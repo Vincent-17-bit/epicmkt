@@ -9,6 +9,7 @@ import Container from "./Container.jsx";
 import Button from "./Button.jsx";
 import IconButton from "./IconButton.jsx";
 import Skeleton from "./Skeleton.jsx";
+import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./MenuPanel.module.css";
 
 export const MENU_ID = "site-menu";
@@ -123,6 +124,8 @@ export default function MenuPanel({ open, onClose, panelRef }) {
               </Link>
             ))}
           </nav>
+
+          <ThemeSwitch className={styles.areaTheme} />
         </Container>
       </div>
     </>

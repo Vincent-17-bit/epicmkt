@@ -4,9 +4,9 @@
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
-  border: 2px solid var(--grey-300);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
 
@@ -24,8 +24,8 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-pill);
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 1.125rem;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .where {
-  color: var(--grey-500);
+  color: var(--text-muted);
   font-size: var(--text-sm);
 }
 
@@ -72,7 +72,7 @@
 }
 
 .count {
-  color: var(--grey-500);
+  color: var(--text-muted);
   font-weight: 400;
 }
 
@@ -85,13 +85,13 @@
 }
 
 .open {
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .closed {
-  background: var(--grey-200);
-  color: var(--black);
+  background: var(--surface-3);
+  color: var(--text);
 }
 
 .actions {

@@ -5,7 +5,7 @@
   width: 100%;
   padding: 0;
   border: 0;
-  background: rgb(17 17 17 / 0.6);
+  background: var(--scrim);
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
@@ -29,7 +29,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding-bottom: var(--safe-bottom);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-lg);
   opacity: 0;
   visibility: hidden;
@@ -70,23 +70,23 @@
   gap: var(--space-2);
   min-height: 52px;
   padding: 3px 3px 3px var(--space-4);
-  border: 2px solid var(--black);
+  border: 2px solid var(--text);
   border-radius: var(--radius-pill);
-  background: var(--white);
+  background: var(--surface);
   transition: box-shadow var(--dur) ease, background-color var(--dur) ease;
 }
 
 @media (hover: hover) {
   .search:hover {
-    background: var(--blue-tint);
+    background: var(--primary-tint);
     box-shadow: var(--shadow-md);
   }
 }
 
 .search:focus-within {
-  outline: 3px solid var(--blue);
+  outline: 3px solid var(--primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--black);
+  box-shadow: 0 0 0 2px var(--ring-gap);
 }
 
 .input {
@@ -99,7 +99,7 @@
 }
 
 .input::placeholder {
-  color: var(--grey-500);
+  color: var(--text-muted);
 }
 
 .input:focus-visible {
@@ -109,8 +109,8 @@
 
 .submit {
   flex: none;
-  border-color: var(--black);
-  background: var(--blue);
+  border-color: var(--text);
+  background: var(--primary);
 }
 
 .seller {
@@ -152,7 +152,7 @@
   gap: var(--space-3);
   min-height: 52px;
   padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--grey-200);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
   font-weight: 600;
   text-decoration: none;
@@ -161,8 +161,8 @@
 }
 
 .cat[aria-current="page"] {
-  border-color: var(--blue);
-  background: var(--blue-tint);
+  border-color: var(--primary);
+  background: var(--primary-tint);
 }
 
 .catIcon {
@@ -173,8 +173,8 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-pill);
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
   transition: transform var(--dur) ease;
 }
 
@@ -184,8 +184,8 @@
 
 @media (hover: hover) {
   .cat:hover {
-    border-color: var(--black);
-    background: var(--blue-tint);
+    border-color: var(--text);
+    background: var(--primary-tint);
     box-shadow: var(--shadow-md);
     transform: translateY(-2px);
   }
@@ -202,7 +202,7 @@
 }
 
 .cat:active {
-  background: var(--blue);
+  background: var(--primary);
   transform: scale(0.97);
   box-shadow: none;
 }
@@ -232,14 +232,14 @@
 
 @media (hover: hover) {
   .small:hover {
-    background: var(--blue-tint);
+    background: var(--primary-tint);
     text-decoration-thickness: 2px;
     transform: translateY(-2px);
   }
 }
 
 .small:active {
-  background: var(--blue);
+  background: var(--primary);
   transform: scale(0.97);
 }
 
@@ -249,8 +249,9 @@
     grid-template-areas:
       "search cats"
       "seller cats"
-      "links cats";
-    grid-template-rows: auto auto 1fr;
+      "links cats"
+      "theme cats";
+    grid-template-rows: auto auto auto 1fr;
     column-gap: var(--space-7);
     align-items: start;
     padding-block: var(--space-6);
@@ -270,6 +271,10 @@
 
   .areaLinks {
     grid-area: links;
+  }
+
+  .areaTheme {
+    grid-area: theme;
   }
 
   .cats {

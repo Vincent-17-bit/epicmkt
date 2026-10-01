@@ -4,14 +4,14 @@
 }
 
 .item {
-  border: 2px solid var(--grey-300);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
-  background: var(--white);
+  background: var(--surface);
   transition: border-color var(--dur) ease, box-shadow var(--dur) ease;
 }
 
 .item[open] {
-  border-color: var(--black);
+  border-color: var(--text);
 }
 
 .summary {
@@ -43,20 +43,20 @@
 
 @media (hover: hover) {
   .summary:hover {
-    background: var(--blue-tint);
+    background: var(--primary-tint);
     text-decoration: underline;
     text-underline-offset: 4px;
     text-decoration-thickness: 2px;
   }
 
   .item:hover {
-    border-color: var(--black);
+    border-color: var(--text);
     box-shadow: var(--shadow-md);
   }
 }
 
 .summary:active {
-  background: var(--blue);
+  background: var(--primary);
   transform: scale(0.99);
 }
 

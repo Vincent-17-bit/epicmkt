@@ -5,7 +5,7 @@
   gap: var(--space-2);
   min-height: var(--tap);
   padding: 0 var(--space-5);
-  border: 2px solid var(--black);
+  border: 2px solid var(--text);
   border-radius: var(--radius-pill);
   font-size: var(--text-md);
   font-weight: 700;
@@ -34,24 +34,24 @@
 }
 
 .primary {
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .secondary {
-  background: var(--white);
-  color: var(--black);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .dark {
-  background: var(--black);
-  color: var(--white);
+  background: var(--text);
+  color: var(--text-inverse);
 }
 
 .ghost {
   background: transparent;
   border-color: transparent;
-  color: var(--black);
+  color: var(--text);
 }
 
 @media (hover: hover) {
@@ -70,20 +70,21 @@
   }
 
   .primary:hover {
-    background: var(--blue-hover);
+    background: var(--primary-hover);
   }
 
   .secondary:hover {
-    background: var(--blue-tint);
+    background: var(--primary-tint);
   }
 
   .dark:hover {
-    color: var(--blue);
+    background: var(--primary);
+    color: var(--on-primary);
   }
 
   .ghost:hover {
-    background: var(--grey-200);
-    border-color: var(--black);
+    background: var(--surface-3);
+    border-color: var(--text);
   }
 }
 
@@ -93,13 +94,13 @@
 }
 
 .primary:active {
-  background: var(--blue-pressed);
+  background: var(--primary-pressed);
 }
 
 .secondary:active {
-  background: var(--blue-tint);
+  background: var(--primary-tint);
 }
 
 .ghost:active {
-  background: var(--grey-300);
+  background: var(--surface-3);
 }

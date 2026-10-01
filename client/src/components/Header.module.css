@@ -3,7 +3,8 @@
   inset: 0 0 auto 0;
   z-index: var(--z-header);
   padding-top: var(--safe-top);
-  background: var(--white);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
 }
 

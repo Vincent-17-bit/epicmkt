@@ -8,7 +8,7 @@
   border: 2px solid transparent;
   border-radius: var(--radius-pill);
   background: transparent;
-  color: var(--black);
+  color: var(--text);
   font-size: 1.125rem;
   transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease,
     box-shadow var(--dur) ease;
@@ -20,8 +20,8 @@
 
 @media (hover: hover) {
   .btn:hover {
-    background: var(--blue-tint);
-    border-color: var(--black);
+    background: var(--primary-tint);
+    border-color: var(--text);
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
   }
@@ -32,7 +32,7 @@
 }
 
 .btn:active {
-  background: var(--blue);
+  background: var(--primary);
   transform: scale(0.97);
   box-shadow: none;
 }

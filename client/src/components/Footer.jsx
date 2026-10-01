@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import Container from "./Container.jsx";
 import Logo from "./Logo.jsx";
+import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./Footer.module.css";
 
 export default function Footer() {
@@ -21,6 +22,7 @@ export default function Footer() {
             Categories
           </Link>
         </nav>
+        <ThemeSwitch />
       </Container>
       <Container className={styles.legal}>
         <small>&copy; {new Date().getFullYear()} EpicMKT</small>

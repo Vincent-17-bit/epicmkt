@@ -11,8 +11,8 @@
   margin-inline: auto;
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-card);
-  background: var(--black);
-  color: var(--white);
+  background: var(--text);
+  color: var(--text-inverse);
   box-shadow: var(--shadow-lg);
 }
 
@@ -30,5 +30,5 @@
 }
 
 .later {
-  border-color: var(--white);
+  border-color: var(--text-inverse);
 }

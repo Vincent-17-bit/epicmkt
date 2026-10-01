@@ -14,8 +14,8 @@
   width: 72px;
   height: 72px;
   border-radius: var(--radius-pill);
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 1.75rem;
 }
 

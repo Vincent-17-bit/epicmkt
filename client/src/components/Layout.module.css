@@ -27,8 +27,8 @@
   z-index: var(--z-toast);
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-pill);
-  background: var(--black);
-  color: var(--white);
+  background: var(--text);
+  color: var(--text-inverse);
   font-weight: 700;
   transform: translateY(-300%);
   transition: transform var(--dur) ease;

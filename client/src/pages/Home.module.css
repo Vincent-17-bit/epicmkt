@@ -1,7 +1,7 @@
 .hero {
   padding-block: clamp(var(--space-6), 7vw, var(--space-8));
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .heroInner {
@@ -41,9 +41,9 @@
   height: 100%;
   min-height: 11rem;
   padding: var(--space-4);
-  border: 2px solid var(--grey-300);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
   text-decoration: none;
   transition: transform var(--dur) ease, box-shadow var(--dur) ease, border-color var(--dur) ease;
@@ -56,8 +56,8 @@
   width: 48px;
   height: 48px;
   border-radius: var(--radius-pill);
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
   font-size: 1.25rem;
 }
 
@@ -67,7 +67,7 @@
 }
 
 .blurb {
-  color: var(--grey-500);
+  color: var(--text-muted);
   font-size: var(--text-sm);
 }
 
@@ -88,7 +88,7 @@
 @media (hover: hover) {
   a.card:hover {
     transform: translateY(-2px);
-    border-color: var(--black);
+    border-color: var(--text);
     box-shadow: var(--shadow-md);
   }
 
@@ -114,6 +114,6 @@ a.card:active {
   gap: var(--space-3);
   padding: var(--space-5);
   border-radius: var(--radius-card);
-  background: var(--white);
+  background: var(--surface);
   box-shadow: var(--shadow-sm);
 }

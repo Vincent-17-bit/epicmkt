@@ -13,15 +13,15 @@
 }
 
 .featured {
-  background: var(--black);
-  color: var(--white);
+  background: var(--featured-bg);
+  color: var(--featured-text);
 }
 
 .star {
-  color: var(--blue);
+  color: var(--featured-star);
 }
 
 .verified {
-  background: var(--blue-tint);
-  color: var(--black);
+  background: var(--primary-tint);
+  color: var(--text);
 }

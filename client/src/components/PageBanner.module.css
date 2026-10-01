@@ -1,7 +1,7 @@
 .banner {
   padding-block: clamp(var(--space-5), 5vw, var(--space-7));
-  background: var(--blue);
-  color: var(--black);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .inner {
@@ -18,8 +18,8 @@
   width: clamp(52px, 8vw, 72px);
   height: clamp(52px, 8vw, 72px);
   border-radius: var(--radius-pill);
-  background: var(--black);
-  color: var(--blue);
+  background: var(--ring-gap);
+  color: var(--primary);
   font-size: clamp(1.25rem, 3vw, 1.75rem);
 }
 
