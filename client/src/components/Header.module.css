@@ -1,0 +1,130 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: 64px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: transform var(--dur) ease;
+}
+
+.brand:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .brand:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.nav {
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 3px;
+  text-underline-offset: 6px;
+  transition: background-color var(--dur) ease, text-decoration-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.link[aria-current="page"] {
+  text-decoration-color: var(--blue);
+}
+
+@media (hover: hover) {
+  .link:hover {
+    background: var(--blue-tint);
+    text-decoration-color: var(--black);
+    transform: translateY(-2px);
+  }
+}
+
+.link:active {
+  background: var(--blue);
+  transform: scale(0.97);
+}
+
+@media (min-width: 48rem) {
+  .nav {
+    display: flex;
+  }
+
+  .menuButton {
+    display: none;
+  }
+}
+
+.drawerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.drawerNav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.drawerLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 2px solid transparent;
+  border-radius: var(--radius-card);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.drawerIcon {
+  width: 1.25rem;
+  transition: transform var(--dur) ease;
+}
+
+@media (hover: hover) {
+  .drawerLink:hover {
+    background: var(--blue-tint);
+    border-color: var(--black);
+    text-decoration: underline;
+  }
+
+  .drawerLink:hover .drawerIcon {
+    transform: translateX(4px);
+  }
+}
+
+.drawerLink:active {
+  background: var(--blue);
+  transform: scale(0.97);
+}

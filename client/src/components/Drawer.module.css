@@ -1,0 +1,26 @@
+.drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: var(--z-drawer);
+  width: min(88vw, 22rem);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--white);
+  color: var(--black);
+  box-shadow: var(--shadow-lg);
+}
+
+.drawer::backdrop {
+  background: rgb(17 17 17 / 0.65);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: var(--space-4);
+}
