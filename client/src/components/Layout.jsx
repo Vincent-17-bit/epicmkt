@@ -10,7 +10,9 @@ import styles from "./Layout.module.css";
 export default function Layout() {
   const { pathname, hash } = useLocation();
   const menuOpen = useUiStore((s) => s.menuOpen);
-  const behind = menuOpen ? { inert: "", "aria-hidden": true } : {};
+  const searchOpen = useUiStore((s) => s.searchOpen);
+  const layered = menuOpen || searchOpen;
+  const behind = layered ? { inert: "", "aria-hidden": true } : {};
 
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
@@ -18,11 +20,11 @@ export default function Layout() {
   }, [pathname, hash]);
 
   useEffect(() => {
-    document.documentElement.style.overflow = menuOpen ? "hidden" : "";
+    document.documentElement.style.overflow = layered ? "hidden" : "";
     return () => {
       document.documentElement.style.overflow = "";
     };
-  }, [menuOpen]);
+  }, [layered]);
 
   return (
     <div className={styles.shell}>

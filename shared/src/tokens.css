@@ -29,10 +29,12 @@
   --shadow-md: var(--shadow-2);
   --shadow-lg: var(--shadow-2);
 
-  --z-header: 100;
-  --z-banner: 150;
-  --z-drawer: 200;
-  --z-toast: 300;
+  --z-menu-scrim: 20;
+  --z-menu: 30;
+  --z-header: 40;
+  --z-search-scrim: 50;
+  --z-search: 60;
+  --z-toast: 70;
 
   --dur: 180ms;
   --tap: 44px;

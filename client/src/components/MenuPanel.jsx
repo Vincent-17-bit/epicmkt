@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { Link, useMatch, useNavigate } from "react-router-dom";
+import { Link, useMatch } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
-import { getCategories, logSearch } from "../api/index.js";
+import { getCategories } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import Container from "./Container.jsx";
 import Button from "./Button.jsx";
@@ -22,10 +21,8 @@ const smallLinks = [
   { to: "/faq", label: "FAQs" }
 ];
 
-export default function MenuPanel({ open, onClose, panelRef }) {
-  const navigate = useNavigate();
+export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searchRef, quietRef }) {
   const activeSlug = useMatch("/c/:slug")?.params.slug;
-  const [term, setTerm] = useState("");
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
@@ -34,11 +31,7 @@ export default function MenuPanel({ open, onClose, panelRef }) {
 
   const submit = (event) => {
     event.preventDefault();
-    const clean = term.trim();
-    if (!clean) return;
-    logSearch(clean);
-    setTerm("");
-    navigate(`/?q=${encodeURIComponent(clean)}`, { replace: true });
+    onOpenSearch();
   };
 
   const hidden = open ? undefined : "";
@@ -64,12 +57,16 @@ export default function MenuPanel({ open, onClose, panelRef }) {
             </label>
             <input
               id="menu-search"
+              ref={searchRef}
               type="search"
-              enterKeyHint="search"
+              readOnly
+              inputMode="none"
               autoComplete="off"
               placeholder="Search businesses"
-              value={term}
-              onChange={(event) => setTerm(event.target.value)}
+              onFocus={() => {
+                if (!quietRef.current) onOpenSearch();
+              }}
+              onClick={onOpenSearch}
               className={styles.input}
             />
             <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
