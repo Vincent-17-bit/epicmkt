@@ -1,10 +1,13 @@
+import { forwardRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./IconButton.module.css";
 
-export default function IconButton({ icon, label, className = "", ...rest }) {
+const IconButton = forwardRef(function IconButton({ icon, label, className = "", ...rest }, ref) {
   return (
-    <button type="button" aria-label={label} className={`${styles.btn} ${className}`} {...rest}>
+    <button ref={ref} type="button" aria-label={label} className={`${styles.btn} ${className}`} {...rest}>
       <FontAwesomeIcon icon={icon} className={styles.icon} />
     </button>
   );
-}
+});
+
+export default IconButton;

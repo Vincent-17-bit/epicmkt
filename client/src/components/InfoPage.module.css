@@ -1,0 +1,25 @@
+.page {
+  padding-block: clamp(var(--space-6), 6vw, var(--space-8));
+}
+
+.column {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 48rem;
+}
+
+.title {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.intro {
+  font-size: var(--text-lg);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-4);
+}

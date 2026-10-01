@@ -25,6 +25,7 @@ const toSummary = (b, origin) => ({
   tagline: b.tagline,
   categoryId: b.categoryId,
   categoryName: categoryOf(b.categoryId)?.singular ?? "",
+  categoryIcon: categoryOf(b.categoryId)?.icon ?? null,
   county: b.county,
   area: b.area,
   rating: b.rating,

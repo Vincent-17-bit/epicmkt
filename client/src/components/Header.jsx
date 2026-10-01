@@ -1,68 +1,93 @@
-import { useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { faBars, faXmark, faHouse, faTableCells } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useCallback, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUiStore } from "../stores/ui.js";
 import Container from "./Container.jsx";
 import Logo from "./Logo.jsx";
 import IconButton from "./IconButton.jsx";
+import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";
 import styles from "./Header.module.css";
 
-const MENU_ID = "site-menu";
-
-const links = [
-  { to: "/", label: "Home", icon: faHouse, current: (pathname, hash) => pathname === "/" && !hash },
-  { to: "/#categories", label: "Categories", icon: faTableCells, current: (pathname, hash) => pathname === "/" && hash === "#categories" }
-];
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function Header() {
-  const { pathname, hash } = useLocation();
+  const location = useLocation();
+  const navigate = useNavigate();
   const menuOpen = useUiStore((s) => s.menuOpen);
-  const toggleMenu = useUiStore((s) => s.toggleMenu);
-  const closeMenu = useUiStore((s) => s.closeMenu);
+  const setMenuOpen = useUiStore((s) => s.setMenuOpen);
+  const headerRef = useRef(null);
+  const toggleRef = useRef(null);
+  const panelRef = useRef(null);
+  const wasOpen = useRef(false);
+  const inHistory = Boolean(location.state?.menu);
 
   useEffect(() => {
-    closeMenu();
-  }, [pathname, hash, closeMenu]);
+    if (location.state?.menu) navigate(location, { replace: true, state: null });
+  }, []);
+
+  useEffect(() => {
+    setMenuOpen(inHistory);
+  }, [inHistory, setMenuOpen]);
+
+  const open = useCallback(() => {
+    navigate({ pathname: location.pathname, search: location.search, hash: location.hash }, { state: { menu: true } });
+  }, [navigate, location.pathname, location.search, location.hash]);
+
+  const close = useCallback(() => {
+    if (inHistory) navigate(-1);
+  }, [navigate, inHistory]);
+
+  useEffect(() => {
+    if (menuOpen) {
+      wasOpen.current = true;
+      panelRef.current?.focus({ preventScroll: true });
+    } else if (wasOpen.current) {
+      wasOpen.current = false;
+      toggleRef.current?.focus({ preventScroll: true });
+    }
+  }, [menuOpen]);
 
   useEffect(() => {
     if (!menuOpen) return undefined;
     const onKey = (event) => {
-      if (event.key === "Escape") closeMenu();
+      if (event.key === "Escape") {
+        close();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const nodes = [...headerRef.current.querySelectorAll(FOCUSABLE)].filter(
+        (node) => node.tabIndex >= 0 && node.getClientRects().length > 0
+      );
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [menuOpen, closeMenu]);
+  }, [menuOpen, close]);
 
   return (
-    <header className={styles.header}>
+    <header ref={headerRef} className={styles.header}>
       <Container className={styles.bar}>
         <Link to="/" className={styles.brand} aria-label="EpicMKT home">
           <Logo />
         </Link>
         <IconButton
+          ref={toggleRef}
           icon={menuOpen ? faXmark : faBars}
           label={menuOpen ? "Close menu" : "Open menu"}
           aria-expanded={menuOpen}
           aria-controls={MENU_ID}
-          onClick={toggleMenu}
+          onClick={menuOpen ? close : open}
         />
       </Container>
-      {menuOpen && <button type="button" tabIndex={-1} aria-hidden="true" className={styles.backdrop} onClick={closeMenu} />}
-      <nav id={MENU_ID} className={styles.menu} aria-label="Main" hidden={!menuOpen}>
-        {links.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className={styles.link}
-            aria-current={link.current(pathname, hash) ? "page" : undefined}
-            onClick={closeMenu}
-          >
-            <FontAwesomeIcon icon={link.icon} className={styles.linkIcon} />
-            {link.label}
-          </Link>
-        ))}
-      </nav>
+      <MenuPanel open={menuOpen} onClose={close} panelRef={panelRef} />
     </header>
   );
 }

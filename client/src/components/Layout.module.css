@@ -5,12 +5,19 @@
   padding-top: var(--header-h);
 }
 
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
 .main {
   flex: 1;
 }
 
-.main:focus {
+.main:focus-visible {
   outline: none;
+  box-shadow: none !important;
 }
 
 .skip {

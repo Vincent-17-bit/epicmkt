@@ -1,0 +1,41 @@
+.banner {
+  padding-block: clamp(var(--space-5), 5vw, var(--space-7));
+  background: var(--blue);
+  color: var(--black);
+}
+
+.inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: clamp(52px, 8vw, 72px);
+  height: clamp(52px, 8vw, 72px);
+  border-radius: var(--radius-pill);
+  background: var(--black);
+  color: var(--blue);
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+.text {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: var(--text-lg);
+}

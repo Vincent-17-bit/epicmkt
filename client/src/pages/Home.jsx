@@ -1,7 +1,7 @@
-import { Link } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faArrowDown, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faArrowDown, faRotateRight, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { getCategories } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
@@ -9,6 +9,9 @@ import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import CardGrid from "../components/CardGrid.jsx";
+import PageBanner from "../components/PageBanner.jsx";
+import BusinessResults from "../components/BusinessResults.jsx";
+import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
 
 function CategorySkeleton() {
@@ -22,12 +25,52 @@ function CategorySkeleton() {
 }
 
 export default function Home() {
-  usePageTitle();
-  const { data, isPending, isError, refetch } = useQuery({
+  const { slug } = useParams();
+  const [params] = useSearchParams();
+  const query = (params.get("q") ?? "").trim();
+  const { data, isPending, isError, isSuccess, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
     staleTime: 5 * 60_000
   });
+
+  const category = slug ? data?.find((c) => c.id === slug) : null;
+  const missing = Boolean(slug) && isSuccess && !category;
+
+  usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : undefined);
+
+  if (missing) return <NotFound />;
+
+  if (slug) {
+    return (
+      <>
+        <PageBanner
+          loading={isPending}
+          icon={category ? categoryIcon(category.icon) : undefined}
+          title={category?.name}
+          subtitle={category?.blurb}
+        />
+        <section className={styles.section}>
+          <Container>
+            <BusinessResults categoryId={slug} />
+          </Container>
+        </section>
+      </>
+    );
+  }
+
+  if (query) {
+    return (
+      <>
+        <PageBanner icon={faMagnifyingGlass} title={`Results for "${query}"`} />
+        <section className={styles.section}>
+          <Container>
+            <BusinessResults query={query} />
+          </Container>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -64,16 +107,16 @@ export default function Home() {
                       <CategorySkeleton />
                     </li>
                   ))
-                : data.map((category) => (
-                    <li key={category.id}>
-                      <Link to={`/search?category=${category.id}`} className={styles.card}>
+                : data.map((item) => (
+                    <li key={item.id}>
+                      <Link to={`/c/${item.id}`} className={styles.card}>
                         <span className={styles.icon}>
-                          <FontAwesomeIcon icon={categoryIcon(category.icon)} />
+                          <FontAwesomeIcon icon={categoryIcon(item.icon)} />
                         </span>
-                        <span className={styles.name}>{category.name}</span>
-                        <span className={styles.blurb}>{category.blurb}</span>
+                        <span className={styles.name}>{item.name}</span>
+                        <span className={styles.blurb}>{item.blurb}</span>
                         <span className={styles.meta}>
-                          {category.count} {category.count === 1 ? "listing" : "listings"}
+                          {item.count} {item.count === 1 ? "listing" : "listings"}
                           <FontAwesomeIcon icon={faArrowRight} className={styles.arrow} />
                         </span>
                       </Link>
