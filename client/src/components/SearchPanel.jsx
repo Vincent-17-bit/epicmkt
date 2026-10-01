@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faXmark, faArrowTrendUp, faTableCells, faStore } from "@fortawesome/free-solid-svg-icons";
+import {
+  faMagnifyingGlass,
+  faXmark,
+  faCircleXmark,
+  faClockRotateLeft,
+  faFire,
+  faTableCells,
+  faStore,
+  faScrewdriverWrench
+} from "@fortawesome/free-solid-svg-icons";
 import { getSuggestions, getTopSearches, logSearch } from "../api/index.js";
+import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import Container from "./Container.jsx";
 import IconButton from "./IconButton.jsx";
 import Skeleton from "./Skeleton.jsx";
@@ -10,51 +21,94 @@ import styles from "./SearchPanel.module.css";
 
 export const SEARCH_ID = "site-search";
 
-const suggestionIcon = { category: faTableCells, business: faStore, term: faMagnifyingGlass };
+const GROUP_LIMIT = 4;
+
+function Rows({ count }) {
+  return Array.from({ length: count }, (_, i) => (
+    <li key={i} aria-hidden="true">
+      <Skeleton height="52px" radius="var(--radius-card)" />
+    </li>
+  ));
+}
+
+function Option({ icon, children, onClick }) {
+  return (
+    <button type="button" className={styles.option} onClick={onClick}>
+      <span className={styles.optionIcon}>{icon}</span>
+      <span className={styles.optionName}>{children}</span>
+    </button>
+  );
+}
 
 export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRef }) {
   const [term, setTerm] = useState("");
   const [debounced, setDebounced] = useState("");
-  const clean = term.trim();
+  const [recent, setRecent] = useState(getRecent);
+  const normalized = normalizeTerm(term);
+  const active = normalized !== "";
 
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(clean), 200);
+    const id = setTimeout(() => setDebounced(normalized), 250);
     return () => clearTimeout(id);
-  }, [clean]);
+  }, [normalized]);
 
   useEffect(() => {
-    if (!open) setTerm("");
+    if (open) setRecent(getRecent());
+    else setTerm("");
   }, [open]);
 
-  const popular = useQuery({
+  const top = useQuery({
     queryKey: ["top-searches"],
-    queryFn: () => getTopSearches(8),
+    queryFn: () => getTopSearches(10),
     enabled: open,
     staleTime: 60_000
   });
 
   const suggestions = useQuery({
     queryKey: ["suggestions", debounced],
-    queryFn: () => getSuggestions(debounced, 6),
-    enabled: open && debounced.length >= 2,
+    queryFn: () => getSuggestions(debounced, 40),
+    enabled: open && debounced !== "",
     staleTime: 60_000
   });
 
-  const run = (item) => {
-    if (item.type === "category") {
-      onSelect(`/c/${item.categoryId}`);
-      return;
-    }
-    logSearch(item.label);
-    onSelect(`/?q=${encodeURIComponent(item.label)}`);
+  const commit = (value) => {
+    const clean = normalizeTerm(value);
+    if (!clean) return;
+    addRecent(clean);
+    logSearch(clean);
+    onSelect(`/search?q=${encodeURIComponent(clean)}`);
   };
 
   const submit = (event) => {
     event.preventDefault();
-    if (clean) run({ type: "term", label: clean });
+    commit(term);
   };
 
-  const typing = clean.length > 0;
+  const clear = () => {
+    setTerm("");
+    inputRef.current?.focus();
+  };
+
+  const groups = [
+    { key: "business", title: "Businesses", icon: faStore },
+    { key: "term", title: "Services", icon: faScrewdriverWrench },
+    { key: "category", title: "Categories", icon: faTableCells }
+  ].map((group) => ({
+    ...group,
+    items: (suggestions.data ?? []).filter((item) => item.type === group.key).slice(0, GROUP_LIMIT)
+  }));
+
+  const settled = active && debounced === normalized && !suggestions.isPending;
+  const loading = active && !settled && !suggestions.isError;
+  const empty = settled && groups.every((group) => group.items.length === 0);
+
+  const choose = (group, item) => {
+    if (group.key === "business") onSelect(`/b/${item.slug}`);
+    else if (group.key === "category") onSelect(`/c/${item.categoryId}`);
+    else commit(item.label);
+  };
+
+  const suggestTo = `/contact?suggest=${encodeURIComponent(normalized)}`;
 
   return (
     <>
@@ -88,59 +142,105 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                 onChange={(event) => setTerm(event.target.value)}
                 className={styles.input}
               />
+              {term && <IconButton icon={faCircleXmark} label="Clear search" onClick={clear} />}
               <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
             </div>
             <IconButton icon={faXmark} label="Close search" onClick={onClose} />
           </form>
 
-          {typing ? (
-            <ul className={styles.list} aria-label="Suggestions">
-              <li>
-                <button type="button" className={styles.option} onClick={() => run({ type: "term", label: clean })}>
-                  <span className={styles.optionIcon}>
-                    <FontAwesomeIcon icon={faMagnifyingGlass} />
-                  </span>
-                  <span className={styles.optionName}>Search for &ldquo;{clean}&rdquo;</span>
-                </button>
-              </li>
-              {suggestions.isFetching && !suggestions.data
-                ? Array.from({ length: 3 }, (_, i) => (
-                    <li key={i} aria-hidden="true">
-                      <Skeleton height="52px" radius="var(--radius-card)" />
-                    </li>
-                  ))
-                : (suggestions.data ?? []).map((item) => (
-                    <li key={`${item.type}-${item.label}`}>
-                      <button type="button" className={styles.option} onClick={() => run(item)}>
-                        <span className={styles.optionIcon}>
-                          <FontAwesomeIcon icon={suggestionIcon[item.type]} />
-                        </span>
-                        <span className={styles.optionName}>{item.label}</span>
-                        {item.type === "category" && <span className={styles.kind}>Category</span>}
-                      </button>
-                    </li>
-                  ))}
-            </ul>
-          ) : (
-            popular.data?.length > 0 && (
-              <section aria-labelledby="search-popular">
-                <h2 id="search-popular" className={styles.label}>
-                  Popular searches
-                </h2>
+          {active ? (
+            <div className={styles.results} aria-live="polite">
+              {loading && (
                 <ul className={styles.list}>
-                  {popular.data.map((item) => (
-                    <li key={item.term}>
-                      <button type="button" className={styles.option} onClick={() => run({ type: "term", label: item.term })}>
-                        <span className={styles.optionIcon}>
-                          <FontAwesomeIcon icon={faArrowTrendUp} />
-                        </span>
-                        <span className={styles.optionName}>{item.term}</span>
-                      </button>
-                    </li>
-                  ))}
+                  <Rows count={3} />
                 </ul>
-              </section>
-            )
+              )}
+              {settled &&
+                groups
+                  .filter((group) => group.items.length > 0)
+                  .map((group) => (
+                    <section key={group.key} aria-labelledby={`search-${group.key}`}>
+                      <h2 id={`search-${group.key}`} className={styles.label}>
+                        {group.title}
+                      </h2>
+                      <ul className={styles.list}>
+                        {group.items.map((item) => (
+                          <li key={`${group.key}-${item.label}`}>
+                            <Option icon={<FontAwesomeIcon icon={group.icon} />} onClick={() => choose(group, item)}>
+                              {item.label}
+                            </Option>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+              {empty && (
+                <div className={styles.empty}>
+                  <p>No results for &ldquo;{normalized}&rdquo;.</p>
+                  <Link
+                    to={suggestTo}
+                    className={styles.suggest}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      onSelect(suggestTo);
+                    }}
+                  >
+                    Suggest this business/category
+                  </Link>
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {recent.length > 0 && (
+                <section aria-labelledby="search-recent">
+                  <div className={styles.head}>
+                    <h2 id="search-recent" className={styles.label}>
+                      Recent searches
+                    </h2>
+                    <button
+                      type="button"
+                      className={styles.clearAll}
+                      onClick={() => setRecent(clearRecent())}
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  <ul className={styles.list}>
+                    {recent.map((item) => (
+                      <li key={item} className={styles.recentRow}>
+                        <Option icon={<FontAwesomeIcon icon={faClockRotateLeft} />} onClick={() => commit(item)}>
+                          {item}
+                        </Option>
+                        <IconButton icon={faXmark} label={`Remove ${item}`} onClick={() => setRecent(removeRecent(item))} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {(top.isPending || top.data?.length > 0) && (
+                <section aria-labelledby="search-top">
+                  <h2 id="search-top" className={styles.label}>
+                    Top searches
+                  </h2>
+                  <ol className={styles.list}>
+                    {top.isPending ? (
+                      <Rows count={5} />
+                    ) : (
+                      top.data.map((item, index) => (
+                        <li key={item.term}>
+                          <Option icon={index + 1} onClick={() => commit(item.term)}>
+                            {item.term}
+                            {index === 0 && <FontAwesomeIcon icon={faFire} className={styles.fire} />}
+                          </Option>
+                        </li>
+                      ))
+                    )}
+                  </ol>
+                </section>
+              )}
+            </>
           )}
         </Container>
       </div>

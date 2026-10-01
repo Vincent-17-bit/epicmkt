@@ -11,6 +11,8 @@ import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError } from "../errors.js";
 
+const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
+
 const categoryOf = (id) => store.categories.find((c) => c.id === id) ?? null;
 
 const activeBusinesses = () => store.businesses.filter((b) => b.status === BUSINESS_STATUS.ACTIVE);
@@ -206,7 +208,12 @@ export async function getSimilarBusinesses(ref, limit = 4) {
 
 export async function getTopSearches(limit = 8) {
   await delay();
-  return [...store.searches.entries()]
+  const since = Date.now() - TOP_SEARCH_WINDOW_MS;
+  const totals = new Map();
+  for (const event of store.searches) {
+    if (event.at >= since) totals.set(event.term, (totals.get(event.term) ?? 0) + event.count);
+  }
+  return [...totals.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
     .map(([term, count]) => ({ term, count }));
@@ -215,7 +222,7 @@ export async function getTopSearches(limit = 8) {
 export async function logSearch(term) {
   const clean = normalizeText(term);
   if (clean.length < 2 || clean.length > 60) return { ok: false };
-  store.searches.set(clean, (store.searches.get(clean) ?? 0) + 1);
+  store.searches.push({ term: clean, count: 1, at: Date.now() });
   return { ok: true };
 }
 

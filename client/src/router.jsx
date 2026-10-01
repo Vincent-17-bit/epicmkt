@@ -4,6 +4,7 @@ import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import Faq from "./pages/Faq.jsx";
+import Business from "./pages/Business.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
@@ -18,6 +19,8 @@ export const router = createBrowserRouter([
         children: [
           { index: true, element: <Home /> },
           { path: "c/:slug", element: <Home /> },
+          { path: "search", element: <Home /> },
+          { path: "b/:slug", element: <Business /> },
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },
