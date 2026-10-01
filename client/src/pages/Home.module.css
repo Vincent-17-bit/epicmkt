@@ -1,5 +1,5 @@
 .hero {
-  padding-block: var(--space-7);
+  padding-block: clamp(var(--space-6), 7vw, var(--space-8));
   background: var(--blue);
   color: var(--black);
 }
@@ -11,7 +11,7 @@
 }
 
 .title {
-  max-width: 20ch;
+  max-width: 18ch;
   font-size: var(--text-3xl);
   font-weight: 700;
   line-height: 1.08;
@@ -24,23 +24,14 @@
 }
 
 .section {
-  padding-block: var(--space-7);
-  scroll-margin-top: 72px;
+  padding-block: clamp(var(--space-6), 6vw, var(--space-7));
+  scroll-margin-top: calc(var(--header-h) + var(--space-3));
 }
 
 .heading {
   margin-bottom: var(--space-5);
   font-size: var(--text-xl);
   font-weight: 700;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-  gap: var(--space-4);
-  margin: 0;
-  padding: 0;
-  list-style: none;
 }
 
 .card {

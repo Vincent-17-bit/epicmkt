@@ -19,8 +19,8 @@ export default function Layout() {
       <a href="#main" className={styles.skip}>
         Skip to content
       </a>
-      <OfflineBanner />
       <Header />
+      <OfflineBanner />
       <main id="main" tabIndex={-1} className={styles.main}>
         <Outlet />
       </main>

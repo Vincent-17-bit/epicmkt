@@ -1,6 +1,6 @@
 .prompt {
   position: fixed;
-  inset: auto var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom)) var(--space-4);
+  inset: auto max(var(--space-4), var(--safe-right)) calc(var(--space-4) + var(--safe-bottom)) max(var(--space-4), var(--safe-left));
   z-index: var(--z-toast);
   display: flex;
   flex-wrap: wrap;

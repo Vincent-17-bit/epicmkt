@@ -8,6 +8,7 @@ import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
+import CardGrid from "../components/CardGrid.jsx";
 import styles from "./Home.module.css";
 
 function CategorySkeleton() {
@@ -56,7 +57,7 @@ export default function Home() {
               </Button>
             </div>
           ) : (
-            <ul className={styles.grid} aria-busy={isPending}>
+            <CardGrid aria-busy={isPending}>
               {isPending
                 ? Array.from({ length: 10 }, (_, i) => (
                     <li key={i}>
@@ -78,7 +79,7 @@ export default function Home() {
                       </Link>
                     </li>
                   ))}
-            </ul>
+            </CardGrid>
           )}
         </Container>
       </section>
