@@ -1,0 +1,13 @@
+{
+  "name": "epicmkt",
+  "private": true,
+  "type": "module",
+  "workspaces": ["shared", "backend", "admin-backend", "client", "seller", "admin"],
+  "scripts": {
+    "dev:client": "npm run dev -w client",
+    "dev:seller": "npm run dev -w seller",
+    "dev:admin": "npm run dev -w admin",
+    "build": "npm run build -w client && npm run build -w seller && npm run build -w admin",
+    "test:api": "node backend/check.mjs"
+  }
+}

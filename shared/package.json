@@ -1,0 +1,11 @@
+{
+  "name": "@epicmkt/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens.css": "./src/tokens.css",
+    "./reset.css": "./src/reset.css"
+  }
+}

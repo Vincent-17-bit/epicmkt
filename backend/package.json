@@ -1,0 +1,13 @@
+{
+  "name": "@epicmkt/backend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./store": "./src/store.js"
+  },
+  "dependencies": {
+    "@epicmkt/shared": "*"
+  }
+}
