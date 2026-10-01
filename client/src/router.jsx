@@ -22,6 +22,9 @@ export const router = createBrowserRouter([
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },
           { path: "offline", element: <OfflinePage /> },
+          ...(import.meta.env.DEV
+            ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("./pages/Styleguide.jsx")).default }) }]
+            : []),
           { path: "*", element: <NotFound /> }
         ]
       }
