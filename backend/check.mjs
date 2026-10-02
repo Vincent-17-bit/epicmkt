@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, resolveShortcode, reportBusiness, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
@@ -33,6 +33,12 @@ await assert.rejects(() => resolveShortcode("nope"), { name: "NotFoundError" });
 assert.equal((await reportBusiness({ businessId: "b_001", reason: "closed" })).ok, true);
 await assert.rejects(() => reportBusiness({ businessId: "b_001", reason: "x" }), ValidationError);
 await assert.rejects(() => reportBusiness({ businessId: "zzz", reason: "closed" }), { name: "NotFoundError" });
+
+const featuredA = await getFeaturedBusinesses({ limit: 20, seed: 1 });
+const featuredB = await getFeaturedBusinesses({ limit: 20, seed: 2 });
+assert.ok(featuredA.every((b) => b.plan === "premium"));
+assert.deepEqual([...featuredA.map((b) => b.id)].sort(), [...featuredB.map((b) => b.id)].sort());
+assert.notDeepEqual(featuredA.map((b) => b.id), featuredB.map((b) => b.id));
 
 assert.ok((await getSuggestions("bar")).length > 0);
 assert.ok((await getNearbyBusinesses({ lat: -0.0058, lng: 34.6, radiusKm: 3 })).length >= 5);

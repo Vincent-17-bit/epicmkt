@@ -38,8 +38,6 @@ const mapSrc = (lat, lng) => {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
 };
 
-const mapsPin = (lat, lng) => `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-
 function Section({ title, children, id }) {
   return (
     <section className={styles.section} aria-labelledby={id}>
@@ -298,11 +296,8 @@ export default function Business() {
             <iframe title={`Map showing ${data.name}`} src={mapSrc(data.lat, data.lng)} loading="lazy" referrerPolicy="no-referrer" className={styles.mapFrame} />
           </div>
           <div className={styles.mapActions}>
-            <Button as="a" variant="secondary" icon={faMap} href={mapsPin(data.lat, data.lng)} {...external}>
+            <Button as="a" variant="secondary" icon={faMap} href={directionsLink(data.lat, data.lng)} {...external} onClick={track("directions")}>
               View on map
-            </Button>
-            <Button as="a" variant="secondary" icon={faLocationArrow} href={directionsLink(data.lat, data.lng)} {...external} onClick={track("directions")}>
-              Directions
             </Button>
           </div>
         </Section>

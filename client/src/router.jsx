@@ -4,6 +4,8 @@ import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import Faq from "./pages/Faq.jsx";
+import Sell from "./pages/Sell.jsx";
+import SellRegister from "./pages/SellRegister.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
 import Business from "./pages/Business.jsx";
@@ -28,6 +30,8 @@ export const router = createBrowserRouter([
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },
+          { path: "sell", element: <Sell /> },
+          { path: "sell/register", element: <SellRegister /> },
           { path: "privacy", element: <Privacy /> },
           { path: "terms", element: <Terms /> },
           { path: "offline", element: <OfflinePage /> },

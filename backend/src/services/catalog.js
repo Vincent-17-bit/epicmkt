@@ -274,13 +274,14 @@ export async function reportBusiness({ businessId, reason, message = "", contact
   return { ok: true, id: report.id };
 }
 
-export async function getFeaturedBusinesses({ categoryId = null, limit = 6, lat, lng } = {}) {
+export async function getFeaturedBusinesses({ categoryId = null, limit = 6, lat, lng, seed = null } = {}) {
   await delay();
   const origin = originOf(lat, lng);
+  const byRating = (x, y) => y.rating - x.rating || y.reviewCount - x.reviewCount;
   return activeBusinesses()
     .filter((b) => PLAN_FEATURES[b.plan].featured)
     .filter((b) => !categoryId || b.categoryId === categoryId)
-    .sort((x, y) => y.rating - x.rating || y.reviewCount - x.reviewCount)
+    .sort((x, y) => (seed == null ? byRating(x, y) : shuffleKey(seed, x.id) - shuffleKey(seed, y.id) || byRating(x, y)))
     .slice(0, limit)
     .map((b) => toSummary(b, origin));
 }

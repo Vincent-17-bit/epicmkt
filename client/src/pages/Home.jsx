@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faArrowDown, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
 import { getCategories, getFeaturedBusinesses } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
+import { rotationSeed } from "../lib/rotation.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
@@ -27,12 +28,11 @@ function CategorySkeleton() {
   );
 }
 
-const SELLER_URL = import.meta.env.VITE_SELLER_URL || "/seller/";
 
 function Featured() {
   const { data, isPending } = useQuery({
-    queryKey: ["featured"],
-    queryFn: () => getFeaturedBusinesses({ limit: 8 }),
+    queryKey: ["featured", rotationSeed()],
+    queryFn: () => getFeaturedBusinesses({ limit: 8, seed: rotationSeed() }),
     staleTime: 60_000
   });
 
@@ -65,6 +65,7 @@ export default function Home() {
       { state: { menu: true, search: true } }
     );
   const query = (params.get("q") ?? "").trim();
+  const isSearch = location.pathname === "/search";
   const { data, isPending, isError, isSuccess, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
@@ -74,7 +75,7 @@ export default function Home() {
   const category = slug ? data?.find((c) => c.id === slug) : null;
   const missing = Boolean(slug) && isSuccess && !category;
 
-  usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : undefined);
+  usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : isSearch ? "All businesses" : undefined);
 
   if (missing) return <NotFound />;
 
@@ -96,10 +97,14 @@ export default function Home() {
     );
   }
 
-  if (query) {
+  if (isSearch || query) {
     return (
       <>
-        <PageBanner icon={faMagnifyingGlass} title={`Results for "${query}"`} />
+        <PageBanner
+          icon={faMagnifyingGlass}
+          title={query ? `Results for "${query}"` : "All businesses"}
+          subtitle={query ? undefined : "Browse everything listed on EpicMKT, or use the search to narrow it down."}
+        />
         <section className={styles.section}>
           <Container>
             <BrowseResults query={query} />
@@ -210,7 +215,7 @@ export default function Home() {
               </h2>
               <p>Get found by customers nearby. Standard from KSh 500 a month, Premium from KSh 1,500.</p>
             </div>
-            <Button as="a" href={SELLER_URL} variant="dark" size="lg" iconRight={faArrowRight}>
+            <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight}>
               Become a seller
             </Button>
           </div>

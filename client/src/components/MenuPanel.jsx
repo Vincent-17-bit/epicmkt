@@ -13,8 +13,6 @@ import styles from "./MenuPanel.module.css";
 
 export const MENU_ID = "site-menu";
 
-const SELLER_URL = import.meta.env.VITE_SELLER_URL || "/seller/";
-
 const smallLinks = [
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
@@ -72,7 +70,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
           </form>
 
-          <Button as="a" href={SELLER_URL} size="lg" icon={faStore} className={`${styles.seller} ${styles.areaSeller}`}>
+          <Button as={Link} to="/sell" size="lg" icon={faStore} className={`${styles.seller} ${styles.areaSeller}`}>
             Become a seller
           </Button>
 
