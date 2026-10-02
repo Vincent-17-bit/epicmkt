@@ -27,10 +27,10 @@ function CardSkeleton() {
   );
 }
 
-export default function BusinessResults({ query = "", categoryId = null }) {
+export default function BusinessResults({ query = "", categoryId = null, filters = {}, onReset }) {
   const { data, isPending, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["businesses", { query, categoryId }],
-    queryFn: ({ pageParam }) => searchBusinesses({ query, categoryId, page: pageParam, pageSize: PAGE_SIZE }),
+    queryKey: ["businesses", { query, categoryId, filters }],
+    queryFn: ({ pageParam }) => searchBusinesses({ query, categoryId, ...filters, page: pageParam, pageSize: PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined)
   });
@@ -64,10 +64,16 @@ export default function BusinessResults({ query = "", categoryId = null }) {
   if (!total) {
     return (
       <div className={styles.state}>
-        <p>No businesses found. Try another search or browse the categories.</p>
-        <Button as={Link} to="/#categories" icon={faTableCells}>
-          Browse categories
-        </Button>
+        <p>{onReset ? "No businesses match these filters." : "No businesses found. Try another search or browse the categories."}</p>
+        {onReset ? (
+          <Button icon={faRotateRight} onClick={onReset}>
+            Clear filters
+          </Button>
+        ) : (
+          <Button as={Link} to="/#categories" icon={faTableCells}>
+            Browse categories
+          </Button>
+        )}
       </div>
     );
   }
@@ -93,7 +99,7 @@ export default function BusinessResults({ query = "", categoryId = null }) {
       {hasNextPage && (
         <div className={styles.more}>
           <Button variant="secondary" iconRight={faArrowDown} disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
-            Show more
+            Load more
           </Button>
         </div>
       )}

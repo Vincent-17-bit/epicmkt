@@ -122,6 +122,7 @@ export async function searchBusinesses({
   results.sort((x, y) => {
     if (sort === "distance" && origin) return x.dist - y.dist;
     if (sort === "rating") return byRating(x, y);
+    if (sort === "newest") return y.b.createdAt.localeCompare(x.b.createdAt) || byRating(x, y);
     return y.rank - x.rank || byRating(x, y);
   });
 

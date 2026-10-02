@@ -1,0 +1,47 @@
+.prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 1.25rem;
+}
+
+.text {
+  display: grid;
+  flex: 1;
+  gap: var(--space-1);
+}
+
+.lead {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.sub {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 768px) {
+  .prompt {
+    flex-direction: row;
+    align-items: center;
+  }
+}

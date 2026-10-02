@@ -11,7 +11,7 @@ export const BUSINESS_STATUS = { ACTIVE: "active", PENDING: "pending", SUSPENDED
 
 export const EVENT_TYPES = ["view", "call", "whatsapp", "directions"];
 
-export const SORTS = ["relevance", "distance", "rating"];
+export const SORTS = ["relevance", "distance", "rating", "newest"];
 
 export const COUNTIES = [
   "Nairobi",
