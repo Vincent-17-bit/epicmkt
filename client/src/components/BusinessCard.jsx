@@ -1,7 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPhone, faLocationArrow, faStar } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { directionsLink, telLink, whatsappLink } from "@epicmkt/shared";
+import { directionsLink, formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
 import { logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import Button from "./Button.jsx";
@@ -34,6 +34,17 @@ export default function BusinessCard({ business }) {
       )}
 
       <p className={styles.tagline}>{business.tagline}</p>
+
+      {(business.fromPriceKes != null || business.distanceKm != null) && (
+        <p className={styles.facts}>
+          {[
+            business.fromPriceKes != null && `From ${formatKes(business.fromPriceKes)}`,
+            business.distanceKm != null && `${formatDistance(business.distanceKm)} away`
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      )}
 
       <div className={styles.meta}>
         <span className={styles.rating}>

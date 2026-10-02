@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { faRotateRight, faArrowDown, faTableCells } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
@@ -27,13 +28,19 @@ function CardSkeleton() {
   );
 }
 
-export default function BusinessResults({ query = "", categoryId = null, filters = {}, onReset }) {
+export default function BusinessResults({ query = "", categoryId = null, filters = {}, onReset, onTotal, compact = false }) {
   const { data, isPending, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["businesses", { query, categoryId, filters }],
     queryFn: ({ pageParam }) => searchBusinesses({ query, categoryId, ...filters, page: pageParam, pageSize: PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined)
   });
+
+  const firstTotal = data?.pages[0].total;
+
+  useEffect(() => {
+    if (onTotal && firstTotal !== undefined) onTotal(firstTotal);
+  }, [onTotal, firstTotal]);
 
   if (isError) {
     return (
@@ -48,7 +55,7 @@ export default function BusinessResults({ query = "", categoryId = null, filters
 
   if (isPending) {
     return (
-      <CardGrid aria-busy="true">
+      <CardGrid aria-busy="true" compact={compact}>
         {Array.from({ length: 8 }, (_, i) => (
           <li key={i}>
             <CardSkeleton />
@@ -83,7 +90,7 @@ export default function BusinessResults({ query = "", categoryId = null, filters
       <p className={styles.count} aria-live="polite">
         {total} {total === 1 ? "business" : "businesses"} found
       </p>
-      <CardGrid>
+      <CardGrid compact={compact}>
         {items.map((business) => (
           <li key={business.id}>
             <BusinessCard business={business} />

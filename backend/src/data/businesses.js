@@ -1,4 +1,5 @@
 import { slugify } from "@epicmkt/shared";
+import { attributesById } from "./attributes.js";
 
 const week = (weekday, sat = weekday, sun = null) => ({
   mon: weekday, tue: weekday, wed: weekday, thu: weekday, fri: weekday, sat, sun
@@ -24,6 +25,7 @@ const make = (i, b) => ({
   email: null,
   socials: {},
   services: [],
+  attributes: attributesById[`b_${String(i).padStart(3, "0")}`] ?? {},
   stats: seedStats(i),
   createdAt: new Date(Date.UTC(2025, i % 12, 1 + (i % 27))).toISOString(),
   planExpiresAt: new Date(Date.UTC(2026, 9 + (i % 3), 1 + (i % 27))).toISOString(),

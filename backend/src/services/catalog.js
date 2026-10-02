@@ -20,6 +20,17 @@ const activeBusinesses = () => store.businesses.filter((b) => b.status === BUSIN
 const originOf = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 
+const fromPrice = (b) => {
+  const prices = b.services.map((svc) => svc.priceKes).filter(Number.isFinite);
+  return prices.length ? Math.min(...prices) : null;
+};
+
+const shuffleKey = (seed, id) => {
+  let h = 2166136261;
+  for (const ch of `${seed}:${id}`) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return h >>> 0;
+};
+
 const toSummary = (b, origin) => ({
   id: b.id,
   slug: b.slug,
@@ -35,6 +46,7 @@ const toSummary = (b, origin) => ({
   plan: b.plan,
   verified: b.verified,
   hue: b.hue,
+  fromPriceKes: fromPrice(b),
   phone: b.phone,
   whatsapp: b.whatsapp,
   lat: b.lat,
@@ -93,9 +105,17 @@ export async function searchBusinesses({
   query = "",
   categoryId = null,
   county = null,
+  area = null,
   openNow = false,
+  verifiedOnly = false,
+  featuredOnly = false,
+  radiusKm = null,
+  minPrice = null,
+  maxPrice = null,
+  attrs = {},
   minRating = 0,
   sort = "relevance",
+  seed = 0,
   lat,
   lng,
   page = 1,
@@ -104,27 +124,51 @@ export async function searchBusinesses({
   await delay();
   const origin = originOf(lat, lng);
   const tokens = normalizeText(query).split(" ").filter(Boolean);
+  const attrEntries = Object.entries(attrs);
 
-  let results = activeBusinesses()
+  const results = activeBusinesses()
     .filter((b) => !categoryId || b.categoryId === categoryId)
     .filter((b) => !county || b.county === county)
+    .filter((b) => !area || b.area === area)
     .filter((b) => b.rating >= minRating)
     .filter((b) => !openNow || isOpenNow(b.hours))
-    .map((b) => {
-      const score = scoreBusiness(b, tokens);
-      const boost = PLAN_FEATURES[b.plan].priorityRanking ? 3 : 0;
-      return { b, score, rank: score + boost, dist: origin ? distanceKm(origin, b) : null };
-    })
-    .filter((r) => r.score >= 0);
+    .filter((b) => !verifiedOnly || b.verified)
+    .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
+    .filter((b) => attrEntries.every(([key, value]) => String(b.attributes?.[key]) === String(value)))
+    .map((b) => ({
+      b,
+      score: scoreBusiness(b, tokens),
+      dist: origin ? distanceKm(origin, b) : null,
+      price: fromPrice(b),
+      shuffle: shuffleKey(seed, b.id)
+    }))
+    .filter((r) => r.score >= 0)
+    .filter((r) => !(origin && radiusKm) || r.dist <= radiusKm)
+    .filter((r) => minPrice == null || (r.price != null && r.price >= minPrice))
+    .filter((r) => maxPrice == null || (r.price != null && r.price <= maxPrice));
 
   const byRating = (x, y) => y.b.rating - x.b.rating || y.b.reviewCount - x.b.reviewCount;
+  const byPrice = (dir) => (x, y) => {
+    if (x.price == null || y.price == null) return (x.price == null) - (y.price == null);
+    return dir * (x.price - y.price) || byRating(x, y);
+  };
+  const isPremium = (r) => PLAN_FEATURES[r.b.plan].priorityRanking;
 
-  results.sort((x, y) => {
-    if (sort === "distance" && origin) return x.dist - y.dist;
-    if (sort === "rating") return byRating(x, y);
-    if (sort === "newest") return y.b.createdAt.localeCompare(x.b.createdAt) || byRating(x, y);
-    return y.rank - x.rank || byRating(x, y);
-  });
+  const comparators = {
+    distance: (x, y) => (origin ? x.dist - y.dist : 0) || byRating(x, y),
+    rating: byRating,
+    newest: (x, y) => y.b.createdAt.localeCompare(x.b.createdAt) || byRating(x, y),
+    price_asc: byPrice(1),
+    price_desc: byPrice(-1),
+    relevance: (x, y) => {
+      const px = isPremium(x);
+      if (px !== isPremium(y)) return px ? -1 : 1;
+      if (px) return y.score - x.score || x.shuffle - y.shuffle;
+      return y.score - x.score || (origin ? x.dist - y.dist : 0) || byRating(x, y);
+    }
+  };
+
+  results.sort(comparators[sort] ?? comparators.relevance);
 
   const total = results.length;
   const size = Math.max(1, pageSize);
@@ -134,6 +178,27 @@ export async function searchBusinesses({
     .map((r) => toSummary(r.b, origin));
 
   return { items, total, page: current, pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)) };
+}
+
+export async function getSearchFacets({ query = "", categoryId = null } = {}) {
+  await delay();
+  const tokens = normalizeText(query).split(" ").filter(Boolean);
+  const matched = activeBusinesses()
+    .filter((b) => !categoryId || b.categoryId === categoryId)
+    .filter((b) => scoreBusiness(b, tokens) >= 0);
+
+  const prices = matched.map(fromPrice).filter((n) => n != null);
+  const categoryIds = new Set(matched.map((b) => b.categoryId));
+  const scopedId = categoryId ?? (categoryIds.size === 1 ? [...categoryIds][0] : null);
+  const category = scopedId ? categoryOf(scopedId) : null;
+
+  return {
+    areas: [...new Set(matched.map((b) => b.area))].sort(),
+    price: prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null,
+    categoryId: scopedId,
+    categoryName: category?.name ?? null,
+    fields: (category?.fields ?? []).filter((f) => f.filterable)
+  };
 }
 
 export async function getSuggestions(prefix, limit = 6) {

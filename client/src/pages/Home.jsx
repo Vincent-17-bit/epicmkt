@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faArrowDown, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
 import { getCategories, getFeaturedBusinesses } from "../api/index.js";
-import { useGeoStore } from "../stores/geo.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
@@ -11,9 +10,8 @@ import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import CardGrid from "../components/CardGrid.jsx";
 import PageBanner from "../components/PageBanner.jsx";
-import BusinessResults from "../components/BusinessResults.jsx";
+import BrowseResults from "../components/BrowseResults.jsx";
 import BusinessRail from "../components/BusinessRail.jsx";
-import FilterBar from "../components/FilterBar.jsx";
 import HomeList from "../components/HomeList.jsx";
 import NearYou from "../components/NearYou.jsx";
 import NotFound from "./NotFound.jsx";
@@ -56,48 +54,6 @@ function Featured() {
   );
 }
 
-function CategoryResults({ slug }) {
-  const [params, setParams] = useSearchParams();
-  const coords = useGeoStore((s) => s.coords);
-  const requestGeo = useGeoStore((s) => s.request);
-
-  const county = params.get("county") ?? "";
-  const minRating = params.get("rating") ?? "0";
-  const openNow = params.get("open") === "1";
-  const sort = params.get("sort") ?? "relevance";
-  const active = Boolean(county) || minRating !== "0" || openNow || sort !== "relevance";
-
-  const change = (patch) => {
-    const next = new URLSearchParams(params);
-    const apply = (key, value, empty) => (value === empty ? next.delete(key) : next.set(key, value));
-    if ("county" in patch) apply("county", patch.county, "");
-    if ("minRating" in patch) apply("rating", patch.minRating, "0");
-    if ("openNow" in patch) apply("open", patch.openNow ? "1" : "", "");
-    if ("sort" in patch) {
-      apply("sort", patch.sort, "relevance");
-      if (patch.sort === "distance") requestGeo();
-    }
-    setParams(next, { replace: true });
-  };
-
-  const reset = () => setParams({}, { replace: true });
-
-  const filters = {
-    county: county || null,
-    minRating: Number(minRating),
-    openNow,
-    sort,
-    ...(coords ?? {})
-  };
-
-  return (
-    <>
-      <FilterBar filters={{ county, minRating, openNow, sort }} onChange={change} onReset={reset} active={active} />
-      <BusinessResults categoryId={slug} filters={filters} onReset={active ? reset : undefined} />
-    </>
-  );
-}
-
 export default function Home() {
   const { slug } = useParams();
   const [params] = useSearchParams();
@@ -133,7 +89,7 @@ export default function Home() {
         />
         <section className={styles.section}>
           <Container>
-            <CategoryResults slug={slug} />
+            <BrowseResults categoryId={slug} />
           </Container>
         </section>
       </>
@@ -146,7 +102,7 @@ export default function Home() {
         <PageBanner icon={faMagnifyingGlass} title={`Results for "${query}"`} />
         <section className={styles.section}>
           <Container>
-            <BusinessResults query={query} />
+            <BrowseResults query={query} />
           </Container>
         </section>
       </>

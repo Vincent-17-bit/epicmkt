@@ -1,0 +1,126 @@
+.panel {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.legend {
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  font-size: var(--text-md);
+  cursor: pointer;
+}
+
+.native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.box {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--text);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--on-primary);
+  font-size: 0.75rem;
+  transition: background-color var(--dur) ease;
+}
+
+.tick {
+  opacity: 0;
+}
+
+.native:checked + .box {
+  background: var(--primary);
+}
+
+.native:checked + .box .tick {
+  opacity: 1;
+}
+
+.native:focus-visible + .box {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .toggle:hover .box {
+    background: var(--primary-tint);
+  }
+
+  .toggle:hover .native:checked + .box {
+    background: var(--primary-hover);
+  }
+}
+
+.select,
+.input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-md);
+  transition: background-color var(--dur) ease, border-color var(--dur) ease;
+}
+
+@media (hover: hover) {
+  .select:hover,
+  .input:hover {
+    background: var(--primary-tint);
+    border-color: var(--text);
+  }
+}
+
+.range {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sub {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.subLabel {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
