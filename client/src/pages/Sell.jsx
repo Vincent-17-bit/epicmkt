@@ -151,7 +151,7 @@ export default function Sell() {
         </ul>
       </Container>
 
-      <section className={styles.band} aria-labelledby="how-title">
+      <section id="how" className={styles.band} aria-labelledby="how-title">
         <Container className={styles.section}>
           <div className={styles.head}>
             <h2 id="how-title" className={styles.h2}>

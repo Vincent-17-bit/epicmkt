@@ -8,6 +8,7 @@ import Sell from "./pages/Sell.jsx";
 import SellRegister from "./pages/SellRegister.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
+import Cookies from "./pages/Cookies.jsx";
 import Business from "./pages/Business.jsx";
 import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
           { path: "sell/register", element: <SellRegister /> },
           { path: "privacy", element: <Privacy /> },
           { path: "terms", element: <Terms /> },
+          { path: "cookies", element: <Cookies /> },
           { path: "offline", element: <OfflinePage /> },
           ...(import.meta.env.DEV
             ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("./pages/Styleguide.jsx")).default }) }]

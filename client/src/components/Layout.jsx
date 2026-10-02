@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useUiStore } from "../stores/ui.js";
 import { useGeoStore } from "../stores/geo.js";
@@ -10,6 +10,7 @@ import UpdatePrompt from "./UpdatePrompt.jsx";
 import styles from "./Layout.module.css";
 
 export default function Layout() {
+  const mainRef = useRef(null);
   const { pathname, hash } = useLocation();
   const menuOpen = useUiStore((s) => s.menuOpen);
   const searchOpen = useUiStore((s) => s.searchOpen);
@@ -22,7 +23,7 @@ export default function Layout() {
 
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
-    else window.scrollTo(0, 0);
+    else mainRef.current?.scrollTo(0, 0);
   }, [pathname, hash]);
 
   useEffect(() => {
@@ -40,10 +41,12 @@ export default function Layout() {
       <Header />
       <div className={styles.content} {...behind}>
         <OfflineBanner />
-        <main id="main" tabIndex={-1} className={styles.main}>
-          <Outlet />
+        <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
+          <div className={styles.page}>
+            <Outlet />
+          </div>
+          <Footer />
         </main>
-        <Footer />
       </div>
       <UpdatePrompt />
       <LocationDialog />

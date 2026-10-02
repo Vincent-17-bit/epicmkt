@@ -25,7 +25,7 @@
 
 .section {
   padding-block: clamp(var(--space-6), 6vw, var(--space-7));
-  scroll-margin-top: calc(var(--header-h) + var(--space-3));
+  scroll-margin-top: var(--space-3);
 }
 
 .heading {
