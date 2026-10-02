@@ -56,6 +56,16 @@ export default function BusinessCard({ business }) {
 
         <p className={styles.tagline}>{business.tagline}</p>
 
+        {business.highlights?.length > 0 && (
+          <ul className={styles.highlights} aria-label="Highlights">
+            {business.highlights.map((item) => (
+              <li key={item} className={styles.highlight}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        )}
+
         {(business.fromPriceKes != null || business.distanceKm != null) && (
           <p className={styles.facts}>
             {[

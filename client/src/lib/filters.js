@@ -1,4 +1,4 @@
-import { formatKes } from "@epicmkt/shared";
+import { describeFilter, formatKes } from "@epicmkt/shared";
 
 export const SORT_OPTIONS = [
   { value: "relevance", label: "Recommended" },
@@ -95,9 +95,7 @@ export function buildChips(filters, facets) {
   for (const field of facets?.fields ?? []) {
     const value = filters.attrs[field.key];
     if (!value) continue;
-    const label =
-      field.type === "boolean" ? field.label : `${field.label}: ${field.options.find((o) => o.value === value)?.label ?? value}`;
-    chips.push({ id: `f.${field.key}`, label, patch: { attrs: { [field.key]: "" } } });
+    chips.push({ id: `f.${field.key}`, label: describeFilter(field, value), patch: { attrs: { [field.key]: "" } } });
   }
   return chips;
 }

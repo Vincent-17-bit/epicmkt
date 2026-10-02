@@ -42,17 +42,6 @@ export const socialLinks = (socials = {}) =>
     .filter(([key, handle]) => SOCIALS[key] && handle)
     .map(([key, handle]) => ({ key, handle, ...SOCIALS[key], href: SOCIALS[key].url(handle) }));
 
-export function detailRows(category, attributes = {}) {
-  return (category?.fields ?? [])
-    .filter((field) => field.key in attributes)
-    .map((field) => {
-      const value = attributes[field.key];
-      if (field.type === "boolean") return { key: field.key, label: field.label, yes: Boolean(value), text: value ? "Yes" : "No" };
-      const option = field.options?.find((o) => o.value === value);
-      return { key: field.key, label: field.label, yes: null, text: option?.label ?? String(value) };
-    });
-}
-
 export function expiryText(iso) {
   const days = Math.ceil((Date.parse(iso) - Date.now()) / 86400000);
   if (days <= 1) return "Ends today";

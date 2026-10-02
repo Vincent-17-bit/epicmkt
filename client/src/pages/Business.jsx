@@ -10,21 +10,20 @@ import {
   faRotateRight,
   faShareNodes,
   faFlag,
-  faCheck,
-  faXmark,
   faTag,
   faMap
 } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { directionsLink, distanceKm, formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
+import { directionsLink, distanceKm, formatDistance, formatKes, telLink, visibleFields, whatsappLink } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { DAY_NAMES, WEEK, detailRows, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
+import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
+import TemplateDetails from "../components/TemplateDetails.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -107,7 +106,7 @@ export default function Business() {
   const today = todayKey();
   const origin = live ?? geo.coords;
   const distance = origin ? distanceKm(origin, data) : null;
-  const details = detailRows(data.category, data.attributes);
+  const hasDetails = visibleFields(data.category?.fields, data.attributes).some((f) => f.key in (data.attributes ?? {}));
   const socials = socialLinks(data.socials);
   const reviews = data.reviewCount > 0 ? `${data.rating.toFixed(1)} (${data.reviewCount})` : "New";
 
@@ -263,18 +262,9 @@ export default function Business() {
           </Section>
         )}
 
-        {details.length > 0 && (
+        {hasDetails && (
           <Section title={`${data.category?.singular} details`} id="details">
-            <ul className={styles.details}>
-              {details.map((row) => (
-                <li key={row.key} className={styles.detail}>
-                  {row.yes != null && <FontAwesomeIcon icon={row.yes ? faCheck : faXmark} className={row.yes ? styles.yes : styles.no} />}
-                  <span className={styles.detailLabel}>{row.label}</span>
-                  {row.yes == null && <strong>{row.text}</strong>}
-                  {row.yes != null && <span className={styles.srOnly}>{row.text}</span>}
-                </li>
-              ))}
-            </ul>
+            <TemplateDetails fields={data.category.fields} attributes={data.attributes} />
           </Section>
         )}
 

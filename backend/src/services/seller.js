@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, isValidPhoneKE, isOpenNow } from "@epicmkt/shared";
+import { PLAN_FEATURES, isValidPhoneKE, isOpenNow, validateAttributes } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
@@ -11,7 +11,7 @@ const findBySeller = (sellerId) => {
 
 const EDITABLE = [
   "tagline", "description", "phone", "whatsapp", "email", "address", "area",
-  "hours", "tags", "services", "socials", "gallery", "coverUrl", "logoUrl"
+  "hours", "tags", "services", "socials", "gallery", "coverUrl", "logoUrl", "attributes"
 ];
 
 const isImageRef = (value) => value === null || value === "" || /^(https?:\/\/|\/)/.test(value);
@@ -54,6 +54,11 @@ export async function updateSellerBusiness(sellerId, patch) {
   }
   for (const key of ["coverUrl", "logoUrl"]) {
     if (key in patch && !isImageRef(patch[key])) fields[key] = "Enter a valid image link";
+  }
+  if ("attributes" in patch) {
+    const category = store.categories.find((c) => c.id === business.categoryId);
+    const problems = validateAttributes(category?.fields, patch.attributes);
+    if (Object.keys(problems).length) fields.attributes = problems;
   }
   if ("socials" in patch && !features.socials && Object.keys(patch.socials).length) {
     fields.socials = "Social links need the Premium plan";

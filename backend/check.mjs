@@ -1,11 +1,34 @@
 import assert from "node:assert/strict";
-import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { validateTemplate, validateAttributes, FIELD_TYPES } from "@epicmkt/shared";
+import { categories as templates } from "./src/data/categories.js";
+import { businesses as seeded } from "./src/data/businesses.js";
+import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
 
 const cats = await getCategories();
-assert.equal(cats.length, 10);
+assert.equal(cats.length, 16);
+for (const c of templates) assert.deepEqual(validateTemplate(c.fields), [], c.id);
+for (const b of seeded) {
+  const template = templates.find((c) => c.id === b.categoryId);
+  assert.ok(template, b.id);
+  assert.deepEqual(validateAttributes(template.fields, b.attributes), {}, b.id);
+}
+for (const id of ["car-wash", "tailors", "mpesa", "groceries", "butchery", "bakery"]) {
+  assert.ok(seeded.some((b) => b.categoryId === id), id);
+}
+assert.ok(FIELD_TYPES.every((type) => templates.some((c) => c.fields.some((f) => f.type === type))), "every field type is used");
+
+const washes = await searchBusinesses({ categoryId: "car-wash", attrs: { vehicles: "matatus" } });
+assert.deepEqual(washes.items.map((b) => b.id), ["b_025"]);
+assert.equal((await searchBusinesses({ categoryId: "water-refill", attrs: { "price-20l": "-30" } })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "tailors", attrs: { condition: "mitumba" } })).total, 1);
+assert.equal((await searchBusinesses({ query: "nyama choma" })).items[0].categoryId, "butchery");
+assert.ok((await searchBusinesses({ categoryId: "butchery" })).items.every((b) => Array.isArray(b.highlights) && b.highlights.length > 0));
+const facets = await getSearchFacets({ categoryId: "mpesa" });
+assert.ok(facets.fields.some((f) => f.key === "networks"));
+assert.ok(Object.keys(validateAttributes(templates.find((c) => c.id === "bakery").fields, { notice: 3 })).includes("products"));
 
 const barbers = await searchBusinesses({ query: "barber" });
 assert.ok(barbers.items.length >= 3);
@@ -57,7 +80,7 @@ await assert.rejects(() => updateSellerBusiness("s_002", { plan: "premium" }), V
 assert.equal((await updateSellerBusiness("s_002", { tagline: "Updated" })).tagline, "Updated");
 
 const overview = await getOverview();
-assert.equal(overview.totalBusinesses, 24);
+assert.equal(overview.totalBusinesses, 36);
 assert.equal(overview.byStatus.pending, 1);
 await setBusinessStatus("b_023", "active");
 assert.equal((await listBusinesses({ status: "pending" })).total, 0);

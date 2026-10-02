@@ -1,20 +1,8 @@
 import { useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import Toggle from "./Toggle.jsx";
+import TemplateFilters from "./TemplateFilters.jsx";
 import { RADII } from "../lib/filters.js";
 import styles from "./FilterPanel.module.css";
-
-function Toggle({ checked, onChange, children }) {
-  return (
-    <label className={styles.toggle}>
-      <input type="checkbox" className={styles.native} checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      <span className={styles.box}>
-        <FontAwesomeIcon icon={faCheck} className={styles.tick} />
-      </span>
-      {children}
-    </label>
-  );
-}
 
 export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
   const [price, setPrice] = useState({ min: filters.minPrice, max: filters.maxPrice });
@@ -123,41 +111,7 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
         </div>
       )}
 
-      {facets?.fields?.length > 0 && (
-        <fieldset className={styles.group}>
-          <legend className={styles.legend}>{facets.categoryName}</legend>
-          {facets.fields.map((field) =>
-            field.type === "boolean" ? (
-              <Toggle
-                key={field.key}
-                checked={filters.attrs[field.key] === "true"}
-                onChange={(on) => onChange({ attrs: { [field.key]: on ? "true" : "" } })}
-              >
-                {field.label}
-              </Toggle>
-            ) : (
-              <div key={field.key} className={styles.sub}>
-                <label htmlFor={id(field.key)} className={styles.subLabel}>
-                  {field.label}
-                </label>
-                <select
-                  id={id(field.key)}
-                  className={styles.select}
-                  value={filters.attrs[field.key] ?? ""}
-                  onChange={(e) => onChange({ attrs: { [field.key]: e.target.value } })}
-                >
-                  <option value="">Any</option>
-                  {field.options.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )
-          )}
-        </fieldset>
-      )}
+      <TemplateFilters title={facets?.categoryName} fields={facets?.fields} attrs={filters.attrs} idPrefix={idPrefix} onChange={onChange} />
     </form>
   );
 }

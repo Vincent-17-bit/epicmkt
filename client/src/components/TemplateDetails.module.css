@@ -1,0 +1,124 @@
+.groups {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.groupTitle {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.value {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.yes,
+.no {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.yes svg {
+  color: var(--verified);
+}
+
+.no {
+  color: var(--text-muted);
+}
+
+.link {
+  text-underline-offset: 4px;
+  text-decoration-color: var(--link-underline);
+  text-decoration-thickness: 2px;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.long {
+  max-width: 40rem;
+  white-space: pre-line;
+}
+
+.chips,
+.items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.items {
+  display: grid;
+  gap: 0;
+  max-width: 28rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+}
+
+.item:nth-child(even) {
+  background: var(--surface-2);
+}
+
+.image {
+  width: 100%;
+  max-width: 28rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+}

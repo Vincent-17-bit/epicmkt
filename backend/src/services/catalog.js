@@ -4,7 +4,11 @@ import {
   BUSINESS_STATUS,
   REPORT_REASONS,
   closingInfo,
+  cardFacts,
   distanceKm,
+  filterableFields,
+  matchesFilter,
+  searchableText,
   isOpenNow,
   normalizeText,
   todayHours
@@ -16,6 +20,14 @@ import { NotFoundError, ValidationError } from "../errors.js";
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
 const categoryOf = (id) => store.categories.find((c) => c.id === id) ?? null;
+
+const matchesAttrs = (b, entries) => {
+  const fields = categoryOf(b.categoryId)?.fields ?? [];
+  return entries.every(([key, value]) => {
+    const field = fields.find((f) => f.key === key);
+    return field ? matchesFilter(field, b.attributes?.[key], String(value)) : false;
+  });
+};
 
 const activeBusinesses = () => store.businesses.filter((b) => b.status === BUSINESS_STATUS.ACTIVE);
 
@@ -51,6 +63,7 @@ const toSummary = (b, origin) => ({
   coverUrl: b.coverUrl ?? null,
   logoUrl: b.logoUrl ?? null,
   fromPriceKes: fromPrice(b),
+  highlights: cardFacts(categoryOf(b.categoryId)?.fields, b.attributes),
   phone: b.phone,
   whatsapp: b.whatsapp,
   lat: b.lat,
@@ -81,6 +94,7 @@ const scoreBusiness = (b, tokens) => {
     [normalizeText(b.tags.join(" ")), 4],
     [normalizeText(categoryOf(b.categoryId)?.name), 3],
     [normalizeText(`${b.area} ${b.county}`), 2],
+    [normalizeText(searchableText(categoryOf(b.categoryId)?.fields, b.attributes)), 2],
     [normalizeText(`${b.tagline} ${b.description}`), 1]
   ];
   let total = 0;
@@ -141,7 +155,7 @@ export async function searchBusinesses({
     .filter((b) => !openNow || isOpenNow(b.hours))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
-    .filter((b) => attrEntries.every(([key, value]) => String(b.attributes?.[key]) === String(value)))
+    .filter((b) => matchesAttrs(b, attrEntries))
     .map((b) => ({
       b,
       score: scoreBusiness(b, tokens),
@@ -204,7 +218,7 @@ export async function getSearchFacets({ query = "", categoryId = null } = {}) {
     price: prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null,
     categoryId: scopedId,
     categoryName: category?.name ?? null,
-    fields: (category?.fields ?? []).filter((f) => f.filterable)
+    fields: filterableFields(category?.fields)
   };
 }
 

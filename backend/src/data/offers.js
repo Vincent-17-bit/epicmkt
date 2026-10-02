@@ -25,5 +25,7 @@ export const offersById = {
   b_017: [offer("o1", "Braids and wig bundle", "KSh 500 off when you book braids with a wig install.", 20)],
   b_018: [offer("o1", "Free diagnostics", "Free diagnostics with any basic service.", 10)],
   b_022: [offer("o1", "Biryani Friday", "Two chicken biryani plates for KSh 1,000 every Friday.", 28)],
+  b_025: [offer("o1", "Full wash combo", "Full wash plus tyre shine for KSh 450 on weekdays.", 16)],
+  b_035: [offer("o1", "Order a cake, get cupcakes", "Free box of 6 cupcakes with any cake ordered 3 days ahead.", 22)],
   b_021: [offer("o1", "Lunch special", "Chapati and beans with tea for KSh 150, 12pm to 2pm.", -3)]
 };
