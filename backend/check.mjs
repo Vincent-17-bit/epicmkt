@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, resolveShortcode, reportBusiness, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
@@ -22,6 +22,17 @@ const biz = await getBusiness("fade-kings-barbershop");
 assert.equal(biz.id, "b_001");
 assert.equal(biz.sellerId, undefined);
 await assert.rejects(() => getBusiness("old-lake-chemist"), { name: "NotFoundError" });
+
+assert.ok(biz.coverUrl && biz.logoUrl && biz.services.every((svc) => svc.imageUrl) && biz.gallery.every((g) => g.url));
+assert.equal(biz.offers.length, 2);
+assert.ok(biz.offers.every((o) => Date.parse(o.expiresAt) > Date.now()));
+assert.equal((await getBusiness("b_021")).offers.length, 0);
+assert.ok(biz.closesAt || biz.opensAt);
+assert.equal((await resolveShortcode(biz.shortcode)).slug, biz.slug);
+await assert.rejects(() => resolveShortcode("nope"), { name: "NotFoundError" });
+assert.equal((await reportBusiness({ businessId: "b_001", reason: "closed" })).ok, true);
+await assert.rejects(() => reportBusiness({ businessId: "b_001", reason: "x" }), ValidationError);
+await assert.rejects(() => reportBusiness({ businessId: "zzz", reason: "closed" }), { name: "NotFoundError" });
 
 assert.ok((await getSuggestions("bar")).length > 0);
 assert.ok((await getNearbyBusinesses({ lat: -0.0058, lng: 34.6, radiusKm: 3 })).length >= 5);

@@ -1,12 +1,19 @@
 import { slugify } from "@epicmkt/shared";
 import { attributesById } from "./attributes.js";
+import { offersById } from "./offers.js";
+import { coverArt, logoArt, serviceArt, galleryArt } from "./art.js";
 
 const week = (weekday, sat = weekday, sun = null) => ({
   mon: weekday, tue: weekday, wed: weekday, thu: weekday, fri: weekday, sat, sun
 });
 
 const gallery = (hue, labels) =>
-  labels.map((caption, i) => ({ id: `g${i + 1}`, hue: (hue + i * 28) % 360, caption }));
+  labels.map((caption, i) => {
+    const h = (hue + i * 28) % 360;
+    return { id: `g${i + 1}`, hue: h, caption, url: galleryArt(h, caption) };
+  });
+
+const shortcodeOf = (i) => Math.imul(i, 2654435761).toString(36).replace("-", "").slice(0, 6).padStart(6, "0");
 
 const seedStats = (i) => ({
   view: 140 + ((i * 97) % 520),
@@ -15,22 +22,33 @@ const seedStats = (i) => ({
   directions: 9 + ((i * 23) % 70)
 });
 
-const make = (i, b) => ({
-  id: `b_${String(i).padStart(3, "0")}`,
-  slug: slugify(b.name),
-  sellerId: `s_${String(i).padStart(3, "0")}`,
-  status: "active",
-  plan: "standard",
-  verified: false,
-  email: null,
-  socials: {},
-  services: [],
-  attributes: attributesById[`b_${String(i).padStart(3, "0")}`] ?? {},
-  stats: seedStats(i),
-  createdAt: new Date(Date.UTC(2025, i % 12, 1 + (i % 27))).toISOString(),
-  planExpiresAt: new Date(Date.UTC(2026, 9 + (i % 3), 1 + (i % 27))).toISOString(),
-  ...b
-});
+const make = (i, b) => {
+  const id = `b_${String(i).padStart(3, "0")}`;
+  const hue = b.hue ?? 210;
+  return {
+    id,
+    slug: slugify(b.name),
+    shortcode: shortcodeOf(i),
+    sellerId: `s_${String(i).padStart(3, "0")}`,
+    status: "active",
+    plan: "standard",
+    verified: false,
+    email: null,
+    socials: {},
+    attributes: attributesById[id] ?? {},
+    offers: offersById[id] ?? [],
+    stats: seedStats(i),
+    createdAt: new Date(Date.UTC(2025, i % 12, 1 + (i % 27))).toISOString(),
+    planExpiresAt: new Date(Date.UTC(2026, 9 + (i % 3), 1 + (i % 27))).toISOString(),
+    coverUrl: coverArt(hue, b.name),
+    logoUrl: logoArt(hue, b.name),
+    ...b,
+    services: (b.services ?? []).map((svc, n) => ({
+      ...svc,
+      imageUrl: svc.imageUrl ?? serviceArt((hue + n * 24) % 360, svc.name)
+    }))
+  };
+};
 
 export const businesses = [
   make(1, {

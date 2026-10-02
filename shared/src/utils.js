@@ -77,3 +77,17 @@ export function isOpenNow(hours, date) {
   const end = toMinutes(slot[1]);
   return end > start ? minutes >= start && minutes < end : minutes >= start || minutes < end;
 }
+
+export function closingInfo(hours, date) {
+  const now = nairobiNow(date);
+  const slot = hours[now.day];
+  const open = isOpenNow(hours, date);
+  if (open) return { closesAt: slot[1], opensAt: null };
+  if (slot && now.minutes < toMinutes(slot[0])) return { closesAt: null, opensAt: { day: now.day, time: slot[0] } };
+  const start = DAYS.indexOf(now.day);
+  for (let step = 1; step <= 7; step += 1) {
+    const day = DAYS[(start + step) % 7];
+    if (hours[day]) return { closesAt: null, opensAt: { day, time: hours[day][0] } };
+  }
+  return { closesAt: null, opensAt: null };
+}

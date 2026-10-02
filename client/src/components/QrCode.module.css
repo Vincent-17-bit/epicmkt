@@ -1,0 +1,13 @@
+.qr {
+  width: 9rem;
+  aspect-ratio: 1;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

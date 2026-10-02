@@ -5,6 +5,7 @@ import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import Faq from "./pages/Faq.jsx";
 import Business from "./pages/Business.jsx";
+import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
           { path: "b/:slug", element: <Business /> },
+          { path: "s/:shortcode", element: <ShortLink /> },
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },

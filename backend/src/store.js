@@ -23,5 +23,6 @@ export const store = {
   businesses: structuredClone(businesses),
   searches: seedSearchEvents,
   events: [],
+  reports: [],
   latency: { min: 150, max: 450 }
 };

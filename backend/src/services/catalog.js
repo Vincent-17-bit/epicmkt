@@ -2,6 +2,8 @@ import {
   PLAN_FEATURES,
   EVENT_TYPES,
   BUSINESS_STATUS,
+  REPORT_REASONS,
+  closingInfo,
   distanceKm,
   isOpenNow,
   normalizeText,
@@ -9,7 +11,7 @@ import {
 } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
-import { NotFoundError } from "../errors.js";
+import { NotFoundError, ValidationError } from "../errors.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
@@ -59,8 +61,11 @@ const toSummary = (b, origin) => ({
 
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
+  const now = Date.now();
   return {
     ...rest,
+    offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
+    ...closingInfo(b.hours),
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
     isOpen: isOpenNow(b.hours),
@@ -235,6 +240,38 @@ export async function getBusiness(ref, { lat, lng } = {}) {
   const business = activeBusinesses().find((b) => b.id === ref || b.slug === ref);
   if (!business) throw new NotFoundError("Business not found");
   return toPublic(business, originOf(lat, lng));
+}
+
+export async function resolveShortcode(code) {
+  await delay();
+  const clean = String(code ?? "").trim().toLowerCase();
+  const business = activeBusinesses().find((b) => b.shortcode === clean);
+  if (!business) throw new NotFoundError("Business not found");
+  return { slug: business.slug };
+}
+
+export async function reportBusiness({ businessId, reason, message = "", contact = "" } = {}) {
+  await delay();
+  const fields = {};
+  const business = store.businesses.find((b) => b.id === businessId || b.slug === businessId);
+  if (!business) throw new NotFoundError("Business not found");
+  if (!REPORT_REASONS.some((r) => r.value === reason)) fields.reason = "Choose a reason";
+  const text = String(message).trim();
+  if (text.length > 500) fields.message = "Keep it under 500 characters";
+  if (reason === "other" && text.length < 5) fields.message = "Tell us what is wrong";
+  const reach = String(contact).trim();
+  if (reach.length > 80) fields.contact = "Keep it under 80 characters";
+  if (Object.keys(fields).length) throw new ValidationError("Please fix the highlighted fields", fields);
+  const report = {
+    id: `r_${String(store.reports.length + 1).padStart(4, "0")}`,
+    businessId: business.id,
+    reason,
+    message: text,
+    contact: reach,
+    at: new Date().toISOString()
+  };
+  store.reports.push(report);
+  return { ok: true, id: report.id };
 }
 
 export async function getFeaturedBusinesses({ categoryId = null, limit = 6, lat, lng } = {}) {

@@ -12,3 +12,5 @@ export const getSimilarBusinesses = (ref, limit) => backend.getSimilarBusinesses
 export const getTopSearches = (limit) => backend.getTopSearches(limit);
 export const logSearch = (term) => backend.logSearch(term);
 export const logContactEvent = (event) => backend.logContactEvent(event);
+export const resolveShortcode = (code) => backend.resolveShortcode(code);
+export const reportBusiness = (report) => backend.reportBusiness(report);
