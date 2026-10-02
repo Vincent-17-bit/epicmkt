@@ -162,3 +162,16 @@
     justify-content: flex-end;
   }
 }
+
+.noteBtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}

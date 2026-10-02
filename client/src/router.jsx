@@ -4,6 +4,8 @@ import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
 import Contact from "./pages/Contact.jsx";
 import Faq from "./pages/Faq.jsx";
+import Privacy from "./pages/Privacy.jsx";
+import Terms from "./pages/Terms.jsx";
 import Business from "./pages/Business.jsx";
 import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
@@ -26,6 +28,8 @@ export const router = createBrowserRouter([
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },
+          { path: "privacy", element: <Privacy /> },
+          { path: "terms", element: <Terms /> },
           { path: "offline", element: <OfflinePage /> },
           ...(import.meta.env.DEV
             ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("./pages/Styleguide.jsx")).default }) }]

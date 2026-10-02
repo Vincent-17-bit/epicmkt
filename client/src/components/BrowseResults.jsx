@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -23,10 +23,6 @@ export default function BrowseResults({ query = "", categoryId = null }) {
   const filters = useMemo(() => readFilters(params), [params]);
   const needsGeo = filters.sort === "distance" || filters.radius > 0;
 
-  useEffect(() => {
-    if (needsGeo) requestGeo();
-  }, [needsGeo, requestGeo]);
-
   const { data: facets } = useQuery({
     queryKey: ["facets", query, categoryId],
     queryFn: () => getSearchFacets({ query, categoryId }),
@@ -40,12 +36,7 @@ export default function BrowseResults({ query = "", categoryId = null }) {
   const chips = buildChips(filters, facets);
   const apiFilters = useMemo(() => toApiFilters(filters, coords, rotationSeed()), [filters, coords]);
 
-  const geoNote =
-    needsGeo && !coords
-      ? geoStatus === "denied" || geoStatus === "unsupported"
-        ? "Allow location access to sort and filter by distance."
-        : "Finding your location…"
-      : null;
+  const geoNote = needsGeo && !coords ? (geoStatus === "asking" ? "Finding your location…" : "Set your location to sort and filter by distance.") : null;
 
   return (
     <div className={styles.layout}>
@@ -77,6 +68,14 @@ export default function BrowseResults({ query = "", categoryId = null }) {
         {geoNote && (
           <p className={styles.note} role="status">
             {geoNote}
+            {geoStatus !== "asking" && (
+              <>
+                {" "}
+                <button type="button" className={styles.noteBtn} onClick={requestGeo}>
+                  Set location
+                </button>
+              </>
+            )}
           </p>
         )}
 

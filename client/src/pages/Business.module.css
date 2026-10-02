@@ -474,3 +474,8 @@
     display: none;
   }
 }
+
+.note {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

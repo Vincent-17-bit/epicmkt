@@ -60,14 +60,14 @@ export default function Business() {
   const [live, setLive] = useState(null);
 
   useEffect(() => {
-    if (geo.status !== "granted") return undefined;
+    if (geo.status !== "granted" || geo.source !== "device") return undefined;
     const id = navigator.geolocation.watchPosition(
       (pos) => setLive({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => {},
       { enableHighAccuracy: false, maximumAge: 30000 }
     );
     return () => navigator.geolocation.clearWatch(id);
-  }, [geo.status]);
+  }, [geo.status, geo.source]);
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["business", slug],
@@ -174,10 +174,12 @@ export default function Business() {
           <li>
             <FontAwesomeIcon icon={faLocationArrow} />
             {distance != null ? (
-              <span>{formatDistance(distance)} from you</span>
+              <span>
+                {formatDistance(distance)} away <span className={styles.note}>(straight line{geo.town ? ` from ${geo.town}` : ""})</span>
+              </span>
             ) : (
               <button type="button" className={styles.linkBtn} onClick={geo.request} disabled={geo.status === "asking"}>
-                {geo.status === "asking" ? "Finding you" : geo.status === "denied" ? "Location blocked in your browser" : "Show distance from me"}
+                {geo.status === "asking" ? "Finding you" : geo.status === "denied" || geo.status === "unsupported" ? "Choose your town to see distance" : "Show distance from me"}
               </button>
             )}
           </li>

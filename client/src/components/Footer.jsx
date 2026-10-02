@@ -21,6 +21,12 @@ export default function Footer() {
           <Link to="/#categories" className={styles.link}>
             Categories
           </Link>
+          <Link to="/privacy" className={styles.link}>
+            Privacy
+          </Link>
+          <Link to="/terms" className={styles.link}>
+            Terms
+          </Link>
         </nav>
         <ThemeSwitch />
       </Container>

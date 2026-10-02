@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import InfoPage from "../components/InfoPage.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Faq.module.css";
@@ -37,18 +38,35 @@ const faqs = [
 
 export default function Faq() {
   usePageTitle("FAQs");
+  const [openIndex, setOpenIndex] = useState(null);
   return (
     <InfoPage title="Frequently asked questions">
       <div className={styles.list}>
-        {faqs.map((item) => (
-          <details key={item.q} className={styles.item}>
-            <summary className={styles.summary}>
-              <span>{item.q}</span>
-              <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} />
-            </summary>
-            <p className={styles.answer}>{item.a}</p>
-          </details>
-        ))}
+        {faqs.map((item, i) => {
+          const open = openIndex === i;
+          return (
+            <div key={item.q} className={`${styles.item} ${open ? styles.open : ""}`}>
+              <h2 className={styles.heading}>
+                <button
+                  type="button"
+                  className={styles.summary}
+                  id={`faq-q-${i}`}
+                  aria-expanded={open}
+                  aria-controls={`faq-a-${i}`}
+                  onClick={() => setOpenIndex(open ? null : i)}
+                >
+                  <span>{item.q}</span>
+                  <FontAwesomeIcon icon={open ? faMinus : faPlus} className={styles.icon} />
+                </button>
+              </h2>
+              <div id={`faq-a-${i}`} role="region" aria-labelledby={`faq-q-${i}`} className={styles.panel}>
+                <div className={styles.clip}>
+                  <p className={styles.answer}>{item.a}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </InfoPage>
   );

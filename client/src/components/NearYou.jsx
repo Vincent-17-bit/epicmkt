@@ -19,19 +19,19 @@ function Prompt({ status, onAsk }) {
         <FontAwesomeIcon icon={faLocationDot} />
       </span>
       <div className={styles.text}>
-        <p className={styles.lead}>{denied ? "Location is unavailable" : "See what is closest to you"}</p>
+        <p className={styles.lead}>{denied ? "Location is turned off" : "See what is closest to you"}</p>
         <p className={styles.sub}>
           {denied
-            ? "Allow location access in your browser to see nearby businesses, or browse by category."
-            : "Share your location once and we will show businesses around you. It never leaves your device."}
+            ? "Choose your town to see businesses near you, or browse by category."
+            : "Share your location or choose your town and we will show businesses around you."}
         </p>
       </div>
       <Button
-        icon={denied ? faRotateRight : faLocationCrosshairs}
+        icon={denied ? faLocationDot : faLocationCrosshairs}
         disabled={status === "asking"}
         onClick={onAsk}
       >
-        {status === "asking" ? "Locating…" : denied ? "Try again" : "Use my location"}
+        {status === "asking" ? "Locating…" : denied ? "Choose your town" : "Set my location"}
       </Button>
     </div>
   );
@@ -41,6 +41,7 @@ export default function NearYou() {
   const status = useGeoStore((s) => s.status);
   const coords = useGeoStore((s) => s.coords);
   const request = useGeoStore((s) => s.request);
+  const town = useGeoStore((s) => s.town);
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["nearby", coords],
@@ -87,12 +88,22 @@ export default function NearYou() {
   }
 
   return (
-    <CardGrid>
-      {data.map((business) => (
-        <li key={business.id}>
-          <BusinessCard business={business} />
-        </li>
-      ))}
-    </CardGrid>
+    <>
+      {town && (
+        <p className={styles.where}>
+          Showing businesses near {town}.{" "}
+          <button type="button" className={styles.change} onClick={request}>
+            Change
+          </button>
+        </p>
+      )}
+      <CardGrid>
+        {data.map((business) => (
+          <li key={business.id}>
+            <BusinessCard business={business} />
+          </li>
+        ))}
+      </CardGrid>
+    </>
   );
 }

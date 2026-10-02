@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useUiStore } from "../stores/ui.js";
+import { useGeoStore } from "../stores/geo.js";
+import LocationDialog from "./LocationDialog.jsx";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
 import OfflineBanner from "./OfflineBanner.jsx";
@@ -13,6 +15,10 @@ export default function Layout() {
   const searchOpen = useUiStore((s) => s.searchOpen);
   const layered = menuOpen || searchOpen;
   const behind = layered ? { inert: "", "aria-hidden": true } : {};
+
+  useEffect(() => {
+    useGeoStore.getState().restore();
+  }, []);
 
   useEffect(() => {
     if (hash) document.getElementById(hash.slice(1))?.scrollIntoView();
@@ -40,6 +46,7 @@ export default function Layout() {
         <Footer />
       </div>
       <UpdatePrompt />
+      <LocationDialog />
     </div>
   );
 }
