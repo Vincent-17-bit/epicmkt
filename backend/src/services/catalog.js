@@ -46,6 +46,8 @@ const toSummary = (b, origin) => ({
   plan: b.plan,
   verified: b.verified,
   hue: b.hue,
+  coverUrl: b.coverUrl ?? null,
+  logoUrl: b.logoUrl ?? null,
   fromPriceKes: fromPrice(b),
   phone: b.phone,
   whatsapp: b.whatsapp,

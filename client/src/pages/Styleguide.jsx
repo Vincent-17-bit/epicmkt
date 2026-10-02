@@ -54,6 +54,8 @@ const pairs = [
 
 const sample = {
   id: "styleguide",
+  slug: "mwangi-barbers",
+  hue: 210,
   name: "Mwangi Barbers",
   plan: "premium",
   verified: true,

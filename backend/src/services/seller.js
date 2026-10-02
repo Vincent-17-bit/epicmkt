@@ -11,8 +11,10 @@ const findBySeller = (sellerId) => {
 
 const EDITABLE = [
   "tagline", "description", "phone", "whatsapp", "email", "address", "area",
-  "hours", "tags", "services", "socials", "gallery"
+  "hours", "tags", "services", "socials", "gallery", "coverUrl", "logoUrl"
 ];
+
+const isImageRef = (value) => value === null || value === "" || /^(https?:\/\/|\/)/.test(value);
 
 export async function getSellerBusiness(sellerId) {
   await delay();
@@ -49,6 +51,9 @@ export async function updateSellerBusiness(sellerId, patch) {
   }
   for (const key of ["phone", "whatsapp"]) {
     if (key in patch && !isValidPhoneKE(patch[key])) fields[key] = "Enter a valid Kenyan number";
+  }
+  for (const key of ["coverUrl", "logoUrl"]) {
+    if (key in patch && !isImageRef(patch[key])) fields[key] = "Enter a valid image link";
   }
   if ("socials" in patch && !features.socials && Object.keys(patch.socials).length) {
     fields.socials = "Social links need the Premium plan";
