@@ -125,7 +125,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-theme="light">
       <Container className={styles.top}>
         <div className={`${styles.brand} ${styles.about}`}>
           <Logo />

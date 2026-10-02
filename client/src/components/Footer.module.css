@@ -1,4 +1,5 @@
 .footer {
+  --footer-accent: #0a6aa8;
   margin-top: var(--space-8);
   padding-block: var(--space-6) calc(var(--space-5) + var(--safe-bottom));
   background: var(--footer-bg);
@@ -155,7 +156,7 @@
 .rowIcon {
   flex: none;
   width: 1rem;
-  color: var(--verified);
+  color: var(--footer-accent);
 }
 
 .rowLink,
@@ -179,8 +180,9 @@
 .rowLink:focus-visible,
 .link:focus-visible {
   background: var(--primary-tint);
+  color: var(--footer-accent);
   text-decoration: underline;
-  text-decoration-color: var(--primary);
+  text-decoration-color: var(--footer-accent);
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
 }
@@ -189,8 +191,9 @@
   .rowLink:hover,
   .link:hover {
     background: var(--primary-tint);
+    color: var(--footer-accent);
     text-decoration: underline;
-    text-decoration-color: var(--primary);
+    text-decoration-color: var(--footer-accent);
     text-decoration-thickness: 2px;
     text-underline-offset: 4px;
   }
