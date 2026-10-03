@@ -97,3 +97,57 @@ assert.equal((await listBusinesses({ status: "pending" })).total, 0);
 assert.equal((await searchBusinesses({ query: "phone" })).total, 1);
 
 console.log("all checks passed");
+
+{
+  const { getItemDetail, getStoreSelective, getFlashForItem, advanceClock, resetClock, runSweep } = await import("./src/index.js");
+  const { store } = await import("./src/store.js");
+
+  const live = await getItemDetail("fade-and-beard", { businessId: "b_001" });
+  assert.equal(live.flash.sale.id, "f_001");
+  assert.equal(live.pricing.regularPrice, 300);
+  assert.equal(live.pricing.salePrice, 240);
+  assert.equal(live.pricing.savings, 60);
+  assert.equal(live.pricing.discountPercent, 20);
+  assert.ok(live.flash.remainingMs > 0);
+  assert.equal(live.business.slug, "fade-kings-barbershop");
+
+  const plain = await getItemDetail("haircut", { businessId: "b_001" });
+  assert.equal(plain.flash, null);
+  assert.equal(plain.pricing.salePrice, plain.pricing.regularPrice);
+  assert.equal(plain.pricing.savings, 0);
+
+  const braids = await getItemDetail("box-braids", { businessId: "b_017" });
+  const medium = braids.pricing.variants.find((v) => v.id === "medium");
+  const small = braids.pricing.variants.find((v) => v.id === "small");
+  assert.equal(medium.salePrice, 2000);
+  assert.equal(small.salePrice, 3150);
+  assert.ok(braids.pricing.variants.every((v) => v.salePrice <= v.regularPrice));
+
+  assert.equal(await getFlashForItem("10l-refill", "b_004"), null);
+  await assert.rejects(() => getItemDetail("nope", { businessId: "b_001" }), { name: "NotFoundError" });
+
+  const selective = await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 12 });
+  assert.ok(selective.every((i) => i.id !== "haircut"));
+  assert.deepEqual(selective.map((i) => i.id), ["fade-and-beard", "kids-cut"]);
+  const sectionLast = (await getStoreSelective("b_017", { excludeItemId: "wig-install" })).map((i) => i.id);
+  assert.equal(sectionLast.length, 2);
+  assert.equal((await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 1 })).length, 1);
+  assert.deepEqual(await getStoreSelective("missing"), []);
+
+  advanceClock(6 * 3600000);
+  assert.equal((await getFlashForItem("10l-refill", "b_004")).sale.id, "f_004");
+  advanceClock(8 * 3600000);
+  runSweep();
+  assert.equal(store.flashSales.find((s) => s.id === "f_003").status, "ended");
+  const unlisted = store.businesses.find((b) => b.id === "b_010").services.find((s) => s.id === "dairy-meal-70kg");
+  assert.equal(unlisted.status, "unlisted");
+  assert.equal(unlisted.unlistReason, "flash_ended");
+  assert.equal(store.notifications.at(-1).type, "flash_sale_ended");
+  await assert.rejects(() => getItemDetail("dairy-meal-70kg", { businessId: "b_010" }), { name: "NotFoundError" });
+  assert.ok(!(await getBusiness("b_010")).services.some((s) => s.id === "dairy-meal-70kg"));
+  advanceClock(30 * 3600000);
+  assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).flash, null);
+  assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).pricing.salePrice, 300);
+  resetClock();
+}
+console.log("items ok");

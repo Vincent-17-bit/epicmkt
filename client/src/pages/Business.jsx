@@ -27,7 +27,7 @@ import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import ItemSheet from "../components/ItemSheet.jsx";
+import ItemDetail from "../components/ItemDetail.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -96,9 +96,10 @@ export default function Business() {
     showToast(t("item.unavailable"));
   }, [data, itemId, item, setSearchParams]);
 
-  const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: true } });
+  const depth = location.state?.sheet ?? 0;
+  const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: depth + 1 } });
   const closeItem = () => {
-    if (location.state?.sheet) navigate(-1);
+    if (depth > 0) navigate(-depth);
     else
       setSearchParams(
         (prev) => {
@@ -391,7 +392,16 @@ export default function Business() {
       </nav>
 
       <Lightbox items={data.gallery} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
-      <ItemSheet business={data} item={item} onClose={closeItem} />
+      {item && (
+        <ItemDetail
+          business={data}
+          itemId={item.id}
+          distanceKm={distance}
+          onClose={closeItem}
+          onSelect={openItem}
+          onReport={() => setReporting(true)}
+        />
+      )}
       <ReportDialog business={data} open={reporting} onClose={() => setReporting(false)} />
     </article>
   );

@@ -16,6 +16,7 @@ import {
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
+import { runSweep } from "../promotions.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
@@ -79,6 +80,7 @@ const toPublic = (b, origin) => {
   return {
     ...rest,
     offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
+    services: b.services.filter((svc) => svc.status !== "unlisted"),
     ...closingInfo(b.hours),
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
@@ -267,6 +269,7 @@ export async function getSuggestions(prefix, limit = 6) {
 
 export async function getBusiness(ref, { lat, lng } = {}) {
   await delay();
+  runSweep();
   const business = activeBusinesses().find((b) => b.id === ref || b.slug === ref);
   if (!business) throw new NotFoundError("Business not found");
   return toPublic(business, originOf(lat, lng));

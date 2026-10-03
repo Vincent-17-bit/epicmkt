@@ -63,7 +63,11 @@ export const businesses = [
     rating: 4.8, reviewCount: 126, hue: 210,
     tags: ["haircut", "fade", "beard trim", "kids cut", "shave"],
     socials: { instagram: "fadekingsmaseno", facebook: "fadekingsmaseno", tiktok: "fadekings.ke" },
-    services: [{ name: "Haircut", priceKes: 150 }, { name: "Fade and beard", priceKes: 300 }, { name: "Kids cut", priceKes: 100 }],
+    services: [
+      { name: "Haircut", priceKes: 150, section: "Cuts", description: "Clean cut with clippers and scissors, finished with a neck shave.", availability: "available" },
+      { name: "Fade and beard", priceKes: 300, section: "Cuts", description: "Skin or taper fade with full beard shaping and line-up.", specs: [{ label: "Duration", value: "45 minutes" }, { label: "Includes", value: "Hot towel" }] },
+      { name: "Kids cut", priceKes: 100, section: "Cuts", description: "Patient barbers for children under 12.", availability: "limited" }
+    ],
     gallery: gallery(210, ["Shop front", "Fade work", "Beard trim", "Waiting area", "Kids corner", "Tools"])
   }),
   make(2, {
@@ -172,7 +176,10 @@ export const businesses = [
     rating: 4.7, reviewCount: 102, hue: 110,
     tags: ["seeds", "fertiliser", "animal feeds", "veterinary", "dairy meal", "farm tools"],
     socials: { facebook: "greenfieldagrovet", tiktok: "greenfield.agrovet" },
-    services: [{ name: "Certified maize seed 2kg", priceKes: 650 }, { name: "Dairy meal 70kg", priceKes: 2900 }],
+    services: [
+      { name: "Certified maize seed 2kg", priceKes: 650, section: "Seed", description: "Certified hybrid maize seed for the long rains.", specs: [{ label: "Pack size", value: "2 kg" }, { label: "Maturity", value: "120 to 140 days" }, { label: "Germination", value: "90% minimum" }] },
+      { name: "Dairy meal 70kg", priceKes: 2900, section: "Feeds", description: "Balanced dairy ration for milking cows.", specs: [{ label: "Pack size", value: "70 kg" }, { label: "Protein", value: "16%" }] }
+    ],
     gallery: gallery(110, ["Seed shelves", "Feed store", "Vet counter", "Farm tools"])
   }),
   make(11, {
@@ -256,7 +263,16 @@ export const businesses = [
     rating: 4.8, reviewCount: 143, hue: 330,
     tags: ["braids", "weaves", "wigs", "natural hair", "cornrows"],
     socials: { instagram: "crownbraidske", tiktok: "crownbraids", facebook: "crownbraidske" },
-    services: [{ name: "Box braids", priceKes: 2500 }, { name: "Cornrows", priceKes: 800 }, { name: "Wig install", priceKes: 1200 }],
+    services: [
+      {
+        name: "Box braids", priceKes: 2500, section: "Braids",
+        description: "Neat box braids in your chosen length. Hair not included.",
+        variants: [{ id: "small", label: "Small", price: 3500 }, { id: "medium", label: "Medium", price: 2500 }, { id: "jumbo", label: "Jumbo", price: 1800 }],
+        specs: [{ group: "Service", label: "Duration", value: "4 to 6 hours" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }]
+      },
+      { name: "Cornrows", priceKes: 800, section: "Braids", description: "Straight-back or styled cornrows." },
+      { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited" }
+    ],
     gallery: gallery(330, ["Braiding area", "Wig display", "Results", "Reception"])
   }),
   make(18, {

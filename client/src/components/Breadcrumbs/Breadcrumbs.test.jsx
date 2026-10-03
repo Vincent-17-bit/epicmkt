@@ -1,11 +1,25 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Breadcrumbs from "./Breadcrumbs.jsx";
-import ItemSheet from "../ItemSheet.jsx";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import ItemDetail from "../ItemDetail.jsx";
 
-vi.mock("../../api/index.js", () => ({ logContactEvent: vi.fn() }));
+const detail = {
+  id: "skin-fade",
+  name: "Skin fade",
+  images: [],
+  specs: [],
+  availability: "available",
+  pricing: { regularPrice: 300, salePrice: 300, savings: 0, discountPercent: 0, variants: [] },
+  business: { slug: "fade-kings", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678", townName: "Maseno", isOpen: true }
+};
+
+vi.mock("../../api/index.js", () => ({
+  logContactEvent: vi.fn(),
+  items: { getDetail: vi.fn(async () => detail), getStoreSelective: vi.fn(async () => []) }
+}));
 
 const trail4 = [
   { key: "home", label: "Home", to: "/", icon: "house" },
@@ -30,7 +44,7 @@ function Where() {
 const mount = (ui, entry = "/") =>
   render(
     <MemoryRouter initialEntries={[entry]}>
-      {ui}
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>{ui}</QueryClientProvider>
       <Where />
     </MemoryRouter>
   );
@@ -143,22 +157,22 @@ describe("Item sheet trail", () => {
     return (
       <>
         <Breadcrumbs trail={open ? trail5 : trail4.slice(0, 3).concat([{ key: "b", label: business.name }])} compact={false} />
-        <ItemSheet business={business} item={open ? item : null} onClose={() => window.__closed?.()} />
+        {open && <ItemDetail business={business} itemId="skin-fade" onClose={() => window.__closed?.()} onSelect={() => {}} onReport={() => {}} />}
       </>
     );
   }
 
-  it("shows a compact trail with the business and the item", () => {
-    mount(<ItemSheet business={business} item={item} onClose={() => {}} />);
+  it("shows a compact trail with the business and the item", async () => {
+    mount(<ItemDetail business={business} itemId="skin-fade" onClose={() => {}} onSelect={() => {}} onReport={() => {}} />);
     const nav = screen.getByRole("navigation", { name: "Item" });
     expect(within(nav).getByRole("button", { name: /Fade Kings Barbershop/ })).toBeInTheDocument();
-    expect(within(nav).getByText("Skin fade")).toHaveAttribute("aria-current", "page");
+    await waitFor(() => expect(within(nav).getByText("Skin fade")).toHaveAttribute("aria-current", "page"));
   });
 
   it("closes the sheet when the Business button is pressed", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    mount(<ItemSheet business={business} item={item} onClose={onClose} />);
+    mount(<ItemDetail business={business} itemId="skin-fade" onClose={onClose} onSelect={() => {}} onReport={() => {}} />);
     await user.click(screen.getByRole("button", { name: /Fade Kings Barbershop/ }));
     expect(onClose).toHaveBeenCalled();
   });

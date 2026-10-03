@@ -16,3 +16,11 @@ export const resolveShortcode = (code) => backend.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => backend.getTowns();
 export const logEvent = (name, payload) => backend.logEvent(name, payload);
+export const getServerTime = () => backend.getServerTime();
+export const items = {
+  getDetail: (itemId, opts) => backend.getItemDetail(itemId, opts),
+  getStoreSelective: (businessId, opts) => backend.getStoreSelective(businessId, opts)
+};
+export const flash = {
+  getForItem: (itemId, businessId) => backend.getFlashForItem(itemId, businessId)
+};

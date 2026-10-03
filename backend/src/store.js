@@ -1,5 +1,6 @@
 import { categories } from "./data/categories.js";
 import { businesses } from "./data/businesses.js";
+import { seedFlashSales } from "./data/flashSales.js";
 
 const seedSearches = [
   ["barbershop", 412], ["water refill", 366], ["chemist", 341], ["agrovet", 287],
@@ -25,5 +26,7 @@ export const store = {
   events: [],
   analytics: [],
   reports: [],
+  flashSales: seedFlashSales(),
+  notifications: [],
   latency: { min: 150, max: 450 }
 };
