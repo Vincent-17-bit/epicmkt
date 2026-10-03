@@ -28,7 +28,7 @@ function Panel({ id, title, open, onToggle, children }) {
   );
 }
 
-export default function ItemSpecs({ item, category, attributes }) {
+export default function ItemSpecs({ item, category, attributes, onExpand }) {
   const uid = useId();
   const [open, setOpen] = useState({ specs: true });
   const [all, setAll] = useState(false);
@@ -37,7 +37,14 @@ export default function ItemSpecs({ item, category, attributes }) {
   const total = countRows(groups);
   const shown = all ? groups : limitGroups(groups, SPEC_LIMIT);
   const includes = item.includes ?? [];
-  const toggle = (key) => () => setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  const toggle = (key) => () => {
+    if (!open[key]) onExpand?.(key);
+    setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+  const toggleAll = () => {
+    if (!all) onExpand?.("specs_all");
+    setAll((v) => !v);
+  };
 
   const panels = [
     total > 0 && {
@@ -59,7 +66,7 @@ export default function ItemSpecs({ item, category, attributes }) {
             </div>
           ))}
           {total > SPEC_LIMIT && (
-            <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll((v) => !v)}>
+            <button type="button" className={styles.more} aria-expanded={all} onClick={toggleAll}>
               {all ? t("item.showLess") : t("item.showAll")}
             </button>
           )}

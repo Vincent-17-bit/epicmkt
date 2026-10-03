@@ -11,6 +11,8 @@ const detail = {
   name: "Skin fade",
   images: [],
   specs: [],
+  offers: [],
+  flash: null,
   availability: "available",
   pricing: { regularPrice: 300, salePrice: 300, savings: 0, discountPercent: 0, variants: [] },
   business: { slug: "fade-kings", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678", townName: "Maseno", isOpen: true }
@@ -18,6 +20,7 @@ const detail = {
 
 vi.mock("../../api/index.js", () => ({
   logContactEvent: vi.fn(),
+  logEvent: vi.fn(),
   items: { getDetail: vi.fn(async () => detail), getStoreSelective: vi.fn(async () => []) }
 }));
 

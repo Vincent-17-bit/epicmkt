@@ -128,11 +128,25 @@ console.log("all checks passed");
 
   const selective = await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 12 });
   assert.ok(selective.every((i) => i.id !== "haircut"));
-  assert.deepEqual(selective.map((i) => i.id), ["fade-and-beard", "kids-cut"]);
+  assert.equal(selective.length, 9);
+  assert.equal(selective[0].id, "fade-and-beard");
+  const sameSection = selective.filter((i) => i.section === "Cuts").length;
+  assert.ok(selective.slice(0, sameSection).every((i) => i.section === "Cuts"));
   const sectionLast = (await getStoreSelective("b_017", { excludeItemId: "wig-install" })).map((i) => i.id);
-  assert.equal(sectionLast.length, 2);
+  assert.equal(sectionLast.length, 9);
   assert.equal((await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 1 })).length, 1);
   assert.deepEqual(await getStoreSelective("missing"), []);
+
+  const { getOffers } = await import("./src/index.js");
+  const forFade = await getItemDetail("fade-and-beard", { businessId: "b_001" });
+  assert.deepEqual(forFade.offers.map((o) => o.offer.id), ["p_001"]);
+  assert.equal(forFade.offers[0].appliesToLabel, "Whole store");
+  assert.ok(forFade.offers[0].remainingMs > 0);
+  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_001" })).offers.map((o) => o.offer.id).sort(), ["p_001", "p_002"]);
+  assert.deepEqual((await getItemDetail("hair-dye", { businessId: "b_001" })).offers.map((o) => o.offer.id), ["p_001"]);
+  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_002" })).offers, []);
+  assert.equal((await getOffers({ businessId: "b_001" })).items.length, 2);
+  assert.equal((await getItemDetail("box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Braids");
 
   advanceClock(6 * 3600000);
   assert.equal((await getFlashForItem("10l-refill", "b_004")).sale.id, "f_004");
@@ -148,6 +162,17 @@ console.log("all checks passed");
   advanceClock(30 * 3600000);
   assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).flash, null);
   assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).pricing.salePrice, 300);
+  advanceClock(6 * 86400000);
+  runSweep();
+  assert.equal(store.offers.find((o) => o.id === "p_001").status, "expired");
+  assert.deepEqual((await getItemDetail("fade-and-beard", { businessId: "b_001" })).offers, []);
+  assert.equal(store.offers.find((o) => o.id === "p_010").status, "active");
   resetClock();
+}
+
+for (const b of seeded.filter((x) => ["barbershops", "salons", "gyms", "chemists", "agrovets", "hardware"].includes(x.categoryId))) {
+  assert.ok(b.services.length >= 8, b.id);
+  assert.ok(b.services.every((svc) => svc.specs.length >= 4 && svc.specs.length <= 10), b.id);
+  assert.ok(b.services.every((svc) => svc.description), b.id);
 }
 console.log("items ok");

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
+  faBoxOpen,
   faChevronLeft,
   faChevronRight,
   faCircleCheck,
@@ -15,33 +16,46 @@ import {
   faXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
-import { items, logContactEvent } from "../api/index.js";
+import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, defaultVariantId } from "../lib/itemView.js";
+import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
+import FlashBanner from "./FlashBanner.jsx";
+import OfferStrip from "./OfferStrip.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
 import styles from "./ItemDetail.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const external = { target: "_blank", rel: "noopener noreferrer" };
+const MAX_TIMEOUT = 2147483647;
 
 export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport }) {
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
   const titleRef = useRef(null);
+  const viewed = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const [choice, setChoice] = useState({ itemId: null, variantId: null });
 
-  const { data: detail, isError, error, refetch } = useQuery({
+  const { data: detail, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["item", business.id, itemId],
     queryFn: () => items.getDetail(itemId, { businessId: business.id }),
     retry: false,
-    staleTime: 30_000
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true
   });
+
+  const gone = isError && error?.name === "NotFoundError";
+  const current = !gone && detail?.id === itemId ? detail : null;
+  const failed = isError && !gone && !current;
+
+  useItemJsonLd(current);
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -81,16 +95,25 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   }, [itemId]);
 
   useEffect(() => {
-    if (detail?.id === itemId) titleRef.current?.focus({ preventScroll: true });
-  }, [detail?.id, itemId]);
+    if (current || gone) titleRef.current?.focus({ preventScroll: true });
+  }, [current?.id, gone, itemId]);
 
   useEffect(() => {
-    if (!isError || error?.name !== "NotFoundError") return;
-    showToast(t("item.unavailable"));
-    closeRef.current();
-  }, [isError, error]);
+    if (!current || viewed.current === current.id) return;
+    viewed.current = current.id;
+    logEvent("item_view", { businessId: business.id, itemId: current.id, kind: current.kind, flash: Boolean(current.flash) });
+  }, [current?.id]);
 
-  const current = detail?.id === itemId ? detail : null;
+  useEffect(() => {
+    if (!current) return undefined;
+    const waits = [current.flash?.remainingMs, ...current.offers.map((view) => view.remainingMs)].filter((ms) => Number.isFinite(ms));
+    if (!waits.length) return undefined;
+    const wait = Math.min(...waits) + 300;
+    if (wait > MAX_TIMEOUT) return undefined;
+    const id = window.setTimeout(() => refetch(), wait);
+    return () => window.clearTimeout(id);
+  }, [dataUpdatedAt, current?.id]);
+
   const variants = current?.pricing?.variants ?? [];
   const activeId = choice.itemId === itemId ? choice.variantId : defaultVariantId(current?.pricing);
   const variant = variants.find((v) => v.id === activeId) ?? null;
@@ -98,7 +121,14 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const seller = current?.business ?? null;
   const message = current ? chatMessage({ item: current, variant, pricing: current.pricing }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
-  const track = (type) => () => logContactEvent({ businessId: business.id, type });
+
+  const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
+  const onChat = (placement) => () => {
+    logContactEvent({ businessId: business.id, type: "whatsapp" });
+    track("chat_seller_click", { placement, variantId: variant?.id ?? null, flash: Boolean(current?.flash) });
+  };
+  const onVisit = (placement) => () => track("visit_store_click", { placement });
+  const onCall = () => logContactEvent({ businessId: business.id, type: "call" });
 
   const share = async () => {
     const url = `${window.location.origin}/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
@@ -114,6 +144,19 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     }
   };
 
+  const selective = (
+    <StoreSelective
+      businessId={business.id}
+      businessSlug={business.slug}
+      excludeItemId={itemId}
+      onSelect={(next, index) => {
+        track("store_selective_click", { targetItemId: next.id, position: index + 1 });
+        onSelect(next.id);
+      }}
+      onSeeAll={() => track("store_selective_click", { target: "see_all" })}
+    />
+  );
+
   return (
     <div className={styles.root}>
       <div className={styles.scrim} onClick={onClose} aria-hidden="true" />
@@ -122,7 +165,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
         className={styles.sheet}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="item-title"
+        aria-labelledby={current || gone ? "item-title" : undefined}
+        aria-label={current || gone ? undefined : business.name}
         tabIndex={-1}
       >
         <header className={styles.header}>
@@ -148,7 +192,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
         </header>
 
         <div ref={bodyRef} className={styles.body}>
-          {isError && error?.name !== "NotFoundError" && (
+          {failed && (
             <div className={styles.state} role="alert">
               <p>{t("item.loadFailed")}</p>
               <button type="button" className={styles.retry} onClick={() => refetch()}>
@@ -158,20 +202,51 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
             </div>
           )}
 
-          {!current && !isError && (
+          {gone && (
+            <>
+              <div className={styles.state}>
+                <FontAwesomeIcon icon={faBoxOpen} className={styles.goneIcon} aria-hidden="true" />
+                <h2 id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
+                  {t("item.gone")}
+                </h2>
+                <p className={styles.description}>{t("item.goneHint")}</p>
+                <Link to={`/b/${business.slug}`} className={`${styles.outline} ${styles.single}`} onClick={onVisit("gone")}>
+                  <FontAwesomeIcon icon={faStore} className={styles.icon} aria-hidden="true" />
+                  <span>{t("item.visitStore")}</span>
+                </Link>
+              </div>
+              {selective}
+            </>
+          )}
+
+          {!current && !gone && !failed && (
             <div aria-busy="true">
               <Skeleton height="auto" radius="0" className={styles.skeletonMedia} />
+              <div className={styles.skeletonThumbs}>
+                {[0, 1, 2].map((n) => (
+                  <Skeleton key={n} width="56px" height="56px" radius="var(--radius-sm)" />
+                ))}
+              </div>
               <div className={styles.info}>
                 <Skeleton height="1.75rem" width="70%" />
                 <Skeleton height="1.5rem" width="35%" />
                 <Skeleton height="1rem" width="90%" />
+                <Skeleton height="1rem" width="60%" />
               </div>
+              <div className={styles.skeletonSpecs}>
+                {[0, 1, 2].map((n) => (
+                  <Skeleton key={n} height="52px" radius="var(--radius-sm)" />
+                ))}
+              </div>
+              {selective}
             </div>
           )}
 
           {current && (
             <>
               <ItemGallery key={current.id} images={current.images} name={current.name} />
+
+              {current.flash && <FlashBanner key={current.flash.sale.id} flash={current.flash} receivedAt={dataUpdatedAt} />}
 
               <div className={styles.info}>
                 <div className={styles.badges}>
@@ -208,6 +283,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                     )}
                   </div>
                 )}
+
+                <OfferStrip key={current.id} offers={current.offers} />
 
                 {variants.length > 0 && (
                   <div role="radiogroup" aria-label={t("item.options")} className={styles.variants}>
@@ -256,18 +333,18 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 </div>
 
                 <div className={styles.actions}>
-                  <Link to={`/b/${seller.slug}`} className={styles.outline}>
+                  <Link to={`/b/${seller.slug}`} className={styles.outline} onClick={onVisit("card")}>
                     <FontAwesomeIcon icon={faStore} className={styles.icon} aria-hidden="true" />
                     <span>{t("item.visitStore")}</span>
                   </Link>
-                  <a href={chatHref} {...external} className={styles.outline} onClick={track("whatsapp")}>
+                  <a href={chatHref} {...external} className={styles.outline} onClick={onChat("card")}>
                     <FontAwesomeIcon icon={faCommentDots} className={styles.icon} aria-hidden="true" />
                     <span>{t("item.chatSeller")}</span>
                   </a>
                 </div>
 
                 <div className={styles.secondary}>
-                  <a href={telLink(seller.phone)} className={styles.ghost} onClick={track("call")}>
+                  <a href={telLink(seller.phone)} className={styles.ghost} onClick={onCall}>
                     <FontAwesomeIcon icon={faPhone} aria-hidden="true" />
                     <span>{t("item.call")}</span>
                   </a>
@@ -284,25 +361,26 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 <p className={styles.note}>{t("item.disclaimer")}</p>
               </section>
 
-              <StoreSelective
-                businessId={business.id}
-                businessSlug={business.slug}
-                excludeItemId={current.id}
-                onSelect={(next) => onSelect(next.id)}
-              />
+              {selective}
 
-              <ItemSpecs key={current.id} item={current} category={business.category} attributes={business.attributes} />
+              <ItemSpecs
+                key={current.id}
+                item={current}
+                category={business.category}
+                attributes={business.attributes}
+                onExpand={(panel) => track("spec_expand", { panel })}
+              />
             </>
           )}
         </div>
 
         {current && (
           <footer className={styles.footer}>
-            <a href={chatHref} {...external} className={styles.chat} onClick={track("whatsapp")}>
+            <a href={chatHref} {...external} className={styles.chat} onClick={onChat("footer")}>
               <FontAwesomeIcon icon={faCommentDots} className={styles.icon} aria-hidden="true" />
               <span>{t("item.chatSeller")}</span>
             </a>
-            <Link to={`/b/${seller.slug}`} className={styles.outline}>
+            <Link to={`/b/${seller.slug}`} className={styles.outline} onClick={onVisit("footer")}>
               <FontAwesomeIcon icon={faStore} className={styles.icon} aria-hidden="true" />
               <span>{t("item.visitStore")}</span>
             </Link>

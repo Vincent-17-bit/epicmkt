@@ -1,0 +1,54 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.note {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.timer {
+  display: grid;
+  flex: none;
+  justify-items: end;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.clock {
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}

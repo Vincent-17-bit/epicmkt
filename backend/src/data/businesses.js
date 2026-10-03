@@ -2,6 +2,7 @@ import { slugify } from "@epicmkt/shared";
 import { attributesById } from "./attributes.js";
 import { offersById } from "./offers.js";
 import { coverArt, logoArt, serviceArt, galleryArt } from "./art.js";
+import { completeServices } from "./catalogItems.js";
 
 const week = (weekday, sat = weekday, sun = null) => ({
   mon: weekday, tue: weekday, wed: weekday, thu: weekday, fri: weekday, sat, sun
@@ -44,7 +45,7 @@ const make = (i, b) => {
     logoUrl: logoArt(hue, b.name),
     ...b,
     townSlug: slugify(b.area),
-    services: (b.services ?? []).map((svc, n) => ({
+    services: completeServices(b.categoryId, b.services ?? [], i).map((svc, n) => ({
       ...svc,
       id: svc.id ?? slugify(svc.name),
       imageUrl: svc.imageUrl ?? serviceArt((hue + n * 24) % 360, svc.name)
@@ -272,7 +273,7 @@ export const businesses = [
         term: "Lasts 4 to 6 weeks",
         terms: "A KSh 500 deposit secures your slot. Hair extensions are not included.",
         includes: ["Hair parting and braiding", "Ends sealed"],
-        specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }]
+        specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }, { group: "Booking", label: "Cancel", value: "24 hours notice" }]
       },
       { name: "Cornrows", priceKes: 800, section: "Braids", description: "Straight-back or styled cornrows." },
       { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited" }

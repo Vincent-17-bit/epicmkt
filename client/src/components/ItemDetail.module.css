@@ -153,6 +153,27 @@
   aspect-ratio: 4 / 3;
 }
 
+.skeletonThumbs {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4) 0;
+}
+
+.skeletonSpecs {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.goneIcon {
+  color: var(--text-muted);
+  font-size: var(--text-3xl);
+}
+
+.single {
+  min-width: 12rem;
+}
+
 .state {
   display: grid;
   justify-items: center;

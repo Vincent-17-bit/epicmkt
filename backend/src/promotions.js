@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS } from "@epicmkt/shared";
+import { BUSINESS_STATUS, nairobiNow, slugify } from "@epicmkt/shared";
 import { store } from "./store.js";
 import { now } from "./clock.js";
 
@@ -57,6 +57,37 @@ export function liveSaleFor(item, business, at = now()) {
   );
 }
 
+const offerApplies = (offer, item) => {
+  if (offer.appliesTo === "store") return true;
+  if (offer.appliesTo === "items") return offer.itemIds.includes(item.id);
+  return Boolean(item.section) && slugify(item.section) === offer.sectionId;
+};
+
+const offerLive = (offer, at) =>
+  (offer.status === "active" || offer.status === "scheduled") &&
+  (!offer.startsAt || Date.parse(offer.startsAt) <= at) &&
+  (!offer.endsAt || at < Date.parse(offer.endsAt));
+
+const dayAllowed = (offer, at) => {
+  const days = offer.conditions?.daysOfWeek;
+  if (!days?.length) return true;
+  return days.includes(nairobiNow(new Date(at)).day);
+};
+
+export function liveOffersFor(item, business, at = now()) {
+  if (!item || !business || business.status !== BUSINESS_STATUS.ACTIVE || item.status !== "listed") return [];
+  return store.offers
+    .filter((offer) => offer.businessId === business.id && offerLive(offer, at) && offerApplies(offer, item) && dayAllowed(offer, at))
+    .sort((a, b) => (a.endsAt ? Date.parse(a.endsAt) : Infinity) - (b.endsAt ? Date.parse(b.endsAt) : Infinity));
+}
+
+export function appliesToLabel(offer, business) {
+  if (offer.appliesTo === "store") return "Whole store";
+  if (offer.appliesTo === "items") return `${offer.itemIds.length} selected ${offer.itemIds.length === 1 ? "item" : "items"}`;
+  const section = business.services.find((svc) => svc.section && slugify(svc.section) === offer.sectionId)?.section;
+  return section ?? "Selected section";
+}
+
 export function endSale(sale, reason) {
   const at = new Date(now()).toISOString();
   sale.status = "ended";
@@ -81,6 +112,10 @@ export function endSale(sale, reason) {
 
 export function runSweep() {
   const at = now();
+  for (const offer of store.offers) {
+    if (offer.status === "scheduled" && (!offer.startsAt || at >= Date.parse(offer.startsAt))) offer.status = "active";
+    if (offer.status === "active" && offer.endsAt && at >= Date.parse(offer.endsAt)) offer.status = "expired";
+  }
   for (const sale of store.flashSales) {
     if (sale.status === "scheduled" && at >= Date.parse(sale.startsAt)) sale.status = "live";
     if (sale.status === "live" && at >= Date.parse(sale.endsAt)) endSale(sale, "time");

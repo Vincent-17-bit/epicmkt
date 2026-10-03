@@ -4,7 +4,8 @@ import { delay } from "../latency.js";
 import { now } from "../clock.js";
 import { NotFoundError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
-import { buildPricing, liveSaleFor, runSweep } from "../promotions.js";
+import { defaultKind } from "../data/catalogItems.js";
+import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
 
@@ -42,6 +43,7 @@ const toItem = (business, svc, index) => {
     unit: svc.unit ?? null,
     status: svc.status ?? "listed",
     unlistReason: svc.unlistReason ?? null,
+    kind: svc.kind ?? defaultKind(business.categoryId),
     section: svc.section ?? null,
     availability: svc.availability ?? "available",
     variants: svc.variants ?? [],
@@ -80,6 +82,14 @@ const flashParts = (item, sale) => ({
   remainingMs: Math.max(0, Date.parse(sale.endsAt) - now())
 });
 
+const offerViews = (item, business) =>
+  liveOffersFor(item, business).map((offer) => ({
+    offer,
+    business: sellerCard(business, null),
+    remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - now()) : null,
+    appliesToLabel: appliesToLabel(offer, business)
+  }));
+
 const originOf = (origin) =>
   origin && Number.isFinite(origin.lat) && Number.isFinite(origin.lng) ? origin : null;
 
@@ -115,8 +125,23 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
     ...item,
     business: sellerCard(business, originOf(origin)),
     pricing: buildPricing(item, sale),
-    flash: sale ? flashParts(item, sale) : null
+    flash: sale ? flashParts(item, sale) : null,
+    offers: offerViews(item, business)
   };
+}
+
+export async function getOffers({ businessId, itemId, limit = 20 } = {}) {
+  await delay();
+  runSweep();
+  const business = store.businesses.find((b) => b.id === businessId || b.slug === businessId);
+  if (!business || business.status !== BUSINESS_STATUS.ACTIVE) return { items: [], serverNow: new Date(now()).toISOString() };
+  const found = itemId ? locate(itemId, business.id) : null;
+  const views = found
+    ? offerViews(found.item, business)
+    : store.offers
+        .filter((offer) => offer.businessId === business.id && offer.status === "active")
+        .map((offer) => ({ offer, business: sellerCard(business, null), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - now()) : null, appliesToLabel: appliesToLabel(offer, business) }));
+  return { items: views.slice(0, limit), serverNow: new Date(now()).toISOString() };
 }
 
 export async function getStoreSelective(businessId, { excludeItemId, limit = 12 } = {}) {

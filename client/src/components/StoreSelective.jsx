@@ -12,7 +12,7 @@ import styles from "./StoreSelective.module.css";
 const LIMIT = 12;
 const DRAG_THRESHOLD = 5;
 
-export default function StoreSelective({ businessId, businessSlug, excludeItemId, onSelect }) {
+export default function StoreSelective({ businessId, businessSlug, excludeItemId, onSelect, onSeeAll }) {
   const rowRef = useRef(null);
   const drag = useRef({ active: false, moved: false, startX: 0, startLeft: 0 });
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -124,13 +124,13 @@ export default function StoreSelective({ businessId, businessSlug, excludeItemId
               ))
             : (
               <>
-                {data.map((item) => (
+                {data.map((item, index) => (
                   <li key={item.id} className={styles.cell}>
-                    <ItemCard item={item} onSelect={onSelect} />
+                    <ItemCard item={item} onSelect={(picked) => onSelect?.(picked, index)} />
                   </li>
                 ))}
                 <li className={styles.cell}>
-                  <Link to={`/b/${businessSlug}`} className={styles.tile} data-tile="" draggable="false">
+                  <Link to={`/b/${businessSlug}`} className={styles.tile} data-tile="" draggable="false" onClick={onSeeAll}>
                     <span>{t("item.seeAll")}</span>
                     <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
                   </Link>

@@ -66,3 +66,69 @@ export function limitGroups(groups, max = LIMIT_ROWS) {
 
 export const countRows = (groups) => groups.reduce((sum, g) => sum + g.rows.length, 0);
 export const SPEC_LIMIT = LIMIT_ROWS;
+
+const pad2 = (n) => String(n).padStart(2, "0");
+
+export function countdown(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const seconds = total % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
+}
+
+export function offerValueLabel(offer) {
+  if (offer.valueText) return offer.valueText;
+  if (offer.kind === "percent_off" && offer.value != null) return `${offer.value}% off`;
+  if (offer.kind === "amount_off" && offer.value != null) return `${kes(offer.value)} off`;
+  if (offer.kind === "freebie") return "Free gift";
+  if (offer.kind === "free_service") return "Free";
+  return "Offer";
+}
+
+export function offerExpiry(remainingMs) {
+  if (remainingMs == null) return null;
+  const hours = Math.floor(remainingMs / 3600000);
+  if (hours >= 24) return `${Math.floor(hours / 24)}d`;
+  if (hours >= 1) return `${hours}h`;
+  return `${Math.max(1, Math.ceil(remainingMs / 60000))}m`;
+}
+
+const AVAILABILITY = {
+  available: "https://schema.org/InStock",
+  limited: "https://schema.org/LimitedAvailability",
+  unavailable: "https://schema.org/OutOfStock"
+};
+
+export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
+  const seller = {
+    "@type": "LocalBusiness",
+    name: item.business.name,
+    url: `${siteUrl}/b/${item.business.slug}`
+  };
+  const url = `${siteUrl}/b/${item.business.slug}?item=${encodeURIComponent(item.id)}`;
+  const data = {
+    "@context": "https://schema.org",
+    "@type": item.kind === "service" ? "Service" : "Product",
+    name: item.name,
+    url,
+    ...(item.description ? { description: item.description } : {}),
+    ...(item.images?.length ? { image: item.images.map((image) => image.url) } : {})
+  };
+  if (item.kind === "service") data.provider = seller;
+  else data.brand = { "@type": "Brand", name: item.business.name };
+  if (item.pricing) {
+    data.offers = {
+      "@type": "Offer",
+      url,
+      priceCurrency: "KES",
+      price: item.pricing.salePrice,
+      availability: AVAILABILITY[item.availability] ?? AVAILABILITY.available,
+      seller,
+      ...(item.flash ? { priceValidUntil: item.flash.sale.endsAt } : {})
+    };
+  }
+  return data;
+}

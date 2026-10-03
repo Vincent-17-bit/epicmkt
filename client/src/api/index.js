@@ -24,3 +24,6 @@ export const items = {
 export const flash = {
   getForItem: (itemId, businessId) => backend.getFlashForItem(itemId, businessId)
 };
+export const offers = {
+  list: (params) => backend.getOffers(params)
+};

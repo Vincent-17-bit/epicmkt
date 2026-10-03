@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,7 +19,6 @@ import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
-import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
@@ -80,21 +79,20 @@ export default function Business() {
     retry: false
   });
 
-  const item = itemId ? data?.services?.find((svc) => svc.id === itemId) ?? null : null;
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
 
+  const seeded = useRef(null);
   useEffect(() => {
-    if (!data || !itemId || item) return;
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("item");
-        return next;
-      },
-      { replace: true }
-    );
-    showToast(t("item.unavailable"));
-  }, [data, itemId, item, setSearchParams]);
+    if (!data || !itemId || (location.state?.sheet ?? 0) > 0 || seeded.current === location.key) return;
+    seeded.current = location.key;
+    const base = new URLSearchParams(searchParams);
+    base.delete("item");
+    const query = (params) => (params.toString() ? `?${params}` : "");
+    navigate({ pathname: location.pathname, search: query(base) }, { replace: true });
+    const withItem = new URLSearchParams(base);
+    withItem.set("item", itemId);
+    navigate({ pathname: location.pathname, search: query(withItem) }, { state: { sheet: 1 } });
+  }, [data, itemId, location.key]);
 
   const depth = location.state?.sheet ?? 0;
   const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: depth + 1 } });
@@ -392,10 +390,10 @@ export default function Business() {
       </nav>
 
       <Lightbox items={data.gallery} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
-      {item && (
+      {itemId && (
         <ItemDetail
           business={data}
-          itemId={item.id}
+          itemId={itemId}
           distanceKm={distance}
           onClose={closeItem}
           onSelect={openItem}
