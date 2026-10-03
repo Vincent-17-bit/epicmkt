@@ -8,6 +8,14 @@ import { buildPricing, liveSaleFor, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
 
+const SHORT_MAX = 140;
+
+const shorten = (text) => {
+  if (text.length <= SHORT_MAX) return text;
+  const cut = text.slice(0, SHORT_MAX);
+  return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
+};
+
 const toItem = (business, svc, index) => {
   const hue = business.hue ?? 210;
   const images = svc.images ?? [0, 1, 2].map((k) => ({
@@ -21,6 +29,12 @@ const toItem = (business, svc, index) => {
     businessSlug: business.slug,
     name: svc.name,
     description: svc.description ?? "",
+    shortDescription: svc.shortDescription ?? shorten(svc.description ?? ""),
+    includes: svc.includes ?? [],
+    terms: svc.terms ?? "",
+    duration: svc.duration ?? null,
+    term: svc.term ?? null,
+    packSize: svc.packSize ?? null,
     imageUrl: svc.imageUrl,
     images,
     regularPrice: Number.isFinite(svc.priceKes) ? svc.priceKes : null,

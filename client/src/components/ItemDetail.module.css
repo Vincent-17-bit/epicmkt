@@ -302,48 +302,6 @@
   line-height: 1.55;
 }
 
-.h3 {
-  font-size: var(--text-lg);
-  font-weight: 700;
-}
-
-.specs {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-top: 1px solid var(--border);
-}
-
-.specList {
-  display: grid;
-  margin: 0;
-}
-
-.specGroup {
-  padding: var(--space-2) 0;
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.specRow {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
-
-.specRow dt {
-  color: var(--text-muted);
-}
-
-.specRow dd {
-  margin: 0;
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
 .sold {
   display: grid;
   gap: var(--space-3);

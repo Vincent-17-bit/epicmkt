@@ -65,7 +65,7 @@ export const businesses = [
     socials: { instagram: "fadekingsmaseno", facebook: "fadekingsmaseno", tiktok: "fadekings.ke" },
     services: [
       { name: "Haircut", priceKes: 150, section: "Cuts", description: "Clean cut with clippers and scissors, finished with a neck shave.", availability: "available" },
-      { name: "Fade and beard", priceKes: 300, section: "Cuts", description: "Skin or taper fade with full beard shaping and line-up.", specs: [{ label: "Duration", value: "45 minutes" }, { label: "Includes", value: "Hot towel" }] },
+      { name: "Fade and beard", priceKes: 300, section: "Cuts", description: "Skin or taper fade with full beard shaping and line-up.", duration: "45 minutes", includes: ["Skin or taper fade", "Beard shaping and line-up", "Hot towel finish"], terms: "Walk-ins served in order of arrival.\nBook ahead on weekends." },
       { name: "Kids cut", priceKes: 100, section: "Cuts", description: "Patient barbers for children under 12.", availability: "limited" }
     ],
     gallery: gallery(210, ["Shop front", "Fade work", "Beard trim", "Waiting area", "Kids corner", "Tools"])
@@ -177,8 +177,8 @@ export const businesses = [
     tags: ["seeds", "fertiliser", "animal feeds", "veterinary", "dairy meal", "farm tools"],
     socials: { facebook: "greenfieldagrovet", tiktok: "greenfield.agrovet" },
     services: [
-      { name: "Certified maize seed 2kg", priceKes: 650, section: "Seed", description: "Certified hybrid maize seed for the long rains.", specs: [{ label: "Pack size", value: "2 kg" }, { label: "Maturity", value: "120 to 140 days" }, { label: "Germination", value: "90% minimum" }] },
-      { name: "Dairy meal 70kg", priceKes: 2900, section: "Feeds", description: "Balanced dairy ration for milking cows.", specs: [{ label: "Pack size", value: "70 kg" }, { label: "Protein", value: "16%" }] }
+      { name: "Certified maize seed 2kg", priceKes: 650, section: "Seed", description: "Certified hybrid maize seed for the long rains.", packSize: "2 kg", specs: [{ label: "Maturity", value: "120 to 140 days" }, { label: "Germination", value: "90% minimum" }] },
+      { name: "Dairy meal 70kg", priceKes: 2900, section: "Feeds", description: "Balanced dairy ration for milking cows.", packSize: "70 kg", specs: [{ label: "Protein", value: "16%" }] }
     ],
     gallery: gallery(110, ["Seed shelves", "Feed store", "Vet counter", "Farm tools"])
   }),
@@ -268,7 +268,11 @@ export const businesses = [
         name: "Box braids", priceKes: 2500, section: "Braids",
         description: "Neat box braids in your chosen length. Hair not included.",
         variants: [{ id: "small", label: "Small", price: 3500 }, { id: "medium", label: "Medium", price: 2500 }, { id: "jumbo", label: "Jumbo", price: 1800 }],
-        specs: [{ group: "Service", label: "Duration", value: "4 to 6 hours" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }]
+        duration: "4 to 6 hours",
+        term: "Lasts 4 to 6 weeks",
+        terms: "A KSh 500 deposit secures your slot. Hair extensions are not included.",
+        includes: ["Hair parting and braiding", "Ends sealed"],
+        specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }]
       },
       { name: "Cornrows", priceKes: 800, section: "Braids", description: "Straight-back or styled cornrows." },
       { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited" }

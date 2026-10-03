@@ -16,12 +16,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent } from "../api/index.js";
-import { chatMessage, defaultVariantId, groupSpecs } from "../lib/itemView.js";
+import { chatMessage, defaultVariantId } from "../lib/itemView.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
 import StoreSelective from "./StoreSelective.jsx";
+import ItemSpecs from "./ItemSpecs.jsx";
 import styles from "./ItemDetail.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -112,8 +113,6 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
       if (err?.name !== "AbortError") showToast(t("item.shareFailed"));
     }
   };
-
-  const specs = groupSpecs(current?.specs);
 
   return (
     <div className={styles.root}>
@@ -232,27 +231,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   {t(`item.availability.${current.availability}`)}
                 </p>
 
-                {current.description && <p className={styles.description}>{current.description}</p>}
+                {current.shortDescription && <p className={styles.description}>{current.shortDescription}</p>}
               </div>
-
-              {specs.length > 0 && (
-                <section className={styles.specs} aria-labelledby="specs-title">
-                  <h3 id="specs-title" className={styles.h3}>
-                    {t("item.specs")}
-                  </h3>
-                  {specs.map((group) => (
-                    <dl key={group.name ?? "_"} className={styles.specList}>
-                      {group.name && <dt className={styles.specGroup}>{group.name}</dt>}
-                      {group.rows.map((row) => (
-                        <div key={row.label} className={styles.specRow}>
-                          <dt>{row.label}</dt>
-                          <dd>{row.value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  ))}
-                </section>
-              )}
 
               <section className={styles.sold} aria-label={t("item.soldBy")}>
                 <div className={styles.seller}>
@@ -310,6 +290,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 excludeItemId={current.id}
                 onSelect={(next) => onSelect(next.id)}
               />
+
+              <ItemSpecs key={current.id} item={current} category={business.category} attributes={business.attributes} />
             </>
           )}
         </div>

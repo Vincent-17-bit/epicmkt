@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chatMessage, defaultVariantId, groupSpecs } from "./itemView.js";
+import { buildSpecGroups, chatMessage, countRows, defaultVariantId, limitGroups } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -40,13 +40,39 @@ describe("defaultVariantId", () => {
   });
 });
 
-describe("groupSpecs", () => {
-  it("groups by name keeping order", () => {
-    const groups = groupSpecs([
-      { group: "A", label: "x", value: "1" },
-      { label: "y", value: "2" },
-      { group: "A", label: "z", value: "3" }
-    ]);
-    expect(groups.map((g) => [g.name, g.rows.length])).toEqual([["A", 2], [null, 1]]);
+describe("buildSpecGroups", () => {
+  const category = {
+    singular: "Barbershop",
+    fields: [
+      { key: "walkins", label: "Walk-ins", type: "boolean" },
+      { key: "chairs", label: "Chairs", type: "number" },
+      { key: "about", label: "About", type: "longtext" },
+      { key: "kids", label: "Kids cuts", type: "boolean", group: "Services" }
+    ]
+  };
+
+  it("merges specs, meta and template fields without duplicates", () => {
+    const groups = buildSpecGroups({
+      item: { specs: [{ group: "A", label: "Duration", value: "1h" }, { label: "Colour", value: "Red" }], duration: "2h", packSize: "2 kg", pricing: { unit: "kg" } },
+      category,
+      attributes: { walkins: true, chairs: 4, about: "text", kids: false }
+    });
+    expect(groups.map((g) => g.name)).toEqual(["A", null, "Barbershop details"]);
+    expect(groups[1].rows.map((r) => r.label)).toEqual(["Colour", "Pack size", "Unit"]);
+    expect(groups[2].rows).toEqual([{ label: "Walk-ins", value: "Yes" }, { label: "Chairs", value: "4" }]);
+  });
+
+  it("returns nothing when there is nothing to show", () => {
+    expect(buildSpecGroups({ item: { specs: [] }, category: null, attributes: {} })).toEqual([]);
+  });
+});
+
+describe("limitGroups", () => {
+  const groups = [{ name: "A", rows: [1, 2, 3].map((n) => ({ label: `a${n}`, value: "x" })) }, { name: "B", rows: [1, 2, 3].map((n) => ({ label: `b${n}`, value: "x" })) }];
+
+  it("cuts across groups and drops empty ones", () => {
+    expect(countRows(limitGroups(groups, 4))).toBe(4);
+    expect(limitGroups(groups, 3).map((g) => g.name)).toEqual(["A"]);
+    expect(countRows(limitGroups(groups, 8))).toBe(6);
   });
 });
