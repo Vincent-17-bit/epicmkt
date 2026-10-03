@@ -14,3 +14,5 @@ export const logSearch = (term) => backend.logSearch(term);
 export const logContactEvent = (event) => backend.logContactEvent(event);
 export const resolveShortcode = (code) => backend.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
+export const getTowns = () => backend.getTowns();
+export const logEvent = (name, payload) => backend.logEvent(name, payload);

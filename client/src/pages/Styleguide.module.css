@@ -270,3 +270,13 @@
   gap: var(--space-1);
   font-weight: 700;
 }
+
+.crumbs {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.crumbWidth {
+  width: 100%;
+  overflow: hidden;
+}

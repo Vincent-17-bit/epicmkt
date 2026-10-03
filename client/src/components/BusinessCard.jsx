@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+import { rememberResults } from "../lib/resultsMemory.js";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPhone, faLocationArrow, faStar } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
@@ -10,6 +11,9 @@ import { FeaturedBadge, VerifiedBadge } from "./Badges.jsx";
 import styles from "./BusinessCard.module.css";
 
 export default function BusinessCard({ business }) {
+  const { pathname, search } = useLocation();
+  const linkState = { from: `${pathname}${search}` };
+  const remember = () => rememberResults(pathname, search);
   const track = (type) => () => logContactEvent({ businessId: business.id, type });
   const hasBadges = business.plan === "premium" || business.verified;
   const href = `/b/${business.slug}`;
@@ -18,7 +22,7 @@ export default function BusinessCard({ business }) {
   return (
     <article className={styles.card} style={{ "--hue": business.hue ?? 210 }}>
       <div className={styles.top}>
-        <Link to={href} className={styles.cover} tabIndex={-1} aria-hidden="true">
+        <Link to={href} state={linkState} onClick={remember} className={styles.cover} tabIndex={-1} aria-hidden="true">
           {business.coverUrl ? (
             <img src={business.coverUrl} alt="" loading="lazy" decoding="async" className={styles.coverImg} />
           ) : (
@@ -44,7 +48,7 @@ export default function BusinessCard({ business }) {
           </span>
           <div className={styles.titles}>
             <h3 className={styles.name}>
-              <Link to={href} className={styles.nameLink}>
+              <Link to={href} state={linkState} onClick={remember} className={styles.nameLink}>
                 {business.name}
               </Link>
             </h3>

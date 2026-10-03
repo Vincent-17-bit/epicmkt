@@ -23,3 +23,8 @@
   display: grid;
   gap: var(--space-4);
 }
+
+.page > :first-child {
+  margin-top: calc(clamp(var(--space-6), 6vw, var(--space-8)) * -1);
+  margin-bottom: clamp(var(--space-4), 3vw, var(--space-6));
+}

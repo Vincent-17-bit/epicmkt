@@ -291,3 +291,7 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.crumbRow {
+  padding-top: 0;
+}

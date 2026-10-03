@@ -36,3 +36,10 @@
   gap: var(--space-3);
   margin-top: var(--space-2);
 }
+
+.page > :first-child:not(.badge) {
+  align-self: stretch;
+  margin-top: calc(var(--space-8) * -1);
+  margin-bottom: 0;
+  text-align: left;
+}

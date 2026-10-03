@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -19,11 +19,15 @@ import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
+import { showToast } from "../stores/toast.js";
+import { t } from "../i18n/index.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import TemplateDetails from "../components/TemplateDetails.jsx";
+import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
+import ItemSheet from "../components/ItemSheet.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -50,6 +54,10 @@ function Section({ title, children, id }) {
 
 export default function Business() {
   const { slug } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const itemId = searchParams.get("item");
   const [lightbox, setLightbox] = useState(null);
   const [reporting, setReporting] = useState(false);
   const [shareNote, setShareNote] = useState("");
@@ -72,7 +80,35 @@ export default function Business() {
     retry: false
   });
 
-  usePageTitle(data?.name);
+  const item = itemId ? data?.services?.find((svc) => svc.id === itemId) ?? null : null;
+  usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
+
+  useEffect(() => {
+    if (!data || !itemId || item) return;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("item");
+        return next;
+      },
+      { replace: true }
+    );
+    showToast(t("item.unavailable"));
+  }, [data, itemId, item, setSearchParams]);
+
+  const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: true } });
+  const closeItem = () => {
+    if (location.state?.sheet) navigate(-1);
+    else
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("item");
+          return next;
+        },
+        { replace: true }
+      );
+  };
 
   if (isError && error?.name === "NotFoundError") return <NotFound />;
 
@@ -90,6 +126,9 @@ export default function Business() {
   if (isPending) {
     return (
       <div aria-busy="true">
+        <Container className={styles.crumbRow}>
+          <PageBreadcrumbs />
+        </Container>
         <Skeleton height="clamp(10rem, 32vw, 18rem)" radius="0" />
         <Container className={styles.page}>
           <Skeleton height="1.5rem" width="60%" />
@@ -130,6 +169,9 @@ export default function Business() {
 
   return (
     <article className={styles.root} style={{ "--hue": data.hue ?? 210 }}>
+      <Container className={styles.crumbRow}>
+        <PageBreadcrumbs />
+      </Container>
       <header className={styles.hero}>
         <div className={styles.cover}>
           {data.coverUrl ? <img src={data.coverUrl} alt="" className={styles.coverImg} decoding="async" /> : <FontAwesomeIcon icon={icon} />}
@@ -236,12 +278,14 @@ export default function Business() {
           <Section title="Services and prices" id="services">
             <ul className={styles.services}>
               {data.services.map((svc) => (
-                <li key={svc.name} className={styles.service}>
-                  {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
-                  <div className={styles.serviceText}>
-                    <h3 className={styles.h3}>{svc.name}</h3>
-                    {Number.isFinite(svc.priceKes) && <p className={styles.price}>{formatKes(svc.priceKes)}</p>}
-                  </div>
+                <li key={svc.id} className={styles.service}>
+                  <button type="button" className={styles.serviceBtn} onClick={() => openItem(svc.id)} aria-haspopup="dialog">
+                    {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
+                    <span className={styles.serviceText}>
+                      <span className={styles.h3}>{svc.name}</span>
+                      {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
+                    </span>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -347,6 +391,7 @@ export default function Business() {
       </nav>
 
       <Lightbox items={data.gallery} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
+      <ItemSheet business={data} item={item} onClose={closeItem} />
       <ReportDialog business={data} open={reporting} onClose={() => setReporting(false)} />
     </article>
   );

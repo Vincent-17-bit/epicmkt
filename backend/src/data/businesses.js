@@ -43,8 +43,10 @@ const make = (i, b) => {
     coverUrl: coverArt(hue, b.name),
     logoUrl: logoArt(hue, b.name),
     ...b,
+    townSlug: slugify(b.area),
     services: (b.services ?? []).map((svc, n) => ({
       ...svc,
+      id: svc.id ?? slugify(svc.name),
       imageUrl: svc.imageUrl ?? serviceArt((hue + n * 24) % 360, svc.name)
     }))
   };

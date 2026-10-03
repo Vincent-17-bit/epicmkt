@@ -55,6 +55,7 @@ const toSummary = (b, origin) => ({
   categoryIcon: categoryOf(b.categoryId)?.icon ?? null,
   county: b.county,
   area: b.area,
+  townSlug: b.townSlug,
   rating: b.rating,
   reviewCount: b.reviewCount,
   plan: b.plan,
@@ -117,6 +118,21 @@ export async function getCategories() {
   }));
 }
 
+const townList = (list) => {
+  const found = new Map();
+  for (const b of list) {
+    const entry = found.get(b.townSlug) ?? { slug: b.townSlug, name: b.area, county: b.county, count: 0 };
+    entry.count += 1;
+    found.set(b.townSlug, entry);
+  }
+  return [...found.values()].sort((a, c) => a.name.localeCompare(c.name));
+};
+
+export async function getTowns() {
+  await delay();
+  return townList(activeBusinesses());
+}
+
 export async function getCounties() {
   await delay();
   return [...new Set(activeBusinesses().map((b) => b.county))].sort();
@@ -126,7 +142,7 @@ export async function searchBusinesses({
   query = "",
   categoryId = null,
   county = null,
-  area = null,
+  town = null,
   openNow = false,
   verifiedOnly = false,
   featuredOnly = false,
@@ -150,7 +166,7 @@ export async function searchBusinesses({
   const results = activeBusinesses()
     .filter((b) => !categoryId || b.categoryId === categoryId)
     .filter((b) => !county || b.county === county)
-    .filter((b) => !area || b.area === area)
+    .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
     .filter((b) => !openNow || isOpenNow(b.hours))
     .filter((b) => !verifiedOnly || b.verified)
@@ -214,7 +230,7 @@ export async function getSearchFacets({ query = "", categoryId = null } = {}) {
   const category = scopedId ? categoryOf(scopedId) : null;
 
   return {
-    areas: [...new Set(matched.map((b) => b.area))].sort(),
+    towns: townList(matched),
     price: prices.length ? { min: Math.min(...prices), max: Math.max(...prices) } : null,
     categoryId: scopedId,
     categoryName: category?.name ?? null,
@@ -343,6 +359,13 @@ export async function logSearch(term) {
   const clean = normalizeText(term);
   if (clean.length < 2 || clean.length > 60) return { ok: false };
   store.searches.push({ term: clean, count: 1, at: Date.now() });
+  return { ok: true };
+}
+
+export async function logEvent(name, payload = {}) {
+  if (typeof name !== "string" || !/^[a-z_]{2,40}$/.test(name)) return { ok: false };
+  store.analytics.push({ name, payload, at: new Date().toISOString() });
+  if (store.analytics.length > 1000) store.analytics.shift();
   return { ok: true };
 }
 

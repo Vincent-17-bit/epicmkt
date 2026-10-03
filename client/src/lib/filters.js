@@ -26,7 +26,7 @@ export function readFilters(params) {
     radius: RADII.includes(Number(params.get("radius"))) ? Number(params.get("radius")) : 0,
     minPrice: params.get("pmin") ?? "",
     maxPrice: params.get("pmax") ?? "",
-    area: params.get("area") ?? "",
+    town: params.get("town") ?? "",
     attrs
   };
 }
@@ -42,7 +42,7 @@ export function applyFilters(params, patch) {
   if ("radius" in patch) setOrDelete(next, "radius", patch.radius || "");
   if ("minPrice" in patch) setOrDelete(next, "pmin", patch.minPrice);
   if ("maxPrice" in patch) setOrDelete(next, "pmax", patch.maxPrice);
-  if ("area" in patch) setOrDelete(next, "area", patch.area);
+  if ("town" in patch) setOrDelete(next, "town", patch.town);
   if (patch.attrs) {
     for (const [key, value] of Object.entries(patch.attrs)) setOrDelete(next, `${ATTR_PREFIX}${key}`, value);
   }
@@ -69,7 +69,7 @@ export function toApiFilters(filters, coords, seed) {
     radiusKm: filters.radius || null,
     minPrice: filters.minPrice === "" ? null : Number(filters.minPrice),
     maxPrice: filters.maxPrice === "" ? null : Number(filters.maxPrice),
-    area: filters.area || null,
+    town: filters.town || null,
     attrs,
     seed,
     ...(coords ?? {})
@@ -91,7 +91,10 @@ export function buildChips(filters, facets) {
           : `Up to ${formatKes(filters.maxPrice)}`;
     chips.push({ id: "price", label, patch: { minPrice: "", maxPrice: "" } });
   }
-  if (filters.area) chips.push({ id: "area", label: filters.area, patch: { area: "" } });
+  if (filters.town) {
+    const name = facets?.towns?.find((t) => t.slug === filters.town)?.name ?? filters.town;
+    chips.push({ id: "town", label: name, patch: { town: "" } });
+  }
   for (const field of facets?.fields ?? []) {
     const value = filters.attrs[field.key];
     if (!value) continue;

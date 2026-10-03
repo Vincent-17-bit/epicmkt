@@ -15,6 +15,7 @@ import {
 import { PLAN_FEATURES, PLAN_PRICE_KES, formatKes } from "@epicmkt/shared";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
+import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import Accordion from "../components/Accordion.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Sell.module.css";
@@ -107,6 +108,9 @@ export default function Sell() {
   usePageTitle("Become a seller");
   return (
     <>
+      <Container className={styles.crumbRow}>
+        <PageBreadcrumbs />
+      </Container>
       <section className={styles.hero} aria-labelledby="sell-title">
         <Container className={styles.heroInner}>
           <span className={styles.heroIcon}>

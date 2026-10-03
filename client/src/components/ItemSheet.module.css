@@ -1,0 +1,169 @@
+.sheet {
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90dvh;
+  margin: auto auto 0;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid var(--text);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sheet::backdrop {
+  background: var(--scrim);
+}
+
+.body {
+  display: grid;
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding-bottom: var(--safe-bottom);
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 56px;
+  padding: 0 var(--space-3);
+  background: var(--surface);
+}
+
+.trail {
+  min-width: 0;
+  font-size: clamp(13px, 1.6vw, 14px);
+}
+
+.list {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.crumb {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.parent {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 14ch;
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-weight: 500;
+  transition: background-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.parentName,
+.current {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current {
+  max-width: 22ch;
+  padding-inline: var(--space-2);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sep {
+  flex: none;
+  margin-inline: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.7em;
+}
+
+.parent:active,
+.close:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .parent:hover,
+  .close:hover {
+    background: var(--link-hover-bg);
+    text-decoration: underline;
+    text-decoration-color: var(--link-underline);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 5px;
+  }
+}
+
+.parent:focus-visible,
+.close:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.close {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+}
+
+.image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.info {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+
+.title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.price {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.sold {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .sheet {
+    margin: auto;
+    border-radius: var(--radius-card);
+  }
+}

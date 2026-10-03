@@ -95,16 +95,16 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
         </div>
       </fieldset>
 
-      {facets?.areas?.length > 0 && (
+      {facets?.towns?.length > 0 && (
         <div className={styles.group}>
-          <label htmlFor={id("area")} className={styles.legend}>
-            Area or town
+          <label htmlFor={id("town")} className={styles.legend}>
+            Town
           </label>
-          <select id={id("area")} className={styles.select} value={filters.area} onChange={(e) => onChange({ area: e.target.value })}>
-            <option value="">All areas</option>
-            {facets.areas.map((area) => (
-              <option key={area} value={area}>
-                {area}
+          <select id={id("town")} className={styles.select} value={filters.town} onChange={(e) => onChange({ town: e.target.value })}>
+            <option value="">All towns</option>
+            {facets.towns.map((town) => (
+              <option key={town.slug} value={town.slug}>
+                {town.name}
               </option>
             ))}
           </select>

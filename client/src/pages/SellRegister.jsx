@@ -10,6 +10,7 @@ export default function SellRegister() {
     <StatusPage
       icon={faStore}
       title="Registration opens soon"
+      breadcrumbs
       message="Seller sign-up is on its way. Want to be listed first? Get in touch and we will add your business as soon as registration opens."
     >
       <Button as={Link} to="/contact" icon={faEnvelope}>

@@ -39,3 +39,7 @@
 .subtitle {
   font-size: var(--text-lg);
 }
+
+.withCrumbs {
+  padding-top: 0;
+}

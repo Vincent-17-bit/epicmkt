@@ -1,10 +1,12 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Container from "./Container.jsx";
+import PageBreadcrumbs from "./PageBreadcrumbs.jsx";
 import styles from "./StatusPage.module.css";
 
-export default function StatusPage({ icon, title, message, children }) {
+export default function StatusPage({ icon, title, message, breadcrumbs = false, children }) {
   return (
     <Container className={styles.page}>
+      {breadcrumbs && <PageBreadcrumbs />}
       <span className={styles.badge}>
         <FontAwesomeIcon icon={icon} />
       </span>

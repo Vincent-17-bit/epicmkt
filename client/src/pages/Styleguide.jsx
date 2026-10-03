@@ -15,6 +15,7 @@ import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import IconButton from "../components/IconButton.jsx";
 import Skeleton from "../components/Skeleton.jsx";
+import Breadcrumbs from "../components/Breadcrumbs/Breadcrumbs.jsx";
 import BusinessCard from "../components/BusinessCard.jsx";
 import Img from "../components/Img.jsx";
 import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
@@ -168,6 +169,41 @@ function Contrast({ paneRef }) {
   );
 }
 
+const crumb = (key, label, to) => ({ key, label, ...(to ? { to } : {}) });
+const home = { key: "home", label: "Home", to: "/", icon: "house" };
+const longName = "The Extraordinarily Long Named Barbershop and Grooming Lounge";
+
+const crumbVariants = [
+  { title: "2 crumbs", trail: [home, crumb("a", "Become a seller")] },
+  { title: "3 crumbs", trail: [home, crumb("a", "Barbershops", "/c/barbershops"), crumb("b", "Maseno")] },
+  { title: "4 crumbs", trail: [home, crumb("a", "Barbershops", "/c/barbershops"), crumb("t", "Maseno", "/c/barbershops?town=maseno"), crumb("b", "Fade Kings Barbershop")] },
+  {
+    title: "5 crumbs (collapses on phones)",
+    trail: [home, crumb("a", "Barbershops", "/c/barbershops"), crumb("t", "Maseno", "/c/barbershops?town=maseno"), crumb("b", "Fade Kings Barbershop", "/b/fade-kings"), crumb("i", "Skin fade")]
+  },
+  { title: "Very long names", trail: [home, crumb("a", "Hair Salons and Beauty Parlours", "/c/salons"), crumb("b", longName)] }
+];
+
+function CrumbSamples() {
+  return (
+    <div className={styles.crumbs}>
+      {[320, 1280].map((width) => (
+        <div key={width} className={styles.crumbWidth} style={{ maxWidth: width }}>
+          <p className={styles.muted}>{width}px</p>
+          {crumbVariants.map((v) => (
+            <div key={v.title}>
+              <p className={styles.muted}>{v.title}</p>
+              <Breadcrumbs trail={v.trail} compact={width < 768} />
+            </div>
+          ))}
+          <p className={styles.muted}>Loading</p>
+          <Breadcrumbs loading trail={[]} compact={width < 768} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Pane({ theme }) {
   const paneRef = useRef(null);
 
@@ -234,6 +270,10 @@ function Pane({ theme }) {
             Sale
           </span>
         </div>
+      </Block>
+
+      <Block title="Breadcrumbs">
+        <CrumbSamples />
       </Block>
 
       <Block title="Inputs">

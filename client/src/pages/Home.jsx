@@ -10,6 +10,7 @@ import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import CardGrid from "../components/CardGrid.jsx";
+import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import PageBanner from "../components/PageBanner.jsx";
 import BrowseResults from "../components/BrowseResults.jsx";
 import BusinessRail from "../components/BusinessRail.jsx";
@@ -83,6 +84,7 @@ export default function Home() {
     return (
       <>
         <PageBanner
+          crumbs={<PageBreadcrumbs />}
           loading={isPending}
           icon={category ? categoryIcon(category.icon) : undefined}
           title={category?.name}
@@ -101,6 +103,7 @@ export default function Home() {
     return (
       <>
         <PageBanner
+          crumbs={<PageBreadcrumbs />}
           icon={faMagnifyingGlass}
           title={query ? `Results for "${query}"` : "All businesses"}
           subtitle={query ? undefined : "Browse everything listed on EpicMKT, or use the search to narrow it down."}

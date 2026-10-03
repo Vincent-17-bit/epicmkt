@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { validateTemplate, validateAttributes, FIELD_TYPES } from "@epicmkt/shared";
 import { categories as templates } from "./src/data/categories.js";
 import { businesses as seeded } from "./src/data/businesses.js";
-import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getTowns, logEvent, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
@@ -28,6 +28,16 @@ assert.equal((await searchBusinesses({ query: "nyama choma" })).items[0].categor
 assert.ok((await searchBusinesses({ categoryId: "butchery" })).items.every((b) => Array.isArray(b.highlights) && b.highlights.length > 0));
 const facets = await getSearchFacets({ categoryId: "mpesa" });
 assert.ok(facets.fields.some((f) => f.key === "networks"));
+const towns = await getTowns();
+assert.ok(towns.every((t) => t.slug && t.name && t.count > 0));
+assert.equal(new Set(towns.map((t) => t.slug)).size, towns.length);
+assert.ok(towns.some((t) => t.slug === "maseno"));
+assert.ok(facets.towns.every((t) => towns.some((x) => x.slug === t.slug)));
+const maseno = await searchBusinesses({ categoryId: "barbershops", town: "maseno" });
+assert.ok(maseno.total >= 1 && maseno.items.every((b) => b.townSlug === "maseno"));
+assert.ok(seeded.every((b) => new Set(b.services.map((svc) => svc.id)).size === b.services.length));
+assert.equal((await logEvent("breadcrumb_click", { level: 1, target: "/" })).ok, true);
+assert.equal((await logEvent("Bad Name")).ok, false);
 assert.ok(Object.keys(validateAttributes(templates.find((c) => c.id === "bakery").fields, { notice: 3 })).includes("products"));
 
 const barbers = await searchBusinesses({ query: "barber" });
