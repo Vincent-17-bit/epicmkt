@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusiness, getCategories, getSearchFacets, getTowns } from "../api/index.js";
+import { t } from "../i18n/index.js";
 import { getTrail } from "../utils/getTrail.js";
 
 const STALE = 5 * 60_000;
@@ -21,6 +22,10 @@ export function useBreadcrumbs() {
     retry: false,
     enabled: Boolean(businessSlug)
   });
+
+  const itemId = new URLSearchParams(search).get("item");
+  const item = useQuery({ queryKey: ["item", business.data?.id, itemId], enabled: false });
+  const itemVanished = Boolean(itemId) && item.isError && item.error?.name === "NotFoundError" && item.data !== undefined;
 
   const result = getTrail({
     pathname,
@@ -47,5 +52,14 @@ export function useBreadcrumbs() {
     [queryClient]
   );
 
-  return { ...result, prefetch };
+  let trail = result.trail;
+  if (itemVanished && result.status === "ready" && business.data) {
+    const last = trail[trail.length - 1];
+    const unavailable = { key: "i-unavailable", label: t("breadcrumbs.itemUnavailable") };
+    trail = last.key.startsWith("i-")
+      ? [...trail.slice(0, -1), unavailable]
+      : [...trail.slice(0, -1), { ...last, to: `/b/${business.data.slug}` }, unavailable];
+  }
+
+  return { ...result, trail, prefetch };
 }

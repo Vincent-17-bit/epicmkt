@@ -148,6 +148,32 @@ describe("ItemDetail", () => {
     expect(await screen.findByRole("heading", { name: "This item is no longer available" })).toBeInTheDocument();
   });
 
+  it("shows plain-text Item unavailable and refetches the business only when it vanishes mid-view", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = vi.spyOn(client, "invalidateQueries");
+    mount({}, client);
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: ["business", "fade-kings"] });
+    mocks.getDetail.mockRejectedValue(Object.assign(new Error("nf"), { name: "NotFoundError" }));
+    await client.invalidateQueries({ queryKey: ["item"] });
+    const crumb = await screen.findByText("Item unavailable");
+    expect(crumb.closest("a,button")).toBeNull();
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["business", "fade-kings"] });
+  });
+
+  it("does not refetch the business or relabel the crumb on a cold unavailable load", async () => {
+    mocks.getDetail.mockRejectedValue(Object.assign(new Error("nf"), { name: "NotFoundError" }));
+    mocks.getStoreSelective.mockResolvedValue([]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const spy = vi.spyOn(client, "invalidateQueries");
+    mount({}, client);
+    await screen.findByRole("heading", { name: "This item is no longer available" });
+    expect(screen.queryByText("Item unavailable")).not.toBeInTheDocument();
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("renders the flash banner, two offers with See all, and JSON-LD", async () => {
     const view = (id) => ({ offer: { id, title: `Offer ${id}`, kind: "percent_off", value: 10, conditions: {} }, remainingMs: 86400000, appliesToLabel: "Whole store" });
     mocks.getDetail.mockResolvedValue({

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBoxOpen,
@@ -41,6 +41,7 @@ const LEAVE_MS = 260;
 
 export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport }) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const onSeeItems = (offer) => navigate(offerTarget(offer, business), { replace: true });
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
@@ -63,6 +64,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const gone = isError && error?.name === "NotFoundError";
   const fresh = !gone && detail?.id === itemId ? detail : null;
   const failed = isError && !gone && !fresh;
+  const vanished = gone && detail?.id === itemId;
   const [hold, setHold] = useState(null);
   const lastLive = useRef(null);
   const current = hold && fresh && hold.id === fresh.id ? { ...fresh, flash: hold.flash, pricing: hold.pricing } : fresh;
@@ -85,6 +87,10 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     setHold(null);
     lastLive.current = null;
   }, [itemId]);
+
+  useEffect(() => {
+    if (vanished) queryClient.invalidateQueries({ queryKey: ["business", business.slug] });
+  }, [vanished]);
 
   useEffect(() => {
     if (gone) {
@@ -241,7 +247,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               <li className={styles.crumb}>
                 <FontAwesomeIcon icon={faChevronRight} className={styles.sep} aria-hidden="true" />
                 <span className={styles.current} aria-current="page">
-                  {current?.name ?? ""}
+                  {current ? current.name : vanished ? t("breadcrumbs.itemUnavailable") : ""}
                 </span>
               </li>
             </ol>

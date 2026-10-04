@@ -13,6 +13,7 @@ export default {
   "breadcrumb.cookies": "Cookie notice",
   "breadcrumb.more": "Show hidden pages",
   "breadcrumb.back": "Back to results",
+  "breadcrumbs.itemUnavailable": "Item unavailable",
   "item.unavailable": "That item is no longer available",
   "item.close": "Close",
   "item.back": "Item",
