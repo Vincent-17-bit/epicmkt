@@ -57,7 +57,9 @@ export function urgencyLabel(urgency) {
   return t("flash.label");
 }
 
-const kes = (n) => Number(n).toLocaleString("en-KE");
+export const kes = (n) => Number(n).toLocaleString("en-KE");
+
+export const kesText = (n) => `${t("flash.currency")} ${kes(n)}`;
 
 export function discountBadge(discount) {
   if (discount?.type === "percent") return { kind: "percent", text: `-${discount.value}%` };

@@ -534,3 +534,17 @@
     display: none;
   }
 }
+
+.endedNotice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-3);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.variantPrice {
+  margin-left: var(--space-2);
+  color: var(--flash-price-sale);
+  font-weight: 800;
+}

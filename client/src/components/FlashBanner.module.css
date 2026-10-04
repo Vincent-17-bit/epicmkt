@@ -1,54 +1,108 @@
+.wrap {
+  display: grid;
+}
+
 .banner {
-  display: flex;
-  align-items: center;
+  display: grid;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--border);
-  background: var(--primary-tint);
-  color: var(--on-primary-tint);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--flash-gradient);
+  color: var(--flash-band-text);
 }
 
-.icon {
-  display: inline-flex;
-  flex: none;
+.top {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--primary);
-  color: var(--on-primary);
+  gap: var(--space-2) var(--space-3);
 }
 
-.text {
-  flex: 1;
-  min-width: 0;
-}
-
-.title {
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.note {
-  color: var(--text-muted);
+.label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-size: var(--text-sm);
-  overflow-wrap: anywhere;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.headline {
+  font-weight: 600;
 }
 
 .timer {
   display: grid;
-  flex: none;
-  justify-items: end;
+  justify-items: start;
+  gap: var(--space-2);
 }
 
-.label {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
+.ends {
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
-.clock {
-  font-size: var(--text-md);
+.fuse {
+  margin-top: var(--space-1);
+}
+
+.panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--flash-save-bg);
+  color: var(--text);
+}
+
+.price {
+  color: var(--flash-price-sale);
+  font-size: 32px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.cur {
+  margin-right: 4px;
+  font-size: var(--text-sm);
   font-weight: 700;
+}
+
+.unit {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.was {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  color: var(--text-muted);
+}
+
+.saved {
+  color: var(--flash-save-text);
+  font-weight: 800;
+}
+
+.note {
+  padding: 2px var(--space-3);
+  border: 1px solid var(--flash-save-text);
+  border-radius: var(--radius-pill);
+  color: var(--flash-save-text);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

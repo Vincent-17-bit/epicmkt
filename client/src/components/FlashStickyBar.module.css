@@ -1,0 +1,38 @@
+.anchor {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  background: var(--flash-gradient);
+  color: var(--flash-band-text);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-100%);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.bar[data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.price {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    transition: none;
+  }
+}

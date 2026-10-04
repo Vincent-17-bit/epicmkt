@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -185,5 +185,53 @@ describe("ItemDetail", () => {
     expect(logEvent).toHaveBeenCalledWith("store_selective_click", expect.objectContaining({ targetItemId: "s0", position: 1 }));
     await user.click(screen.getByRole("button", { name: "Description" }));
     expect(logEvent).toHaveBeenCalledWith("spec_expand", expect.objectContaining({ panel: "description" }));
+  });
+});
+
+describe("ItemDetail flash expiry", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const liveFlash = (endsInMs) => ({
+    sale: { id: "f", headline: "Weekend deal", quantityNote: null, startsAt: new Date(Date.now() - 3600000).toISOString(), endsAt: new Date(Date.now() + endsInMs).toISOString() },
+    remainingMs: endsInMs
+  });
+
+  it("confirms expiry with a refetch, shows the ended notice for 6 seconds, then restores regular pricing", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mocks.getDetail.mockReset();
+    mocks.getDetail.mockResolvedValueOnce({ ...base, pricing: pricing(300, 240), flash: liveFlash(2000) });
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), flash: null });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mount();
+    await screen.findByText("Weekend deal");
+    expect(chatHrefs()[0]).toContain("flash sale");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(await screen.findByText(/Flash sale ended. Regular price/)).toHaveTextContent("KES 300");
+    expect(screen.queryByText("Weekend deal")).toBeNull();
+    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6500);
+    });
+    expect(screen.queryByText(/Flash sale ended/)).toBeNull();
+  });
+
+  it("shows the no longer available state when the item was unlisted after the sale", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    mocks.getDetail.mockReset();
+    mocks.getDetail.mockResolvedValueOnce({ ...base, pricing: pricing(300, 240), flash: liveFlash(2000) });
+    mocks.getDetail.mockRejectedValue(Object.assign(new Error("Item not found"), { name: "NotFoundError" }));
+    mocks.getStoreSelective.mockResolvedValue(selective(3));
+    mount();
+    await screen.findByText("Weekend deal");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4000);
+    });
+    expect(await screen.findByRole("heading", { name: "This item is no longer available" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /Visit Store/ })[0]).toHaveAttribute("href", "/b/fade-kings");
+    expect(screen.getByText("Other 0")).toBeInTheDocument();
   });
 });

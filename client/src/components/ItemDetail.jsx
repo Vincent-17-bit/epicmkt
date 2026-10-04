@@ -24,6 +24,10 @@ import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
 import FlashBanner from "./FlashBanner.jsx";
+import FlashStickyBar from "./FlashStickyBar.jsx";
+import { useUrgency } from "../hooks/useCountdown.js";
+import { kesText } from "../lib/flash.js";
+import { useInView } from "../hooks/useInView.js";
 import OfferStrip from "./OfferStrip.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
@@ -38,6 +42,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const bodyRef = useRef(null);
   const titleRef = useRef(null);
   const viewed = useRef(null);
+  const bannerRef = useRef(null);
+  const lastFlash = useRef(null);
+  const [endedNotice, setEndedNotice] = useState(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const [choice, setChoice] = useState({ itemId: null, variantId: null });
@@ -56,6 +63,41 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const failed = isError && !gone && !current;
 
   useItemJsonLd(current);
+
+  const flashEndsAt = current?.flash?.sale.endsAt ?? null;
+  const flashUrgency = useUrgency(flashEndsAt);
+  const flashOver = Boolean(flashEndsAt) && flashUrgency === "ended";
+  const bannerInView = useInView(bannerRef, bodyRef, current?.flash?.sale.id ?? null);
+
+  useEffect(() => {
+    if (!flashOver) return undefined;
+    refetch();
+    const id = window.setInterval(() => refetch(), 2000);
+    return () => window.clearInterval(id);
+  }, [flashOver, flashEndsAt]);
+
+  useEffect(() => {
+    setEndedNotice(null);
+    lastFlash.current = null;
+  }, [itemId]);
+
+  useEffect(() => {
+    if (!current) return;
+    if (current.flash) {
+      lastFlash.current = current.id;
+      return;
+    }
+    if (lastFlash.current === current.id) {
+      lastFlash.current = null;
+      setEndedNotice({ price: current.pricing?.regularPrice ?? null });
+    }
+  }, [current]);
+
+  useEffect(() => {
+    if (!endedNotice) return undefined;
+    const id = window.setTimeout(() => setEndedNotice(null), 6000);
+    return () => window.clearTimeout(id);
+  }, [endedNotice]);
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -106,7 +148,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
   useEffect(() => {
     if (!current) return undefined;
-    const waits = [current.flash?.remainingMs, ...current.offers.map((view) => view.remainingMs)].filter((ms) => Number.isFinite(ms));
+    const waits = current.offers.map((view) => view.remainingMs).filter((ms) => Number.isFinite(ms));
     if (!waits.length) return undefined;
     const wait = Math.min(...waits) + 300;
     if (wait > MAX_TIMEOUT) return undefined;
@@ -244,9 +286,19 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
           {current && (
             <>
+              {current.flash && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
               <ItemGallery key={current.id} images={current.images} name={current.name} />
 
-              {current.flash && <FlashBanner key={current.flash.sale.id} flash={current.flash} receivedAt={dataUpdatedAt} />}
+              {current.flash && (
+                <FlashBanner key={current.flash.sale.id} flash={current.flash} pricing={shown} unit={current.pricing?.unit} bannerRef={bannerRef} />
+              )}
+
+              {endedNotice && (
+                <p className={styles.endedNotice} role="status">
+                  {t("flash.endedNotice")}
+                  {endedNotice.price !== null && ` ${kesText(endedNotice.price)}`}
+                </p>
+              )}
 
               <div className={styles.info}>
                 <div className={styles.badges}>
@@ -257,7 +309,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   {current.name}
                 </h2>
 
-                {shown && (
+                {shown && !current.flash && (
                   <div className={styles.priceBlock}>
                     {shown.savings > 0 ? (
                       <>
@@ -298,6 +350,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                         onClick={() => setChoice({ itemId, variantId: v.id })}
                       >
                         {v.label}
+                        {current.flash && <span className={styles.variantPrice}>{kesText(v.salePrice)}</span>}
                       </button>
                     ))}
                   </div>

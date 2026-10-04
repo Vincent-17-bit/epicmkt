@@ -1,43 +1,61 @@
-import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
-import { countdown } from "../lib/itemView.js";
+import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
+import { formatEndsAt, kesText, urgencyLabel } from "../lib/flash.js";
 import { t } from "../i18n/index.js";
+import CountdownTiles from "./CountdownTiles.jsx";
+import FuseBar from "./FuseBar.jsx";
 import styles from "./FlashBanner.module.css";
 
-export default function FlashBanner({ flash, receivedAt, onExpire }) {
-  const endAt = receivedAt + flash.remainingMs;
-  const [left, setLeft] = useState(() => Math.max(0, endAt - Date.now()));
-  const fired = useRef(false);
-
-  useEffect(() => {
-    fired.current = false;
-    const tick = () => {
-      const remaining = Math.max(0, endAt - Date.now());
-      setLeft(remaining);
-      if (remaining === 0 && !fired.current) {
-        fired.current = true;
-        onExpire?.();
-      }
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, [endAt]);
+export default function FlashBanner({ flash, pricing, unit, bannerRef }) {
+  const { sale } = flash;
+  const urgency = useUrgency(sale.endsAt);
+  const remaining = useCountdownLabel(sale.endsAt);
+  const saving = pricing && pricing.savings > 0;
 
   return (
-    <div className={styles.banner} role="group" aria-label={t("item.flash")}>
-      <span className={styles.icon}>
-        <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
-      </span>
-      <div className={styles.text}>
-        <p className={styles.title}>{flash.sale.headline || t("item.flash")}</p>
-        {flash.sale.quantityNote && <p className={styles.note}>{flash.sale.quantityNote}</p>}
-      </div>
-      <p className={styles.timer}>
-        <span className={styles.label}>{t("item.endsIn")}</span>
-        <time className={styles.clock}>{countdown(left)}</time>
-      </p>
+    <div className={styles.wrap}>
+      <section ref={bannerRef} className={styles.banner} data-urgency={urgency} aria-label={t("item.flash")}>
+        <div className={styles.top}>
+          <span className={styles.label}>
+            <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
+            {urgencyLabel(urgency)}
+          </span>
+          {sale.headline && <span className={styles.headline}>{sale.headline}</span>}
+        </div>
+        <div className={styles.timer}>
+          <CountdownTiles endsAt={sale.endsAt} variant="banner" />
+          <p className={styles.ends}>
+            {t("flash.endsOn")} {formatEndsAt(sale.endsAt)}
+          </p>
+        </div>
+        <span className={styles.sr} role="status">
+          {remaining}
+        </span>
+        <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} animate className={styles.fuse} />
+      </section>
+
+      {pricing && (
+        <div className={styles.panel}>
+          <p className={styles.price}>
+            <span className={styles.cur}>{t("flash.currency")}</span>
+            {Number(pricing.salePrice).toLocaleString("en-KE")}
+            {unit && <span className={styles.unit}> / {unit}</span>}
+          </p>
+          {saving && (
+            <p className={styles.was}>
+              <s>
+                <span className={styles.sr}>{t("item.was")} </span>
+                {kesText(pricing.regularPrice)}
+              </s>
+              <span className={styles.saved}>
+                {t("flash.youSave")} {kesText(pricing.savings)} ({pricing.discountPercent}%)
+              </span>
+            </p>
+          )}
+          {sale.quantityNote && <span className={styles.note}>{sale.quantityNote}</span>}
+        </div>
+      )}
     </div>
   );
 }
