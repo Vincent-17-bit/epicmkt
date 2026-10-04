@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusiness, getCategories, getSearchFacets, getTowns } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { getTrail } from "../utils/getTrail.js";
@@ -24,7 +24,7 @@ export function useBreadcrumbs() {
   });
 
   const itemId = new URLSearchParams(search).get("item");
-  const item = useQuery({ queryKey: ["item", business.data?.id, itemId], enabled: false });
+  const item = useQuery({ queryKey: ["item", business.data?.id, itemId], queryFn: skipToken });
   const itemVanished = Boolean(itemId) && item.isError && item.error?.name === "NotFoundError" && item.data !== undefined;
 
   const result = getTrail({
