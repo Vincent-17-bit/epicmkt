@@ -51,6 +51,11 @@ describe("results memory", () => {
     expect(mod.readResults()).toBeNull();
   });
 
+  it("recognises flash and offers listings case-insensitively but not sub-paths", () => {
+    expect(["/flash", "/FLASH", "/Flash/", "/offers", "/Offers/"].every(mod.isListing)).toBe(true);
+    expect(["/flash/x", "/flashes", "/offers/1", "/SEARCH"].some(mod.isListing)).toBe(false);
+  });
+
   it("computes the pop distance only when both indexes exist", () => {
     expect(mod.backDelta({ historyIdx: 2 }, 5)).toBe(3);
     expect(mod.backDelta({ historyIdx: null }, 5)).toBe(0);

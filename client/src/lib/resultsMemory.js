@@ -1,8 +1,9 @@
 import { RESULTS_KEY } from "../config/breadcrumbs.js";
 
-const LISTINGS = ["/search", "/flash", "/offers"];
+const INSENSITIVE_LISTINGS = ["/flash", "/offers"];
 
-export const isListing = (pathname) => pathname.startsWith("/c/") || LISTINGS.includes(pathname);
+export const isListing = (pathname) =>
+  pathname.startsWith("/c/") || pathname === "/search" || INSENSITIVE_LISTINGS.includes(pathname.replace(/\/+$/, "").toLowerCase());
 
 const slugOf = (pathname) => /^\/b\/([^/]+)/.exec(pathname)?.[1] ?? null;
 const indexOf = (idx) => (Number.isInteger(idx) ? idx : null);

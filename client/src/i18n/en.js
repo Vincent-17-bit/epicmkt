@@ -6,6 +6,7 @@ export default {
   "breadcrumb.register": "Register",
   "breadcrumb.about": "About",
   "breadcrumb.flash": "Flash sales",
+  "breadcrumb.offers": "Offers",
   "breadcrumb.contact": "Contact",
   "breadcrumb.faq": "FAQs",
   "breadcrumb.privacy": "Privacy Policy",

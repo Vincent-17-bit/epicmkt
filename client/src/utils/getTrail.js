@@ -1,4 +1,4 @@
-import { SEARCH_QUERY_MAX, STATIC_TRAILS } from "../config/breadcrumbs.js";
+import { CASE_INSENSITIVE_PATHS, SEARCH_QUERY_MAX, STATIC_TRAILS } from "../config/breadcrumbs.js";
 import { t as translate } from "../i18n/index.js";
 
 const HOME = (t) => ({ key: "home", label: t("breadcrumb.home"), to: "/", icon: "house" });
@@ -24,7 +24,8 @@ export function getTrail({ pathname, search = "", categories, towns, business, t
 
   if (path === "/") return none;
 
-  const staticTrail = STATIC_TRAILS[path];
+  const lower = path.toLowerCase();
+  const staticTrail = STATIC_TRAILS[CASE_INSENSITIVE_PATHS.includes(lower) ? lower : path];
   if (staticTrail) {
     const trail = staticTrail.map((c) => ({ key: c.key, label: t(c.key), ...(c.to ? { to: c.to } : {}) }));
     return { status: "ready", trail: [home, ...trail], invalidItem: false };

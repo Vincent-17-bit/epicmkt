@@ -109,6 +109,7 @@ describe("getTrail", () => {
 
   it.each([
     ["/flash", ["Home", "Flash sales"]],
+    ["/offers", ["Home", "Offers"]],
     ["/sell", ["Home", "Become a seller"]],
     ["/sell/register", ["Home", "Become a seller", "Register"]],
     ["/about", ["Home", "About"]],
@@ -119,6 +120,33 @@ describe("getTrail", () => {
     ["/cookies", ["Home", "Cookie notice"]]
   ])("builds a static trail for %s", (pathname, expected) => {
     expect(labels(getTrail({ ...base, pathname }))).toEqual(expected);
+  });
+
+  it.each([
+    ["/FLASH", "?x=1", ["Home", "Flash sales"]],
+    ["/Flash/", "", ["Home", "Flash sales"]],
+    ["/flash", "?category=barbershop&sort=ending&page=2", ["Home", "Flash sales"]],
+    ["/Offers", "?section=cuts", ["Home", "Offers"]],
+    ["/OFFERS/", "", ["Home", "Offers"]]
+  ])("matches %s%s case-insensitively with the same static trail", (pathname, search, expected) => {
+    const r = getTrail({ ...base, pathname, search });
+    expect(r.status).toBe("ready");
+    expect(labels(r)).toEqual(expected);
+    expect(targets(r)).toEqual(["/", undefined]);
+    expect(r.trail.slice(1).every((c) => !c.icon)).toBe(true);
+  });
+
+  it.each(["/flash/anything", "/flashes", "/offers/1", "/offerss"])("does not match %s", (pathname) => {
+    expect(getTrail({ ...base, pathname }).status).toBe("none");
+  });
+
+  it("keeps existing routes case-sensitive in the trail map", () => {
+    expect(getTrail({ ...base, pathname: "/ABOUT" }).status).toBe("none");
+  });
+
+  it("never adds Flash sales or Offers to a business or item trail", () => {
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade&from=flash" });
+    expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
   });
 
   it("links the seller crumb on the register page", () => {
