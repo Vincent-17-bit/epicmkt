@@ -1,0 +1,88 @@
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-3);
+}
+
+.clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.bar,
+.rail {
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc((1 - var(--share)) * 100%));
+  transition: transform 1s linear;
+}
+
+.bar {
+  background: var(--flash-gradient);
+}
+
+.rail {
+  pointer-events: none;
+}
+
+.spark {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--flash-spark);
+  box-shadow: 0 0 0 2px var(--flash-tile-bg);
+}
+
+:global([data-theme="dark"]) .spark {
+  box-shadow: none;
+}
+
+.spark::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: var(--flash-spark);
+  filter: blur(4px);
+  opacity: 0.5;
+}
+
+.track[data-animate="true"] .spark::after {
+  animation: glow 1.6s ease-in-out infinite;
+}
+
+.track[data-animate="true"][data-urgency="urgent"] .spark,
+.track[data-animate="true"][data-urgency="critical"] .spark {
+  animation: flicker 0.35s steps(2, end) infinite;
+}
+
+@keyframes glow {
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes flicker {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar,
+  .rail {
+    transition: none;
+  }
+
+  .spark,
+  .spark::after {
+    animation: none !important;
+  }
+}

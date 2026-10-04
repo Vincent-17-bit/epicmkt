@@ -1,0 +1,48 @@
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.state {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--flash-gradient);
+  color: var(--flash-band-text);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.cards {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.cell {
+  width: clamp(220px, 64vw, 280px);
+}
+
+.compact {
+  width: clamp(160px, 46vw, 200px);
+}

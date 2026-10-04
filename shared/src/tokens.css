@@ -80,6 +80,32 @@
   --skeleton-shine: #f3f4f6;
   --shadow-1: 0 1px 2px rgb(17 17 17 / 0.06), 0 1px 3px rgb(17 17 17 / 0.1);
   --shadow-2: 0 10px 24px rgb(17 17 17 / 0.16);
+  --flash-gradient: linear-gradient(105deg, #c2410c 0%, #b91c1c 52%, #7f1d1d 100%);
+  --flash-band-text: #ffffff;
+  --flash-tile-bg: #1a0b0b;
+  --flash-tile-text: #ffffff;
+  --flash-tile-label: #ffd9a8;
+  --flash-tile-edge: #ffb020;
+  --flash-tile-urgent-text: #ffc83d;
+  --flash-tile-critical-bg: #ffffff;
+  --flash-tile-critical-text: #b91c1c;
+  --flash-burst-gradient: linear-gradient(135deg, #ffc83d, #ff8a1f);
+  --flash-burst-text: #111111;
+  --flash-spark: #ffc83d;
+  --flash-save-bg: #fff1e6;
+  --flash-save-text: #7f1d1d;
+  --flash-price-sale: #b91c1c;
+  --flash-section-bg: linear-gradient(180deg, #fff1e6 0%, #ffffff 100%);
+  --flash-glow: 0 8px 24px rgb(185 28 28 / 0.25);
+  --offer-stub-gradient: linear-gradient(160deg, #ffc83d 0%, #ff8a1f 100%);
+  --offer-stub-text: #111111;
+  --offer-body-bg: #fff4e5;
+  --offer-body-text: #111111;
+  --offer-border: #c2410c;
+  --offer-validity-bg: #1a0b0b;
+  --offer-validity-text: #ffffff;
+  --offer-validity-urgent-bg: #b91c1c;
+  --offer-validity-urgent-text: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -114,4 +140,30 @@
   --skeleton-shine: #2e2e2e;
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.6);
   --shadow-2: 0 12px 28px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(56 182 255 / 0.35);
+  --flash-gradient: linear-gradient(105deg, #ffb020 0%, #ff6a1f 50%, #ff3b30 100%);
+  --flash-band-text: #111111;
+  --flash-tile-bg: #0b0505;
+  --flash-tile-text: #ffffff;
+  --flash-tile-label: #ffd9a8;
+  --flash-tile-edge: #ffb020;
+  --flash-tile-urgent-text: #ffb020;
+  --flash-tile-critical-bg: #ffffff;
+  --flash-tile-critical-text: #b91c1c;
+  --flash-burst-gradient: linear-gradient(135deg, #ffb020, #ff6a1f);
+  --flash-burst-text: #111111;
+  --flash-spark: #ffb020;
+  --flash-save-bg: rgb(255 106 31 / 0.16);
+  --flash-save-text: #ffb020;
+  --flash-price-sale: #ff6a1f;
+  --flash-section-bg: linear-gradient(180deg, #2a130a 0%, #111111 100%);
+  --flash-glow: 0 0 28px rgb(255 90 40 / 0.4);
+  --offer-stub-gradient: linear-gradient(160deg, #ffb020 0%, #ff6a1f 100%);
+  --offer-stub-text: #111111;
+  --offer-body-bg: rgb(255 138 31 / 0.12);
+  --offer-body-text: #f3f4f6;
+  --offer-border: #ff8a1f;
+  --offer-validity-bg: #0b0505;
+  --offer-validity-text: #ffb020;
+  --offer-validity-urgent-bg: #ffffff;
+  --offer-validity-urgent-text: #b91c1c;
 }

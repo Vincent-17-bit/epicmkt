@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheck,
@@ -15,6 +15,7 @@ import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import IconButton from "../components/IconButton.jsx";
 import Skeleton from "../components/Skeleton.jsx";
+import FlashBlocks from "./FlashBlocks.jsx";
 import Breadcrumbs from "../components/Breadcrumbs/Breadcrumbs.jsx";
 import BusinessCard from "../components/BusinessCard.jsx";
 import Img from "../components/Img.jsx";
@@ -80,13 +81,28 @@ const photo =
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d9d9d9"/><stop offset="1" stop-color="#8a8a8a"/></linearGradient></defs><rect width="640" height="360" fill="url(#g)"/></svg>'
   );
 
+const parse = (text) => {
+  const [r, g, b, a = 1] = text.match(/[\d.]+/g).map(Number);
+  return { r, g, b, a };
+};
+
 const read = (pane, name) => {
   const probe = document.createElement("span");
   probe.style.color = `var(--${name})`;
   pane.appendChild(probe);
-  const [r, g, b, a = 1] = getComputedStyle(probe).color.match(/[\d.]+/g).map(Number);
+  const color = parse(getComputedStyle(probe).color);
   probe.remove();
-  return { r, g, b, a };
+  return color;
+};
+
+const readBack = (pane, name) => {
+  const probe = document.createElement("span");
+  probe.style.background = `var(--${name})`;
+  pane.appendChild(probe);
+  const style = getComputedStyle(probe);
+  const source = style.backgroundImage !== "none" ? style.backgroundImage : style.backgroundColor;
+  probe.remove();
+  return source.match(/rgba?\([^)]+\)/g).map(parse);
 };
 
 const mix = (top, base) => ({
@@ -117,20 +133,26 @@ function Block({ title, children }) {
   );
 }
 
-function Contrast({ paneRef }) {
+function Contrast({ paneRef, list = pairs }) {
   const [rows, setRows] = useState([]);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const pane = paneRef.current;
     const base = read(pane, "surface");
     setRows(
-      pairs.map(([fg, bg, min]) => {
-        const back = mix(read(pane, bg), base);
-        const front = mix(read(pane, fg), back);
-        return { fg, bg, min, value: ratio(front, back) };
+      list.map(([fg, bg, min]) => {
+        const defined = [fg, bg].every((name) => getComputedStyle(pane).getPropertyValue(`--${name}`).trim() !== "");
+        if (!defined) return { fg, bg, min, value: 0 };
+        const value = Math.min(
+          ...readBack(pane, bg).map((stop) => {
+            const back = mix(stop, base);
+            return ratio(mix(read(pane, fg), back), back);
+          })
+        );
+        return { fg, bg, min, value };
       })
     );
-  }, [paneRef]);
+  }, [paneRef, list]);
 
   return (
     <table className={styles.table}>
@@ -330,6 +352,8 @@ function Pane({ theme }) {
           <Skeleton height="120px" radius="var(--radius-card)" />
         </div>
       </Block>
+
+      <FlashBlocks Block={Block} Contrast={Contrast} paneRef={paneRef} theme={theme} />
 
       <Block title="Contrast">
         <Contrast paneRef={paneRef} />
