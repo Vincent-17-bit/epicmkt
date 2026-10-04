@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -17,7 +17,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, defaultVariantId } from "../lib/itemView.js";
+import { chatMessage, defaultVariantId, offerTarget } from "../lib/itemView.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
@@ -40,6 +40,8 @@ const HOLD_MS = 6000;
 const LEAVE_MS = 260;
 
 export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport }) {
+  const navigate = useNavigate();
+  const onSeeItems = (offer) => navigate(offerTarget(offer, business), { replace: true });
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
   const titleRef = useRef(null);
@@ -355,7 +357,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   </div>
                 )}
 
-                <OfferStrip key={current.id} offers={current.offers} />
+                <OfferStrip key={current.id} offers={current.offers} onSeeItems={onSeeItems} />
 
                 {variants.length > 0 && (
                   <div role="radiogroup" aria-label={t("item.options")} className={styles.variants}>

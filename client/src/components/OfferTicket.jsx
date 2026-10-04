@@ -3,7 +3,7 @@ import { formatKes } from "@epicmkt/shared";
 import { t } from "../i18n/index.js";
 import styles from "./OfferTicket.module.css";
 
-export default function OfferTicket({ view }) {
+export default function OfferTicket({ view, onSeeItems }) {
   const { offer, remainingMs, appliesToLabel } = view;
   const expiry = offerExpiry(remainingMs);
   const notes = [
@@ -30,6 +30,11 @@ export default function OfferTicket({ view }) {
           </p>
         )}
         {offer.terms && <p className={styles.terms}>{offer.terms}</p>}
+        {onSeeItems && (
+          <button type="button" className={styles.cta} onClick={() => onSeeItems(offer)}>
+            {t("item.seeItems")}
+          </button>
+        )}
       </div>
     </article>
   );

@@ -20,6 +20,14 @@ const labels = (r) => r.trail.map((c) => c.label);
 const targets = (r) => r.trail.map((c) => c.to);
 
 describe("getTrail", () => {
+  it("ignores every query param except item on a business page", () => {
+    const search = "?section=cuts&offer=p_001&utm_source=x&src=qr";
+    const plain = getTrail({ ...base, business, pathname: "/b/fade-kings" });
+    expect(getTrail({ ...base, business, pathname: "/b/fade-kings", search })).toEqual(plain);
+    const withItem = getTrail({ ...base, business, pathname: "/b/fade-kings", search: `${search}&item=skin-fade` });
+    expect(labels(withItem)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
+  });
+
   it("has no trail on Home", () => {
     expect(getTrail({ ...base, pathname: "/" }).status).toBe("none");
   });

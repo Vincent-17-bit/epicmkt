@@ -115,6 +115,7 @@ export default {
   "item.endsIn": "Ends in",
   "item.offers": "Offers for this item",
   "item.seeAllOffers": "See all",
+  "item.seeItems": "See items",
   "item.code": "Code",
   "item.noLimit": "No time limit",
   "item.newOnly": "New customers only",

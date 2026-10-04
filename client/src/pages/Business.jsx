@@ -14,7 +14,7 @@ import {
   faMap
 } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { directionsLink, distanceKm, formatDistance, formatKes, telLink, visibleFields, whatsappLink } from "@epicmkt/shared";
+import { directionsLink, distanceKm, formatDistance, formatKes, slugify, telLink, visibleFields, whatsappLink } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
@@ -40,6 +40,20 @@ const mapSrc = (lat, lng) => {
   const bbox = [lng - d, lat - d, lng + d, lat + d].join("%2C");
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
 };
+
+function groupServices(services) {
+  const groups = [];
+  services.forEach((svc) => {
+    const id = svc.section ? slugify(svc.section) : null;
+    let group = groups.find((g) => g.id === id);
+    if (!group) {
+      group = { id, name: svc.section ?? null, items: [] };
+      groups.push(group);
+    }
+    group.items.push(svc);
+  });
+  return groups;
+}
 
 function Section({ title, children, id }) {
   return (
@@ -94,6 +108,18 @@ export default function Business() {
     withItem.set("item", itemId);
     navigate({ pathname: location.pathname, search: query(withItem) }, { state: { sheet: 1 } });
   }, [data, itemId, location.key]);
+
+  const sectionId = searchParams.get("section");
+  const [hit, setHit] = useState(null);
+  useEffect(() => {
+    if (!data || !sectionId) return undefined;
+    const node = document.getElementById(`section-${sectionId}`);
+    if (!node) return undefined;
+    node.scrollIntoView({ block: "start" });
+    setHit(sectionId);
+    const timer = setTimeout(() => setHit(null), 2500);
+    return () => clearTimeout(timer);
+  }, [data, sectionId]);
 
   const depth = location.state?.sheet ?? 0;
   const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: depth + 1 } });
@@ -278,19 +304,28 @@ export default function Business() {
 
         {data.services.length > 0 && (
           <Section title="Services and prices" id="services">
-            <ul className={styles.services}>
-              {data.services.map((svc) => (
-                <li key={svc.id} className={styles.service}>
-                  <button type="button" className={styles.serviceBtn} onClick={() => openItem(svc.id)} aria-haspopup="dialog">
-                    {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
-                    <span className={styles.serviceText}>
-                      <span className={styles.h3}>{svc.name}</span>
-                      {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            {groupServices(data.services).map((group) => (
+              <div
+                key={group.id ?? "all"}
+                id={group.id ? `section-${group.id}` : undefined}
+                className={group.id && group.id === hit ? styles.sectionHit : undefined}
+              >
+                {group.name && <h3 className={styles.h3}>{group.name}</h3>}
+                <ul className={styles.services}>
+                {group.items.map((svc) => (
+                  <li key={svc.id} className={styles.service}>
+                    <button type="button" className={styles.serviceBtn} onClick={() => openItem(svc.id)} aria-haspopup="dialog">
+                      {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
+                      <span className={styles.serviceText}>
+                        <span className={styles.h3}>{svc.name}</span>
+                        {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+                </ul>
+              </div>
+            ))}
           </Section>
         )}
 

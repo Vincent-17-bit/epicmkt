@@ -57,3 +57,16 @@
   font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
+
+.cta {
+  justify-self: start;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}

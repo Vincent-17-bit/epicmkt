@@ -1,4 +1,4 @@
-import { formatValue, visibleFields } from "@epicmkt/shared";
+import { formatValue, slugify, visibleFields } from "@epicmkt/shared";
 
 const kes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
@@ -16,6 +16,17 @@ export function defaultVariantId(pricing) {
   const variants = pricing?.variants ?? [];
   if (!variants.length) return null;
   return (variants.find((v) => v.regularPrice === pricing.regularPrice) ?? variants[0]).id;
+}
+
+export function offerTarget(offer, business) {
+  const base = `/b/${business.slug}`;
+  let sectionId = null;
+  if (offer.appliesTo === "section") sectionId = offer.sectionId;
+  if (offer.appliesTo === "items") {
+    const first = business.services?.find((svc) => offer.itemIds?.includes(svc.id) && svc.section);
+    sectionId = first ? slugify(first.section) : null;
+  }
+  return sectionId ? `${base}?section=${encodeURIComponent(sectionId)}` : base;
 }
 
 const SCALARS = ["text", "number", "price", "boolean", "select", "multiselect"];

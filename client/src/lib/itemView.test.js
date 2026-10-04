@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, limitGroups, offerExpiry, offerValueLabel } from "./itemView.js";
+import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, limitGroups, offerExpiry, offerTarget, offerValueLabel } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -122,5 +122,28 @@ describe("buildItemJsonLd", () => {
 
   it("omits offers without a price", () => {
     expect(buildItemJsonLd({ item: { ...base, kind: "service", pricing: null, flash: null }, siteUrl: "https://e.test" }).offers).toBeUndefined();
+  });
+});
+
+describe("offerTarget", () => {
+  const business = {
+    slug: "fade-kings",
+    services: [
+      { id: "haircut", section: "Cuts" },
+      { id: "wig", section: null }
+    ]
+  };
+
+  it("sends store offers to the business page", () => {
+    expect(offerTarget({ appliesTo: "store" }, business)).toBe("/b/fade-kings");
+  });
+
+  it("sends section offers to their section", () => {
+    expect(offerTarget({ appliesTo: "section", sectionId: "cuts" }, business)).toBe("/b/fade-kings?section=cuts");
+  });
+
+  it("sends item offers to the section of the first sectioned item", () => {
+    expect(offerTarget({ appliesTo: "items", itemIds: ["wig", "haircut"] }, business)).toBe("/b/fade-kings?section=cuts");
+    expect(offerTarget({ appliesTo: "items", itemIds: ["wig"] }, business)).toBe("/b/fade-kings");
   });
 });
