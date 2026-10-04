@@ -2,6 +2,16 @@ import { RESULTS_KEY } from "../config/breadcrumbs.js";
 
 const INSENSITIVE_LISTINGS = ["/flash", "/offers"];
 
+const positions = new Map();
+
+export const keepsScroll = (pathname) => INSENSITIVE_LISTINGS.includes(pathname.replace(/\/+$/, "").toLowerCase());
+
+export function saveScroll(key, pathname, top) {
+  if (keepsScroll(pathname)) positions.set(key, top);
+}
+
+export const savedScroll = (key) => positions.get(key);
+
 export const isListing = (pathname) =>
   pathname.startsWith("/c/") || pathname === "/search" || INSENSITIVE_LISTINGS.includes(pathname.replace(/\/+$/, "").toLowerCase());
 

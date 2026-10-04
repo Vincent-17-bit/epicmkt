@@ -56,6 +56,14 @@ describe("results memory", () => {
     expect(["/flash/x", "/flashes", "/offers/1", "/SEARCH"].some(mod.isListing)).toBe(false);
   });
 
+  it("keeps scroll only for flash and offers listings", () => {
+    mod.saveScroll("k1", "/FLASH/", 640);
+    mod.saveScroll("k2", "/offers", 90);
+    mod.saveScroll("k3", "/c/gyms", 500);
+    mod.saveScroll("k4", "/flash/x", 500);
+    expect([mod.savedScroll("k1"), mod.savedScroll("k2"), mod.savedScroll("k3"), mod.savedScroll("k4")]).toEqual([640, 90, undefined, undefined]);
+  });
+
   it("computes the pop distance only when both indexes exist", () => {
     expect(mod.backDelta({ historyIdx: 2 }, 5)).toBe(3);
     expect(mod.backDelta({ historyIdx: null }, 5)).toBe(0);
