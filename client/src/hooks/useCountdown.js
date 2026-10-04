@@ -30,10 +30,12 @@ export function useCountdownLabel(endsAtIso) {
   return useMemo(() => endsInLabel(minutes * MINUTE), [minutes]);
 }
 
+const GRACE_MS = 1200;
+
 export function useLiveSales(entries) {
   const read = () => {
     const now = getSnapshot();
-    return entries.filter((entry) => Date.parse(entry.sale.endsAt) > now).map((entry) => entry.sale.id).join("|");
+    return entries.filter((entry) => Date.parse(entry.sale.endsAt) + GRACE_MS > now).map((entry) => entry.sale.id).join("|");
   };
   const key = useSyncExternalStore(subscribe, read, read);
   return useMemo(() => {

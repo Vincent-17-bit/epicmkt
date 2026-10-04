@@ -57,7 +57,6 @@
   display: inline-flex;
   font-size: var(--digit-size);
   font-weight: 700;
-  perspective: 120px;
 }
 
 .digit {
@@ -67,7 +66,9 @@
 }
 
 .digit[data-flip] {
-  animation: flip 220ms ease-out;
+  animation: flip 220ms cubic-bezier(0.22, 0.8, 0.3, 1);
+  backface-visibility: hidden;
+  transform-origin: 50% 0;
 }
 
 .unit {
@@ -163,13 +164,13 @@
 
 @keyframes flip {
   from {
-    opacity: 0.2;
-    transform: rotateX(-90deg);
+    opacity: 0;
+    transform: perspective(160px) rotateX(-70deg) translateY(-25%);
   }
 
   to {
     opacity: 1;
-    transform: rotateX(0);
+    transform: perspective(160px) rotateX(0) translateY(0);
   }
 }
 

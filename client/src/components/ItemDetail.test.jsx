@@ -198,7 +198,7 @@ describe("ItemDetail flash expiry", () => {
     remainingMs: endsInMs
   });
 
-  it("confirms expiry with a refetch, shows the ended notice for 6 seconds, then restores regular pricing", async () => {
+  it("confirms expiry with a refetch, holds the flash view with the ended notice for 6 seconds, then restores regular pricing", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     mocks.getDetail.mockReset();
     mocks.getDetail.mockResolvedValueOnce({ ...base, pricing: pricing(300, 240), flash: liveFlash(2000) });
@@ -211,12 +211,17 @@ describe("ItemDetail flash expiry", () => {
       await vi.advanceTimersByTimeAsync(4000);
     });
     expect(await screen.findByText(/Flash sale ended. Regular price/)).toHaveTextContent("KES 300");
-    expect(screen.queryByText("Weekend deal")).toBeNull();
-    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    expect(screen.getByText("Weekend deal")).toBeInTheDocument();
+    expect(chatHrefs()[0]).toContain("flash sale");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(6500);
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
     expect(screen.queryByText(/Flash sale ended/)).toBeNull();
+    expect(screen.queryByText("Weekend deal")).toBeNull();
+    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT");
   });
 
   it("shows the no longer available state when the item was unlisted after the sale", async () => {

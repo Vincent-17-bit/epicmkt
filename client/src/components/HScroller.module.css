@@ -8,7 +8,7 @@
   display: flex;
   gap: 12px;
   margin: 0;
-  padding: var(--space-2) var(--space-4) var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-5);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   list-style: none;
@@ -46,8 +46,6 @@
   flex: 0 0 var(--cell);
   min-width: 0;
   scroll-snap-align: start;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 26rem;
 }
 
 @media (min-width: 1024px) {

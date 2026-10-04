@@ -7,7 +7,7 @@ import CountdownTiles from "./CountdownTiles.jsx";
 import FuseBar from "./FuseBar.jsx";
 import styles from "./FlashBanner.module.css";
 
-export default function FlashBanner({ flash, pricing, unit, bannerRef }) {
+export default function FlashBanner({ flash, pricing, unit, bannerRef, ended = false }) {
   const { sale } = flash;
   const urgency = useUrgency(sale.endsAt);
   const remaining = useCountdownLabel(sale.endsAt);
@@ -15,7 +15,7 @@ export default function FlashBanner({ flash, pricing, unit, bannerRef }) {
 
   return (
     <div className={styles.wrap}>
-      <section ref={bannerRef} className={styles.banner} data-urgency={urgency} aria-label={t("item.flash")}>
+      <section ref={bannerRef} className={styles.banner} data-urgency={urgency} data-ended={ended ? "true" : "false"} aria-label={t("item.flash")}>
         <div className={styles.top}>
           <span className={styles.label}>
             <FontAwesomeIcon icon={faBolt} aria-hidden="true" />

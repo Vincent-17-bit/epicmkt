@@ -36,6 +36,8 @@ import styles from "./ItemDetail.module.css";
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const external = { target: "_blank", rel: "noopener noreferrer" };
 const MAX_TIMEOUT = 2147483647;
+const HOLD_MS = 6000;
+const LEAVE_MS = 260;
 
 export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport }) {
   const sheetRef = useRef(null);
@@ -43,8 +45,6 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const titleRef = useRef(null);
   const viewed = useRef(null);
   const bannerRef = useRef(null);
-  const lastFlash = useRef(null);
-  const [endedNotice, setEndedNotice] = useState(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const [choice, setChoice] = useState({ itemId: null, variantId: null });
@@ -59,12 +59,15 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   });
 
   const gone = isError && error?.name === "NotFoundError";
-  const current = !gone && detail?.id === itemId ? detail : null;
-  const failed = isError && !gone && !current;
+  const fresh = !gone && detail?.id === itemId ? detail : null;
+  const failed = isError && !gone && !fresh;
+  const [hold, setHold] = useState(null);
+  const lastLive = useRef(null);
+  const current = hold && fresh && hold.id === fresh.id ? { ...fresh, flash: hold.flash, pricing: hold.pricing } : fresh;
 
-  useItemJsonLd(current);
+  useItemJsonLd(fresh);
 
-  const flashEndsAt = current?.flash?.sale.endsAt ?? null;
+  const flashEndsAt = fresh?.flash?.sale.endsAt ?? null;
   const flashUrgency = useUrgency(flashEndsAt);
   const flashOver = Boolean(flashEndsAt) && flashUrgency === "ended";
   const bannerInView = useInView(bannerRef, bodyRef, current?.flash?.sale.id ?? null);
@@ -77,27 +80,40 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   }, [flashOver, flashEndsAt]);
 
   useEffect(() => {
-    setEndedNotice(null);
-    lastFlash.current = null;
+    setHold(null);
+    lastLive.current = null;
   }, [itemId]);
 
   useEffect(() => {
-    if (!current) return;
-    if (current.flash) {
-      lastFlash.current = current.id;
+    if (gone) {
+      setHold(null);
+      lastLive.current = null;
       return;
     }
-    if (lastFlash.current === current.id) {
-      lastFlash.current = null;
-      setEndedNotice({ price: current.pricing?.regularPrice ?? null });
+    if (!fresh) return;
+    if (fresh.flash) {
+      lastLive.current = { id: fresh.id, flash: fresh.flash, pricing: fresh.pricing };
+      setHold(null);
+      return;
     }
-  }, [current]);
+    const last = lastLive.current;
+    if (last && last.id === fresh.id) {
+      lastLive.current = null;
+      setHold({ ...last, regularPrice: fresh.pricing?.regularPrice ?? null, leaving: false });
+    }
+  }, [fresh, gone]);
 
   useEffect(() => {
-    if (!endedNotice) return undefined;
-    const id = window.setTimeout(() => setEndedNotice(null), 6000);
+    if (!hold || hold.leaving) return undefined;
+    const id = window.setTimeout(() => setHold((h) => (h ? { ...h, leaving: true } : h)), HOLD_MS);
     return () => window.clearTimeout(id);
-  }, [endedNotice]);
+  }, [hold?.id, hold?.leaving]);
+
+  useEffect(() => {
+    if (!hold?.leaving) return undefined;
+    const id = window.setTimeout(() => setHold(null), LEAVE_MS);
+    return () => window.clearTimeout(id);
+  }, [hold?.leaving]);
 
   useEffect(() => {
     const opener = document.activeElement;
@@ -286,18 +302,21 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
           {current && (
             <>
-              {current.flash && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
-              <ItemGallery key={current.id} images={current.images} name={current.name} />
+              {current.flash && !hold && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
+              <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
 
               {current.flash && (
-                <FlashBanner key={current.flash.sale.id} flash={current.flash} pricing={shown} unit={current.pricing?.unit} bannerRef={bannerRef} />
-              )}
-
-              {endedNotice && (
-                <p className={styles.endedNotice} role="status">
-                  {t("flash.endedNotice")}
-                  {endedNotice.price !== null && ` ${kesText(endedNotice.price)}`}
-                </p>
+                <div className={styles.collapse} data-open={hold?.leaving ? "false" : "true"}>
+                  <div className={styles.collapseInner}>
+                    <FlashBanner key={current.flash.sale.id} flash={current.flash} pricing={shown} unit={current.pricing?.unit} bannerRef={bannerRef} ended={Boolean(hold)} />
+                    {hold && (
+                      <p className={styles.endedNotice} role="status">
+                        {t("flash.endedNotice")}
+                        {hold.regularPrice !== null && ` ${kesText(hold.regularPrice)}`}
+                      </p>
+                    )}
+                  </div>
+                </div>
               )}
 
               <div className={styles.info}>
@@ -417,7 +436,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               {selective}
 
               <ItemSpecs
-                key={current.id}
+                key={`specs-${current.id}`}
                 item={current}
                 category={business.category}
                 attributes={business.attributes}

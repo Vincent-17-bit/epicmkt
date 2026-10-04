@@ -35,6 +35,13 @@
   animation: glow 2.4s ease-in-out infinite;
 }
 
+.card[data-urgency="ended"] {
+  opacity: 0.35;
+  pointer-events: none;
+  transform: scale(0.97);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
 .card:active {
   transform: scale(0.97);
 }

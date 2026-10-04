@@ -7,9 +7,22 @@ let timer = null;
 
 const snap = () => Math.floor((Date.now() + offset) / 1000) * 1000;
 
-const emit = () => {
+const schedule = () => {
+  const wait = 1000 - ((Date.now() + offset) % 1000) + 8;
+  timer = window.setTimeout(emit, wait);
+};
+
+function emit() {
   tick = snap();
   listeners.forEach((listener) => listener());
+  if (listeners.size > 0) schedule();
+  else timer = null;
+}
+
+const resume = () => {
+  if (timer === null || document.visibilityState !== "visible") return;
+  window.clearTimeout(timer);
+  emit();
 };
 
 export const serverNow = () => Date.now() + offset;
@@ -20,12 +33,14 @@ export function subscribe(listener) {
   listeners.add(listener);
   if (timer === null) {
     tick = snap();
-    timer = window.setInterval(emit, 1000);
+    schedule();
+    document.addEventListener("visibilitychange", resume);
   }
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0 && timer !== null) {
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
       timer = null;
     }
   };
@@ -37,7 +52,10 @@ export async function syncServerTime() {
     const { now } = await getServerTime();
     const received = Date.now();
     offset = Date.parse(now) - (sent + received) / 2;
-    if (timer !== null) emit();
+    if (timer !== null) {
+      window.clearTimeout(timer);
+      emit();
+    }
   } catch {
     return;
   }

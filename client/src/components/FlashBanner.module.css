@@ -106,3 +106,28 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.wrap {
+  animation: enter 220ms ease-out;
+}
+
+.banner[data-ended="true"] {
+  filter: saturate(0.4);
+  transition: filter 300ms ease;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap {
+    animation: none;
+  }
+
+  .banner[data-ended="true"] {
+    transition: none;
+  }
+}
