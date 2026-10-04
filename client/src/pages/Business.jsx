@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -96,19 +96,6 @@ export default function Business() {
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
 
-  const seeded = useRef(null);
-  useEffect(() => {
-    if (!data || !itemId || (location.state?.sheet ?? 0) > 0 || seeded.current === location.key) return;
-    seeded.current = location.key;
-    const base = new URLSearchParams(searchParams);
-    base.delete("item");
-    const query = (params) => (params.toString() ? `?${params}` : "");
-    navigate({ pathname: location.pathname, search: query(base) }, { replace: true });
-    const withItem = new URLSearchParams(base);
-    withItem.set("item", itemId);
-    navigate({ pathname: location.pathname, search: query(withItem) }, { state: { sheet: 1 } });
-  }, [data, itemId, location.key]);
-
   const sectionId = searchParams.get("section");
   const [hit, setHit] = useState(null);
   useEffect(() => {
@@ -121,10 +108,10 @@ export default function Business() {
     return () => clearTimeout(timer);
   }, [data, sectionId]);
 
-  const depth = location.state?.sheet ?? 0;
-  const openItem = (id) => setSearchParams({ item: id }, { state: { sheet: depth + 1 } });
+  const openItem = (id) => setSearchParams({ item: id }, { state: { sheetFrom: "page" } });
+  const swapItem = (id) => setSearchParams({ item: id }, { replace: true, state: location.state });
   const closeItem = () => {
-    if (depth > 0) navigate(-depth);
+    if (location.state?.sheetFrom === "page") navigate(-1);
     else
       setSearchParams(
         (prev) => {
@@ -195,7 +182,7 @@ export default function Business() {
 
   return (
     <article className={styles.root} style={{ "--hue": data.hue ?? 210 }}>
-      <Container className={styles.crumbRow}>
+      <Container className={styles.crumbRow} {...(itemId ? { inert: "", "aria-hidden": true } : {})}>
         <PageBreadcrumbs />
       </Container>
       <header className={styles.hero}>
@@ -434,7 +421,7 @@ export default function Business() {
           itemId={itemId}
           distanceKm={distance}
           onClose={closeItem}
-          onSelect={openItem}
+          onSelect={swapItem}
           onReport={() => setReporting(true)}
         />
       )}
