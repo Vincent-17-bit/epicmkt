@@ -1,3 +1,8 @@
+.crumbRow {
+  max-width: var(--content-width);
+  padding-top: 0;
+}
+
 .hero {
   padding: var(--space-4) 0 var(--space-5);
   background: var(--flash-section-bg);

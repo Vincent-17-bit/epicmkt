@@ -108,6 +108,7 @@ describe("getTrail", () => {
   });
 
   it.each([
+    ["/flash", ["Home", "Flash sales"]],
     ["/sell", ["Home", "Become a seller"]],
     ["/sell/register", ["Home", "Become a seller", "Register"]],
     ["/about", ["Home", "About"]],

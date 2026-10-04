@@ -81,9 +81,11 @@ export default function FlashSales() {
 
   return (
     <>
+      <Container className={styles.crumbRow}>
+        <PageBreadcrumbs />
+      </Container>
       <section className={styles.hero}>
         <Container>
-          <PageBreadcrumbs />
           <div className={styles.heroInner}>
             <h1 className={styles.title}>
               <FontAwesomeIcon icon={faBolt} className={styles.bolt} aria-hidden="true" />
