@@ -54,11 +54,8 @@ describe("breadcrumb JSON-LD for /flash and /offers", () => {
 });
 
 describe("breadcrumb labels", () => {
-  it("are static text with Kiswahili placeholders and an English fallback", () => {
+  it("are static English text", () => {
     expect(t("breadcrumbs.flashSales")).toBe("Flash sales");
     expect(t("breadcrumbs.offers")).toBe("Offers");
-    expect(t("breadcrumbs.flashSales", "sw")).toBe("Ofa za Haraka");
-    expect(t("breadcrumbs.offers", "sw")).toBe("Ofa");
-    expect(t("breadcrumbs.itemUnavailable", "sw")).toBe("Item unavailable");
   });
 });

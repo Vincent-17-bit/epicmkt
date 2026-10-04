@@ -229,45 +229,6 @@
   gap: var(--space-3);
 }
 
-.lang {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.langGroup {
-  display: inline-grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: var(--space-1);
-  padding: var(--space-1);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--surface-2);
-}
-
-.langBtn {
-  min-height: var(--tap);
-  padding: 0 var(--space-4);
-  border: 2px solid transparent;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.langBtn[aria-pressed="true"] {
-  border-color: var(--text);
-  background: var(--primary-tint);
-  color: var(--on-primary-tint);
-}
-
-.langNote {
-  min-height: 1.25em;
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
 .top_btn {
   display: inline-flex;
   align-items: center;

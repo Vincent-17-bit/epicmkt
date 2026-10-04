@@ -96,25 +96,6 @@ function Section({ id, title, area, desktop, children }) {
   );
 }
 
-function Language() {
-  const [note, setNote] = useState(false);
-  return (
-    <div className={styles.lang}>
-      <div role="group" aria-label="Language" className={styles.langGroup}>
-        <button type="button" className={styles.langBtn} aria-pressed="true">
-          English
-        </button>
-        <button type="button" className={styles.langBtn} aria-pressed="false" onClick={() => setNote(true)}>
-          Kiswahili
-        </button>
-      </div>
-      <p className={styles.langNote} role="status">
-        {note ? "Kiswahili is coming soon." : ""}
-      </p>
-    </div>
-  );
-}
-
 export default function Footer() {
   const desktop = useDesktop();
   const toTop = () => {
@@ -186,7 +167,6 @@ export default function Footer() {
       <Container className={styles.bottom}>
         <p className={styles.note}>EpicMKT lists businesses and does not process orders or payments.</p>
         <div className={styles.controls}>
-          <Language />
           <ThemeSwitch />
           <button type="button" className={styles.top_btn} onClick={toTop}>
             <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
