@@ -1,22 +1,62 @@
 import { RESULTS_KEY } from "../config/breadcrumbs.js";
 
-const isListing = (pathname) => pathname.startsWith("/c/") || pathname === "/search";
+const LISTINGS = ["/search", "/flash", "/offers"];
 
-export function rememberResults(pathname, search) {
-  try {
-    if (isListing(pathname)) sessionStorage.setItem(RESULTS_KEY, JSON.stringify({ path: pathname, search }));
-    else sessionStorage.removeItem(RESULTS_KEY);
-  } catch {
-    return;
-  }
-}
+export const isListing = (pathname) => pathname.startsWith("/c/") || LISTINGS.includes(pathname);
+
+const slugOf = (pathname) => /^\/b\/([^/]+)/.exec(pathname)?.[1] ?? null;
+const indexOf = (idx) => (Number.isInteger(idx) ? idx : null);
+
+let listing = null;
+let previous = null;
 
 export function readResults() {
   try {
     const raw = sessionStorage.getItem(RESULTS_KEY);
     const value = raw ? JSON.parse(raw) : null;
-    return value && isListing(value.path) ? value : null;
+    return value && isListing(value.path) && value.businessSlug ? value : null;
   } catch {
     return null;
   }
 }
+
+export function clearResults() {
+  try {
+    sessionStorage.removeItem(RESULTS_KEY);
+  } catch {
+    return;
+  }
+}
+
+function writeResults(value) {
+  try {
+    sessionStorage.setItem(RESULTS_KEY, JSON.stringify(value));
+  } catch {
+    return;
+  }
+}
+
+export function trackResults(location, idx = window.history.state?.idx) {
+  if (previous?.key === location.key) return;
+  const from = previous;
+  previous = { key: location.key, pathname: location.pathname };
+
+  if (isListing(location.pathname)) {
+    listing = { path: location.pathname, search: location.search, historyIdx: indexOf(idx) };
+    return;
+  }
+
+  const slug = slugOf(location.pathname);
+  if (!slug) return;
+
+  if (from && isListing(from.pathname) && listing) {
+    writeResults({ ...listing, businessSlug: slug });
+  } else if (from ? slugOf(from.pathname) !== slug : readResults()?.businessSlug !== slug) {
+    clearResults();
+  }
+}
+
+export const backDelta = (stored, idx = window.history.state?.idx) => {
+  const current = indexOf(idx);
+  return stored.historyIdx != null && current != null ? current - stored.historyIdx : 0;
+};

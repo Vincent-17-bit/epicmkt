@@ -15,6 +15,7 @@ import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
+import { trackResults } from "./lib/resultsMemory.js";
 
 export const router = createBrowserRouter([
   {
@@ -48,3 +49,5 @@ export const router = createBrowserRouter([
     ]
   }
 ]);
+
+router.subscribe((state) => trackResults(state.location));
