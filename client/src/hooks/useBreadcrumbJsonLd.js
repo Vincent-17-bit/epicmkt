@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { SITE_URL } from "../config/breadcrumbs.js";
+import { CASE_INSENSITIVE_PATHS, SITE_URL } from "../config/breadcrumbs.js";
 
 const ID = "breadcrumb-jsonld";
 
@@ -19,6 +19,8 @@ export function buildJsonLd(trail, here) {
 
 export function useBreadcrumbJsonLd(trail) {
   const { pathname, search } = useLocation();
+  const normal = pathname.replace(/\/+$/, "").toLowerCase();
+  const here = CASE_INSENSITIVE_PATHS.includes(normal) ? normal : `${pathname}${search}`;
   const signature = trail.map((c) => `${c.label}|${c.to ?? ""}`).join(">");
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function useBreadcrumbJsonLd(trail) {
     const script = document.createElement("script");
     script.id = ID;
     script.type = "application/ld+json";
-    script.textContent = JSON.stringify(buildJsonLd(trail, `${pathname}${search}`)).replace(/</g, "\\u003c");
+    script.textContent = JSON.stringify(buildJsonLd(trail, here)).replace(/</g, "\\u003c");
     document.head.appendChild(script);
     return () => script.remove();
   }, [signature, pathname, search]);

@@ -5,8 +5,8 @@ export const SEARCH_QUERY_MAX = 24;
 export const CASE_INSENSITIVE_PATHS = ["/flash", "/offers"];
 
 export const STATIC_TRAILS = {
-  "/flash": [{ key: "breadcrumb.flash" }],
-  "/offers": [{ key: "breadcrumb.offers" }],
+  "/flash": [{ key: "breadcrumbs.flashSales" }],
+  "/offers": [{ key: "breadcrumbs.offers" }],
   "/sell": [{ key: "breadcrumb.sell" }],
   "/sell/register": [{ key: "breadcrumb.sell", to: "/sell" }, { key: "breadcrumb.register" }],
   "/about": [{ key: "breadcrumb.about" }],
