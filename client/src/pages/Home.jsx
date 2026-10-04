@@ -11,6 +11,7 @@ import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import CardGrid from "../components/CardGrid.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
+import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
 import BrowseResults from "../components/BrowseResults.jsx";
 import BusinessRail from "../components/BusinessRail.jsx";
@@ -92,6 +93,7 @@ export default function Home() {
         />
         <section className={styles.section}>
           <Container>
+            <FlashStrip id="category-flash-title" categoryId={slug} />
             <BrowseResults categoryId={slug} />
           </Container>
         </section>
@@ -135,6 +137,10 @@ export default function Home() {
           </Button>
         </Container>
       </section>
+
+      <Container>
+        <FlashStrip id="home-flash-title" />
+      </Container>
 
       <section className={styles.section} aria-labelledby="near-title">
         <Container>

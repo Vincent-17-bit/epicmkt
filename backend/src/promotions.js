@@ -81,6 +81,16 @@ export function liveOffersFor(item, business, at = now()) {
     .sort((a, b) => (a.endsAt ? Date.parse(a.endsAt) : Infinity) - (b.endsAt ? Date.parse(b.endsAt) : Infinity));
 }
 
+export function promoCountsFor(business, at = now()) {
+  if (!business) return { flash: 0, offers: 0 };
+  const items = business.services.filter((svc) => svc.status !== "unlisted");
+  const flash = items.filter((svc) => liveSaleFor({ id: svc.id, status: svc.status ?? "listed" }, business, at)).length;
+  const offers = store.offers.filter(
+    (offer) => offer.businessId === business.id && offerLive(offer, at) && dayAllowed(offer, at)
+  ).length;
+  return { flash, offers };
+}
+
 export function appliesToLabel(offer, business) {
   if (offer.appliesTo === "store") return "Whole store";
   if (offer.appliesTo === "items") return `${offer.itemIds.length} selected ${offer.itemIds.length === 1 ? "item" : "items"}`;

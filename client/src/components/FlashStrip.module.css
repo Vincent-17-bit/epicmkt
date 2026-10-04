@@ -1,0 +1,70 @@
+.tile {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  min-height: 14rem;
+  padding: var(--space-3);
+  border: 2px dashed var(--flash-price-sale);
+  border-radius: 14px;
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color var(--dur) ease;
+}
+
+.tileBolt {
+  color: var(--flash-price-sale);
+  font-size: var(--text-xl);
+}
+
+@media (hover: hover) {
+  .tile:hover {
+    background: var(--flash-save-bg);
+  }
+}
+
+.tile:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.plain {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border);
+}
+
+.plainTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.plainBolt {
+  color: var(--flash-price-sale);
+}
+
+.error {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+}
+
+.retry {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}

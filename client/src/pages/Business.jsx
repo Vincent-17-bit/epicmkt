@@ -27,6 +27,7 @@ import Skeleton from "../components/Skeleton.jsx";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import ItemDetail from "../components/ItemDetail.jsx";
+import FlashStrip from "../components/FlashStrip.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -272,6 +273,8 @@ export default function Business() {
             </ul>
           </Section>
         )}
+
+        <FlashStrip id="business-flash-title" businessId={data.id} heat={false} />
 
         {data.services.length > 0 && (
           <Section title="Services and prices" id="services">

@@ -1,5 +1,6 @@
 import { formatKes } from "@epicmkt/shared";
 import { t } from "../i18n/index.js";
+import FlashChip from "./FlashChip.jsx";
 import styles from "./ItemCard.module.css";
 
 export default function ItemCard({ item, onSelect, className = "" }) {
@@ -18,6 +19,7 @@ export default function ItemCard({ item, onSelect, className = "" }) {
       <span className={styles.media}>
         {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
         {onSale && <span className={styles.chip}>-{pricing.discountPercent}%</span>}
+        {item.flash?.sale && <FlashChip endsAt={item.flash.sale.endsAt} className={styles.flashChip} />}
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>

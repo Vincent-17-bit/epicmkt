@@ -9,6 +9,7 @@ import SellRegister from "./pages/SellRegister.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
 import Cookies from "./pages/Cookies.jsx";
+import FlashSales from "./pages/FlashSales.jsx";
 import Business from "./pages/Business.jsx";
 import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
@@ -26,6 +27,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Home /> },
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
+          { path: "flash", element: <FlashSales /> },
           { path: "b/:slug", element: <Business /> },
           { path: "s/:shortcode", element: <ShortLink /> },
           { path: "about", element: <About /> },

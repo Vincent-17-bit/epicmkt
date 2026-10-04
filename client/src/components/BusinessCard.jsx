@@ -8,6 +8,7 @@ import { logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import Button from "./Button.jsx";
 import { FeaturedBadge, VerifiedBadge } from "./Badges.jsx";
+import PromoChip from "./PromoChip.jsx";
 import styles from "./BusinessCard.module.css";
 
 export default function BusinessCard({ business }) {
@@ -29,6 +30,7 @@ export default function BusinessCard({ business }) {
             <FontAwesomeIcon icon={icon} />
           )}
         </Link>
+        <PromoChip promo={business.promo} className={styles.promo} />
         {hasBadges && (
           <div className={styles.badges}>
             {business.plan === "premium" && <FeaturedBadge />}

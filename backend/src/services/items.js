@@ -65,6 +65,8 @@ const sellerCard = (business, origin) => ({
   id: business.id,
   slug: business.slug,
   name: business.name,
+  categoryId: business.categoryId,
+  townSlug: business.townSlug,
   logo: business.logoUrl ?? null,
   verified: business.verified,
   townName: business.area,
@@ -174,4 +176,82 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
     return 0;
   });
   return rows.slice(0, limit);
+}
+
+const HOUR_MS = 3600000;
+const WINDOWS = { "1h": HOUR_MS, "24h": 24 * HOUR_MS };
+
+const SALE_SORTS = {
+  ending: (a, b) => Date.parse(a.sale.endsAt) - Date.parse(b.sale.endsAt),
+  discount: (a, b) => b.pricing.discountPercent - a.pricing.discountPercent || Date.parse(a.sale.endsAt) - Date.parse(b.sale.endsAt),
+  nearest: (a, b) => (a.business.distanceKm ?? Infinity) - (b.business.distanceKm ?? Infinity) || Date.parse(a.sale.endsAt) - Date.parse(b.sale.endsAt),
+  newest: (a, b) => Date.parse(b.sale.startsAt) - Date.parse(a.sale.startsAt)
+};
+
+export async function getFlashSales({
+  businessId = null,
+  categoryId = null,
+  town = null,
+  endsWithin = null,
+  minPrice = null,
+  maxPrice = null,
+  sort = "ending",
+  limit = 12,
+  offset = 0,
+  origin = null
+} = {}) {
+  await delay();
+  runSweep();
+  const at = now();
+  const from = originOf(origin);
+  const window = WINDOWS[endsWithin] ?? null;
+  const rows = [];
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    if (businessId && business.id !== businessId && business.slug !== businessId) continue;
+    if (categoryId && business.categoryId !== categoryId) continue;
+    if (town && business.townSlug !== town) continue;
+    business.services.forEach((svc, index) => {
+      if (svc.status === "unlisted") return;
+      const item = toItem(business, svc, index);
+      const sale = liveSaleFor(item, business, at);
+      if (!sale) return;
+      const pricing = buildPricing(item, sale);
+      if (!pricing) return;
+      if (window && Date.parse(sale.endsAt) - at > window) return;
+      if (Number.isFinite(minPrice) && pricing.salePrice < minPrice) return;
+      if (Number.isFinite(maxPrice) && pricing.salePrice > maxPrice) return;
+      rows.push({ sale, item, pricing, business: sellerCard(business, from), remainingMs: Math.max(0, Date.parse(sale.endsAt) - at) });
+    });
+  }
+  rows.sort(SALE_SORTS[sort] ?? SALE_SORTS.ending);
+  return {
+    items: rows.slice(offset, offset + limit),
+    total: rows.length,
+    serverNow: new Date(at).toISOString()
+  };
+}
+
+export async function getFlashFacets() {
+  await delay();
+  runSweep();
+  const at = now();
+  const categories = new Map();
+  const towns = new Map();
+  let total = 0;
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    const live = business.services.filter((svc) => svc.status !== "unlisted" && liveSaleFor({ id: svc.id, status: svc.status ?? "listed" }, business, at)).length;
+    if (!live) continue;
+    total += live;
+    categories.set(business.categoryId, (categories.get(business.categoryId) ?? 0) + live);
+    const town = towns.get(business.townSlug) ?? { slug: business.townSlug, name: business.area, count: 0 };
+    town.count += live;
+    towns.set(business.townSlug, town);
+  }
+  return {
+    total,
+    categories: [...categories].map(([id, count]) => ({ id, count })),
+    towns: [...towns.values()].sort((a, b) => a.name.localeCompare(b.name))
+  };
 }

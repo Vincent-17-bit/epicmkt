@@ -1,8 +1,9 @@
 import { Link, useMatch } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
-import { getCategories } from "../api/index.js";
+import { faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { flash, getCategories } from "../api/index.js";
+import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import Container from "./Container.jsx";
 import Button from "./Button.jsx";
@@ -25,6 +26,13 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
     queryKey: ["categories"],
     queryFn: getCategories,
     staleTime: 5 * 60_000
+  });
+
+  const { data: flashFacets } = useQuery({
+    queryKey: ["flash-facets"],
+    queryFn: flash.facets,
+    staleTime: 30_000,
+    refetchInterval: 60_000
   });
 
   const submit = (event) => {
@@ -70,9 +78,16 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
           </form>
 
-          <Button as={Link} to="/sell" size="lg" icon={faStore} className={`${styles.seller} ${styles.areaSeller}`}>
-            Become a seller
-          </Button>
+          <div className={`${styles.sellerStack} ${styles.areaSeller}`}>
+            <Button as={Link} to="/sell" size="lg" icon={faStore} className={styles.seller}>
+              Become a seller
+            </Button>
+            <Link to="/flash" replace className={styles.flashLink}>
+              <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
+              <span>{t("flash.title")}</span>
+              {flashFacets?.total > 0 && <span className={styles.flashCount}>{flashFacets.total}</span>}
+            </Link>
+          </div>
 
           <section aria-labelledby="menu-categories" className={styles.areaCats}>
             <h2 id="menu-categories" className={styles.label}>

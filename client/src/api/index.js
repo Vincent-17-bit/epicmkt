@@ -22,7 +22,9 @@ export const items = {
   getStoreSelective: (businessId, opts) => backend.getStoreSelective(businessId, opts)
 };
 export const flash = {
-  getForItem: (itemId, businessId) => backend.getFlashForItem(itemId, businessId)
+  getForItem: (itemId, businessId) => backend.getFlashForItem(itemId, businessId),
+  list: (params) => backend.getFlashSales(params),
+  facets: () => backend.getFlashFacets()
 };
 export const offers = {
   list: (params) => backend.getOffers(params)

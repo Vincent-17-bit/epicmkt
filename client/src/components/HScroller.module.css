@@ -1,0 +1,98 @@
+.frame {
+  --cell: clamp(220px, 64vw, 280px);
+  position: relative;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  gap: 12px;
+  margin: 0;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scroll-padding-inline: var(--space-4);
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.row::-webkit-scrollbar {
+  display: none;
+}
+
+.row[data-left="true"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-5));
+  mask-image: linear-gradient(90deg, transparent, #000 var(--space-5));
+}
+
+.row[data-right="true"] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-5)), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-5)), transparent);
+}
+
+.row[data-left="true"][data-right="true"] {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent);
+}
+
+.dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+.cell {
+  flex: 0 0 var(--cell);
+  min-width: 0;
+  scroll-snap-align: start;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 26rem;
+}
+
+@media (min-width: 1024px) {
+  .cell[data-wide="true"] {
+    flex-basis: calc(var(--cell) * 2 + 12px);
+  }
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-50%);
+  transition: opacity var(--dur) ease, background-color var(--dur) ease;
+}
+
+.prev {
+  left: var(--space-2);
+}
+
+.next {
+  right: var(--space-2);
+}
+
+.nav:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (hover: hover) and (min-width: 768px) {
+  .nav {
+    display: inline-flex;
+  }
+
+  .nav:hover {
+    background: var(--primary-tint);
+  }
+}

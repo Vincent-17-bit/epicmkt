@@ -16,7 +16,7 @@ import {
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
-import { runSweep } from "../promotions.js";
+import { promoCountsFor, runSweep } from "../promotions.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
@@ -71,7 +71,8 @@ const toSummary = (b, origin) => ({
   lat: b.lat,
   lng: b.lng,
   isOpen: isOpenNow(b.hours),
-  distanceKm: origin ? distanceKm(origin, b) : null
+  distanceKm: origin ? distanceKm(origin, b) : null,
+  promo: promoCountsFor(b)
 });
 
 const toPublic = (b, origin) => {

@@ -184,3 +184,9 @@
   font-size: var(--text-xs);
   font-weight: 600;
 }
+
+.promo {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-3);
+}

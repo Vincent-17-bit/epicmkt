@@ -3,6 +3,7 @@ export const SITE_URL = (import.meta.env?.VITE_SITE_URL || (typeof window !== "u
 export const SEARCH_QUERY_MAX = 24;
 
 export const STATIC_TRAILS = {
+  "/flash": [{ key: "breadcrumb.flash" }],
   "/sell": [{ key: "breadcrumb.sell" }],
   "/sell/register": [{ key: "breadcrumb.sell", to: "/sell" }, { key: "breadcrumb.register" }],
   "/about": [{ key: "breadcrumb.about" }],
