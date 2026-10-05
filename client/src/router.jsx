@@ -10,6 +10,7 @@ import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
 import Cookies from "./pages/Cookies.jsx";
 import FlashSales from "./pages/FlashSales.jsx";
+import Offers from "./pages/Offers.jsx";
 import Business from "./pages/Business.jsx";
 import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
@@ -29,6 +30,7 @@ export const router = createBrowserRouter([
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
           { path: "flash", element: <FlashSales /> },
+          { path: "offers", element: <Offers /> },
           { path: "b/:slug", element: <Business /> },
           { path: "s/:shortcode", element: <ShortLink /> },
           { path: "about", element: <About /> },

@@ -108,6 +108,10 @@ export default function Business() {
     return () => clearTimeout(timer);
   }, [data, sectionId]);
 
+  useEffect(() => {
+    if (data && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  }, [data, location.hash]);
+
   const openItem = (id) => setSearchParams({ item: id }, { state: { sheetFrom: "page" } });
   const swapItem = (id) => setSearchParams({ item: id }, { replace: true, state: location.state });
   const closeItem = () => {

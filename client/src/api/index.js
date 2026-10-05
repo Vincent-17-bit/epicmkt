@@ -27,5 +27,6 @@ export const flash = {
   facets: () => backend.getFlashFacets()
 };
 export const offers = {
-  list: (params) => backend.getOffers(params)
+  list: (params) => backend.getOffers(params),
+  facets: () => backend.getOfferFacets()
 };

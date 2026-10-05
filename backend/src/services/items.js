@@ -5,7 +5,7 @@ import { now } from "../clock.js";
 import { NotFoundError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
-import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, runSweep } from "../promotions.js";
+import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
 
@@ -132,18 +132,65 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   };
 }
 
-export async function getOffers({ businessId, itemId, limit = 20 } = {}) {
+const endMs = (offer) => (offer.endsAt ? Date.parse(offer.endsAt) : Infinity);
+
+const OFFER_SORTS = {
+  ending: (a, b) => endMs(a.offer) - endMs(b.offer),
+  nearest: (a, b) => (a.business.distanceKm ?? Infinity) - (b.business.distanceKm ?? Infinity) || endMs(a.offer) - endMs(b.offer),
+  newest: (a, b) => Date.parse(b.offer.createdAt) - Date.parse(a.offer.createdAt)
+};
+
+export async function getOffers({ businessId, itemId, categoryId = null, town = null, sort = "ending", limit = 20, offset = 0, origin = null } = {}) {
   await delay();
   runSweep();
+  const at = now();
+  if (!businessId) {
+    const from = originOf(origin);
+    const rows = [];
+    for (const business of store.businesses) {
+      if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+      if (categoryId && business.categoryId !== categoryId) continue;
+      if (town && business.townSlug !== town) continue;
+      for (const offer of liveStoreOffers(business, at)) {
+        rows.push({ offer, business: sellerCard(business, from), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null, appliesToLabel: appliesToLabel(offer, business) });
+      }
+    }
+    rows.sort(OFFER_SORTS[sort] ?? OFFER_SORTS.ending);
+    return { items: rows.slice(offset, offset + limit), total: rows.length, serverNow: new Date(at).toISOString() };
+  }
   const business = store.businesses.find((b) => b.id === businessId || b.slug === businessId);
-  if (!business || business.status !== BUSINESS_STATUS.ACTIVE) return { items: [], serverNow: new Date(now()).toISOString() };
+  if (!business || business.status !== BUSINESS_STATUS.ACTIVE) return { items: [], total: 0, serverNow: new Date(at).toISOString() };
   const found = itemId ? locate(itemId, business.id) : null;
   const views = found
     ? offerViews(found.item, business)
     : store.offers
         .filter((offer) => offer.businessId === business.id && offer.status === "active")
-        .map((offer) => ({ offer, business: sellerCard(business, null), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - now()) : null, appliesToLabel: appliesToLabel(offer, business) }));
-  return { items: views.slice(0, limit), serverNow: new Date(now()).toISOString() };
+        .map((offer) => ({ offer, business: sellerCard(business, null), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null, appliesToLabel: appliesToLabel(offer, business) }));
+  return { items: views.slice(0, limit), total: views.length, serverNow: new Date(at).toISOString() };
+}
+
+export async function getOfferFacets() {
+  await delay();
+  runSweep();
+  const at = now();
+  const categories = new Map();
+  const towns = new Map();
+  let total = 0;
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    const live = liveStoreOffers(business, at).length;
+    if (!live) continue;
+    total += live;
+    categories.set(business.categoryId, (categories.get(business.categoryId) ?? 0) + live);
+    const entry = towns.get(business.townSlug) ?? { slug: business.townSlug, name: business.area, count: 0 };
+    entry.count += live;
+    towns.set(business.townSlug, entry);
+  }
+  return {
+    total,
+    categories: [...categories].map(([id, count]) => ({ id, count })),
+    towns: [...towns.values()].sort((a, b) => a.name.localeCompare(b.name))
+  };
 }
 
 export async function getStoreSelective(businessId, { excludeItemId, limit = 12 } = {}) {

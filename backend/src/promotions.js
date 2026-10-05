@@ -81,6 +81,9 @@ export function liveOffersFor(item, business, at = now()) {
     .sort((a, b) => (a.endsAt ? Date.parse(a.endsAt) : Infinity) - (b.endsAt ? Date.parse(b.endsAt) : Infinity));
 }
 
+export const liveStoreOffers = (business, at = now()) =>
+  store.offers.filter((offer) => offer.businessId === business.id && offerLive(offer, at) && dayAllowed(offer, at));
+
 export function promoCountsFor(business, at = now()) {
   if (!business) return { flash: 0, offers: 0 };
   const items = business.services.filter((svc) => svc.status !== "unlisted");

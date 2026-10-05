@@ -146,6 +146,13 @@ console.log("all checks passed");
   assert.deepEqual((await getItemDetail("hair-dye", { businessId: "b_001" })).offers.map((o) => o.offer.id), ["p_001"]);
   assert.deepEqual((await getItemDetail("haircut", { businessId: "b_002" })).offers, []);
   assert.equal((await getOffers({ businessId: "b_001" })).items.length, 2);
+  const allOffers = await getOffers({ limit: 50 });
+  assert.equal(allOffers.total, allOffers.items.length);
+  assert.ok(allOffers.items.every((v) => v.business.slug && v.offer.status !== "paused"));
+  assert.ok(!allOffers.items.some((v) => v.offer.id === "p_009"));
+  const { getOfferFacets } = await import("./src/index.js");
+  assert.equal((await getOfferFacets()).total, allOffers.total);
+  assert.ok((await getOffers({ town: "no-such-town" })).total === 0);
   assert.equal((await getItemDetail("box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Braids");
 
   advanceClock(6 * 3600000);
