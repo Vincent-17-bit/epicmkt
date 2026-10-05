@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { categories } from '../client/src/data/categories.js';
-import { planRows } from '../client/src/data/plans.seed.js';
-import { legalDocs } from '../client/src/data/legal.js';
+import { planRows } from '../client/src/config/plans.seed.js';
+import { legalDocs } from '../client/src/data/legal/index.js';
 
 const url = process.env.SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

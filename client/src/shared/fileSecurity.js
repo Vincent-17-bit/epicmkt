@@ -1,4 +1,4 @@
-import { ALLOWED_EXT, MIME_BY_KIND, SLOT_LIMITS } from './validators';
+import { ALLOWED_EXT, MAX_FILES, MIME_BY_KIND, SLOT_LIMITS } from './validators';
 
 export function sniff(bytes) {
   const at = (i, ...v) => v.every((x, k) => bytes[i + k] === x);
@@ -7,6 +7,20 @@ export function sniff(bytes) {
   if (at(0, 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return 'png';
   if (at(0, 0x52, 0x49, 0x46, 0x46) && at(8, 0x57, 0x45, 0x42, 0x50)) return 'webp';
   return null;
+}
+
+export function isBlocked(bytes) {
+  const head = new TextDecoder('latin1').decode(bytes.slice(0, 64)).trimStart().toLowerCase();
+  return /^(<|pk|mz|#!|\x7felf|\x1f\x8b|rar|7z)/.test(head) || head.startsWith('%!ps');
+}
+
+export function isHeic(bytes) {
+  const brand = new TextDecoder('latin1').decode(bytes.slice(4, 12));
+  return /^ftyp(heic|heix|heim|heis|hevc|mif1|msf1)/.test(brand);
+}
+
+export function checkFileCount(count) {
+  return count <= MAX_FILES ? { ok: true } : { ok: false, reason: 'too_many', message: FILE_ERRORS.too_many };
 }
 
 const PDF_BAD = ['/Encrypt', '/JavaScript', '/JS', '/OpenAction', '/AA', '/Launch', '/EmbeddedFile', '/RichMedia'];
@@ -22,6 +36,9 @@ export const FILE_ERRORS = {
   bad_extension: 'Use a PDF, JPG, PNG or WebP file.',
   wrong_type: 'This file is not a real PDF or image.',
   unsafe_pdf: 'This PDF contains scripts or protection and cannot be used. Save it as a plain PDF or upload a photo instead.',
+  blocked_type: 'SVG, HTML, Office, ZIP and program files are not accepted. Use a PDF, JPG, PNG or WebP file.',
+  heic_unsupported: 'This browser cannot read HEIC photos. Take the photo as JPG or share it as JPG, then try again.',
+  too_many: `You can upload at most ${MAX_FILES} files in total.`,
   unreadable: 'We could not read this file. Try another one.',
 };
 
@@ -44,6 +61,12 @@ export async function inspectFile(file) {
     bytes = await readBytes(file);
   } catch {
     return { ok: false, reason: 'unreadable' };
+  }
+  if (isBlocked(bytes)) return { ok: false, reason: 'blocked_type' };
+  if (isHeic(bytes)) {
+    if (!['heic', 'heif'].includes(extOf(file.name))) return { ok: false, reason: 'bad_extension' };
+    if (bytes.length > SLOT_LIMITS.image) return { ok: false, reason: 'too_large' };
+    return { ok: true, kind: 'heic', mime: 'image/heic' };
   }
   const kind = sniff(bytes);
   if (!kind) return { ok: false, reason: 'wrong_type' };
@@ -89,7 +112,7 @@ export async function stripAndCompress(file, mime, { maxDim = 2000, quality = 0.
 
   let blob = await toBlob(canvas, mime, quality);
   let outMime = mime;
-  let name = file.name;
+  let name = file.name.replace(/\.(heic|heif)$/i, '.jpg');
   if (!blob || blob.type !== mime) {
     blob = await toBlob(canvas, 'image/jpeg', quality);
     outMime = 'image/jpeg';
@@ -105,11 +128,13 @@ export async function prepareFile(file) {
   if (check.kind === 'pdf') {
     return { ok: true, file: new File([file], file.name, { type: check.mime }) };
   }
+  const mime = check.kind === 'heic' ? 'image/jpeg' : check.mime;
   try {
-    const out = await stripAndCompress(file, check.mime);
+    const out = await stripAndCompress(file, mime);
     if (out.size > SLOT_LIMITS.image) return { ok: false, reason: 'too_large', message: FILE_ERRORS.too_large };
     return { ok: true, file: out };
   } catch {
-    return { ok: false, reason: 'unreadable', message: FILE_ERRORS.unreadable };
+    const reason = check.kind === 'heic' ? 'heic_unsupported' : 'unreadable';
+    return { ok: false, reason, message: FILE_ERRORS[reason] };
   }
 }

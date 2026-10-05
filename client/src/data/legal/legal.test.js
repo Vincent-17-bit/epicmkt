@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { legalDocs, TERMS_VERSION, PRIVACY_VERSION } from './legal';
+import { legalDocs, TERMS_VERSION, PRIVACY_VERSION } from './index';
 
 describe('legal docs', () => {
   it('has terms and privacy with versions, body and key points', () => {

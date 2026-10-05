@@ -1,3 +1,4 @@
+// Draft text: an advocate must review before launch
 export const TERMS_VERSION = '2026-10-05';
 export const PRIVACY_VERSION = '2026-10-05';
 
@@ -5,11 +6,12 @@ export const legalDocs = [
   {
     key: 'terms',
     version: TERMS_VERSION,
-    title: 'Seller Terms of Service',
+    title: 'Seller Terms and Rules',
     keyPoints: [
       'EpicMKT is a free directory. No orders or payments happen on the site.',
       'You pay a monthly listing fee by M-Pesa only after your application is approved.',
       'Everything you submit must be true and belong to your business.',
+      'A month is a calendar month, with one day of grace before a listing is hidden.',
       'We may reject, suspend or remove a listing that breaks these terms.',
     ],
     body: `1. About EpicMKT
@@ -25,7 +27,7 @@ You must give true, complete and current information and upload genuine document
 We review each application and may ask for changes or more documents. We may approve or reject an application at our discretion and will give a reason when we reject one. Review times are estimates, not promises.
 
 5. Listing fees
-A listing is paid for monthly on the Standard or Premium plan. The price shown when you apply is the price recorded on your application. After approval you pay by M-Pesa outside this site using the instructions we give you. Your listing goes live only after we confirm your payment. Fees are charged for the listing service and are not refundable once the listing is live, unless we remove it in error.
+A listing is paid for monthly on the Standard or Premium plan. The price shown when you apply is the price recorded on your application. After approval you pay by M-Pesa outside this site using the instructions we give you. Your listing goes live only after we confirm your payment. One month means one calendar month from the day your payment is confirmed. If a month is not renewed, you have one day of grace after it ends, after which your listing is hidden. Fees are charged for the listing service and are not refundable once the listing is live, unless we remove it in error.
 
 6. Your listing
 You are responsible for the accuracy of your business details, prices, offers and photos. You must not post unlawful, misleading or offensive content, or content you do not have the right to use. You must honour the prices and offers you advertise.
@@ -33,16 +35,19 @@ You are responsible for the accuracy of your business details, prices, offers an
 7. Account credentials
 After activation we issue you a seller ID and a temporary password. Keep them private and change the password when you first sign in. You are responsible for activity under your account.
 
-8. Suspension and removal
+8. Changes to sensitive details
+Changing your category, business name, permit, registration or location needs our approval. The old details stay live until the change is approved and, if extra fees are due, paid. We may ask questions about any information you give us.
+
+9. Suspension and removal
 We may suspend or remove a listing that breaks these terms, receives repeated verified complaints, has an expired permit, or is unpaid. You may ask us to remove your listing at any time.
 
-9. Our responsibility
+10. Our responsibility
 EpicMKT provides the directory as is. We are not a party to any dealings between you and customers, and we are not responsible for losses arising from those dealings. Nothing in these terms limits liability that cannot lawfully be limited.
 
-10. Changes to these terms
+11. Changes to these terms
 We may update these terms. When we do, the version changes and you will be asked to accept the new version before submitting a new application.
 
-11. Governing law
+12. Governing law
 These terms are governed by the laws of Kenya, and the courts of Kenya have jurisdiction over any dispute.`,
   },
   {
@@ -52,6 +57,7 @@ These terms are governed by the laws of Kenya, and the courts of Kenya have juri
     keyPoints: [
       'We collect your identity, contact, business and location details to verify your application.',
       'Your ID and documents are stored privately and seen only by authorised EpicMKT staff.',
+      'Rejected applications are deleted after 90 days.',
       'We never sell your personal data.',
       'You can ask to see, correct or delete your data.',
     ],
@@ -74,7 +80,7 @@ Uploaded documents are stored in a private location. Only authorised EpicMKT sta
 We do not sell your personal data. We share it only with service providers who help us run the service, such as hosting, email delivery and spam protection, under conditions that protect it, and with authorities when the law requires.
 
 7. How long we keep it
-We keep an application and its documents while we review it and for as long as your listing is active. If we reject an application, we keep it for a limited period to handle appeals and prevent repeat fraud, then delete it. After a listing ends we delete your documents unless the law requires us to keep them.
+We keep an application and its documents while we review it and for as long as your listing is active. If we reject an application, we keep it for 90 days to handle appeals and prevent repeat fraud, then delete it. After a listing ends we delete your documents unless the law requires us to keep them.
 
 8. Your rights
 You may ask us to tell you what data we hold about you, to correct it, to delete it, to restrict or object to its use, and to give you a copy. Use the contact details on our Contact page. You also have the right to complain to the Office of the Data Protection Commissioner.

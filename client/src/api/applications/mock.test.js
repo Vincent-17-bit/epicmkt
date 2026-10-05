@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { getCatalogPricing, getLegalDocs, submitApplication } from './mock';
 import { categories } from '../../data/categories';
 import { legalDocs } from '../../data/legal';
+import { setPlanOverride, resetPricing, listApplications } from './mockStore';
 
 const payload = () => ({
   categoryId: 'supermarket-minimart',
@@ -70,6 +71,35 @@ describe('mock adapter', () => {
     it('fakes success for a filled honeypot', async () => {
       const r = await submitApplication({ payload: {}, files: [], startedAt: 0, hp: 'bot' });
       expect(r.referenceNo).toMatch(/^EPM-/);
+    });
+  });
+  describe('pricing and storage', () => {
+    afterEach(() => {
+      resetPricing();
+      localStorage.clear();
+    });
+
+    it('reflects a price change on the next fetch with no code change', async () => {
+      const price = async () => (await getCatalogPricing()).categories.find((c) => c.id === 'bakery').plans.standard.price;
+      const before = await price();
+      setPlanOverride('bakery', 'standard', { price: before + 100 });
+      expect(await price()).toBe(before + 100);
+      resetPricing();
+      expect(await price()).toBe(before);
+    });
+
+    it('stores the database price even if the client sends another', async () => {
+      const p = { ...payload(), price: 1, priceAtSubmission: 1, plan: { price: 1 } };
+      const { referenceNo } = await submitApplication({ payload: p, files: files(slots), startedAt: Date.now() - 60_000, hp: '' });
+      const saved = listApplications().find((a) => a.referenceNo === referenceNo);
+      const listed = (await getCatalogPricing()).categories.find((c) => c.id === 'supermarket-minimart').plans.standard.price;
+      expect(saved.priceAtSubmission).toBe(listed);
+      expect(saved.status).toBe('submitted');
+    });
+
+    it('does not store honeypot submissions', async () => {
+      await submitApplication({ payload: {}, files: [], startedAt: 0, hp: 'bot' });
+      expect(listApplications()).toHaveLength(0);
     });
   });
 });

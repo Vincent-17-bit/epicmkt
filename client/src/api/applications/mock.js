@@ -1,18 +1,19 @@
 import { categories } from '../../data/categories';
-import { GLOBAL_LIMITS, planRows } from '../../data/plans.seed';
+import { GLOBAL_LIMITS, planRows } from '../../config/plans.seed';
 import { legalDocs } from '../../data/legal';
+import { getPricingOverrides, saveApplication, saveFiles } from './mockStore';
 import { applicationSchema, requiredSlots, allowedSlots } from '../../shared/validators';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const NOW = '2026-10-05T00:00:00.000Z';
 
-const toPlan = (row) => ({
-  price: row.price_kes,
-  limits: { items: row.items_limit },
-  topBenefits: row.top_benefits,
+const toPlan = (row, o = {}) => ({
+  price: o.price ?? row.price_kes,
+  limits: { items: o.items ?? row.items_limit },
+  topBenefits: o.topBenefits ?? row.top_benefits,
   features: row.features,
-  badge: row.badge,
-  updatedAt: NOW,
+  badge: o.badge === undefined ? row.badge : o.badge,
+  updatedAt: o.updatedAt ?? NOW,
 });
 
 const catalog = () => categories.map((c) => ({
@@ -23,14 +24,18 @@ const catalog = () => categories.map((c) => ({
   tier: c.tier,
   template: c.keyFields,
   extraDocs: c.extraDocs,
-  plans: Object.fromEntries(planRows(c.id, c.tier).map((r) => [r.plan_key, toPlan(r)])),
+  plans: Object.fromEntries(planRows(c.id, c.tier).map((r) => [r.plan_key, toPlan(r, getPricingOverrides().plans[`${c.id}:${r.plan_key}`])])),
 }));
 
 export async function getCatalogPricing() {
   await wait(200);
   return {
     categories: catalog(),
-    globalLimits: { ...structuredClone(GLOBAL_LIMITS), updated_at: NOW },
+    globalLimits: {
+      standard: { ...GLOBAL_LIMITS.standard, ...getPricingOverrides().limits.standard },
+      premium: { ...GLOBAL_LIMITS.premium, ...getPricingOverrides().limits.premium },
+      updated_at: NOW,
+    },
   };
 }
 
@@ -77,5 +82,17 @@ export async function submitApplication({ payload, files, startedAt, hp }, onFil
     onFileStatus(slot, 'done');
   }
   await wait(250);
-  return { referenceNo: referenceNo() };
+  const ref = referenceNo();
+  const plan = catalog().find((c) => c.id === p.categoryId).plans[p.planKey];
+  saveApplication({
+    referenceNo: ref,
+    status: 'submitted',
+    createdAt: new Date().toISOString(),
+    payload: p,
+    priceAtSubmission: plan.price,
+    planSnapshot: plan,
+    documents: files.map(({ slot, file }) => ({ slot, name: file.name, mime: file.type, size: file.size })),
+  });
+  await saveFiles(ref, files);
+  return { referenceNo: ref };
 }

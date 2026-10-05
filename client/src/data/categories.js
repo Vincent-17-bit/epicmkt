@@ -16,6 +16,7 @@ const WARRANTY = ['None', '7 days', '30 days', '3 months', '6 months', '1 year o
 
 const doc = (key, label, rule, why, condition) => ({ key, label, rule, ...(condition ? { condition } : {}), why });
 
+// Document rules are drafts: an advocate must confirm them
 export const categories = [
   {
     id: 'water-refill', name: 'Water refill station', group: 'Water and energy', icon: 'droplet', tier: 'A',

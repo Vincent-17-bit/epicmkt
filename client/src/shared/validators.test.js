@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { categories } from '../data/categories';
 import { applicationSchema, normalizePhone, requiredSlots, allowedSlots, clean } from './validators';
 
 const base = () => ({
@@ -127,5 +128,34 @@ describe('document slots', () => {
 
   it('also reads the database field name extra_docs', () => {
     expect(allowedSlots({ extra_docs: [{ key: 'z', rule: 'optional' }] })).toContain('cat_z');
+  });
+});
+
+describe('required slots for real categories', () => {
+  const cat = (id) => categories.find((c) => c.id === id);
+  const base = { ownerIdType: 'passport', registered: false, conditionalDocs: {} };
+
+  it('handles registered, unregistered and ID type', () => {
+    const shop = cat('supermarket-minimart');
+    expect(requiredSlots(shop, base)).toEqual(['owner_id_front', 'sbp', 'signboard']);
+    expect(requiredSlots(shop, { ...base, ownerIdType: 'national_id' })).toContain('owner_id_back');
+    expect(requiredSlots(shop, { ...base, registered: true })).toEqual(expect.arrayContaining(['br_cert', 'kra_pin_cert']));
+    expect(requiredSlots(shop, base)).not.toContain('br_cert');
+  });
+
+  it('adds category documents', () => {
+    expect(requiredSlots(cat('chemist'), base)).toEqual(expect.arrayContaining(['cat_ppb_premises_licence', 'cat_pharmacist_registration']));
+    const agro = (d) => requiredSlots(cat('agrovet'), { ...base, conditionalDocs: d });
+    expect(agro({})).not.toContain('cat_pcpb_licence');
+    expect(agro({ pcpb_licence: true })).toContain('cat_pcpb_licence');
+    expect(agro({ pcpb_licence: true })).not.toContain('cat_kvb_registration');
+    expect(agro({ pcpb_licence: true, kvb_registration: true })).toEqual(expect.arrayContaining(['cat_pcpb_licence', 'cat_kvb_registration']));
+  });
+
+  it('asks for the KEBS mark only when the seller says so', () => {
+    const water = (d) => requiredSlots(cat('water-refill'), { ...base, conditionalDocs: d });
+    expect(water({})).toContain('cat_public_health_cert');
+    expect(water({})).not.toContain('cat_kebs_mark');
+    expect(water({ kebs_mark: true })).toContain('cat_kebs_mark');
   });
 });
