@@ -1,0 +1,7 @@
+project_id = "epicmkt"
+
+[functions.submit-application]
+verify_jwt = false
+
+[functions.finalize-application]
+verify_jwt = false

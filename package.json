@@ -8,6 +8,7 @@
     "dev:seller": "npm run dev -w seller",
     "dev:admin": "npm run dev -w admin",
     "build": "npm run build -w client && npm run build -w seller && npm run build -w admin",
-    "test:api": "node backend/check.mjs"
+    "test:api": "node backend/check.mjs",
+    "seed": "node --env-file=scripts/.env scripts/seed.mjs"
   }
 }
