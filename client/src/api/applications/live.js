@@ -68,3 +68,37 @@ export async function submitApplication({ payload, files, turnstileToken, starte
   if (fin.error) throw await toApiError(fin.error);
   return { referenceNo: fin.data.referenceNo };
 }
+
+async function call(name, body) {
+  const res = await supabase.functions.invoke(name, { body });
+  if (res.error) throw await toApiError(res.error);
+  return res.data;
+}
+
+export const requestStatusOtp = ({ referenceNo, phone }) => call('status-request-otp', { referenceNo, phone });
+
+export const verifyStatusOtp = ({ referenceNo, phone, code }) => call('status-verify-otp', { referenceNo, phone, code });
+
+export async function getApplication(session) {
+  const data = await call('status-get', { token: session.token });
+  return data.application;
+}
+
+export async function saveCorrections(session, patch, files = []) {
+  const manifest = files.map(({ slot, file }) => ({ slot, name: file.name, mime: file.type, size: file.size }));
+  const start = await call('status-correct', { token: session.token, patch, files: manifest });
+  for (const up of start.uploads ?? []) {
+    const item = files.find((f) => f.slot === up.slot);
+    const { error } = await supabase.storage
+      .from('applications')
+      .uploadToSignedUrl(up.path, up.token, item.file, { contentType: item.file.type });
+    if (error) throw error;
+  }
+  if (files.length) await call('status-correct', { token: session.token, confirm: files.map((f) => f.slot) });
+  return { ok: true };
+}
+
+export const resubmitApplication = (session) => call('status-resubmit', { token: session.token });
+
+export const submitPaymentCode = (session, mpesaCode) =>
+  call('status-payment-code', { token: session.token, code: mpesaCode });

@@ -49,3 +49,23 @@ export async function sendMail(to: string | undefined, subject: string, html: st
     });
   } catch (_) {}
 }
+
+export async function sendSms(to: string, message: string): Promise<boolean> {
+  const key = Deno.env.get("AT_API_KEY");
+  const username = Deno.env.get("AT_USERNAME");
+  const sender = Deno.env.get("AT_SENDER");
+  if (!key || !username || !sender) return false;
+  try {
+    const host = username === "sandbox" ? "api.sandbox.africastalking.com" : "api.africastalking.com";
+    const r = await fetch(`https://${host}/version1/messaging`, {
+      method: "POST",
+      headers: { apiKey: key, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ username, to, message, from: sender }),
+    });
+    return r.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+export const isProduction = () => Deno.env.get("APP_ENV") === "production";

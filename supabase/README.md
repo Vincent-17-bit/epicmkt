@@ -23,13 +23,25 @@ supabase secrets set --env-file supabase/.env
 - `ALLOWED_ORIGIN`: your site origin, no trailing slash
 - `IP_HASH_SALT`: any long random string
 - `RESEND_API_KEY`, `MAIL_FROM`, `ADMIN_EMAIL`: optional, emails are skipped when unset
+- `AT_API_KEY`, `AT_USERNAME`, `AT_SENDER`: Africa's Talking SMS for status codes. When `APP_ENV` is not `production`, the code is always `123456` and no SMS is sent.
 
 ## 4. Edge functions
 ```
 supabase functions deploy submit-application --no-verify-jwt
 supabase functions deploy finalize-application --no-verify-jwt
+for f in status-request-otp status-verify-otp status-get status-correct status-resubmit status-payment-code; do
+  supabase functions deploy $f --no-verify-jwt
+done
 ```
 `--no-verify-jwt` is required: publishable keys (`sb_publishable_...`) are not JWTs. `config.toml` sets the same.
+
+## Payment details
+Add the M-Pesa details shown to approved sellers (run once in the SQL editor, then edit as needed):
+```
+insert into site_settings (key, value) values ('mpesa', '{"type":"till","number":"YOUR_TILL","name":"EpicMKT"}')
+on conflict (key) do update set value = excluded.value;
+```
+Use `"type":"paybill"` with an `"account"` field for a Paybill.
 
 ## 5. Seed
 Copy `scripts/.env.example` to `scripts/.env`, add the project URL and the service role key, then from the repo root:

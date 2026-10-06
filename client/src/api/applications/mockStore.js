@@ -80,3 +80,17 @@ export async function loadFile(referenceNo, slot) {
     return null;
   }
 }
+
+export const findApplication = (referenceNo) => listApplications().find((a) => a.referenceNo === referenceNo) ?? null;
+
+export function updateApplication(referenceNo, change) {
+  const rec = findApplication(referenceNo);
+  if (!rec) return null;
+  const next = typeof change === 'function' ? change(structuredClone(rec)) ?? rec : { ...rec, ...change };
+  next.updatedAt = new Date().toISOString();
+  saveApplication(next);
+  return next;
+}
+
+export const readJson = read;
+export const writeJson = write;

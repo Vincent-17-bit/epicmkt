@@ -5,3 +5,21 @@ verify_jwt = false
 
 [functions.finalize-application]
 verify_jwt = false
+
+[functions.status-request-otp]
+verify_jwt = false
+
+[functions.status-verify-otp]
+verify_jwt = false
+
+[functions.status-get]
+verify_jwt = false
+
+[functions.status-correct]
+verify_jwt = false
+
+[functions.status-resubmit]
+verify_jwt = false
+
+[functions.status-payment-code]
+verify_jwt = false

@@ -24,7 +24,8 @@ export const router = createBrowserRouter([
     lazy: async () => ({ Component: (await import("./pages/seller-apply/PublicSellerLayout.jsx")).default }),
     errorElement: <RouteError />,
     children: [
-      { index: true, lazy: async () => ({ Component: (await import("./pages/seller-apply/BecomeASeller.jsx")).default }) }
+      { index: true, lazy: async () => ({ Component: (await import("./pages/seller-apply/BecomeASeller.jsx")).default }) },
+      { path: "status", lazy: async () => ({ Component: (await import("./pages/seller-apply/status/CheckStatus.jsx")).default }) }
     ]
   },
   {

@@ -116,7 +116,7 @@ export function toPayload(values, cat) {
   return prune(raw);
 }
 
-const LABELS = {
+export const LABELS = {
   categoryId: "Business type",
   planKey: "Package",
   "owner.fullName": "Full names",
