@@ -1,0 +1,180 @@
+.page {
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: var(--space-4) max(var(--space-3), var(--safe-left)) 0 max(var(--space-3), var(--safe-right));
+}
+
+.card {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.card h2 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-xl);
+}
+
+.lead {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+}
+
+.notice,
+.banner,
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+}
+
+.notice {
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+}
+
+.notice span {
+  flex: 1;
+  min-width: 200px;
+}
+
+.banner,
+.summary {
+  display: block;
+  border: 1.5px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.summary h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.summary ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.summary a {
+  color: inherit;
+  font-weight: 700;
+}
+
+.fileStatus {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  list-style: none;
+  box-shadow: var(--shadow-1);
+}
+
+.fileStatus li {
+  display: grid;
+  gap: 4px;
+}
+
+.indeterminate {
+  position: relative;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.indeterminate::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 35%;
+  border-radius: inherit;
+  background: var(--primary);
+}
+
+.indeterminate[data-state="uploading"]::after {
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+.indeterminate[data-state="done"]::after {
+  width: 100%;
+}
+
+.indeterminate[data-state="failed"]::after {
+  width: 100%;
+  background: var(--danger-border);
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .indeterminate[data-state="uploading"]::after {
+    animation: none;
+    width: 60%;
+  }
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-5) calc(-1 * var(--space-3)) 0;
+  padding: var(--space-3) var(--space-3) calc(var(--space-3) + var(--safe-bottom));
+  background: var(--header-bg);
+  box-shadow: 0 -4px 12px rgb(0 0 0 / 0.08);
+}
+
+.actions > * {
+  flex: 1;
+}
+
+.actions button[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spacer {
+  height: var(--space-6);
+}
+
+@media (min-width: 768px) {
+  .page {
+    padding-top: var(--space-5);
+  }
+
+  .card {
+    padding: var(--space-5);
+  }
+
+  .actions {
+    position: static;
+    margin: var(--space-5) 0 0;
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    justify-content: flex-end;
+  }
+
+  .actions > * {
+    flex: 0 0 auto;
+    min-width: 160px;
+  }
+}

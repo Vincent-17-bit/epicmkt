@@ -1,0 +1,38 @@
+import { faStore, faBlender, faBreadSlice, faCamera, faCar, faCarrot, faCartShopping, faComputer, faCouch, faDroplet, faDrumstickBite, faDumbbell, faFireFlameCurved, faGears, faGlasses, faGraduationCap, faHammer, faMobileScreenButton, faMoneyBillTransfer, faPills, faPlug, faPrint, faScissors, faScrewdriverWrench, faSeedling, faShirt, faShoePrints, faSoap, faSpa, faStethoscope, faUtensils, faWandMagicSparkles, faWrench } from "@fortawesome/free-solid-svg-icons";
+
+const ICONS = {
+  "blender": faBlender,
+  "bread-slice": faBreadSlice,
+  "camera": faCamera,
+  "car": faCar,
+  "carrot": faCarrot,
+  "cart-shopping": faCartShopping,
+  "computer": faComputer,
+  "couch": faCouch,
+  "droplet": faDroplet,
+  "drumstick-bite": faDrumstickBite,
+  "dumbbell": faDumbbell,
+  "fire-flame-curved": faFireFlameCurved,
+  "gears": faGears,
+  "glasses": faGlasses,
+  "graduation-cap": faGraduationCap,
+  "hammer": faHammer,
+  "mobile-screen-button": faMobileScreenButton,
+  "money-bill-transfer": faMoneyBillTransfer,
+  "pills": faPills,
+  "plug": faPlug,
+  "print": faPrint,
+  "scissors": faScissors,
+  "screwdriver-wrench": faScrewdriverWrench,
+  "seedling": faSeedling,
+  "shirt": faShirt,
+  "shoe-prints": faShoePrints,
+  "soap": faSoap,
+  "spa": faSpa,
+  "stethoscope": faStethoscope,
+  "utensils": faUtensils,
+  "wand-magic-sparkles": faWandMagicSparkles,
+  "wrench": faWrench,
+};
+
+export const categoryIcon = (name) => ICONS[name] ?? faStore;

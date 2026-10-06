@@ -1,0 +1,17 @@
+.wrap {
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--surface-3);
+}
+
+.map {
+  height: min(60vh, 380px);
+  min-height: 260px;
+  width: 100%;
+  z-index: 0;
+}
+
+.pin {
+  background: none;
+  border: 0;
+}

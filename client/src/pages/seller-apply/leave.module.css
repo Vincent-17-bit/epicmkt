@@ -1,0 +1,22 @@
+.dialog {
+  width: min(92vw, 26rem);
+  padding: var(--space-5);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dialog::backdrop {
+  background: var(--scrim);
+}
+
+.dialog h2 {
+  margin: 0 0 var(--space-2);
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}

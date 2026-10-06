@@ -20,6 +20,14 @@ import { trackResults } from "./lib/resultsMemory.js";
 
 export const router = createBrowserRouter([
   {
+    path: "/become-a-seller",
+    lazy: async () => ({ Component: (await import("./pages/seller-apply/PublicSellerLayout.jsx")).default }),
+    errorElement: <RouteError />,
+    children: [
+      { index: true, lazy: async () => ({ Component: (await import("./pages/seller-apply/BecomeASeller.jsx")).default }) }
+    ]
+  },
+  {
     path: "/",
     element: <Layout />,
     children: [

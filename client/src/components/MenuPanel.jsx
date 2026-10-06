@@ -79,7 +79,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
           </form>
 
           <div className={`${styles.sellerStack} ${styles.areaSeller}`}>
-            <Button as={Link} to="/sell" size="lg" icon={faStore} className={styles.seller}>
+            <Button as={Link} to="/become-a-seller" size="lg" icon={faStore} className={styles.seller}>
               Become a seller
             </Button>
             <Link to="/flash" replace className={styles.flashLink}>

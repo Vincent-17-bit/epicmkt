@@ -1,0 +1,133 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: max(16px, var(--text-md));
+  transition: border-color var(--dur) ease, background-color var(--dur) ease;
+}
+
+textarea.input {
+  resize: vertical;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.error svg {
+  margin-top: 3px;
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: 1fr;
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.checkRow input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  accent-color: var(--primary-pressed);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.choice:has(input:checked) {
+  border-color: var(--primary-pressed);
+  background: var(--primary-tint);
+}
+
+.choice:active {
+  transform: scale(0.97);
+}
+
+.choice input {
+  accent-color: var(--primary-pressed);
+}
+
+@media (hover: hover) {
+  .choice:hover {
+    border-color: var(--primary-pressed);
+  }
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .span2 {
+    grid-column: 1 / -1;
+  }
+}

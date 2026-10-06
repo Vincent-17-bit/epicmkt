@@ -1,0 +1,141 @@
+.wrap {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.section {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.section header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.section h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.edit,
+.open {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--link);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.edit:active,
+.open:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .edit:hover,
+  .open:hover {
+    background: var(--link-hover-bg);
+  }
+}
+
+.section dl {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+}
+
+.section dl div {
+  display: grid;
+  grid-template-columns: minmax(110px, 38%) 1fr;
+  gap: var(--space-3);
+}
+
+.section dt {
+  color: var(--text-muted);
+}
+
+.section dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.docs {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.docs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.docs img,
+.docs svg {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.docs span {
+  font-weight: 600;
+}
+
+.docs small {
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.legalRow {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+.open {
+  justify-self: start;
+}
+
+.turnstile {
+  margin-top: var(--space-3);
+}
+
+.missing {
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--danger-border);
+  border-radius: var(--radius-card);
+  background: var(--danger-bg);
+  color: var(--danger-fg);
+}
+
+.missing ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ready {
+  margin: 0;
+  font-weight: 700;
+}

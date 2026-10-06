@@ -1,0 +1,95 @@
+.intro {
+  display: grid;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.hero {
+  padding: var(--space-5) var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--primary);
+  color: #111111;
+}
+
+.hero h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-2xl);
+  line-height: 1.15;
+}
+
+.hero p {
+  max-width: 44rem;
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.how {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  grid-template-columns: 1fr 1fr;
+}
+
+.how li {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  font-size: var(--text-sm);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--primary-pressed);
+}
+
+.before {
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.before h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.before ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.before li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.before svg {
+  margin-top: 4px;
+  color: var(--primary-pressed);
+}
+
+@media (min-width: 768px) {
+  .how {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .hero {
+    padding: var(--space-6);
+  }
+}

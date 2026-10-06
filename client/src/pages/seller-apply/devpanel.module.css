@@ -1,0 +1,60 @@
+.panel {
+  position: fixed;
+  left: var(--space-3);
+  bottom: calc(var(--space-3) + var(--safe-bottom) + 72px);
+  z-index: var(--z-toast);
+  max-width: 280px;
+  border-radius: var(--radius-card);
+  background: var(--text);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-2);
+}
+
+.panel > button {
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 55dvh;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+.body label {
+  display: grid;
+  gap: 2px;
+  font-size: var(--text-xs);
+}
+
+.body input,
+.body select {
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border-radius: 6px;
+  border: 0;
+  font: inherit;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.row button {
+  flex: 1;
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

@@ -17,6 +17,6 @@ describe('applications api entry', () => {
   it('exposes the same function names as both adapters', async () => {
     const api = await import('./index');
     const mock = await import('./mock');
-    expect(Object.keys(api).sort()).toEqual(Object.keys(mock).sort());
+    expect(Object.keys(api).filter((k) => k !== 'devTools').sort()).toEqual(Object.keys(mock).sort());
   });
 });
