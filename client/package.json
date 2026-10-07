@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:snapshots": "vitest run --config vitest.snapshot.config.js"
   },
   "dependencies": {
     "@epicmkt/backend": "*",
