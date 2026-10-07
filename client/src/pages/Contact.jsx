@@ -3,7 +3,7 @@ import { faEnvelope, faPhone } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import InfoPage from "../components/InfoPage.jsx";
-import Button from "../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Contact.module.css";
 

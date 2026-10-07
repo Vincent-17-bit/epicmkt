@@ -1,19 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { REPORT_REASONS } from "@epicmkt/shared";
 import { reportBusiness } from "../api/index.js";
-import Button from "./Button.jsx";
+import { Button, Modal } from "@epicmkt/ui";
 import styles from "./ReportDialog.module.css";
 
 export default function ReportDialog({ business, open, onClose }) {
-  const ref = useRef(null);
   const [form, setForm] = useState({ reason: "", message: "", contact: "" });
   const mutation = useMutation({ mutationFn: reportBusiness });
 
   useEffect(() => {
-    const dialog = ref.current;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
     if (open) {
       setForm({ reason: "", message: "", contact: "" });
       mutation.reset();
@@ -28,13 +24,7 @@ export default function ReportDialog({ business, open, onClose }) {
   };
 
   return (
-    <dialog
-      ref={ref}
-      className={styles.dialog}
-      aria-labelledby="report-title"
-      onClose={onClose}
-      onClick={(event) => event.target === ref.current && onClose()}
-    >
+    <Modal open={open} aria-labelledby="report-title" onClose={onClose}>
       {mutation.isSuccess ? (
         <div className={styles.body}>
           <h2 id="report-title" className={styles.title}>
@@ -91,6 +81,6 @@ export default function ReportDialog({ business, open, onClose }) {
           </div>
         </form>
       )}
-    </dialog>
+    </Modal>
   );
 }

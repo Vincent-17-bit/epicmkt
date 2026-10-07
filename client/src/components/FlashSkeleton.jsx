@@ -1,4 +1,4 @@
-import Skeleton from "./Skeleton.jsx";
+import { Skeleton } from "@epicmkt/ui";
 import styles from "./FlashSkeleton.module.css";
 
 export default function FlashSkeleton() {

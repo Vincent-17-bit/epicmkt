@@ -2,7 +2,7 @@ import { useEffect, useId, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown, faCircleCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
-import Button from "../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { formatKes, planLabel } from "../../shared/billing.js";
 import { CatalogError, CatalogLoading } from "./CatalogState.jsx";
 import { ErrorLine, fieldId } from "./Field.jsx";

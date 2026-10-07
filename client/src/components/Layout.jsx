@@ -4,7 +4,7 @@ import { savedScroll, saveScroll } from "../lib/resultsMemory.js";
 import { useUiStore } from "../stores/ui.js";
 import { useGeoStore } from "../stores/geo.js";
 import LocationDialog from "./LocationDialog.jsx";
-import Toaster from "./Toaster.jsx";
+import { Toaster } from "@epicmkt/ui";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
 import OfflineBanner from "./OfflineBanner.jsx";

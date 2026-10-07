@@ -8,7 +8,7 @@ import { useLiveSales } from "../hooks/useCountdown.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
-import Container from "../components/Container.jsx";
+import { Container } from "@epicmkt/ui";
 import FlashSaleCard from "../components/FlashSaleCard.jsx";
 import FlashSkeleton from "../components/FlashSkeleton.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";

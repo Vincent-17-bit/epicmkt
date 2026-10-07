@@ -1,0 +1,11 @@
+.section {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--border);
+}
+
+.h2 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}

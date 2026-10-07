@@ -1,4 +1,4 @@
-import { useToastStore } from "../stores/toast.js";
+import { useToastStore } from "./toastStore.js";
 import styles from "./Toaster.module.css";
 
 export default function Toaster() {

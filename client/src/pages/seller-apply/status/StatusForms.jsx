@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Button from "../../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { requestStatusOtp, verifyStatusOtp, devTools } from "../../../api/applications/index.js";
 import { normalizePhone } from "../../../shared/validators.js";
 import { ErrorLine } from "../Field.jsx";

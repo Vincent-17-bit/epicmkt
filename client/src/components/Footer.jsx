@@ -5,7 +5,7 @@ import { faArrowUp, faChevronDown, faClock, faEnvelope, faLocationDot, faPhone }
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
-import Container from "./Container.jsx";
+import { Container } from "@epicmkt/ui";
 import Logo from "./Logo.jsx";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./Footer.module.css";

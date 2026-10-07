@@ -1,7 +1,7 @@
 import { useRef } from "react";
 import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import BusinessCard from "./BusinessCard.jsx";
-import IconButton from "./IconButton.jsx";
+import { IconButton } from "@epicmkt/ui";
 import styles from "./BusinessRail.module.css";
 
 export default function BusinessRail({ items, label }) {

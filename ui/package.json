@@ -1,0 +1,26 @@
+{
+  "name": "@epicmkt/ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./tokens.css": "./src/styles/tokens.css",
+    "./reset.css": "./src/styles/reset.css"
+  },
+  "dependencies": {
+    "@epicmkt/shared": "*"
+  },
+  "peerDependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.6.0",
+    "@fortawesome/free-brands-svg-icons": "^6.6.0",
+    "@fortawesome/free-solid-svg-icons": "^6.6.0",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^4.5.5"
+  }
+}

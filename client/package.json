@@ -12,6 +12,7 @@
   "dependencies": {
     "@epicmkt/backend": "*",
     "@epicmkt/shared": "*",
+    "@epicmkt/ui": "*",
     "@fontsource-variable/inter": "^5.1.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-brands-svg-icons": "^6.6.0",

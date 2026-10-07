@@ -1,23 +1,5 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { DAYS, nairobiNow } from "@epicmkt/shared";
-
-export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-
-export const DAY_NAMES = {
-  mon: "Monday",
-  tue: "Tuesday",
-  wed: "Wednesday",
-  thu: "Thursday",
-  fri: "Friday",
-  sat: "Saturday",
-  sun: "Sunday"
-};
-
-export const formatTime = (time) => {
-  const [h, m] = time.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
-};
+import { DAYS, DAY_NAMES, WEEK, formatTime, nairobiNow } from "@epicmkt/shared";
 
 export function statusText(business) {
   if (business.isOpen) return business.closesAt ? `Open now · Closes ${formatTime(business.closesAt)}` : "Open now";
@@ -49,4 +31,4 @@ export function expiryText(iso) {
   return `Valid until ${new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", timeZone: "Africa/Nairobi" })}`;
 }
 
-export { DAYS };
+export { DAYS, DAY_NAMES, WEEK, formatTime };

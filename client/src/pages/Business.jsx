@@ -17,21 +17,17 @@ import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { directionsLink, distanceKm, formatDistance, formatKes, slugify, telLink, visibleFields, whatsappLink } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
+import { expiryText, socialLinks, statusText, todayKey } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
-import Skeleton from "../components/Skeleton.jsx";
+import { BusinessHero, BusinessSection as Section, Button, Container, FeaturedBadge, HoursTable, Lightbox, Skeleton, StatusChip, VerifiedBadge } from "@epicmkt/ui";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import ItemDetail from "../components/ItemDetail.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
-import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
-import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Business.module.css";
 
@@ -53,17 +49,6 @@ function groupServices(services) {
     group.items.push(svc);
   });
   return groups;
-}
-
-function Section({ title, children, id }) {
-  return (
-    <section className={styles.section} aria-labelledby={id}>
-      <h2 id={id} className={styles.h2}>
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
 }
 
 export default function Business() {
@@ -189,29 +174,22 @@ export default function Business() {
       <Container className={styles.crumbRow} {...(itemId ? { inert: "", "aria-hidden": true } : {})}>
         <PageBreadcrumbs />
       </Container>
-      <header className={styles.hero}>
-        <div className={styles.cover}>
-          {data.coverUrl ? <img src={data.coverUrl} alt="" className={styles.coverImg} decoding="async" /> : <FontAwesomeIcon icon={icon} />}
-        </div>
-        <Container className={styles.heroInner}>
-          <span className={styles.logo}>
-            {data.logoUrl ? <img src={data.logoUrl} alt={`${data.name} logo`} className={styles.logoImg} decoding="async" /> : <FontAwesomeIcon icon={icon} />}
-          </span>
-          <div className={styles.titles}>
-            <h1 className={styles.name}>{data.name}</h1>
-            <p className={styles.where}>
-              {data.category?.singular} · {data.area}, {data.county}
-            </p>
-            {data.tagline && <p className={styles.tagline}>{data.tagline}</p>}
-          </div>
-        </Container>
-      </header>
+      <BusinessHero
+        name={data.name}
+        categoryName={data.category?.singular}
+        area={data.area}
+        county={data.county}
+        tagline={data.tagline}
+        coverUrl={data.coverUrl}
+        logoUrl={data.logoUrl}
+        icon={icon}
+      />
 
       <Container className={styles.page}>
         <div className={styles.badges}>
           {data.plan === "premium" && <FeaturedBadge />}
           {data.verified && <VerifiedBadge />}
-          <span className={data.isOpen ? styles.open : styles.closed}>{statusText(data)}</span>
+          <StatusChip open={data.isOpen}>{statusText(data)}</StatusChip>
           <span className={styles.rating}>
             <FontAwesomeIcon icon={faStar} />
             {reviews}
@@ -341,16 +319,7 @@ export default function Business() {
         )}
 
         <Section title="Opening hours" id="hours">
-          <table className={styles.hours}>
-            <tbody>
-              {WEEK.map((day) => (
-                <tr key={day} className={day === today ? styles.today : undefined} aria-current={day === today ? "date" : undefined}>
-                  <th scope="row">{DAY_NAMES[day]}</th>
-                  <td>{data.hours[day] ? `${formatTime(data.hours[day][0])} to ${formatTime(data.hours[day][1])}` : "Closed"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <HoursTable hours={data.hours} today={today} />
         </Section>
 
         <Section title="Location" id="location">

@@ -1,13 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationCrosshairs, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { TOWNS } from "@epicmkt/shared";
 import { useGeoStore } from "../stores/geo.js";
-import Button from "./Button.jsx";
+import { Button, Modal } from "@epicmkt/ui";
 import styles from "./LocationDialog.module.css";
 
 export default function LocationDialog() {
-  const ref = useRef(null);
   const open = useGeoStore((s) => s.explaining);
   const status = useGeoStore((s) => s.status);
   const source = useGeoStore((s) => s.source);
@@ -20,9 +19,6 @@ export default function LocationDialog() {
   const [choice, setChoice] = useState("");
 
   useEffect(() => {
-    const dialog = ref.current;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
     if (open) {
       setPicking(blocked || source === "town");
       setChoice(town ?? "");
@@ -39,13 +35,7 @@ export default function LocationDialog() {
   };
 
   return (
-    <dialog
-      ref={ref}
-      className={styles.dialog}
-      aria-labelledby="location-title"
-      onClose={close}
-      onClick={(event) => event.target === ref.current && close()}
-    >
+    <Modal open={open} aria-labelledby="location-title" onClose={close}>
       <div className={styles.body}>
         <span className={styles.icon}>
           <FontAwesomeIcon icon={faLocationDot} />
@@ -116,6 +106,6 @@ export default function LocationDialog() {
           Not now
         </button>
       </div>
-    </dialog>
+    </Modal>
   );
 }

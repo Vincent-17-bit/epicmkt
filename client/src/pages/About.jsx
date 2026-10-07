@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { faTableCells } from "@fortawesome/free-solid-svg-icons";
 import InfoPage from "../components/InfoPage.jsx";
-import Button from "../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
 export default function About() {

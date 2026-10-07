@@ -84,30 +84,6 @@
   font-size: var(--text-xs);
 }
 
-.avail {
-  display: inline-flex;
-  align-items: center;
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.available {
-  background: #16a34a;
-}
-
-.limited {
-  background: #f97316;
-}
-
-.unavailable {
-  background: #dc2626;
-}
-
 .sr {
   position: absolute;
   width: 1px;

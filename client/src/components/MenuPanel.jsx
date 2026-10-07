@@ -5,10 +5,7 @@ import { faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/
 import { flash, getCategories } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import Container from "./Container.jsx";
-import Button from "./Button.jsx";
-import IconButton from "./IconButton.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Button, IconButton, Skeleton, Container } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./MenuPanel.module.css";
 

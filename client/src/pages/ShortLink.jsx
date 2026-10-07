@@ -2,9 +2,7 @@ import { Navigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { resolveShortcode } from "../api/index.js";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
-import Skeleton from "../components/Skeleton.jsx";
+import { Button, Skeleton, Container } from "@epicmkt/ui";
 import NotFound from "./NotFound.jsx";
 import styles from "./Business.module.css";
 

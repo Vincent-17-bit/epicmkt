@@ -13,10 +13,8 @@ import {
   faStar
 } from "@fortawesome/free-solid-svg-icons";
 import { PLAN_FEATURES, PLAN_PRICE_KES, formatKes } from "@epicmkt/shared";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
+import { Button, Container, Accordion } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import Accordion from "../components/Accordion.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Sell.module.css";
 

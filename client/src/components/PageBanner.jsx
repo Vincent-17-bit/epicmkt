@@ -1,6 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Container from "./Container.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Skeleton, Container } from "@epicmkt/ui";
 import styles from "./PageBanner.module.css";
 
 export default function PageBanner({ icon, title, subtitle, crumbs = null, loading = false }) {

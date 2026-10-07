@@ -11,15 +11,10 @@ import {
   faPhone,
   faStore
 } from "@fortawesome/free-solid-svg-icons";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
-import IconButton from "../components/IconButton.jsx";
-import Skeleton from "../components/Skeleton.jsx";
+import { Button, IconButton, Skeleton, Container, Img, FeaturedBadge, VerifiedBadge } from "@epicmkt/ui";
 import FlashBlocks from "./FlashBlocks.jsx";
 import Breadcrumbs from "../components/Breadcrumbs/Breadcrumbs.jsx";
 import BusinessCard from "../components/BusinessCard.jsx";
-import Img from "../components/Img.jsx";
-import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Styleguide.module.css";
 

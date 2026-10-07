@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faTag } from "@fortawesome/free-solid-svg-icons";
-import { t } from "../i18n/index.js";
+import { labels } from "../labels.js";
 import styles from "./PromoChip.module.css";
 
 export default function PromoChip({ promo, className = "" }) {
@@ -13,7 +13,7 @@ export default function PromoChip({ promo, className = "" }) {
   return (
     <span className={`${styles.chip} ${isFlash ? styles.flash : styles.offer} ${className}`}>
       <FontAwesomeIcon icon={isFlash ? faBolt : faTag} aria-hidden="true" />
-      <span>{isFlash ? t("flash.promo") : t("flash.offer")}</span>
+      <span>{isFlash ? labels.promoFlash : labels.promoOffer}</span>
       {extra > 0 && <span>+{extra}</span>}
     </span>
   );

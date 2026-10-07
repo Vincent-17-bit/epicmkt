@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faArrowRight, faCircleExclamation, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { usePageTitle } from "../../hooks/usePageTitle.js";
 import { getLegalDocs, submitApplication } from "../../api/applications/index.js";
 import { clearDraft, loadDraft, loadDraftFiles, saveDraft } from "./draftStore.js";

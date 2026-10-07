@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Container from "./Container.jsx";
+import { Container } from "@epicmkt/ui";
 import PageBreadcrumbs from "./PageBreadcrumbs.jsx";
 import styles from "./StatusPage.module.css";
 

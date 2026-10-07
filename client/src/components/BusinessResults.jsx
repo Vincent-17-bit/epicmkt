@@ -5,8 +5,7 @@ import { Link } from "react-router-dom";
 import { searchBusinesses } from "../api/index.js";
 import BusinessCard from "./BusinessCard.jsx";
 import CardGrid from "./CardGrid.jsx";
-import Button from "./Button.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import styles from "./BusinessResults.module.css";
 
 const PAGE_SIZE = 12;

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { formatKes } from "../../../shared/billing.js";
 import { docSlot, isDocPath } from "../../../shared/statusPaths.js";
 import { resubmitApplication, saveCorrections } from "../../../api/applications/index.js";

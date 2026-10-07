@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import styles from "./success.module.css";
 
 export default function SuccessScreen({ referenceNo, email }) {

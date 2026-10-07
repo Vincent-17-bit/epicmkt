@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { t } from "../i18n/index.js";
+import { labels } from "../labels.js";
 import Lightbox from "./Lightbox.jsx";
 import styles from "./ItemGallery.module.css";
 
@@ -31,7 +31,7 @@ export default function ItemGallery({ images, name }) {
             type="button"
             className={styles.slide}
             onClick={() => setZoom(index)}
-            aria-label={`${t("item.zoom")} ${index + 1} / ${images.length}`}
+            aria-label={`${labels.zoom} ${index + 1} / ${images.length}`}
           >
             <img
               src={image.url}
@@ -52,7 +52,7 @@ export default function ItemGallery({ images, name }) {
                 type="button"
                 className={`${styles.thumb} ${index === active ? styles.current : ""}`}
                 onClick={() => goTo(index)}
-                aria-label={`${t("item.photo")} ${index + 1}`}
+                aria-label={`${labels.photo} ${index + 1}`}
                 aria-current={index === active ? "true" : undefined}
               >
                 <img src={image.url} alt="" className={styles.thumbImg} loading="lazy" decoding="async" draggable="false" />

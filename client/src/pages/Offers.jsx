@@ -7,9 +7,8 @@ import { offers, getCategories } from "../api/index.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
-import Container from "../components/Container.jsx";
+import { Skeleton, Container } from "@epicmkt/ui";
 import OfferCard from "../components/OfferCard.jsx";
-import Skeleton from "../components/Skeleton.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import styles from "./Offers.module.css";
 

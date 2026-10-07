@@ -1,6 +1,6 @@
 import { faTriangleExclamation, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import StatusPage from "../components/StatusPage.jsx";
-import Button from "../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import OfflinePage from "./OfflinePage.jsx";
 import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 

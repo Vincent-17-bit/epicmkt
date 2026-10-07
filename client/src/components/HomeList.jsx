@@ -3,8 +3,7 @@ import { faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { searchBusinesses } from "../api/index.js";
 import BusinessCard from "./BusinessCard.jsx";
 import CardGrid from "./CardGrid.jsx";
-import Button from "./Button.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import styles from "./HomeList.module.css";
 
 export default function HomeList({ sort, limit = 4 }) {

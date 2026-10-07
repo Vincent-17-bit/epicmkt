@@ -1,7 +1,7 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
-import Button from "./Button.jsx";
+import { Button } from "@epicmkt/ui";
 import styles from "./UpdatePrompt.module.css";
 
 export default function UpdatePrompt() {

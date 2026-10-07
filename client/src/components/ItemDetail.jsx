@@ -19,10 +19,8 @@ import { formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/share
 import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, defaultVariantId, offerTarget } from "../lib/itemView.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
-import { showToast } from "../stores/toast.js";
+import { Skeleton, ItemGallery, showToast } from "@epicmkt/ui";
 import { t } from "../i18n/index.js";
-import Skeleton from "./Skeleton.jsx";
-import ItemGallery from "./ItemGallery.jsx";
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";

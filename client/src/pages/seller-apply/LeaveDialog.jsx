@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import Button from "../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import styles from "./leave.module.css";
 
 export default function LeaveDialog({ open, onStay, onLeave }) {

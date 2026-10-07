@@ -3,7 +3,7 @@ import CountdownTiles from "../components/CountdownTiles.jsx";
 import FlashChip from "../components/FlashChip.jsx";
 import FlashSaleCard from "../components/FlashSaleCard.jsx";
 import FuseBar from "../components/FuseBar.jsx";
-import PromoChip from "../components/PromoChip.jsx";
+import { PromoChip } from "@epicmkt/ui";
 import Starburst from "../components/Starburst.jsx";
 import styles from "./FlashBlocks.module.css";
 

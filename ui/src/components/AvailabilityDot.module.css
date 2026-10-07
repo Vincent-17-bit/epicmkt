@@ -1,0 +1,32 @@
+.avail {
+  display: inline-flex;
+  align-items: center;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.available {
+  background: #16a34a;
+}
+
+.limited {
+  background: #f97316;
+}
+
+.unavailable {
+  background: #dc2626;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

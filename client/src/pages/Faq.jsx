@@ -1,5 +1,5 @@
 import InfoPage from "../components/InfoPage.jsx";
-import Accordion from "../components/Accordion.jsx";
+import { Accordion } from "@epicmkt/ui";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
 const faqs = [

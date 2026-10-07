@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCopy, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { formatKes } from "../../../shared/billing.js";
 import { submitPaymentCode } from "../../../api/applications/index.js";
 import { ErrorLine } from "../Field.jsx";
