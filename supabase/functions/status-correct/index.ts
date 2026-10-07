@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { ALLOWED_EXT, MIME_BY_KIND, SLOT_LIMITS, allowedSlots } from "../_shared/validate.ts";
 import { pdfIsSafe, sniff } from "../_shared/files.ts";
-import { clientIp, corsHeaders, json, sha256Hex } from "../_shared/http.ts";
+import { withCors, clientIp, corsHeaders, json, sha256Hex } from "../_shared/http.ts";
 import { applyPatch, columnUpdates, isDocPath, isEditablePath, sessionApp } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -19,7 +19,7 @@ async function address(appId: string, paths: string[]) {
     .eq("application_id", appId).eq("status", "open").in("path", paths);
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     uploads.push({ slot: f.slot, path, token: data.token });
   }
   return json({ ok: true, uploads, flags: (await openFlags(app.id)).length });
-});
+}));
 
 async function confirmUploads(app: any, flagged: Set<string>, slots: unknown[]) {
   const rejected: { slot: string; reason: string }[] = [];

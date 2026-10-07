@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone } from "../_shared/validate.ts";
-import { clientIp, corsHeaders, isProduction, json, sendSms, sha256Hex } from "../_shared/http.ts";
+import { withCors, clientIp, corsHeaders, isProduction, json, sendSms, sha256Hex } from "../_shared/http.ts";
 import { OTP_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -9,7 +9,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const GENERIC = { ok: true, message: "If these details match an application, we have sent a code." };
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -40,4 +40,4 @@ Deno.serve(async (req) => {
   if (isProduction()) await sendSms(phone, `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`);
   await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "otp_requested", data: {} });
   return json(GENERIC);
-});
+}));

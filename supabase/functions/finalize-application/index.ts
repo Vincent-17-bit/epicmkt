@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MIME_BY_KIND, SLOT_LIMITS, requiredSlots } from "../_shared/validate.ts";
 import { pdfIsSafe, sniff } from "../_shared/files.ts";
-import { clientIp, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
+import { withCors, clientIp, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -12,7 +12,7 @@ async function abort(appId: string, paths: string[]) {
   await db.from("applications").delete().eq("id", appId);
 }
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -85,4 +85,4 @@ Deno.serve(async (req) => {
   );
 
   return json({ ok: true, referenceNo: app.reference_no });
-});
+}));

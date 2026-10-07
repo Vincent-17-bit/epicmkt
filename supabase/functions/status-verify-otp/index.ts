@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone } from "../_shared/validate.ts";
-import { clientIp, corsHeaders, json, randomToken, sha256Hex } from "../_shared/http.ts";
+import { withCors, clientIp, corsHeaders, json, randomToken, sha256Hex } from "../_shared/http.ts";
 import { SESSION_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -9,7 +9,7 @@ const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SE
 
 const MAX_ATTEMPTS = 5;
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -49,4 +49,4 @@ Deno.serve(async (req) => {
   if (ins.error) return json({ error: "server_error" }, 500);
   await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "session_started", data: {} });
   return json({ token, expiresAt });
-});
+}));
