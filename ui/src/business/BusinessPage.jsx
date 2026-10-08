@@ -11,6 +11,7 @@ import Lightbox from "../components/Lightbox.jsx";
 import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
+import ActionRow from "./ActionRow.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
 import Follow from "./Follow.jsx";
@@ -122,20 +123,17 @@ export default function BusinessPage({
           </ul>
         )}
 
-        <div className={styles.actions}>
-          <Button as="a" icon={faPhone} {...act.link(callHref, track("call"))}>
-            Call
-          </Button>
-          <Button as="a" variant="secondary" icon={faWhatsapp} {...act.link(whatsappHref, track("whatsapp"), external)}>
-            WhatsApp
-          </Button>
-          <Button as="a" variant="secondary" icon={faLocationArrow} {...act.link(directionsHref, track("directions"), external)}>
-            Directions
-          </Button>
-          <Button variant="secondary" icon={faShareNodes} {...act.button(onShare)}>
-            {shareNote || "Share"}
-          </Button>
-        </div>
+        <ActionRow
+          callHref={callHref}
+          whatsappHref={whatsappHref}
+          directionsHref={directionsHref}
+          shareNote={shareNote}
+          mode={mode}
+          onCall={track("call")}
+          onWhatsApp={track("whatsapp")}
+          onDirections={track("directions")}
+          onShare={onShare}
+        />
 
         {business.offers.length > 0 && (
           <Offers offers={business.offers} formatExpiry={formatExpiry} />
