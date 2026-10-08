@@ -202,12 +202,6 @@
   font-weight: 700;
 }
 
-.h3 {
-  font-size: var(--text-md);
-  font-weight: 700;
-}
-
-.services,
 .gallery,
 .details,
 .socials {
@@ -216,37 +210,6 @@
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.services {
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-}
-
-.service {
-  display: grid;
-  overflow: hidden;
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-}
-
-.serviceImg {
-  width: 100%;
-  aspect-ratio: 4 / 3;
-  object-fit: cover;
-}
-
-.serviceText {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-3);
-}
-
-.price {
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .gallery {
@@ -451,40 +414,4 @@
 .crumbRow {
   max-width: var(--content-width);
   padding-top: 0;
-}
-
-.serviceBtn {
-  display: grid;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  transition: transform var(--dur) ease;
-}
-
-.serviceBtn:active {
-  transform: scale(0.98);
-}
-
-.serviceBtn:focus-visible {
-  outline: 2px solid var(--text);
-  outline-offset: -2px;
-}
-
-@media (hover: hover) {
-  .serviceBtn:hover .h3 {
-    text-decoration: underline;
-    text-decoration-color: var(--link-underline);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
-  }
-}
-
-.sectionHit {
-  outline: 2px solid var(--primary);
-  outline-offset: var(--space-2);
-  border-radius: var(--radius-card);
 }

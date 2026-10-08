@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag, faMap } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { directionsLink, formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
+import { directionsLink, formatDistance, telLink, whatsappLink } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
 import Button from "../components/Button.jsx";
@@ -13,7 +13,8 @@ import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import Offers from "./Offers.jsx";
 import HoursTable from "./HoursTable.jsx";
-import { groupServices, mapSrc } from "./groupServices.js";
+import Services from "./Services.jsx";
+import { mapSrc } from "./groupServices.js";
 import styles from "./BusinessPage.module.css";
 
 const external = { target: "_blank", rel: "noopener noreferrer" };
@@ -139,30 +140,7 @@ export default function BusinessPage({
         {flash}
 
         {business.services.length > 0 && (
-          <BusinessSection title="Services and prices" id="services">
-            {groupServices(business.services).map((group) => (
-              <div
-                key={group.id ?? "all"}
-                id={group.id ? `section-${group.id}` : undefined}
-                className={group.id && group.id === hitSection ? styles.sectionHit : undefined}
-              >
-                {group.name && <h3 className={styles.h3}>{group.name}</h3>}
-                <ul className={styles.services}>
-                  {group.items.map((svc) => (
-                    <li key={svc.id} className={styles.service}>
-                      <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
-                        {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
-                        <span className={styles.serviceText}>
-                          <span className={styles.h3}>{svc.name}</span>
-                          {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </BusinessSection>
+          <Services services={business.services} hitSection={hitSection} mode={mode} onOpenItem={onOpenItem} />
         )}
 
         {business.gallery.length > 0 && (
