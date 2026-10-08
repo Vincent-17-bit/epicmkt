@@ -8,6 +8,10 @@
   width: min(24rem, 100%);
 }
 
+.tablet {
+  width: min(48rem, 100%);
+}
+
 .desktop {
   width: 100%;
 }
@@ -23,7 +27,8 @@
 }
 
 .screen {
-  overflow: hidden;
+  max-height: var(--view-as-height, 42rem);
+  overflow: hidden auto;
   border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
   background: var(--bg);

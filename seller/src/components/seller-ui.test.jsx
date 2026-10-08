@@ -47,6 +47,33 @@ describe("ViewAsFrame", () => {
   });
 });
 
+describe("ViewAsFrame contact bar", () => {
+  const icon = { prefix: "fas", iconName: "store", icon: [1, 1, [], "f000", "M0 0"] };
+  const page = (container) => <BusinessPage business={business} icon={icon} mode="preview" container={container} shortUrl="https://x.example/s/a" hoursRows={[]} statusText="Open now" reviewsText="4.0 (1)" locate={{ label: "Show" }} />;
+
+  it.each(["mobile", "tablet", "desktop"])("keeps the contact bar inside the %s frame", (device) => {
+    const { container } = render(<ViewAsFrame device={device}>{(host) => page(host)}</ViewAsFrame>);
+    const bar = screen.getByRole("navigation", { name: "Contact actions" });
+    const screenEl = container.querySelector(`[data-device="${device}"] > div`);
+    expect(bar.parentElement).toBe(screenEl);
+    expect(container.querySelector("article").contains(bar)).toBe(false);
+  });
+
+  it("leaves the bar inside the page when no container is passed", () => {
+    const { container } = render(<ViewAsFrame device="mobile">{page()}</ViewAsFrame>);
+    expect(container.querySelector("article").contains(screen.getByRole("navigation", { name: "Contact actions" }))).toBe(true);
+  });
+
+  it("keeps the bar inert in preview", () => {
+    const onContact = vi.fn();
+    render(<ViewAsFrame>{(host) => <BusinessPage business={business} icon={icon} mode="preview" container={host} onContact={onContact} shortUrl="https://x.example/s/a" hoursRows={[]} statusText="Open now" reviewsText="4.0 (1)" locate={{ label: "Show" }} />}</ViewAsFrame>);
+    const bar = screen.getByRole("navigation", { name: "Contact actions" });
+    bar.querySelectorAll("a, button").forEach((el) => fireEvent.click(el));
+    expect(onContact).not.toHaveBeenCalled();
+    expect(bar.querySelectorAll("a[href]")).toHaveLength(0);
+  });
+});
+
 describe("ListingCard", () => {
   it("shows seller chips in the overlay and actions in quickActions", () => {
     render(<ListingCard item={item} flags={{ hiddenByMe: true, reports: 2, stalePrice: true }} />);

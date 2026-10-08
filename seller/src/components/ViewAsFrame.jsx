@@ -1,6 +1,9 @@
+import { useState } from "react";
 import styles from "./ViewAsFrame.module.css";
 
 export default function ViewAsFrame({ device = "mobile", notice = "Preview only", children }) {
+  const [screen, setScreen] = useState(null);
+
   return (
     <section className={`${styles.frame} ${styles[device]}`} data-device={device} aria-label="Customer view">
       {notice && (
@@ -8,7 +11,9 @@ export default function ViewAsFrame({ device = "mobile", notice = "Preview only"
           {notice}
         </p>
       )}
-      <div className={styles.screen}>{children}</div>
+      <div ref={setScreen} className={styles.screen}>
+        {typeof children === "function" ? children(screen) : children}
+      </div>
     </section>
   );
 }
