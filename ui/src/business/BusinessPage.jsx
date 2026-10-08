@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag, faMap } from "@fortawesome/free-solid-svg-icons";
+import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { directionsLink, formatDistance, telLink, whatsappLink } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
@@ -14,9 +14,9 @@ import BusinessSection from "./BusinessSection.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
 import Hours from "./Hours.jsx";
+import Location from "./Location.jsx";
 import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
-import { mapSrc } from "./groupServices.js";
 import styles from "./BusinessPage.module.css";
 
 const external = { target: "_blank", rel: "noopener noreferrer" };
@@ -155,23 +155,7 @@ export default function BusinessPage({
 
         <Hours rows={hoursRows} />
 
-        <BusinessSection title="Location" id="location">
-          <div className={styles.map}>
-            <iframe
-              title={`Map showing ${business.name}`}
-              src={mapSrc(business.lat, business.lng)}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              className={styles.mapFrame}
-              {...(preview ? { inert: "" } : {})}
-            />
-          </div>
-          <div className={styles.mapActions}>
-            <Button as="a" variant="secondary" icon={faMap} {...act.link(directionsHref, track("directions"), external)}>
-              View on map
-            </Button>
-          </div>
-        </BusinessSection>
+        <Location name={business.name} lat={business.lat} lng={business.lng} directionsHref={directionsHref} mode={mode} onDirections={track("directions")} />
 
         {socials.length > 0 && (
           <BusinessSection title="Follow" id="social">
