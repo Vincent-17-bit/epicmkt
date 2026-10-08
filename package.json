@@ -19,7 +19,7 @@
     "test:api": "node backend/check.mjs",
     "seed": "node --env-file=scripts/.env scripts/seed.mjs",
     "lint:ui": "eslint ui/src",
-    "test": "npm test -w client && npm run test:snapshots -w client && npm test -w ui && vitest run",
+    "test": "npm test -w shared && npm test -w client && npm run test:snapshots -w client && npm test -w ui && vitest run",
     "test:visual": "node scripts/visual.mjs run"
   },
   "devDependencies": {
