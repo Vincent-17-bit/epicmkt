@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag, faTag, faMap } from "@fortawesome/free-solid-svg-icons";
+import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag, faMap } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { directionsLink, formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
@@ -11,6 +11,7 @@ import Lightbox from "../components/Lightbox.jsx";
 import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
+import Offers from "./Offers.jsx";
 import HoursTable from "./HoursTable.jsx";
 import { groupServices, mapSrc } from "./groupServices.js";
 import styles from "./BusinessPage.module.css";
@@ -132,28 +133,7 @@ export default function BusinessPage({
         </div>
 
         {business.offers.length > 0 && (
-          <BusinessSection title="Offers" id="offers">
-            <ul className={styles.offers}>
-              {business.offers.map((offer) => (
-                <li key={offer.id} className={styles.offer}>
-                  <FontAwesomeIcon icon={faTag} className={styles.offerIcon} />
-                  <div>
-                    <h3 className={styles.h3}>{offer.title}</h3>
-                    <p>{offer.description}</p>
-                    <p className={styles.offerMeta}>
-                      {formatExpiry?.(offer.expiresAt)}
-                      {offer.code && (
-                        <>
-                          {" · Code "}
-                          <strong>{offer.code}</strong>
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </BusinessSection>
+          <Offers offers={business.offers} formatExpiry={formatExpiry} />
         )}
 
         {flash}
