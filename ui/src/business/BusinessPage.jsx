@@ -45,6 +45,7 @@ export default function BusinessPage({
   onOpenItem,
   onReport,
   mode = "live",
+  container,
   overlay,
   quickActions,
   children
@@ -172,6 +173,7 @@ export default function BusinessPage({
         directionsHref={directionsHref}
         shareNote={shareNote}
         mode={mode}
+        container={container}
         onCall={track("call")}
         onWhatsApp={track("whatsapp")}
         onDirections={track("directions")}
