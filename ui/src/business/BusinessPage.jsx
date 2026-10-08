@@ -13,6 +13,7 @@ import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
+import Follow from "./Follow.jsx";
 import Hours from "./Hours.jsx";
 import Location from "./Location.jsx";
 import Photos from "./Photos.jsx";
@@ -158,18 +159,7 @@ export default function BusinessPage({
         <Location name={business.name} lat={business.lat} lng={business.lng} directionsHref={directionsHref} mode={mode} onDirections={track("directions")} />
 
         {socials.length > 0 && (
-          <BusinessSection title="Follow" id="social">
-            <ul className={styles.socials}>
-              {socials.map((s) => (
-                <li key={s.key}>
-                  <a className={styles.social} {...act.link(s.href, undefined, external)}>
-                    <FontAwesomeIcon icon={s.icon} />
-                    <span>{s.label}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </BusinessSection>
+          <Follow socials={socials} mode={mode} />
         )}
 
         <BusinessSection title="Share this page" id="qr">
