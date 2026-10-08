@@ -200,44 +200,6 @@
   font-size: var(--text-sm);
 }
 
-.bar {
-  position: sticky;
-  bottom: 0;
-  z-index: var(--z-menu-scrim);
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  padding-bottom: var(--safe-bottom);
-  border-top: 2px solid var(--border-strong);
-  background: var(--surface);
-}
-
-.barItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  min-height: var(--bar-h);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--text);
-  font: inherit;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.barItem svg {
-  font-size: 1.125rem;
-}
-
-@media (min-width: 768px) {
-  .bar {
-    display: none;
-  }
-}
-
 .note {
   color: var(--text-muted);
   font-size: var(--text-sm);

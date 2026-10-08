@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPhone, faLocationArrow, faLocationDot, faStar, faShareNodes, faFlag } from "@fortawesome/free-solid-svg-icons";
-import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
+import { faLocationArrow, faLocationDot, faStar, faFlag } from "@fortawesome/free-solid-svg-icons";
 import { directionsLink, formatDistance, telLink, whatsappLink } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
-import Button from "../components/Button.jsx";
 import Container from "../components/Container.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
+import BottomBar from "./BottomBar.jsx";
 import BusinessHero from "./BusinessHero.jsx";
-import BusinessSection from "./BusinessSection.jsx";
 import ActionRow from "./ActionRow.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
@@ -21,8 +19,6 @@ import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
 import ShareQr from "./ShareQr.jsx";
 import styles from "./BusinessPage.module.css";
-
-const external = { target: "_blank", rel: "noopener noreferrer" };
 
 export default function BusinessPage({
   business,
@@ -170,24 +166,17 @@ export default function BusinessPage({
         </p>
       </Container>
 
-      <nav className={styles.bar} aria-label="Contact actions">
-        <a className={styles.barItem} {...act.link(callHref, track("call"))}>
-          <FontAwesomeIcon icon={faPhone} />
-          <span>Call</span>
-        </a>
-        <a className={styles.barItem} {...act.link(whatsappHref, track("whatsapp"), external)}>
-          <FontAwesomeIcon icon={faWhatsapp} />
-          <span>WhatsApp</span>
-        </a>
-        <a className={styles.barItem} {...act.link(directionsHref, track("directions"), external)}>
-          <FontAwesomeIcon icon={faLocationArrow} />
-          <span>Directions</span>
-        </a>
-        <button type="button" className={styles.barItem} {...act.button(onShare)}>
-          <FontAwesomeIcon icon={faShareNodes} />
-          <span>{shareNote || "Share"}</span>
-        </button>
-      </nav>
+      <BottomBar
+        callHref={callHref}
+        whatsappHref={whatsappHref}
+        directionsHref={directionsHref}
+        shareNote={shareNote}
+        mode={mode}
+        onCall={track("call")}
+        onWhatsApp={track("whatsapp")}
+        onDirections={track("directions")}
+        onShare={onShare}
+      />
 
       <Lightbox items={business.gallery} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
       {children}
