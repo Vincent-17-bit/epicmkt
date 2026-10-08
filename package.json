@@ -2,13 +2,23 @@
   "name": "epicmkt",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "backend", "admin-backend", "client", "seller", "admin"],
+  "workspaces": [
+    "shared",
+    "ui",
+    "backend",
+    "admin-backend",
+    "client",
+    "seller",
+    "admin"
+  ],
   "scripts": {
     "dev:client": "npm run dev -w client",
     "dev:seller": "npm run dev -w seller",
     "dev:admin": "npm run dev -w admin",
     "build": "npm run build -w client && npm run build -w seller && npm run build -w admin",
     "test:api": "node backend/check.mjs",
-    "seed": "node --env-file=scripts/.env scripts/seed.mjs"
+    "seed": "node --env-file=scripts/.env scripts/seed.mjs",
+    "lint:ui": "eslint ui/src",
+    "test": "npm test -w client && npm run test:snapshots -w client && npm test -w ui && vitest run"
   }
 }
