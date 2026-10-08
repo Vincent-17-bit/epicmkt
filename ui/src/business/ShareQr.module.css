@@ -1,0 +1,19 @@
+.qrRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.qrText {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+.qrLink {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  word-break: break-all;
+}

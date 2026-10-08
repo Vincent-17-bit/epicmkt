@@ -18,6 +18,7 @@ import Hours from "./Hours.jsx";
 import Location from "./Location.jsx";
 import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
+import ShareQr from "./ShareQr.jsx";
 import styles from "./BusinessPage.module.css";
 
 const external = { target: "_blank", rel: "noopener noreferrer" };
@@ -162,18 +163,7 @@ export default function BusinessPage({
           <Follow socials={socials} mode={mode} />
         )}
 
-        <BusinessSection title="Share this page" id="qr">
-          <div className={styles.qrRow}>
-            {qr}
-            <div className={styles.qrText}>
-              <p>Scan to open this page on another phone.</p>
-              <p className={styles.qrLink}>{shortUrl.replace(/^https?:\/\//, "")}</p>
-              <Button variant="secondary" size="sm" icon={faShareNodes} {...act.button(onShare)}>
-                {shareNote || "Share"}
-              </Button>
-            </div>
-          </div>
-        </BusinessSection>
+        <ShareQr qr={qr} shortUrl={shortUrl} shareNote={shareNote} mode={mode} onShare={onShare} />
 
         <p className={styles.report}>
           <button type="button" className={styles.linkBtn} {...act.button(onReport)}>
