@@ -3,3 +3,4 @@ dist
 dev-dist
 .env
 .DS_Store
+.visual
