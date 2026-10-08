@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, distanceKm, isOpenNow } from "@epicmkt/shared";
+import { BUSINESS_STATUS, distanceKm, isOpenState, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -74,7 +74,7 @@ const sellerCard = (business, origin) => ({
   lng: business.lng,
   phone: business.phone,
   whatsapp: business.whatsapp,
-  isOpen: isOpenNow(business.hours),
+  isOpen: isOpenState(statusOf(business, now()).state),
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 

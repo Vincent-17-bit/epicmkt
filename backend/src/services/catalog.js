@@ -3,17 +3,19 @@ import {
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
-  closingInfo,
   cardFacts,
   distanceKm,
   filterableFields,
   matchesFilter,
   searchableText,
-  isOpenNow,
+  isOpenState,
+  legacyStatus,
+  statusOf,
   normalizeText,
   todayHours
 } from "@epicmkt/shared";
 import { store } from "../store.js";
+import { now as clockNow } from "../clock.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { promoCountsFor, runSweep } from "../promotions.js";
@@ -70,7 +72,10 @@ const toSummary = (b, origin) => ({
   whatsapp: b.whatsapp,
   lat: b.lat,
   lng: b.lng,
-  isOpen: isOpenNow(b.hours),
+  isOpen: isOpenState(statusOf(b, clockNow()).state),
+  hours: b.hours,
+  exceptions: b.exceptions ?? [],
+  override: b.override ?? null,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });
@@ -82,10 +87,9 @@ const toPublic = (b, origin) => {
     ...rest,
     offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
     services: b.services.filter((svc) => svc.status !== "unlisted"),
-    ...closingInfo(b.hours),
+    ...legacyStatus(statusOf(b, clockNow())),
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
-    isOpen: isOpenNow(b.hours),
     todayHours: todayHours(b.hours),
     distanceKm: origin ? distanceKm(origin, b) : null
   };
@@ -171,7 +175,7 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !openNow || isOpenNow(b.hours))
+    .filter((b) => !openNow || isOpenState(statusOf(b, clockNow()).state))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .filter((b) => matchesAttrs(b, attrEntries))
