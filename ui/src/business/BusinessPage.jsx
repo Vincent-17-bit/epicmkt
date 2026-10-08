@@ -13,7 +13,7 @@ import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
-import HoursTable from "./HoursTable.jsx";
+import Hours from "./Hours.jsx";
 import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
 import { mapSrc } from "./groupServices.js";
@@ -153,9 +153,7 @@ export default function BusinessPage({
           <Details title={detailsTitle}>{details}</Details>
         )}
 
-        <BusinessSection title="Opening hours" id="hours">
-          <HoursTable rows={hoursRows} />
-        </BusinessSection>
+        <Hours rows={hoursRows} />
 
         <BusinessSection title="Location" id="location">
           <div className={styles.map}>

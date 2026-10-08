@@ -1,4 +1,4 @@
-import styles from "./BusinessPage.module.css";
+import styles from "./HoursTable.module.css";
 
 export default function HoursTable({ rows }) {
   return (
