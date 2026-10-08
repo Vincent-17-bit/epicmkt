@@ -13,6 +13,7 @@ import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import Offers from "./Offers.jsx";
 import HoursTable from "./HoursTable.jsx";
+import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
 import { mapSrc } from "./groupServices.js";
 import styles from "./BusinessPage.module.css";
@@ -144,17 +145,7 @@ export default function BusinessPage({
         )}
 
         {business.gallery.length > 0 && (
-          <BusinessSection title="Photos" id="photos">
-            <ul className={styles.gallery}>
-              {business.gallery.map((photo, i) => (
-                <li key={photo.id}>
-                  <button type="button" className={styles.thumb} {...act.button(() => setLightbox(i))} aria-label={`Open photo: ${photo.caption}`}>
-                    <img src={photo.url} alt={photo.caption} loading="lazy" decoding="async" className={styles.thumbImg} />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </BusinessSection>
+          <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />
         )}
 
         {details && (
