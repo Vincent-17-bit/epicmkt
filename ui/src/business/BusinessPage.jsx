@@ -11,6 +11,7 @@ import Lightbox from "../components/Lightbox.jsx";
 import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import BusinessHero from "./BusinessHero.jsx";
 import BusinessSection from "./BusinessSection.jsx";
+import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
 import HoursTable from "./HoursTable.jsx";
 import Photos from "./Photos.jsx";
@@ -149,9 +150,7 @@ export default function BusinessPage({
         )}
 
         {details && (
-          <BusinessSection title={detailsTitle} id="details">
-            {details}
-          </BusinessSection>
+          <Details title={detailsTitle}>{details}</Details>
         )}
 
         <BusinessSection title="Opening hours" id="hours">
