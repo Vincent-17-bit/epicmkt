@@ -44,6 +44,7 @@ export async function activateSeller(db, input, { paidDays = 30, now = () => new
       category_id: input.categoryId,
       plan_key: planKey,
       status: "live",
+      must_change_password: true,
       paid_until: paidUntil,
       phone: input.phone,
       whatsapp: input.whatsapp ?? input.phone,

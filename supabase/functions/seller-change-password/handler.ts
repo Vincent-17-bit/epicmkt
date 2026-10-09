@@ -19,6 +19,7 @@ export const sellerChangePassword = (d: Deps) => wrap(async (req) => {
   const updated = await d.db.auth.admin.updateUserById(ctx.userId, { password: parsed.data.newPassword });
   if (updated.error) return json({ error: "server_error" }, 500);
   await d.db.rpc("revoke_user_sessions", { p_user: ctx.userId, p_keep: ctx.sessionId });
+  await d.db.rpc("seller_first_login_done", { p_business: ctx.business.id });
   await auditInsert(d.db, { business_id: ctx.business.id, actor_id: ctx.userId, action: "password_changed" });
   return json({ ok: true });
 });
