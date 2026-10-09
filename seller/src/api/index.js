@@ -11,6 +11,7 @@ export const getCategories = () => backend.getCategories();
 
 export const login = (...a) => impl.login(...a);
 export const logout = (...a) => impl.logout(...a);
+export const me = (...a) => impl.me(...a);
 export const forgotRequest = (...a) => impl.forgotRequest(...a);
 export const forgotVerify = (...a) => impl.forgotVerify(...a);
 export const requestOtp = (...a) => impl.requestOtp(...a);
@@ -29,3 +30,5 @@ export const itemSignals = (...a) => impl.itemSignals(...a);
 export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
 export const exportData = (...a) => impl.exportData(...a);
 export { ApiError } from "./errors.js";
+
+export const dev = import.meta.env?.DEV && import.meta.env?.VITE_API_MODE !== "live" ? { simulate: mock.simulate, seededSellers: mock.seededSellers, devSignIn: mock.devSignIn, resetMock: mock.resetMock } : null;

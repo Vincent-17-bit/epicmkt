@@ -29,7 +29,28 @@ export const login = async (sellerId, password) => {
   return { expiresAt: session.expires_at };
 };
 export const logout = async () => { await need().auth.signOut(); };
-export const forgotRequest = (sellerId) => fn("seller-forgot-request", { sellerId });
+export const me = async () => {
+  const client = need();
+  const { data: sess } = await client.auth.getSession();
+  if (!sess?.session) throw new ApiError("unauthorized");
+  const { data: business, error } = await client.from("businesses").select("*").eq("user_id", sess.session.user.id).neq("status", "deleted").maybeSingle();
+  if (error || !business) throw new ApiError("unauthorized");
+  const catalog = await rpc("seller_catalog_stats", { p_stale_days: 90 }).catch(() => null);
+  const { data: notes } = await client.from("messages").select("id, subject, body, created_at, read_at").order("created_at", { ascending: false }).limit(20);
+  const { data: settings } = await client.from("seller_settings").select("*").maybeSingle();
+  return {
+    business: { ...business, unlisted: business.status === "pending" },
+    mustChangePassword: Boolean(business.must_change_password),
+    application: { stage: business.status === "pending" ? "paid" : "live", outcome: null },
+    catalog,
+    usage: null,
+    limits: null,
+    questions: [],
+    notifications: (notes ?? []).map((n) => ({ id: n.id, title: n.subject ?? "Message", body: n.body, created_at: n.created_at, read: Boolean(n.read_at) })),
+    settings: { idle_minutes: settings?.settings?.idle_minutes ?? 60 }
+  };
+};
+export const forgotRequest = (input) => fn("seller-forgot-request", typeof input === "string" ? { sellerId: input } : input);
 export const forgotVerify = ({ sellerId, code, newPassword }) => fn("seller-forgot-verify", { sellerId, code, newPassword });
 export const requestOtp = () => fn("seller-otp-request", { purpose: "change_password" });
 export const changePassword = ({ code, newPassword }) => fn("seller-change-password", { code, newPassword });
