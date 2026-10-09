@@ -1,0 +1,254 @@
+.page {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: max(var(--space-5), var(--safe-top)) max(var(--space-3), var(--safe-right)) max(var(--space-5), var(--safe-bottom)) max(var(--space-3), var(--safe-left));
+  background: var(--bg);
+  color: var(--text);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 26rem;
+  margin-block: auto;
+  padding: var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: start;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+}
+
+.title {
+  font-size: var(--text-xl);
+  line-height: 1.2;
+}
+
+.intro,
+.hint {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--danger-solid);
+}
+
+.input:disabled {
+  opacity: 0.6;
+}
+
+.inputWrap {
+  position: relative;
+}
+
+.inputWrap .input {
+  padding-right: 3rem;
+}
+
+.toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.otp .input {
+  letter-spacing: 0.4em;
+  font-size: var(--text-lg);
+  text-align: center;
+}
+
+.error {
+  color: var(--danger-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.alert,
+.success,
+.note {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.alert {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-weight: 600;
+}
+
+.success {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  font-weight: 600;
+}
+
+.note {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.actions {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.link {
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 3px;
+}
+
+.linkBtn {
+  border: 0;
+  background: transparent;
+  color: var(--link);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 3px;
+}
+
+.linkBtn:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.strength {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.bar,
+.barOn {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--track);
+}
+
+.barOn {
+  background: var(--primary);
+}
+
+.strength[data-level="1"] .barOn {
+  background: var(--danger-solid);
+}
+
+.strengthLabel {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.checklist {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.checklist li {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ok {
+  color: var(--ok-text);
+  font-weight: 600;
+}
+
+.todo {
+  color: var(--text-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .card {
+    padding: var(--space-4);
+  }
+}
