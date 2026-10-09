@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:snapshots": "vitest run --config vitest.snapshot.config.js"
   },
   "dependencies": {
     "@epicmkt/backend": "*",
     "@epicmkt/shared": "*",
+    "@epicmkt/ui": "*",
     "@fontsource-variable/inter": "^5.1.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-brands-svg-icons": "^6.6.0",

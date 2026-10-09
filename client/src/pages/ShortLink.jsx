@@ -6,7 +6,7 @@ import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import NotFound from "./NotFound.jsx";
-import styles from "./Business.module.css";
+import styles from "./ShortLink.module.css";
 
 export default function ShortLink() {
   const { shortcode } = useParams();

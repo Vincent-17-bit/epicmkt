@@ -4,6 +4,7 @@
   "type": "module",
   "workspaces": [
     "shared",
+    "ui",
     "backend",
     "admin-backend",
     "client",
@@ -22,9 +23,15 @@
     "test:shared": "node --test shared/src/seller/seller.test.js scripts/activate-seller.test.mjs seller/src/api/api.test.js",
     "test:db": "node --test supabase/tests/seller.test.mjs",
     "test:fn": "deno test --no-check -A supabase/tests/functions.test.ts",
-    "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn"
+    "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn",
+    "lint:ui": "eslint ui/src",
+    "test": "npm test -w shared && npm test -w client && npm run test:snapshots -w client && npm test -w ui && vitest run",
+    "test:visual": "node scripts/visual.mjs run"
   },
   "devDependencies": {
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.64.0",
+    "pngjs": "^7.0.0"
   }
 }
