@@ -1,12 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
+import { withCors, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
 import { sessionApp } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
 });
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -32,4 +32,4 @@ Deno.serve(async (req) => {
     `<p>${escapeHtml(app.business_name)} submitted M-Pesa code <b>${escapeHtml(code)}</b> for KES ${escapeHtml(app.price_at_submission)}.</p>`,
   );
   return json({ ok: true, status: "payment_confirming" });
-});
+}));

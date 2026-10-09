@@ -1,12 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
+import { withCors, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
 import { sessionApp } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
 });
 
-Deno.serve(async (req) => {
+Deno.serve(withCors(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
@@ -31,4 +31,4 @@ Deno.serve(async (req) => {
     `<p>${escapeHtml(app.business_name)} has sent corrections and is ready for re-check.</p><p>Reference: ${escapeHtml(app.reference_no)}</p>`,
   );
   return json({ ok: true, status: "submitted" });
-});
+}));

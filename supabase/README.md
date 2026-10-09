@@ -11,7 +11,7 @@ supabase link --project-ref afdqkdjyhktbohcpayym
 ```
 supabase db push
 ```
-Applies `0001_applications.sql` (tables, RLS, private `applications` bucket) and `0002_grants.sql` (table privileges, needed because "Automatically expose new tables" is off).
+Applies `0001_applications.sql` (tables, RLS, private `applications` bucket) and `0002_grants.sql` (table privileges, needed because "Automatically expose new tables" is off). `0004_site_config.sql` adds `site_config` (public read, admin write).
 
 ## 3. Secrets
 Copy `supabase/.env.example` to `supabase/.env`, fill it in, then:
@@ -20,7 +20,7 @@ supabase secrets set --env-file supabase/.env
 ```
 - `TURNSTILE_SECRET`: Cloudflare Turnstile secret key
 - `APP_ENV=production`: makes a missing Turnstile secret fail closed. Use `development` locally to skip the check.
-- `ALLOWED_ORIGIN`: your site origin, no trailing slash
+- `ALLOWED_ORIGINS`: comma separated list of exact origins, no trailing slash, no wildcard. Requests with a browser `Origin` outside the list get 403 and are never echoed back. Unset: local origins only when `APP_ENV` is not `production`, nothing when it is. Replaces the old single `ALLOWED_ORIGIN`.
 - `IP_HASH_SALT`: any long random string
 - `RESEND_API_KEY`, `MAIL_FROM`, `ADMIN_EMAIL`: optional, emails are skipped when unset
 - `AT_API_KEY`, `AT_USERNAME`, `AT_SENDER`: Africa's Talking SMS for status codes. When `APP_ENV` is not `production`, the code is always `123456` and no SMS is sent.
@@ -68,7 +68,7 @@ select cron.schedule('purge-stale-uploads', '17 * * * *',
 ## Seller portal backend (phase S0)
 
 ### Database
-`supabase db push` also applies `0004_core.sql` (businesses, items, item_media, faqs, offers, flags, reports, payments, messages, change_requests, audit_log, admin_notifications) and `0005_seller_portal.sql` (stock, price and history triggers, plan limits, seller RPCs, OTP and lockout helpers, the public `seller-media` bucket, realtime on `change_requests`). Both are safe to re-run.
+`supabase db push` also applies `0005_core.sql` (businesses, items, item_media, faqs, offers, flags, reports, payments, messages, change_requests, audit_log, admin_notifications) and `0006_seller_portal.sql` (stock, price and history triggers, plan limits, seller RPCs, OTP and lockout helpers, the public `seller-media` bucket, realtime on `change_requests`). Both are safe to re-run.
 
 Sellers have no direct write access to `businesses`. Every profile, change request, reply, pause and deletion goes through a `seller_*` RPC. Public read policies for the customer site are not part of S0.
 
@@ -97,3 +97,14 @@ Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:
 ```
 npm run test:seller-backend
 ```
+
+## Site config
+Keys read by the customer site, all optional (env values are the fallback):
+```
+insert into site_config (key, value) values
+  ('seller_url', '"https://business.epicmkt.co.ke"'),
+  ('admin_url', '"https://admin.epicmkt.co.ke"'),
+  ('seller_login_path', '"/login"')
+on conflict (key) do update set value = excluded.value, updated_at = now();
+```
+Changes show on the footer "Seller login" link and the `/business/*` and `/admin/*` redirects without a deploy. Never store secrets here: it is publicly readable.

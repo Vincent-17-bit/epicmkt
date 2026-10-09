@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
 import About from "./pages/About.jsx";
@@ -16,9 +16,12 @@ import ShortLink from "./pages/ShortLink.jsx";
 import OfflinePage from "./pages/OfflinePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
+import AppRedirect from "./components/AppRedirect.jsx";
 import { trackResults } from "./lib/resultsMemory.js";
 
 export const router = createBrowserRouter([
+  { path: "/business/*", element: <AppRedirect app="seller" prefix="/business" /> },
+  { path: "/admin/*", element: <AppRedirect app="admin" prefix="/admin" /> },
   {
     path: "/become-a-seller",
     lazy: async () => ({ Component: (await import("./pages/seller-apply/PublicSellerLayout.jsx")).default }),
@@ -45,6 +48,7 @@ export const router = createBrowserRouter([
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },
           { path: "faq", element: <Faq /> },
+          { path: "seller-guide", element: <Navigate to="/sell#how" replace /> },
           { path: "sell", element: <Sell /> },
           { path: "sell/register", element: <SellRegister /> },
           { path: "privacy", element: <Privacy /> },

@@ -5,6 +5,7 @@ import { faArrowUp, faChevronDown, faClock, faEnvelope, faLocationDot, faPhone }
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
+import { useAppLinks } from "../hooks/useAppLinks.js";
 import Container from "./Container.jsx";
 import Logo from "./Logo.jsx";
 import ThemeSwitch from "./ThemeSwitch.jsx";
@@ -27,7 +28,9 @@ const columns = [
     links: [
       { to: "/become-a-seller", label: "Become a seller" },
       { to: "/sell#plans", label: "Pricing" },
-      { to: "/sell#how", label: "Seller guide" }
+      { to: "/seller-guide", label: "Seller guide" },
+      { href: "sellerLogin", label: "Seller login" },
+      { to: "/become-a-seller/status", label: "Check my application" }
     ]
   },
   {
@@ -98,6 +101,7 @@ function Section({ id, title, area, desktop, children }) {
 
 export default function Footer() {
   const desktop = useDesktop();
+  const appLinks = useAppLinks();
   const toTop = () => {
     const main = document.getElementById("main");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -154,9 +158,15 @@ export default function Footer() {
             <ul className={styles.links}>
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.to} className={styles.link}>
-                    {link.label}
-                  </Link>
+                  {link.href ? (
+                    <a href={appLinks[link.href]} rel="noopener" className={styles.link}>
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link to={link.to} className={styles.link}>
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

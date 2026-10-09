@@ -1,9 +1,27 @@
+import { isAllowedOrigin, resolveAllowList } from "./origins.ts";
+
 export const corsHeaders = () => ({
-  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 });
+
+const allowList = () => resolveAllowList(Deno.env.get("ALLOWED_ORIGINS"), Deno.env.get("APP_ENV") === "production");
+
+export const withCors = (handler: (req: Request) => Response | Promise<Response>) => async (req: Request) => {
+  const origin = req.headers.get("origin");
+  if (origin && !isAllowedOrigin(origin, allowList())) {
+    return new Response(JSON.stringify({ error: "origin_not_allowed" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "Vary": "Origin" },
+    });
+  }
+  const res = await handler(req);
+  const headers = new Headers(res.headers);
+  headers.set("Vary", "Origin");
+  if (origin) headers.set("Access-Control-Allow-Origin", origin);
+  return new Response(res.body, { status: res.status, headers });
+};
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

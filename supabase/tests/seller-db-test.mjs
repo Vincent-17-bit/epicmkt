@@ -483,6 +483,6 @@ test("realtime publishes change_requests and the migration re-runs safely", asyn
   const { join, dirname } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
   const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
-  await c.query(readFileSync(join(dir, "0004_core.sql"), "utf8"));
-  await c.query(readFileSync(join(dir, "0005_seller_portal.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0005_core.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0006_seller_portal.sql"), "utf8"));
 });
