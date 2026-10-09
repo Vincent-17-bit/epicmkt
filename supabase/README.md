@@ -64,3 +64,36 @@ insert into public.admins (user_id) select id from auth.users where email = 'you
 select cron.schedule('purge-stale-uploads', '17 * * * *',
   $$ delete from public.applications where status = 'uploading' and created_at < now() - interval '24 hours' $$);
 ```
+
+## Seller portal backend (phase S0)
+
+### Database
+`supabase db push` also applies `0004_core.sql` (businesses, items, item_media, faqs, offers, flags, reports, payments, messages, change_requests, audit_log, admin_notifications) and `0005_seller_portal.sql` (stock, price and history triggers, plan limits, seller RPCs, OTP and lockout helpers, the public `seller-media` bucket, realtime on `change_requests`). Both are safe to re-run.
+
+Sellers have no direct write access to `businesses`. Every profile, change request, reply, pause and deletion goes through a `seller_*` RPC. Public read policies for the customer site are not part of S0.
+
+### Functions
+```
+for f in seller-login seller-forgot-request seller-forgot-verify seller-otp-request seller-change-password seller-media-finalize seller-export-data; do
+  supabase functions deploy $f --no-verify-jwt
+done
+```
+Each function verifies the JWT itself. `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are provided by the platform. With `APP_ENV` not `production` the one-time code is always `123456` and no SMS is sent.
+
+Seller sign-in uses the Auth email `<sellerid>@sellers.epicmkt.app`. Shared rules live in `shared/src/seller`; run `npm run sync:shared` after changing them (`--check` fails when the copies in `supabase/functions/_shared/synced` drift).
+
+### Optional clean-up (pg_cron)
+```
+select cron.schedule('purge-seller-otps', '23 * * * *', $$ delete from public.seller_otps where created_at < now() - interval '1 day' $$);
+select cron.schedule('purge-auth-attempts', '29 * * * *', $$ delete from public.auth_attempts where last_failure_at < now() - interval '1 day' $$);
+select cron.schedule('purge-rate-limits', '41 * * * *', $$ delete from public.rate_limits where window_start < now() - interval '1 day' $$);
+```
+
+### Staging seed
+`npm run seed:sellers` (after `npm run seed`) creates one Standard and one Premium seller with three items each and prints the Seller IDs and passwords to the terminal only. It refuses to run when `APP_ENV=production`.
+
+### Tests
+Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:postgres@127.0.0.1:5432/postgres`; the suite recreates an `epicmkt_test` database) and Deno on the path.
+```
+npm run test:seller-backend
+```

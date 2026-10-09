@@ -2,13 +2,29 @@
   "name": "epicmkt",
   "private": true,
   "type": "module",
-  "workspaces": ["shared", "backend", "admin-backend", "client", "seller", "admin"],
+  "workspaces": [
+    "shared",
+    "backend",
+    "admin-backend",
+    "client",
+    "seller",
+    "admin"
+  ],
   "scripts": {
     "dev:client": "npm run dev -w client",
     "dev:seller": "npm run dev -w seller",
     "dev:admin": "npm run dev -w admin",
     "build": "npm run build -w client && npm run build -w seller && npm run build -w admin",
     "test:api": "node backend/check.mjs",
-    "seed": "node --env-file=scripts/.env scripts/seed.mjs"
+    "seed": "node --env-file=scripts/.env scripts/seed.mjs",
+    "sync:shared": "node scripts/sync-shared.mjs",
+    "seed:sellers": "node --env-file=scripts/.env scripts/seed-sellers.mjs",
+    "test:shared": "node --test shared/src/seller/seller.test.js scripts/activate-seller.test.mjs seller/src/api/api.test.js",
+    "test:db": "node --test supabase/tests/seller.test.mjs",
+    "test:fn": "deno test --no-check -A supabase/tests/functions.test.ts",
+    "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn"
+  },
+  "devDependencies": {
+    "pg": "^8.23.1"
   }
 }

@@ -23,3 +23,24 @@ verify_jwt = false
 
 [functions.status-payment-code]
 verify_jwt = false
+
+[functions.seller-login]
+verify_jwt = false
+
+[functions.seller-forgot-request]
+verify_jwt = false
+
+[functions.seller-forgot-verify]
+verify_jwt = false
+
+[functions.seller-otp-request]
+verify_jwt = false
+
+[functions.seller-change-password]
+verify_jwt = false
+
+[functions.seller-media-finalize]
+verify_jwt = false
+
+[functions.seller-export-data]
+verify_jwt = false
