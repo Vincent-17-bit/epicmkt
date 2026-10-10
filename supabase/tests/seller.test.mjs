@@ -1,6 +1,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { STOCK_CASES } from "../../shared/src/seller/stock-cases.js";
+import { ITEM_TEMPLATES } from "../../shared/src/seller/item-templates.js";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin, asService } from "./db.mjs";
 
 let c;
@@ -487,6 +488,7 @@ test("realtime publishes change_requests and the migration re-runs safely", asyn
   await c.query(readFileSync(join(dir, "0004_core.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0005_seller_portal.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0006_catalog_entry.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0007_item_templates.sql"), "utf8"));
 });
 
 test("S1: catalog columns, wider availability and the same stock decisions as the shared preview", async () => {
@@ -547,4 +549,50 @@ test("S1: restoring a deleted item respects the plan limit, with the error the a
     await assert.rejects(k.query(`insert into items (id, business_id, name) values (gen_random_uuid(), $1, 'restored')`, [ids.bizA]), (e) => /limit_reached:items/.test(e.message));
     await k.query("rollback to savepoint s");
   });
+});
+
+test("S1: categories.item_template defaults to an empty array and accepts only arrays", async () => {
+  const col = await sql(c, `select column_default, is_nullable from information_schema.columns where table_name = 'categories' and column_name = 'item_template'`);
+  assert.equal(col.length, 1);
+  assert.equal(col[0].is_nullable, "NO");
+  const row = await sql(c, `insert into categories (id, name, grp, tier, sort) values ('plain-cat', 'Plain', 'Misc', 'A', 9) returning item_template`);
+  assert.deepEqual(row[0].item_template, [], "new categories start with no item fields");
+  for (const bad of [`'{}'`, `'"text"'`, `'1'`, `'true'`, `'null'::jsonb`]) {
+    await assert.rejects(c.query(`update categories set item_template = ${bad} where id = 'plain-cat'`), /categories_item_template_check/, bad);
+  }
+  await assert.rejects(c.query(`update categories set item_template = null where id = 'plain-cat'`), /null value|not-null/i);
+  await c.query(`update categories set item_template = '[]' where id = 'plain-cat'`);
+  const ok = await sql(c, `update categories set item_template = $1 where id = 'plain-cat' returning item_template`, [JSON.stringify([{ key: "a", label: "A", type: "boolean" }])]);
+  assert.equal(ok[0].item_template[0].key, "a");
+});
+
+test("S1: every real item template fits the column and reads back unchanged; sellers can read it", async () => {
+  for (const [id, fields] of Object.entries(ITEM_TEMPLATES)) {
+    await sql(c, `insert into categories (id, name, grp, tier, sort, item_template) values ($1, $1, 'Test', 'A', 50, $2) on conflict (id) do update set item_template = excluded.item_template`, [`t-${id}`, JSON.stringify(fields)]);
+    const back = await sql(c, `select item_template from categories where id = $1`, [`t-${id}`]);
+    assert.deepEqual(back[0].item_template, fields, id);
+  }
+  const seen = await tx(c, asA, (k) => sql(k, `select id, item_template from categories where id in ('t-chemist', 't-barbershop')`));
+  assert.equal(seen.find((r) => r.id === "t-chemist").item_template.length, ITEM_TEMPLATES.chemist.length);
+  assert.deepEqual(seen.find((r) => r.id === "t-barbershop").item_template, []);
+  let changed = 0;
+  try {
+    await tx(c, asA, async (k) => { changed = (await k.query(`update categories set item_template = '[]' where id = 't-chemist'`)).rowCount; });
+  } catch (e) {
+    assert.match(e.message, /permission denied|row-level security/);
+  }
+  assert.equal(changed, 0, "no row may be updated by a seller");
+  const after = await sql(c, `select jsonb_array_length(item_template) n from categories where id = 't-chemist'`);
+  assert.equal(after[0].n, ITEM_TEMPLATES.chemist.length, "a seller cannot change a category's item template");
+});
+
+test("S1: legacy attributes already stored on items are kept by the migration and still readable", async () => {
+  await sql(c, `delete from items where business_id = '${ids.bizB}'`);
+  const [row] = await sql(c, `insert into items (business_id, name, attributes) values ($1, 'Old item', '{"prescriptions": true, "licence": "PPB/1"}') returning id`, [ids.bizB]);
+  const { readFileSync } = await import("node:fs");
+  const { join, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  await c.query(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0007_item_templates.sql"), "utf8"));
+  const [after] = await sql(c, `select attributes from items where id = $1`, [row.id]);
+  assert.deepEqual(after.attributes, { prescriptions: true, licence: "PPB/1" });
 });

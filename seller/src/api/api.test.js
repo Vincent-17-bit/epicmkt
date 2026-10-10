@@ -41,7 +41,8 @@ test("catalog: the mock behaves like the database", async () => {
 
   const ctx = await mock.getCatalogContext();
   assert.equal(ctx.category.id, "salons");
-  assert.ok(ctx.category.fields.length > 0);
+  assert.deepEqual(ctx.category.itemFields, [], "salons have nothing beyond the built-in service fields");
+  assert.equal("fields" in ctx.category, false, "business-level fields are not part of the seller catalog context");
   assert.equal(ctx.itemsLimit, 25);
 
   const tea = await mock.createItem(blankItem({ name: "Tea", price: 50, trackStock: true, stockCount: 2, lowStockThreshold: 3 }));
@@ -102,4 +103,19 @@ test("live maps the database's limit error to item_limit_reached", async () => {
   assert.equal(fromDb({ message: "admin_columns_protected", code: "42501" }).code, "admin_columns_protected");
   assert.equal(fromDb({ message: "duplicate key", code: "23505" }).code, "already_exists");
   assert.equal(fromDb({ message: "new row violates row-level security policy" }).code, "not_allowed");
+});
+
+test("catalog: item-level extras come from the item template; unknown keys are rejected", async () => {
+  const { blankItem } = await import("@epicmkt/shared");
+  mock.resetMock();
+  await mock.login("ES100001", "Demo-Passw0rd");
+  mock.setMockCategory("chemists");
+  const ctx = await mock.getCatalogContext();
+  assert.deepEqual(ctx.category.itemFields.map((f) => f.key), ["prescription-required", "dosage-form", "strength", "active-ingredient"]);
+
+  const ok = await mock.createItem(blankItem({ name: "Amoxicillin", attributes: { "prescription-required": true, "dosage-form": "capsule", strength: "500 mg" } }));
+  assert.equal(ok.attributes["dosage-form"], "capsule");
+  await assert.rejects(mock.createItem(blankItem({ name: "Bad one", attributes: { "dosage-form": "powder" } })), { code: "invalid_value" });
+  await assert.rejects(mock.createItem(blankItem({ name: "Legacy", attributes: { licence: "PPB/1" } })), { code: "invalid_value" }, "a business-level key is not an item field");
+  await assert.rejects(mock.updateItem(ok.id, { ...ok, attributes: { delivery: true } }), { code: "invalid_value" });
 });

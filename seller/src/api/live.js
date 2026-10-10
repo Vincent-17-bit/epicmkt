@@ -76,13 +76,13 @@ const myBusiness = async () => {
 export const getCatalogContext = async () => {
   const b = await myBusiness();
   const [{ data: cat, error: catError }, stats] = await Promise.all([
-    need().from("categories").select("id,name,template").eq("id", b.category_id).maybeSingle(),
+    need().from("categories").select("id,name,item_template").eq("id", b.category_id).maybeSingle(),
     catalogStats(),
   ]);
   if (catError) throw fromDb(catError);
   return {
     business: { id: b.id, name: b.name, categoryId: b.category_id, planKey: b.plan_key, status: b.status },
-    category: { id: b.category_id, name: cat?.name ?? b.category_id, fields: cat?.template ?? [] },
+    category: { id: b.category_id, name: cat?.name ?? b.category_id, itemFields: cat?.item_template ?? [] },
     itemsLimit: stats?.items_limit ?? null,
   };
 };

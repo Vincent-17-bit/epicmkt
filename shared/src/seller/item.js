@@ -1,5 +1,6 @@
 import { TIMEZONE_OFFSET_HOURS } from "../constants.js";
 import { applyStockRules } from "./availability.js";
+import { canonicalCategoryId } from "./item-templates.js";
 
 export const ITEM_KINDS = [
   { value: "product", label: "Product" },
@@ -51,11 +52,14 @@ export const priceNeeds = (priceType) => ({
   unit: priceType !== "contact",
 });
 
-const SERVICE_CATEGORIES = ["barbershops", "salons", "car-wash", "mechanics", "phone-repair", "tailors"];
+// Database category ids. The mock backend's ids are resolved to these first.
+const SERVICE_CATEGORIES = ["barbershop", "salon-beauty", "spa-massage", "car-wash", "garage-mechanic", "phone-repair", "tailor-boutique", "plumbing-electrical", "cleaning-laundry", "photography-events", "clinic", "tuition-daycare"];
+const MEMBERSHIP_CATEGORIES = ["gym-fitness"];
 
 export function defaultKindFor(categoryId) {
-  if (categoryId === "gyms") return "membership";
-  if (SERVICE_CATEGORIES.includes(categoryId)) return "service";
+  const id = canonicalCategoryId(categoryId);
+  if (MEMBERSHIP_CATEGORIES.includes(id)) return "membership";
+  if (SERVICE_CATEGORIES.includes(id)) return "service";
   return "product";
 }
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { blankItem, defaultKindFor, duplicateOf, planUsage, DEFAULT_UNITS } from "@epicmkt/shared";
+import { blankItem, defaultKindFor, duplicateOf, planUsage, knownAttributes, DEFAULT_UNITS } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { validateItem } from "./schema.js";
 import { useToasts } from "../ui/toasts.js";
@@ -7,6 +7,12 @@ import { useToasts } from "../ui/toasts.js";
 export const AUTOSAVE_MS = 700;
 
 const makeRow = (item, saved = item) => ({ id: item.id, item, saved, status: saved ? "saved" : "draft", version: 0, savedVersion: 0, errors: {}, message: "" });
+
+// Items saved before item templates existed may carry business-level attribute keys. They are dropped, never rejected.
+const withKnownAttributes = (item, fields) => {
+  const attributes = knownAttributes(fields, item.attributes);
+  return Object.keys(attributes).length === Object.keys(item.attributes ?? {}).length ? item : { ...item, attributes };
+};
 
 const isPristine = (r) => !r.saved && !r.item.name.trim() && r.item.price == null && !r.item.shortDescription && !r.item.description;
 const needsSave = (r) => r.version !== r.savedVersion;
@@ -99,13 +105,15 @@ export function useCatalog() {
   const doSave = useCallback(async (id) => {
     const row = get(id);
     if (!row || !needsSave(row)) return;
-    const { item, version } = row;
+    const itemFields = ctxRef.current?.category.itemFields ?? [];
+    const item = withKnownAttributes(row.item, itemFields);
+    const { version } = row;
     // A row that has never been saved waits for a usable name before anything else is checked.
     if (!row.saved && item.name.trim().length < 2) {
       patchRow(id, { status: "draft", errors: {}, message: "Add a name to save this row." });
       return;
     }
-    const { ok, errors } = validateItem(item, { fields: ctxRef.current?.category.fields ?? [] });
+    const { ok, errors } = validateItem(item, { fields: itemFields });
     if (!ok) {
       patchRow(id, { status: "error", errors, message: "Fix the highlighted fields to save." });
       return;
@@ -147,8 +155,9 @@ export function useCatalog() {
 
   const change = useCallback((id, patch) => {
     patchRow(id, (r) => {
-      const item = { ...r.item, ...patch };
-      const { errors } = validateItem(item, { fields: ctxRef.current?.category.fields ?? [] });
+      const itemFields = ctxRef.current?.category.itemFields ?? [];
+      const item = withKnownAttributes({ ...r.item, ...patch }, itemFields);
+      const { errors } = validateItem(item, { fields: itemFields });
       if (!r.saved && item.name.trim().length < 2) delete errors.name;
       return { ...r, item, version: r.version + 1, status: "dirty", errors, message: "" };
     });

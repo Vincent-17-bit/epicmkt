@@ -18,7 +18,7 @@ export function FirstItemForm({ catalog }) {
   const rootRef = useRef(null);
   const push = useToasts((s) => s.push);
 
-  const { errors } = useMemo(() => validateItem(item, { fields: ctx.category.fields, strict: true }), [item, ctx]);
+  const { errors } = useMemo(() => validateItem(item, { fields: ctx.category.itemFields, strict: true }), [item, ctx]);
   const shown = attempted ? errors : {};
   const count = Object.keys(shown).length;
   const nav = itemSections(item, ctx.category);

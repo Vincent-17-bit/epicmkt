@@ -143,17 +143,19 @@ export const exportData = async () => { signedIn(); await wait(); return { busin
 
 export const setMockLimit = (limit) => { catalog.limit = limit; };
 export const setMockCategory = (id) => { catalog.categoryId = id; };
+// Test helper: writes attributes straight into a stored row, the way rows saved before item templates existed look.
+export const seedLegacyAttributes = (id, attributes) => { const row = catalog.items.find((r) => r.id === id); if (row) row.attributes = attributes; };
 export const mockItemRows = () => catalog.items.map((r) => ({ ...r }));
 
 const TRACKED = [["name", "name"], ["price", "price"], ["price_max", "price_max"], ["price_type", "price_type"], ["unit", "unit"], ["sale_price", "sale_price"], ["availability", "availability"], ["stock_count", "stock_count"], ["visible", "visible"]];
 
-const categoryFields = async () => {
+const itemFieldsOfCategory = async () => {
   const cats = await backend.getCategories();
-  return cats.find((c) => c.id === catalog.categoryId)?.fields ?? [];
+  return cats.find((c) => c.id === catalog.categoryId)?.itemFields ?? [];
 };
 
 const checked = async (item) => {
-  const { ok, errors } = validateItem(item, { fields: await categoryFields() });
+  const { ok, errors } = validateItem(item, { fields: await itemFieldsOfCategory() });
   if (!ok) throw new ApiError("invalid_value", Object.values(errors)[0], { problems: errors });
 };
 
@@ -166,7 +168,7 @@ export const getCatalogContext = async () => {
   const cat = cats.find((c) => c.id === catalog.categoryId) ?? cats[0];
   return {
     business: { id: "mock-business", name: state.business.name, categoryId: cat.id, planKey: state.business.plan_key, status: state.business.status },
-    category: { id: cat.id, name: cat.name, fields: cat.fields ?? [] },
+    category: { id: cat.id, name: cat.name, itemFields: cat.itemFields ?? [] },
     itemsLimit: catalog.limit,
   };
 };

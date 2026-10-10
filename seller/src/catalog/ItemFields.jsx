@@ -17,7 +17,7 @@ export function itemSections(item, category) {
   ];
   if (showsServiceFields(item.kind)) out.push({ id: "service", title: item.kind === "class" ? "Session details" : "Service details" });
   if (showsMembershipFields(item.kind)) out.push({ id: "membership", title: item.kind === "class" ? "Schedule and trainer" : "Membership terms" });
-  if (category?.fields?.length) out.push({ id: "extras", title: `${category.name} details` });
+  if (category?.itemFields?.length) out.push({ id: "extras", title: `${category.name} details` });
   return out;
 }
 
@@ -329,8 +329,8 @@ export function ItemFields({ item, onChange, errors = {}, ctx, columns = false }
       {has("extras") && (
         <section id="sec-extras" className={styles.block} aria-labelledby="h-extras">
           <h3 id="h-extras" className={styles.blockTitle}>{ctx.category.name} details</h3>
-          <p className={styles.muted}>Extra details for your category. Fill in only what applies to this item.</p>
-          <TemplateFields fields={ctx.category.fields} values={item.attributes} errors={errors} onChange={(attributes) => set({ attributes })} />
+          <p className={styles.muted}>Extra details for this kind of item. Fill in only what applies.</p>
+          <TemplateFields fields={ctx.category.itemFields} values={item.attributes} errors={errors} onChange={(attributes) => set({ attributes })} />
         </section>
       )}
     </div>

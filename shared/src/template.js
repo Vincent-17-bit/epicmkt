@@ -170,9 +170,12 @@ export function validateAttributes(fields = [], attributes = {}) {
   return errors;
 }
 
-export function validateTemplate(fields) {
+// Business templates must have at least one field. Item templates may be empty (allowEmpty), because many
+// categories have nothing that describes a single product or service beyond the built-in item fields.
+export function validateTemplate(fields, { allowEmpty = false } = {}) {
   const problems = [];
-  if (!Array.isArray(fields) || !fields.length) return ["Template needs at least one field"];
+  if (!Array.isArray(fields)) return ["Template must be a list of fields"];
+  if (!fields.length) return allowEmpty ? [] : ["Template needs at least one field"];
   const keys = new Set();
   for (const field of fields) {
     const where = field.key ?? "(no key)";

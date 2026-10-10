@@ -1,3 +1,5 @@
+import { itemTemplateFor } from "@epicmkt/shared";
+
 const opts = (pairs) => pairs.map(([value, label]) => ({ value, label }));
 
 const field = (type, key, label, extra = {}) => ({ key, label, type, ...extra });
@@ -25,7 +27,7 @@ const deliveryBlock = (feeLabel = "Delivery fee") => [
   amount("delivery-radius", "Delivery distance", { group: "Delivery", unit: "km", showIf: { key: "delivery", equals: true } })
 ];
 
-export const categories = [
+const businessCategories = [
   {
     id: "barbershops", name: "Barbershops", singular: "Barbershop", icon: "scissors", hue: 210, blurb: "Cuts, fades and shaves",
     fields: [
@@ -247,3 +249,7 @@ export const categories = [
     ]
   }
 ];
+
+// Item-level extras (what describes one product or service) come from the shared item templates, keyed by the
+// database category id, so the mock and the seeded database cannot drift apart. fields above stay business-level.
+export const categories = businessCategories.map((category) => ({ ...category, itemFields: itemTemplateFor(category.id) }));

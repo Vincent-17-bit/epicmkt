@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { categories } from '../client/src/data/categories.js';
+import { itemTemplateFor } from '../shared/src/seller/item-templates.js';
 import { planRows } from '../client/src/config/plans.seed.js';
 import { legalDocs } from '../client/src/data/legal/index.js';
 
@@ -33,6 +34,7 @@ await check(
       sort: (i + 1) * 10,
       active: true,
       template: c.keyFields,
+      item_template: itemTemplateFor(c.id),
       extra_docs: c.extraDocs,
     })),
     { onConflict: 'id' },

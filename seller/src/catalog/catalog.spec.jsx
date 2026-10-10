@@ -122,15 +122,45 @@ describe("first item", () => {
     expect(screen.getByLabelText(/^Off-peak price \(KSh\)/)).toBeInTheDocument();
   });
 
-  test("category extras render from the template (gyms)", async () => {
+  test("a category with no item-level extras shows no extras block at all (gyms, barbershops)", async () => {
     mock.setMockCategory("gyms");
     await mount();
-    expect(screen.getByRole("heading", { name: "Gyms details" })).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Open to/)).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /Personal trainers/ })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: /Equipment/ })).toBeInTheDocument();
-    // a new gym item defaults to the membership type
+    expect(screen.queryByRole("heading", { name: "Gyms details" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Gyms details/ })).not.toBeInTheDocument();
+    // none of the business-level gym fields leak onto an item
+    expect(screen.queryByLabelText(/Personal trainers/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /Equipment/ })).not.toBeInTheDocument();
+    // a new gym item still defaults to the membership type and gets the built-in membership block
     expect(screen.getByLabelText("Type")).toHaveValue("membership");
+    expect(screen.getByLabelText("Term")).toBeInTheDocument();
+  });
+
+  test("a category with item-level extras shows exactly those fields and none of the business fields (chemists)", async () => {
+    mock.setMockCategory("chemists");
+    await mount();
+    const block = screen.getByRole("heading", { name: "Chemists details" }).closest("section");
+    expect(within(block).getByRole("checkbox", { name: /Prescription required/ })).toBeInTheDocument();
+    expect(within(block).getByLabelText(/^Form/)).toBeInTheDocument();
+    expect(within(block).getByLabelText(/^Strength/)).toBeInTheDocument();
+    expect(within(block).getByLabelText(/^Active ingredient/)).toBeInTheDocument();
+    const shown = [...block.querySelectorAll("label")].map((l) => l.textContent.replace(/\(optional\)|Filter|On listing card/g, "").trim()).filter(Boolean);
+    expect(shown.sort()).toEqual(["Active ingredient", "Form", "Prescription required", "Strength"].sort());
+    // business-level chemist fields are absent everywhere on the form
+    expect(screen.queryByLabelText(/Fills prescriptions/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Pharmacy licence/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Pharmacist on site/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Delivery/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Payment accepted/)).not.toBeInTheDocument();
+    // and the guided form lists the block in its jump links
+    expect(screen.getByRole("link", { name: /Chemists details/ })).toBeInTheDocument();
+  });
+
+  test("showIf inside an item template: the notice field appears only for made-to-order bakery items", async () => {
+    mock.setMockCategory("bakery");
+    const { user } = await mount();
+    expect(screen.queryByLabelText(/^Notice needed/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole("checkbox", { name: /Made to order/ }));
+    expect(screen.getByLabelText(/^Notice needed/)).toBeInTheDocument();
   });
 
   test("variants, specs, included lines and tags can be added", async () => {
@@ -285,17 +315,66 @@ describe("table", () => {
     await waitFor(async () => expect((await mock.listItems())[0].visible).toBe(false), { timeout: 4000 });
   });
 
-  test("category extras appear in the expanded row for every field type and flag", async () => {
+  test("item extras appear in the expanded row, with their flags, and are saved to the item", async () => {
+    mock.setMockCategory("eateries");
+    await seed("Chicken stew");
+    const { user } = await mount();
+    await user.click(screen.getByRole("button", { name: /Show more fields for Chicken stew/ }));
+    const panel = screen.getByRole("region", { name: /More details for Chicken stew/ });
+    expect(within(panel).getByLabelText(/^Spice level/)).toBeInTheDocument();
+    expect(within(panel).getByRole("checkbox", { name: /Vegetarian/ })).toBeInTheDocument();
+    expect(within(panel).getByRole("checkbox", { name: /Halal/ })).toBeInTheDocument();
+    expect(within(panel).getByLabelText(/^Preparation time \(minutes\)/)).toBeInTheDocument();
+    expect(within(panel).getByLabelText(/^Serves \(people\)/)).toBeInTheDocument();
+    expect(within(panel).getAllByText("On listing card").length).toBeGreaterThan(0);
+    expect(within(panel).getAllByText("Filter").length).toBeGreaterThan(0);
+    // eatery business fields (menu, seats, reservations ...) are not item fields
+    expect(within(panel).queryByLabelText(/Seats/)).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(/Reservations/)).not.toBeInTheDocument();
+    await user.selectOptions(within(panel).getByLabelText(/^Spice level/), "hot");
+    await waitFor(async () => expect((await mock.listItems())[0].attributes["spice-level"]).toBe("hot"), { timeout: 4000 });
+  });
+
+  test("a barbershop item has no extras block in its expanded row", async () => {
     mock.setMockCategory("barbershops");
-    await seed("Fade");
+    await mock.createItem(blankItem({ name: "Fade", kind: "service", price: 300, shortDescription: "ok" }));
     const { user } = await mount();
     await user.click(screen.getByRole("button", { name: /Show more fields for Fade/ }));
     const panel = screen.getByRole("region", { name: /More details for Fade/ });
-    expect(within(panel).getByLabelText(/^Booking/)).toBeInTheDocument();
-    expect(within(panel).getAllByText("On listing card").length).toBeGreaterThan(0);
-    expect(within(panel).getAllByText("Filter").length).toBeGreaterThan(0);
-    await user.selectOptions(within(panel).getByLabelText(/^Booking/), "appointment");
-    await waitFor(async () => expect((await mock.listItems())[0].attributes.booking).toBe("appointment"), { timeout: 4000 });
+    expect(within(panel).queryByRole("heading", { name: "Barbershops details" })).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(/^Booking/)).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(/Barber chairs/)).not.toBeInTheDocument();
+    expect(within(panel).getByRole("heading", { name: "Service details" })).toBeInTheDocument();
+  });
+
+  test("legacy business-level attributes are ignored by the form, never block a save, and are stripped on the next save", async () => {
+    mock.setMockCategory("chemists");
+    const [a, b] = await seed("Panadol", "Untouched");
+    mock.seedLegacyAttributes(a.id, { prescriptions: true, licence: "PPB/9", strength: "500 mg", delivery: true, "delivery-fee": 100 });
+    mock.seedLegacyAttributes(b.id, { prescriptions: true });
+    const { user } = await mount();
+
+    await user.click(screen.getByRole("button", { name: /Show more fields for Panadol/ }));
+    const panel = screen.getByRole("region", { name: /More details for Panadol/ });
+    expect(within(panel).getByLabelText(/^Strength/)).toHaveValue("500 mg");
+    expect(within(panel).queryByLabelText(/licence/i)).not.toBeInTheDocument();
+    expect(within(panel).queryByLabelText(/Delivery/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Not part of this category/)).not.toBeInTheDocument();
+
+    // untouched rows are not rewritten just because they hold legacy keys
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(mock.mockItemRows().find((r) => r.id === a.id).attributes).toHaveProperty("licence");
+
+    // the next edit saves successfully and drops the legacy keys, keeping the known one
+    await user.type(screen.getAllByRole("textbox", { name: "Name" })[0], " Extra");
+    await waitFor(() => expect(saveText()).toBe("All changes saved"), { timeout: 4000 });
+    const saved = (await mock.listItems()).find((i) => i.id === a.id);
+    expect(saved.name).toBe("Panadol Extra");
+    expect(saved.attributes).toEqual({ strength: "500 mg" });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+    // the other item still has its legacy data until someone edits it
+    expect(mock.mockItemRows().find((r) => r.id === b.id).attributes).toEqual({ prescriptions: true });
   });
 });
 
