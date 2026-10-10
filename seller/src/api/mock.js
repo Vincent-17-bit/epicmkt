@@ -1,4 +1,6 @@
-import { passwordProblems } from "@epicmkt/shared";
+import { passwordProblems, rowToItem, itemToRow, withStockRules, newId } from "@epicmkt/shared";
+import * as backend from "@epicmkt/backend";
+import { validateItem } from "../catalog/schema.js";
 import { ApiError } from "./errors.js";
 
 const DEMO = { sellerId: "ES100001", password: "Demo-Passw0rd", phone: "+254712345678", name: "Demo Shop", plan: "standard", status: "live" };
@@ -17,7 +19,10 @@ const state = {
 
 const wait = () => new Promise((r) => setTimeout(r, 120));
 
+const catalog = { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons" };
+
 export const resetMock = () => {
+  Object.assign(catalog, { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons" });
   state.password = DEMO.password;
   state.signedIn = false;
   state.failures.clear();
@@ -114,8 +119,114 @@ export const requestDeletion = async (name) => {
 export const catalogStats = async () => {
   signedIn();
   await wait();
-  return { total: 0, visible: 0, hidden: 0, hidden_by_admin: 0, out_of_stock: 0, limited_stock: 0, unavailable: 0, without_photo: 0, stale_prices: 0, items_limit: 20, open_flags: 0, unread_messages: 0 };
+  const n = (f) => catalog.items.filter(f).length;
+  return {
+    total: catalog.items.length,
+    visible: n((i) => i.visible && !i.hidden_by_admin),
+    hidden: n((i) => !i.visible),
+    hidden_by_admin: n((i) => i.hidden_by_admin),
+    out_of_stock: n((i) => i.availability === "out_of_stock"),
+    limited_stock: n((i) => i.availability === "limited_stock"),
+    unavailable: n((i) => i.availability === "unavailable"),
+    without_photo: catalog.items.length,
+    stale_prices: 0,
+    items_limit: catalog.limit,
+    open_flags: 0,
+    unread_messages: 0,
+  };
 };
 export const itemSignals = async () => { signedIn(); await wait(); return []; };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...state.business } }; };
+
+// ---- Catalog (S1). The mock plays the database: same stock rules, same checks, same limit error. ----
+
+export const setMockLimit = (limit) => { catalog.limit = limit; };
+export const setMockCategory = (id) => { catalog.categoryId = id; };
+export const mockItemRows = () => catalog.items.map((r) => ({ ...r }));
+
+const TRACKED = [["name", "name"], ["price", "price"], ["price_max", "price_max"], ["price_type", "price_type"], ["unit", "unit"], ["sale_price", "sale_price"], ["availability", "availability"], ["stock_count", "stock_count"], ["visible", "visible"]];
+
+const categoryFields = async () => {
+  const cats = await backend.getCategories();
+  return cats.find((c) => c.id === catalog.categoryId)?.fields ?? [];
+};
+
+const checked = async (item) => {
+  const { ok, errors } = validateItem(item, { fields: await categoryFields() });
+  if (!ok) throw new ApiError("invalid_value", Object.values(errors)[0], { problems: errors });
+};
+
+const stamp = (row) => ({ ...row, availability: withStockRules(rowToItem(row)).availability });
+
+export const getCatalogContext = async () => {
+  signedIn();
+  await wait();
+  const cats = await backend.getCategories();
+  const cat = cats.find((c) => c.id === catalog.categoryId) ?? cats[0];
+  return {
+    business: { id: "mock-business", name: state.business.name, categoryId: cat.id, planKey: state.business.plan_key, status: state.business.status },
+    category: { id: cat.id, name: cat.name, fields: cat.fields ?? [] },
+    itemsLimit: catalog.limit,
+  };
+};
+
+export const listItems = async () => {
+  signedIn();
+  await wait();
+  return [...catalog.items].sort((a, b) => a.sort - b.sort).map(rowToItem);
+};
+
+export const createItem = async (item) => {
+  signedIn();
+  await wait();
+  await checked(item);
+  if (catalog.items.some((r) => r.id === item.id)) throw new ApiError("already_exists");
+  if (catalog.limit != null && catalog.items.length >= catalog.limit) throw new ApiError("item_limit_reached", "You have reached the item limit for your plan.");
+  const now = new Date().toISOString();
+  const row = stamp({ ...itemToRow(item), id: item.id ?? newId(), hidden_by_admin: false, admin_hide_reason: null, removed_by_admin: false, price_confirmed_at: now, created_at: now, updated_at: now });
+  catalog.items.push(row);
+  return rowToItem(row);
+};
+
+export const updateItem = async (id, item) => {
+  signedIn();
+  await wait();
+  const index = catalog.items.findIndex((r) => r.id === id);
+  if (index < 0) throw new ApiError("not_found");
+  await checked(item);
+  const old = catalog.items[index];
+  const next = stamp({ ...old, ...itemToRow(item), updated_at: new Date().toISOString() });
+  if ([old.price, old.price_max, old.price_type, old.sale_price].join("|") !== [next.price, next.price_max, next.price_type, next.sale_price].join("|")) next.price_confirmed_at = next.updated_at;
+  for (const [field, key] of TRACKED) {
+    if (old[key] !== next[key]) catalog.history.unshift({ id: catalog.history.length + 1, item_id: id, business_id: "mock-business", field, old_value: old[key] == null ? null : String(old[key]), new_value: next[key] == null ? null : String(next[key]), actor_role: "seller", created_at: next.updated_at });
+  }
+  catalog.items[index] = next;
+  return rowToItem(next);
+};
+
+export const deleteItem = async (id) => {
+  signedIn();
+  await wait();
+  catalog.items = catalog.items.filter((r) => r.id !== id);
+};
+
+export const restoreItem = (item) => createItem(item);
+
+export const reorderItems = async (order) => {
+  signedIn();
+  await wait();
+  for (const { id, sort } of order) {
+    const row = catalog.items.find((r) => r.id === id);
+    if (row) row.sort = sort;
+  }
+};
+
+export const getCatalogSettings = async () => { signedIn(); await wait(); return structuredClone(catalog.settings); };
+export const saveCatalogSettings = async (patch) => { signedIn(); await wait(); Object.assign(catalog.settings, patch); return structuredClone(catalog.settings); };
+
+export const listItemHistory = async ({ itemId, limit = 100 } = {}) => {
+  signedIn();
+  await wait();
+  return catalog.history.filter((h) => !itemId || h.item_id === itemId).slice(0, limit).map((h) => ({ ...h }));
+};

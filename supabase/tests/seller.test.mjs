@@ -1,5 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { STOCK_CASES } from "../../shared/src/seller/stock-cases.js";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin, asService } from "./db.mjs";
 
 let c;
@@ -485,4 +486,65 @@ test("realtime publishes change_requests and the migration re-runs safely", asyn
   const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
   await c.query(readFileSync(join(dir, "0004_core.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0005_seller_portal.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0006_catalog_entry.sql"), "utf8"));
+});
+
+test("S1: catalog columns, wider availability and the same stock decisions as the shared preview", async () => {
+  await sql(c, `delete from items where business_id in ('${ids.bizA}','${ids.bizB}')`);
+  await tx(c, asB, async (k) => {
+    for (const a of ["seasonal", "by_appointment", "coming_soon", "unavailable"]) {
+      const { rows } = await k.query(`insert into items (business_id, name, availability) values ($1, $2, $3) returning availability`, [ids.bizB, `item ${a}`, a]);
+      assert.equal(rows[0].availability, a);
+    }
+    await k.query("savepoint s");
+    await assert.rejects(k.query(`insert into items (business_id, name, availability) values ($1, 'bad', 'sold_out')`, [ids.bizB]), /items_availability_check/);
+    await k.query("rollback to savepoint s");
+  });
+  // Every row of the shared decision table, run through the real trigger. The trigger is the authority.
+  await tx(c, asService, async (k) => {
+    for (const [i, row] of STOCK_CASES.entries()) {
+      const { rows } = await k.query(
+        `insert into items (business_id, name, track_stock, stock_count, low_stock_threshold, availability) values ($1, $2, $3, $4, $5, $6) returning availability`,
+        [ids.bizA, `case ${i}`, row.in.trackStock, row.in.stockCount, row.in.lowStockThreshold, row.in.availability]
+      );
+      assert.equal(rows[0].availability, row.out, JSON.stringify(row.in));
+    }
+  });
+});
+
+test("S1: new item constraints reject impossible values and accept the form's output", async () => {
+  await sql(c, `delete from items where business_id in ('${ids.bizA}','${ids.bizB}')`);
+  const bad = async (cols, vals, pattern) => rejects(c, asB, `insert into items (business_id, name, ${cols}) values ('${ids.bizB}', 'Test item', ${vals})`, [], pattern);
+  await bad("price", "10.5", /items_whole_kes_check/);
+  await bad("kind", "'gadget'", /items_kind_check/);
+  await bad("badge", "'Hot'", /items_badge_check/);
+  await bad("price, price_max", "100, 100", /items_range_check/);
+  await bad("price, sale_price", "100, 100", /items_sale_below_price_check/);
+  await bad("sale_starts_at, sale_ends_at", "'2026-11-02', '2026-11-01'", /items_sale_window_check/);
+  await bad("short_description", `'${"x".repeat(161)}'`, /items_short_description_check/);
+  await bad("variants", "'{}'::jsonb", /items_variants_check/);
+  await bad("attributes", "'[]'::jsonb", /items_attributes_check/);
+  await rejects(c, asB, `insert into items (business_id, name) values ('${ids.bizB}', '${"x".repeat(81)}')`, [], /items_name_len_check/);
+  await tx(c, asB, async (k) => {
+    const { rows } = await k.query(
+      `insert into items (business_id, name, kind, short_description, price_type, price, price_max, unit, sale_price, sale_starts_at, sale_ends_at, search_tags, badge, variants, specs, includes, terms, service, membership, attributes, season)
+       values ($1, 'Box braids', 'service', 'Neat braids', 'from', 2000, null, 'per session', 1800, '2026-11-01T00:00:00+03:00', '2026-11-30T23:59:59+03:00', '{braids,cornrows}', 'Popular',
+       '[{"id":"a","label":"Small","price":2000}]', '[{"label":"Hair","value":"Included"}]', '["Wash"]', 'Deposit first', '{"duration":180}', '{}', '{"booking":"appointment"}', '{"from":"2026-12-01","to":"2026-12-31"}') returning id, kind`,
+      [ids.bizB]
+    );
+    assert.equal(rows[0].kind, "service");
+    // Undo re-inserts the same row id after a delete.
+    await k.query(`delete from items where id = $1`, [rows[0].id]);
+    await k.query(`insert into items (id, business_id, name) values ($1, $2, 'Box braids')`, [rows[0].id, ids.bizB]);
+  });
+});
+
+test("S1: restoring a deleted item respects the plan limit, with the error the app maps", async () => {
+  await sql(c, `delete from items where business_id = '${ids.bizA}'`);
+  await tx(c, asA, async (k) => {
+    for (let i = 0; i < 3; i++) await k.query(`insert into items (business_id, name) values ($1, $2)`, [ids.bizA, `fill ${i}`]);
+    await k.query("savepoint s");
+    await assert.rejects(k.query(`insert into items (id, business_id, name) values (gen_random_uuid(), $1, 'restored')`, [ids.bizA]), (e) => /limit_reached:items/.test(e.message));
+    await k.query("rollback to savepoint s");
+  });
 });

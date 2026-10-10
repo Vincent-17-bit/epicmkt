@@ -1,0 +1,18 @@
+:root {
+  --danger: #b91c1c;
+  --danger-tint: #fef2f2;
+  --success: #166534;
+  --success-tint: #f0fdf4;
+  --warn: #92400e;
+  --warn-tint: #fffbeb;
+}
+[data-theme="dark"] {
+  --danger: #f87171;
+  --danger-tint: #2a1212;
+  --success: #4ade80;
+  --success-tint: #0f2417;
+  --warn: #fbbf24;
+  --warn-tint: #2a2010;
+}
+body { font-size: var(--text-md); line-height: 1.45; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

@@ -1,4 +1,5 @@
 import { supabase } from "./client.js";
+import { itemToRow, rowToItem, isItemLimitMessage } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 
 const need = () => {
@@ -16,9 +17,20 @@ const fn = async (name, body) => {
   return data;
 };
 
+// Database errors become stable app codes. limit_reached:items is the plan limit; the app calls it item_limit_reached.
+export const fromDb = (error) => {
+  const message = error.message ?? "request_failed";
+  if (isItemLimitMessage(message)) return new ApiError("item_limit_reached", "You have reached the item limit for your plan.");
+  if (/admin_columns_protected/.test(message)) return new ApiError("admin_columns_protected", message);
+  if (error.code === "23514") return new ApiError("invalid_value", message);
+  if (error.code === "23505") return new ApiError("already_exists", message);
+  if (error.code === "42501" || /row-level security/.test(message)) return new ApiError("not_allowed", message);
+  return new ApiError(message.split(":")[0], message);
+};
+
 const rpc = async (name, args) => {
   const { data, error } = await need().rpc(name, args);
-  if (error) throw new ApiError((error.message ?? "request_failed").split(":")[0], error.message);
+  if (error) throw fromDb(error);
   return data;
 };
 
@@ -50,3 +62,87 @@ export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_
 export const itemSignals = () => rpc("seller_item_signals");
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});
+
+let cachedBusiness = null;
+const myBusiness = async () => {
+  if (cachedBusiness) return cachedBusiness;
+  const { data, error } = await need().from("businesses").select("id,name,category_id,plan_key,status").limit(1).maybeSingle();
+  if (error) throw fromDb(error);
+  if (!data) throw new ApiError("not_a_seller");
+  cachedBusiness = data;
+  return data;
+};
+
+export const getCatalogContext = async () => {
+  const b = await myBusiness();
+  const [{ data: cat, error: catError }, stats] = await Promise.all([
+    need().from("categories").select("id,name,template").eq("id", b.category_id).maybeSingle(),
+    catalogStats(),
+  ]);
+  if (catError) throw fromDb(catError);
+  return {
+    business: { id: b.id, name: b.name, categoryId: b.category_id, planKey: b.plan_key, status: b.status },
+    category: { id: b.category_id, name: cat?.name ?? b.category_id, fields: cat?.template ?? [] },
+    itemsLimit: stats?.items_limit ?? null,
+  };
+};
+
+export const listItems = async () => {
+  const { data, error } = await need().from("items").select("*").order("sort", { ascending: true }).order("created_at", { ascending: true });
+  if (error) throw fromDb(error);
+  return data.map(rowToItem);
+};
+
+// The client picks the id so autosave can address the row before the first response returns.
+export const createItem = async (item) => {
+  const b = await myBusiness();
+  const { data, error } = await need().from("items").insert({ ...itemToRow(item), id: item.id, business_id: b.id }).select().single();
+  if (error) throw fromDb(error);
+  return rowToItem(data);
+};
+
+export const updateItem = async (id, item) => {
+  const { data, error } = await need().from("items").update(itemToRow(item)).eq("id", id).select().maybeSingle();
+  if (error) throw fromDb(error);
+  if (!data) throw new ApiError("not_found");
+  return rowToItem(data);
+};
+
+export const deleteItem = async (id) => {
+  const { error } = await need().from("items").delete().eq("id", id);
+  if (error) throw fromDb(error);
+};
+
+// Undo: insert the same row, same id, back. The limit trigger runs again, so a full plan can refuse it.
+export const restoreItem = (item) => createItem(item);
+
+export const reorderItems = async (order) => {
+  const results = await Promise.all(order.map(({ id, sort }) => need().from("items").update({ sort }).eq("id", id)));
+  const failed = results.find((r) => r.error);
+  if (failed) throw fromDb(failed.error);
+};
+
+export const getCatalogSettings = async () => {
+  const { data, error } = await need().from("seller_settings").select("settings").maybeSingle();
+  if (error) throw fromDb(error);
+  const s = data?.settings ?? {};
+  return { sections: s.sections ?? [], units: s.units ?? [] };
+};
+
+export const saveCatalogSettings = async (patch) => {
+  const b = await myBusiness();
+  const { data: current, error: readError } = await need().from("seller_settings").select("settings").maybeSingle();
+  if (readError) throw fromDb(readError);
+  const next = { ...(current?.settings ?? {}), ...patch };
+  const { error } = await need().from("seller_settings").upsert({ business_id: b.id, settings: next });
+  if (error) throw fromDb(error);
+  return { sections: next.sections ?? [], units: next.units ?? [] };
+};
+
+export const listItemHistory = async ({ itemId, limit = 100 } = {}) => {
+  let q = need().from("item_history").select("*").order("created_at", { ascending: false }).limit(limit);
+  if (itemId) q = q.eq("item_id", itemId);
+  const { data, error } = await q;
+  if (error) throw fromDb(error);
+  return data;
+};
