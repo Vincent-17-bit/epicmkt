@@ -119,3 +119,44 @@ test("catalog: item-level extras come from the item template; unknown keys are r
   await assert.rejects(mock.createItem(blankItem({ name: "Legacy", attributes: { licence: "PPB/1" } })), { code: "invalid_value" }, "a business-level key is not an item field");
   await assert.rejects(mock.updateItem(ok.id, { ...ok, attributes: { delivery: true } }), { code: "invalid_value" });
 });
+
+test("sections: the mock applies the same cases as the database, atomically", async () => {
+  const { blankItem } = await import("@epicmkt/shared");
+  const { SECTION_CASES, SECTION_REFUSALS } = await import("../../../shared/src/seller/section-cases.js");
+  mock.resetMock();
+  await mock.login("ES100001", "Demo-Passw0rd");
+  mock.setMockLimit(10);
+  for (const cs of SECTION_CASES) {
+    for (const row of await mock.listItems()) await mock.deleteItem(row.id);
+    await mock.saveCatalogSettings({ sections: cs.list });
+    for (const [i, s] of cs.items.entries()) await mock.createItem(blankItem({ name: `Item ${i}`, section: s ?? "", sort: i }));
+    const out = cs.op === "rename" ? await mock.renameSection(...cs.args) : await mock.removeSection(...cs.args);
+    assert.deepEqual(out.sections, cs.sections, JSON.stringify(cs));
+    assert.deepEqual((await mock.getCatalogSettings()).sections, cs.sections);
+    assert.deepEqual((await mock.listItems()).map((i) => i.section || null), cs.after, JSON.stringify(cs));
+  }
+  for (const cs of SECTION_REFUSALS) {
+    await mock.saveCatalogSettings({ sections: cs.list });
+    const call = () => (cs.op === "rename" ? mock.renameSection(...cs.args) : mock.removeSection(...cs.args));
+    await assert.rejects(call(), { code: cs.code }, JSON.stringify(cs));
+    assert.deepEqual((await mock.getCatalogSettings()).sections, cs.list, "a refused change leaves the list alone");
+  }
+  const moved = await (async () => {
+    for (const row of await mock.listItems()) await mock.deleteItem(row.id);
+    await mock.saveCatalogSettings({ sections: ["Cuts", "Wigs"] });
+    await mock.createItem(blankItem({ name: "One", section: "Cuts" }));
+    await mock.createItem(blankItem({ name: "Two", section: "cuts", sort: 1 }));
+    return mock.renameSection("Cuts", "Fades");
+  })();
+  assert.equal(moved.moved, 2);
+  assert.equal(moved.merged, false);
+});
+
+test("sections: live calls the database functions with the right arguments", async () => {
+  const live = await import("./live.js");
+  assert.equal(typeof live.renameSection, "function");
+  assert.equal(typeof live.removeSection, "function");
+  assert.equal(live.fromDb({ message: "section_not_found" }).code, "section_not_found");
+  assert.equal(live.fromDb({ message: "invalid_move_target" }).code, "invalid_move_target");
+  assert.equal(live.fromDb({ message: "invalid_section_name" }).code, "invalid_section_name");
+});

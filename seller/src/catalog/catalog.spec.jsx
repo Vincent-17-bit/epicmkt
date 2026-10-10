@@ -454,20 +454,153 @@ describe("tabs", () => {
 });
 
 describe("sections dialog", () => {
-  test("add and reorder sections; a section in use cannot be removed", async () => {
-    await mock.saveCatalogSettings({ sections: ["Cuts", "Braids"] });
-    await mock.createItem(blankItem({ name: "Fade", section: "Cuts", sort: 0 }));
-    const { user } = await mount();
+  const openDialog = async (user) => {
     await user.click(screen.getByRole("button", { name: "Sections" }));
-    const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByRole("button", { name: "Remove Cuts" })).toBeDisabled();
-    await user.type(within(dialog).getByLabelText("New section"), "Wigs");
+    return screen.getByRole("dialog");
+  };
+  const setup = async () => {
+    await mock.saveCatalogSettings({ sections: ["Cuts", "Braids", "Wigs"] });
+    await mock.createItem(blankItem({ name: "Fade", section: "Cuts", sort: 0, price: 300, shortDescription: "ok" }));
+    await mock.createItem(blankItem({ name: "Box braids", section: "Braids", sort: 1, price: 2000, shortDescription: "ok" }));
+    await mock.createItem(blankItem({ name: "Knotless", section: "Braids", sort: 2, price: 2500, shortDescription: "ok" }));
+    return mount();
+  };
+  const sectionsOf = async () => (await mock.listItems()).map((i) => i.section || null);
+
+  test("add and reorder sections", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.type(within(dialog).getByLabelText("New section"), "Locs");
     await user.click(within(dialog).getByRole("button", { name: "Add" }));
-    await waitFor(async () => expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids", "Wigs"]));
-    await user.click(within(dialog).getByRole("button", { name: "Move Wigs up" }));
-    await waitFor(async () => expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Wigs", "Braids"]));
+    await waitFor(async () => expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids", "Wigs", "Locs"]));
+    await user.click(within(dialog).getByRole("button", { name: "Move Locs up" }));
+    await waitFor(async () => expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids", "Locs", "Wigs"]));
+  });
+
+  test("rename updates the list and every item in it, announces the result and returns focus", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Braids" }));
+    const input = within(dialog).getByLabelText("New name for Braids");
+    expect(input).toHaveFocus();
+    await user.clear(input);
+    await user.type(input, "  Plaits   and twists {Enter}");
+    expect(await within(dialog).findByText(/Renamed “Braids” to “Plaits and twists”\. 2 items updated\./)).toBeInTheDocument();
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Plaits and twists", "Wigs"]);
+    expect(await sectionsOf()).toEqual(["Cuts", "Plaits and twists", "Plaits and twists"]);
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Rename Plaits and twists" })).toHaveFocus());
+    expect(within(dialog).getByText(/Plaits and twists/, { selector: "span" })).toBeInTheDocument();
+  });
+
+  test("rename does not mark rows as changed or trigger autosave, and the table shows the new section", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Cuts" }));
+    await user.type(within(dialog).getByLabelText("New name for Cuts"), "{Control>}a{/Control}Haircuts{Enter}");
+    await within(dialog).findByText(/Renamed “Cuts” to “Haircuts”/);
+    const before = mock.mockItemRows().map((r) => r.updated_at);
+    await new Promise((r) => setTimeout(r, 1000));
+    expect(saveText()).toBe("All changes saved");
+    expect(mock.mockItemRows().map((r) => r.updated_at)).toEqual(before);
+    await user.click(within(dialog).getByRole("button", { name: "Done" }));
+    await user.click(screen.getByRole("button", { name: /Show more fields for Fade/ }));
+    const panel = screen.getByRole("region", { name: /More details for Fade/ });
+    expect(within(panel).getByLabelText(/^Section/)).toHaveValue("Haircuts");
+  });
+
+  test("renaming to an existing name warns first, then merges into it", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Wigs" }));
+    await user.clear(within(dialog).getByLabelText("New name for Wigs"));
+    await user.type(within(dialog).getByLabelText("New name for Wigs"), "braids");
+    expect(within(dialog).getByText(/“Braids” already exists\. Items in “Wigs” will move into it\./)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Merge" }));
+    expect(await within(dialog).findByText(/Merged “Wigs” into “Braids”/)).toBeInTheDocument();
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids"]);
+    expect(await sectionsOf()).toEqual(["Cuts", "Braids", "Braids"]);
+  });
+
+  test("rename: bad names show an inline error and call nothing; Escape cancels and restores focus", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Cuts" }));
+    const input = within(dialog).getByLabelText("New name for Cuts");
+    await user.clear(input);
+    await user.type(input, "x{Enter}");
+    expect(await within(dialog).findByText("Enter 2 to 40 characters")).toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids", "Wigs"]);
+    await user.keyboard("{Escape}");
+    expect(within(dialog).queryByLabelText("New name for Cuts")).not.toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Rename Cuts" })).toHaveFocus());
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  test("remove asks where to move the items, and moves them without deleting any", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
     await user.click(within(dialog).getByRole("button", { name: "Remove Braids" }));
-    await waitFor(async () => expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Wigs"]));
+    const confirm = within(dialog).getByRole("group", { name: "Remove Braids" });
+    const select = within(confirm).getByLabelText("Move 2 items to:");
+    expect(select).toHaveFocus();
+    expect(select).toHaveValue("");
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["No section", "Cuts", "Wigs"]);
+    await user.selectOptions(select, "Wigs");
+    await user.click(within(confirm).getByRole("button", { name: "Remove section" }));
+    expect(await within(dialog).findByText(/Removed “Braids”\. 2 items moved to “Wigs”\./)).toBeInTheDocument();
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Wigs"]);
+    expect(await sectionsOf()).toEqual(["Cuts", "Wigs", "Wigs"]);
+    expect(await mock.listItems()).toHaveLength(3);
+  });
+
+  test("remove with the default choice leaves the items with no section", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Remove Cuts" }));
+    await user.click(within(dialog).getByRole("button", { name: "Remove section" }));
+    expect(await within(dialog).findByText(/Removed “Cuts”\. 1 item now has no section\./)).toBeInTheDocument();
+    expect(await sectionsOf()).toEqual([null, "Braids", "Braids"]);
+    expect(await mock.listItems()).toHaveLength(3);
+  });
+
+  test("removing an unused section just confirms; Cancel is focused so Enter cannot remove by accident", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Remove Wigs" }));
+    const confirm = within(dialog).getByRole("group", { name: "Remove Wigs" });
+    expect(within(confirm).getByText(/No items use “Wigs”\./)).toBeInTheDocument();
+    expect(within(confirm).getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await user.keyboard("{Enter}");
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids", "Wigs"]);
+    await user.click(within(dialog).getByRole("button", { name: "Remove Wigs" }));
+    await user.click(within(dialog).getByRole("button", { name: "Remove section" }));
+    expect(await within(dialog).findByText("Removed “Wigs”.")).toBeInTheDocument();
+    expect((await mock.getCatalogSettings()).sections).toEqual(["Cuts", "Braids"]);
+  });
+
+  test("a pending edit is saved before a rename, so the old name cannot be written back", async () => {
+    const { user } = await setup();
+    await user.type(nameInputs()[1], " 2");
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Braids" }));
+    await user.clear(within(dialog).getByLabelText("New name for Braids"));
+    await user.type(within(dialog).getByLabelText("New name for Braids"), "Plaits{Enter}");
+    await within(dialog).findByText(/Renamed “Braids” to “Plaits”/);
+    await new Promise((r) => setTimeout(r, 1000));
+    const items = await mock.listItems();
+    expect(items.find((i) => i.name === "Box braids 2").section).toBe("Plaits");
+    expect(items.map((i) => i.section)).toEqual(["Cuts", "Plaits", "Plaits"]);
+  });
+
+  test("a section removed elsewhere shows a clear message and refreshes", async () => {
+    const { user } = await setup();
+    const dialog = await openDialog(user);
+    await user.click(within(dialog).getByRole("button", { name: "Rename Wigs" }));
+    await mock.saveCatalogSettings({ sections: ["Cuts", "Braids"] });
+    await user.type(within(dialog).getByLabelText("New name for Wigs"), "X{Enter}");
+    expect(await within(dialog).findByText(/no longer exists/)).toBeInTheDocument();
+    await waitFor(() => expect(within(dialog).queryByRole("button", { name: "Rename Wigs" })).not.toBeInTheDocument());
   });
 });
 

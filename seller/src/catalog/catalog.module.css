@@ -139,6 +139,13 @@
 .sectionList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }
 .sectionList li { display: flex; align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
 .sectionList .miniBtn { width: 36px; min-height: 36px; font-size: var(--text-sm); }
+.sectionRow { flex-wrap: wrap; }
+.sectionStatus { min-height: 1.4em; margin: 0; font-size: var(--text-sm); color: var(--success); font-weight: 600; }
+.sectionListWrap:focus { outline: none; }
+.sectionEdit { flex: 1 1 100%; display: grid; gap: var(--space-2); padding: var(--space-2) 0; }
+.sectionEditActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.removeConfirm { flex: 1 1 100%; display: grid; gap: var(--space-2); padding: var(--space-3); margin-top: var(--space-1); border-radius: var(--radius-sm); background: var(--danger-tint); }
+.removeConfirm p { margin: 0; }
 .sectionName { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .confirmBar { display: flex; flex-wrap: wrap; gap: var(--space-3); justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3); border-radius: var(--radius-card); background: var(--warn-tint); color: var(--warn); font-weight: 600; }
 .attentionList, .reasons, .history { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }

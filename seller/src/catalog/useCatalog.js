@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { blankItem, defaultKindFor, duplicateOf, planUsage, knownAttributes, DEFAULT_UNITS } from "@epicmkt/shared";
+import { blankItem, defaultKindFor, duplicateOf, planUsage, knownAttributes, planRename, planRemove, applyRewrite, DEFAULT_UNITS } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { validateItem } from "./schema.js";
 import { useToasts } from "../ui/toasts.js";
@@ -39,6 +39,7 @@ export function useCatalog() {
   const rowsRef = useRef([]);
   const ctxRef = useRef(null);
   const unitsRef = useRef([]);
+  const sectionsRef = useRef([]);
   const timers = useRef(new Map());
   const inflight = useRef(new Map());
   const alive = useRef(true);
@@ -53,20 +54,22 @@ export function useCatalog() {
   const patchRow = useCallback((id, patch) => commit((rs) => rs.map((r) => (r.id === id ? (typeof patch === "function" ? patch(r) : { ...r, ...patch }) : r))), [commit]);
   const get = (id) => rowsRef.current.find((r) => r.id === id);
 
-  const load = useCallback(async () => {
-    setState({ loading: true, error: null });
+  // silent: refresh data in place (no loading screen), so open dialogs and focus are not torn down.
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setState({ loading: true, error: null });
     try {
       const [context, items, settings] = await Promise.all([api.getCatalogContext(), api.listItems(), api.getCatalogSettings()]);
       if (!alive.current) return;
       ctxRef.current = context;
       unitsRef.current = settings.units;
+      sectionsRef.current = settings.sections;
       setCtx(context);
       setSections(settings.sections);
       setUnits(settings.units);
       commit(items.map((i) => makeRow(i)));
       setState({ loading: false, error: null });
     } catch (e) {
-      if (alive.current) setState({ loading: false, error: e });
+      if (alive.current && !silent) setState({ loading: false, error: e });
     }
   }, [commit]);
 
@@ -201,8 +204,8 @@ export function useCatalog() {
     try {
       await api.reorderItems(targets.map((r) => ({ id: r.id, sort: get(r.id).item.sort })));
     } catch {
-      push({ message: "Could not save the new order. Reloading your list.", tone: "error" });
-      load();
+      push({ message: "Could not save the new order. Refreshing your list.", tone: "error" });
+      load({ silent: true });
     }
   }, [load, push]);
 
@@ -278,10 +281,36 @@ export function useCatalog() {
 
   const saveSections = useCallback(async (next) => {
     const out = await api.saveCatalogSettings({ sections: next });
+    sectionsRef.current = out.sections;
     setSections(out.sections);
     return out.sections;
   }, []);
-  const addSection = useCallback((name) => saveSections([...sections, name]), [saveSections, sections]);
+
+  // Rename and remove change the section list and every item using the name in one database transaction.
+  // Afterwards local rows are rewritten with the same rule, without marking them changed (nothing to autosave).
+  const afterSectionChange = useCallback((out, plan) => {
+    sectionsRef.current = out.sections;
+    setSections(out.sections);
+    const rewriteSection = (item) => (item && item.section ? { ...item, section: applyRewrite(item.section, plan.rewrite) } : item);
+    commit((rs) => rs.map((r) => (r.item.section ? { ...r, item: rewriteSection(r.item), saved: rewriteSection(r.saved) } : r)));
+    if (JSON.stringify(out.sections) !== JSON.stringify(plan.sections)) load({ silent: true });
+    return out;
+  }, [commit, load]);
+
+  const renameSection = useCallback(async (from, to) => {
+    await flushAll();
+    const plan = planRename(sectionsRef.current, from, to);
+    const out = await api.renameSection(from, to);
+    return afterSectionChange(out, plan);
+  }, [afterSectionChange, flushAll]);
+
+  const removeSection = useCallback(async (name, moveTo = null) => {
+    await flushAll();
+    const plan = planRemove(sectionsRef.current, name, moveTo);
+    const out = await api.removeSection(name, moveTo);
+    return afterSectionChange(out, plan);
+  }, [afterSectionChange, flushAll]);
+  const addSection = useCallback((name) => saveSections([...sectionsRef.current, name]), [saveSections]);
 
   const any = (s) => rows.some((r) => r.status === s);
   const status = any("error") ? "error" : any("saving") || rows.some((r) => !isPristine(r) && needsSave(r) && r.status !== "draft") ? "saving" : "saved";
@@ -291,6 +320,6 @@ export function useCatalog() {
     ...state, ctx, rows, sections, units, usage, status, hasUnsaved, limitHit, focusRequest,
     dismissLimit: () => setLimitHit(false),
     showLimit: () => setLimitHit(true),
-    reload: load, change, addRow, remove, duplicate, moveRow, flushAll, retry, createFirst, addSection, saveSections, setFocusRequest,
+    reload: load, refresh: () => load({ silent: true }), change, addRow, remove, duplicate, moveRow, flushAll, retry, createFirst, addSection, saveSections, renameSection, removeSection, setFocusRequest,
   };
 }

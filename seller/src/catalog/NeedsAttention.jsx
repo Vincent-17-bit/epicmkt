@@ -27,7 +27,7 @@ export function NeedsAttention({ catalog, onFix }) {
   const confirm = async () => {
     try {
       await api.confirmPrices();
-      await catalog.reload();
+      await catalog.refresh();
       push({ message: "Thanks. All your prices are marked as current.", ms: 5000 });
     } catch {
       push({ message: "Could not confirm prices. Try again.", tone: "error" });

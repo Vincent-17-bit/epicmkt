@@ -37,5 +37,7 @@ export const restoreItem = (...a) => impl.restoreItem(...a);
 export const reorderItems = (...a) => impl.reorderItems(...a);
 export const getCatalogSettings = (...a) => impl.getCatalogSettings(...a);
 export const saveCatalogSettings = (...a) => impl.saveCatalogSettings(...a);
+export const renameSection = (...a) => impl.renameSection(...a);
+export const removeSection = (...a) => impl.removeSection(...a);
 export const listItemHistory = (...a) => impl.listItemHistory(...a);
 export { ApiError } from "./errors.js";

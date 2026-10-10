@@ -27,5 +27,7 @@ export const SELLER_API = [
   "reorderItems",
   "getCatalogSettings",
   "saveCatalogSettings",
+  "renameSection",
+  "removeSection",
   "listItemHistory",
 ];

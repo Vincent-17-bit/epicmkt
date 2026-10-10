@@ -1,4 +1,4 @@
-import { passwordProblems, rowToItem, itemToRow, withStockRules, newId } from "@epicmkt/shared";
+import { passwordProblems, rowToItem, itemToRow, withStockRules, newId, planRename, planRemove, SectionError } from "@epicmkt/shared";
 import * as backend from "@epicmkt/backend";
 import { validateItem } from "../catalog/schema.js";
 import { ApiError } from "./errors.js";
@@ -226,6 +226,26 @@ export const reorderItems = async (order) => {
 
 export const getCatalogSettings = async () => { signedIn(); await wait(); return structuredClone(catalog.settings); };
 export const saveCatalogSettings = async (patch) => { signedIn(); await wait(); Object.assign(catalog.settings, patch); return structuredClone(catalog.settings); };
+
+// Same rules as the database functions (shared planners): list and items change together or not at all.
+const sectionChange = (plan) => {
+  let moved = 0;
+  if (plan.changed) {
+    for (const row of catalog.items) {
+      if (row.section != null && row.section.toLowerCase() === plan.rewrite.from.toLowerCase()) {
+        row.section = plan.rewrite.to ?? null;
+        moved += 1;
+      }
+    }
+  }
+  catalog.settings.sections = plan.sections;
+  return { sections: [...plan.sections], moved, merged: plan.merged };
+};
+const planned = (make) => {
+  try { return sectionChange(make()); } catch (e) { throw e instanceof SectionError ? new ApiError(e.code) : e; }
+};
+export const renameSection = async (from, to) => { signedIn(); await wait(); return planned(() => planRename(catalog.settings.sections, from, to)); };
+export const removeSection = async (name, moveTo = null) => { signedIn(); await wait(); return planned(() => planRemove(catalog.settings.sections, name, moveTo)); };
 
 export const listItemHistory = async ({ itemId, limit = 100 } = {}) => {
   signedIn();

@@ -139,6 +139,11 @@ export const saveCatalogSettings = async (patch) => {
   return { sections: next.sections ?? [], units: next.units ?? [] };
 };
 
+// Atomic in the database: the section list and every item using the name change in one transaction.
+// Both return { sections, moved, merged }. Errors: invalid_section_name, section_not_found, invalid_move_target.
+export const renameSection = (from, to) => rpc("rename_item_section", { p_old: from, p_new: to });
+export const removeSection = (name, moveTo = null) => rpc("remove_item_section", { p_name: name, p_move_to: moveTo || null });
+
 export const listItemHistory = async ({ itemId, limit = 100 } = {}) => {
   let q = need().from("item_history").select("*").order("created_at", { ascending: false }).limit(limit);
   if (itemId) q = q.eq("item_id", itemId);

@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { STOCK_CASES } from "../../shared/src/seller/stock-cases.js";
 import { ITEM_TEMPLATES } from "../../shared/src/seller/item-templates.js";
+import { SECTION_CASES, SECTION_REFUSALS } from "../../shared/src/seller/section-cases.js";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin, asService } from "./db.mjs";
 
 let c;
@@ -489,6 +490,7 @@ test("realtime publishes change_requests and the migration re-runs safely", asyn
   await c.query(readFileSync(join(dir, "0005_seller_portal.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0006_catalog_entry.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0007_item_templates.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0008_item_sections.sql"), "utf8"));
 });
 
 test("S1: catalog columns, wider availability and the same stock decisions as the shared preview", async () => {
@@ -595,4 +597,94 @@ test("S1: legacy attributes already stored on items are kept by the migration an
   await c.query(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0007_item_templates.sql"), "utf8"));
   const [after] = await sql(c, `select attributes from items where id = $1`, [row.id]);
   assert.deepEqual(after.attributes, { prescriptions: true, licence: "PPB/1" });
+});
+
+// ---- Sections: rename and remove (migration 0008) ----
+
+const seedSections = async (k, businessId, list, itemSections) => {
+  await k.query(`delete from items where business_id = $1`, [businessId]);
+  await k.query(`insert into seller_settings (business_id, settings) values ($1, $2) on conflict (business_id) do update set settings = excluded.settings`, [businessId, JSON.stringify({ sections: list })]);
+  const made = [];
+  for (const [i, s] of itemSections.entries()) {
+    const [row] = await sql(k, `insert into items (business_id, name, section, sort) values ($1, $2, $3, $4) returning id`, [businessId, `Item ${i}`, s, i]);
+    made.push(row.id);
+  }
+  return made;
+};
+const callSection = (k, c0) => (c0.op === "rename"
+  ? sql(k, `select rename_item_section($1, $2) as r`, c0.args)
+  : sql(k, `select remove_item_section($1, $2) as r`, c0.args));
+
+test("S1 sections: every shared case gives the same result in SQL as in the JS planners", async () => {
+  for (const cs of SECTION_CASES) {
+    await tx(c, asB, async (k) => {
+      const made = await seedSections(k, ids.bizB, cs.list, cs.items);
+      const [{ r }] = await callSection(k, cs);
+      assert.deepEqual(r.sections, cs.sections, JSON.stringify(cs));
+      if (cs.op === "rename") assert.equal(r.merged, cs.merged, JSON.stringify(cs));
+      const after = await sql(k, `select section from items where business_id = $1 order by sort`, [ids.bizB]);
+      assert.deepEqual(after.map((x) => x.section), cs.after, JSON.stringify(cs));
+      assert.equal(after.length, made.length, "no item is ever deleted");
+      const [stored] = await sql(k, `select settings -> 'sections' as s from seller_settings where business_id = $1`, [ids.bizB]);
+      assert.deepEqual(stored.s, cs.sections, "the stored list matches what was returned");
+    });
+  }
+});
+
+test("S1 sections: refusals raise the same codes as the JS planners, and nothing changes", async () => {
+  for (const cs of SECTION_REFUSALS) {
+    await tx(c, asB, async (k) => {
+      await seedSections(k, ids.bizB, cs.list, [cs.list[0]]);
+      await k.query("savepoint s");
+      await assert.rejects(callSection(k, cs), new RegExp(cs.code), JSON.stringify(cs));
+      await k.query("rollback to savepoint s");
+      const [row] = await sql(k, `select section from items where business_id = $1`, [ids.bizB]);
+      assert.equal(row.section, cs.list[0]);
+      const [stored] = await sql(k, `select settings -> 'sections' as s from seller_settings where business_id = $1`, [ids.bizB]);
+      assert.deepEqual(stored.s, cs.list);
+    });
+  }
+});
+
+test("S1 sections: another seller's sections and items are never touched, and the business comes from the session", async () => {
+  await sql(c, `delete from items where business_id in ('${ids.bizA}', '${ids.bizB}')`);
+  await sql(c, `insert into seller_settings (business_id, settings) values ('${ids.bizA}', '{"sections":["Cuts","Braids"]}') on conflict (business_id) do update set settings = excluded.settings`);
+  await sql(c, `insert into items (business_id, name, section) values ('${ids.bizA}', 'A item', 'Cuts')`);
+  await tx(c, asB, async (k) => {
+    await seedSections(k, ids.bizB, ["Cuts", "Wigs"], ["Cuts", "Wigs"]);
+    const [{ r }] = await sql(k, `select rename_item_section('Cuts', 'Fades') as r`);
+    assert.deepEqual(r.sections, ["Fades", "Wigs"]);
+    const [{ r: r2 }] = await sql(k, `select remove_item_section('Wigs', 'Fades') as r`);
+    assert.deepEqual(r2.sections, ["Fades"]);
+  });
+  const a = await sql(c, `select section from items where business_id = '${ids.bizA}'`);
+  assert.equal(a[0].section, "Cuts");
+  assert.deepEqual((await sql(c, `select settings -> 'sections' as s from seller_settings where business_id = '${ids.bizA}'`))[0].s, ["Cuts", "Braids"]);
+  // the signature takes no business id at all
+  const sig = await sql(c, `select pg_get_function_arguments(oid) as a from pg_proc where proname in ('rename_item_section', 'remove_item_section') order by proname`);
+  for (const row of sig) assert.ok(!/business|uuid/i.test(row.a), row.a);
+});
+
+test("S1 sections: only a signed-in seller may call them", async () => {
+  await rejects(c, asAdmin, `select rename_item_section('Cuts', 'Fades')`, [], /not_a_seller/);
+  await rejects(c, asAdmin, `select remove_item_section('Cuts')`, [], /not_a_seller/);
+  const [priv] = await sql(c, `select has_function_privilege('anon', 'public.rename_item_section(text, text)', 'execute') as a1, has_function_privilege('anon', 'public.remove_item_section(text, text)', 'execute') as a2, has_function_privilege('authenticated', 'public.rename_item_section(text, text)', 'execute') as s1, has_function_privilege('authenticated', 'public.remove_item_section(text, text)', 'execute') as s2`);
+  assert.deepEqual([priv.a1, priv.a2, priv.s1, priv.s2], [false, false, true, true]);
+});
+
+test("S1 sections: renaming and removing write audit rows, and the move count is reported", async () => {
+  await sql(c, `delete from audit_log where action in ('section_renamed', 'section_removed')`);
+  await tx(c, asB, async (k) => {
+    await seedSections(k, ids.bizB, ["Cuts", "Braids"], ["Cuts", "Cuts", "Braids"]);
+    const [{ r }] = await sql(k, `select rename_item_section('Cuts', 'Fades') as r`);
+    assert.equal(r.moved, 2);
+    const [{ r: r2 }] = await sql(k, `select remove_item_section('Braids') as r`);
+    assert.equal(r2.moved, 1);
+  }, { commit: true });
+  const rows = await sql(c, `select action, data, actor_role from audit_log where business_id = '${ids.bizB}' and action in ('section_renamed', 'section_removed') order by id`);
+  assert.deepEqual(rows.map((r) => r.action), ["section_renamed", "section_removed"]);
+  assert.deepEqual([rows[0].data.from, rows[0].data.to, rows[0].data.items, rows[0].data.merged], ["Cuts", "Fades", 2, false]);
+  assert.deepEqual([rows[1].data.name, rows[1].data.moved_to, rows[1].data.items], ["Braids", null, 1]);
+  assert.equal(rows[0].actor_role, "seller");
+  await sql(c, `delete from items where business_id = '${ids.bizB}'`);
 });
