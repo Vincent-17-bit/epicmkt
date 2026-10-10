@@ -50,3 +50,65 @@ export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_
 export const itemSignals = () => rpc("seller_item_signals");
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});
+
+export const hasSession = async () => {
+  if (!supabase) return false;
+  const { data } = await supabase.auth.getSession();
+  return Boolean(data?.session);
+};
+
+export const getMyBusiness = async () => {
+  const { data, error } = await need().from("businesses").select("*").maybeSingle();
+  if (error) throw new ApiError("request_failed", error.message);
+  if (!data) throw new ApiError("not_a_seller");
+  return data;
+};
+
+export const listCategories = async () => {
+  const { data, error } = await need().from("categories").select("id, name, grp, template, plans(plan_key, price_kes)").eq("active", true).order("sort");
+  if (error) throw new ApiError("request_failed", error.message);
+  return data.map((c) => ({
+    id: c.id,
+    name: c.name,
+    grp: c.grp,
+    template: c.template ?? [],
+    plans: Object.fromEntries((c.plans ?? []).map((p) => [p.plan_key, { price: p.price_kes }])),
+  }));
+};
+
+const tableError = (error) => new ApiError((error.message ?? "request_failed").split(":")[0], error.message);
+
+export const listBranches = async () => {
+  const { data, error } = await need().from("branches").select("*").order("sort").order("created_at");
+  if (error) throw tableError(error);
+  return data;
+};
+
+export const saveBranch = async (branch) => {
+  const { id, business_id, name, address, town, lat, lng, phone, hours, sort } = branch;
+  const row = { name, address, town, lat, lng, phone, hours: hours ?? {}, sort: sort ?? 0 };
+  const q = id ? need().from("branches").update(row).eq("id", id) : need().from("branches").insert({ ...row, business_id });
+  const { data, error } = await q.select().single();
+  if (error) throw tableError(error);
+  return data;
+};
+
+export const deleteBranch = async (id) => {
+  const { error } = await need().from("branches").delete().eq("id", id);
+  if (error) throw tableError(error);
+};
+
+const upload = async (bucket, path, body, contentType) => {
+  const { error } = await need().storage.from(bucket).upload(path, body, { contentType, upsert: false, cacheControl: "31536000" });
+  if (error) throw new ApiError("upload_failed", error.message);
+  return path;
+};
+
+export const uploadMedia = ({ businessId, kind, blob }) => upload("seller-media", `${businessId}/profile/${kind}-${Date.now()}.webp`, blob, "image/webp");
+
+export const uploadDoc = ({ businessId, file }) => {
+  const safe = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "").slice(-60) || "document";
+  return upload("seller-docs", `${businessId}/licence/${Date.now()}-${safe}`, file, file.type);
+};
+
+export const mediaUrl = (path) => (path && supabase ? supabase.storage.from("seller-media").getPublicUrl(path).data.publicUrl : null);

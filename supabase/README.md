@@ -97,3 +97,12 @@ Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:
 ```
 npm run test:seller-backend
 ```
+
+### My Account (migration 0006)
+`supabase db push` also applies `0006_account.sql`:
+- `branches` table (Premium only, at most 5 per business, enforced by a trigger that takes an advisory lock; sellers manage their own rows, admins all).
+- `change_requests` accepts two more locked fields: `location` (map pin, sent as `lat,lng`) and `licence_docs` (JSON list of storage paths). It also stores `quote_kes`, the prorated amount a dearer category must pay first, computed by `category_change_quote` (kept in step with `categoryChangeQuote` in `@epicmkt/shared`).
+- `seller_update_profile` limits: tagline 80, description 1500, announcement 140 with no links, emails or phone numbers. New `profile` keys are validated: `year_established`, `website`, `shopfront_path`, `languages`, `attributes`, `section_updated`.
+- A private `seller-docs` bucket for licence documents (sellers read and write their own folder, admins everything).
+
+Approving a change request (applying the new value to `businesses`) is an admin action and is not part of this migration.

@@ -18,4 +18,13 @@ export const SELLER_API = [
   "itemSignals",
   "finalizeMedia",
   "exportData",
+  "hasSession",
+  "getMyBusiness",
+  "listCategories",
+  "listBranches",
+  "saveBranch",
+  "deleteBranch",
+  "uploadMedia",
+  "uploadDoc",
+  "mediaUrl",
 ];
