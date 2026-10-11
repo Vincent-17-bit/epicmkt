@@ -11,7 +11,7 @@ supabase link --project-ref afdqkdjyhktbohcpayym
 ```
 supabase db push
 ```
-Applies `0001_applications.sql` (tables, RLS, private `applications` bucket) and `0002_grants.sql` (table privileges, needed because "Automatically expose new tables" is off).
+Applies every pending file in `supabase/migrations`, in order, and lists them first so you can confirm. `0001_applications.sql` holds the tables, RLS and the private `applications` bucket; `0002_grants.sql` the table privileges (needed because "Automatically expose new tables" is off). Later files are described in the phase sections below.
 
 ## 3. Secrets
 Copy `supabase/.env.example` to `supabase/.env`, fill it in, then:
@@ -48,6 +48,8 @@ Copy `scripts/.env.example` to `scripts/.env`, add the project URL and the servi
 ```
 npm run seed
 ```
+> **Only for a fresh project.** This overwrites categories, plans (prices and limits) and legal text. On a live project where prices have been edited, do not re-run it: to add or refresh the item fields use `npm run seed:item-templates` (see "Seller catalog (phase S1)").
+
 Seeds 32 categories, 64 plans (prices, limits, benefits and grouped features from `client/src/config/plans.seed.js`) and the terms and privacy text. Safe to re-run: it overwrites those rows, so run it before editing prices in the admin app, not after.
 
 ## 6. First admin
@@ -97,3 +99,45 @@ Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:
 ```
 npm run test:seller-backend
 ```
+
+## Seller catalog (phase S1)
+
+Adds the catalog data-entry fields (`0006_catalog_entry.sql`), per-category item fields (`0007_item_templates.sql`) and
+atomic section rename and remove (`0008_item_sections.sql`). All three are safe to re-run. `0006` and `0007` add columns
+and constraints only; no existing data is changed or removed.
+
+### Upgrading a live project, in this order
+
+1. **Preflight (read-only).** Paste `supabase/preflight-catalog.sql` into the SQL editor and run it. `0006` adds its
+   checks as `NOT VALID`, so old rows are not rejected when it runs, but PostgreSQL checks the whole row on every later
+   update. An old item with a name over 80 characters, a price with cents, a top price not above the price, or a sale
+   price not below the price would refuse ordinary edits (even hiding it) until fixed. An empty result means nothing to do;
+   otherwise fix the listed items first.
+2. **Apply the migrations.** `supabase db push` (this applies `0006`, `0007` and `0008` after whatever you already have).
+3. **Fill in the item fields.** `0007` gives every category an empty `item_template`, so until this step no category shows
+   extra item fields (nothing breaks). Use one of:
+   - **SQL editor, no credentials:** run `supabase/seed-item-templates.sql`. It prints two checks: ids that are not categories
+     (expect no rows) and how many categories now have item fields.
+   - **Script:** with `scripts/.env` filled in, `npm run seed:item-templates -- --dry` to preview, then
+     `npm run seed:item-templates`.
+
+   Both set `categories.item_template` and nothing else, so edited plan prices, business templates and legal text are safe.
+   Do not use `npm run seed` for this on a live project. After changing `shared/src/seller/item-templates.js`, regenerate the
+   SQL with `npm run gen:item-templates-sql`; the tests fail if the committed file is out of date.
+4. **Seller app environment.** The upgrade page links to EpicMKT using the same variables as the public contact page. Set
+   `VITE_CONTACT_EMAIL`, `VITE_CONTACT_PHONE`, `VITE_CONTACT_WHATSAPP` and `VITE_SUPPORT_HOURS` for the seller app's build
+   (see `seller/.env.example`). Without them the page says contact details are not set up instead of showing links.
+
+### Check it worked
+```
+select column_name from information_schema.columns where table_name = 'categories' and column_name = 'item_template';
+select proname from pg_proc where proname in ('rename_item_section', 'remove_item_section');
+select count(*) filter (where jsonb_array_length(item_template) > 0) as categories_with_item_fields from public.categories;
+```
+Expect one row, two rows, and a count of 28 (four categories deliberately have none: barbershop, salon-beauty, gym-fitness,
+mpesa-airtime-agent).
+
+### Plan upgrades
+There is no plan-change request in the database (`seller_request_change` does not accept a plan). The seller plan page therefore
+sends sellers to EpicMKT by email, WhatsApp or phone, with their name, Seller ID, current plan and wanted plan filled in.
+
