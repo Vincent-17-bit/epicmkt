@@ -19,10 +19,17 @@ const state = {
 
 const wait = () => new Promise((r) => setTimeout(r, 120));
 
-const catalog = { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons" };
+// Plan fixtures stand in for the plans table (price_kes, items_limit, top_benefits per category and plan).
+// They mirror a real tier (standard KSh 500 / 25 items, premium KSh 1,300 / 70 items); components never hold these numbers.
+const planFixtures = () => ({
+  standard: { key: "standard", priceKes: 500, itemsLimit: 25, topBenefits: ["Listed in search and category pages", "Call, WhatsApp and directions buttons", "Manual item entry"] },
+  premium: { key: "premium", priceKes: 1300, itemsLimit: 70, topBenefits: ["Featured badge on your shop card", "Priority placement in category lists", "CSV and Excel import"] },
+});
+
+const catalog = { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons", plans: planFixtures() };
 
 export const resetMock = () => {
-  Object.assign(catalog, { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons" });
+  Object.assign(catalog, { items: [], history: [], settings: { sections: [], units: [] }, limit: 25, categoryId: "salons", plans: planFixtures() });
   state.password = DEMO.password;
   state.signedIn = false;
   state.failures.clear();
@@ -141,7 +148,10 @@ export const exportData = async () => { signedIn(); await wait(); return { busin
 
 // ---- Catalog (S1). The mock plays the database: same stock rules, same checks, same limit error. ----
 
-export const setMockLimit = (limit) => { catalog.limit = limit; };
+// Test helpers. The item limit is the current plan's items_limit, so setting one keeps the other in step.
+export const setMockLimit = (limit) => { catalog.limit = limit; if (catalog.plans[state.business.plan_key]) catalog.plans[state.business.plan_key].itemsLimit = limit; };
+export const setMockPlan = (key) => { state.business.plan_key = key; catalog.limit = catalog.plans[key].itemsLimit; };
+export const setMockPlanNumbers = (key, patch) => { Object.assign(catalog.plans[key], patch); if (key === state.business.plan_key) catalog.limit = catalog.plans[key].itemsLimit; };
 export const setMockCategory = (id) => { catalog.categoryId = id; };
 // Test helper: writes attributes straight into a stored row, the way rows saved before item templates existed look.
 export const seedLegacyAttributes = (id, attributes) => { const row = catalog.items.find((r) => r.id === id); if (row) row.attributes = attributes; };
@@ -167,9 +177,10 @@ export const getCatalogContext = async () => {
   const cats = await backend.getCategories();
   const cat = cats.find((c) => c.id === catalog.categoryId) ?? cats[0];
   return {
-    business: { id: "mock-business", name: state.business.name, categoryId: cat.id, planKey: state.business.plan_key, status: state.business.status },
+    business: { id: "mock-business", name: state.business.name, sellerId: DEMO.sellerId, categoryId: cat.id, planKey: state.business.plan_key, status: state.business.status },
     category: { id: cat.id, name: cat.name, itemFields: cat.itemFields ?? [] },
     itemsLimit: catalog.limit,
+    plan: { current: state.business.plan_key, plans: Object.values(catalog.plans).map((p) => ({ ...p, topBenefits: [...p.topBenefits] })) },
   };
 };
 

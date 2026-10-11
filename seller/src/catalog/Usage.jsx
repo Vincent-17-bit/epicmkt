@@ -1,22 +1,24 @@
 import { Link } from "react-router-dom";
-import { PLAN_PRICE_KES } from "@epicmkt/shared";
+import { planLabel, upgradeLine, upgradeSummary } from "@epicmkt/shared";
 import { Button } from "../ui/ui.jsx";
 import styles from "./catalog.module.css";
 
-export function UpgradePrompt({ usage, planKey, onDismiss }) {
-  const premium = planKey === "premium";
+// Every number here comes from the plan the seller context supplies (the plans table); none is written into the UI.
+export function UpgradePrompt({ usage, plan, onDismiss }) {
+  const next = upgradeSummary(plan);
+  const planName = plan?.current ? `${planLabel(plan.current)} plan` : "plan";
   return (
     <div className={styles.upgrade} role="alert">
       <div>
-        <strong>{usage.limit != null ? `You have used all ${usage.limit} items on your plan.` : "You have reached your plan's item limit."}</strong>
+        <strong>{usage.limit != null ? `You have used all ${usage.limit} items on your ${planName}.` : "You have reached your plan's item limit."}</strong>
         <p>
-          {premium
-            ? "Delete an item you no longer sell to make room, or contact support to raise your limit."
-            : `Upgrade to Premium (KSh ${PLAN_PRICE_KES.premium.toLocaleString("en-KE")} a month) to list more, or delete an item you no longer sell.`}
+          {next
+            ? `${upgradeLine(plan)} Or delete an item you no longer sell.`
+            : "Delete an item you no longer sell to make room, or contact EpicMKT to raise your limit."}
         </p>
       </div>
       <div className={styles.upgradeActions}>
-        {!premium && <Link className={styles.upgradeLink} to="/business/plan">See Premium</Link>}
+        {next && <Link className={styles.upgradeLink} to="/business/plan">See {planLabel(next.to.key)}</Link>}
         {onDismiss && <Button onClick={onDismiss}>Not now</Button>}
       </div>
     </div>

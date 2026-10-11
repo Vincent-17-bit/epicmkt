@@ -1,5 +1,5 @@
 import { supabase } from "./client.js";
-import { itemToRow, rowToItem, isItemLimitMessage } from "@epicmkt/shared";
+import { itemToRow, rowToItem, isItemLimitMessage, rowToPlan, sortPlans } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 
 const need = () => {
@@ -66,7 +66,7 @@ export const exportData = () => fn("seller-export-data", {});
 let cachedBusiness = null;
 const myBusiness = async () => {
   if (cachedBusiness) return cachedBusiness;
-  const { data, error } = await need().from("businesses").select("id,name,category_id,plan_key,status").limit(1).maybeSingle();
+  const { data, error } = await need().from("businesses").select("id,name,seller_id,category_id,plan_key,status").limit(1).maybeSingle();
   if (error) throw fromDb(error);
   if (!data) throw new ApiError("not_a_seller");
   cachedBusiness = data;
@@ -75,15 +75,21 @@ const myBusiness = async () => {
 
 export const getCatalogContext = async () => {
   const b = await myBusiness();
-  const [{ data: cat, error: catError }, stats] = await Promise.all([
+  const [{ data: cat, error: catError }, { data: planRows, error: planError }, stats] = await Promise.all([
     need().from("categories").select("id,name,item_template").eq("id", b.category_id).maybeSingle(),
+    need().from("plans").select("plan_key,price_kes,items_limit,top_benefits").eq("category_id", b.category_id),
     catalogStats(),
   ]);
   if (catError) throw fromDb(catError);
+  if (planError) throw fromDb(planError);
+  const plans = sortPlans((planRows ?? []).map(rowToPlan));
+  const current = plans.find((p) => p.key === b.plan_key);
   return {
-    business: { id: b.id, name: b.name, categoryId: b.category_id, planKey: b.plan_key, status: b.status },
+    business: { id: b.id, name: b.name, sellerId: b.seller_id, categoryId: b.category_id, planKey: b.plan_key, status: b.status },
     category: { id: b.category_id, name: cat?.name ?? b.category_id, itemFields: cat?.item_template ?? [] },
-    itemsLimit: stats?.items_limit ?? null,
+    // The number the database enforces (seller_catalog_stats reads plans.items_limit); the plan's own number is the fallback.
+    itemsLimit: stats?.items_limit ?? current?.itemsLimit ?? null,
+    plan: { current: b.plan_key, plans },
   };
 };
 

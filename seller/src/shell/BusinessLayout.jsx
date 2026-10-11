@@ -1,5 +1,4 @@
 import { NavLink, Outlet, Link } from "react-router-dom";
-import { PLAN_PRICE_KES } from "@epicmkt/shared";
 import { Toaster } from "../ui/ui.jsx";
 import styles from "./shell.module.css";
 
@@ -15,16 +14,6 @@ export function BusinessLayout() {
       </header>
       <main className={styles.main}><Outlet /></main>
       <Toaster />
-    </div>
-  );
-}
-
-export function PlanPlaceholder() {
-  return (
-    <div className={styles.plain}>
-      <h1>Plan</h1>
-      <p>Plan changes are not built yet. Premium is KSh {PLAN_PRICE_KES.premium.toLocaleString("en-KE")} a month.</p>
-      <Link to="/business/catalog">Back to your catalog</Link>
     </div>
   );
 }

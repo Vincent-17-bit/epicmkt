@@ -64,7 +64,7 @@ export function FirstItemForm({ catalog }) {
         ))}
       </nav>
 
-      {limit && <UpgradePrompt usage={usage} planKey={ctx.business.planKey} onDismiss={() => setLimit(false)} />}
+      {limit && <UpgradePrompt usage={usage} plan={ctx.plan} onDismiss={() => setLimit(false)} />}
       {attempted && count > 0 && (
         <p className={styles.summary} role="alert">
           {count === 1 ? "1 thing needs fixing before you can save." : `${count} things need fixing before you can save.`}

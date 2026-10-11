@@ -406,6 +406,43 @@ describe("plan usage", () => {
     expect(await mock.listItems()).toHaveLength(1);
   });
 
+  test("the prompt's numbers come from the plan data: a different price and limit show up as given", async () => {
+    mock.setMockPlanNumbers("premium", { priceKes: 1234, itemsLimit: 77 });
+    mock.setMockLimit(2);
+    await seed("Alpha", "Bravo");
+    const { router, user } = await mount();
+    const prompt = screen.getByRole("alert");
+    expect(prompt).toHaveTextContent("You have used all 2 items on your Standard plan.");
+    expect(prompt).toHaveTextContent("Premium lists up to 77 items, KSh 1,234 a month.");
+    expect(prompt.textContent).not.toMatch(/1,300|1,500|\b70\b|\b100\b/);
+    await user.click(within(prompt).getByRole("link", { name: "See Premium" }));
+    expect(router.state.location.pathname).toBe("/business/plan");
+  });
+
+  test("the database limit error shows the prompt with the same real numbers", async () => {
+    mock.setMockPlanNumbers("premium", { priceKes: 1234, itemsLimit: 77 });
+    mock.setMockLimit(5);
+    await seed("Alpha");
+    const { user } = await mount();
+    mock.setMockLimit(1);
+    await user.click(screen.getByRole("button", { name: "Add row" }));
+    await user.type(nameInputs()[1], "Bravo");
+    const link = await screen.findByRole("link", { name: "See Premium" }, { timeout: 4000 });
+    expect(link.closest("[role=alert]")).toHaveTextContent("Premium lists up to 77 items, KSh 1,234 a month.");
+  });
+
+  test("a seller on the highest plan gets no upgrade link, only the delete or contact message", async () => {
+    mock.setMockPlan("premium");
+    mock.setMockLimit(2);
+    await seed("Alpha", "Bravo");
+    await mount();
+    const prompt = screen.getByRole("alert");
+    expect(prompt).toHaveTextContent("You have used all 2 items on your Premium plan.");
+    expect(prompt).toHaveTextContent(/Delete an item you no longer sell to make room, or contact EpicMKT to raise your limit\./);
+    expect(within(prompt).queryByRole("link")).not.toBeInTheDocument();
+    expect(prompt.textContent).not.toMatch(/lists up to/);
+  });
+
   test("undo respects a full plan", async () => {
     mock.setMockLimit(2);
     await seed("Alpha", "Bravo");

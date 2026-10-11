@@ -688,3 +688,53 @@ test("S1 sections: renaming and removing write audit rows, and the move count is
   assert.equal(rows[0].actor_role, "seller");
   await sql(c, `delete from items where business_id = '${ids.bizB}'`);
 });
+
+// ---- Plans: what the seller sees on the plan page ----
+
+const planQuery = `select plan_key, price_kes, items_limit, top_benefits from plans where category_id = (select category_id from businesses where id = public.my_business_id()) order by price_kes`;
+
+test("S1 plans: a seller reads their own category's two plans with the real numbers", async () => {
+  const a = await tx(c, asA, (k) => sql(k, planQuery));
+  assert.deepEqual(a.map((r) => [r.plan_key, r.price_kes, r.items_limit]), [["standard", 500, 3], ["premium", 1500, 6]]);
+  for (const r of a) assert.equal(r.top_benefits.length, 3);
+  const b = await tx(c, asB, (k) => sql(k, planQuery));
+  assert.deepEqual(b.map((r) => r.plan_key), ["standard", "premium"]);
+});
+
+test("S1 plans: the limit the item meter uses is the limit in the plans table", async () => {
+  for (const [who, key] of [[asA, "standard"], [asB, "premium"]]) {
+    const { stats, plan } = await tx(c, who, async (k) => ({
+      stats: (await sql(k, `select seller_catalog_stats() as s`))[0].s,
+      plan: (await sql(k, `select items_limit from plans where plan_key = $1 and category_id = 'barber'`, [key]))[0],
+    }));
+    assert.equal(stats.items_limit, plan.items_limit, key);
+  }
+});
+
+test("S1 plans: only active categories' plans are readable, and nobody but an admin can change them", async () => {
+  await sql(c, `insert into categories (id, name, grp, tier, sort, active) values ('retired-cat', 'Retired', 'Misc', 'A', 99, false) on conflict (id) do update set active = false`);
+  await sql(c, `insert into plans (category_id, plan_key, price_kes, items_limit, top_benefits) values ('retired-cat', 'standard', 111, 7, '["x","y","z"]'), ('retired-cat', 'premium', 222, 9, '["x","y","z"]') on conflict do nothing`);
+  const seen = async (who) => (await tx(c, who, (k) => sql(k, `select category_id from plans where category_id = 'retired-cat'`))).length;
+  assert.equal(await seen(asA), 0, "a seller cannot read an inactive category's plans");
+  assert.equal(await seen({ role: "anon" }), 0);
+  assert.equal(await seen(asAdmin), 2, "admins can");
+  // the policy publishes active categories' plans (the public pricing), and nothing else lives in that table
+  const cols = (await sql(c, `select column_name from information_schema.columns where table_name = 'plans' order by 1`)).map((r) => r.column_name);
+  assert.deepEqual(cols, ["badge", "category_id", "features", "items_limit", "plan_key", "price_kes", "top_benefits", "updated_at"]);
+
+  for (const stmt of [
+    `update plans set items_limit = 9999 where category_id = 'barber'`,
+    `delete from plans where category_id = 'barber'`,
+    `insert into plans (category_id, plan_key, price_kes, items_limit, top_benefits) values ('barber', 'standard', 1, 1, '["a","b","c"]')`,
+  ]) {
+    let changed = 0;
+    try {
+      await tx(c, asA, async (k) => { changed = (await k.query(stmt)).rowCount; });
+    } catch (e) {
+      assert.match(e.message, /permission denied|row-level security|duplicate key/, stmt);
+    }
+    assert.equal(changed, 0, `a seller changed plans: ${stmt}`);
+  }
+  assert.equal((await sql(c, `select items_limit from plans where category_id = 'barber' and plan_key = 'standard'`))[0].items_limit, 3);
+  await sql(c, `delete from categories where id = 'retired-cat'`);
+});

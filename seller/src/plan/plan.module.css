@@ -1,0 +1,22 @@
+.page { display: grid; gap: var(--space-5); max-width: 56rem; }
+.head { display: flex; flex-wrap: wrap; gap: var(--space-4); align-items: center; justify-content: space-between; }
+.head h1 { margin: 0; font-size: var(--text-xl); }
+.grid { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--space-4); }
+.card { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-5); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface); }
+.card h2 { margin: 0; font-size: var(--text-lg); }
+.current { border: 2px solid var(--primary-pressed); background: var(--primary-tint); }
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.badge { padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--primary); color: var(--on-primary); font-size: var(--text-xs); font-weight: 700; }
+.price { margin: 0; font-size: var(--text-xl); font-weight: 800; }
+.price span { font-size: var(--text-sm); font-weight: 500; color: var(--text-muted); }
+.limit { margin: 0; font-weight: 700; }
+.benefits { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-1); }
+.adds ul { margin: 0; padding-left: 1.2rem; display: grid; gap: var(--space-1); }
+.adds h2, .contact h2 { margin: 0 0 var(--space-2); font-size: var(--text-lg); }
+.contact { display: grid; gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface); }
+.contact p { margin: 0; }
+.channels { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.detail { font-weight: 400; opacity: 0.85; }
+.noContact { padding: var(--space-3); border-radius: var(--radius-sm); background: var(--warn-tint); color: var(--warn); font-weight: 600; }
+.muted { color: var(--text-muted); font-size: var(--text-sm); }
+.top { margin: 0; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-2); }

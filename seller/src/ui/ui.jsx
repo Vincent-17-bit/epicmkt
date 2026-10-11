@@ -177,8 +177,10 @@ export function StringList({ items, onChange, addLabel, max, label, placeholder,
   );
 }
 
-export function Button({ variant = "secondary", className, ...rest }) {
-  return <button type="button" className={cx(styles.btn, styles[variant], className)} {...rest} />;
+// as="a" renders a real link (href required) with the same look; the default is a button.
+export function Button({ as: Tag = "button", variant = "secondary", className, ...rest }) {
+  const props = Tag === "button" ? { type: "button", ...rest } : rest;
+  return <Tag className={cx(styles.btn, styles[variant], className)} {...props} />;
 }
 
 export function Modal({ open, onClose, title, children, actions, labelledBy }) {

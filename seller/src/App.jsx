@@ -1,6 +1,7 @@
 import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom";
 import { SessionGate } from "./shell/Session.jsx";
-import { BusinessLayout, NotFound, PlanPlaceholder } from "./shell/BusinessLayout.jsx";
+import { BusinessLayout, NotFound } from "./shell/BusinessLayout.jsx";
+import { PlanPage } from "./plan/PlanPage.jsx";
 import { CatalogPage } from "./catalog/CatalogPage.jsx";
 
 export const routes = [
@@ -11,7 +12,7 @@ export const routes = [
     children: [
       { index: true, element: <Navigate to="catalog" replace /> },
       { path: "catalog", element: <CatalogPage /> },
-      { path: "plan", element: <PlanPlaceholder /> },
+      { path: "plan", element: <PlanPage /> },
     ],
   },
   { path: "*", element: <NotFound /> },

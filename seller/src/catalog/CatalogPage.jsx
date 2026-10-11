@@ -72,7 +72,7 @@ export function CatalogPage() {
         <Button onClick={() => setSectionsOpen(true)}>Sections</Button>
       </header>
 
-      {(catalog.limitHit || catalog.usage.atLimit) && <UpgradePrompt usage={catalog.usage} planKey={catalog.ctx.business.planKey} onDismiss={catalog.limitHit ? catalog.dismissLimit : undefined} />}
+      {(catalog.limitHit || catalog.usage.atLimit) && <UpgradePrompt usage={catalog.usage} plan={catalog.ctx.plan} onDismiss={catalog.limitHit ? catalog.dismissLimit : undefined} />}
 
       <div role="tablist" aria-label="Catalog views" className={styles.tabs}>
         {TABS.map((t, i) => (
