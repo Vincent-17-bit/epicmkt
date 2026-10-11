@@ -28,4 +28,11 @@ export const SELLER_API = [
   "getCatalogSettings",
   "saveCatalogSettings",
   "listItemHistory",
+  "listMedia",
+  "uploadMedia",
+  "reorderMedia",
+  "updateMedia",
+  "setPoster",
+  "removeMedia",
+  "copyItemMedia",
 ];

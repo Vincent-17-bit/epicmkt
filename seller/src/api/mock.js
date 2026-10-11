@@ -2,6 +2,7 @@ import { passwordProblems, rowToItem, itemToRow, withStockRules, newId } from "@
 import * as backend from "@epicmkt/backend";
 import { validateItem } from "../catalog/schema.js";
 import { ApiError } from "./errors.js";
+import * as media from "../media/mockMedia.js";
 
 const DEMO = { sellerId: "ES100001", password: "Demo-Passw0rd", phone: "+254712345678", name: "Demo Shop", plan: "standard", status: "live" };
 const OTP = "123456";
@@ -29,6 +30,7 @@ export const resetMock = () => {
   state.changes = [];
   state.business = { name: DEMO.name, plan_key: DEMO.plan, status: DEMO.status, tagline: null };
   state.priceConfirmedAt = null;
+  media.resetMedia();
 };
 
 const signedIn = () => {
@@ -144,6 +146,8 @@ export const exportData = async () => { signedIn(); await wait(); return { busin
 export const setMockLimit = (limit) => { catalog.limit = limit; };
 export const setMockCategory = (id) => { catalog.categoryId = id; };
 export const mockItemRows = () => catalog.items.map((r) => ({ ...r }));
+// The plan decides the photo and video limits, here as in the database.
+export const setMockPlan = (plan) => { state.business.plan_key = plan; media.setMockMediaPlan(plan); };
 
 const TRACKED = [["name", "name"], ["price", "price"], ["price_max", "price_max"], ["price_type", "price_type"], ["unit", "unit"], ["sale_price", "sale_price"], ["availability", "availability"], ["stock_count", "stock_count"], ["visible", "visible"]];
 
@@ -168,6 +172,7 @@ export const getCatalogContext = async () => {
     business: { id: "mock-business", name: state.business.name, categoryId: cat.id, planKey: state.business.plan_key, status: state.business.status },
     category: { id: cat.id, name: cat.name, fields: cat.fields ?? [] },
     itemsLimit: catalog.limit,
+    mediaLimits: media.mockMediaLimits(),
   };
 };
 
@@ -196,6 +201,8 @@ export const updateItem = async (id, item) => {
   if (index < 0) throw new ApiError("not_found");
   await checked(item);
   const old = catalog.items[index];
+  // Same rule as the database: turning an item on needs a ready photo. A video alone does not count.
+  if (item.visible && !old.visible && !media.hasReadyImage(id)) throw new ApiError("photo_required", "Add at least one photo before showing this item to shoppers.");
   const next = stamp({ ...old, ...itemToRow(item), updated_at: new Date().toISOString() });
   if ([old.price, old.price_max, old.price_type, old.sale_price].join("|") !== [next.price, next.price_max, next.price_type, next.sale_price].join("|")) next.price_confirmed_at = next.updated_at;
   for (const [field, key] of TRACKED) {
@@ -208,6 +215,7 @@ export const updateItem = async (id, item) => {
 export const deleteItem = async (id) => {
   signedIn();
   await wait();
+  media.purgeItemMedia(id);
   catalog.items = catalog.items.filter((r) => r.id !== id);
 };
 
@@ -230,3 +238,36 @@ export const listItemHistory = async ({ itemId, limit = 100 } = {}) => {
   await wait();
   return catalog.history.filter((h) => !itemId || h.item_id === itemId).slice(0, limit).map((h) => ({ ...h }));
 };
+
+// ---- Photos and videos (S5). The mock runs the same preparation in the browser and the same checks the server makes. ----
+
+const itemRow = (itemId) => {
+  const row = catalog.items.find((r) => r.id === itemId);
+  if (!row) throw new ApiError("item_not_found");
+  return { id: row.id, variants: row.variants ?? [] };
+};
+
+export const listMedia = async (itemId) => { signedIn(); await wait(); return media.listMediaRows(itemId); };
+
+export const uploadMedia = async (itemId, file, onProgress, opts = {}) => {
+  signedIn();
+  return media.uploadMediaMock(itemRow(itemId), file, onProgress, opts, opts.latency ?? 0);
+};
+
+export const reorderMedia = async (itemId, orderedIds) => { signedIn(); await wait(); itemRow(itemId); media.reorderMediaMock(itemId, orderedIds); };
+
+export const updateMedia = async (mediaId, patch) => {
+  signedIn();
+  await wait();
+  const row = media.mockMediaRows().find((r) => r.id === mediaId);
+  if (!row) throw new ApiError("media_not_found");
+  return media.updateMediaMock(mediaId, patch, itemRow(row.item_id));
+};
+
+export const setPoster = async (mediaId, input) => { signedIn(); await wait(); return media.setPosterMock(mediaId, input); };
+
+export const removeMedia = async (mediaId) => { signedIn(); await wait(); media.removeMediaMock(mediaId); };
+
+export const copyItemMedia = async (fromItemId, toItemId) => { signedIn(); await wait(); return media.copyItemMediaMock(itemRow(fromItemId), itemRow(toItemId)); };
+
+export { mockMediaRows, mockMediaFiles, mockAdminRemoveMedia, mockFailNextFinalize } from "../media/mockMedia.js";

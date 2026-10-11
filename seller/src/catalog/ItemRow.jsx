@@ -6,6 +6,10 @@ import { faGripVertical, faChevronUp, faChevronDown, faChevronRight, faCopy, faT
 import { AVAILABILITY, LEGACY_AVAILABILITY, DEFAULT_UNITS, LIMITS, applyStockRules, isStockDriven, availabilityLabel, pricePreview, priceNeeds } from "@epicmkt/shared";
 import { NumberInput, SelectInput, TextInput, Toggle } from "../ui/ui.jsx";
 import { ItemFields } from "./ItemFields.jsx";
+import { MediaManager, useFileDrop } from "../media/MediaManager.jsx";
+import { useItemMedia } from "../media/useItemMedia.js";
+import { addFiles } from "../media/mediaStore.js";
+import { coverOf } from "@epicmkt/shared";
 import styles from "./catalog.module.css";
 
 export function RowStatus({ row, onRetry }) {
@@ -27,6 +31,14 @@ export function RowStatus({ row, onRetry }) {
 
 const availabilityOptions = (item) =>
   [...AVAILABILITY, ...(item.availability === "unavailable" ? LEGACY_AVAILABILITY : [])].map((a) => ({ value: a.value, label: a.label }));
+
+// The small picture in the row: the cover (first image), or an icon until there is one.
+function RowThumb({ row, limits }) {
+  const { media } = useItemMedia(row.id, { limits, itemSaved: Boolean(row.saved) });
+  const cover = coverOf(media);
+  if (cover) return <img src={cover.thumbUrl} alt="" className={styles.thumbImg} data-testid="row-cover" draggable="false" />;
+  return <FontAwesomeIcon icon={faImage} />;
+}
 
 export function ItemRow({ row, index, total, catalog, expanded, onToggle, mobile, focusRequest, onMove }) {
   const { item, errors } = row;
@@ -104,16 +116,22 @@ export function ItemRow({ row, index, total, catalog, expanded, onToggle, mobile
       <FontAwesomeIcon icon={faGripVertical} />
     </button>
   );
+  const drop = useFileDrop((files) => addFiles(row.id, files));
+  const limits = ctx.mediaLimits;
+  const mediaBlock = (
+    <MediaManager itemId={row.id} itemName={item.name} itemSaved={Boolean(row.saved)} limits={limits} planKey={ctx.business?.planKey} variants={item.variants ?? []} />
+  );
   const panel = expanded && (
     <div id={panelId} role="region" aria-label={`More details for ${label}`} className={styles.panel}>
       <ItemFields item={item} errors={errors} columns ctx={{ category: ctx.category, sections, units, addSection: catalog.addSection }} onChange={set} />
+      <div className={styles.mediaBlock}>{mediaBlock}</div>
     </div>
   );
   const message = row.status === "error" && row.message ? <p className={styles.rowMessage} role="alert">{row.message}</p> : null;
 
   if (mobile) {
     return (
-      <div ref={setNodeRef} style={style} className={`${styles.card} ${isDragging ? styles.dragging : ""}`} data-row={row.id}>
+      <div ref={setNodeRef} style={style} className={`${styles.card} ${isDragging ? styles.dragging : ""} ${drop.over ? styles.dropOver : ""}`} data-row={row.id} data-drop-over={drop.over ? "true" : undefined} {...drop.props}>
         <div className={styles.cardHead}>
           {handle}
           <button type="button" className={styles.cardToggle} aria-expanded={expanded} aria-controls={expanded ? panelId : undefined} onClick={onToggle}>
@@ -142,10 +160,10 @@ export function ItemRow({ row, index, total, catalog, expanded, onToggle, mobile
   }
 
   return (
-    <div ref={setNodeRef} style={style} role="rowgroup" className={`${styles.rowGroup} ${isDragging ? styles.dragging : ""}`} data-row={row.id}>
+    <div ref={setNodeRef} style={style} role="rowgroup" className={`${styles.rowGroup} ${isDragging ? styles.dragging : ""} ${drop.over ? styles.dropOver : ""}`} data-row={row.id} data-drop-over={drop.over ? "true" : undefined} {...drop.props}>
       <div role="row" className={`${styles.row} ${styles.gridCols}`}>
         <div role="cell" className={styles.handleCell}>{handle}{moveButtons}</div>
-        <div role="cell" className={styles.thumb} title="Photos are added in a later step" aria-hidden="true"><FontAwesomeIcon icon={faImage} /></div>
+        <div role="cell" className={styles.thumb} title="Cover photo. Drop files on this row to add photos." aria-hidden="true"><RowThumb row={row} limits={limits} /></div>
         <div role="cell">{nameCell}</div>
         <div role="cell">{priceCell}</div>
         <div role="cell">{unitCell}</div>

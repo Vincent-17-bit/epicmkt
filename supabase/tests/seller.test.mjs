@@ -1,5 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { STOCK_CASES } from "../../shared/src/seller/stock-cases.js";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin, asService } from "./db.mjs";
 
@@ -12,6 +13,9 @@ before(async () => {
   await seedFixtures(c);
 });
 after(async () => { await c.end(); });
+
+// Every stored object is <business>/<item>/<media>/<file>.
+const mp = (biz, item, media = randomUUID(), file = "a.webp") => `${biz}/${item}/${media}/${file}`;
 
 const addItem = (k, biz, name, extra = "") =>
   k.query(`insert into items (business_id, name, price${extra ? ", " + extra.split("=")[0] : ""}) values ($1, $2, 100${extra ? ", " + extra.split("=")[1] : ""}) returning *`, [biz, name]);
@@ -302,7 +306,7 @@ test("catalog stats and item signals return counts only", async () => {
       ('${ids.bizA}', 'two', 10, false, 'out_of_stock', now() - interval '100 days'),
       ('${ids.bizA}', 'three', 10, true, 'limited_stock', now() - interval '10 days') returning id, name`);
   const one = rows.find((r) => r.name === "one").id;
-  await sql(c, `insert into item_media (item_id, business_id, kind, path, mime) values ('${one}', '${ids.bizA}', 'image', '${ids.bizA}/a.webp', 'image/webp')`);
+  await sql(c, `insert into item_media (item_id, business_id, kind, path, mime) values ('${one}', '${ids.bizA}', 'image', '${mp(ids.bizA, one)}', 'image/webp')`);
   await sql(c, `insert into flags (business_id, item_id, reason) values ('${ids.bizA}', '${one}', 'check this one')`);
   await sql(c, `insert into reports (business_id, item_id, reason, reporter_hash) values ('${ids.bizA}', '${one}', 'wrong_price', 'secret-hash'), ('${ids.bizA}', '${one}', 'spam', 'secret-hash-2')`);
   const stats = (await tx(c, asA, (k) => sql(k, `select seller_catalog_stats(30) as s`)))[0].s;
@@ -426,46 +430,296 @@ test("seller settings are private to the seller", async () => {
 });
 
 test("storage: sellers touch only their own folder", async () => {
-  const put = (who, path) => tx(c, who, (k) => k.query(`insert into storage.objects (bucket_id, name) values ('seller-media', $1)`, [path]));
-  await put(asA, `${ids.bizA}/items/a.webp`);
-  await assert.rejects(put(asA, `${ids.bizB}/items/a.webp`), /row-level security/);
+  const itemA = (await sql(c, `insert into items (business_id, name) values ('${ids.bizA}', 'Folder A') returning id`))[0].id;
+  const itemB = (await sql(c, `insert into items (business_id, name) values ('${ids.bizB}', 'Folder B') returning id`))[0].id;
+  const put = (who, path, bucket = "seller-media") => tx(c, who, (k) => k.query(`insert into storage.objects (bucket_id, name) values ($1, $2)`, [bucket, path]));
+  await put(asA, mp(ids.bizA, itemA));
+  await assert.rejects(put(asA, mp(ids.bizB, itemB)), /row-level security/);
   await assert.rejects(put(asA, `loose.webp`), /row-level security/);
-  await assert.rejects(tx(c, asA, (k) => k.query(`insert into storage.objects (bucket_id, name) values ('applications', $1)`, [`${ids.bizA}/x.pdf`])), /row-level security/);
-  await put(asAdmin, `${ids.bizB}/items/admin.webp`);
-  await sql(c, `insert into storage.objects (bucket_id, name) values ('seller-media', '${ids.bizA}/keep.webp'), ('seller-media', '${ids.bizB}/theirs.webp')`);
+  await assert.rejects(put(asA, mp(ids.bizA, itemA), "applications"), /row-level security/);
+  // one of my own folders is not enough: the second level must be one of my items, and the path must be four levels deep
+  await assert.rejects(put(asA, mp(ids.bizA, itemB)), /row-level security/);
+  await assert.rejects(put(asA, mp(ids.bizA, randomUUID())), /row-level security/);
+  await assert.rejects(put(asA, `${ids.bizA}/${itemA}/a.webp`), /row-level security/);
+  await assert.rejects(put(asA, `${ids.bizA}/${itemA}/${randomUUID()}/deeper/a.webp`), /row-level security/);
+  await put(asAdmin, mp(ids.bizB, itemB, randomUUID(), "admin.webp"));
+  const keep = mp(ids.bizA, itemA, randomUUID(), "keep.webp");
+  const theirs = mp(ids.bizB, itemB, randomUUID(), "theirs.webp");
+  await sql(c, `insert into storage.objects (bucket_id, name) values ('seller-media', '${keep}'), ('seller-media', '${theirs}')`);
   const del = await tx(c, asA, async (k) => ({
-    mine: (await k.query(`delete from storage.objects where name = '${ids.bizA}/keep.webp'`)).rowCount,
-    theirs: (await k.query(`delete from storage.objects where name = '${ids.bizB}/theirs.webp'`)).rowCount,
+    mine: (await k.query(`delete from storage.objects where name = '${keep}'`)).rowCount,
+    theirs: (await k.query(`delete from storage.objects where name = '${theirs}'`)).rowCount,
   }));
   assert.deepEqual(del, { mine: 1, theirs: 0 });
-  const upd = await tx(c, asA, async (k) => (await k.query(`update storage.objects set name = '${ids.bizA}/moved.webp' where name = '${ids.bizB}/theirs.webp'`)).rowCount);
+  const upd = await tx(c, asA, async (k) => (await k.query(`update storage.objects set name = '${mp(ids.bizA, itemA)}' where name = '${theirs}'`)).rowCount);
   assert.equal(upd, 0);
-  await assert.rejects(tx(c, asA, (k) => k.query(`update storage.objects set name = '${ids.bizB}/stolen.webp' where name = '${ids.bizA}/keep.webp'`).then((r) => { if (r.rowCount === 0) throw new Error("row-level security"); })), /row-level security/);
+  await sql(c, `insert into storage.objects (bucket_id, name) values ('seller-media', '${keep}')`);
+  await assert.rejects(tx(c, asA, (k) => k.query(`update storage.objects set name = '${mp(ids.bizB, itemB)}' where name = '${keep}'`).then((r) => { if (r.rowCount === 0) throw new Error("row-level security"); })), /row-level security/);
+  await assert.rejects(tx(c, asA, (k) => k.query(`update storage.objects set name = '${mp(ids.bizA, itemB)}' where name = '${keep}'`)), /row-level security/);
   assert.equal((await tx(c, asA, (k) => sql(k, `select name from storage.objects`))).every((r) => r.name.startsWith(ids.bizA)), true);
   const bucket = (await sql(c, `select * from storage.buckets where id = 'seller-media'`))[0];
   assert.equal(bucket.public, true);
   assert.equal(Number(bucket.file_size_limit), 25 * 1024 * 1024);
-  assert.deepEqual([...bucket.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]);
+  assert.deepEqual([...bucket.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/quicktime", "video/webm"]);
   await sql(c, `delete from storage.objects`);
+  await sql(c, `delete from items where id in ('${itemA}', '${itemB}')`);
 });
+
+// ---- S5 media manager ------------------------------------------------------------------------------------------
+const fresh = async (biz = ids.bizA, name = "Media item", extra = "") =>
+  (await sql(c, `insert into items (business_id, name${extra ? ", " + extra.split("=")[0] : ""}) values ('${biz}', '${name}'${extra ? ", " + extra.split("=")[1] : ""}) returning id`))[0].id;
+
+// One call per media, the way seller-media-finalize makes it. Returns the jsonb the function answers with.
+const attach = async (item, kind, o = {}) => {
+  const media = o.media ?? randomUUID();
+  const path = o.path ?? mp(o.biz ?? ids.bizA, item, media, kind === "image" ? "main.webp" : "video.mp4");
+  const r = await tx(c, asService, (k) => sql(k,
+    `select attach_item_media($1::uuid, $2::uuid, $3::text, $4::text, $5::text, 800, 600, $6::numeric, 1000::bigint, $7::jsonb, $8::text, null::numeric,
+       $9::text, $10::text, $11::text, $12::text, $13::text, $14::uuid) as r`,
+    [item, media, kind, path, kind === "image" ? "image/webp" : "video/mp4", kind === "video" ? 12 : null, JSON.stringify(o.variants ?? {}), o.poster ?? null,
+     o.placeholder ?? null, o.alt ?? null, o.variantId ?? null, o.status ?? "ready", o.failReason ?? null, o.replace ?? null]), { commit: true });
+  return { ...r[0].r, media };
+};
+const mediaOf = (item) => sql(c, `select * from item_media where item_id = '${item}' order by sort`);
 
 test("media limits per item, locked and ownership checked", async () => {
   await sql(c, `delete from items where business_id = '${ids.bizA}'`);
-  const item = (await sql(c, `insert into items (business_id, name) values ('${ids.bizA}', 'Photo item') returning id`))[0].id;
-  const attach = (kind, n, biz = ids.bizA) => tx(c, asService, (k) => sql(k, `select attach_item_media($1, $2, $3, $4, 800, 600, null, 1000) as id`, [item, kind, `${biz}/${kind}-${n}`, kind === "image" ? "image/webp" : "video/mp4"]), { commit: true });
-  for (let i = 0; i < 7; i++) await attach("image", i);
+  const item = await fresh();
+  for (let i = 0; i < 7; i++) await attach(item, "image");
   assert.equal((await tx(c, asService, (k) => sql(k, `select media_limit_ok($1, 'image') as ok`, [item])))[0].ok, false);
-  await assert.rejects(attach("image", 8), /limit_reached:item_media/);
+  await assert.rejects(attach(item, "image"), /limit_reached:item_media/);
   assert.equal((await tx(c, asService, (k) => sql(k, `select media_limit_ok($1, 'video') as ok`, [item])))[0].ok, true);
-  await attach("video", 1);
-  await assert.rejects(attach("video", 2), /limit_reached:item_media/);
-  await assert.rejects(attach("image", 9, ids.bizB), /path_not_owned/);
+  await attach(item, "video");
+  await assert.rejects(attach(item, "video"), /limit_reached:item_media/);
+  // a failed upload is kept so the seller sees a badge, but it never uses up a slot
+  await attach(item, "image", { status: "failed", failReason: "unsupported_codec" });
+  assert.equal((await tx(c, asService, (k) => sql(k, `select media_limit_ok($1, 'image') as ok`, [item])))[0].ok, false);
+  await assert.rejects(attach(item, "image", { biz: ids.bizB }), /path_not_owned/);
   assert.equal((await tx(c, asService, (k) => sql(k, `select media_limit_ok($1, 'gif') as ok`, [item])))[0].ok, false);
   await rejects(c, asA, `select media_limit_ok('${item}', 'image')`, [], /permission denied/);
-  await rejects(c, asA, `insert into item_media (item_id, business_id, kind, path, mime) values ('${item}', '${ids.bizA}', 'image', '${ids.bizA}/x', 'image/webp')`, [], /row-level security/);
+  await rejects(c, asA, `insert into item_media (item_id, business_id, kind, path, mime) values ('${item}', '${ids.bizA}', 'image', '${mp(ids.bizA, item)}', 'image/webp')`, [], /row-level security/);
+  await rejects(c, asA, `select attach_item_media('${item}', gen_random_uuid(), 'image', 'x', 'image/webp', 800, 600, null, 1)`, [], /permission denied/);
   const own = await tx(c, asA, async (k) => ({ n: (await sql(k, `select 1 from item_media`)).length, del: (await k.query(`delete from item_media where kind = 'video'`)).rowCount }));
-  assert.deepEqual(own, { n: 8, del: 1 });
+  assert.deepEqual(own, { n: 9, del: 1 });
   assert.equal((await tx(c, asB, (k) => sql(k, `select 1 from item_media`))).length, 0);
+  await sql(c, `delete from items where id = '${item}'`);
+});
+
+test("media limits follow the plan: premium allows 15 photos and 3 videos", async () => {
+  const item = await fresh(ids.bizB, "Premium item");
+  for (let i = 0; i < 15; i++) await attach(item, "image", { biz: ids.bizB });
+  await assert.rejects(attach(item, "image", { biz: ids.bizB }), /limit_reached:item_media/);
+  for (let i = 0; i < 3; i++) await attach(item, "video", { biz: ids.bizB });
+  await assert.rejects(attach(item, "video", { biz: ids.bizB }), /limit_reached:item_media/);
+  await sql(c, `delete from items where id = '${item}'`);
+});
+
+test("attach checks the folder, alt text, variant, poster and status", async () => {
+  const item = await fresh(ids.bizA, "Checked item", `variants='[{"id":"v1","label":"Red","price":10}]'::jsonb`);
+  const other = await fresh(ids.bizA, "Other item");
+  const media = randomUUID();
+  // the path must be exactly <business>/<this item>/<this media>/...
+  await assert.rejects(attach(item, "image", { media, path: mp(ids.bizA, other, media) }), /path_not_owned/);
+  await assert.rejects(attach(item, "image", { media, path: mp(ids.bizA, item, randomUUID()) }), /path_not_owned/);
+  await assert.rejects(attach(item, "image", { media, path: `${ids.bizA}/${item}/${media}/../../x.webp` }), /path_not_owned/);
+  await assert.rejects(attach(item, "image", { media, variants: { 320: mp(ids.bizA, other, media, "w320.webp") } }), /path_not_owned/);
+  await assert.rejects(attach(item, "video", { media, poster: mp(ids.bizA, other, media, "poster.webp") }), /path_not_owned/);
+  await assert.rejects(attach(item, "image", { media, poster: mp(ids.bizA, item, media, "poster.webp") }), /poster_only_video/);
+  await assert.rejects(attach(item, "image", { media, alt: "x".repeat(121) }), /alt_too_long/);
+  await assert.rejects(attach(item, "image", { media, variantId: "nope" }), /variant_not_found/);
+  await assert.rejects(attach(item, "image", { media, status: "weird" }), /invalid_status/);
+  assert.equal((await mediaOf(item)).length, 0);
+  const ok = await attach(item, "image", { media, alt: "Red shirt - view 1", variantId: "v1", variants: { 320: mp(ids.bizA, item, media, "w320.webp") }, placeholder: "data:image/webp;base64,AAAA" });
+  assert.equal(ok.sort, 0);
+  const row = (await mediaOf(item))[0];
+  assert.deepEqual([row.id, row.alt, row.variant_id, row.status, row.variants["320"]], [media, "Red shirt - view 1", "v1", "ready", mp(ids.bizA, item, media, "w320.webp")]);
+  await assert.rejects(attach(item, "image", { media }), /duplicate key/);
+  const second = await attach(item, "image");
+  assert.equal(second.sort, 1);
+  await sql(c, `delete from items where id in ('${item}', '${other}')`);
+});
+
+test("a replacement keeps the position, alt text and variant, and the limit counts the swap once", async () => {
+  const item = await fresh(ids.bizA, "Replace item", `variants='[{"id":"v1","label":"Red","price":10}]'::jsonb`);
+  const first = await attach(item, "image", { alt: "First", variantId: "v1", variants: {} });
+  const ids7 = [first];
+  for (let i = 0; i < 6; i++) ids7.push(await attach(item, "image"));
+  await assert.rejects(attach(item, "image"), /limit_reached:item_media/);
+  const target = ids7[2];
+  const swapped = await attach(item, "image", { replace: target.media, alt: null, variants: { 640: "x" } }).catch((e) => e);
+  assert.match(String(swapped), /path_not_owned/);
+  const done = await attach(item, "image", { replace: target.media });
+  assert.equal(done.sort, 2);
+  assert.ok(done.removed.includes(mp(ids.bizA, item, target.media, "main.webp")));
+  const rows = await mediaOf(item);
+  assert.equal(rows.length, 7);
+  assert.deepEqual(rows.map((r) => r.sort), [0, 1, 2, 3, 4, 5, 6]);
+  assert.equal(rows[2].id, done.media);
+  // alt text and the variant link move to the new file when the caller does not set them
+  const swappedFirst = await attach(item, "image", { replace: first.media });
+  assert.equal(swappedFirst.sort, 0);
+  const head = (await mediaOf(item))[0];
+  assert.deepEqual([head.alt, head.variant_id], ["First", "v1"]);
+  await assert.rejects(attach(item, "video", { replace: swappedFirst.media }), /kind_mismatch/);
+  await assert.rejects(attach(item, "image", { replace: randomUUID() }), /media_not_found/);
+  await sql(c, `update item_media set removed_by_admin = true, admin_remove_reason = 'Not allowed' where id = '${swappedFirst.media}'`);
+  await assert.rejects(attach(item, "image", { replace: swappedFirst.media }), /removed_by_admin/);
+  await sql(c, `delete from items where id = '${item}'`);
+});
+
+test("sellers reorder and edit their own media; sets must match, other sellers' media is out of reach", async () => {
+  const item = await fresh(ids.bizA, "Order item", `variants='[{"id":"v1","label":"Red","price":10}]'::jsonb`);
+  const m = [];
+  for (let i = 0; i < 4; i++) m.push((await attach(item, "image")).media);
+  const video = (await attach(item, "video")).media;
+  const all = [...m, video];
+  const reorder = (who, id, list) => tx(c, who, (k) => k.query(`select seller_reorder_media($1, $2::uuid[])`, [id, list]), { commit: true });
+  await reorder(asA, item, [video, m[3], m[2], m[1], m[0]]);
+  assert.deepEqual((await mediaOf(item)).map((r) => r.id), [video, m[3], m[2], m[1], m[0]]);
+  await assert.rejects(reorder(asA, item, [video, m[3]]), /order_mismatch/);
+  await assert.rejects(reorder(asA, item, [...all, randomUUID()]), /order_mismatch/);
+  await assert.rejects(reorder(asA, item, [video, video, m[2], m[1], m[0]]), /order_mismatch/);
+  await assert.rejects(reorder(asB, item, all), /item_not_found/);
+  await rejects(c, { role: "anon" }, `select seller_reorder_media('${item}', '{}')`, [], /permission denied/);
+
+  const update = (who, id, patch) => tx(c, who, (k) => sql(k, `select * from seller_update_media($1, $2::jsonb)`, [id, JSON.stringify(patch)]));
+  const done = await update(asA, m[0], { alt: "  Back view  ", variantId: "v1" });
+  assert.deepEqual([done[0].alt, done[0].variant_id], ["Back view", "v1"]);
+  assert.equal((await update(asA, m[0], { alt: "", variantId: "" }))[0].alt, null);
+  await assert.rejects(update(asA, m[0], { alt: "x".repeat(121) }), /alt_too_long/);
+  await assert.rejects(update(asA, m[0], { variantId: "ghost" }), /variant_not_found/);
+  await assert.rejects(update(asA, m[0], { path: "x" }), /field_not_allowed:path/);
+  await assert.rejects(update(asA, m[0], { status: "ready" }), /field_not_allowed:status/);
+  await assert.rejects(update(asA, m[0], { removed_by_admin: false }), /field_not_allowed/);
+  await assert.rejects(update(asB, m[0], { alt: "mine now" }), /media_not_found/);
+  // a seller cannot write the table directly either: no update policy exists
+  assert.equal((await tx(c, asA, (k) => k.query(`update item_media set alt = 'sneaky', sort = 99 where id = '${m[1]}'`))).rowCount, 0);
+  await sql(c, `delete from items where id = '${item}'`);
+});
+
+test("admin removal shows a reason, hides the media from shoppers and cannot be undone by the seller", async () => {
+  const item = await fresh(ids.bizA, "Removal item");
+  const a = (await attach(item, "image")).media;
+  const b = (await attach(item, "image")).media;
+  const rm = (who, id, removed, reason) => tx(c, who, (k) => k.query(`select admin_set_media_removed($1, $2, $3)`, [id, removed, reason]), { commit: true });
+  await assert.rejects(rm(asA, a, true, "I want it gone"), /not_admin/);
+  await assert.rejects(rm(asAdmin, a, true, " "), /reason_required/);
+  await rm(asAdmin, a, true, "Shows a stranger's face");
+  const row = (await sql(c, `select removed_by_admin, admin_remove_reason from item_media where id = '${a}'`))[0];
+  assert.deepEqual(row, { removed_by_admin: true, admin_remove_reason: "Shows a stranger's face" });
+  await assert.rejects(tx(c, asA, (k) => k.query(`select seller_update_media($1, '{"alt":"x"}')`, [a])), /removed_by_admin/);
+  assert.equal((await tx(c, asA, (k) => k.query(`update item_media set removed_by_admin = false where id = '${a}'`))).rowCount, 0);
+  // a removed media frees its slot, and the seller can still dismiss it
+  assert.equal((await tx(c, asService, (k) => sql(k, `select media_limit_ok($1, 'image') as ok`, [item])))[0].ok, true);
+  assert.equal((await tx(c, asA, (k) => k.query(`delete from item_media where id = '${a}'`))).rowCount, 1);
+  await assert.rejects(rm(asAdmin, randomUUID(), true, "Gone for good"), /media_not_found/);
+  await sql(c, `delete from items where id = '${item}'`);
+  assert.ok(b);
+});
+
+test("shoppers read ready media only, never processing, failed or admin-removed, and never a video-only item", async () => {
+  await sql(c, `update businesses set status = 'live' where id in ('${ids.bizA}', '${ids.bizB}')`);
+  const full = await fresh(ids.bizA, "Shop item");
+  const ready = (await attach(full, "image")).media;
+  await attach(full, "video", { poster: undefined });
+  const processing = (await attach(full, "image", { status: "processing" })).media;
+  const failed = (await attach(full, "image", { status: "failed", failReason: "unreadable" })).media;
+  const removed = (await attach(full, "image")).media;
+  await sql(c, `update item_media set removed_by_admin = true, admin_remove_reason = 'No' where id = '${removed}'`);
+  const seen = (who = { role: "anon" }, item = full) => tx(c, who, (k) => sql(k, `select id, kind from customer_item_media where item_id = $1 order by sort`, [item]));
+  const ids1 = (await seen()).map((r) => r.id);
+  assert.ok(ids1.includes(ready));
+  for (const hidden of [processing, failed, removed]) assert.ok(!ids1.includes(hidden), hidden);
+  assert.equal(ids1.length, 2);
+  assert.deepEqual((await seen(asB)).map((r) => r.id), ids1);
+  await rejects(c, { role: "anon" }, `select * from item_media`, [], /permission denied/);
+
+  const videoOnly = await fresh(ids.bizA, "Video only");
+  await attach(videoOnly, "video");
+  assert.equal((await seen({ role: "anon" }, videoOnly)).length, 0);
+
+  await sql(c, `update items set visible = false where id = '${full}'`);
+  assert.equal((await seen()).length, 0);
+  await sql(c, `update items set visible = true, hidden_by_admin = true where id = '${full}'`);
+  assert.equal((await seen()).length, 0);
+  await sql(c, `update items set hidden_by_admin = false where id = '${full}'`);
+  await sql(c, `update businesses set status = 'paused' where id = '${ids.bizA}'`);
+  assert.equal((await seen()).length, 0);
+  await sql(c, `update businesses set status = 'live' where id = '${ids.bizA}'`);
+  assert.equal((await seen()).length, 2);
+  await sql(c, `delete from items where id in ('${full}', '${videoOnly}')`);
+});
+
+test("a seller needs a ready image to turn an item on; a video alone does not count", async () => {
+  const item = await fresh(ids.bizA, "Publish item", "visible=false");
+  const show = (who = asA) => tx(c, who, (k) => k.query(`update items set visible = true where id = '${item}'`), { commit: true });
+  const hide = () => sql(c, `update items set visible = false where id = '${item}'`);
+  await assert.rejects(show(), /photo_required:items/);
+  await attach(item, "video");
+  await assert.rejects(show(), /photo_required:items/);
+  const processing = (await attach(item, "image", { status: "processing" })).media;
+  await assert.rejects(show(), /photo_required:items/);
+  await attach(item, "image", { status: "failed", failReason: "unreadable" });
+  await assert.rejects(show(), /photo_required:items/);
+  const removed = (await attach(item, "image")).media;
+  await sql(c, `update item_media set removed_by_admin = true, admin_remove_reason = 'No' where id = '${removed}'`);
+  await assert.rejects(show(), /photo_required:items/);
+  await sql(c, `update item_media set status = 'ready' where id = '${processing}'`);
+  await show();
+  assert.equal((await sql(c, `select visible from items where id = '${item}'`))[0].visible, true);
+  // other edits to an item without photos are fine, and the check applies to the off-to-on change only
+  await hide();
+  await sql(c, `delete from item_media where item_id = '${item}'`);
+  await tx(c, asA, (k) => k.query(`update items set name = 'Renamed' where id = '${item}'`));
+  await tx(c, asAdmin, (k) => k.query(`update items set visible = true where id = '${item}'`));
+  await sql(c, `delete from items where id = '${item}'`);
+  const live = await tx(c, asA, (k) => sql(k, `insert into items (business_id, name) values ('${ids.bizA}', 'Starts visible') returning visible, id`));
+  assert.equal(live[0].visible, true);
+  await sql(c, `delete from items where id = '${live[0].id}'`);
+});
+
+test("a poster can be set on a video only, inside its own folder, and the old one is returned for deletion", async () => {
+  const item = await fresh(ids.bizA, "Poster item");
+  const video = await attach(item, "video", { poster: undefined });
+  const image = await attach(item, "image");
+  const setPoster = (media, biz, path) => tx(c, asService, (k) => sql(k, `select set_media_poster($1, $2, $3, 1.5) as old`, [media, biz, path]), { commit: true });
+  const first = mp(ids.bizA, item, video.media, "poster-1.webp");
+  assert.equal((await setPoster(video.media, ids.bizA, first))[0].old, null);
+  assert.equal((await setPoster(video.media, ids.bizA, mp(ids.bizA, item, video.media, "poster-2.webp")))[0].old, first);
+  const row = (await mediaOf(item)).find((r) => r.id === video.media);
+  assert.deepEqual([row.poster_path, Number(row.poster_time)], [mp(ids.bizA, item, video.media, "poster-2.webp"), 1.5]);
+  await assert.rejects(setPoster(image.media, ids.bizA, mp(ids.bizA, item, image.media, "p.webp")), /poster_only_video/);
+  await assert.rejects(setPoster(video.media, ids.bizB, mp(ids.bizB, item, video.media, "p.webp")), /media_not_found/);
+  await assert.rejects(setPoster(video.media, ids.bizA, mp(ids.bizA, item, randomUUID(), "p.webp")), /path_not_owned/);
+  await assert.rejects(setPoster(video.media, ids.bizA, `${ids.bizA}/${item}/${video.media}/../x.webp`), /path_not_owned/);
+  await rejects(c, asA, `select set_media_poster('${video.media}', '${ids.bizA}', 'x', 1)`, [], /permission denied/);
+  await sql(c, `delete from items where id = '${item}'`);
+});
+
+test("deleting an item deletes its media rows; one item's media never shows under another", async () => {
+  const a = await fresh(ids.bizA, "Item A");
+  const b = await fresh(ids.bizA, "Item B");
+  const ma = await attach(a, "image");
+  await attach(a, "video");
+  await attach(b, "image");
+  assert.equal((await mediaOf(a)).length, 2);
+  assert.equal((await mediaOf(b)).length, 1);
+  assert.ok((await mediaOf(a)).every((r) => r.item_id === a && r.path.split("/")[1] === a));
+  assert.ok((await mediaOf(b)).every((r) => r.item_id === b && r.path.split("/")[1] === b));
+  await sql(c, `delete from items where id = '${a}'`);
+  assert.equal((await mediaOf(a)).length, 0);
+  assert.equal((await mediaOf(b)).length, 1);
+  assert.equal((await sql(c, `select 1 from item_media where id = '${ma.media}'`)).length, 0);
+  await sql(c, `delete from items where id = '${b}'`);
+});
+
+test("S5 migration can run again", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { join, dirname } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0007_media_manager.sql");
+  await c.query(readFileSync(file, "utf8"));
+  await c.query(readFileSync(file, "utf8"));
 });
 
 test("sessions can be revoked except the current one", async () => {
@@ -487,6 +741,7 @@ test("realtime publishes change_requests and the migration re-runs safely", asyn
   await c.query(readFileSync(join(dir, "0004_core.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0005_seller_portal.sql"), "utf8"));
   await c.query(readFileSync(join(dir, "0006_catalog_entry.sql"), "utf8"));
+  await c.query(readFileSync(join(dir, "0007_media_manager.sql"), "utf8"));
 });
 
 test("S1: catalog columns, wider availability and the same stock decisions as the shared preview", async () => {

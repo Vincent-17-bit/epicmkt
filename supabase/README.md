@@ -97,3 +97,22 @@ Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:
 ```
 npm run test:seller-backend
 ```
+
+## Media manager (phase S5)
+
+Run `0007_media_manager.sql` after `0006`. It adds the media columns (alt, variant, poster, status, admin removal), a
+race-free `media_limit_ok`, the publish rule (an item needs one ready **image** to be switched on; a video alone is not
+enough), the `customer_item_media` view shoppers read, and tighter storage policies (`<business>/<item>/<media>/<file>`,
+only inside the seller's own items).
+
+Deploy the three functions: `seller-media-finalize` (attach and poster; reads the real bytes, ignores the declared type,
+deletes the uploaded objects on any failure), `seller-media-remove` (one media, or all media of an item before the item is
+deleted) and `seller-media-copy` (duplicate an item's media into new files and rows).
+
+Limits come from `global_limits` (`photosPerItem`, `videosPerItem`; Standard 7 and 1, Premium 15 and 3). Videos: MP4 or WebM,
+up to 45 seconds and 25 MB. iPhone HEVC videos are kept as `failed` so the seller sees why; shoppers never see failed or
+processing media. Photos are re-encoded in the browser (this removes EXIF and GPS and fixes rotation) into WebP at
+320/640/960/1280/1600 (and 2000 for zoom when the source is large enough).
+
+Tests: `npm run test:db`, `npm run test:fn`, `npm test -w seller`, `npm test -w ui`. A real-browser check lives in
+`seller/e2e/media.e2e.mjs` (see the header of that file).

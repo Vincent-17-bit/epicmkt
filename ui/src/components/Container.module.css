@@ -1,0 +1,21 @@
+.container {
+  width: 100%;
+  max-width: var(--content-width);
+  margin-inline: auto;
+  padding-left: max(var(--space-4), var(--safe-left));
+  padding-right: max(var(--space-4), var(--safe-right));
+}
+
+@media (min-width: 768px) {
+  .container {
+    padding-left: max(var(--space-5), var(--safe-left));
+    padding-right: max(var(--space-5), var(--safe-right));
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    padding-left: max(var(--space-6), var(--safe-left));
+    padding-right: max(var(--space-6), var(--safe-right));
+  }
+}

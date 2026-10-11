@@ -59,7 +59,7 @@ test("real type is read from magic bytes, not names", () => {
   assert.equal(sniffMedia(webm(640, 480, 5)).type, "webm");
   assert.equal(sniffMedia(Uint8Array.from(str("<svg xmlns='http://www.w3.org/2000/svg'></svg>"))), null);
   assert.equal(sniffMedia(Uint8Array.from(str("%PDF-1.7 padding padding"))), null);
-  assert.equal(sniffMedia(Uint8Array.from([...be32(24), ...str("ftypqt  "), ...new Array(12).fill(0)])), null);
+  assert.equal(sniffMedia(Uint8Array.from([...be32(24), ...str("ftypqt  "), ...new Array(12).fill(0)])).type, "mov");
   assert.equal(sniffMedia(new Uint8Array(4)), null);
 });
 
@@ -84,7 +84,8 @@ test("inspectMedia enforces size, dimensions and duration", () => {
   assert.equal(inspectMedia(pad(mp4(640, 480, 5), MEDIA_RULES.videoMaxBytes + 1)).reason, "too_large");
   const ok = inspectMedia(mp4(640, 480, 12));
   assert.deepEqual([ok.ok, ok.kind, ok.width, ok.height, ok.durationSec], [true, "video", 640, 480, 12]);
-  assert.equal(inspectMedia(mp4(640, 480, 61)).reason, "too_long");
+  assert.equal(inspectMedia(mp4(640, 480, 46)).reason, "too_long");
+  assert.equal(inspectMedia(mp4(640, 480, 45)).ok, true);
   assert.equal(inspectMedia(Uint8Array.from(str("not a media file at all"))).reason, "unsupported_type");
   assert.equal(inspectMedia(Uint8Array.from([...str("RIFF"), 4, 0, 0, 0, ...str("WEBP"), ...str("VP8X"), 0, 0, 0, 0])).reason, "unreadable");
 });

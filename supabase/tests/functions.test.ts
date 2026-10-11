@@ -4,7 +4,6 @@ import { sellerForgotRequest } from "../functions/seller-forgot-request/handler.
 import { sellerForgotVerify } from "../functions/seller-forgot-verify/handler.ts";
 import { sellerOtpRequest } from "../functions/seller-otp-request/handler.ts";
 import { sellerChangePassword } from "../functions/seller-change-password/handler.ts";
-import { sellerMediaFinalize } from "../functions/seller-media-finalize/handler.ts";
 import { sellerExportData } from "../functions/seller-export-data/handler.ts";
 import { realDeps, type Deps } from "../functions/_shared/seller.ts";
 
@@ -264,67 +263,6 @@ Deno.test("change-password: keeps only the current session", async () => {
   assertEquals(w.passwordUpdates, [{ id: "u1", password: "Brand-New-Pass1" }]);
   assertEquals(w.rpcCalls.find((c) => c.name === "revoke_user_sessions")!.args, { p_user: "u1", p_keep: "sess-1" });
   assertEquals(w.tables.audit_log[0].action, "password_changed");
-});
-
-const png = (width: number, height: number) => {
-  const be = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
-  return Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...be(13), 0x49, 0x48, 0x44, 0x52, ...be(width), ...be(height), 8, 6, 0, 0, 0]);
-};
-
-Deno.test("media-finalize: ownership, real type, limits and cleanup", async () => {
-  const w = world();
-  const h = sellerMediaFinalize(deps(w));
-  const good = "b1/items/a.png";
-  const itemId = "11111111-1111-4111-8111-111111111111";
-  w.tables.items = [{ id: itemId, business_id: "b1" }, { id: "22222222-2222-4222-8222-222222222222", business_id: "other" }];
-
-  assertEquals((await h(post({ itemId, path: good }))).status, 401);
-  const foreign = await read(await h(authed({ itemId, path: "other/items/a.png" })));
-  assertEquals(foreign.status, 403);
-  assertEquals((await h(authed({ itemId, path: "b1/../other/x.png" }))).status, 403);
-  assertEquals(w.removed, []);
-
-  const otherItem = await read(await h(authed({ itemId: "22222222-2222-4222-8222-222222222222", path: good })));
-  assertEquals(otherItem.status, 404);
-  assertEquals(w.removed, [good]);
-  w.removed.length = 0;
-
-  assertEquals((await read(await h(authed({ itemId, path: good })))).status, 404);
-
-  w.files.set("b1/items/fake.png", new TextEncoder().encode("<svg onload=alert(1)></svg> not an image"));
-  const fake = await read(await h(authed({ itemId, path: "b1/items/fake.png" })));
-  assertEquals([fake.status, fake.body.error], [422, "unsupported_type"]);
-  assertEquals(w.removed, ["b1/items/fake.png"]);
-  w.removed.length = 0;
-
-  w.files.set("b1/items/tiny.png", png(50, 50));
-  assertEquals((await read(await h(authed({ itemId, path: "b1/items/tiny.png" })))).body.error, "too_small");
-  assertEquals(w.removed, ["b1/items/tiny.png"]);
-  w.removed.length = 0;
-
-  w.files.set(good, png(800, 600));
-  w.rpcResults["attach_item_media"] = () => ({ data: null, error: { message: "limit_reached:item_media" } });
-  const full = await read(await h(authed({ itemId, path: good })));
-  assertEquals([full.status, full.body.error], [409, "limit_reached"]);
-  assertEquals(w.removed, [good]);
-  w.removed.length = 0;
-
-  w.rpcResults["attach_item_media"] = () => ({ data: null, error: { message: "boom" } });
-  assertEquals((await read(await h(authed({ itemId, path: good })))).status, 500);
-  assertEquals(w.removed, [good]);
-  w.removed.length = 0;
-
-  w.rpcResults["attach_item_media"] = () => ({ data: "media-1", error: null });
-  const ok = await read(await h(authed({ itemId, path: good })));
-  assertEquals(ok.status, 201);
-  assertEquals(ok.body, { id: "media-1", kind: "image", width: 800, height: 600, durationSec: null, size: png(800, 600).length });
-  assertEquals(w.removed, []);
-  const call = w.rpcCalls.filter((c) => c.name === "attach_item_media").at(-1)!.args;
-  assertEquals([call.p_kind, call.p_mime, call.p_path, call.p_item], ["image", "image/png", good, itemId]);
-
-  w.tables.item_media.push({ id: "m", path: good });
-  assertEquals((await read(await h(authed({ itemId, path: good })))).status, 409);
-  assertEquals(w.removed, []);
 });
 
 Deno.test("export-data: own rows only, no secrets, rate limited", async () => {

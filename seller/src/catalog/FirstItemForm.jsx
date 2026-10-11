@@ -3,6 +3,7 @@ import { blankItem, defaultKindFor, pricePreview } from "@epicmkt/shared";
 import { Button } from "../ui/ui.jsx";
 import { ItemFields, itemSections } from "./ItemFields.jsx";
 import { UpgradePrompt } from "./Usage.jsx";
+import { MediaManager } from "../media/MediaManager.jsx";
 import { validateItem } from "./schema.js";
 import { useToasts } from "../ui/toasts.js";
 import styles from "./catalog.module.css";
@@ -72,6 +73,10 @@ export function FirstItemForm({ catalog }) {
       )}
 
       <ItemFields item={item} onChange={(patch) => setItem((x) => ({ ...x, ...patch }))} errors={shown} ctx={{ category: ctx.category, sections, units, addSection }} />
+
+      <div className={styles.mediaBlock} id="sec-media">
+        <MediaManager itemId={item.id} itemName={item.name} itemSaved={false} limits={ctx.mediaLimits} planKey={ctx.business?.planKey} variants={item.variants ?? []} />
+      </div>
 
       <div className={styles.stickyBar}>
         <div className={styles.previewLine} aria-live="polite">

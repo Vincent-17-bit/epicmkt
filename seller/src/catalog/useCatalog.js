@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { blankItem, defaultKindFor, duplicateOf, planUsage, DEFAULT_UNITS } from "@epicmkt/shared";
+import { blankItem, defaultKindFor, duplicateOf, planUsage, DEFAULT_UNITS, canPublish, PUBLISH_BLOCKED_MESSAGE } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { validateItem } from "./schema.js";
 import { useToasts } from "../ui/toasts.js";
+import { adoptMedia, configure as configureMedia, purge as purgeMedia, useMediaStore, visibleMedia, EMPTY_SLICE } from "../media/mediaStore.js";
+
+// Ready photos for one item right now, read straight from the media store (never from another item).
+const hasReadyPhoto = (id) => canPublish(visibleMedia(useMediaStore.getState().byItem[id] ?? EMPTY_SLICE));
 
 export const AUTOSAVE_MS = 700;
 
@@ -89,6 +93,8 @@ export function useCatalog() {
     if (e?.code === "item_limit_reached") {
       setLimitHit(true);
       patchRow(id, { status: "error", message: "Your plan is full. Remove an item or upgrade to add more." });
+    } else if (e?.code === "photo_required") {
+      patchRow(id, (r) => ({ ...r, item: { ...r.item, visible: false }, status: "error", message: PUBLISH_BLOCKED_MESSAGE }));
     } else if (e?.code === "invalid_value") {
       patchRow(id, { status: "error", errors: e.problems ?? {}, message: e.message || "Some values are not allowed." });
     } else {
@@ -124,6 +130,7 @@ export function useCatalog() {
         return { ...r, item: adopted, saved: out, savedVersion: version, status: unchanged ? "saved" : "dirty", errors: {}, message: "" };
       });
       rememberUnit(item.unit);
+      configureMedia(id, { itemSaved: true });
       if (followUp) scheduleRef.current(id);
     } catch (e) {
       handleError(id, e);
@@ -146,6 +153,14 @@ export function useCatalog() {
   scheduleRef.current = schedule;
 
   const change = useCallback((id, patch) => {
+    // An item needs one ready photo before shoppers can see it. A video on its own does not count.
+    if (patch.visible === true && !get(id)?.item.visible && !hasReadyPhoto(id)) {
+      push({ message: PUBLISH_BLOCKED_MESSAGE, tone: "error", ms: 7000 });
+      const { visible, ...rest } = patch;
+      void visible;
+      if (!Object.keys(rest).length) { patchRow(id, (r) => ({ ...r })); return; }
+      patch = rest;
+    }
     patchRow(id, (r) => {
       const item = { ...r.item, ...patch };
       const { errors } = validateItem(item, { fields: ctxRef.current?.category.fields ?? [] });
@@ -153,7 +168,7 @@ export function useCatalog() {
       return { ...r, item, version: r.version + 1, status: "dirty", errors, message: "" };
     });
     schedule(id);
-  }, [patchRow, schedule]);
+  }, [patchRow, push, schedule]);
 
   const flushAll = useCallback(async () => {
     const pending = rowsRef.current.filter((r) => !isPristine(r) && (needsSave(r) || r.status === "error"));
@@ -223,8 +238,10 @@ export function useCatalog() {
       }
     }
     commit((rs) => rs.filter((r) => r.id !== id));
+    // The server deleted a saved item's files with it. Photos of a restored item are not brought back.
+    purgeMedia(id);
     push({
-      message: current.item.name.trim() ? `Deleted “${current.item.name.trim()}”.` : "Row removed.",
+      message: current.item.name.trim() ? `Deleted “${current.item.name.trim()}”.${restoreItem ? " Its photos are deleted for good." : ""}` : "Row removed.",
       actionLabel: "Undo",
       onAction: async () => {
         if (restoreItem) {
@@ -257,6 +274,11 @@ export function useCatalog() {
     const next = commit(withSorts([...rowsRef.current.slice(0, index + 1), row, ...rowsRef.current.slice(index + 1)]));
     setFocusRequest({ id: copy.id, field: "name", n: Date.now() });
     await save(copy.id);
+    // The copy gets its own files and rows. Nothing is shared with the original.
+    if (get(copy.id)?.saved) {
+      try { adoptMedia(copy.id, await api.copyItemMedia(id, copy.id)); }
+      catch { push({ message: "The item was copied, but its photos could not be. Add them again.", tone: "error" }); }
+    }
     persistOrder(next.filter((r) => r.id !== copy.id && before.get(r.id) !== r.item.sort).map((r) => r.id));
   }, [commit, persistOrder, save]);
 
@@ -264,6 +286,7 @@ export function useCatalog() {
     const out = await api.createItem({ ...item, sort: 0 });
     rememberUnit(item.unit);
     commit([makeRow(out)]);
+    configureMedia(out.id, { itemSaved: true });
     return out;
   }, [commit, rememberUnit]);
 

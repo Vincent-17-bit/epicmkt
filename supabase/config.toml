@@ -42,5 +42,11 @@ verify_jwt = false
 [functions.seller-media-finalize]
 verify_jwt = false
 
+[functions.seller-media-remove]
+verify_jwt = false
+
+[functions.seller-media-copy]
+verify_jwt = false
+
 [functions.seller-export-data]
 verify_jwt = false

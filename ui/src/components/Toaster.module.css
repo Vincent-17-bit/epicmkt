@@ -1,0 +1,37 @@
+.region {
+  position: fixed;
+  right: max(var(--space-4), var(--safe-right));
+  bottom: calc(var(--space-4) + var(--safe-bottom));
+  left: max(var(--space-4), var(--safe-left));
+  z-index: var(--z-toast);
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  max-width: 28rem;
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-card);
+  background: var(--featured-bg);
+  color: var(--featured-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-2);
+  pointer-events: auto;
+}
+
+.close {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
