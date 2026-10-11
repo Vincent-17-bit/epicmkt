@@ -9,6 +9,7 @@ import FirstLogin from "./pages/FirstLogin.jsx";
 import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Notifications from "./pages/Notifications.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
+import Listings from "./listings/Listings.jsx";
 import { Navigate } from "react-router-dom";
 
 const page = (title, text) => <Placeholder title={title} text={text} />;
@@ -33,7 +34,7 @@ export const routes = [
         element: <Shell />,
         children: [
           { index: true, element: <Dashboard /> },
-          { path: "catalog", element: page("Catalog", "Your items will be managed here in an upcoming release.") },
+          { path: "catalog", element: <Listings /> },
           { path: "offers", element: page("Offers", "Offers and flash sales will be managed here in an upcoming release.") },
           { path: "account", element: page("Account", "Your business profile will be managed here in an upcoming release.") },
           { path: "subscription", element: page("Subscription", "Renewals and payments will be managed here in an upcoming release.") },

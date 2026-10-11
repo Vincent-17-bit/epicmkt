@@ -1,4 +1,5 @@
 import { supabase } from "./client.js";
+import { sanitizeSavedViews } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 
 const need = () => {
@@ -47,7 +48,7 @@ export const me = async () => {
     limits: null,
     questions: [],
     notifications: (notes ?? []).map((n) => ({ id: n.id, title: n.subject ?? "Message", body: n.body, created_at: n.created_at, read: Boolean(n.read_at) })),
-    settings: { idle_minutes: settings?.settings?.idle_minutes ?? 60 }
+    settings: { idle_minutes: settings?.settings?.idle_minutes ?? 60, saved_views: sanitizeSavedViews(settings?.settings?.saved_views) }
   };
 };
 export const forgotRequest = (input) => fn("seller-forgot-request", typeof input === "string" ? { sellerId: input } : input);
@@ -69,5 +70,32 @@ export const pauseListing = (pause) => rpc("seller_pause_listing", { p_pause: pa
 export const requestDeletion = (name) => rpc("seller_request_deletion", { p_name: name });
 export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_stale_days: staleDays });
 export const itemSignals = () => rpc("seller_item_signals");
+const MEDIA_BUCKET = "seller-media";
+export const listItems = async () => {
+  const client = need();
+  const { data, error } = await client.from("items").select("*, item_media(kind, path, sort)").order("sort").order("created_at");
+  if (error) throw new ApiError("request_failed", error.message);
+  const items = (data ?? []).map((row) => {
+    const first = [...(row.item_media ?? [])].filter((m) => m.kind === "image").sort((a, b) => a.sort - b.sort)[0];
+    return { ...row, imageUrl: first ? client.storage.from(MEDIA_BUCKET).getPublicUrl(first.path).data.publicUrl : null };
+  });
+  const [signals, stats] = await Promise.all([rpc("seller_item_signals"), rpc("seller_catalog_stats", { p_stale_days: 90 })]);
+  return { items, signals: signals ?? [], stats };
+};
+export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
+export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
+export const importItems = (rows) => rpc("seller_import_items", { p_rows: rows });
+export const duplicateItem = async (id) => {
+  const client = need();
+  const { data: src, error } = await client.from("items").select("*").eq("id", id).maybeSingle();
+  if (error || !src) throw new ApiError("item_not_found");
+  const { data: top } = await client.from("items").select("sort").order("sort", { ascending: false }).limit(1).maybeSingle();
+  const keep = ["section", "description", "kind", "price_type", "price", "price_max", "unit", "availability", "search_tags", "variants", "badge", "track_stock", "low_stock_threshold", "show_stock_count"];
+  const copy = Object.fromEntries(keep.map((k) => [k, src[k]]));
+  const { data, error: insertError } = await client.from("items").insert({ ...copy, business_id: src.business_id, name: `${src.name} (copy)`.slice(0, 80), visible: false, draft: true, sort: (top?.sort ?? 0) + 1 }).select().single();
+  if (insertError) throw new ApiError((insertError.message ?? "request_failed").split(":")[0] === "limit_reached" ? "limit_reached:items" : "request_failed", insertError.message);
+  return data;
+};
+export const saveViews = (views) => rpc("seller_save_views", { p_views: views });
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});

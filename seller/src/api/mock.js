@@ -1,5 +1,6 @@
-import { passwordProblems } from "@epicmkt/shared";
+import { passwordProblems, sanitizeSavedViews } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
+import * as listings from "./mockItems.js";
 
 export const DEMO_PASSWORD = "Demo-Passw0rd";
 const OTP = "123456";
@@ -48,12 +49,14 @@ const state = {
   changes: [],
   patches: {},
   read: new Set(),
-  priceConfirmedAt: null
+  priceConfirmedAt: null,
+  items: {},
+  views: {}
 };
 
 const persist = () => {
   try {
-    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ sellers: state.sellers, current: state.current, read: [...state.read], patches: state.patches }));
+    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ sellers: state.sellers, current: state.current, read: [...state.read], patches: state.patches, items: state.items, views: state.views }));
   } catch {
     return;
   }
@@ -68,6 +71,8 @@ const restore = () => {
     state.current = saved.current ?? null;
     state.read = new Set(saved.read ?? []);
     state.patches = saved.patches ?? {};
+    state.items = saved.items ?? {};
+    state.views = saved.views ?? {};
   } catch {
     return;
   }
@@ -89,7 +94,21 @@ export const resetMock = () => {
   state.patches = {};
   state.read = new Set();
   state.priceConfirmedAt = null;
+  state.items = {};
+  state.views = {};
   persist();
+};
+
+const SEED_COUNTS = { ES100001: 12, ES100002: 40, ES100005: 60 };
+const ITEM_LIMITS = { standard: 20, premium: 100 };
+const itemsOf = (id) => {
+  if (!state.items[id]) state.items[id] = listings.seedItems(id, SEED_COUNTS[id] ?? 0);
+  return state.items[id];
+};
+const signalsOf = (id) => listings.seedSignals(id, itemsOf(id)).filter((sig) => state.items[id].some((i) => i.id === sig.item_id));
+const catalogOf = (id) => {
+  const list = itemsOf(id);
+  return listings.statsFor(list, ITEM_LIMITS[state.sellers[id].plan], signalsOf(id), { unread: id === "ES100002" ? 1 : 0 });
 };
 
 const signedIn = () => {
@@ -223,12 +242,12 @@ export const me = async () => {
     business,
     mustChangePassword: s.mustChange,
     application: { stage: s.stage, outcome: s.outcome },
-    catalog: d.catalog,
+    catalog: catalogOf(id),
     usage: d.usage,
     limits: LIMITS[s.plan],
     questions: id === "ES100002" ? [{ id: "q1", text: "Is the 24-hour sign still accurate?", created_at: iso(-1) }] : [],
     notifications: NOTES(id, s),
-    settings: { idle_minutes: 60 }
+    settings: { idle_minutes: 60, saved_views: sanitizeSavedViews(state.views[id]) }
   };
 };
 
@@ -321,6 +340,57 @@ export const catalogStats = async () => {
   await wait();
   return (await me()).catalog;
 };
-export const itemSignals = async () => { signedIn(); await wait(); return []; };
+export const itemSignals = async () => { signedIn(); await wait(); return signalsOf(state.current); };
+export const listItems = async () => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  const items = itemsOf(id).map((i) => ({ ...i, item_media: i.item_media.map((m) => ({ ...m })) }));
+  return { items, signals: signalsOf(id), stats: catalogOf(id) };
+};
+const commit = (id, out) => {
+  state.items[id] = out.items;
+  persist();
+  return out.result;
+};
+export const bulkItems = async (action, ids, args = {}) => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  return commit(id, listings.bulk(itemsOf(id), action, ids, args));
+};
+export const reorderItems = async (ids) => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  const list = itemsOf(id);
+  if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) throw new ApiError("invalid_selection");
+  if (ids.some((x) => !list.some((i) => i.id === x))) throw new ApiError("item_not_found");
+  const pos = new Map(ids.map((x, n) => [x, n + 1]));
+  state.items[id] = list.map((i) => (pos.has(i.id) ? { ...i, sort: pos.get(i.id) } : i));
+  persist();
+  return ids.length;
+};
+export const importItems = async (rows) => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  return commit(id, listings.importRows(itemsOf(id), rows, { plan: me_().plan, limit: ITEM_LIMITS[me_().plan] }));
+};
+export const duplicateItem = async (itemId) => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  return commit(id, listings.duplicate(itemsOf(id), itemId, ITEM_LIMITS[me_().plan]));
+};
+export const saveViews = async (views) => {
+  signedIn();
+  await wait();
+  const clean = sanitizeSavedViews(views);
+  if (!Array.isArray(views) || clean.length !== views.length) throw new ApiError("invalid_saved_views");
+  state.views[state.current] = clean;
+  persist();
+  return clean;
+};
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...me_() } }; };

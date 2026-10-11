@@ -17,6 +17,12 @@ export const SELLER_API = [
   "requestDeletion",
   "catalogStats",
   "itemSignals",
+  "listItems",
+  "bulkItems",
+  "reorderItems",
+  "importItems",
+  "duplicateItem",
+  "saveViews",
   "finalizeMedia",
   "exportData",
 ];
