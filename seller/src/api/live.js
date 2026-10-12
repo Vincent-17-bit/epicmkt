@@ -29,6 +29,7 @@ export const login = async (sellerId, password) => {
   return { expiresAt: session.expires_at };
 };
 export const logout = async () => { await need().auth.signOut(); };
+export const isSignedIn = async () => Boolean((await need().auth.getSession()).data.session);
 export const forgotRequest = (sellerId) => fn("seller-forgot-request", { sellerId });
 export const forgotVerify = ({ sellerId, code, newPassword }) => fn("seller-forgot-verify", { sellerId, code, newPassword });
 export const requestOtp = () => fn("seller-otp-request", { purpose: "change_password" });

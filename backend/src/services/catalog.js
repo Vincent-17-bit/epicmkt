@@ -279,7 +279,7 @@ export async function getBusiness(ref, { lat, lng } = {}) {
 export async function resolveShortcode(code) {
   await delay();
   const clean = String(code ?? "").trim().toLowerCase();
-  const business = activeBusinesses().find((b) => b.shortcode === clean);
+  const business = activeBusinesses().find((b) => b.shortcode === clean || b.slug === clean);
   if (!business) throw new NotFoundError("Business not found");
   return { slug: business.slug };
 }

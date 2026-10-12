@@ -47,6 +47,7 @@ export const login = async (sellerId, password) => {
   throw new ApiError("invalid_credentials", "Seller ID or password is incorrect.");
 };
 export const logout = async () => { state.signedIn = false; };
+export const isSignedIn = async () => state.signedIn;
 export const forgotRequest = async () => { await wait(); return { ok: true }; };
 export const forgotVerify = async ({ sellerId, code, newPassword }) => {
   await wait();

@@ -1,0 +1,31 @@
+.page {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-5) var(--space-4);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  width: min(24rem, 100%);
+  padding: var(--space-6) var(--space-5);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.title {
+  font-size: var(--text-xl);
+  font-weight: 800;
+}

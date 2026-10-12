@@ -1,6 +1,7 @@
 export const SELLER_API = [
   "login",
   "logout",
+  "isSignedIn",
   "forgotRequest",
   "forgotVerify",
   "requestOtp",

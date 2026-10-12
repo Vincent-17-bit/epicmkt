@@ -5,6 +5,7 @@ import { sellerForgotVerify } from "../functions/seller-forgot-verify/handler.ts
 import { sellerOtpRequest } from "../functions/seller-otp-request/handler.ts";
 import { sellerChangePassword } from "../functions/seller-change-password/handler.ts";
 import { sellerMediaFinalize } from "../functions/seller-media-finalize/handler.ts";
+import { sellerGalleryFinalize } from "../functions/seller-gallery-finalize/handler.ts";
 import { sellerExportData } from "../functions/seller-export-data/handler.ts";
 import { realDeps, type Deps } from "../functions/_shared/seller.ts";
 
@@ -324,6 +325,70 @@ Deno.test("media-finalize: ownership, real type, limits and cleanup", async () =
 
   w.tables.item_media.push({ id: "m", path: good });
   assertEquals((await read(await h(authed({ itemId, path: good })))).status, 409);
+  assertEquals(w.removed, []);
+});
+
+Deno.test("gallery-finalize: ownership, real image, read-only, limits and cleanup", async () => {
+  const w = world();
+  const h = sellerGalleryFinalize(deps(w));
+  const good = "b1/gallery/a.png";
+  w.tables.gallery_photos = [];
+
+  assertEquals((await h(post({ path: good }))).status, 401);
+  assertEquals((await h(authed({ path: "other/gallery/a.png" }))).status, 403);
+  assertEquals((await h(authed({ path: "b1/items/a.png" }))).status, 403);
+  assertEquals((await h(authed({ path: "b1/gallery/../../other/x.png" }))).status, 403);
+  assertEquals((await h(authed({ path: good, pairId: "11111111-1111-4111-8111-111111111111" }))).status, 400);
+  assertEquals((await h(authed({ path: good, caption: "x".repeat(121) }))).status, 400);
+  assertEquals(w.removed, []);
+
+  assertEquals((await read(await h(authed({ path: good })))).status, 404);
+
+  w.files.set("b1/gallery/fake.png", new TextEncoder().encode("<svg onload=alert(1)></svg> not an image"));
+  const fake = await read(await h(authed({ path: "b1/gallery/fake.png" })));
+  assertEquals([fake.status, fake.body.error], [422, "unsupported_type"]);
+  assertEquals(w.removed, ["b1/gallery/fake.png"]);
+  w.removed.length = 0;
+
+  w.files.set("b1/gallery/tiny.png", png(50, 50));
+  assertEquals((await read(await h(authed({ path: "b1/gallery/tiny.png" })))).body.error, "too_small");
+  assertEquals(w.removed, ["b1/gallery/tiny.png"]);
+  w.removed.length = 0;
+
+  w.files.set(good, png(800, 600));
+  w.tables.businesses[0].status = "paused";
+  const paused = await read(await h(authed({ path: good })));
+  assertEquals([paused.status, paused.body.error], [403, "read_only"]);
+  assertEquals(w.removed, [good]);
+  w.removed.length = 0;
+  w.tables.businesses[0].status = "live";
+
+  w.files.set(good, png(800, 600));
+  w.rpcResults["attach_gallery_photo"] = () => ({ data: null, error: { message: "limit_reached:gallery_photos" } });
+  const full = await read(await h(authed({ path: good })));
+  assertEquals([full.status, full.body.error], [409, "limit_reached"]);
+  assertEquals(w.removed, [good]);
+  w.removed.length = 0;
+
+  w.rpcResults["attach_gallery_photo"] = () => ({ data: null, error: { message: "pair_category" } });
+  assertEquals((await read(await h(authed({ path: good, pairId: "11111111-1111-4111-8111-111111111111", pairRole: "before" })))).body.error, "pair_category");
+  w.removed.length = 0;
+
+  w.rpcResults["attach_gallery_photo"] = () => ({ data: null, error: { message: "boom" } });
+  assertEquals((await read(await h(authed({ path: good })))).status, 500);
+  assertEquals(w.removed, [good]);
+  w.removed.length = 0;
+
+  w.rpcResults["attach_gallery_photo"] = () => ({ data: "photo-1", error: null });
+  const ok = await read(await h(authed({ path: good, caption: " Bridal updo " })));
+  assertEquals(ok.status, 201);
+  assertEquals(ok.body, { id: "photo-1", width: 800, height: 600, size: png(800, 600).length });
+  assertEquals(w.removed, []);
+  const call = w.rpcCalls.filter((c) => c.name === "attach_gallery_photo").at(-1)!.args;
+  assertEquals([call.p_business, call.p_path, call.p_mime, call.p_caption, call.p_pair_id], ["b1", good, "image/png", "Bridal updo", null]);
+
+  w.tables.gallery_photos.push({ id: "g", path: good });
+  assertEquals((await read(await h(authed({ path: good })))).status, 409);
   assertEquals(w.removed, []);
 });
 

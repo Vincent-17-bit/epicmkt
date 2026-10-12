@@ -11,6 +11,7 @@ export const getCategories = () => backend.getCategories();
 
 export const login = (...a) => impl.login(...a);
 export const logout = (...a) => impl.logout(...a);
+export const isSignedIn = (...a) => impl.isSignedIn(...a);
 export const forgotRequest = (...a) => impl.forgotRequest(...a);
 export const forgotVerify = (...a) => impl.forgotVerify(...a);
 export const requestOtp = (...a) => impl.requestOtp(...a);

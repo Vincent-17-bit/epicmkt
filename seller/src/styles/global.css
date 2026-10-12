@@ -1,0 +1,44 @@
+:root,
+[data-theme="light"] {
+  --poster-paper: #ffffff;
+  --danger: #b91c1c;
+  --danger-tint: #fee2e2;
+  --on-danger-tint: #7f1d1d;
+}
+
+[data-theme="dark"] {
+  --danger: #ff7b7b;
+  --danger-tint: rgb(255 123 123 / 0.16);
+  --on-danger-tint: #ffd1d1;
+}
+
+body {
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 3px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -70,11 +70,13 @@ select cron.schedule('purge-stale-uploads', '17 * * * *',
 ### Database
 `supabase db push` also applies `0004_core.sql` (businesses, items, item_media, faqs, offers, flags, reports, payments, messages, change_requests, audit_log, admin_notifications) and `0005_seller_portal.sql` (stock, price and history triggers, plan limits, seller RPCs, OTP and lockout helpers, the public `seller-media` bucket, realtime on `change_requests`). Both are safe to re-run.
 
+`0006_seller_promos_gallery_team.sql` adds offer discounts, `offer_items`, `flash_sales`, `gallery_photos`, `staff_members`, `staff_services`, `timetable_slots`, their limit and moderation triggers, and the public views `public_offers`, `public_flash_sales`, `public_gallery_photos`, `public_staff`, `public_timetable`. Offer and flash sale expiry is computed from `starts_at` and `ends_at` at read time; no scheduled job is needed.
+
 Sellers have no direct write access to `businesses`. Every profile, change request, reply, pause and deletion goes through a `seller_*` RPC. Public read policies for the customer site are not part of S0.
 
 ### Functions
 ```
-for f in seller-login seller-forgot-request seller-forgot-verify seller-otp-request seller-change-password seller-media-finalize seller-export-data; do
+for f in seller-login seller-forgot-request seller-forgot-verify seller-otp-request seller-change-password seller-media-finalize seller-gallery-finalize seller-export-data; do
   supabase functions deploy $f --no-verify-jwt
 done
 ```

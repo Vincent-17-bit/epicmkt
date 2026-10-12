@@ -42,5 +42,8 @@ verify_jwt = false
 [functions.seller-media-finalize]
 verify_jwt = false
 
+[functions.seller-gallery-finalize]
+verify_jwt = false
+
 [functions.seller-export-data]
 verify_jwt = false
