@@ -51,6 +51,7 @@ export default function Layout() {
           <NavLink to="/business/subscription">Subscription</NavLink>
           <Bell count={unread.data ?? 0} />
           <NavLink to="/business/questions">Questions</NavLink>
+          <NavLink to="/business/exceptions">Exceptions</NavLink>
         </nav>
         <button type="button" className={styles.iconBtn} onClick={toggle} aria-pressed={theme === "dark"} aria-label="Dark theme">
           {theme === "dark" ? "Light" : "Dark"}

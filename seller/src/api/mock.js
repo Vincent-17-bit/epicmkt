@@ -1,6 +1,6 @@
 import { passwordProblems } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { checkProofBatch, checkReply, inspectProof } from "@epicmkt/shared";
+import { EXCEPTION_LIMIT, checkProofBatch, checkReply, inspectProof, validateException } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -120,7 +120,7 @@ const ITEMS = { barber: { standard: 30, premium: 100 }, salon: { standard: 30, p
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 
 function resetBilling() {
@@ -146,6 +146,7 @@ function resetBilling() {
     { id: "q3", message: "Old question", dueAt: null, status: "resolved", reply: "Done", repliedAt: ISO(now - 20 * DAY), itemId: null, faqId: null, createdAt: ISO(now - 30 * DAY), attachments: [{ id: "a1", name: "receipt.pdf", mime: "application/pdf", size: 52000, status: "ready" }], item: null, faq: null },
   ];
   bill.changes = [];
+  bill.exceptions = [];
 }
 resetBilling();
 
@@ -306,6 +307,32 @@ export const replyFlag = async (id, reply) => {
   q.repliedAt = clockNow().toISOString();
   emit("flags", "UPDATE", q);
   return { id: q.id, status: q.status };
+};
+
+const todayNairobi = () => nairobiDay(clockNow());
+const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
+export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };
+export const saveException = async ({ id = null, date, kind, intervals = [], note = null }) => {
+  signedIn();
+  await wait();
+  const v = validateException({ date, kind, intervals, note }, todayNairobi());
+  if (!v.ok) throw new ApiError(v.error);
+  pruneExceptions();
+  const key = id ?? `x${++bill.seq + 500}`;
+  const known = bill.exceptions.some((e) => e.id === key);
+  if (bill.exceptions.some((e) => e.date === date && e.id !== key)) throw new ApiError("date_taken");
+  if (!known && bill.exceptions.length >= EXCEPTION_LIMIT) throw new ApiError("limit_reached", "limit_reached:exceptions");
+  bill.exceptions = [...bill.exceptions.filter((e) => e.id !== key), { id: key, ...v.value }].sort((a, b) => (a.date < b.date ? -1 : 1));
+  emit("businesses", "UPDATE", bill.business);
+  return copy(bill.exceptions.find((e) => e.id === key));
+};
+export const deleteException = async (id) => {
+  signedIn();
+  await wait();
+  const found = bill.exceptions.some((e) => e.id === id);
+  bill.exceptions = bill.exceptions.filter((e) => e.id !== id);
+  emit("businesses", "UPDATE", bill.business);
+  return found;
 };
 
 export const subscribe = (tables, onEvent) => {

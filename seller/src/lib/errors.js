@@ -18,6 +18,18 @@ const MESSAGES = {
   invalid_credentials: "Seller ID or password is incorrect.",
   locked: "Too many tries. Please wait and try again.",
   unauthorized: "Please sign in again.",
+  invalid_date: "Choose a valid date.",
+  date_in_past: "Choose today or a later date. Past dates cannot be added.",
+  date_too_far: "Choose a date within the next 2 years.",
+  date_taken: "You already have an exception on that date. Edit it instead.",
+  invalid_kind: "Choose Closed all day or Special hours.",
+  intervals_required: "Add at least one opening interval, or choose Closed all day.",
+  too_many_intervals: "You can add up to 3 intervals for a day.",
+  invalid_time: "Enter each time as hours and minutes.",
+  interval_order: "Each interval must end after it starts.",
+  intervals_overlap: "Intervals cannot overlap or touch. Merge them into one.",
+  invalid_note: "Keep the note to 120 characters of plain text.",
+  limit_reached: "You have reached the limit of 60 upcoming exceptions. Delete one you no longer need, then try again.",
   ...PROOF_ERRORS,
 };
 

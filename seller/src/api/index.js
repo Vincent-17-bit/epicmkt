@@ -40,4 +40,7 @@ export const unreadCount = (...a) => impl.unreadCount(...a);
 export const listQuestions = (...a) => impl.listQuestions(...a);
 export const uploadProofs = (...a) => impl.uploadProofs(...a);
 export const subscribe = (...a) => impl.subscribe(...a);
+export const listExceptions = (...a) => impl.listExceptions(...a);
+export const saveException = (...a) => impl.saveException(...a);
+export const deleteException = (...a) => impl.deleteException(...a);
 export { ApiError } from "./errors.js";

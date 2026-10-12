@@ -30,4 +30,7 @@ export const SELLER_API = [
   "listQuestions",
   "uploadProofs",
   "subscribe",
+  "listExceptions",
+  "saveException",
+  "deleteException",
 ];

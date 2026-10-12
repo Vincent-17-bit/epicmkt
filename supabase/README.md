@@ -137,3 +137,6 @@ select cron.schedule('billing-notices', '5 3 * * *', $$ select public.generate_b
 
 ### Tests
 `npm run test:all` runs the database, function, seller UI and client suites.
+
+### Opening exceptions
+`0007_exceptions.sql` adds `seller_save_exception` and `seller_delete_exception`, the only way a seller changes `businesses.exceptions` (each item: `{id, date, kind: "closed"|"special", intervals, note}`). Rules: today or later and within 2 years, one per date, up to 3 non-touching intervals for special hours, note up to 120 plain-text characters, at most 60 upcoming. Past dates are dropped on every write. Sending an existing id back (what Undo does) restores a deleted exception.

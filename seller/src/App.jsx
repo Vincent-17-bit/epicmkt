@@ -6,6 +6,7 @@ import Subscription from "./pages/business/Subscription.jsx";
 import Receipt from "./pages/business/Receipt.jsx";
 import Notifications from "./pages/business/Notifications.jsx";
 import Questions from "./pages/business/Questions.jsx";
+import Exceptions from "./pages/business/Exceptions.jsx";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route path="subscription/receipts/:id" element={<Receipt />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="questions" element={<Questions />} />
+          <Route path="exceptions" element={<Exceptions />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/business/subscription" replace />} />
