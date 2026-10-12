@@ -201,8 +201,13 @@ export function validateRow(cells, mapping) {
 
 export const canImport = (plan) => plan === "premium";
 
-export function validateImport(rows, mapping, { capacity = Infinity } = {}) {
-  const results = rows.map((cells, i) => ({ row: i + 1, cells, ...validateRow(cells, mapping) }));
+// defaults.availability fills in rows that leave the availability column empty.
+export function validateImport(rows, mapping, { capacity = Infinity, defaults = {} } = {}) {
+  const results = rows.map((cells, i) => {
+    const r = { row: i + 1, cells, ...validateRow(cells, mapping) };
+    if (r.ok && !r.raw.availability && LISTING_AVAILABILITY.includes(defaults.availability)) r.item = { ...r.item, availability: defaults.availability };
+    return r;
+  });
   let room = capacity;
   for (const r of results) {
     if (!r.ok) continue;

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { IMPORT_FIELDS, IMPORT_LIMITS, canImport, errorReportCsv, importProblem, readTable, validateImport } from "@epicmkt/shared";
 import * as api from "../api/index.js";
+import { useDefaults } from "../lib/useDefaults.js";
 import Dialog from "./Dialog.jsx";
 import styles from "./listings.module.css";
 
@@ -26,6 +27,7 @@ function Locked({ onClose }) {
 }
 
 function Body({ plan, stats, onClose, onImported }) {
+  const defaultAvailability = useDefaults().itemDefaults.availability;
   const [tab, setTab] = useState("paste");
   const [text, setText] = useState("");
   const [table, setTable] = useState(null);
@@ -34,7 +36,7 @@ function Body({ plan, stats, onClose, onImported }) {
   const [busy, setBusy] = useState(false);
 
   const capacity = stats?.items_limit === null || stats?.items_limit === undefined ? Infinity : Math.max(0, stats.items_limit - (stats.total ?? 0));
-  const check = useMemo(() => (table ? validateImport(table.rows, mapping, { capacity }) : null), [table, mapping, capacity]);
+  const check = useMemo(() => (table ? validateImport(table.rows, mapping, { capacity, defaults: { availability: defaultAvailability } }) : null), [table, mapping, capacity, defaultAvailability]);
   const problem = table ? importProblem(mapping) : null;
 
   const read = (source) => {

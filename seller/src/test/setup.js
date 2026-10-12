@@ -1,8 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { useSettings } from "../state/settings.js";
+import { useToasts } from "../state/toast.js";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  useSettings.getState().reset();
+  useToasts.getState().clear();
+  for (const k of ["textSize", "density", "reduceMotion"]) delete document.documentElement.dataset[k];
+});
 
 HTMLDialogElement.prototype.showModal ??= function showModal() {
   this.setAttribute("open", "");

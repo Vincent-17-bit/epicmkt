@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { readStore, writeStore } from "../lib/storage.js";
+import { useSettings } from "./settings.js";
+import { applyAppearance, readDeviceAppearance } from "./appearance.js";
 
 export const THEME_KEY = "epicmkt-seller-theme";
 const MODES = ["light", "dark", "system"];
@@ -27,6 +29,18 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const resolved = resolveTheme(mode, dark);
+  const serverTheme = useSettings((st) => (st.loaded ? st.settings.appearance.theme : null));
+
+  useEffect(() => {
+    applyAppearance(readDeviceAppearance());
+  }, []);
+
+  useEffect(() => {
+    if (serverTheme && MODES.includes(serverTheme)) {
+      setModeState(serverTheme);
+      writeStore(THEME_KEY, serverTheme);
+    }
+  }, [serverTheme]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = resolved;
@@ -37,6 +51,8 @@ export function ThemeProvider({ children }) {
     if (!MODES.includes(next)) return;
     setModeState(next);
     writeStore(THEME_KEY, next);
+    const st = useSettings.getState();
+    if (st.loaded && st.settings.appearance.theme !== next) st.update({ appearance: { theme: next } }, { quiet: true });
   }, []);
 
   const value = useMemo(() => ({ mode, resolved, setMode }), [mode, resolved, setMode]);

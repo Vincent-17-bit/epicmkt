@@ -1,4 +1,4 @@
-import { passwordProblems, sanitizeSavedViews } from "@epicmkt/shared";
+import { CRITICAL_EVENTS, mergeSettings, passwordProblems, resolveSettings, sanitizeSavedViews, summarizeLogins } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import * as listings from "./mockItems.js";
 
@@ -51,12 +51,15 @@ const state = {
   read: new Set(),
   priceConfirmedAt: null,
   items: {},
-  views: {}
+  views: {},
+  settings: {},
+  logins: {},
+  others: {}
 };
 
 const persist = () => {
   try {
-    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ sellers: state.sellers, current: state.current, read: [...state.read], patches: state.patches, items: state.items, views: state.views }));
+    window.sessionStorage.setItem(STORE_KEY, JSON.stringify({ sellers: state.sellers, current: state.current, read: [...state.read], patches: state.patches, items: state.items, views: state.views, settings: state.settings, logins: state.logins, others: state.others }));
   } catch {
     return;
   }
@@ -73,6 +76,9 @@ const restore = () => {
     state.patches = saved.patches ?? {};
     state.items = saved.items ?? {};
     state.views = saved.views ?? {};
+    state.settings = saved.settings ?? {};
+    state.logins = saved.logins ?? {};
+    state.others = saved.others ?? {};
   } catch {
     return;
   }
@@ -96,6 +102,9 @@ export const resetMock = () => {
   state.priceConfirmedAt = null;
   state.items = {};
   state.views = {};
+  state.settings = {};
+  state.logins = {};
+  state.others = {};
   persist();
 };
 
@@ -108,7 +117,16 @@ const itemsOf = (id) => {
 const signalsOf = (id) => listings.seedSignals(id, itemsOf(id)).filter((sig) => state.items[id].some((i) => i.id === sig.item_id));
 const catalogOf = (id) => {
   const list = itemsOf(id);
-  return listings.statsFor(list, ITEM_LIMITS[state.sellers[id].plan], signalsOf(id), { unread: id === "ES100002" ? 1 : 0 });
+  return listings.statsFor(list, ITEM_LIMITS[state.sellers[id].plan], signalsOf(id), { unread: id === "ES100002" ? 1 : 0, staleDays: resolveSettings(state.settings[id]).catalog.price_reminder_days });
+};
+
+const UA = () => (typeof navigator !== "undefined" && navigator.userAgent) || "";
+const otherDevices = (id) => state.others[id] ?? (id === "ES100001" ? 2 : 1);
+const logLogin = (id, success) => {
+  if (!state.sellers[id]) return;
+  const list = (state.logins[id] ??= []);
+  list.push({ id: `${id}-${list.length + 1}`, success, user_agent: UA(), created_at: new Date().toISOString() });
+  if (list.length > 200) list.splice(0, list.length - 200);
 };
 
 const signedIn = () => {
@@ -128,9 +146,11 @@ export const login = async (sellerId, password) => {
     if (seller.status === "deleted") throw new ApiError("deleted", "This business has been deleted. Contact support if you think this is a mistake.");
     state.failures.delete(key);
     state.current = id;
+    logLogin(id, true);
     persist();
     return { expiresAt: Math.floor(Date.now() / 1000) + 3600 };
   }
+  if (seller && seller.status !== "deleted") logLogin(id, false);
   f.n = f.until && f.until <= Date.now() ? 1 : f.n + 1;
   f.until = f.n >= MAX_FAILURES ? Date.now() + LOCK_MS : 0;
   state.failures.set(key, f);
@@ -205,6 +225,7 @@ export const changePassword = async ({ code, newPassword }) => {
   checkOtp("change", state.current, code);
   state.passwords[state.current] = newPassword;
   me_().mustChange = false;
+  state.others[state.current] = 0;
   persist();
   return { ok: true };
 };
@@ -247,7 +268,7 @@ export const me = async () => {
     limits: LIMITS[s.plan],
     questions: id === "ES100002" ? [{ id: "q1", text: "Is the 24-hour sign still accurate?", created_at: iso(-1) }] : [],
     notifications: NOTES(id, s),
-    settings: { idle_minutes: 60, saved_views: sanitizeSavedViews(state.views[id]) }
+    settings: resolveSettings({ ...(state.settings[id] ?? {}), saved_views: sanitizeSavedViews(state.views[id]) })
   };
 };
 
@@ -296,7 +317,10 @@ export const requestChange = async (field, value) => {
   await wait();
   if (!["name", "category_id", "phone", "town", "pin", "licence"].includes(field)) throw new ApiError("field_not_allowed");
   if (state.changes.some((c) => c.field === field && c.status === "pending")) throw new ApiError("change_already_pending");
-  const row = { id: `c${state.changes.length + 1}`, field, new_value: String(value), status: "pending", created_at: new Date().toISOString() };
+  const normalized = field === "phone" ? String(value).replace(/[\s().-]/g, "").replace(/^(?:\+?254|0)/, "+254") : String(value);
+  if (field === "phone" && !/^\+254[71]\d{8}$/.test(normalized)) throw new ApiError("invalid_phone");
+  if (field === "phone" && normalized === me_().phone) throw new ApiError("no_change");
+  const row = { id: `c${state.changes.length + 1}`, field, new_value: normalized, status: "pending", created_at: new Date().toISOString() };
   state.changes.unshift(row);
   return row;
 };
@@ -375,7 +399,7 @@ export const importItems = async (rows) => {
   signedIn();
   await wait();
   const id = state.current;
-  return commit(id, listings.importRows(itemsOf(id), rows, { plan: me_().plan, limit: ITEM_LIMITS[me_().plan] }));
+  return commit(id, listings.importRows(itemsOf(id), rows, { plan: me_().plan, limit: ITEM_LIMITS[me_().plan], defaults: resolveSettings(state.settings[id]).catalog }));
 };
 export const duplicateItem = async (itemId) => {
   signedIn();
@@ -393,4 +417,53 @@ export const saveViews = async (views) => {
   return clean;
 };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
-export const exportData = async () => { signedIn(); await wait(); return { business: { ...me_() } }; };
+export const exportData = async () => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  return { exportedAt: new Date().toISOString(), business: { seller_id: id, ...me_() }, items: itemsOf(id), seller_settings: [{ settings: state.settings[id] ?? {} }], login_events: state.logins[id] ?? [], change_requests: state.changes };
+};
+
+const SETTINGS_KEYS = ["idle_minutes", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
+const leaves = (v, path = "") => (v !== null && typeof v === "object" && !Array.isArray(v) ? Object.entries(v).flatMap(([k, x]) => leaves(x, `${path}.${k}`)) : [[path, v]]);
+const at = (obj, path) => path.split(".").filter(Boolean).reduce((o, k) => (o == null ? undefined : o[k]), obj);
+
+export const saveSettings = async (patch) => {
+  signedIn();
+  await wait();
+  const id = state.current;
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new ApiError("invalid_patch");
+  const bad = Object.keys(patch).find((k) => !SETTINGS_KEYS.includes(k));
+  if (bad) throw new ApiError("field_not_allowed", `field_not_allowed:${bad}`);
+  if (patch.business?.announcement?.enabled === true && me_().plan !== "premium") throw new ApiError("premium_only");
+  for (const key of CRITICAL_EVENTS) if (patch.notifications?.events?.[key]?.in_app === false) throw new ApiError("critical_in_app_required");
+  const merged = mergeSettings(state.settings[id] ?? {}, patch);
+  const resolved = resolveSettings(merged);
+  const invalid = leaves(patch).find(([path, value]) => JSON.stringify(at(resolved, path)) !== JSON.stringify(value) && !path.includes("default_units") && !path.includes("closure_reasons") && !path.includes("dismissed_tips"));
+  if (invalid) throw new ApiError("invalid_settings", `invalid_settings:${invalid[0]}`);
+  state.settings[id] = merged;
+  persist();
+  return resolveSettings({ ...merged, saved_views: sanitizeSavedViews(state.views[id]) });
+};
+
+export const loginHistory = async () => {
+  signedIn();
+  await wait();
+  return summarizeLogins(state.logins[state.current] ?? []);
+};
+
+export const signOutOthers = async () => {
+  signedIn();
+  await wait();
+  const n = otherDevices(state.current);
+  state.others[state.current] = 0;
+  persist();
+  return { ok: true, signedOut: n };
+};
+
+export const supportContacts = async () => {
+  signedIn();
+  await wait();
+  return { whatsapp: "+254700000111", phone: "+254700000222", email: "support@epicmkt.test", hours: "Mon to Sat, 8am to 6pm" };
+};
+export const faqCount = async () => { signedIn(); await wait(); return (data[state.current]?.usage?.faqs ?? 0) + (state.faqAdded?.[state.current] ?? 0); };

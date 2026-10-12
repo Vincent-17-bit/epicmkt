@@ -44,3 +44,12 @@ verify_jwt = false
 
 [functions.seller-export-data]
 verify_jwt = false
+
+[functions.seller-signout-others]
+verify_jwt = false
+
+[functions.dispatch-messages]
+verify_jwt = false
+
+[functions.run-reminders]
+verify_jwt = false

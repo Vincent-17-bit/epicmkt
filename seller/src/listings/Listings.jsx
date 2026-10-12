@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { BottomSheet, ProductCard } from "@epicmkt/ui";
 import { DEFAULT_STALE_DAYS, activeChips, clearFilters, selectItems, sortItems, trackerView, writeCatalogView } from "@epicmkt/shared";
 import * as api from "../api/index.js";
+import { useSettings } from "../state/settings.js";
+import Tip from "../onboarding/Tip.jsx";
 import { useSession } from "../state/session.js";
 import { listingState } from "../lib/listing.js";
 import ViewAsFrame from "../components/ViewAsFrame.jsx";
@@ -54,7 +56,8 @@ export default function Listings() {
   const savedViews = me.settings?.saved_views ?? NO_ITEMS;
 
   const items = useMemo(() => (pending.length ? all.filter((i) => !pending.includes(i.id)) : all), [all, pending]);
-  const ctx = useMemo(() => ({ now: Date.now(), staleDays: DEFAULT_STALE_DAYS }), [all]);
+  const reminderDays = useSettings((st) => st.settings.catalog.price_reminder_days);
+  const ctx = useMemo(() => ({ now: Date.now(), staleDays: reminderDays ?? DEFAULT_STALE_DAYS }), [all, reminderDays]);
   const results = useMemo(() => selectItems(items, view, ctx), [items, view, ctx]);
   const filtersActive = activeChips(view).length > 0;
   const canReorder = view.sort === "manual" && !filtersActive;
@@ -266,6 +269,7 @@ export default function Listings() {
       <header className={styles.head}>
         <h1>Catalog</h1>
       </header>
+      <Tip id="catalog-price-reminder">We remind you to confirm prices on the schedule you chose in Settings. Confirm them here when they are still right.</Tip>
       {empty ? (
         <NoItems onImport={() => setDialog("import")} importLocked={importLocked} />
       ) : (

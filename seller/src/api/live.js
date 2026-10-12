@@ -1,5 +1,5 @@
 import { supabase } from "./client.js";
-import { sanitizeSavedViews } from "@epicmkt/shared";
+import { resolveSettings, sanitizeSavedViews, summarizeLogins } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 
 const need = () => {
@@ -36,19 +36,20 @@ export const me = async () => {
   if (!sess?.session) throw new ApiError("unauthorized");
   const { data: business, error } = await client.from("businesses").select("*").eq("user_id", sess.session.user.id).neq("status", "deleted").maybeSingle();
   if (error || !business) throw new ApiError("unauthorized");
-  const catalog = await rpc("seller_catalog_stats", { p_stale_days: 90 }).catch(() => null);
+  const { data: settingsRow } = await client.from("seller_settings").select("*").maybeSingle();
+  const settings = resolveSettings({ ...(settingsRow?.settings ?? {}), saved_views: sanitizeSavedViews(settingsRow?.settings?.saved_views) });
+  const catalog = await rpc("seller_catalog_stats", { p_stale_days: settings.catalog.price_reminder_days }).catch(() => null);
   const { data: notes } = await client.from("messages").select("id, subject, body, created_at, read_at").order("created_at", { ascending: false }).limit(20);
-  const { data: settings } = await client.from("seller_settings").select("*").maybeSingle();
   return {
     business: { ...business, unlisted: business.status === "pending" },
     mustChangePassword: Boolean(business.must_change_password),
     application: { stage: business.status === "pending" ? "paid" : "live", outcome: null },
     catalog,
-    usage: null,
+    usage: { faqs: await faqCount().catch(() => 0) },
     limits: null,
     questions: [],
     notifications: (notes ?? []).map((n) => ({ id: n.id, title: n.subject ?? "Message", body: n.body, created_at: n.created_at, read: Boolean(n.read_at) })),
-    settings: { idle_minutes: settings?.settings?.idle_minutes ?? 60, saved_views: sanitizeSavedViews(settings?.settings?.saved_views) }
+    settings
   };
 };
 export const forgotRequest = (input) => fn("seller-forgot-request", typeof input === "string" ? { sellerId: input } : input);
@@ -99,3 +100,26 @@ export const duplicateItem = async (id) => {
 export const saveViews = (views) => rpc("seller_save_views", { p_views: views });
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});
+export const saveSettings = async (patch) => resolveSettings(await rpc("seller_save_settings", { p_patch: patch }));
+export const loginHistory = async () => {
+  const { data, error } = await need().from("login_events").select("id, success, user_agent, created_at").order("created_at", { ascending: false }).limit(200);
+  if (error) throw new ApiError("request_failed", error.message);
+  return summarizeLogins(data ?? []);
+};
+export const signOutOthers = () => fn("seller-signout-others", {});
+export const supportContacts = async () => {
+  const env = import.meta.env ?? {};
+  const base = { whatsapp: env.VITE_CONTACT_WHATSAPP || "", phone: env.VITE_CONTACT_PHONE || "", email: env.VITE_CONTACT_EMAIL || "", hours: env.VITE_SUPPORT_HOURS || "" };
+  try {
+    const { data } = await need().from("site_config").select("value").eq("key", "support").maybeSingle();
+    const v = data?.value && typeof data.value === "object" ? data.value : {};
+    return { ...base, ...Object.fromEntries(Object.entries(v).filter(([k, x]) => k in base && typeof x === "string" && x.trim())) };
+  } catch {
+    return base;
+  }
+};
+export const faqCount = async () => {
+  const { count, error } = await need().from("faqs").select("id", { count: "exact", head: true });
+  if (error) throw new ApiError("request_failed", error.message);
+  return count ?? 0;
+};

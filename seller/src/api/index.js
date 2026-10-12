@@ -35,6 +35,11 @@ export const duplicateItem = (...a) => impl.duplicateItem(...a);
 export const saveViews = (...a) => impl.saveViews(...a);
 export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
 export const exportData = (...a) => impl.exportData(...a);
+export const saveSettings = (...a) => impl.saveSettings(...a);
+export const loginHistory = (...a) => impl.loginHistory(...a);
+export const signOutOthers = (...a) => impl.signOutOthers(...a);
+export const supportContacts = (...a) => impl.supportContacts(...a);
+export const faqCount = (...a) => impl.faqCount(...a);
 export { ApiError } from "./errors.js";
 
 export const dev = import.meta.env?.DEV && import.meta.env?.VITE_API_MODE !== "live" ? { simulate: mock.simulate, seededSellers: mock.seededSellers, devSignIn: mock.devSignIn, resetMock: mock.resetMock } : null;

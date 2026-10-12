@@ -178,7 +178,7 @@ export function bulk(items, action, ids, args = {}) {
   return { items: next, result: { changed, skipped: set.length - changed, rows } };
 }
 
-export function importRows(items, rows, { plan, limit }) {
+export function importRows(items, rows, { plan, limit, defaults = {} }) {
   if (plan !== "premium") throw new ApiError("premium_only");
   if (!Array.isArray(rows) || rows.length === 0) throw new ApiError("invalid_rows");
   if (rows.length > 500) throw new ApiError("too_many_rows");
@@ -194,7 +194,7 @@ export function importRows(items, rows, { plan, limit }) {
       id: `imp-${Date.now().toString(36)}-${idx}`, name, description: "", section: r.section ?? null, kind: "product",
       availability: r.availability ?? "available", visible: false, draft: true, hidden_by_admin: false, removed_by_admin: false, admin_hide_reason: null,
       price_type: r.price_type ?? "fixed", price: r.price ?? null, price_max: r.price_max ?? null, sale_price: null, unit: r.unit ?? null,
-      badge: null, search_tags: r.search_tags ?? [], variants: [], track_stock: false, stock_count: null, low_stock_threshold: 3, show_stock_count: false,
+      badge: null, search_tags: r.search_tags ?? [], variants: [], track_stock: false, stock_count: null, low_stock_threshold: defaults.low_stock_threshold ?? 3, show_stock_count: defaults.show_stock_count ?? false,
       price_confirmed_at: now, updated_at: now, created_at: now, sort: top + idx + 1, item_media: [], imageUrl: null
     };
   });

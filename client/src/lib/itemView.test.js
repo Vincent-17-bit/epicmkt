@@ -3,6 +3,23 @@ import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, de
 
 const item = { name: "Fade and beard" };
 
+describe("chatMessage with a seller greeting", () => {
+  const item = { name: "Fade and beard" };
+  const pricing = { regularPrice: 300, savings: 0 };
+  it("uses the greeting with {item} and {price}", () => {
+    expect(chatMessage({ item, pricing, greeting: "Hello! Is {item} at {price} ready?" })).toBe("Hello! Is Fade and beard at KES 300 ready?");
+  });
+  it("uses the sale price when there is a saving", () => {
+    expect(chatMessage({ item, pricing: { regularPrice: 300, salePrice: 240, savings: 60 }, greeting: "Is {item} at {price} ok?" })).toBe("Is Fade and beard at KES 240 ok?");
+  });
+  it("falls back to the default wording for an invalid or missing greeting", () => {
+    const fallback = "Hi, I saw Fade and beard (KES 300) on EpicMKT";
+    for (const greeting of [undefined, "", "   ", "Call 0712345678", "See https://x.com", "Hi {name}"]) {
+      expect(chatMessage({ item, pricing, greeting })).toBe(fallback);
+    }
+  });
+});
+
 describe("chatMessage", () => {
   it("states the regular price", () => {
     const pricing = { regularPrice: 300, salePrice: 300, savings: 0 };

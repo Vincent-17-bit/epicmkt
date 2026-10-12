@@ -8,3 +8,4 @@ export * from "./appBase.js";
 export * from "./filters.js";
 export * from "./seller/bulk.js";
 export * from "./seller/importer.js";
+export * from "./seller/settings.js";

@@ -1,0 +1,79 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.page h1 {
+  font-size: var(--text-xl);
+  line-height: 1.2;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.section h2 {
+  font-size: var(--text-lg);
+}
+
+.guides {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.guide {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.guide summary {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-3);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.guide ol {
+  margin: 0;
+  padding: 0 var(--space-3) var(--space-3) var(--space-5);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.contacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.contact {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.contact:hover {
+  background: var(--link-hover-bg);
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

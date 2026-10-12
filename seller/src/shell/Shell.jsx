@@ -1,6 +1,9 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Toaster } from "@epicmkt/ui";
 import { useSession } from "../state/session.js";
+import { useSettings } from "../state/settings.js";
+import { useToasts } from "../state/toast.js";
 import { DEFAULT_IDLE, idleMinutes, useIdle } from "../state/useIdle.js";
 import { readStore, writeStore } from "../lib/storage.js";
 import { banner as bannerFor, canOpen, daysLeft, highlightSubscription, listingState } from "../lib/listing.js";
@@ -36,7 +39,17 @@ export default function Shell() {
   const left = daysLeft(business.paid_until);
   const unread = me.notifications.filter((n) => !n.read).length;
   const attention = highlightSubscription(state) ? "subscription" : null;
-  const minutes = idleMinutes(me.settings?.idle_minutes ?? DEFAULT_IDLE);
+  const loaded = useSettings((s) => s.loaded);
+  const storedIdle = useSettings((s) => s.settings.idle_minutes);
+  const loadSettings = useSettings((s) => s.load);
+  const toasts = useToasts((s) => s.toasts);
+  const dismissToast = useToasts((s) => s.dismiss);
+  const sellerId = business.seller_id;
+  useEffect(() => {
+    loadSettings(me.settings, sellerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sellerId, loadSettings]);
+  const minutes = idleMinutes(loaded ? storedIdle : me.settings?.idle_minutes ?? DEFAULT_IDLE);
 
   const doSignOut = useCallback(
     (notice) => {
@@ -94,6 +107,7 @@ export default function Shell() {
       </div>
       <Drawer open={drawer} onClose={() => setDrawer(false)} unread={unread} attention={attention} />
       <MoreSheet open={more} onClose={() => setMore(false)} unread={unread} onSignOut={() => doSignOut()} />
+      <Toaster toasts={toasts} onDismiss={dismissToast} />
       <IdleDialog open={idle.warning} seconds={idle.remaining} onStay={idle.stay} onSignOut={() => doSignOut()} />
       {DevSimulator && (
         <Suspense fallback={null}>

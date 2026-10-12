@@ -84,6 +84,29 @@ for (const theme of themes) {
       await page.keyboard.press("[");
       check(`${tag} expand`, (await width()) === 272);
     }
+    // S8b: settings, help and the setup guide, at normal and extra large text, comfortable and compact.
+    for (const [route, ready] of [["/settings", "Settings"], ["/help", "Help"], ["/onboarding", "Welcome to EpicMKT Business"]]) {
+      for (const variant of ["normal", "xlarge-compact"]) {
+        await page.goto(`${server.url}${route}`);
+        await page.waitForSelector(`h1:has-text("${ready}")`);
+        await page.evaluate((v) => {
+          const root = document.documentElement;
+          if (v === "xlarge-compact") { root.dataset.textSize = "xlarge"; root.dataset.density = "compact"; }
+          else { delete root.dataset.textSize; delete root.dataset.density; }
+        }, variant);
+        await page.waitForTimeout(250);
+        const ov = await overflow(page);
+        const wide = await page.evaluate(() => {
+          const limit = window.innerWidth + 1;
+          return [...document.querySelectorAll("main *, [data-testid='content'] *")].filter((e) => e.getBoundingClientRect().right > limit && getComputedStyle(e).position !== "fixed" && !e.closest("[data-scroll-x]") && !e.closest("nav")).length;
+        });
+        check(`${tag} ${route} ${variant} overflow`, ov.doc <= 0 && ov.body <= 0 && ov.content <= 0, JSON.stringify(ov));
+        check(`${tag} ${route} ${variant} clipped elements`, wide === 0, String(wide));
+        const small = await page.evaluate(() => [...document.querySelectorAll("button, a[href], select, input:not([type=hidden])")].filter((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== "hidden" && !e.closest("nav") && !e.closest("header") && Math.min(r.width, r.height) < 24; }).length);
+        check(`${tag} ${route} ${variant} tiny targets`, small === 0, String(small));
+        if (variant === "xlarge-compact" || route === "/settings") await page.screenshot({ path: join(out, `${tag}${route.replace("/", "-")}-${variant}.png`), fullPage: false });
+      }
+    }
     await ctx.close();
   }
 }

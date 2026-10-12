@@ -10,6 +10,9 @@ import Dashboard from "./pages/dashboard/Dashboard.jsx";
 import Notifications from "./pages/Notifications.jsx";
 import Placeholder from "./pages/Placeholder.jsx";
 import Listings from "./listings/Listings.jsx";
+import Settings from "./settings/Settings.jsx";
+import Help from "./help/Help.jsx";
+import Onboarding from "./onboarding/Onboarding.jsx";
 import { Navigate } from "react-router-dom";
 
 const page = (title, text) => <Placeholder title={title} text={text} />;
@@ -39,9 +42,9 @@ export const routes = [
           { path: "account", element: page("Account", "Your business profile will be managed here in an upcoming release.") },
           { path: "subscription", element: page("Subscription", "Renewals and payments will be managed here in an upcoming release.") },
           { path: "notifications", element: <Notifications /> },
-          { path: "help", element: page("Help", "Need a hand? Contact the EpicMKT team and we will get back to you.") },
-          { path: "settings", element: page("Settings", "Session and security settings will be managed here in an upcoming release.") },
-          { path: "onboarding", element: page("Welcome", "Your setup guide will appear here in an upcoming release.") }
+          { path: "help", element: <Help /> },
+          { path: "settings", element: <Settings /> },
+          { path: "onboarding", element: <Onboarding /> }
         ]
       }
     ]

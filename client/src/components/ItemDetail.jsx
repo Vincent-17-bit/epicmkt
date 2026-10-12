@@ -185,7 +185,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const variant = variants.find((v) => v.id === activeId) ?? null;
   const shown = variant ?? current?.pricing ?? null;
   const seller = current?.business ?? null;
-  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing }) : "";
+  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: seller?.whatsappGreeting ?? seller?.profile?.whatsapp_greeting }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
 
   const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });

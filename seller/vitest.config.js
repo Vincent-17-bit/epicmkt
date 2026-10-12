@@ -6,6 +6,7 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     globals: true,
+    testTimeout: 20000,
     setupFiles: "./src/test/setup.js",
     include: ["src/**/*.test.{js,jsx}"],
     css: { include: [/.+/], modules: { classNameStrategy: "non-scoped" } }

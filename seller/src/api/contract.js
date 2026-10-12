@@ -25,4 +25,9 @@ export const SELLER_API = [
   "saveViews",
   "finalizeMedia",
   "exportData",
+  "saveSettings",
+  "loginHistory",
+  "signOutOthers",
+  "supportContacts",
+  "faqCount",
 ];

@@ -4,7 +4,9 @@ import { useSession } from "../../state/session.js";
 import { businessReadiness } from "../../lib/readiness.js";
 import { daysLeft, listingState } from "../../lib/listing.js";
 import { todaySentences } from "../../lib/today.js";
+import { useSettings } from "../../state/settings.js";
 import { PlanBadge, StatusChip } from "../../shell/Badges.jsx";
+import SetupCard from "../../onboarding/SetupCard.jsx";
 import { Card, Empty, Meter, Ring, Stepper, TodoList } from "./parts.jsx";
 import styles from "./dashboard.module.css";
 
@@ -45,7 +47,8 @@ export default function Dashboard() {
   const state = listingState(business);
   const left = daysLeft(business.paid_until);
   const ready = businessReadiness(business, { catalog, usage });
-  const today = todaySentences({ catalog, notifications, questions, left, state });
+  const staleDays = useSettings((st) => st.settings.catalog.price_reminder_days);
+  const today = todaySentences({ catalog, notifications, questions, left, state, staleDays });
   const hasItems = (catalog?.total ?? 0) > 0;
   const watch = [
     ["Out of stock", catalog?.out_of_stock ?? 0],
@@ -66,6 +69,8 @@ export default function Dashboard() {
         </div>
         <Stepper stage={application.stage} outcome={application.outcome} />
       </section>
+
+      <div className={styles.span}><SetupCard /></div>
 
       <Card title="Listing health" id="health" className={styles.health}>
         <div className={styles.healthBody}>
