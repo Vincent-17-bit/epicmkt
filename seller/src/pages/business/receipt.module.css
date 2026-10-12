@@ -1,0 +1,112 @@
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sheet {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--text);
+}
+
+.head p {
+  margin: 0;
+}
+
+.issuer {
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.small {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.rows {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.rows > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) 1fr;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.rows dt {
+  color: var(--text-muted);
+}
+
+.rows dd {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 40rem) {
+  .sheet {
+    padding: var(--space-4);
+  }
+
+  .rows > div {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+/* Print: one clean page, black on white, no app chrome, in either theme. */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  .sheet {
+    border: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+    box-shadow: none;
+    break-inside: avoid;
+  }
+
+  .head {
+    border-bottom-color: #000;
+  }
+
+  .rows > div {
+    border-bottom-color: #bbb;
+    grid-template-columns: 12rem 1fr;
+  }
+
+  .rows dt,
+  .small {
+    color: #333;
+  }
+}

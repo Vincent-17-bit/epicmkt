@@ -11,6 +11,7 @@ export type Deps = {
   sms: (to: string, message: string) => Promise<boolean>;
   code: () => string;
   salt: string;
+  cronSecret?: string;
 };
 
 export const SELLER_EMAIL_DOMAIN = "sellers.epicmkt.app";
@@ -33,6 +34,7 @@ export function realDeps(): Deps {
     sms: prod ? sendSms : async () => true,
     code: () => (prod ? String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0") : "123456"),
     salt: Deno.env.get("IP_HASH_SALT") ?? "",
+    cronSecret: Deno.env.get("CRON_SECRET") ?? undefined,
   };
 }
 
@@ -98,3 +100,14 @@ export const otpMessage = (code: string) => `Your EpicMKT code is ${code}. It ex
 
 export const auditInsert = (db: Db, row: { business_id: string; actor_id: string; action: string; entity?: string; entity_id?: string; data?: unknown }) =>
   db.from("audit_log").insert({ actor_role: "seller", entity: "business", entity_id: row.business_id, data: {}, ...row });
+
+export async function authenticateAdmin(req: Request, db: Db): Promise<{ userId: string } | Response> {
+  const header = req.headers.get("authorization") ?? "";
+  const jwt = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!jwt) return json({ error: "unauthorized" }, 401);
+  const { data, error } = await db.auth.getUser(jwt);
+  if (error || !data?.user?.id) return json({ error: "unauthorized" }, 401);
+  const { data: admin } = await db.from("admins").select("user_id").eq("user_id", data.user.id).maybeSingle();
+  if (!admin) return json({ error: "forbidden" }, 403);
+  return { userId: data.user.id };
+}

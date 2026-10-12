@@ -1,0 +1,52 @@
+/* Status colours for both themes; everything else comes from @epicmkt/shared tokens. */
+:root,
+[data-theme="light"] {
+  --ok-bg: #e7f6ec;
+  --ok-text: #14532d;
+  --ok-border: #86d1a0;
+  --warn-bg: #fff4d6;
+  --warn-text: #6b4200;
+  --warn-border: #f0c261;
+  --danger-bg: #fde8e8;
+  --danger-text: #8a1c1c;
+  --danger-border: #f0a3a3;
+  --info-bg: #e6f5ff;
+  --info-text: #0b3a5a;
+  --info-border: #8fd0f7;
+}
+
+[data-theme="dark"] {
+  --ok-bg: #12301d;
+  --ok-text: #b7f0c9;
+  --ok-border: #2f6b45;
+  --warn-bg: #3a2c0c;
+  --warn-text: #ffe3a1;
+  --warn-border: #7a5a14;
+  --danger-bg: #3d1717;
+  --danger-text: #ffc9c9;
+  --danger-border: #7d2f2f;
+  --info-bg: #0e2a3c;
+  --info-text: #bfe6ff;
+  --info-border: #1f5f87;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: 1.5;
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+}

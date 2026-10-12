@@ -15,3 +15,20 @@ export function pdfIsSafe(bytes: Uint8Array): boolean {
   const text = new TextDecoder("latin1").decode(bytes);
   return !PDF_BAD.some((k) => text.includes(k));
 }
+
+export type PdfProblem = "pdf_encrypted" | "pdf_active_content";
+
+export function pdfProblem(bytes: Uint8Array): PdfProblem | null {
+  const text = new TextDecoder("latin1").decode(bytes);
+  if (text.includes("/Encrypt")) return "pdf_encrypted";
+  return PDF_BAD.some((k) => text.includes(k)) ? "pdf_active_content" : null;
+}
+
+export const PROOF_MAX_BYTES = 8 * 1024 * 1024;
+export const PROOF_MAX_FILES = 3;
+export const PROOF_TYPES: Record<Kind, { mime: string; ext: string[] }> = {
+  pdf: { mime: "application/pdf", ext: ["pdf"] },
+  jpg: { mime: "image/jpeg", ext: ["jpg", "jpeg"] },
+  png: { mime: "image/png", ext: ["png"] },
+  webp: { mime: "image/webp", ext: ["webp"] },
+};

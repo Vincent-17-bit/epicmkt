@@ -97,3 +97,43 @@ Needs a local PostgreSQL (set `TEST_DATABASE_URL`, default `postgres://postgres:
 ```
 npm run test:seller-backend
 ```
+
+## Subscription, notifications and admin questions (phase S1)
+
+`supabase db push` also applies `0006_subscription_notifications.sql`: payment status, M-Pesa code, receipt numbers, category quotes, message types, flag questions, `flag_attachments` and the private `seller-proofs` bucket (8 MB, pdf/jpeg/png/webp, no policy for any user).
+
+### M-Pesa Paybill
+```
+insert into site_settings (key, value) values ('mpesa', '{"type":"paybill","number":"YOUR_PAYBILL","name":"EpicMKT"}')
+on conflict (key) do update set value = excluded.value;
+```
+Sellers cannot read `site_settings`; `seller_payment_instructions()` returns the number, the account number to type and the exact amount, all computed on the server. Without this row the page says "We will send you the payment details by SMS shortly."
+
+- First payment: account = the application's `reference_no`, amount = `price_at_submission`.
+- Renewal: account = Seller ID, amount = the current plan price.
+- Upgrade and dearer category: account = Seller ID, amount = prorated difference (`category_change_quote`).
+
+### Confirming payments (admin or automatic)
+Both paths end in one function, so the seller's page needs no change when matching is automated:
+- Admin: `select admin_confirm_payment('<payment id>')` or `admin_reject_payment(id, 'reason')`.
+- Automatic: a Daraja C2B callback (service role) calls `payment_match_incoming(code, amount_kes, account)`. It confirms a submitted row when code, account and amount agree; otherwise it returns the reason and leaves the row for the admin.
+The seller page listens to its own `payments` and `businesses` rows over realtime and refetches.
+
+### Functions
+```
+for f in seller-proof-upload-url seller-proof-finalize admin-proof-url proofs-purge; do
+  supabase functions deploy $f --no-verify-jwt
+done
+supabase secrets set CRON_SECRET=<long random string>
+```
+Upload flow: `seller-proof-upload-url` (ownership, open flag, 3 files, 8 MB, one-time signed URLs, random names) then the browser uploads, then `seller-proof-finalize` (real type by magic bytes, PDF scan, deletes everything pending on any failure), then `seller_reply_flag`. Admins open a proof with `admin-proof-url` (60 second signed URL, audit row written first).
+
+### Schedules (pg_cron)
+```
+select cron.schedule('billing-notices', '5 3 * * *', $$ select public.generate_billing_notices() $$);
+-- proofs: call the proofs-purge function daily with the x-cron-secret header (pg_net or any scheduler)
+```
+`generate_billing_notices()` writes the 7, 3 and 1 day reminders, the grace notice and the expiry notice, once each.
+
+### Tests
+`npm run test:all` runs the database, function, seller UI and client suites.

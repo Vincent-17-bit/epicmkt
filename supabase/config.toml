@@ -44,3 +44,15 @@ verify_jwt = false
 
 [functions.seller-export-data]
 verify_jwt = false
+
+[functions.seller-proof-upload-url]
+verify_jwt = false
+
+[functions.seller-proof-finalize]
+verify_jwt = false
+
+[functions.admin-proof-url]
+verify_jwt = false
+
+[functions.proofs-purge]
+verify_jwt = false

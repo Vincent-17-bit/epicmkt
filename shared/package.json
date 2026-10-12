@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.js",
     "./tokens.css": "./src/tokens.css",
-    "./reset.css": "./src/reset.css"
+    "./reset.css": "./src/reset.css",
+    "./billing": "./src/billing.js"
   }
 }
