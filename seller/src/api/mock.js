@@ -1,4 +1,8 @@
 import { passwordProblems } from "@epicmkt/shared";
+import {
+  validateWeek, validateException, serializeHours, serializeException, normalizeHours, defaultHours,
+  validateOverride, validatePartial, MAX_EXCEPTIONS
+} from "@epicmkt/shared/hours";
 import { ApiError } from "./errors.js";
 
 const DEMO = { sellerId: "ES100001", password: "Demo-Passw0rd", phone: "+254712345678", name: "Demo Shop", plan: "standard", status: "live" };
@@ -17,6 +21,20 @@ const state = {
 
 const wait = () => new Promise((r) => setTimeout(r, 120));
 
+const BIZ = "10000000-0000-0000-0000-0000000000d1";
+const freshHours = () => ({
+  businessId: BIZ,
+  name: DEMO.name,
+  hours: serializeHours(defaultHours()),
+  exceptions: [],
+  override: null,
+  partial_closures: [],
+  hours_version: 1,
+  settings: { hours_defaults: { closure_reasons: ["lunch", "restock", "power", "emergency", "other"], partial_message: "Delivery paused until {time}" }, sections: ["Cakes", "Drinks", "Snacks"] }
+});
+const hoursState = freshHours();
+const clone = (v) => JSON.parse(JSON.stringify(v));
+
 export const resetMock = () => {
   state.password = DEMO.password;
   state.signedIn = false;
@@ -24,6 +42,7 @@ export const resetMock = () => {
   state.changes = [];
   state.business = { name: DEMO.name, plan_key: DEMO.plan, status: DEMO.status, tagline: null };
   state.priceConfirmedAt = null;
+  Object.assign(hoursState, freshHours());
 };
 
 const signedIn = () => {
@@ -119,3 +138,88 @@ export const catalogStats = async () => {
 export const itemSignals = async () => { signedIn(); await wait(); return []; };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...state.business } }; };
+
+const own = (businessId) => {
+  if (businessId !== hoursState.businessId) throw new ApiError("not_a_seller");
+};
+const fail = (r) => {
+  const map = { past: "closure_in_past", too_long: "closure_too_long" };
+  if (r.code?.startsWith("message_")) throw new ApiError("invalid_message", `invalid_message:${r.code.slice(8)}`);
+  const code = map[r.code] ?? (r.code === "scope" ? "invalid_scope" : "invalid_override");
+  throw new ApiError(code, `${code}:${r.code}`);
+};
+const publicHours = () => {
+  const { settings, ...rest } = hoursState;
+  return clone(rest);
+};
+
+export const getHours = async () => { signedIn(); await wait(); return publicHours(); };
+export const getHoursSettings = async () => { signedIn(); await wait(); return clone(hoursState.settings); };
+export const saveHours = async ({ businessId, hours, version }) => {
+  signedIn();
+  await wait();
+  own(businessId);
+  const check = validateWeek(hours);
+  if (!check.ok) {
+    const first = Object.values(check.days).flat()[0];
+    throw new ApiError("invalid_hours", `invalid_hours:${first.code}`);
+  }
+  if (version !== hoursState.hours_version) throw new ApiError("CONCURRENCY_CONFLICT", "CONCURRENCY_CONFLICT");
+  hoursState.hours = serializeHours(hours);
+  hoursState.hours_version += 1;
+  return clone({ hours: hoursState.hours, hours_version: hoursState.hours_version });
+};
+export const saveExceptions = async ({ businessId, exceptions, version }) => {
+  signedIn();
+  await wait();
+  own(businessId);
+  if (!Array.isArray(exceptions) || exceptions.length > MAX_EXCEPTIONS) throw new ApiError("invalid_exceptions");
+  const dates = new Set();
+  for (const e of exceptions) {
+    if (dates.has(e?.date)) throw new ApiError("invalid_exceptions");
+    dates.add(e?.date);
+    const problems = validateException(e);
+    if (problems.length) throw new ApiError(problems[0].code === "date" ? "invalid_exceptions" : "invalid_hours", `invalid_hours:${problems[0].code}`);
+  }
+  if (version !== hoursState.hours_version) throw new ApiError("CONCURRENCY_CONFLICT", "CONCURRENCY_CONFLICT");
+  hoursState.exceptions = exceptions.map(serializeException);
+  hoursState.hours_version += 1;
+  return clone({ exceptions: hoursState.exceptions, hours_version: hoursState.hours_version });
+};
+export const setClosureOverride = async ({ businessId, override }) => {
+  signedIn();
+  await wait();
+  own(businessId);
+  if (override == null) {
+    hoursState.override = null;
+    return { override: null };
+  }
+  const r = validateOverride(override, Date.now());
+  if (!r.ok) fail(r);
+  hoursState.override = r.value;
+  return clone({ override: hoursState.override });
+};
+export const setPartialClosure = async ({ businessId, scope, closure }) => {
+  signedIn();
+  await wait();
+  own(businessId);
+  const now = Date.now();
+  const section = scope === "section" ? String(closure?.section ?? "").trim() : null;
+  if (!["delivery", "walkin", "appointments", "section"].includes(scope)) throw new ApiError("invalid_scope");
+  if (scope === "section" && (!section || section.length > 60)) throw new ApiError("invalid_closure", "invalid_closure:section");
+  const keep = hoursState.partial_closures.filter((p) => !(p.scope === scope && (p.section ?? "") === (section ?? "")) && Date.parse(p.until) > now);
+  if (closure && closure.until != null) {
+    const r = validatePartial({ ...closure, scope, section }, now);
+    if (!r.ok) fail(r);
+    keep.push(r.value);
+  }
+  hoursState.partial_closures = keep;
+  return clone({ partial_closures: keep });
+};
+
+export const simulateRemoteHoursChange = () => {
+  const week = normalizeHours(hoursState.hours);
+  week.mon = { closed: false, open24: false, intervals: [{ start: "07:00", end: "15:00" }] };
+  hoursState.hours = serializeHours(week);
+  hoursState.hours_version += 1;
+};

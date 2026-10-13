@@ -18,4 +18,10 @@ export const SELLER_API = [
   "itemSignals",
   "finalizeMedia",
   "exportData",
+  "getHours",
+  "getHoursSettings",
+  "saveHours",
+  "saveExceptions",
+  "setClosureOverride",
+  "setPartialClosure",
 ];

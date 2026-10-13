@@ -1,0 +1,30 @@
+.btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition: background-color var(--dur) ease;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+@media (hover: hover) {
+  .btn:hover:not(:disabled) {
+    background: var(--surface-3);
+  }
+}

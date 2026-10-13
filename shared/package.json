@@ -6,6 +6,8 @@
   "exports": {
     ".": "./src/index.js",
     "./tokens.css": "./src/tokens.css",
-    "./reset.css": "./src/reset.css"
+    "./reset.css": "./src/reset.css",
+    "./hours": "./src/hours/index.js",
+    "./hours/ui": "./src/hours/ui/index.js"
   }
 }

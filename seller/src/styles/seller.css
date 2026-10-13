@@ -1,0 +1,49 @@
+:root,
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f0f10;
+  --surface: #171717;
+  --surface-2: #202021;
+  --surface-3: #2a2a2b;
+  --border: #2a2a2a;
+  --border-strong: #4a4a4a;
+  --text: #f3f4f6;
+  --text-muted: #a1a1aa;
+  --primary: #38b6ff;
+  --primary-hover: #66c7ff;
+  --on-primary: #000000;
+  --primary-tint: rgb(56 182 255 / 0.16);
+  --danger: #f87171;
+  --st-open: #4ade80;
+  --st-closing: #38b6ff;
+  --st-closed: #f87171;
+  --scrim: rgb(0 0 0 / 0.7);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

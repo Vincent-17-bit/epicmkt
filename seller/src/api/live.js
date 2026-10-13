@@ -50,3 +50,22 @@ export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_
 export const itemSignals = () => rpc("seller_item_signals");
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});
+
+export const getHours = async () => {
+  const { data: auth } = await need().auth.getSession();
+  if (!auth.session) throw new ApiError("unauthorized");
+  const { data, error } = await need().from("businesses").select("id,name,hours,exceptions,override,partial_closures,hours_version").maybeSingle();
+  if (error) throw new ApiError("request_failed", error.message);
+  if (!data) throw new ApiError("not_found");
+  const { id, ...rest } = data;
+  return { businessId: id, ...rest };
+};
+export const getHoursSettings = async () => {
+  const { data, error } = await need().from("seller_settings").select("settings").maybeSingle();
+  if (error) throw new ApiError("request_failed", error.message);
+  return data?.settings ?? {};
+};
+export const saveHours = ({ businessId, hours, version }) => rpc("save_seller_hours", { p_business_id: businessId, p_hours: hours, p_version: version });
+export const saveExceptions = ({ businessId, exceptions, version }) => rpc("save_seller_exceptions", { p_business_id: businessId, p_exceptions: exceptions, p_version: version });
+export const setClosureOverride = ({ businessId, override }) => rpc("set_seller_closure_override", { p_business_id: businessId, p_override: override });
+export const setPartialClosure = ({ businessId, scope, closure }) => rpc("set_partial_closure", { p_business_id: businessId, p_scope: scope, p_closure: closure });

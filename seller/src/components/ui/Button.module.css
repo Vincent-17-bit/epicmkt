@@ -1,0 +1,100 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--tap);
+  max-width: 100%;
+  padding: 0 var(--space-4);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color var(--dur) ease, color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.secondary {
+  background: var(--surface);
+}
+
+.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.ghost {
+  border-color: transparent;
+}
+
+.sm {
+  min-height: 36px;
+  padding: 0 var(--space-3);
+}
+
+.lg {
+  min-height: 52px;
+  padding: 0 var(--space-5);
+  font-size: var(--text-md);
+}
+
+@media (hover: hover) {
+  .primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+  }
+
+  .secondary:hover:not(:disabled),
+  .ghost:hover:not(:disabled) {
+    background: var(--surface-3);
+  }
+
+  .danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+  }
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
