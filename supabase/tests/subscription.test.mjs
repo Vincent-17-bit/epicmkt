@@ -5,6 +5,8 @@ import { addCalendarMonth, categoryChangeQuote, listingState, daysLeft, buildPay
 
 let c;
 const iso = (d) => d.toISOString().slice(0, 10);
+// node-pg returns a SQL `date` as a Date at local midnight, so read local parts (toISOString would shift a day in UTC+ zones).
+const pgDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const APP = "30000000-0000-0000-0000-0000000000a1";
 const MPESA = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
 
@@ -177,8 +179,8 @@ test("confirmation: calendar month, grace, receipt number, one place for admin a
   await sql(c, `update businesses set paid_until = public.nairobi_midnight('2026-01-31'::date) where id = '${ids.bizA}'`);
   const p = (await sql(c, `select * from payment_apply_confirmation('${id}', 'admin', '2026-01-31T09:00:00Z')`))[0];
   assert.equal(p.status, "confirmed");
-  assert.equal(iso(p.period_start), "2026-01-31");
-  assert.equal(iso(p.period_end), "2026-02-28");
+  assert.equal(pgDay(p.period_start), "2026-01-31");
+  assert.equal(pgDay(p.period_end), "2026-02-28");
   assert.match(p.receipt_no, /^EPM-R-\d{4}-\d{6}$/);
   assert.equal(p.confirmed_via, "admin");
   const [{ paid }] = await sql(c, `select public.nairobi_day(paid_until)::text as paid from businesses where id = '${ids.bizA}'`);
@@ -195,12 +197,12 @@ test("renewal during grace extends from paid_until, after expiry starts today, f
   await sql(c, `update businesses set paid_until = public.nairobi_midnight('2026-10-05'::date) where id = '${ids.bizB}'`);
   let id = await mk(ids.bizB, "GRACE00001");
   let p = (await sql(c, `select * from payment_apply_confirmation('${id}', 'admin', '2026-10-06T10:00:00Z')`))[0];
-  assert.deepEqual([iso(p.period_start), iso(p.period_end)], ["2026-10-05", "2026-11-05"]);
+  assert.deepEqual([pgDay(p.period_start), pgDay(p.period_end)], ["2026-10-05", "2026-11-05"]);
 
   await sql(c, `update businesses set paid_until = public.nairobi_midnight('2026-10-05'::date), status = 'expired' where id = '${ids.bizB}'`);
   id = await mk(ids.bizB, "EXPIRED001");
   p = (await sql(c, `select * from payment_apply_confirmation('${id}', 'auto', '2026-10-20T10:00:00Z')`))[0];
-  assert.deepEqual([iso(p.period_start), iso(p.period_end)], ["2026-10-20", "2026-11-20"]);
+  assert.deepEqual([pgDay(p.period_start), pgDay(p.period_end)], ["2026-10-20", "2026-11-20"]);
   assert.equal(p.confirmed_via, "auto");
   assert.equal((await sql(c, `select status from businesses where id = '${ids.bizB}'`))[0].status, "live");
 

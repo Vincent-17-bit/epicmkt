@@ -97,6 +97,9 @@
 }
 
 .nameLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
   text-decoration: none;
   text-underline-offset: 4px;
   text-decoration-thickness: 2px;

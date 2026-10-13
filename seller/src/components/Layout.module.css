@@ -18,6 +18,9 @@
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
   font-weight: 800;
   color: var(--text);
   text-decoration: none;

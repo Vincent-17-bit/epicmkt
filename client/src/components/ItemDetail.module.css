@@ -16,6 +16,7 @@
 .sheet {
   position: relative;
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* the column must shrink to the sheet, not to its widest child */
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: 100%;
   max-width: 36rem;
@@ -67,6 +68,7 @@
   align-items: center;
   gap: var(--space-2);
   max-width: 14ch;
+  min-width: 0; /* lets the name truncate with an ellipsis instead of running into the next crumb */
   min-height: 44px;
   padding: 0 var(--space-2);
   border: 0;
@@ -325,6 +327,7 @@
 
 .sold {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   padding: var(--space-4);
   border-top: 1px solid var(--border);
@@ -410,7 +413,7 @@
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 

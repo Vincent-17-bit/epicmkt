@@ -51,6 +51,7 @@
 
 .inner {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* let the column shrink to the panel instead of its widest child */
   gap: var(--space-5);
   padding-block: var(--space-4) var(--space-5);
 }

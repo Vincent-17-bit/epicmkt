@@ -79,6 +79,9 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
   color: var(--link);
   text-decoration: underline;
   text-decoration-color: var(--link-underline);

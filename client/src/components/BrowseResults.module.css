@@ -14,6 +14,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap; /* Filters and Sort wrap on very narrow screens instead of overflowing */
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-3);

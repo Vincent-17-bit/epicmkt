@@ -42,9 +42,20 @@ create table if not exists public.audit_log (
   ip text,
   created_at timestamptz not null default now()
 );
+-- audit_log already exists from 0004_core (seller/system rows use entity/data).
+-- Extend it with the admin-audit columns, and default actor_role for admin writers.
+alter table public.audit_log add column if not exists actor_email text;
+alter table public.audit_log add column if not exists target_type text;
+alter table public.audit_log add column if not exists target_id uuid;
+alter table public.audit_log add column if not exists before jsonb;
+alter table public.audit_log add column if not exists after jsonb;
+alter table public.audit_log add column if not exists reason text;
+alter table public.audit_log add column if not exists ip text;
+alter table public.audit_log alter column actor_role set default 'admin';
 create index if not exists audit_target_idx on public.audit_log (target_type, target_id, created_at desc);
 alter table public.audit_log enable row level security;
-create policy if not exists "admin read audit" on public.audit_log for select to authenticated using (public.is_admin());
+drop policy if exists "admin read audit" on public.audit_log;
+create policy "admin read audit" on public.audit_log for select to authenticated using (public.is_admin());
 revoke insert, update, delete on public.audit_log from public, anon, authenticated;
 
 create or replace function public.audit_log_immutable() returns trigger
@@ -138,7 +149,7 @@ $$
   );
 $$;
 
-create trigger if not exists t_businesses_touch before update on public.businesses
+create or replace trigger t_businesses_touch before update on public.businesses
   for each row execute function public.touch_updated_at();
 
 create table if not exists public.items (
@@ -174,7 +185,7 @@ create table if not exists public.items (
 create index if not exists items_name_trgm on public.items using gin (name gin_trgm_ops);
 create index if not exists items_business_idx on public.items (business_id, sort);
 create index if not exists items_tags_idx on public.items using gin (tags);
-create trigger if not exists t_items_touch before update on public.items for each row execute function public.touch_updated_at();
+create or replace trigger t_items_touch before update on public.items for each row execute function public.touch_updated_at();
 
 create table if not exists public.item_media (
   id uuid primary key default gen_random_uuid(),
@@ -203,7 +214,7 @@ create table if not exists public.faqs (
   updated_at timestamptz not null default now()
 );
 create index if not exists faqs_business_idx on public.faqs (business_id, sort);
-create trigger if not exists t_faqs_touch before update on public.faqs for each row execute function public.touch_updated_at();
+create or replace trigger t_faqs_touch before update on public.faqs for each row execute function public.touch_updated_at();
 
 create table if not exists public.offers (
   id uuid primary key default gen_random_uuid(),
@@ -377,99 +388,142 @@ alter table public.site_config enable row level security;
 alter table public.content_pages enable row level security;
 alter table public.change_requests enable row level security;
 
-create policy if not exists "public read active categories" on public.categories for select to anon, authenticated using (active);
-create policy if not exists "public read plans" on public.plans for select to anon, authenticated
+drop policy if exists "public read active categories" on public.categories;
+create policy "public read active categories" on public.categories for select to anon, authenticated using (active);
+drop policy if exists "public read plans" on public.plans;
+create policy "public read plans" on public.plans for select to anon, authenticated
   using (exists (select 1 from public.categories c where c.id = category_id and c.active));
-create policy if not exists "public read global limits" on public.global_limits for select to anon, authenticated using (true);
-create policy if not exists "public read legal docs" on public.legal_docs for select to anon, authenticated using (true);
-create policy if not exists "public read visible businesses" on public.businesses for select to anon, authenticated using (public.business_is_visible(businesses));
-create policy if not exists "public read visible items" on public.items for select to anon, authenticated using (
+drop policy if exists "public read global limits" on public.global_limits;
+create policy "public read global limits" on public.global_limits for select to anon, authenticated using (true);
+drop policy if exists "public read legal docs" on public.legal_docs;
+create policy "public read legal docs" on public.legal_docs for select to anon, authenticated using (true);
+drop policy if exists "public read visible businesses" on public.businesses;
+create policy "public read visible businesses" on public.businesses for select to anon, authenticated using (public.business_is_visible(businesses));
+drop policy if exists "public read visible items" on public.items;
+create policy "public read visible items" on public.items for select to anon, authenticated using (
   visible and not hidden_by_admin and exists (
     select 1 from public.businesses b where b.id = business_id and public.business_is_visible(b)
   )
 );
-create policy if not exists "public read visible media" on public.item_media for select to anon, authenticated using (
+drop policy if exists "public read visible media" on public.item_media;
+create policy "public read visible media" on public.item_media for select to anon, authenticated using (
   status = 'ready' and not removed_by_admin and exists (
     select 1 from public.items i join public.businesses b on b.id = i.business_id
     where i.id = item_id and i.visible and not i.hidden_by_admin and public.business_is_visible(b)
   )
 );
-create policy if not exists "public read visible faqs" on public.faqs for select to anon, authenticated using (
+drop policy if exists "public read visible faqs" on public.faqs;
+create policy "public read visible faqs" on public.faqs for select to anon, authenticated using (
   visible and admin_status = 'ok' and exists (
     select 1 from public.businesses b where b.id = business_id and public.business_is_visible(b)
   )
 );
-create policy if not exists "public read offers" on public.offers for select to anon, authenticated using (
+drop policy if exists "public read offers" on public.offers;
+create policy "public read offers" on public.offers for select to anon, authenticated using (
   admin_status = 'ok' and exists (
     select 1 from public.businesses b where b.id = business_id and public.business_is_visible(b)
   )
 );
-create policy if not exists "public read site config" on public.site_config for select to anon, authenticated using (true);
-create policy if not exists "public read published pages" on public.content_pages for select to anon, authenticated using (published);
+drop policy if exists "public read site config" on public.site_config;
+create policy "public read site config" on public.site_config for select to anon, authenticated using (true);
+drop policy if exists "public read published pages" on public.content_pages;
+create policy "public read published pages" on public.content_pages for select to anon, authenticated using (published);
 
-create policy if not exists "admin role categories" on public.categories for all to authenticated
+drop policy if exists "admin role categories" on public.categories;
+create policy "admin role categories" on public.categories for all to authenticated
   using (public.has_role(array['owner'])) with check (public.has_role(array['owner']));
-create policy if not exists "admin role plans" on public.plans for all to authenticated
+drop policy if exists "admin role plans" on public.plans;
+create policy "admin role plans" on public.plans for all to authenticated
   using (public.has_role(array['owner'])) with check (public.has_role(array['owner']));
-create policy if not exists "admin role global limits" on public.global_limits for all to authenticated
+drop policy if exists "admin role global limits" on public.global_limits;
+create policy "admin role global limits" on public.global_limits for all to authenticated
   using (public.has_role(array['owner'])) with check (public.has_role(array['owner']));
-create policy if not exists "admin role legal docs" on public.legal_docs for all to authenticated
+drop policy if exists "admin role legal docs" on public.legal_docs;
+create policy "admin role legal docs" on public.legal_docs for all to authenticated
   using (public.has_role(array['owner'])) with check (public.has_role(array['owner']));
-create policy if not exists "admin role settings" on public.site_settings for all to authenticated
+drop policy if exists "admin role settings" on public.site_settings;
+create policy "admin role settings" on public.site_settings for all to authenticated
   using (public.has_role(array['owner'])) with check (public.has_role(array['owner']));
-create policy if not exists "admin role applications" on public.applications for all to authenticated
+drop policy if exists "admin role applications" on public.applications;
+create policy "admin role applications" on public.applications for all to authenticated
   using (public.has_role(array['owner','reviewer'])) with check (public.has_role(array['owner','reviewer']));
-create policy if not exists "admin role application docs" on public.application_documents for all to authenticated
+drop policy if exists "admin role application docs" on public.application_documents;
+create policy "admin role application docs" on public.application_documents for all to authenticated
   using (public.has_role(array['owner','reviewer'])) with check (public.has_role(array['owner','reviewer']));
-create policy if not exists "admin role application flags" on public.application_flags for all to authenticated
+drop policy if exists "admin role application flags" on public.application_flags;
+create policy "admin role application flags" on public.application_flags for all to authenticated
   using (public.has_role(array['owner','reviewer'])) with check (public.has_role(array['owner','reviewer']));
-create policy if not exists "admin role application events" on public.application_events for all to authenticated
+drop policy if exists "admin role application events" on public.application_events;
+create policy "admin role application events" on public.application_events for all to authenticated
   using (public.has_role(array['owner','reviewer'])) with check (public.has_role(array['owner','reviewer']));
 
-create policy if not exists "admin role businesses" on public.businesses for all to authenticated
+drop policy if exists "admin role businesses" on public.businesses;
+create policy "admin role businesses" on public.businesses for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role items" on public.items for all to authenticated
+drop policy if exists "admin role items" on public.items;
+create policy "admin role items" on public.items for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role item media" on public.item_media for all to authenticated
+drop policy if exists "admin role item media" on public.item_media;
+create policy "admin role item media" on public.item_media for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role faqs" on public.faqs for all to authenticated
+drop policy if exists "admin role faqs" on public.faqs;
+create policy "admin role faqs" on public.faqs for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role offers" on public.offers for all to authenticated
+drop policy if exists "admin role offers" on public.offers;
+create policy "admin role offers" on public.offers for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role flags" on public.flags for all to authenticated
+drop policy if exists "admin role flags" on public.flags;
+create policy "admin role flags" on public.flags for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role reports" on public.reports for all to authenticated
+drop policy if exists "admin role reports" on public.reports;
+create policy "admin role reports" on public.reports for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role payments" on public.payments for all to authenticated
+drop policy if exists "admin role payments" on public.payments;
+create policy "admin role payments" on public.payments for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role message templates" on public.message_templates for all to authenticated
+drop policy if exists "admin role message templates" on public.message_templates;
+create policy "admin role message templates" on public.message_templates for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role messages" on public.messages for all to authenticated
+drop policy if exists "admin role messages" on public.messages;
+create policy "admin role messages" on public.messages for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role notifications" on public.admin_notifications for all to authenticated
+drop policy if exists "admin role notifications" on public.admin_notifications;
+create policy "admin role notifications" on public.admin_notifications for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role site config" on public.site_config for all to authenticated
+drop policy if exists "admin role site config" on public.site_config;
+create policy "admin role site config" on public.site_config for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role content pages" on public.content_pages for all to authenticated
+drop policy if exists "admin role content pages" on public.content_pages;
+create policy "admin role content pages" on public.content_pages for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
-create policy if not exists "admin role change requests" on public.change_requests for all to authenticated
+drop policy if exists "admin role change requests" on public.change_requests;
+create policy "admin role change requests" on public.change_requests for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
-create policy if not exists "seller read own business" on public.businesses for select to authenticated using (owner_user_id = auth.uid());
-create policy if not exists "seller manage own items" on public.items for all to authenticated
+drop policy if exists "seller read own business" on public.businesses;
+create policy "seller read own business" on public.businesses for select to authenticated using (owner_user_id = auth.uid());
+drop policy if exists "seller manage own items" on public.items;
+create policy "seller manage own items" on public.items for all to authenticated
   using (public.owns_business(business_id)) with check (public.owns_business(business_id));
-create policy if not exists "seller manage own media" on public.item_media for all to authenticated
+drop policy if exists "seller manage own media" on public.item_media;
+create policy "seller manage own media" on public.item_media for all to authenticated
   using (exists (select 1 from public.items i where i.id = item_id and public.owns_business(i.business_id)))
   with check (exists (select 1 from public.items i where i.id = item_id and public.owns_business(i.business_id)));
-create policy if not exists "seller manage own faqs" on public.faqs for all to authenticated
+drop policy if exists "seller manage own faqs" on public.faqs;
+create policy "seller manage own faqs" on public.faqs for all to authenticated
   using (public.owns_business(business_id)) with check (public.owns_business(business_id));
-create policy if not exists "seller manage own offers" on public.offers for all to authenticated
+drop policy if exists "seller manage own offers" on public.offers;
+create policy "seller manage own offers" on public.offers for all to authenticated
   using (public.owns_business(business_id)) with check (public.owns_business(business_id));
-create policy if not exists "seller read own flags" on public.flags for select to authenticated using (public.owns_business(business_id));
-create policy if not exists "seller read own payments" on public.payments for select to authenticated using (public.owns_business(business_id));
-create policy if not exists "seller read own messages" on public.messages for select to authenticated
+drop policy if exists "seller read own flags" on public.flags;
+create policy "seller read own flags" on public.flags for select to authenticated using (public.owns_business(business_id));
+drop policy if exists "seller read own payments" on public.payments;
+create policy "seller read own payments" on public.payments for select to authenticated using (public.owns_business(business_id));
+drop policy if exists "seller read own messages" on public.messages;
+create policy "seller read own messages" on public.messages for select to authenticated
   using (channel = 'in_app' and public.owns_business(business_id));
-create policy if not exists "seller read own change requests" on public.change_requests for select to authenticated using (public.owns_business(business_id));
+drop policy if exists "seller read own change requests" on public.change_requests;
+create policy "seller read own change requests" on public.change_requests for select to authenticated using (public.owns_business(business_id));
 
 create or replace function public.protect_admin_cols() returns trigger
 language plpgsql as $$
