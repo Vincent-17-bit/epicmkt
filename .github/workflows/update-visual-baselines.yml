@@ -1,0 +1,39 @@
+name: update-visual-baselines
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build:visual
+      - run: npm run test:visual:update
+      - run: npm run test:visual
+      - name: Commit baselines
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add e2e/__screenshots__ e2e/tap-target-baseline.json
+          git diff --cached --quiet && echo "No baseline changes" && exit 0
+          git commit -m "Update visual regression baselines"
+          git push
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: visual-regression-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

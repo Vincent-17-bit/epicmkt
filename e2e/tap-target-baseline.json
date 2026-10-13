@@ -1,0 +1,65 @@
+{
+  "client-business": [
+    "a|0700 000 000",
+    "a|Contact page",
+    "a|Gyms",
+    "button|Report a problem",
+    "button|Show distance from me"
+  ],
+  "client-contact": [
+    "a|0700 000 000",
+    "a|Contact page"
+  ],
+  "client-flash": [
+    "a|0700 000 000",
+    "a|Contact page"
+  ],
+  "client-home": [
+    "a|0700 000 000",
+    "a|Afya Plus Chemist",
+    "a|Aqua Fresh Refill Station",
+    "a|Contact page",
+    "a|Crown Braids and Weaves",
+    "a|Fade Kings Barbershop",
+    "a|Golden Crust Bakery",
+    "a|GreenField Agrovet",
+    "a|IronCore Gym",
+    "a|Shamba Care Agrovet",
+    "a|Swahili Plate Mombasa"
+  ],
+  "client-not-found": [
+    "a|0700 000 000",
+    "a|Contact page"
+  ],
+  "client-offers": [
+    "a|0700 000 000",
+    "a|Contact page"
+  ],
+  "client-search": [
+    "a|0700 000 000",
+    "a|Coast Flex Fitness",
+    "a|Contact page",
+    "a|FitHub Maseno",
+    "a|IronCore Gym"
+  ],
+  "client-sell": [
+    "a|0700 000 000",
+    "a|Contact page"
+  ],
+  "seller-exceptions": [
+    "a|EpicMKT Seller"
+  ],
+  "seller-notifications": [
+    "a|EpicMKT Seller",
+    "a|Open subscription"
+  ],
+  "seller-questions": [
+    "a|Do you deliver?",
+    "a|EpicMKT Seller",
+    "a|Fade cut"
+  ],
+  "seller-subscription": [
+    "a|EPM-R-2026-000001",
+    "a|EpicMKT Seller"
+  ]
+}

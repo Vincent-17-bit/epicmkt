@@ -25,9 +25,13 @@
     "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn",
     "test:seller-ui": "npm test -w seller",
     "test:client": "npm test -w client",
-    "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client"
+    "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client",
+    "build:visual": "node e2e/build.mjs",
+    "test:visual": "playwright test",
+    "test:visual:update": "UPDATE_TARGET_BASELINE=1 playwright test --update-snapshots=all"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.0",
     "pg": "^8.23.1"
   }
 }
