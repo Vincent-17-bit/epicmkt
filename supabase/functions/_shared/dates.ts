@@ -110,3 +110,7 @@ export function renewalPeriod(paidUntil: Date | string | number | null | undefin
   const start = continues ? (paid as Day) : today;
   return { start, end: addCalendarMonth(start), continuesPaidPeriod: continues };
 }
+
+export const eatToday = (now: Date | string | number = new Date()): Day => nairobiDay(now);
+
+export const laterDate = (a: Day, b: Day): Day => (a >= b ? a : b);

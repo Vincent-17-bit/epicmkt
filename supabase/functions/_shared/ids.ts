@@ -71,3 +71,27 @@ export function generatePassword(context: { sellerId?: string; phone?: string } 
   }
   throw new Error("could not generate a valid password");
 }
+
+export const makeTempPassword = (context: { sellerId?: string; phone?: string } = {}): string => generatePassword(context, 12);
+
+export function slugBase(name: string): string {
+  const s = name
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50)
+    .replace(/-+$/, "");
+  if (s.length >= 3) return s;
+  return s ? `${s}-shop` : "shop";
+}
+
+export async function uniqueSlug(name: string, exists: (slug: string) => Promise<boolean>): Promise<string> {
+  const base = slugBase(name);
+  for (let n = 1; n <= 1000; n++) {
+    const candidate = n === 1 ? base : `${base}-${n}`;
+    if (!(await exists(candidate))) return candidate;
+  }
+  throw new Error("slug_exhausted");
+}
