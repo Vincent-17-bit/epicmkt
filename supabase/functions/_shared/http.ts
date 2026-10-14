@@ -1,3 +1,5 @@
+import { deliverEmail, deliverSms, isProduction } from "./providers.ts";
+
 export const corsHeaders = () => ({
   "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -8,7 +10,7 @@ export const corsHeaders = () => ({
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders(), "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: { ...corsHeaders(), "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
   });
 
 export async function sha256Hex(s: string): Promise<string> {
@@ -38,34 +40,11 @@ export const escapeHtml = (s: unknown) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
 
 export async function sendMail(to: string | undefined, subject: string, html: string) {
-  const key = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("MAIL_FROM");
-  if (!key || !from || !to) return;
-  try {
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-  } catch (_) {}
+  await deliverEmail(to, subject, html);
 }
 
 export async function sendSms(to: string, message: string): Promise<boolean> {
-  const key = Deno.env.get("AT_API_KEY");
-  const username = Deno.env.get("AT_USERNAME");
-  const sender = Deno.env.get("AT_SENDER");
-  if (!key || !username || !sender) return false;
-  try {
-    const host = username === "sandbox" ? "api.sandbox.africastalking.com" : "api.africastalking.com";
-    const r = await fetch(`https://${host}/version1/messaging`, {
-      method: "POST",
-      headers: { apiKey: key, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ username, to, message, from: sender }),
-    });
-    return r.ok;
-  } catch (_) {
-    return false;
-  }
+  return (await deliverSms(to, message)).ok;
 }
 
-export const isProduction = () => Deno.env.get("APP_ENV") === "production";
+export { isProduction };
