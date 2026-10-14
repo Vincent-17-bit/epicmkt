@@ -179,7 +179,7 @@ test("confirmation: calendar month, grace, receipt number, one place for admin a
   assert.equal(p.status, "confirmed");
   assert.equal(iso(p.period_start), "2026-01-31");
   assert.equal(iso(p.period_end), "2026-02-28");
-  assert.match(p.receipt_no, /^EPM-R-\d{4}-\d{6}$/);
+  assert.match(p.receipt_no, /^RCT-\d{6}$/);
   assert.equal(p.confirmed_via, "admin");
   const [{ paid }] = await sql(c, `select public.nairobi_day(paid_until)::text as paid from businesses where id = '${ids.bizA}'`);
   assert.equal(paid, "2026-02-28");

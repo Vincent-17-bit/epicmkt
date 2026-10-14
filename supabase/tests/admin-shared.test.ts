@@ -1,5 +1,5 @@
 import nodeAssert from "node:assert/strict";
-import { addCalendarMonth, eatToday, laterDate } from "../functions/_shared/dates.ts";
+import { addCalendarMonth, eatToday, formatDay, laterDate, nairobiDay, nairobiMidnight } from "../functions/_shared/dates.ts";
 import { SELLER_ID_RE, generateSellerId, makeTempPassword, slugBase, uniqueSlug } from "../functions/_shared/ids.ts";
 import { passwordProblems } from "../functions/_shared/synced/password.js";
 import { rateLimit } from "../functions/_shared/rateLimit.ts";
@@ -58,4 +58,17 @@ Deno.test("rateLimit: allows up to max then blocks", async () => {
   for (let i = 0; i < 4; i++) results.push(await rateLimit(d.db, "k", 3, 60));
   assertEquals(results, [true, true, true, false]);
   assertEquals(await rateLimit(d.db, "other", 3, 60), true);
+});
+
+Deno.test("nairobiMidnight and nairobiDay round-trip a Nairobi calendar day", () => {
+  assertEquals(nairobiMidnight("2026-11-14"), "2026-11-13T21:00:00.000Z");
+  assertEquals(nairobiDay("2026-11-13T21:00:00.000Z"), "2026-11-14");
+  assertEquals(nairobiDay("2026-11-14T20:59:59.000Z"), "2026-11-14");
+  assertEquals(nairobiDay(nairobiMidnight("2027-02-28")), "2027-02-28");
+  nodeAssert.throws(() => nairobiMidnight("nope"));
+});
+
+Deno.test("formatDay renders DD Mon YYYY", () => {
+  assertEquals(formatDay("2026-12-20"), "20 Dec 2026");
+  assertEquals(formatDay("2027-02-05"), "05 Feb 2027");
 });

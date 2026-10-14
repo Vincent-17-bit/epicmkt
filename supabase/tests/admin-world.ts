@@ -1,5 +1,6 @@
 import { generateSellerId, makeTempPassword } from "../functions/_shared/ids.ts";
 import type { AdminDeps } from "../functions/_shared/adminKit.ts";
+import { nairobiMidnight } from "../functions/_shared/dates.ts";
 
 export const APP_ID = "11111111-1111-4111-8111-111111111111";
 export const APP2_ID = "22222222-2222-4222-8222-222222222222";
@@ -9,6 +10,8 @@ export const TOKENS = { owner: "tok-owner", reviewer: "tok-reviewer", finance: "
 export type World = {
   tables: Record<string, any[]>;
   unique: Record<string, string[]>;
+  failOn: { table: string; mode: "insert" | "update" }[];
+  uniqueIf: Record<string, { cols: string[]; when: (r: any) => boolean }[]>;
   authUsers: any[];
   counters: Map<string, number>;
   receiptSeq: number;
@@ -25,7 +28,8 @@ const application = (id: string, over: Record<string, unknown> = {}) => ({
   short_description: "Salon and spa", template_values: { hours: "8-6" }, conditional_docs: {},
   county: "Kisumu", town: "Kisumu", address: "Oginga Odinga St", lat: -0.09, lng: 34.76,
   business_phones: ["+254722000111"], whatsapp: "+254712345678", website: null, socials: {},
-  payment_code: null, admin_note: null, review_started_at: null, ...over,
+  payment_code: null, admin_note: null, review_started_at: null,
+  owner_id_number: "29384756", kra_pin: "A001234567Z", sbp_number: "SBP-77881", reg_number: "REG-99120", ...over,
 });
 
 export function world(): World {
@@ -42,15 +46,19 @@ export function world(): World {
       ],
       application_flags: [], application_events: [], application_documents: [{ application_id: APP2_ID, slot_key: "sbp" }],
       businesses: [{
-        id: BIZ_ID, slug: "mama-pima", seller_id: "SLR-AAAAAA", owner_user_id: "auth-0", name: "Old Shop",
-        status: "live", paid_until: "2026-11-20", monthly_price: 500, plan_key: "standard",
+        id: BIZ_ID, slug: "mama-pima", seller_id: "SLR-AAAAAA", user_id: "auth-0", name: "Old Shop",
+        status: "live", paid_until: nairobiMidnight("2026-11-20"), monthly_price: 500, plan_key: "standard", category_id: "salon",
         phone: "+254700000001", email: "old@example.com", application_id: null, must_change_password: false,
       }],
       payments: [], messages: [], audit_log: [],
     },
-    unique: { businesses: ["slug", "seller_id", "owner_user_id"], payments: ["receipt_no"] },
+    unique: { businesses: ["slug", "seller_id", "user_id"], payments: ["receipt_no"] },
+    uniqueIf: {
+      payments: [{ cols: ["mpesa_code"], when: (r) => r.mpesa_code != null && r.status !== "rejected" }],
+      messages: [{ cols: ["business_id", "dedupe_key"], when: (r) => r.dedupe_key != null }],
+    },
     authUsers: [{ id: "auth-0", email: "slr-aaaaaa@sellers.epicmkt.app", user_metadata: {} }],
-    counters: new Map(), receiptSeq: 0, sms: [], mail: [],
+    failOn: [], counters: new Map(), receiptSeq: 0, sms: [], mail: [],
     now: new Date("2026-10-14T06:30:00Z"),
   };
 }
@@ -58,18 +66,25 @@ export function world(): World {
 function table(w: World, t: string) {
   const eqs: [string, unknown][] = [];
   const nes: [string, unknown][] = [];
+  const ins: [string, unknown[]][] = [];
   let mode: "select" | "insert" | "update" | "delete" = "select";
   let payload: any;
   let one = false;
   let strict = false;
-  const match = (r: any) => eqs.every(([c, v]) => r[c] === v) && nes.every(([c, v]) => r[c] !== v);
+  const match = (r: any) => eqs.every(([c, v]) => r[c] === v) && nes.every(([c, v]) => r[c] !== v) && ins.every(([c, vs]) => vs.includes(r[c]));
   const exec = () => {
     const rows = (w.tables[t] ??= []);
+    if (w.failOn.some((f) => f.table === t && f.mode === mode)) return { data: null, error: { code: "XX000", message: "injected" } };
     if (mode === "insert") {
       const list = (Array.isArray(payload) ? payload : [payload]).map((r: any) => ({ id: r.id ?? `${t}-${rows.length + 1}`, ...r }));
       for (const r of list) {
+        if (t === "payments" && r.status === "confirmed") {
+          r.receipt_no ??= `RCT-${String(++w.receiptSeq).padStart(6, "0")}`;
+          r.confirmed_at ??= w.now.toISOString();
+        }
         const col = (w.unique[t] ?? []).find((c) => r[c] != null && rows.some((x) => x[c] === r[c]));
-        if (col) return { data: null, error: { code: "23505", message: `duplicate key value violates unique constraint ${col}` } };
+        const part = (w.uniqueIf[t] ?? []).find((u) => u.when(r) && rows.some((x) => u.when(x) && u.cols.every((c) => x[c] === r[c])));
+        if (col || part) return { data: null, error: { code: "23505", message: `duplicate key value violates unique constraint ${col ?? part!.cols.join("_")}` } };
       }
       rows.push(...list);
       return { data: one ? list[0] : list, error: null };
@@ -91,6 +106,7 @@ function table(w: World, t: string) {
     select: () => api, limit: () => api, order: () => api,
     eq: (c: string, v: unknown) => (eqs.push([c, v]), api),
     neq: (c: string, v: unknown) => (nes.push([c, v]), api),
+    in: (c: string, vs: unknown[]) => (ins.push([c, vs]), api),
     maybeSingle: () => ((one = true), Promise.resolve(exec())),
     single: () => ((one = true), (strict = true), Promise.resolve(exec())),
     insert: (p: unknown) => ((mode = "insert"), (payload = p), api),
@@ -110,7 +126,6 @@ export function deps(w: World): AdminDeps {
         w.counters.set(args.p_key, n);
         return Promise.resolve({ data: n <= args.p_max, error: null });
       }
-      if (name === "next_rct_no") return Promise.resolve({ data: `RCT-${String(++w.receiptSeq).padStart(6, "0")}`, error: null });
       return Promise.resolve({ data: null, error: null });
     },
     auth: {

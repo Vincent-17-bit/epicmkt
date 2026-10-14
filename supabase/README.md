@@ -33,7 +33,19 @@ The schema the admin functions must code against (these are the real columns, no
 | Grace | Fixed at one day everywhere (`listing_state()`, `shared/src/billing.js`, `_shared/dates.ts`). It is not a setting. |
 | Seller export | `seller-export-data` lists the columns it returns from `messages` and `audit_log`, so staff-only data never leaves in a seller's export. |
 
+<<<<<<< HEAD
 ### 3. First admin
+=======
+```bash
+supabase functions deploy admin-decide-application --no-verify-jwt
+supabase functions deploy admin-confirm-payment --no-verify-jwt
+supabase functions deploy admin-reset-seller-password --no-verify-jwt
+supabase functions deploy admin-message --no-verify-jwt
+supabase functions deploy dispatch-messages --no-verify-jwt
+supabase functions deploy daily-lifecycle --no-verify-jwt
+supabase functions deploy admin-export --no-verify-jwt
+```
+>>>>>>> 26402d0 (Reconcile admin and seller schemas; renewal messages; spec and test scripts)
 
 Create the user in Supabase Auth, then make them the owner:
 
@@ -45,6 +57,7 @@ on conflict (user_id) do update set role = excluded.role, email = excluded.email
 
 (`node scripts/seed-admin.mjs` prints this with your `ADMIN_EMAIL` and `ADMIN_NAME`.)
 
+<<<<<<< HEAD
 ### 4. Secrets
 
 ```bash
@@ -121,3 +134,9 @@ They are to be rewritten on `adminHandler`, `parseBody`, `writeAudit` and the RP
 ```bash
 supabase functions deploy admin-proof-url --no-verify-jwt   # the function checks the admin JWT itself
 ```
+=======
+- All browser writes must go through edge functions and RPCs.
+- Admin and audit access are enforced using `public.is_admin()` and `public.has_role()`.
+- Realtime is enabled for the admin dashboard tables.
+- `supabase/pending/0008b_admin_content_tables.sql` holds admin statements for items, item_media, faqs, offers, flags, reports and change_requests that do not match the seller schema. It is not run by migrations.
+>>>>>>> 26402d0 (Reconcile admin and seller schemas; renewal messages; spec and test scripts)

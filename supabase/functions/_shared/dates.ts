@@ -114,3 +114,10 @@ export function renewalPeriod(paidUntil: Date | string | number | null | undefin
 export const eatToday = (now: Date | string | number = new Date()): Day => nairobiDay(now);
 
 export const laterDate = (a: Day, b: Day): Day => (a >= b ? a : b);
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export const formatDay = (day: Day): string => {
+  const [y, m, d] = parts(nairobiDay(day));
+  return `${pad(d)} ${MONTHS[m - 1]} ${y}`;
+};

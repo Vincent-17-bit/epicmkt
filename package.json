@@ -20,9 +20,16 @@
     "sync:shared": "node scripts/sync-shared.mjs",
     "seed:sellers": "node --env-file=scripts/.env scripts/seed-sellers.mjs",
     "test:shared": "node --test shared/src/seller/seller.test.js shared/src/seller/exceptions.test.js scripts/activate-seller.test.mjs seller/src/api/api.test.js",
+<<<<<<< HEAD
     "test:db": "node --test --test-concurrency=1 supabase/tests/seller.test.mjs supabase/tests/subscription.test.mjs supabase/tests/exceptions.test.mjs supabase/tests/admin.test.mjs supabase/tests/seed.test.mjs",
     "test:fn": "deno test --no-check -A supabase/tests/functions.test.ts supabase/tests/proofs.test.ts supabase/tests/shared-pure.test.ts supabase/tests/shared-admin.test.ts supabase/tests/admin.test.ts supabase/tests/admin-shared.test.ts",
     "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn",
+=======
+    "test:db": "node --test --test-concurrency=1 supabase/tests/seller.test.mjs supabase/tests/subscription.test.mjs supabase/tests/exceptions.test.mjs supabase/tests/admin-schema.test.mjs",
+    "test:fn": "deno test --no-check -A --node-modules-dir=none supabase/tests/functions.test.ts supabase/tests/proofs.test.ts supabase/tests/admin.test.ts supabase/tests/admin-shared.test.ts",
+    "test:fn:db": "deno test --no-check -A --node-modules-dir=none supabase/tests/admin-db.test.ts",
+    "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn && npm run test:fn:db",
+>>>>>>> 26402d0 (Reconcile admin and seller schemas; renewal messages; spec and test scripts)
     "test:seller-ui": "npm test -w seller",
     "test:client": "npm test -w client",
     "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client",

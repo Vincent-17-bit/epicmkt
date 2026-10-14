@@ -140,7 +140,7 @@ test("works for suspended, paused and expired sellers", async () => {
 
 test("changes are audited without the note text", async () => {
   await reset();
-  await sql(c, `delete from audit_log`);
+  await sql(c, `truncate audit_log`);
   const e = await save(asA, addDays(today, 3), "closed", [], "private reason");
   await tx(c, asA, (k) => k.query(`select seller_delete_exception('${e.id}')`), { commit: true });
   const rows = await sql(c, `select action, data from audit_log where business_id = '${ids.bizA}' order by id`);
