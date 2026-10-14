@@ -1,4 +1,27 @@
 {
+  "admin-applications": [
+    "button|Collapse sidebar",
+    "input:search|⌕"
+  ],
+  "admin-businesses": [
+    "button|Collapse sidebar",
+    "input:search|⌕"
+  ],
+  "admin-command-center": [
+    "button|Collapse sidebar",
+    "input:search|⌕"
+  ],
+  "admin-not-found": [
+    "a|Back to Command Center"
+  ],
+  "admin-payments": [
+    "button|Collapse sidebar",
+    "input:search|⌕"
+  ],
+  "admin-settings": [
+    "button|Collapse sidebar",
+    "input:search|⌕"
+  ],
   "client-business": [
     "a|0700 000 000",
     "a|Contact page",

@@ -38,3 +38,5 @@ export const mockAdminApi = {
     return mockPayments;
   },
 };
+
+export default mockAdminApi;

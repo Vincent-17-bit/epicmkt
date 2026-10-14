@@ -1,8 +1,5 @@
-import { existsSync } from "node:fs";
 import { defineConfig } from "@playwright/test";
 import { HEIGHTS, HOST, PORTS, TOUCH_MAX, WIDTHS } from "./e2e/support/env.js";
-
-const built = (app) => existsSync(`${app}/dist/index.html`);
 
 const server = (app) => ({
   command: `npm run preview -w ${app} -- --host ${HOST} --port ${PORTS[app]} --strictPort`,
@@ -47,5 +44,5 @@ export default defineConfig({
       use: { viewport: { width, height: HEIGHTS[width] }, hasTouch: touch, isMobile: touch }
     };
   }),
-  webServer: ["client", "seller", "admin"].filter(built).map(server)
+  webServer: ["client", "seller", "admin"].map(server)
 });

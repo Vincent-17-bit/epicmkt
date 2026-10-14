@@ -1,8 +1,8 @@
+import mockApi from "./mock.js";
+import liveApi from "./live.js";
+
 const isLive = Boolean(import.meta.env.VITE_SUPABASE_URL);
 
-export const api = isLive
-  ? await import("./live.js")
-  : await import("./mock.js");
+export const api = isLive ? liveApi : mockApi;
 
 export default api;
-export { api as default };

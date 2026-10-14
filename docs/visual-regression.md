@@ -2,7 +2,7 @@
 
 ## What runs
 
-`npm run test:visual` serves the production builds of `client` and `seller` (and `admin` once it builds) in mock mode and drives headless Chromium at 320, 375, 768 and 1280 px.
+`npm run test:visual` serves the production builds of `client` and `seller` and `admin` in mock mode and drives headless Chromium at 320, 375, 768 and 1280 px.
 
 Every page test does three things:
 
@@ -16,7 +16,7 @@ Time is frozen, `Math.random` is seeded, external requests are stubbed, motion i
 
 client: home, search, business, flash, offers, contact, sell, become-a-seller, not-found, open menu.
 seller: login, subscription, notifications, questions, exceptions.
-admin: command center, applications, businesses, payments, settings, not-found (marked fixme until `admin` builds).
+admin: command center, applications, businesses, payments, settings, not-found.
 
 ## CI
 
@@ -46,7 +46,3 @@ If a test proves flaky, do not delete it silently:
 3. Fix the cause (usually an unstable data source or animation) and remove the `fixme`.
 
 To remove the whole job, delete `.github/workflows/visual-regression.yml`. Nothing else depends on it.
-
-## Known blockers
-
-`admin` does not build: `admin/src/api/index.js` has two default exports and a top-level `await` the build target rejects, and `admin/src/api/mock.js` has no default export, so the pages' `api.getAdminCounts()` calls cannot resolve. Admin tests stay `fixme` until that is fixed.
