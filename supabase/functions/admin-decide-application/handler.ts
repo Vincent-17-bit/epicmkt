@@ -133,6 +133,7 @@ export const adminDecideApplication = (d: AdminDeps) =>
       await must(d.db.from("messages").insert(outbox.map((m) => ({
         application_id: applicationId,
         channel: m.channel,
+        kind: action === "approve" ? "approval" : "general",
         template_key: `application.${action}`,
         to_address: m.to,
         subject: m.subject,

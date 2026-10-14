@@ -17,3 +17,17 @@ export function addCalendarMonth(date: string, months = 1): string {
 }
 
 export const laterDate = (a: string, b: string): string => (a >= b ? a : b);
+
+export const eatDay = (ts: string | Date): string => eatToday(new Date(ts));
+
+export const eatMidnight = (day: string): string => {
+  if (!ISO_DATE.test(day)) throw new Error("invalid_date");
+  return new Date(`${day}T00:00:00+03:00`).toISOString();
+};
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export const formatDay = (day: string): string => {
+  const [y, m, d] = day.split("-").map(Number);
+  return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
+};

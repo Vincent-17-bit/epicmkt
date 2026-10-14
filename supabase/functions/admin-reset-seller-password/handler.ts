@@ -10,17 +10,17 @@ export const adminResetSellerPassword = (d: AdminDeps) =>
   adminFn(d, { name: "reset-password", roles: ["owner"], max: 5, seconds: 3600, schema: Body }, async (c) => {
     const { businessId, reason } = c.input;
     const { data: biz } = await d.db.from("businesses")
-      .select("id,seller_id,owner_user_id,phone,email,status")
+      .select("id,seller_id,user_id,phone,email,status")
       .eq("id", businessId).maybeSingle();
     if (!biz || biz.status === "deleted") return json({ error: "not_found" }, 404);
-    if (!biz.owner_user_id) return json({ error: "no_login" }, 409);
+    if (!biz.user_id) return json({ error: "no_login" }, 409);
 
     const password = d.password();
-    const upd = await d.db.auth.admin.updateUserById(biz.owner_user_id, { password, user_metadata: { must_change_password: true } });
+    const upd = await d.db.auth.admin.updateUserById(biz.user_id, { password, user_metadata: { must_change_password: true } });
     if (upd.error) throw new Error("auth_update_failed");
     await must(d.db.from("businesses").update({ must_change_password: true }).eq("id", businessId));
     await audit(c, {
-      action: "business.password_reset", targetType: "business", targetId: businessId,
+      action: "business.password_reset", targetType: "business", targetId: businessId, businessId,
       after: { sellerId: biz.seller_id, mustChangePassword: true }, reason,
     });
 

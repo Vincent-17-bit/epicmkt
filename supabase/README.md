@@ -15,7 +15,7 @@ The admin migration is in `supabase/migrations/0008_admin.sql` and is designed t
 Deploy the admin functions with:
 
 ```bash
-supabase functions deploy admin-decision --no-verify-jwt
+supabase functions deploy admin-decide-application --no-verify-jwt
 supabase functions deploy admin-confirm-payment --no-verify-jwt
 supabase functions deploy admin-reset-seller-password --no-verify-jwt
 supabase functions deploy admin-message --no-verify-jwt
@@ -53,3 +53,4 @@ where user_id = (select id from auth.users where email = 'you@example.com');
 - All browser writes must go through edge functions and RPCs.
 - Admin and audit access are enforced using `public.is_admin()` and `public.has_role()`.
 - Realtime is enabled for the admin dashboard tables.
+- `supabase/pending/0008b_admin_content_tables.sql` holds admin statements for items, item_media, faqs, offers, flags, reports and change_requests that do not match the seller schema. It is not run by migrations.

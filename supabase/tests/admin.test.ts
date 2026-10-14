@@ -2,6 +2,8 @@ import nodeAssert from "node:assert/strict";
 import { adminDecideApplication } from "../functions/admin-decide-application/handler.ts";
 import { adminConfirmPayment } from "../functions/admin-confirm-payment/handler.ts";
 import { adminResetSellerPassword } from "../functions/admin-reset-seller-password/handler.ts";
+import { queueMessages } from "../functions/_shared/adminKit.ts";
+import { eatMidnight } from "../functions/_shared/dates.ts";
 import { APP2_ID, APP_ID, BIZ_ID, TOKENS, deps, post, read, world } from "./admin-world.ts";
 
 const assertEquals = (a: unknown, b: unknown) => nodeAssert.deepStrictEqual(a, b);
@@ -113,7 +115,7 @@ Deno.test("decide: rate limit is 60 per minute per admin", async () => {
   assertEquals(last, 429);
 });
 
-Deno.test("confirm: duplicate M-Pesa code returns a warning and does nothing until acknowledged", async () => {
+Deno.test("confirm: duplicate M-Pesa code warns first, and stays a conflict because the database forbids reuse", async () => {
   const { w, run } = confirm();
   w.tables.payments.push({ id: "p0", mpesa_code: "QWE1234567", status: "confirmed" });
   const blocked = await run(pay());
@@ -127,14 +129,25 @@ Deno.test("confirm: duplicate M-Pesa code returns a warning and does nothing unt
   assertEquals(w.receiptSeq, 0);
   assertEquals(w.tables.audit_log.length, 0);
 
-  const ok = await run(pay({ acknowledgeWarnings: true }));
-  assertEquals(ok.status, 200);
-  assertEquals(ok.body.warnings.map((x: any) => x.code), ["duplicate_mpesa_code"]);
-  assertEquals(w.tables.applications[1].status, "activated");
+  const acknowledged = await run(pay({ acknowledgeWarnings: true }));
+  assertEquals(acknowledged.status, 409);
+  assertEquals(acknowledged.body.error, "duplicate_mpesa_code");
+  assertEquals(w.tables.payments.length, 1);
+  assertEquals(w.authUsers.length, 1);
+  assertEquals(w.tables.businesses.length, 1);
+  assertEquals(w.tables.applications[1].status, "payment_confirming");
+  assertEquals(w.sms.length, 0);
 
   const w2 = world();
   w2.tables.payments.push({ id: "p0", mpesa_code: "QWE1234567", status: "rejected" });
   assertEquals((await confirm(w2).run(pay())).status, 200);
+
+  const w3 = world();
+  w3.tables.payments.push({ id: "p0", mpesa_code: "ABC1234567", status: "confirmed" });
+  const renewal = await confirm(w3).run({ businessId: BIZ_ID, mpesaCode: "ABC1234567", amount: 500, months: 1, action: "confirm", acknowledgeWarnings: true });
+  assertEquals(renewal.status, 409);
+  assertEquals(w3.tables.businesses[0].paid_until, eatMidnight("2026-11-20"));
+  assertEquals(w3.tables.messages.length, 0);
 });
 
 Deno.test("confirm: amount differing from plan price needs acknowledgement", async () => {
@@ -165,15 +178,19 @@ Deno.test("confirm: first payment activates the business", async () => {
 
   const biz = w.tables.businesses.find((x) => x.seller_id === b.sellerId);
   assertEquals(biz.slug, "mama-pima-2");
-  assertEquals(biz.paid_until, "2026-11-14");
   assertEquals(biz.first_paid_at, "2026-10-14T06:30:00.000Z");
+  assertEquals(biz.paid_until, eatMidnight("2026-11-14"));
+  assertEquals(biz.must_change_password, true);
+  assertEquals(biz.owner_name, "Wanjiru Kamau");
   assertEquals(biz.status, "live");
   assertEquals(biz.application_id, APP2_ID);
   assertEquals(biz.name, "Mama Pima");
   assertEquals(biz.phone, "+254722000111");
   assertEquals(biz.monthly_price, 500);
-  assertEquals(biz.profile.documentSlots, ["sbp"]);
-  assertEquals(biz.owner_user_id, b.businessId === biz.id ? w.authUsers[1].id : "");
+  assertEquals(Object.keys(biz.profile).sort(), ["businessPhones", "registered", "templateValues", "website", "yearEstablished"]);
+  assertEquals(biz.user_id, w.authUsers[1].id);
+  const blob = JSON.stringify(biz);
+  for (const secret of ["29384756", "A001234567Z", "SBP-77881", "REG-99120", "sbp"]) assert(!blob.includes(secret), `business must not carry ${secret}`);
 
   const user = w.authUsers[1];
   assertEquals(user.email, `${b.sellerId.toLowerCase()}@sellers.epicmkt.app`);
@@ -183,8 +200,8 @@ Deno.test("confirm: first payment activates the business", async () => {
   assertEquals(w.tables.applications[1].status, "activated");
   assertEquals(w.tables.applications[1].seller_id, b.sellerId);
   const p = w.tables.payments[0];
-  assertEquals([p.status, p.receipt_no, p.amount, p.months, p.business_id, p.application_id], ["confirmed", "RCT-000001", 500, 1, biz.id, APP2_ID]);
-  assertEquals([p.period_start, p.period_end, p.confirmed_by], ["2026-10-14", "2026-11-14", "u-finance"]);
+  assertEquals([p.status, p.kind, p.receipt_no, p.amount_kes, p.months, p.business_id, p.application_id], ["confirmed", "first", "RCT-000001", 500, 1, biz.id, APP2_ID]);
+  assertEquals([p.period_start, p.period_end, p.confirmed_by, p.confirmed_via, p.source], ["2026-10-14", "2026-11-14", "u-finance", "admin", "admin"]);
 
   assertEquals(w.sms.length, 1);
   assertEquals(w.sms[0].to, "+254712345678");
@@ -199,6 +216,7 @@ Deno.test("confirm: first payment activates the business", async () => {
   assertEquals(w.tables.application_events.at(-1).type, "activated");
   assertEquals(w.tables.audit_log.map((a) => a.action), ["payment.confirm", "business.activate"]);
   assertEquals(w.tables.audit_log[0].actor_email, "finance@epicmkt.test");
+  assertEquals([w.tables.audit_log[0].actor_role, w.tables.audit_log[0].business_id, w.tables.audit_log[1].business_id], ["admin", biz.id, biz.id]);
   assertEquals(b.smsSent, true);
   assertEquals(b.warnings, []);
 
@@ -216,15 +234,18 @@ Deno.test("confirm: activation with months and no clash keeps the plain slug", a
   assertEquals(r.body.paidUntil, "2026-12-14");
 });
 
-Deno.test("confirm: activation rolls back when a later step fails", async () => {
-  const w = world();
-  w.unique.payments = ["receipt_no", "mpesa_code"];
-  w.tables.payments.push({ id: "p0", mpesa_code: "QWE1234567", status: "confirmed" });
-  const r = await confirm(w).run(pay({ acknowledgeWarnings: true }));
-  assertEquals(r.status, 500);
-  assertEquals(w.tables.businesses.length, 1);
-  assertEquals(w.authUsers.length, 1);
-  assertEquals(w.tables.applications[1].status, "payment_confirming");
+Deno.test("confirm: activation rolls back everything when a later step fails", async () => {
+  for (const failing of [{ table: "applications", mode: "update" }, { table: "payments", mode: "insert" }] as const) {
+    const w = world();
+    w.failOn.push({ ...failing });
+    const r = await confirm(w).run(pay());
+    assertEquals(r.status, 500);
+    assertEquals(w.tables.businesses.length, 1);
+    assertEquals(w.tables.payments.length, 0);
+    assertEquals(w.authUsers.length, 1);
+    assertEquals(w.tables.applications[1].status, "payment_confirming");
+    assertEquals(w.sms.length, 0);
+  }
 });
 
 Deno.test("confirm: renewal before expiry adds a month to the OLD paid_until", async () => {
@@ -233,23 +254,54 @@ Deno.test("confirm: renewal before expiry adds a month to the OLD paid_until", a
   assertEquals(r.status, 200);
   assertEquals(r.body.kind, "renewal");
   assertEquals(r.body.paidUntil, "2026-12-20");
-  assertEquals(w.tables.businesses[0].paid_until, "2026-12-20");
+  assertEquals(w.tables.businesses[0].paid_until, eatMidnight("2026-12-20"));
   assertEquals(w.tables.payments[0].period_start, "2026-11-20");
+  assertEquals(w.tables.payments[0].kind, "renewal");
   assertEquals(w.tables.payments[0].receipt_no, "RCT-000001");
   assertEquals(r.body.temporaryPassword, undefined);
   assertEquals(w.sms.length, 0);
   assertEquals(w.authUsers.length, 1);
   assertEquals(w.tables.audit_log[0].before.paid_until, "2026-11-20");
+  assertEquals(w.tables.audit_log[0].business_id, BIZ_ID);
+});
+
+Deno.test("confirm: renewal queues payment-received by SMS, email and in-app, idempotent by dedupe_key", async () => {
+  const { w, run } = confirm();
+  const r = await run({ businessId: BIZ_ID, mpesaCode: "ABC1234567", amount: 500, months: 1, action: "confirm" });
+  assertEquals(r.status, 200);
+  const rows = w.tables.messages;
+  assertEquals(rows.map((m) => m.channel), ["sms", "email", "in_app"]);
+  assertEquals(rows.map((m) => m.dedupe_key), ["payment:payments-1:sms", "payment:payments-1:email", "payment:payments-1:in_app"]);
+  assertEquals(rows.map((m) => m.status), ["queued", "queued", "delivered"]);
+  assertEquals(rows.map((m) => m.to_address), ["+254700000001", "old@example.com", null]);
+  assertEquals(new Set(rows.map((m) => m.business_id)), new Set([BIZ_ID]));
+  assertEquals(new Set(rows.map((m) => m.kind)), new Set(["payment"]));
+  for (const m of rows) {
+    assert(m.body.includes("payment received") && m.body.includes("20 Dec 2026") && m.body.includes("RCT-000001"));
+    assertEquals(m.data.paid_until, "2026-12-20");
+  }
+  assertEquals(w.sms.length, 0);
+
+  const again = rows.map((m) => ({ ...m, id: undefined }));
+  await queueMessages(deps(w), again);
+  await queueMessages(deps(w), again);
+  assertEquals(w.tables.messages.length, 3);
+
+  const w2 = world();
+  w2.tables.messages.push({ id: "m0", business_id: BIZ_ID, channel: "sms", dedupe_key: "payment:payments-1:sms", body: "earlier attempt" });
+  assertEquals((await confirm(w2).run({ businessId: BIZ_ID, mpesaCode: "ABC1234567", amount: 500, months: 1, action: "confirm" })).status, 200);
+  assertEquals(w2.tables.messages.map((m) => m.channel).sort(), ["email", "in_app", "sms"]);
+  assertEquals(w2.tables.messages.filter((m) => m.dedupe_key === "payment:payments-1:sms").length, 1);
 });
 
 Deno.test("confirm: renewal after lapse counts from today, month-end clamps", async () => {
   const w = world();
-  w.tables.businesses[0].paid_until = "2026-09-01";
+  w.tables.businesses[0].paid_until = eatMidnight("2026-09-01");
   const lapsed = await confirm(w).run({ businessId: BIZ_ID, mpesaCode: "ABC1234567", amount: 500, months: 1, action: "confirm" });
   assertEquals(lapsed.body.paidUntil, "2026-11-14");
 
   const w2 = world();
-  w2.tables.businesses[0].paid_until = "2027-01-31";
+  w2.tables.businesses[0].paid_until = eatMidnight("2027-01-31");
   const clamp = await confirm(w2).run({ businessId: BIZ_ID, mpesaCode: "ABC1234567", amount: 500, months: 1, action: "confirm" });
   assertEquals(clamp.body.paidUntil, "2027-02-28");
 });
@@ -260,7 +312,8 @@ Deno.test("confirm: reject records the payment and sends the application back to
   const r = await run(pay({ action: "reject", reason: "Code not found in statement" }));
   assertEquals(r.status, 200);
   assertEquals(w.tables.payments[0].status, "rejected");
-  assertEquals(w.tables.payments[0].reject_reason, "Code not found in statement");
+  assertEquals(w.tables.payments[0].decline_reason, "Code not found in statement");
+  assertEquals([w.tables.payments[0].kind, w.tables.payments[0].amount_kes, w.tables.payments[0].business_id, w.tables.payments[0].application_id], ["first", 500, null, APP2_ID]);
   assertEquals(w.tables.applications[1].status, "approved");
   assertEquals(w.tables.applications[1].payment_code, null);
   assertEquals(w.tables.audit_log[0].action, "payment.reject");
@@ -296,6 +349,7 @@ Deno.test("reset: owner only, reason required, password sent and never returned 
   assertEquals(w.mail[0].to, "old@example.com");
   assertEquals(w.tables.audit_log[0].action, "business.password_reset");
   assertEquals(w.tables.audit_log[0].reason, "Seller lost phone");
+  assertEquals([w.tables.audit_log[0].business_id, w.tables.audit_log[0].actor_role], [BIZ_ID, "admin"]);
   assert(!JSON.stringify(w.tables).includes(user.password));
   assert(!JSON.stringify(r.body).includes(user.password));
   assertEquals((await run({ businessId: "44444444-4444-4444-8444-444444444444", reason: "none here" })).status, 404);

@@ -68,10 +68,12 @@ export const adminFn = <S extends z.ZodTypeAny>(d: AdminDeps, cfg: Config<S>, ru
 
 export async function audit(
   c: { req: Request; d: AdminDeps; admin: Admin },
-  row: { action: string; targetType: string; targetId: string; before?: unknown; after?: unknown; reason?: string | null },
+  row: { action: string; targetType: string; targetId: string; businessId?: string | null; before?: unknown; after?: unknown; reason?: string | null },
 ) {
   const r = await c.d.db.from("audit_log").insert({
+    business_id: row.businessId ?? null,
     actor_id: c.admin.user.id,
+    actor_role: "admin",
     actor_email: c.admin.user.email ?? null,
     action: row.action,
     target_type: row.targetType,
@@ -88,4 +90,17 @@ export async function must<T extends { error?: unknown }>(p: PromiseLike<T> | T)
   const r = await p;
   if (r?.error) throw new Error("db_failed");
   return r;
+}
+
+type OutMessage = { business_id: string | null; channel: string; dedupe_key: string } & Record<string, unknown>;
+
+export async function queueMessages(d: AdminDeps, rows: OutMessage[]) {
+  if (!rows.length) return;
+  const keys = rows.map((r) => r.dedupe_key);
+  const seen = await d.db.from("messages").select("business_id,dedupe_key").in("dedupe_key", keys);
+  const have = new Set((seen.data ?? []).map((r: { business_id: string; dedupe_key: string }) => `${r.business_id}|${r.dedupe_key}`));
+  const fresh = rows.filter((r) => !have.has(`${r.business_id}|${r.dedupe_key}`));
+  if (!fresh.length) return;
+  const r = await d.db.from("messages").insert(fresh);
+  if (r?.error && r.error.code !== "23505") throw new Error("db_failed");
 }
