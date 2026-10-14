@@ -194,7 +194,7 @@ test("two parallel inserts at limit minus one admit only one", async () => {
 });
 
 test("protect_admin_cols blocks sellers only", async () => {
-  const cols = [["hidden_by_admin", "true"], ["admin_hide_reason", "'x'"], ["admin_status", "'x'"], ["admin_reason", "'x'"], ["removed_by_admin", "true"]];
+  const cols = [["hidden_by_admin", "true"], ["admin_hide_reason", "'x'"], ["admin_status", "'hidden'"], ["admin_reason", "'x'"], ["removed_by_admin", "true"]];
   for (const [table, ins] of [["items", "name"], ["faqs", "question"], ["offers", "title"]]) {
     const { rows } = await c.query(`insert into ${table} (business_id, ${ins}${table === "faqs" ? ", answer" : ""}) values ($1, 'seed row'${table === "faqs" ? ", 'a'" : ""}) returning id`, [ids.bizB]).catch(() => ({ rows: [] }));
     const id = rows[0]?.id ?? (await sql(c, `select id from ${table} where business_id = '${ids.bizB}' limit 1`))[0].id;

@@ -140,10 +140,11 @@ test("works for suspended, paused and expired sellers", async () => {
 
 test("changes are audited without the note text", async () => {
   await reset();
-  await sql(c, `delete from audit_log`);
+  // audit_log is append-only, so the test reads only the rows written after this point instead of clearing the table.
+  const since = (await sql(c, `select coalesce(max(id), 0)::bigint as n from audit_log`))[0].n;
   const e = await save(asA, addDays(today, 3), "closed", [], "private reason");
   await tx(c, asA, (k) => k.query(`select seller_delete_exception('${e.id}')`), { commit: true });
-  const rows = await sql(c, `select action, data from audit_log where business_id = '${ids.bizA}' order by id`);
+  const rows = await sql(c, `select action, data from audit_log where business_id = '${ids.bizA}' and id > ${since} order by id`);
   assert.deepEqual(rows.map((r) => r.action), ["exception_added", "exception_deleted"]);
   assert.ok(!JSON.stringify(rows).includes("private reason"));
 });
