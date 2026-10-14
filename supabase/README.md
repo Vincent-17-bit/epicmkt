@@ -36,7 +36,25 @@ AT_USERNAME=
 AT_SENDER=
 RESEND_API_KEY=
 MAIL_FROM=
+CRON_SECRET=
 ```
+
+## Messaging and scheduled jobs
+
+Migration `0009_messaging.sql` adds the delivery columns to `messages`, the templates table, quiet hours and the
+SQL the jobs run. Schedule the jobs once per environment with `supabase/cron/schedule.sql`
+(`dispatch-messages` every minute, `daily-lifecycle` at 07:00 Nairobi).
+
+- **Dev mode** (`APP_ENV` anything but `production`): `dispatch-messages` sends nothing and marks SMS/email rows
+  `sent` with `provider_id = 'dev'`. In production a missing provider key counts as a failed attempt.
+- **Quiet hours** (`site_settings.quiet_hours`, default 21:00 to 07:00 Nairobi): promotional SMS/email wait for the
+  morning. Transactional messages and in-app messages are never delayed.
+- **Retries**: 3 attempts per message (backoff 5 then 15 minutes), then `failed` plus an `admin_notifications` row.
+- **Reminders** at 7, 3 and 1 days are keyed by `dedupe_key` (`reminder:<days>:<paid_until day>`), so re-running is safe.
+- `admin-message` queues; `dispatch-messages` delivers. `admin-export` returns CSV/JSON and writes an audit row.
+
+Note: `0008_admin.sql` currently fails to apply after `0007` (its tables clash with the ones created in `0004`),
+so `0009` does not depend on it.
 
 ## First admin
 

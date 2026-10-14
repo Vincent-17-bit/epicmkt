@@ -1,1 +1,4 @@
-import { makePersistedQueryClient } from "@tanstack/react-query-persist-client";
+import { realOutboundDeps } from "../_shared/outbound.ts";
+import { adminExport } from "./handler.ts";
+
+Deno.serve(adminExport(realOutboundDeps()));
