@@ -13,7 +13,7 @@ Every variable is listed, with where it goes, in the repository root `.env.examp
 ### 2. Database
 
 ```bash
-supabase db push        # runs migrations 0001 to 0008 in order
+supabase db push        # runs migrations 0001 to 0011 in order
 ```
 
 `0008_admin.sql` is additive. It never re-declares a table that an earlier migration owns; it adds roles, the audit
@@ -113,8 +113,15 @@ The DB test files run one at a time because they share one database name.
 
 `admin-decide-application`, `admin-confirm-payment` and `admin-reset-seller-password` are rewritten on the canonical
 columns (migrations 0008 to 0010) and tested. `admin-message`, `dispatch-messages`, `daily-lifecycle` and `admin-export`
-are still placeholders: do not deploy them until they are rewritten the same way.
+are implemented on migration `0011_messaging.sql`; their contracts are in `docs/b0d-contracts.md` (derived from the
+schema and tests, not from spec section 5: verify before relying on them).
 `admin-proof-url`, the seller functions and the application functions are complete and tested.
+
+### Messaging jobs
+
+Schedule the two jobs once per environment with `supabase/cron/schedule.sql` (setup steps are in its header):
+`dispatch-messages` every minute, `daily-lifecycle` at 07:00 Nairobi (04:00 UTC). Both accept the `x-cron-secret`
+header (`CRON_SECRET`), and an admin JWT for manual runs.
 
 ```bash
 supabase functions deploy admin-proof-url --no-verify-jwt   # the function checks the admin JWT itself
@@ -124,6 +131,10 @@ supabase functions deploy admin-proof-url --no-verify-jwt   # the function check
 supabase functions deploy admin-decide-application --no-verify-jwt
 supabase functions deploy admin-confirm-payment --no-verify-jwt
 supabase functions deploy admin-reset-seller-password --no-verify-jwt
+supabase functions deploy admin-message --no-verify-jwt
+supabase functions deploy admin-export --no-verify-jwt
+supabase functions deploy dispatch-messages --no-verify-jwt
+supabase functions deploy daily-lifecycle --no-verify-jwt
 ```
 
 - All browser writes must go through edge functions and RPCs.
