@@ -1,92 +1,36 @@
--- 0009_messaging.sql
--- Outbound delivery (SMS / email / in-app) on top of the seller inbox table from 0004-0006.
+-- 0011_messaging.sql
+-- The SQL behind dispatch-messages, daily-lifecycle and admin-message, on top of main's canonical schema.
 --
--- 0008_admin.sql describes a different `messages` table, but `create table if not exists` is a no-op
--- here because 0004 already created it, so the delivery columns never existed. This migration adds them
--- without changing how the seller inbox behaves, plus the SQL the dispatcher and the daily lifecycle run.
+-- 0008_admin.sql already owns the delivery columns on `messages` (channel, status, attempts, provider_id,
+-- transactional, scheduled_at, ...), `message_templates`, the `quiet_hours` setting and admins.role.
+-- This migration adds only what they lack: the tighter seller inbox policy, a dedupe index for applicant-only
+-- messages, message_templates.transactional, and the functions the jobs run. It is additive and safe to run again.
 --
 -- Time is always passed in (p_now) so tests can travel through quiet hours and billing days.
 
 -- ---------------------------------------------------------------------------
--- admins: roles (same definition 0008 intends; `if not exists` keeps both safe to run)
+-- Seller inbox: only in-app messages that have actually been delivered
 -- ---------------------------------------------------------------------------
-alter table public.admins add column if not exists role text not null default 'owner'
-  check (role in ('owner', 'reviewer', 'finance', 'support'));
-alter table public.admins add column if not exists email text;
-alter table public.admins add column if not exists display_name text;
-
--- ---------------------------------------------------------------------------
--- messages: delivery columns
--- ---------------------------------------------------------------------------
-alter table public.messages alter column business_id drop not null;
-
-alter table public.messages
-  add column if not exists application_id uuid references public.applications(id) on delete set null,
-  add column if not exists channel text not null default 'in_app',
-  add column if not exists template_key text,
-  add column if not exists to_address text,
-  add column if not exists status text not null default 'delivered',
-  add column if not exists provider_id text,
-  add column if not exists cost_kes numeric(8,2),
-  add column if not exists error text,
-  add column if not exists attempts integer not null default 0,
-  add column if not exists transactional boolean not null default true,
-  add column if not exists scheduled_at timestamptz not null default now(),
-  add column if not exists sent_at timestamptz;
-
--- Existing rows are seller-inbox messages that were visible the moment they were written, so the defaults
--- above ('in_app', 'delivered') describe them correctly. Only the admin-message function queues rows.
-alter table public.messages drop constraint if exists messages_channel_check;
-alter table public.messages add constraint messages_channel_check
-  check (channel in ('sms', 'email', 'in_app', 'whatsapp_link'));
-alter table public.messages drop constraint if exists messages_status_check;
-alter table public.messages add constraint messages_status_check
-  check (status in ('queued', 'sent', 'delivered', 'failed'));
-alter table public.messages drop constraint if exists messages_target_check;
-alter table public.messages add constraint messages_target_check
-  check (business_id is not null or application_id is not null);
+-- 0008 lets a seller read every in-app row they own, so an in-app message scheduled for next week (status
+-- 'queued') would show up early. SMS/email rows are delivery records and stay hidden, as in 0008.
+drop policy if exists "seller reads own messages" on public.messages;
+create policy "seller reads own messages" on public.messages for select to authenticated
+  using (channel = 'in_app' and business_id = public.my_business_id() and status in ('sent', 'delivered'));
 
 -- (business_id, dedupe_key) is already unique from 0006; applicant-only messages have no business.
 create unique index if not exists messages_application_dedupe_key
   on public.messages (application_id, dedupe_key) where business_id is null and dedupe_key is not null;
-create index if not exists messages_dispatch_idx on public.messages (scheduled_at) where status = 'queued';
-
--- Sellers see only in-app messages that have actually been delivered. SMS/email rows are delivery records,
--- and a queued in-app message (for example one scheduled for next week) must not appear early.
-drop policy if exists "seller reads own messages" on public.messages;
-create policy "seller reads own messages" on public.messages for select to authenticated
-  using (business_id = public.my_business_id() and channel = 'in_app' and status in ('sent', 'delivered'));
 
 -- ---------------------------------------------------------------------------
--- Templates for admin-message
+-- Templates: admin-message needs to know whether a template is a transactional notice
 -- ---------------------------------------------------------------------------
-create table if not exists public.message_templates (
-  key text primary key check (key ~ '^[a-z0-9_]{2,60}$'),
-  channel text check (channel in ('sms', 'email', 'in_app')),   -- null = usable on any channel
-  subject text,
-  body_en text not null,
-  body_sw text,
-  transactional boolean not null default false,
-  version integer not null default 1,
-  updated_at timestamptz not null default now()
-);
-alter table public.message_templates enable row level security;
-drop policy if exists "admin all message_templates" on public.message_templates;
-create policy "admin all message_templates" on public.message_templates for all to authenticated
-  using (public.is_admin()) with check (public.is_admin());
-revoke all on public.message_templates from public, anon;
-grant all on public.message_templates to authenticated, service_role;
-
-insert into public.message_templates (key, channel, subject, body_en, transactional) values
-  ('general_notice', null, 'A notice from EpicMKT', 'Hi {{business_name}}, {{message}} - EpicMKT', false),
-  ('renewal_help', null, 'Renewing your listing', 'Hi {{business_name}}, your listing runs to {{paid_until}}. You can renew from your seller dashboard. - EpicMKT', true)
-on conflict (key) do nothing;
+-- Transactional templates (billing and account notices) ignore quiet hours; everything else is promotional.
+alter table public.message_templates add column if not exists transactional boolean not null default false;
 
 -- ---------------------------------------------------------------------------
 -- Quiet hours (site_settings.quiet_hours, Nairobi local time, may wrap past midnight)
 -- ---------------------------------------------------------------------------
-insert into public.site_settings (key, value) values ('quiet_hours', '{"start":"21:00","end":"07:00"}')
-on conflict (key) do nothing;
+-- The setting itself is seeded by 0008_admin.sql; with no row, in_quiet_hours() is false (nothing is delayed).
 
 create or replace function public.in_quiet_hours(p_now timestamptz default now()) returns boolean
 language plpgsql stable security definer set search_path = public as $$
