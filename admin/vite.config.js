@@ -10,4 +10,12 @@ export default defineConfig({
       "@": "/src",
     },
   },
+  test: {
+    environment: "jsdom",
+    globals: true,
+    setupFiles: "./src/test/setup.js",
+    // CSS modules resolve to their plain class names so tests can read them; no styles are applied.
+    css: { modules: { classNameStrategy: "non-scoped" } },
+    include: ["src/**/*.test.{js,jsx}"],
+  },
 });

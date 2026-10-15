@@ -1,0 +1,257 @@
+/*
+  Admin design tokens.
+
+  Loaded after @epicmkt/shared/tokens.css, which already provides the brand and base roles used by
+  every app (--bg, --surface, --surface-2, --border, --text, --text-muted, --primary, --on-primary,
+  --primary-tint, --input-border, --scrim, --skeleton-*, --focus-ring, --ring-gap, the --text-*
+  scale, --space-*, --radius-sm/card/pill, --shadow-1/2). This file adds the roles only the admin
+  needs: status tones, danger, hover/selected/disabled states, toast, chart series, fields,
+  elevation, control sizes, motion and stacking.
+
+  Rules for components:
+  - No raw colours outside this file. Use var(--token).
+  - Every colour token has a light and a dark value, defined on :root / [data-theme="light"] and
+    [data-theme="dark"], so a subtree can carry its own theme (the /admin/_kit page does this).
+  - Every :hover rule sits inside @media (hover: hover) so touch screens never get stuck hovers.
+  - Status is never shown by colour alone: a tone always comes with an icon and a label.
+  - Pairs that carry text meet WCAG AA (4.5:1); icons, borders and chart strokes meet 3:1.
+    tokens.test.js checks this for every pair listed there.
+*/
+
+:root {
+  /* Type. The size scale (--text-xs ... --text-3xl) comes from shared tokens. */
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --lh-tight: 1.25;
+  --lh-body: 1.5;
+  --text-stat: clamp(1.75rem, 1.4rem + 1.2vw, 2.25rem);
+
+  /* Shape */
+  --radius-xs: 4px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Controls (buttons, fields, tabs). Touch screens get larger hit areas. */
+  --control-h-sm: 36px;
+  --control-h-md: 44px;
+  --control-h-lg: 52px;
+
+  /* Focus ring. Colours come from shared tokens (--focus-ring, --ring-gap). */
+  --focus-ring-width: 3px;
+  --focus-ring-offset: 2px;
+
+  /* Motion. prefers-reduced-motion is handled globally in shared reset.css. */
+  --dur-fast: 120ms;
+  --dur-slow: 320ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Stacking: header 40 (shared), then dialogs, then toasts so Undo stays reachable over a dialog. */
+  --z-dialog-scrim: 80;
+  --z-dialog: 90;
+  --z-toast: 100;
+
+  --dialog-w-sm: 24rem;
+  --dialog-w-md: 32rem;
+  --dialog-w-lg: 44rem;
+  --drawer-w: 28rem;
+}
+
+@media (pointer: coarse) {
+  :root {
+    --control-h-sm: 44px;
+    --control-h-md: 48px;
+    --control-h-lg: 56px;
+  }
+}
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Interaction states */
+  --hover-tint: rgb(17 17 17 / 0.05);
+  --pressed-tint: rgb(17 17 17 / 0.1);
+  --selected-bg: #e6f5ff;
+  --on-selected: #111111;
+  --disabled-bg: #e5e7eb;
+  --disabled-fg: #6b7280;
+  --disabled-border: #d1d5db;
+
+  /* Fields */
+  --field-bg: #ffffff;
+  --field-border: #6b7280;
+  --field-border-hover: #111111;
+  --field-placeholder: #6b7280;
+
+  /* Danger action (filled button) */
+  --danger: #b91c1c;
+  --danger-hover: #991b1b;
+  --danger-pressed: #7f1d1d;
+  --on-danger: #ffffff;
+
+  /* Status tones. bg/fg/border for chips and banners, solid for icons, dots and strokes. */
+  --tone-success-bg: #e6f6ec;
+  --tone-success-fg: #14532d;
+  --tone-success-border: #7fcf9b;
+  --tone-success-solid: #15803d;
+  --tone-success-on-solid: #ffffff;
+
+  --tone-warning-bg: #fff4d6;
+  --tone-warning-fg: #713f12;
+  --tone-warning-border: #e9b949;
+  --tone-warning-solid: #b45309;
+  --tone-warning-on-solid: #ffffff;
+
+  --tone-danger-bg: #fdeaea;
+  --tone-danger-fg: #7f1d1d;
+  --tone-danger-border: #ee9d9d;
+  --tone-danger-solid: #b91c1c;
+  --tone-danger-on-solid: #ffffff;
+
+  --tone-info-bg: #e6f5ff;
+  --tone-info-fg: #0b4a6f;
+  --tone-info-border: #8fd0f7;
+  --tone-info-solid: #0b6fa8;
+  --tone-info-on-solid: #ffffff;
+
+  --tone-neutral-bg: #eceef1;
+  --tone-neutral-fg: #374151;
+  --tone-neutral-border: #c5cad2;
+  --tone-neutral-solid: #4b5563;
+  --tone-neutral-on-solid: #ffffff;
+
+  /* Toast sits on the inverse surface so it reads over any page */
+  --toast-bg: #111111;
+  --toast-fg: #f3f4f6;
+  --toast-muted: #c4c8cf;
+  --toast-action: #66c7ff;
+  --toast-border: #333333;
+  /* Tone colours for the icon and accent edge, tuned for the toast surface (not the page surface) */
+  --toast-tone-success: #4ade80;
+  --toast-tone-warning: #fbbf24;
+  --toast-tone-danger: #f87171;
+  --toast-tone-info: #66c7ff;
+
+  /* Charts: six categorical series, then axis and grid */
+  --chart-1: #0072b2;
+  --chart-2: #c2410c;
+  --chart-3: #007a5a;
+  --chart-4: #a3326b;
+  --chart-5: #7a5a00;
+  --chart-6: #5b4fc7;
+  --chart-grid: #d9dce1;
+  --chart-area-opacity: 0.14;
+
+  /* Elevation */
+  --shadow-popover: 0 8px 24px rgb(17 17 17 / 0.14), 0 1px 2px rgb(17 17 17 / 0.08);
+  --shadow-modal: 0 24px 48px rgb(17 17 17 / 0.24), 0 2px 6px rgb(17 17 17 / 0.1);
+  --shadow-drawer: -12px 0 32px rgb(17 17 17 / 0.2);
+  --shadow-drawer-left: 12px 0 32px rgb(17 17 17 / 0.2);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --hover-tint: rgb(255 255 255 / 0.06);
+  --pressed-tint: rgb(255 255 255 / 0.12);
+  --selected-bg: rgb(56 182 255 / 0.16);
+  --on-selected: #f3f4f6;
+  --disabled-bg: #2a2a2a;
+  --disabled-fg: #8b919a;
+  --disabled-border: #3a3a3a;
+
+  --field-bg: #111111;
+  --field-border: #8b919a;
+  --field-border-hover: #f3f4f6;
+  --field-placeholder: #9ca3af;
+
+  --danger: #f87171;
+  --danger-hover: #fca5a5;
+  --danger-pressed: #ef4444;
+  --on-danger: #1a0505;
+
+  --tone-success-bg: rgb(34 197 94 / 0.16);
+  --tone-success-fg: #86efac;
+  --tone-success-border: rgb(34 197 94 / 0.5);
+  --tone-success-solid: #22c55e;
+  --tone-success-on-solid: #052e16;
+
+  --tone-warning-bg: rgb(245 158 11 / 0.16);
+  --tone-warning-fg: #fcd34d;
+  --tone-warning-border: rgb(245 158 11 / 0.5);
+  --tone-warning-solid: #f59e0b;
+  --tone-warning-on-solid: #1c1202;
+
+  --tone-danger-bg: rgb(248 113 113 / 0.16);
+  --tone-danger-fg: #fca5a5;
+  --tone-danger-border: rgb(248 113 113 / 0.5);
+  --tone-danger-solid: #f87171;
+  --tone-danger-on-solid: #1a0505;
+
+  --tone-info-bg: rgb(56 182 255 / 0.16);
+  --tone-info-fg: #8fd4ff;
+  --tone-info-border: rgb(56 182 255 / 0.5);
+  --tone-info-solid: #38b6ff;
+  --tone-info-on-solid: #111111;
+
+  --tone-neutral-bg: #2e2e2e;
+  --tone-neutral-fg: #d1d5db;
+  --tone-neutral-border: #4a4a4a;
+  --tone-neutral-solid: #9ca3af;
+  --tone-neutral-on-solid: #111111;
+
+  --toast-bg: #f3f4f6;
+  --toast-fg: #111111;
+  --toast-muted: #3b4048;
+  --toast-action: #0b6fa8;
+  --toast-border: #d1d5db;
+  --toast-tone-success: #15803d;
+  --toast-tone-warning: #b45309;
+  --toast-tone-danger: #b91c1c;
+  --toast-tone-info: #0b6fa8;
+
+  --chart-1: #56b4e9;
+  --chart-2: #ff9a5c;
+  --chart-3: #3ddc97;
+  --chart-4: #f58ac2;
+  --chart-5: #e6c34a;
+  --chart-6: #a99cff;
+  --chart-grid: #333333;
+  --chart-area-opacity: 0.2;
+
+  --shadow-popover: 0 8px 24px rgb(0 0 0 / 0.6), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-modal: 0 24px 56px rgb(0 0 0 / 0.75), 0 0 0 1px rgb(255 255 255 / 0.1);
+  --shadow-drawer: -12px 0 32px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-drawer-left: 12px 0 32px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+
+/* Focus ring: shared reset.css adds the dark inner gap; width and offset come from here. */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Hover rules for plain markup. Component styles follow the same rule: hover only where hover exists. */
+@media (hover: hover) {
+  .u-hover-tint:hover {
+    background: var(--hover-tint);
+  }
+  .u-hover-lift:hover {
+    box-shadow: var(--shadow-popover);
+    transform: translateY(-1px);
+  }
+}
+
+.u-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

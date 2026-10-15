@@ -27,7 +27,8 @@
     "test:client": "npm test -w client",
     "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client",
     "seed:admin": "node --env-file=scripts/.env scripts/seed.ts",
-    "test:admin-backend": "npm run test:fn && npm run test:db"
+    "test:admin-backend": "npm run test:fn && npm run test:db",
+    "test:admin-ui": "npm test -w admin"
   },
   "devDependencies": {
     "pg": "^8.23.1"

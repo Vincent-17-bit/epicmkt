@@ -1,0 +1,167 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-dialog-scrim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+  animation: fade var(--dur) var(--ease);
+}
+
+.panel {
+  position: relative;
+  z-index: var(--z-dialog);
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  background: var(--surface);
+  color: var(--text);
+  outline: none;
+}
+
+.modal {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  animation: pop var(--dur) var(--ease);
+}
+.size-sm {
+  max-width: var(--dialog-w-sm);
+}
+.size-md {
+  max-width: var(--dialog-w-md);
+}
+.size-lg {
+  max-width: var(--dialog-w-lg);
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: min(var(--drawer-w), 100%);
+  max-height: none;
+  padding-bottom: var(--safe-bottom);
+}
+.side-right {
+  right: 0;
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-drawer);
+  animation: slide-right var(--dur-slow) var(--ease);
+}
+.side-left {
+  left: 0;
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-drawer-left);
+  animation: slide-left var(--dur-slow) var(--ease);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+.headings {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--lh-tight);
+}
+
+.description {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
+}
+
+.body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 var(--space-4) var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+/* Phones: modals sit at the bottom as sheets so thumbs can reach the actions */
+@media (max-width: 600px) {
+  .root {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: var(--safe-bottom);
+    animation: slide-up var(--dur-slow) var(--ease);
+  }
+  .footer {
+    flex-direction: column-reverse;
+  }
+  .footer > * {
+    width: 100%;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+@keyframes slide-right {
+  from {
+    transform: translateX(32px);
+    opacity: 0;
+  }
+}
+@keyframes slide-left {
+  from {
+    transform: translateX(-32px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scrim,
+  .modal,
+  .side-right,
+  .side-left {
+    animation: none;
+  }
+}
