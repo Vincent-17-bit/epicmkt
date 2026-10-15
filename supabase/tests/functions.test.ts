@@ -331,7 +331,11 @@ Deno.test("export-data: own rows only, no secrets, rate limited", async () => {
   const w = world();
   w.tables.businesses[0] = { ...BIZ, application_id: "app-1", tagline: "hi" };
   w.tables.seller_otps = [{ business_id: "b1", code_hash: "x" }];
-  w.tables.messages = [{ id: "m1", business_id: "b1", subject: "Hello" }, { id: "m2", business_id: "other", subject: "No" }];
+  w.tables.messages = [
+    { id: "m1", business_id: "b1", channel: "in_app", subject: "Hello" },
+    { id: "m2", business_id: "other", channel: "in_app", subject: "No" },
+    { id: "m3", business_id: "b1", channel: "sms", body: "staff-only delivery log" },
+  ];
   const h = sellerExportData(deps(w));
   assertEquals((await h(post({}))).status, 401);
   const res = await h(authed());
@@ -352,10 +356,10 @@ Deno.test("export-data: own rows only, no secrets, rate limited", async () => {
 
 Deno.test("real deps: development uses 123456 and sends no SMS, production sends a random code", async () => {
   const set = (k: string, v?: string) => (v === undefined ? Deno.env.delete(k) : Deno.env.set(k, v));
-  const saved = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "APP_ENV", "AT_API_KEY", "AT_USERNAME", "AT_SENDER"].map((k) => [k, Deno.env.get(k)] as const);
+  const saved = ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY", "APP_ENV", "MESSAGING_MODE", "AT_API_KEY", "AT_USERNAME", "AT_SENDER"].map((k) => [k, Deno.env.get(k)] as const);
   const realFetch = globalThis.fetch;
   const sent: { url: string; body: string }[] = [];
-  globalThis.fetch = ((url: string, init: any) => (sent.push({ url: String(url), body: String(init?.body) }), Promise.resolve(new Response("{}", { status: 201 })))) as any;
+  globalThis.fetch = ((url: string, init: any) => (sent.push({ url: String(url), body: String(init?.body) }), Promise.resolve(new Response(JSON.stringify({ SMSMessageData: { Recipients: [{ statusCode: 101, status: "Success", number: "+254712345678", cost: "KES 0.8000", messageId: "ATXid_1" }] } }), { status: 201 })))) as any;
   try {
     set("SUPABASE_URL", "http://localhost:54321");
     set("SUPABASE_SERVICE_ROLE_KEY", "service");
@@ -363,6 +367,7 @@ Deno.test("real deps: development uses 123456 and sends no SMS, production sends
     set("AT_API_KEY", "k");
     set("AT_USERNAME", "sandbox");
     set("AT_SENDER", "EpicMKT");
+    set("MESSAGING_MODE", undefined);
     set("APP_ENV", "development");
     const dev = realDeps();
     assertEquals(dev.code(), "123456");

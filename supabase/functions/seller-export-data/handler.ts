@@ -1,6 +1,13 @@
 import { auditInsert, authenticate, corsHeaders, json, rateLimited, rateOk, wrap, type Deps } from "../_shared/seller.ts";
 
-const TABLES = ["items", "item_media", "item_history", "faqs", "offers", "flags", "messages", "payments", "change_requests", "login_events", "seller_settings", "audit_log"];
+// Columns are listed where the table also holds staff-only data (migration 0008): the SMS/email log keeps provider
+// errors and costs, and the audit log keeps admin e-mails, internal reasons and before/after snapshots.
+const TABLES: Array<[table: string, columns: string, filter?: [column: string, value: string]]> = [
+  ["items", "*"], ["item_media", "*"], ["item_history", "*"], ["faqs", "*"], ["offers", "*"], ["flags", "*"],
+  ["messages", "id, business_id, kind, subject, body, data, read_at, created_at", ["channel", "in_app"]],
+  ["payments", "*"], ["change_requests", "*"], ["login_events", "*"], ["seller_settings", "*"],
+  ["audit_log", "id, business_id, actor_role, action, entity, entity_id, created_at"],
+];
 
 export const sellerExportData = (d: Deps) => wrap(async (req) => {
   const ctx = await authenticate(req, d.db);
@@ -12,8 +19,10 @@ export const sellerExportData = (d: Deps) => wrap(async (req) => {
   const { user_id: _u, application_id: _a, ...profile } = business;
 
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), business: profile };
-  for (const t of TABLES) {
-    const r = await d.db.from(t).select("*").eq("business_id", ctx.business.id).limit(5000);
+  for (const [t, columns, filter] of TABLES) {
+    let q = d.db.from(t).select(columns).eq("business_id", ctx.business.id);
+    if (filter) q = q.eq(filter[0], filter[1]);
+    const r = await q.limit(5000);
     out[t] = r.data ?? [];
   }
   await auditInsert(d.db, { business_id: ctx.business.id, actor_id: ctx.userId, action: "data_exported" });
