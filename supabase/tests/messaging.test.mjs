@@ -2,11 +2,10 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createDatabase, connect, seedFixtures, tx, sql, ids, asA, asB } from "./db.mjs";
 
-// 0008_admin.sql does not apply after 0007 (its tables clash with 0004), so these tests build the schema
-// the same way production has it: 0001-0007 plus 0009. Drop the skip once 0008 is fixed.
+// Builds the schema from every migration (0001-0011), the way production has it.
 let c;
 before(async () => {
-  c = await connect(await createDatabase({ skip: ["0008_admin.sql"], database: "epicmkt_messaging_test" }));
+  c = await connect(await createDatabase({ database: "epicmkt_messaging_test" }));
   await seedFixtures(c);
 });
 after(async () => { await c.end(); });
@@ -284,8 +283,8 @@ test("sellers see only their own delivered in-app messages, never queued ones or
   assert.deepEqual(await seen(asB), ["for B"]);
 });
 
-test("an applicant-only message needs an application and dedupes per application", async () => {
-  await assert.rejects(sql(c, `insert into messages (channel, subject, body) values ('sms', 's', 'b')`), /messages_target_check/);
+test("a message needs a target (business, application or address) and applicant messages dedupe per application", async () => {
+  await assert.rejects(sql(c, `insert into messages (channel, subject, body) values ('sms', 's', 'b')`), /messages_target_chk/);
   const app = "30000000-0000-0000-0000-0000000000a9";
   await sql(c, `
     insert into applications (id, reference_no, category_id, plan_key, price_at_submission, plan_snapshot, owner_full_name, owner_id_type, owner_id_number,

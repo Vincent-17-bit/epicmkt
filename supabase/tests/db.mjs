@@ -21,10 +21,9 @@ export const ids = {
   bizB: "10000000-0000-0000-0000-0000000000b1",
 };
 
-// `skip` lists migration files to leave out; `database` lets a test file use its own database so files can run in parallel.
-// The connection is always closed, so a failing migration reports its error instead of hanging the test run.
-export async function createDatabase({ skip = [], database = name } = {}) {
-  skip = [...skip, ...(process.env.TEST_SKIP_MIGRATIONS ?? "").split(",").filter(Boolean)]; // e.g. TEST_SKIP_MIGRATIONS=0008_admin.sql
+// `database` lets a test file use its own database so files can run in parallel.
+// The connection is always closed, so a failing migration reports its file and error instead of hanging the test run.
+export async function createDatabase({ database = name } = {}) {
   const root = new pg.Client({ connectionString: base });
   await root.connect();
   await root.query(`drop database if exists ${database} with (force)`);
@@ -37,7 +36,7 @@ export async function createDatabase({ skip = [], database = name } = {}) {
     await owner.query(`alter database ${database} set search_path = "$user", public, extensions`);
     await owner.query(readFileSync(join(here, "bootstrap.sql"), "utf8"));
     const dir = join(here, "..", "migrations");
-    for (const f of readdirSync(dir).filter((x) => x.endsWith(".sql") && !skip.includes(x)).sort()) {
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".sql")).sort()) {
       try {
         await owner.query(readFileSync(join(dir, f), "utf8"));
       } catch (e) {

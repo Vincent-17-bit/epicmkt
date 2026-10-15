@@ -39,6 +39,8 @@ function table(client: pg.Client, t: string) {
   let payload: any;
   let one = false;
   let strict = false;
+  let window = "";
+  const orderBy: string[] = [];
   const bind = (v: unknown) => (params.push(encode(v)), `$${params.length}`);
   const clause = () => (where.length ? ` where ${where.join(" and ")}` : "");
   const run = async () => {
@@ -55,7 +57,7 @@ function table(client: pg.Client, t: string) {
       } else if (mode === "delete") {
         sql = `delete from public.${t}${clause()}`;
       } else {
-        sql = `select ${cols} from public.${t}${clause()}`;
+        sql = `select ${cols} from public.${t}${clause()}${orderBy.length ? ` order by ${orderBy.join(", ")}` : ""}${window}`;
       }
       const r = await client.query(sql, params);
       const rows = r.rows ?? [];
@@ -69,9 +71,13 @@ function table(client: pg.Client, t: string) {
     select: (c?: string) => (mode === "select" && (cols = c ?? "*"), api),
     eq: (c: string, v: unknown) => (where.push(`${c} = ${bind(v)}`), api),
     neq: (c: string, v: unknown) => (where.push(`${c} <> ${bind(v)}`), api),
-    in: (c: string, vs: unknown[]) => (where.push(`${c} = any(${bind(vs)})`), api),
+    in: (c: string, vs: unknown[]) => (params.push(vs), where.push(`${c} = any($${params.length})`), api), // a real array, not JSON
+    like: (c: string, v: string) => (where.push(`${c} like ${bind(v)}`), api),
+    gte: (c: string, v: unknown) => (where.push(`${c} >= ${bind(v)}`), api),
+    lt: (c: string, v: unknown) => (where.push(`${c} < ${bind(v)}`), api),
+    range: (a: number, b: number) => ((window = ` limit ${b - a + 1} offset ${a}`), api),
     limit: () => api,
-    order: () => api,
+    order: (c: string, o?: { ascending?: boolean }) => (orderBy.push(`${c}${o?.ascending === false ? " desc" : ""}`), api),
     maybeSingle: () => ((one = true), run()),
     single: () => ((one = true), (strict = true), run()),
     insert: (p: unknown) => ((mode = "insert"), (payload = p), api),
@@ -100,7 +106,16 @@ export function pgDeps(client: pg.Client, tokens: Record<string, { id: string; e
     rpc: async (name: string, args: Record<string, unknown>) => {
       try {
         const keys = Object.keys(args);
-        const r = await client.query(`select public.${name}(${keys.map((k, i) => `${k} => $${i + 1}`).join(", ")}) as r`, keys.map((k) => encode(args[k])));
+        const call = `public.${name}(${keys.map((k, i) => `${k} => $${i + 1}`).join(", ")})`;
+        const values = keys.map((k) => encode(args[k]));
+        // Like PostgREST: a set-returning function answers an array (of rows, or of plain values), anything else its one value.
+        const set = (await client.query(`select bool_or(proretset) s from pg_proc where proname = $1 and pronamespace = 'public'::regnamespace`, [name])).rows[0].s;
+        if (set) {
+          const r = await client.query(`select * from ${call}`, values);
+          const plain = r.fields.length === 1 && r.fields[0].name === name;
+          return { data: plain ? r.rows.map((x) => x[name]) : r.rows, error: null };
+        }
+        const r = await client.query(`select ${call} as r`, values);
         return { data: r.rows[0].r, error: null };
       } catch (e: any) {
         return { data: null, error: { code: e.code, message: e.message } };

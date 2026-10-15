@@ -193,7 +193,7 @@ Deno.test("daily-lifecycle: runs the billing notices once with the clock and aud
   assertEquals([first.inApp, first.queued], [2, 3]);
   assertEquals([second.inApp, second.queued], [0, 0]);
   assertEquals(w.rpcCalls[0].args.p_now, NOW.toISOString());
-  assertEquals(w.tables.audit_log.map((a) => [a.action, a.actor_role]), [["daily_lifecycle", "system"], ["daily_lifecycle", "system"]]);
+  assertEquals(w.tables.audit_log.map((a) => [a.action, a.actor_role]), [["lifecycle.daily", "system"], ["lifecycle.daily", "system"]]);
 });
 
 Deno.test("daily-lifecycle: a database error is a 500 and writes no audit row", async () => {
@@ -230,7 +230,7 @@ Deno.test("admin-message: queues one row per recipient and channel, promotional 
     [BIZ_B, "sms", "queued", false, "Hello Shop B"],
   ]);
   assert(rows.every((r) => r.read_at), "delivery records stay out of the unread count");
-  assertEquals(w.tables.audit_log[0].action, "message_queued");
+  assertEquals(w.tables.audit_log[0].action, "message.queue");
   assertEquals(w.sms.length, 0, "admin-message never sends; the dispatcher does");
 });
 
@@ -300,7 +300,7 @@ Deno.test("admin-export: roles are enforced per dataset and every export is audi
   assertEquals((await adminExport(makeDeps(w))(post({ dataset: "audit" }, bearer))).status, 403);
   assertEquals((await adminExport(makeDeps(w))(post({ dataset: "payments" }, bearer))).status, 200);
   assertEquals((await adminExport(makeDeps(w))(post({ dataset: "payments" }))).status, 401);
-  assertEquals(w.tables.audit_log.map((a) => [a.action, a.entity, a.data.rows]), [["export", "payments", 0]]);
+  assertEquals(w.tables.audit_log.map((a) => [a.action, a.target_type, a.after.rows]), [["export.run", "payments", 0]]);
 });
 
 Deno.test("admin-export: CSV has a header, only allow-listed columns, and neutralises spreadsheet formulas", async () => {
