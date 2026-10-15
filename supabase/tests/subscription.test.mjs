@@ -4,7 +4,11 @@ import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB,
 import { addCalendarMonth, categoryChangeQuote, listingState, daysLeft, buildPaymentInstructions } from "../../shared/src/billing.js";
 
 let c;
-const iso = (d) => d.toISOString().slice(0, 10);
+const pad = (n) => String(n).padStart(2, "0");
+const iso = (d) =>
+  d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0
+    ? d.toISOString().slice(0, 10)
+    : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const APP = "30000000-0000-0000-0000-0000000000a1";
 const MPESA = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
 

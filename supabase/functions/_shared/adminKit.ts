@@ -1,9 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { requireAdmin } from "./admin.ts";
-import { clientIp, corsHeaders, isProduction, json, sendMail, sendSms } from "./http.ts";
+import { clientIp, corsHeaders, isProduction, json, sendMail, sendSms, sha256Hex } from "./http.ts";
 import { generateSellerId, makeTempPassword } from "./ids.ts";
-import { rateLimit } from "./rateLimit.ts";
+import { hitRateLimit } from "./ratelimit.ts";
 import type { Db } from "./seller.ts";
 
 export { json, z };
@@ -51,7 +51,7 @@ export const adminFn = <S extends z.ZodTypeAny>(d: AdminDeps, cfg: Config<S>, ru
       }
       const role = (who.admin as { role: string }).role;
       if (!cfg.roles.includes(role)) return json({ error: "forbidden" }, 403);
-      if (!(await rateLimit(d.db, `admin:${cfg.name}:${who.user.id}`, cfg.max, cfg.seconds))) {
+      if (!(await hitRateLimit(d.db, `admin:${cfg.name}:${who.user.id}`, cfg.max, cfg.seconds))) {
         return json({ error: "rate_limited", retryAfter: cfg.seconds }, 429);
       }
       const parsed = cfg.schema.safeParse(await req.json().catch(() => null));
@@ -81,7 +81,7 @@ export async function audit(
     before: row.before ?? null,
     after: row.after ?? null,
     reason: row.reason ?? null,
-    ip: clientIp(c.req),
+    ip_hash: await sha256Hex((Deno.env.get("IP_HASH_SALT") ?? "") + clientIp(c.req)),
   });
   if (r?.error) throw new Error("audit_failed");
 }

@@ -46,7 +46,7 @@ test("add_calendar_month: SQL, billing.js and dates.ts agree on every day of fou
 test("nairobi_day, nairobi_midnight and listing_state agree with dates.ts around midnight EAT", async () => {
   const instants = ["2026-10-14T20:59:59Z", "2026-10-14T21:00:00Z", "2026-10-15T20:59:59Z", "2026-10-15T21:00:00Z", "2026-10-16T21:00:00Z", "2026-02-28T21:00:00Z", "2027-01-01T00:00:00Z"];
   const paid = nairobiMidnight("2026-10-15");
-  assert.equal((await one(`select public.nairobi_midnight('2026-10-15')::timestamptz at time zone 'UTC' as t`)).t.toISOString(), paid);
+  assert.equal((await one(`select to_char(public.nairobi_midnight('2026-10-15') at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') as t`)).t, paid);
   for (const now of instants) {
     const r = await one(`select public.nairobi_day($1::timestamptz)::text as d, public.listing_state($2::timestamptz, $1::timestamptz) as s`, [now, paid]);
     assert.equal(nairobiDay(new Date(now)), r.d, `day at ${now}`);

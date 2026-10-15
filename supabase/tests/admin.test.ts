@@ -23,7 +23,7 @@ Deno.test("decide: preview renders messages per channel and sends nothing", asyn
   assertEquals(r.status, 200);
   assertEquals(r.cache, "no-store");
   assertEquals(r.body.preview, true);
-  assertEquals(Object.keys(r.body.messages).sort(), ["email", "inApp", "sms"]);
+  assertEquals(Object.keys(r.body.messages).sort(), ["email", "sms"]);
   assertEquals(r.body.messages.sms.to, "+254712345678");
   assertEquals(r.body.messages.email.to, "wanjiru@example.com");
   assert(r.body.messages.sms.body.includes("KES 500"));
@@ -115,13 +115,12 @@ Deno.test("decide: rate limit is 60 per minute per admin", async () => {
   assertEquals(last, 429);
 });
 
-Deno.test("confirm: duplicate M-Pesa code warns first, and stays a conflict because the database forbids reuse", async () => {
+Deno.test("confirm: a duplicate M-Pesa code is a hard 409, with or without acknowledgement", async () => {
   const { w, run } = confirm();
   w.tables.payments.push({ id: "p0", mpesa_code: "QWE1234567", status: "confirmed" });
   const blocked = await run(pay());
   assertEquals(blocked.status, 409);
-  assertEquals(blocked.body.ok, false);
-  assertEquals(blocked.body.warnings.map((x: any) => x.code), ["duplicate_mpesa_code"]);
+  assertEquals(blocked.body.error, "duplicate_mpesa_code");
   assertEquals(w.tables.payments.length, 1);
   assertEquals(w.authUsers.length, 1);
   assertEquals(w.tables.businesses.length, 1);

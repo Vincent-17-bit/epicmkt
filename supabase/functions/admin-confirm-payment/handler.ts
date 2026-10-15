@@ -62,7 +62,7 @@ export const adminConfirmPayment = (d: AdminDeps) =>
 
     const warnings: { code: string; message: string }[] = [];
     const dupes = await d.db.from("payments").select("id").eq("mpesa_code", mpesaCode).neq("status", "rejected");
-    if (dupes.data?.length > 0) warnings.push({ code: "duplicate_mpesa_code", message: "This M-Pesa code is already recorded on another payment." });
+    if (dupes.data?.length > 0) return duplicateCode();
     if (amount !== unit * months) warnings.push({ code: "amount_differs", message: `Expected KES ${unit * months} for ${months} month(s), received KES ${amount}.` });
     if (warnings.length && !acknowledgeWarnings) return json({ ok: false, requiresAcknowledgement: true, warnings }, 409);
 

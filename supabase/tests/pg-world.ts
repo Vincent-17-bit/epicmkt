@@ -1,5 +1,5 @@
 import pg from "npm:pg@8";
-import { makeSellerId, makeTempPassword } from "../functions/_shared/ids.ts";
+import { generateSellerId, makeTempPassword } from "../functions/_shared/ids.ts";
 import type { AdminDeps } from "../functions/_shared/adminKit.ts";
 
 const base = Deno.env.get("TEST_DATABASE_URL") ?? "postgres://postgres:postgres@127.0.0.1:5432/postgres";
@@ -135,8 +135,8 @@ export function pgDeps(client: pg.Client, tokens: Record<string, { id: string; e
     sms: (to, message) => (sms.push({ to, message }), Promise.resolve(true)),
     mail: (to, subject, html) => (mail.push({ to, subject, html }), Promise.resolve()),
     now: () => now,
-    sellerId: makeSellerId,
-    password: makeTempPassword,
+    sellerId: () => generateSellerId(),
+    password: () => makeTempPassword(),
   };
   return { deps, sms, mail, authMeta, setNow: (d) => (now = d) };
 }

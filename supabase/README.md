@@ -33,19 +33,7 @@ The schema the admin functions must code against (these are the real columns, no
 | Grace | Fixed at one day everywhere (`listing_state()`, `shared/src/billing.js`, `_shared/dates.ts`). It is not a setting. |
 | Seller export | `seller-export-data` lists the columns it returns from `messages` and `audit_log`, so staff-only data never leaves in a seller's export. |
 
-<<<<<<< HEAD
 ### 3. First admin
-=======
-```bash
-supabase functions deploy admin-decide-application --no-verify-jwt
-supabase functions deploy admin-confirm-payment --no-verify-jwt
-supabase functions deploy admin-reset-seller-password --no-verify-jwt
-supabase functions deploy admin-message --no-verify-jwt
-supabase functions deploy dispatch-messages --no-verify-jwt
-supabase functions deploy daily-lifecycle --no-verify-jwt
-supabase functions deploy admin-export --no-verify-jwt
-```
->>>>>>> 26402d0 (Reconcile admin and seller schemas; renewal messages; spec and test scripts)
 
 Create the user in Supabase Auth, then make them the owner:
 
@@ -57,7 +45,6 @@ on conflict (user_id) do update set role = excluded.role, email = excluded.email
 
 (`node scripts/seed-admin.mjs` prints this with your `ADMIN_EMAIL` and `ADMIN_NAME`.)
 
-<<<<<<< HEAD
 ### 4. Secrets
 
 ```bash
@@ -124,19 +111,21 @@ The DB test files run one at a time because they share one database name.
 
 ### 9. Edge functions
 
-The functions that exist today for the admin area (`admin-decision`, `admin-confirm-payment`, `admin-message`,
-`admin-reset-seller-password`, `dispatch-messages`, `daily-lifecycle`, `admin-export`) are placeholders written before
-the schema above was settled. **Do not deploy them as they are.** Several write columns that do not exist (for example
-`payments.amount`, `payments.months`, `audit_log` rows without `actor_role`) and `admin-export` is not a function yet.
-They are to be rewritten on `adminHandler`, `parseBody`, `writeAudit` and the RPCs described above.
+`admin-decide-application`, `admin-confirm-payment` and `admin-reset-seller-password` are rewritten on the canonical
+columns (migrations 0008 to 0010) and tested. `admin-message`, `dispatch-messages`, `daily-lifecycle` and `admin-export`
+are still placeholders: do not deploy them until they are rewritten the same way.
 `admin-proof-url`, the seller functions and the application functions are complete and tested.
 
 ```bash
 supabase functions deploy admin-proof-url --no-verify-jwt   # the function checks the admin JWT itself
 ```
-=======
+
+```bash
+supabase functions deploy admin-decide-application --no-verify-jwt
+supabase functions deploy admin-confirm-payment --no-verify-jwt
+supabase functions deploy admin-reset-seller-password --no-verify-jwt
+```
+
 - All browser writes must go through edge functions and RPCs.
 - Admin and audit access are enforced using `public.is_admin()` and `public.has_role()`.
 - Realtime is enabled for the admin dashboard tables.
-- `supabase/pending/0008b_admin_content_tables.sql` holds admin statements for items, item_media, faqs, offers, flags, reports and change_requests that do not match the seller schema. It is not run by migrations.
->>>>>>> 26402d0 (Reconcile admin and seller schemas; renewal messages; spec and test scripts)

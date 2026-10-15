@@ -103,13 +103,12 @@ export const adminDecideApplication = (d: AdminDeps) =>
       text = `EpicMKT: your application ${ref} is back in the review queue.`;
     }
 
-    const outbox: { channel: "sms" | "email" | "in_app"; to: string | null; subject: string | null; body: string }[] = [];
+    const outbox: { channel: "sms" | "email"; to: string | null; subject: string | null; body: string }[] = [];
     if (channels.sms) outbox.push({ channel: "sms", to: app.phone, subject: null, body: text });
     if (channels.email) outbox.push({ channel: "email", to: app.email, subject, body: text });
-    if (channels.inApp) outbox.push({ channel: "in_app", to: null, subject, body: text });
 
     if (preview) {
-      const messages = Object.fromEntries(outbox.map((m) => [m.channel === "in_app" ? "inApp" : m.channel, { to: m.to, subject: m.subject, body: m.body }]));
+      const messages = Object.fromEntries(outbox.map((m) => [m.channel, { to: m.to, subject: m.subject, body: m.body }]));
       return json({ ok: true, preview: true, action, nextStatus: next, messages });
     }
 

@@ -2,7 +2,7 @@ import nodeAssert from "node:assert/strict";
 import { addCalendarMonth, eatToday, formatDay, laterDate, nairobiDay, nairobiMidnight } from "../functions/_shared/dates.ts";
 import { SELLER_ID_RE, generateSellerId, makeTempPassword, slugBase, uniqueSlug } from "../functions/_shared/ids.ts";
 import { passwordProblems } from "../functions/_shared/synced/password.js";
-import { rateLimit } from "../functions/_shared/rateLimit.ts";
+import { hitRateLimit } from "../functions/_shared/ratelimit.ts";
 import { deps, world } from "./admin-world.ts";
 
 const assertEquals = (a: unknown, b: unknown) => nodeAssert.deepStrictEqual(a, b);
@@ -52,12 +52,12 @@ Deno.test("uniqueSlug: suffixes -2, -3 on clashes", async () => {
   assertEquals(await uniqueSlug("Mama Pima", (s) => Promise.resolve(s === "mama-pima")), "mama-pima-2");
 });
 
-Deno.test("rateLimit: allows up to max then blocks", async () => {
+Deno.test("hitRateLimit: allows up to max then blocks", async () => {
   const d = deps(world());
   const results: boolean[] = [];
-  for (let i = 0; i < 4; i++) results.push(await rateLimit(d.db, "k", 3, 60));
+  for (let i = 0; i < 4; i++) results.push(await hitRateLimit(d.db, "k", 3, 60));
   assertEquals(results, [true, true, true, false]);
-  assertEquals(await rateLimit(d.db, "other", 3, 60), true);
+  assertEquals(await hitRateLimit(d.db, "other", 3, 60), true);
 });
 
 Deno.test("nairobiMidnight and nairobiDay round-trip a Nairobi calendar day", () => {

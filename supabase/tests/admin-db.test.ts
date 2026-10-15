@@ -98,10 +98,21 @@ Deno.test("real schema: first payment activates a business with every insert acc
   assert(!JSON.stringify(await q(`select * from public.audit_log`)).includes(r.body.temporaryPassword));
 });
 
-Deno.test("real schema: audit_log is append-only but a business can still be deleted", async () => {
+const asBrowser = async (sql: string) => {
+  await client.query(`begin`);
+  try {
+    await client.query(`set local role authenticated`);
+    await client.query(sql);
+  } finally {
+    await client.query(`rollback`);
+  }
+};
+
+Deno.test("real schema: audit_log is append-only for browser roles but a business can still be deleted", async () => {
   const [{ id }] = await q(`select id from public.businesses`);
-  await nodeAssert.rejects(client.query(`update public.audit_log set reason = 'tamper'`), /append-only/);
-  await nodeAssert.rejects(client.query(`delete from public.audit_log`), /append-only/);
+  await nodeAssert.rejects(asBrowser(`update public.audit_log set reason = 'tamper'`), /permission denied/);
+  await nodeAssert.rejects(asBrowser(`delete from public.audit_log`), /permission denied/);
+  await nodeAssert.rejects(asBrowser(`insert into public.audit_log (actor_role, action) values ('admin', 'forged')`), /permission denied/);
   const before = (await q(`select count(*)::int as n from public.audit_log`))[0].n;
   await client.query(`delete from public.businesses where id = $1`, [id]);
   const after = await q(`select count(*)::int as n, count(business_id)::int as linked from public.audit_log`);
@@ -146,7 +157,7 @@ Deno.test("real schema: the unique M-Pesa index turns a duplicate into a clean c
   assertEquals(dup.body.error, "duplicate_mpesa_code");
   assertEquals((await q(`select count(*)::int as n from public.businesses`))[0].n, 1);
   assertEquals((await q(`select count(*)::int as n from public.payments`))[0].n, 1);
-  assertEquals((await q(`select count(*)::int as n from auth.users where email like 'slr-%'`))[0].n, 1);
+  assertEquals((await q(`select count(*)::int as n from auth.users where email like 'es%@sellers.epicmkt.app'`))[0].n, 1);
   assertEquals((await q(`select status from public.applications where id = $1`, [APP]))[0].status, "payment_confirming");
 });
 
@@ -170,7 +181,7 @@ Deno.test("real schema: decide-application queues messages for an application wi
   assertEquals(r.status, 200);
   const msgs = await q(`select channel, kind, status, business_id, application_id, to_address from public.messages order by channel`);
   assertEquals(msgs.map((m) => [m.channel, m.kind, m.status, m.business_id, m.application_id]), [
-    ["email", "approval", "queued", null, APP], ["in_app", "approval", "queued", null, APP], ["sms", "approval", "queued", null, APP],
+    ["email", "approval", "queued", null, APP], ["sms", "approval", "queued", null, APP],
   ]);
   assertEquals((await q(`select status from public.applications where id = $1`, [APP]))[0].status, "approved");
   const audit = await q(`select action, actor_role, target_type, target_id, business_id from public.audit_log`);
