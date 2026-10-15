@@ -1,0 +1,108 @@
+.region {
+  position: fixed;
+  z-index: var(--z-toast);
+  inset-inline: var(--space-3);
+  bottom: calc(var(--space-3) + var(--safe-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+@media (min-width: 640px) {
+  .region {
+    inset-inline: auto var(--space-5);
+    bottom: calc(var(--space-5) + var(--safe-bottom));
+    width: 24rem;
+  }
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  border: 1px solid var(--toast-border);
+  border-inline-start: 4px solid var(--toast-accent, var(--toast-border));
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-popover);
+  pointer-events: auto;
+  animation: rise var(--dur-slow) var(--ease);
+}
+
+.success {
+  --toast-accent: var(--toast-tone-success);
+}
+.info {
+  --toast-accent: var(--toast-tone-info);
+}
+.warning {
+  --toast-accent: var(--toast-tone-warning);
+}
+.danger {
+  --toast-accent: var(--toast-tone-danger);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--toast-accent);
+}
+
+.text {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-1) 0;
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.message {
+  margin: 0;
+  color: var(--toast-fg);
+  font-size: var(--text-sm);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+
+.action {
+  flex: none;
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+  background: transparent;
+  color: var(--toast-action);
+  border: 0;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .action:hover {
+    background: var(--hover-tint);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
+}

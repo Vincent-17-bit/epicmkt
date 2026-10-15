@@ -1,0 +1,116 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--control-h-md);
+  height: var(--control-h-md);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-md);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+
+.sm {
+  width: var(--control-h-sm);
+  height: var(--control-h-sm);
+  font-size: var(--text-sm);
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text);
+}
+.ghost:active {
+  background: var(--pressed-tint);
+}
+
+.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.secondary:active {
+  background: var(--pressed-tint);
+}
+
+.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.primary:active {
+  background: var(--primary-pressed);
+}
+
+.danger {
+  background: transparent;
+  color: var(--tone-danger-fg);
+}
+.danger:active {
+  background: var(--tone-danger-bg);
+}
+
+/* On the toast surface the page colours do not apply */
+.inverse {
+  background: transparent;
+  color: var(--toast-fg);
+}
+.inverse:active {
+  background: var(--toast-border);
+}
+
+@media (hover: hover) {
+  .ghost:hover {
+    background: var(--hover-tint);
+  }
+  .secondary:hover {
+    background: var(--hover-tint);
+    border-color: var(--field-border-hover);
+  }
+  .primary:hover {
+    background: var(--primary-hover);
+  }
+  .danger:hover {
+    background: var(--tone-danger-bg);
+  }
+  .inverse:hover {
+    background: var(--toast-border);
+  }
+}
+
+.root:disabled {
+  color: var(--disabled-fg);
+  background: var(--disabled-bg);
+  border-color: var(--disabled-border);
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-style: dotted;
+    border-right-color: currentColor;
+  }
+}

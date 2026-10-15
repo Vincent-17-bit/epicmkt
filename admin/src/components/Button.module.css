@@ -1,0 +1,121 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--control-h-md);
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  line-height: var(--lh-tight);
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+}
+
+.sm {
+  min-height: var(--control-h-sm);
+  padding: 0 var(--space-3);
+}
+.lg {
+  min-height: var(--control-h-lg);
+  padding: 0 var(--space-5);
+  font-size: var(--text-md);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+}
+.label {
+  min-width: 0;
+}
+
+.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.primary:active {
+  background: var(--primary-pressed);
+}
+
+.secondary {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.secondary:active {
+  background: var(--pressed-tint);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text);
+}
+.ghost:active {
+  background: var(--pressed-tint);
+}
+
+.danger {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+.danger:active {
+  background: var(--danger-pressed);
+}
+
+@media (hover: hover) {
+  .primary:hover {
+    background: var(--primary-hover);
+  }
+  .secondary:hover {
+    background: var(--hover-tint);
+    border-color: var(--field-border-hover);
+  }
+  .ghost:hover {
+    background: var(--hover-tint);
+  }
+  .danger:hover {
+    background: var(--danger-hover);
+  }
+}
+
+.root:disabled {
+  background: var(--disabled-bg);
+  color: var(--disabled-fg);
+  border-color: var(--disabled-border);
+  cursor: not-allowed;
+}
+
+.loading {
+  cursor: progress;
+}
+
+.spinner {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+    border-style: dotted;
+  }
+}
