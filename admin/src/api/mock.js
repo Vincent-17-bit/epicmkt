@@ -1,5 +1,6 @@
 import { normalizeCounts } from "./counts.js";
 import { buildDashboard } from "./dashboard.js";
+import { buildPulse } from "../lib/pulse.js";
 
 // Built-in demo data, used while VITE_SUPABASE_URL is empty. Same shapes as the live API, so every screen works the same.
 const HOUR = 3_600_000;
@@ -67,6 +68,43 @@ export async function getDashboard() {
   const data = buildDashboard(rawFor(now), now);
   data.waitingOver24h = state.counts.submitted > 0 ? 2 : 0;
   return data;
+}
+
+const TOWNS = [
+  ["Nairobi", -1.2864, 36.8172, 14], ["Mombasa", -4.0435, 39.6682, 8], ["Kisumu", -0.0917, 34.768, 6], ["Nakuru", -0.3031, 36.08, 6],
+  ["Eldoret", 0.5143, 35.2698, 5], ["Thika", -1.0333, 37.0693, 4], ["Nyeri", -0.4167, 36.95, 3], ["Machakos", -1.5177, 37.2634, 3],
+  ["Kakamega", 0.2827, 34.7519, 2], ["Garissa", -0.4532, 39.6461, 2], ["Malindi", -3.2192, 40.1169, 2], ["Kisii", -0.6817, 34.7667, 2],
+  ["Meru", 0.047, 37.649, 2], ["Kitale", 1.0157, 34.9989, 1], ["Lodwar", 3.1191, 35.5973, 1], ["Isiolo", 0.3546, 37.5822, 1],
+];
+const NAMES = ["Mara Fresh Mart", "Umoja Hardware", "Green Valley Foods", "Pwani Plaza", "Zuri Studio", "Karibu Corner", "Imani House", "Safari Centre", "Neema Works", "Tumaini Express", "Baraka Pharmacy", "Jua Kali Tools", "Amani Cafe", "Savanna Books", "Rift Valley Dairy", "Lakeside Grocers", "Twiga Stationers", "Simba Motors", "Pendo Salon", "Kilele Sports"];
+const EXPIRY_DAYS = [-1, -1, 0, 0, 1, 1, 2, 2, 3, 4, 5, 6, 7, 9, 11, 13, 16, 20, 25, 29, 45, 70, 120, 200];
+
+function pulseRaw(now) {
+  const t = now.getTime();
+  const businesses = [];
+  const applications = [];
+  let n = 0;
+  for (const [county, lat, lng, count] of TOWNS) {
+    for (let i = 0; i < count; i += 1) {
+      n += 1;
+      const days = EXPIRY_DAYS[Math.floor(pseudo(n * 3.1) * EXPIRY_DAYS.length)];
+      businesses.push({
+        id: `mock-biz-${n}`, name: `${NAMES[n % NAMES.length]} ${county}`, county, status: "live",
+        lat: lat + (pseudo(n * 7.7) - 0.5) * 0.14, lng: lng + (pseudo(n * 5.3) - 0.5) * 0.14,
+        paid_until: new Date(t + days * DAY + (pseudo(n) - 0.5) * 8 * HOUR).toISOString(),
+      });
+    }
+  }
+  for (let i = 0; i < 6; i += 1) {
+    const [county, lat, lng] = TOWNS[(i * 3) % TOWNS.length];
+    applications.push({ id: `mock-app-${i + 1}`, business_name: `${NAMES[(i + 9) % NAMES.length]} (new)`, county, lat: lat + (pseudo(i + 40) - 0.5) * 0.1, lng: lng + (pseudo(i + 50) - 0.5) * 0.1, status: i % 2 ? "under_review" : "submitted" });
+  }
+  return { businesses, applications, flaggedIds: [3, 12, 19, 27, 41].map((k) => `mock-biz-${k}`) };
+}
+
+export async function getPulse() {
+  await wait();
+  return buildPulse(pulseRaw(new Date()), new Date());
 }
 
 export async function getNotifications({ limit = 30 } = {}) {

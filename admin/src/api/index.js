@@ -7,6 +7,7 @@ const impl = isLive ? live : mock;
 
 export const getAdminCounts = () => impl.getAdminCounts();
 export const getDashboard = () => impl.getDashboard();
+export const getPulse = () => impl.getPulse();
 export const getNotifications = (options) => impl.getNotifications(options);
 export const markNotificationsRead = (ids) => impl.markNotificationsRead(ids);
 export const startReview = (applicationId) => impl.startReview(applicationId);

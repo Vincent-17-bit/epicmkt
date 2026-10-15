@@ -1,6 +1,7 @@
 import { supabase } from "../lib/supabase.js";
 import { normalizeCounts } from "./counts.js";
 import { buildDashboard } from "./dashboard.js";
+import { buildPulse } from "../lib/pulse.js";
 import { monthKeys, monthStartIso } from "../lib/series.js";
 
 /** One RPC, role-checked in SQL (public.admin_counts). Non-admins get an empty object, which normalises to zeros. */
@@ -60,6 +61,16 @@ export async function getDashboard() {
     },
     applications: apps.data, payments: pays.data, confirmed: confirmed.data, activations: activations.data, lapses: lapses.data, upcoming: upcoming.data,
   }, now);
+}
+
+export async function getPulse() {
+  const now = new Date();
+  const [businesses, flags, applications] = await Promise.all([
+    supabase.from("businesses").select("id,name,county,lat,lng,status,paid_until").eq("status", "live").is("deleted_at", null).not("lat", "is", null).not("lng", "is", null).limit(1000).then(ok),
+    supabase.from("flags").select("business_id").in("status", ["open", "replied"]).limit(1000).then(ok),
+    supabase.from("applications").select("id,business_name,county,lat,lng,status").in("status", ["submitted", "under_review", "changes_requested", "approved", "payment_confirming"]).not("lat", "is", null).not("lng", "is", null).limit(1000).then(ok),
+  ]);
+  return buildPulse({ businesses: businesses.data, flaggedIds: flags.data.map((f) => f.business_id), applications: applications.data }, now);
 }
 
 /** The newest notifications (with the business name) and how many are unread. */
