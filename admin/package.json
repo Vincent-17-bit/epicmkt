@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test src/lib/lib.test.js"
   },
   "dependencies": {
     "@epicmkt/admin-backend": "*",
     "@epicmkt/backend": "*",
     "@epicmkt/shared": "*",
+    "@supabase/supabase-js": "^2.45.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-brands-svg-icons": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",

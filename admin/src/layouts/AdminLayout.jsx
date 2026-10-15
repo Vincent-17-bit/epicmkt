@@ -1,5 +1,8 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import CommandPalette from "../components/CommandPalette.jsx";
+import PeekDrawer from "../components/PeekDrawer.jsx";
+import { isMac } from "../lib/search.js";
 
 const navItems = [
   { label: "Command Center", to: "/admin", end: true, badge: "12" },
@@ -11,6 +14,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("epicmkt-admin-theme");
     if (saved) return saved;
@@ -21,6 +25,17 @@ export default function AdminLayout() {
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("epicmkt-admin-theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="admin-app">
@@ -76,10 +91,11 @@ export default function AdminLayout() {
           </div>
 
           <div className="admin-header__right">
-            <label className="admin-global-search" aria-label="Search admin">
-              <span>⌕</span>
-              <input type="search" placeholder="Search everything" readOnly />
-            </label>
+            <button type="button" className="admin-global-search" aria-label="Search admin" aria-haspopup="dialog" onClick={() => setPaletteOpen(true)}>
+              <span aria-hidden="true">⌕</span>
+              <span className="admin-global-search__hint">Search everything</span>
+              <kbd className="palette__kbd">{isMac() ? "⌘K" : "Ctrl K"}</kbd>
+            </button>
             <button type="button" className="admin-icon-button" aria-label="Notifications">
               🔔
             </button>
@@ -99,6 +115,8 @@ export default function AdminLayout() {
           <Outlet />
         </main>
       </div>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <PeekDrawer />
     </div>
   );
 }

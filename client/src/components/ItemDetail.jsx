@@ -31,6 +31,7 @@ import { useInView } from "../hooks/useInView.js";
 import OfferStrip from "./OfferStrip.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
+import AdminQuickBarGate from "./admin/AdminQuickBarGate.jsx";
 import styles from "./ItemDetail.module.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -467,6 +468,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
           </footer>
         )}
       </section>
+      {current && <AdminQuickBarGate target={{ type: "item", id: current.id, label: current.name }} />}
     </div>
   );
 }
