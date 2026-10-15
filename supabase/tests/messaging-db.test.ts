@@ -8,7 +8,7 @@ import { adminExport } from "../functions/admin-export/handler.ts";
 import type { OutboundDeps, SendResult } from "../functions/_shared/outbound.ts";
 import { createAdminDb, pgDeps } from "./pg-world.ts";
 
-const assertEquals = (a: unknown, b: unknown) => nodeAssert.deepStrictEqual(a, b);
+const assertEquals = (a: unknown, b: unknown, m?: string) => nodeAssert.deepStrictEqual(a, b, m);
 const assert = (v: unknown, m?: string) => nodeAssert.ok(v, m);
 
 const ADMINS = {
@@ -211,6 +211,61 @@ Deno.test("real schema: admin-export honours roles, audits, and the allow-listed
   const audit = await q(`select action, target_type, actor_email from public.audit_log where action = 'export.run' order by created_at`);
   assertEquals(audit.map((a) => a.target_type), ["payments", "businesses", "messages", "audit"]);
   assertEquals(audit[0].actor_email, "finance@epicmkt.test");
+});
+
+Deno.test("real schema: a hand-run dispatch writes one 'dispatch.run' audit row; a cron run writes none", async () => {
+  await seed();
+  const queue = () =>
+    adminMessage(deps())(post({ target: { businessIds: [BIZ_A] }, channels: { sms: true }, body: "Hello", transactional: true }, as("owner")));
+  await queue();
+  const afterQueue = (await q(`select count(*)::int n from public.audit_log`))[0].n;
+
+  assertEquals((await (await dispatchMessages(deps())(post({}, cron))).json()).sent, 1);
+  assertEquals((await q(`select count(*)::int n from public.audit_log where action = 'dispatch.run'`))[0].n, 0);
+  assertEquals((await q(`select count(*)::int n from public.audit_log`))[0].n, afterQueue);
+
+  await queue();
+  const res = await dispatchMessages(deps())(post({ limit: 25 }, as("support")));
+  assertEquals(res.status, 200);
+  const rows = await q(`select actor_role, actor_email, target_type, after from public.audit_log where action = 'dispatch.run'`);
+  assertEquals(rows.length, 1);
+  assertEquals([rows[0].actor_role, rows[0].actor_email, rows[0].target_type], ["admin", "support@epicmkt.test", "system"]);
+  assertEquals([rows[0].after.limit, rows[0].after.claimed, rows[0].after.sent, rows[0].after.failed], [25, 1, 1, 0]);
+
+  // finance may not run it, and a refused caller leaves no audit row
+  assertEquals((await dispatchMessages(deps())(post({}, as("finance")))).status, 403);
+  assertEquals((await q(`select count(*)::int n from public.audit_log where action = 'dispatch.run'`))[0].n, 1);
+});
+
+Deno.test("real schema: the limits hold per admin and per action; cron is never limited", async () => {
+  await seed();
+  const dispatch = dispatchMessages(deps());
+  const status = async (headers: Record<string, string>) => (await dispatch(post({}, headers))).status;
+
+  // dispatch-messages: 10 a minute per admin
+  for (let i = 0; i < 10; i++) assertEquals(await status(as("owner")), 200, `owner call ${i + 1}`);
+  const over = await dispatch(post({}, as("owner")));
+  assertEquals(over.status, 429);
+  assertEquals(await over.json(), { error: "rate_limited", retryAfter: 60 });
+  assertEquals(await status(as("support")), 200, "another admin has their own bucket");
+  assertEquals((await adminMessage(deps())(post({ target: { businessIds: [BIZ_A] }, channels: { sms: true }, body: "x" }, as("owner")))).status, 200, "another action has its own bucket");
+  for (let i = 0; i < 15; i++) assertEquals(await status(cron), 200, `cron call ${i + 1}`);
+
+  // daily-lifecycle: 5 an hour
+  const lifecycle = dailyLifecycle(deps());
+  for (let i = 0; i < 5; i++) assertEquals((await lifecycle(post({}, as("owner")))).status, 200, `lifecycle call ${i + 1}`);
+  const lim = await lifecycle(post({}, as("owner")));
+  assertEquals([lim.status, (await lim.json()).retryAfter], [429, 3600]);
+  assertEquals((await lifecycle(post({}, cron))).status, 200);
+
+  // one bucket per admin and action; cron left none behind
+  const keys = (await q(`select key from public.rate_limits where key like 'admin:%' order by key`)).map((r) => r.key);
+  assertEquals(keys, [
+    `admin:dispatch:${ADMINS.owner}`,
+    `admin:dispatch:${ADMINS.support}`,
+    `admin:lifecycle:${ADMINS.owner}`,
+    `admin:message:${ADMINS.owner}`,
+  ]);
 });
 
 Deno.test("close", async () => {

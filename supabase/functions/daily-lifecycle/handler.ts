@@ -1,6 +1,6 @@
 import { json, wrap } from "../_shared/seller.ts";
 import { writeAudit } from "../_shared/audit.ts";
-import { cronOrRole, isResponse, type OutboundDeps } from "../_shared/outbound.ts";
+import { cronOrRole, isResponse, limitAdmin, type OutboundDeps } from "../_shared/outbound.ts";
 
 // Runs once a day at 07:00 Nairobi (see supabase/cron/schedule.sql) with the x-cron-secret header.
 // An owner can also run it by hand; running it again the same day is harmless.
@@ -11,6 +11,8 @@ import { cronOrRole, isResponse, type OutboundDeps } from "../_shared/outbound.t
 export const dailyLifecycle = (d: OutboundDeps) => wrap(async (req) => {
   const actor = await cronOrRole(req, d, ["owner"]);
   if (isResponse(actor)) return actor;
+  const limited = await limitAdmin(d, actor, "lifecycle");
+  if (limited) return limited;
 
   const r = await d.db.rpc("queue_billing_notices", { p_now: d.now().toISOString() });
   if (r.error) return json({ error: "server_error" }, 500);

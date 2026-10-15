@@ -1,7 +1,7 @@
 import { json, readJson, wrap, z } from "../_shared/seller.ts";
 import { corsHeaders } from "../_shared/http.ts";
 import { writeAudit } from "../_shared/audit.ts";
-import { isResponse, requireRole, toCsv, type AdminRole, type OutboundDeps } from "../_shared/outbound.ts";
+import { isResponse, limitAdmin, requireRole, toCsv, type AdminRole, type OutboundDeps } from "../_shared/outbound.ts";
 
 // CSV (or JSON) export of an admin dataset. Every export is recorded in the audit log.
 //
@@ -51,6 +51,8 @@ export const adminExport = (d: OutboundDeps) => wrap(async (req) => {
 
   const actor = await requireRole(req, d.db, ds.roles);
   if (isResponse(actor)) return actor;
+  const limited = await limitAdmin(d, actor, "export");
+  if (limited) return limited;
 
   const gte = b.from ? nairobiStart(b.from).toISOString() : null;
   const lt = b.to ? new Date(nairobiStart(b.to).getTime() + 86_400_000).toISOString() : null;

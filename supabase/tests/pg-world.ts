@@ -113,7 +113,7 @@ export function pgDeps(client: pg.Client, tokens: Record<string, { id: string; e
         if (set) {
           const r = await client.query(`select * from ${call}`, values);
           const plain = r.fields.length === 1 && r.fields[0].name === name;
-          return { data: plain ? r.rows.map((x) => x[name]) : r.rows, error: null };
+          return { data: plain ? r.rows.map((x: Record<string, unknown>) => x[name]) : r.rows, error: null };
         }
         const r = await client.query(`select ${call} as r`, values);
         return { data: r.rows[0].r, error: null };

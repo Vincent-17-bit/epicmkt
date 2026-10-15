@@ -6,7 +6,7 @@ import { adminExport } from "../functions/admin-export/handler.ts";
 import { csvCell, renderTemplate, type OutboundDeps, type SendResult } from "../functions/_shared/outbound.ts";
 
 const assert = (v: unknown, m?: string) => nodeAssert.ok(v, m);
-const assertEquals = (a: unknown, b: unknown) => nodeAssert.deepStrictEqual(a, b);
+const assertEquals = (a: unknown, b: unknown, m?: string) => nodeAssert.deepStrictEqual(a, b, m);
 
 const NOW = new Date("2026-10-14T09:00:00Z");
 const ADMIN = "admin-jwt";
@@ -34,7 +34,8 @@ const world = (): W => ({
     ],
     messages: [], audit_log: [], admins: [], payments: [],
   },
-  rpc: {}, rpcCalls: [], sms: [], emails: [],
+  // The limiter allows by default; the rate-limit tests replace it.
+  rpc: { hit_rate_limit: () => ({ data: true, error: null }) }, rpcCalls: [], sms: [], emails: [],
   smsResult: () => ({ ok: true, providerId: "at-1" }),
   role: "owner",
 });
@@ -352,4 +353,115 @@ Deno.test("csvCell: formulas are neutralised but real numbers and empty values a
 
 Deno.test("renderTemplate: fills known variables and reports missing ones instead of sending blanks", () => {
   assertEquals(renderTemplate("Hi {{ name }}, {{x}}", { name: "A" }), { text: "Hi A, ", missing: ["x"] });
+});
+
+// ---------------------------------------------------------------------------
+// Owner decision D2b: dispatch-messages audits a hand-run dispatch, never a cron run
+// ---------------------------------------------------------------------------
+const oneClaim = (w: W) => {
+  w.rpc.claim_due_messages = () => claimed({ id: "m1", channel: "sms" });
+  w.rpc.record_message_result = () => ({ data: "sent", error: null });
+};
+
+// The same deps, but every write to audit_log fails.
+const failingAudit = (w: W) => {
+  const deps = makeDeps(w);
+  const db: any = deps.db;
+  const from = db.from;
+  db.from = (t: string) => (t === "audit_log" ? { insert: () => Promise.resolve({ error: { message: "boom" } }) } : from(t));
+  return deps;
+};
+
+Deno.test("dispatch audit: an admin run writes exactly one 'dispatch.run' row with the counts", async () => {
+  const w = world();
+  oneClaim(w);
+  const res = await dispatchMessages(makeDeps(w))(post({ limit: 10 }, bearer));
+  assertEquals(res.status, 200);
+  assertEquals(w.tables.audit_log.length, 1);
+  const a = w.tables.audit_log[0];
+  assertEquals([a.action, a.actor_role, a.actor_id, a.target_type], ["dispatch.run", "admin", "u-admin", "system"]);
+  assertEquals(a.after, { limit: 10, dev: false, claimed: 1, sent: 1, retried: 0, failed: 0, skipped: 0 });
+});
+
+Deno.test("dispatch audit: a cron run writes no audit row, even when the audit table is broken", async () => {
+  const w = world();
+  oneClaim(w);
+  assertEquals((await dispatchMessages(makeDeps(w))(post({}, cron))).status, 200);
+  assertEquals(w.tables.audit_log.length, 0);
+
+  const w2 = world();
+  oneClaim(w2);
+  const res = await dispatchMessages(failingAudit(w2))(post({}, cron));
+  assertEquals([res.status, (await res.json()).sent], [200, 1]);
+});
+
+Deno.test("dispatch audit: if the audit write fails an admin run fails, as in the other functions", async () => {
+  const w = world();
+  oneClaim(w);
+  const res = await dispatchMessages(failingAudit(w))(post({}, bearer));
+  assertEquals(res.status, 500);
+  assertEquals((await res.json()).error, "server_error");
+  assertEquals(w.tables.audit_log.length, 0);
+
+  // the same behaviour as daily-lifecycle, which audits too
+  const w2 = world();
+  assertEquals((await dailyLifecycle(failingAudit(w2))(post({}, bearer))).status, 500);
+});
+
+// ---------------------------------------------------------------------------
+// Owner decision D1: rate limits for admin callers only
+// ---------------------------------------------------------------------------
+const limitCases: { name: string; action: string; max: number; window: number; work: string | null; call: (d: OutboundDeps) => Promise<Response> }[] = [
+  { name: "admin-message", action: "message", max: 30, window: 60, work: null, call: (d) => adminMessage(d)(post({ target: ids, channels: { sms: true }, body: "hi" }, bearer)) },
+  { name: "admin-export", action: "export", max: 10, window: 60, work: null, call: (d) => adminExport(d)(post({ dataset: "payments" }, bearer)) },
+  { name: "dispatch-messages", action: "dispatch", max: 10, window: 60, work: "claim_due_messages", call: (d) => dispatchMessages(d)(post({}, bearer)) },
+  { name: "daily-lifecycle", action: "lifecycle", max: 5, window: 3600, work: "queue_billing_notices", call: (d) => dailyLifecycle(d)(post({}, bearer)) },
+];
+const limiterCalls = (w: W) => w.rpcCalls.filter((c) => c.name === "hit_rate_limit").map((c) => c.args);
+
+Deno.test("rate limits: an admin call spends one hit in its own per-admin, per-action bucket", async () => {
+  for (const c of limitCases) {
+    const w = world();
+    assertEquals((await c.call(makeDeps(w))).status, 200, c.name);
+    assertEquals(limiterCalls(w), [{ p_key: `admin:${c.action}:u-admin`, p_max: c.max, p_window_seconds: c.window }], c.name);
+  }
+});
+
+Deno.test("rate limits: over the limit is a 429 with retryAfter, and no work is done", async () => {
+  for (const c of limitCases) {
+    const w = world();
+    w.rpc.hit_rate_limit = () => ({ data: false, error: null });
+    const res = await c.call(makeDeps(w));
+    assertEquals(res.status, 429, c.name);
+    assertEquals(await res.json(), { error: "rate_limited", retryAfter: c.window }, c.name);
+    assertEquals(w.tables.messages.length + w.tables.audit_log.length, 0, c.name);
+    if (c.work) assert(!w.rpcCalls.some((r) => r.name === c.work), `${c.name} did work while limited`);
+  }
+});
+
+Deno.test("rate limits: cron is never limited and never touches the limiter", async () => {
+  const w = world();
+  w.rpc.hit_rate_limit = () => ({ data: false, error: null });
+  oneClaim(w);
+  assertEquals((await dispatchMessages(makeDeps(w))(post({}, cron))).status, 200);
+  assertEquals((await dailyLifecycle(makeDeps(w))(post({}, cron))).status, 200);
+  assertEquals(limiterCalls(w), []);
+});
+
+Deno.test("rate limits: callers who fail authentication or the role check do not spend the limiter", async () => {
+  const w = world();
+  assertEquals((await adminMessage(makeDeps(w))(post({ target: ids, channels: { sms: true }, body: "hi" }))).status, 401);
+  w.role = "finance";
+  assertEquals((await adminMessage(makeDeps(w))(post({ target: ids, channels: { sms: true }, body: "hi" }, bearer))).status, 403);
+  assertEquals(limiterCalls(w), []);
+});
+
+Deno.test("rate limits: a broken limiter is a 500, never a free pass", async () => {
+  for (const c of limitCases) {
+    const w = world();
+    w.rpc.hit_rate_limit = () => ({ data: null, error: { message: "down" } });
+    const res = await c.call(makeDeps(w));
+    assertEquals(res.status, 500, c.name);
+    assertEquals(w.tables.messages.length + w.tables.audit_log.length, 0, c.name);
+  }
 });

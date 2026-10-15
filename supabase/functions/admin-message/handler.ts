@@ -1,6 +1,6 @@
 import { json, readJson, wrap, z } from "../_shared/seller.ts";
 import { writeAudit } from "../_shared/audit.ts";
-import { chunk, fmtDay, isResponse, renderTemplate, requireRole, type OutboundDeps } from "../_shared/outbound.ts";
+import { chunk, fmtDay, isResponse, limitAdmin, renderTemplate, requireRole, type OutboundDeps } from "../_shared/outbound.ts";
 
 // Queues messages from an admin to sellers (or to one applicant). Nothing is sent here: rows land in `messages`
 // as 'queued' and dispatch-messages delivers them, holding promotional SMS/email back during quiet hours.
@@ -40,6 +40,8 @@ type Channel = "sms" | "email" | "in_app";
 export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
   const actor = await requireRole(req, d.db, ["owner", "reviewer", "support"]);
   if (isResponse(actor)) return actor;
+  const limited = await limitAdmin(d, actor, "message");
+  if (limited) return limited;
 
   const parsed = Body.safeParse(await readJson(req));
   if (!parsed.success) return json({ error: "bad_request", issues: parsed.error.issues.map((i) => i.message) }, 422);

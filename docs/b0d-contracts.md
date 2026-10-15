@@ -1,9 +1,11 @@
 # B0d messaging and jobs: function contracts
 
-> **Derived from the schema and the tests, not from spec section 5, so verify before merge.**
-> Spec section 5 was not available in the repository when these functions were written. Everything below describes
-> what the code does today (`supabase/functions/*`, `supabase/migrations/0011_messaging.sql`); where the spec says
-> something different, the spec wins and the code should change.
+> **Contracts v1: approved by the owner on 2026-10-15.**
+> `docs/ADMIN_SPEC.md` records only the section 5 preamble and has no entries for these four functions, and the owner
+> has no more detailed spec for them. These contracts are therefore the specification: they describe what the code does
+> (`supabase/functions/*`, `supabase/migrations/0011_messaging.sql`) and the owner approved them as written, with the
+> decisions and deviations recorded under [Owner decisions](#owner-decisions-approved-2026-10-15). One point is still
+> open; see [Still open](#still-open).
 
 All four functions are `POST` only, answer JSON (except the CSV export), and are deployed with `--no-verify-jwt`
 because they check credentials themselves.
@@ -47,17 +49,33 @@ setting means no quiet hours (nothing is held back).
 lease simply expires.
 
 **Dev mode**: when the messaging mode is `mock` (default whenever `APP_ENV` is not `production`, or `MESSAGING_MODE=mock`)
-`dispatch-messages` sends nothing and marks SMS/email rows `sent` with `provider_id = 'dev'`. In `live` mode it calls
-Africa's Talking (SMS) and Resend (email); a missing provider secret is a failed attempt, never a fake success.
+`dispatch-messages` sends nothing and marks SMS/email rows `sent` with `provider_id = 'dev'`. In `live` mode (the
+default in production) it calls Africa's Talking (SMS) and Resend (email); a missing provider secret is a failed
+attempt (`sms_not_configured` / `email_not_configured`), never a fake success.
 In-app rows are always recorded `delivered` with `provider_id = 'in_app'` (no provider involved).
 
-**Audit**: every action writes `audit_log` before answering, and if the audit write fails the request fails.
+**Audit**: every action writes `audit_log` before answering, and if the audit write fails the request fails (`500`).
+The one exception is a cron run of `dispatch-messages`, which writes no row (see the table below and D2b).
 
 | Function | `action` | `target_type` |
 | --- | --- | --- |
 | `admin-message` | `message.queue` | `message_batch` |
+| `dispatch-messages` | `dispatch.run`, **only when an admin runs it by hand**; `after` holds `limit`, `dev` and the counts `claimed`, `sent`, `retried`, `failed`, `skipped`. Cron runs write nothing. | `system` |
 | `daily-lifecycle` | `lifecycle.daily` (`actor_role` is `system` for cron) | `system` |
 | `admin-export` | `export.run` | the dataset name |
+
+**Rate limits**: admin callers only, one bucket per admin and action through `hit_rate_limit` (key
+`admin:<action>:<user id>`, fixed window). Over the limit is `429 { "error": "rate_limited", "retryAfter": <window seconds> }`
+and no work is done. The check runs after authentication and the role check, so callers who fail either do not spend
+it. A scheduler call (`x-cron-secret`) is never limited and never touches the limiter. If the limiter itself fails the
+request fails (`500`); it is never let through.
+
+| Function | Bucket `<action>` | Limit |
+| --- | --- | --- |
+| `admin-message` | `message` | 30 per minute |
+| `admin-export` | `export` | 10 per minute |
+| `dispatch-messages` | `dispatch` | 10 per minute |
+| `daily-lifecycle` | `lifecycle` | 5 per hour |
 
 ## `admin-message`
 
@@ -109,6 +127,10 @@ Transactional rows are claimed first.
 
 Response `200`: `{ "ok": true, "dev": true, "claimed": 4, "sent": 3, "retried": 1, "failed": 0, "skipped": 0 }`.
 
+A hand-run (admin) call is rate limited (10 a minute) and writes one `dispatch.run` audit row after the messages are
+processed; if that write fails the answer is `500` even though the messages were already handled. A cron call is
+neither limited nor audited.
+
 ## `daily-lifecycle`
 
 No body. Calls `queue_billing_notices(now)`, which creates the in-app notices (existing `generate_billing_notices`) plus an
@@ -147,7 +169,37 @@ Defined in `supabase/cron/schedule.sql` (not a migration; run once per environme
 | `dispatch-messages` | `* * * * *` | every minute |
 | `daily-lifecycle` | `0 4 * * *` | 07:00 daily (when quiet hours end) |
 
+## Owner decisions (approved 2026-10-15)
+
+| # | Decision | Status |
+| --- | --- | --- |
+| D1 | Rate limits for the four functions (the spec gives none): `admin-message` 30/min, `admin-export` 10/min, `dispatch-messages` 10/min, `daily-lifecycle` 5/hour. Admin callers only; cron is never limited. | approved by the owner on 2026-10-15 |
+| D2a | `dispatch-messages` and `daily-lifecycle` accept `x-cron-secret` instead of a user JWT, because `pg_cron` has no JWT. | approved by the owner on 2026-10-15 |
+| D2b | `dispatch-messages` writes an audit row (`dispatch.run`, with counts) only when an admin triggers a run by hand. Cron runs stay unaudited because they fire every minute, and failures already raise `admin_notifications`. | approved by the owner on 2026-10-15 |
+| D3a | Sellers see only delivered in-app messages; queued or scheduled in-app rows and all SMS/email delivery records stay hidden. | approved by the owner on 2026-10-15 |
+| D3b | Expiry texts go out only 2 to 4 days after `paid_until`, so long-lapsed businesses are not texted on first run. | approved by the owner on 2026-10-15 |
+| D3c | In production a missing SMS or email provider key counts as a failed attempt, never a fake success. | approved by the owner on 2026-10-15 |
+| D4 | The four function contracts in this document (request and response shapes, roles, export columns, cron times) are approved as v1. The owner has no more detailed spec for these functions. | approved by the owner on 2026-10-15 |
+
+### Deviations from the section 5 preamble
+
+`docs/ADMIN_SPEC.md` says every function verifies the caller JWT, rate-limits with `hit_rate_limit`, writes `audit_log`,
+and returns `400` for validation errors. These are the approved differences.
+
+| Preamble says | These functions | Status |
+| --- | --- | --- |
+| Verify the caller JWT | `dispatch-messages` and `daily-lifecycle` also accept `x-cron-secret` (a wrong or unset secret is `401`); `admin-message` and `admin-export` accept a JWT only | approved by the owner on 2026-10-15 (D2a) |
+| Write `audit_log` | `dispatch-messages` audits hand-run dispatches only; the other three audit every call | approved by the owner on 2026-10-15 (D2b) |
+| Rate-limit with `hit_rate_limit` | Admin callers only, with the limits above; cron is never limited | approved by the owner on 2026-10-15 (D1) |
+
+## Still open
+
+- **Validation status code.** The preamble says validation errors return `400`. `admin-message` and `admin-export`
+  return `422 bad_request` (with `issues`) for a malformed body, and so do the other input errors listed above
+  (`unknown_template`, `no_recipients`, and so on), while `dispatch-messages` returns `400 bad_request`. This
+  document describes the current behavior, assumed, needs owner sign-off: either accept `422` for these functions and
+  record it as a deviation, or change `admin-message` and `admin-export` to `400`.
+
 ## Not covered
 
-- These endpoints are not rate limited (admin and cron callers only). Add `enforceRateLimit` if the spec asks for it.
 - No delivery-status webhooks: Africa's Talking and Resend acceptance is recorded as `sent`; nothing moves a row to `delivered` later.

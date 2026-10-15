@@ -3,6 +3,7 @@ import { escapeHtml, json } from "./http.ts";
 import { requireAdmin } from "./admin.ts";
 import { isHttpError } from "./errors.ts";
 import { deliverEmail, deliverSms, isMockMode } from "./providers.ts";
+import { adminRateKey, hitRateLimit } from "./ratelimit.ts";
 import type { AdminRole } from "./roles.ts";
 import type { Db } from "./seller.ts";
 
@@ -64,6 +65,27 @@ export async function cronOrRole(req: Request, d: OutboundDeps, roles: AdminRole
     return d.cronSecret && safeEqual(secret, d.cronSecret) ? { kind: "system" } : json({ error: "unauthorized" }, 401);
   }
   return requireRole(req, d.db, roles);
+}
+
+// Rate limits for the messaging functions (owner decision D1): [max calls, window in seconds], one bucket per
+// action and admin. Admin callers only: the scheduler is never limited.
+export const MESSAGING_LIMITS = {
+  message: [30, 60],
+  export: [10, 60],
+  dispatch: [10, 60],
+  lifecycle: [5, 3600],
+} as const satisfies Record<string, readonly [number, number]>;
+
+/**
+ * A 429 `Response` once an admin is over the limit for `action`, otherwise null. Cron (`kind: "system"`) always passes.
+ * It answers the 429 itself instead of throwing, because `wrap` turns every thrown error into a 500.
+ * A limiter failure still throws (500): the limiter being down must not let the request through.
+ */
+export async function limitAdmin(d: OutboundDeps, actor: Actor, action: keyof typeof MESSAGING_LIMITS): Promise<Response | null> {
+  if (actor.kind !== "admin") return null;
+  const [max, windowSeconds] = MESSAGING_LIMITS[action];
+  const ok = await hitRateLimit(d.db, adminRateKey(action, actor.userId), max, windowSeconds);
+  return ok ? null : json({ error: "rate_limited", retryAfter: windowSeconds }, 429);
 }
 
 // ---------------------------------------------------------------------------
