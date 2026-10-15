@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider.jsx";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
+import { useLiveSync } from "../hooks/useLiveSync.js";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { useTheme } from "../hooks/useTheme.js";
 import { bottomBarRoutes, findRoute, visibleRoutes } from "../routes/config.js";
@@ -26,6 +27,7 @@ export default function AdminLayout() {
   const { admin, signOut } = useAuth();
   const { role } = usePermissions();
   const { data: counts } = useAdminCounts();
+  useLiveSync(); // Realtime: keeps counts, the dashboard and notifications fresh, and raises the soft toasts
   const { pathname } = useLocation();
   const route = findRoute(pathname);
   const routes = visibleRoutes(role);

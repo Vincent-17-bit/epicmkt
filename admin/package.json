@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test \"src/**/*.test.js\" \"src/**/*.test.mjs\"",
-    "test:e2e": "node e2e/shell.e2e.mjs"
+    "test:e2e": "node e2e/shell.e2e.mjs",
+    "test:e2e:dashboard": "node e2e/dashboard.e2e.mjs"
   },
   "dependencies": {
     "@epicmkt/admin-backend": "*",

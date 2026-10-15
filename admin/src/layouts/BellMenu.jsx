@@ -1,40 +1,24 @@
-import { useCallback, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import Icon from "../components/Icon.jsx";
-import { useDismiss } from "../hooks/useDismiss.js";
-import { badgeFor, hrefOf } from "../routes/config.js";
+import { useNotifications } from "../hooks/useDashboard.js";
+import { useLiveStore } from "../state/liveStore.js";
 import { formatBadge } from "./NavList.jsx";
+import NotificationsDrawer from "./NotificationsDrawer.jsx";
 
-/** Everything that currently needs attention and that this role can open, from the same counts as the sidebar. */
+/** The bell. Its number is the unread notifications; the drawer it opens also lists everything that needs attention. */
 export default function BellMenu({ routes, counts }) {
-  const [open, setOpen] = useState(false);
-  const box = useRef(null);
-  const button = useRef(null);
-  const close = useCallback(() => setOpen(false), []);
-  useDismiss(open, close, box, button);
-
-  const items = routes.map((route) => ({ route, count: badgeFor(route, counts) })).filter((item) => item.count > 0);
-  const total = items.reduce((sum, item) => sum + item.count, 0);
+  const open = useLiveStore((state) => state.drawerOpen);
+  const { openDrawer, closeDrawer } = useLiveStore.getState();
+  const { data } = useNotifications();
+  const unread = data?.unread ?? 0;
 
   return (
-    <div className="popover-host" ref={box}>
-      <button ref={button} type="button" className="icon-button" aria-expanded={open} aria-controls="bell-panel" onClick={() => setOpen((v) => !v)}
-        aria-label={total ? `Notifications, ${total} need attention` : "Notifications, nothing needs attention"}>
+    <>
+      <button type="button" className="icon-button" aria-haspopup="dialog" aria-expanded={open} onClick={openDrawer}
+        aria-label={unread ? `Notifications, ${unread} unread` : "Notifications, none unread"}>
         <Icon name="bell" />
-        {total > 0 ? <span className="nav-badge nav-badge--corner" aria-hidden="true">{formatBadge(total)}</span> : null}
+        {unread > 0 ? <span className="nav-badge nav-badge--corner" aria-hidden="true">{formatBadge(unread)}</span> : null}
       </button>
-      {open ? (
-        <div className="popover popover--bell" id="bell-panel">
-          <p className="popover__title">Needs attention</p>
-          {items.length === 0 ? <p className="popover__empty">Nothing is waiting for you.</p> : (
-            <ul>
-              {items.map(({ route, count }) => (
-                <li key={route.id}><Link to={hrefOf(route)} onClick={close}><span>{route.title}</span><span className="nav-badge">{formatBadge(count)}</span></Link></li>
-              ))}
-            </ul>
-          )}
-        </div>
-      ) : null}
-    </div>
+      <NotificationsDrawer open={open} onClose={closeDrawer} routes={routes} counts={counts} />
+    </>
   );
 }
