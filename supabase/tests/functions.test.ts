@@ -101,7 +101,7 @@ function deps(w: World): Deps {
     },
     storage: {
       from: () => ({
-        download: (p: string) => w.files.has(p) ? Promise.resolve({ data: new Blob([w.files.get(p)!]), error: null }) : Promise.resolve({ data: null, error: { message: "nf" } }),
+        download: (p: string) => w.files.has(p) ? Promise.resolve({ data: new Blob([w.files.get(p)! as BlobPart]), error: null }) : Promise.resolve({ data: null, error: { message: "nf" } }),
         remove: (ps: string[]) => (w.removed.push(...ps), Promise.resolve({ error: null })),
       }),
     },
