@@ -1,104 +1,87 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider.jsx";
+import { useAdminCounts } from "../hooks/useAdminCounts.js";
+import { usePermissions } from "../hooks/usePermissions.js";
+import { useTheme } from "../hooks/useTheme.js";
+import { bottomBarRoutes, findRoute, visibleRoutes } from "../routes/config.js";
+import BottomBar from "./BottomBar.jsx";
+import Header from "./Header.jsx";
+import IdleGuard from "./IdleGuard.jsx";
+import MobileDrawer from "./MobileDrawer.jsx";
+import Sidebar from "./Sidebar.jsx";
 
-const navItems = [
-  { label: "Command Center", to: "/admin", end: true, badge: "12" },
-  { label: "Applications", to: "/admin/applications", badge: "7" },
-  { label: "Businesses", to: "/admin/businesses", badge: "64" },
-  { label: "Payments", to: "/admin/payments", badge: "3" },
-  { label: "Settings", to: "/admin/settings" },
-];
+const SIDEBAR_KEY = "epicmkt-admin-sidebar";
+const isTyping = (el) => el instanceof HTMLElement && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+
+function initialCollapsed() {
+  try {
+    const saved = localStorage.getItem(SIDEBAR_KEY);
+    if (saved) return saved === "collapsed";
+  } catch { /* ignore */ }
+  return window.innerWidth < 1100; // tablets start collapsed to leave room for the page
+}
 
 export default function AdminLayout() {
-  const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem("epicmkt-admin-theme");
-    if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
+  const { admin, signOut } = useAuth();
+  const { role } = usePermissions();
+  const { data: counts } = useAdminCounts();
+  const { pathname } = useLocation();
+  const route = findRoute(pathname);
+  const routes = visibleRoutes(role);
 
-  useMemo(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("epicmkt-admin-theme", theme);
-  }, [theme]);
+  const [theme, toggleTheme] = useTheme();
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const titleRef = useRef(null);
+  const menuRef = useRef(null);
+  const moreRef = useRef(null);
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
+
+  const toggleSidebar = useCallback(() => {
+    setCollapsed((value) => {
+      try { localStorage.setItem(SIDEBAR_KEY, value ? "expanded" : "collapsed"); } catch { /* ignore */ }
+      return !value;
+    });
+  }, []);
+
+  // "[" collapses or expands the sidebar, unless the person is typing.
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key !== "[" || event.ctrlKey || event.metaKey || event.altKey || isTyping(event.target)) return;
+      event.preventDefault();
+      toggleSidebar();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [toggleSidebar]);
+
+  // On each page change: close the drawer, put the title in the tab, and move focus to the page heading.
+  useEffect(() => {
+    document.title = `${route?.title ?? "Not found"} · EpicMKT Admin`;
+    setDrawerOpen(false);
+    titleRef.current?.focus({ preventScroll: true });
+    document.getElementById("admin-content")?.scrollTo?.(0, 0);
+  }, [route?.title, pathname]);
 
   return (
-    <div className="admin-app">
-      <aside className={`admin-sidebar ${collapsed ? "is-collapsed" : ""}`}>
-        <div className="admin-sidebar__brand">
-          <div className="admin-sidebar__logo">E</div>
-          {!collapsed && <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>}
-          <button
-            type="button"
-            className="admin-sidebar__toggle"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((value) => !value)}
-          >
-            {collapsed ? "›" : "‹"}
-          </button>
-        </div>
-
-        <nav className="admin-sidebar__nav" aria-label="Admin navigation">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `admin-nav-item ${isActive ? "is-active" : ""}`}
-            >
-              <span className="admin-nav-item__label">{item.label}</span>
-              {item.badge ? <span className="admin-nav-item__badge">{item.badge}</span> : null}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="admin-sidebar__footer">
-          <div className="admin-system-card">
-            <div className="admin-system-card__title">System Status</div>
-            <div className="admin-system-card__content">
-              <span className="status-pill status-pill--healthy">Healthy</span>
-              <span>Last sync: 4 mins ago</span>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <div className="admin-main">
-        <header className="admin-header">
-          <div className="admin-header__left">
-            <button type="button" className="admin-icon-button admin-mobile-only" aria-label="Open menu">
-              ☰
-            </button>
-            <div>
-              <div className="admin-breadcrumb">Overview / Command Center</div>
-              <h1 className="admin-page-title">Command Center</h1>
-            </div>
-          </div>
-
-          <div className="admin-header__right">
-            <label className="admin-global-search" aria-label="Search admin">
-              <span>⌕</span>
-              <input type="search" placeholder="Search everything" readOnly />
-            </label>
-            <button type="button" className="admin-icon-button" aria-label="Notifications">
-              🔔
-            </button>
-            <button
-              type="button"
-              className="admin-theme-toggle"
-              aria-label="Toggle theme"
-              onClick={() => setTheme((value) => (value === "light" ? "dark" : "light"))}
-            >
-              {theme === "light" ? "Dark" : "Light"}
-            </button>
-            <div className="admin-avatar" aria-label="User profile">AO</div>
-          </div>
-        </header>
-
-        <main className="admin-content">
-          <Outlet />
+    <div className="app">
+      <a className="skip-link" href="#admin-content">Skip to content</a>
+      <Sidebar routes={routes} counts={counts} collapsed={collapsed} onToggle={toggleSidebar} />
+      <div className="app__main">
+        <Header
+          route={route} routes={routes} counts={counts} admin={admin} theme={theme} onToggleTheme={toggleTheme}
+          onOpenMenu={() => setDrawerOpen(true)} menuRef={menuRef} titleRef={titleRef} onSignOut={() => signOut()}
+        />
+        <main className="content" id="admin-content" tabIndex={-1}>
+          <Suspense fallback={<p className="page-loading" role="status">Loading…</p>}>
+            <Outlet />
+          </Suspense>
         </main>
+        <BottomBar routes={bottomBarRoutes(role)} counts={counts} onMore={() => setDrawerOpen(true)} moreRef={moreRef} />
       </div>
+      <MobileDrawer open={drawerOpen} onClose={closeDrawer} routes={routes} counts={counts} admin={admin} onSignOut={() => signOut()} />
+      <IdleGuard />
     </div>
   );
 }

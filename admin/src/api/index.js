@@ -1,8 +1,8 @@
-const isLive = Boolean(import.meta.env.VITE_SUPABASE_URL);
+import { isLive } from "../lib/supabase.js";
+import * as live from "./live.js";
+import * as mock from "./mock.js";
 
-export const api = isLive
-  ? await import("./live.js")
-  : await import("./mock.js");
+// Both modules export the same functions. The mock is only chosen while VITE_SUPABASE_URL is empty.
+const impl = isLive ? live : mock;
 
-export default api;
-export { api as default };
+export const getAdminCounts = () => impl.getAdminCounts();

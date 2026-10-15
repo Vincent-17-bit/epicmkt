@@ -1,16 +1,9 @@
-export const liveAdminApi = {
-  async getAdminCounts() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
-  },
-  async getApplications() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
-  },
-  async getBusinesses() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
-  },
-  async getPayments() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
-  },
-};
+import { supabase } from "../lib/supabase.js";
+import { normalizeCounts } from "./counts.js";
 
-export default liveAdminApi;
+/** One RPC, role-checked in SQL (public.admin_counts). Non-admins get an empty object, which normalises to zeros. */
+export async function getAdminCounts() {
+  const { data, error } = await supabase.rpc("admin_counts");
+  if (error) throw new Error("Could not load the admin counts.");
+  return normalizeCounts(data);
+}
