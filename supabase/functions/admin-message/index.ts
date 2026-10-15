@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders() });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
-  const db = await adminDb();
+  const db: any = await adminDb();
   try {
     const body = await req.json();
     const parsed = schema.safeParse(body);

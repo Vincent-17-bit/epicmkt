@@ -5,7 +5,7 @@ import { adminProofUrl } from "../functions/admin-proof-url/handler.ts";
 import { proofsPurge } from "../functions/proofs-purge/handler.ts";
 import type { Deps } from "../functions/_shared/seller.ts";
 
-const assertEquals = (a: unknown, b: unknown) => nodeAssert.deepStrictEqual(a, b);
+const assertEquals = (a: unknown, b: unknown, m?: string) => nodeAssert.deepStrictEqual(a, b, m);
 const assert = (v: unknown, m?: string) => nodeAssert.ok(v, m);
 
 const U = "u1";
@@ -97,7 +97,7 @@ function deps(w: World): Deps {
         return {
           createSignedUploadUrl: (p: string) => (w.signedUploads.push(p), Promise.resolve({ data: { signedUrl: `https://s/upload/${p}?token=t`, token: `tok-${w.signedUploads.length}`, path: p }, error: null })),
           createSignedUrl: (p: string, seconds: number) => (w.signedReads.push({ path: p, seconds }), Promise.resolve({ data: { signedUrl: `https://s/read/${p}?exp=${seconds}` }, error: null })),
-          download: (p: string) => (w.files.has(p) ? Promise.resolve({ data: new Blob([w.files.get(p)!]), error: null }) : Promise.resolve({ data: null, error: { message: "nf" } })),
+          download: (p: string) => (w.files.has(p) ? Promise.resolve({ data: new Blob([w.files.get(p)! as BlobPart]), error: null }) : Promise.resolve({ data: null, error: { message: "nf" } })),
           remove: (ps: string[]) => (w.removed.push(...ps), ps.forEach((p) => w.files.delete(p)), Promise.resolve({ error: null })),
         };
       },
