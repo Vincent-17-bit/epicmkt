@@ -56,3 +56,15 @@ verify_jwt = false
 
 [functions.proofs-purge]
 verify_jwt = false
+
+[functions.admin-message]
+verify_jwt = false
+
+[functions.admin-export]
+verify_jwt = false
+
+[functions.dispatch-messages]
+verify_jwt = false
+
+[functions.daily-lifecycle]
+verify_jwt = false

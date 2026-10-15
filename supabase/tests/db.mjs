@@ -21,22 +21,31 @@ export const ids = {
   bizB: "10000000-0000-0000-0000-0000000000b1",
 };
 
-export async function createDatabase() {
+// `database` lets a test file use its own database so files can run in parallel.
+// The connection is always closed, so a failing migration reports its file and error instead of hanging the test run.
+export async function createDatabase({ database = name } = {}) {
   const root = new pg.Client({ connectionString: base });
   await root.connect();
-  await root.query(`drop database if exists ${name} with (force)`);
-  await root.query(`create database ${name}`);
+  await root.query(`drop database if exists ${database} with (force)`);
+  await root.query(`create database ${database}`);
   await root.end();
-  const url = withDb(base, name);
+  const url = withDb(base, database);
   const owner = new pg.Client({ connectionString: url });
   await owner.connect();
-  await owner.query(`alter database ${name} set search_path = "$user", public, extensions`);
-  await owner.query(readFileSync(join(here, "bootstrap.sql"), "utf8"));
-  const dir = join(here, "..", "migrations");
-  for (const f of readdirSync(dir).filter((x) => x.endsWith(".sql")).sort()) {
-    await owner.query(readFileSync(join(dir, f), "utf8"));
+  try {
+    await owner.query(`alter database ${database} set search_path = "$user", public, extensions`);
+    await owner.query(readFileSync(join(here, "bootstrap.sql"), "utf8"));
+    const dir = join(here, "..", "migrations");
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".sql")).sort()) {
+      try {
+        await owner.query(readFileSync(join(dir, f), "utf8"));
+      } catch (e) {
+        throw new Error(`migration ${f} failed: ${e.message}`);
+      }
+    }
+  } finally {
+    await owner.end();
   }
-  await owner.end();
   return url;
 }
 
