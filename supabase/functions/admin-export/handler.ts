@@ -1,5 +1,6 @@
 import { json, readJson, wrap, z } from "../_shared/seller.ts";
 import { corsHeaders } from "../_shared/http.ts";
+import { writeAudit } from "../_shared/audit.ts";
 import { isResponse, requireRole, toCsv, type AdminRole, type OutboundDeps } from "../_shared/outbound.ts";
 
 // CSV (or JSON) export of an admin dataset. Every export is recorded in the audit log.
@@ -67,12 +68,12 @@ export const adminExport = (d: OutboundDeps) => wrap(async (req) => {
   const truncated = rows.length > MAX_ROWS;
   if (truncated) rows.length = MAX_ROWS;
 
-  await d.db.from("audit_log").insert({
-    actor_role: "admin",
-    actor_id: actor.userId,
-    action: "export",
-    entity: b.dataset,
-    data: { dataset: b.dataset, format: b.format, from: b.from ?? null, to: b.to ?? null, rows: rows.length, truncated },
+  await writeAudit(d.db, {
+    actor: { id: actor.userId, email: actor.email },
+    action: "export.run",
+    targetType: b.dataset,
+    after: { dataset: b.dataset, format: b.format, from: b.from ?? null, to: b.to ?? null, rows: rows.length, truncated },
+    req,
   });
 
   if (b.format === "json") return json({ ok: true, dataset: b.dataset, count: rows.length, truncated, rows });

@@ -1,4 +1,5 @@
 import { json, readJson, wrap, z } from "../_shared/seller.ts";
+import { writeAudit } from "../_shared/audit.ts";
 import { chunk, fmtDay, isResponse, renderTemplate, requireRole, type OutboundDeps } from "../_shared/outbound.ts";
 
 // Queues messages from an admin to sellers (or to one applicant). Nothing is sent here: rows land in `messages`
@@ -148,16 +149,16 @@ export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
     }
   }
 
-  await d.db.from("audit_log").insert({
-    actor_role: "admin",
-    actor_id: actor.userId,
-    action: "message_queued",
-    entity: "message_batch",
-    data: {
+  await writeAudit(d.db, {
+    actor: { id: actor.userId, email: actor.email },
+    action: "message.queue",
+    targetType: "message_batch",
+    after: {
       target: b.target.applicationId ? "application" : b.target.segment ? `segment:${b.target.segment}` : "businesses",
       recipients: recipients.length, rows: perChannel, skipped, templateKey: b.templateKey ?? null,
       transactional, scheduledAt: scheduled.toISOString(),
     },
+    req,
   });
 
   return json({ ok: true, queued: rows.length, rows: perChannel, skipped, notFound, transactional, scheduledAt: scheduled.toISOString() });

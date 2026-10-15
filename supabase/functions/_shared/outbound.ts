@@ -1,16 +1,21 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { isProduction, json } from "./http.ts";
+import { escapeHtml, json } from "./http.ts";
+import { requireAdmin } from "./admin.ts";
+import { isHttpError } from "./errors.ts";
+import { deliverEmail, deliverSms, isMockMode } from "./providers.ts";
+import type { AdminRole } from "./roles.ts";
 import type { Db } from "./seller.ts";
 
 export type SendResult = { ok: true; providerId: string; cost?: number } | { ok: false; error: string };
-export type AdminRole = "owner" | "reviewer" | "finance" | "support";
-export type Actor = { kind: "system" } | { kind: "admin"; userId: string; role: AdminRole };
+export type { AdminRole };
+export type Actor = { kind: "system" } | { kind: "admin"; userId: string; email?: string; role: AdminRole };
 
 // Everything the messaging functions touch from the outside world, so tests can replace it.
 export type OutboundDeps = {
   db: Db;
   cronSecret?: string;
-  // Dev mode sends nothing: the dispatcher marks messages 'sent' with provider_id 'dev'.
+  // Dev mode (messaging mode "mock": the default outside production, or MESSAGING_MODE=mock) sends nothing:
+  // the dispatcher marks messages 'sent' with provider_id 'dev'.
   dev: boolean;
   now: () => Date;
   sendSms: (to: string, message: string) => Promise<SendResult>;
@@ -23,10 +28,10 @@ export function realOutboundDeps(): OutboundDeps {
       auth: { persistSession: false, autoRefreshToken: false },
     }),
     cronSecret: Deno.env.get("CRON_SECRET") || undefined,
-    dev: !isProduction(),
+    dev: isMockMode(),
     now: () => new Date(),
-    sendSms: atSendSms,
-    sendEmail: resendSendEmail,
+    sendSms,
+    sendEmail,
   };
 }
 
@@ -44,15 +49,13 @@ export function safeEqual(a: string, b: string): boolean {
 }
 
 export async function requireRole(req: Request, db: Db, roles: AdminRole[]): Promise<Extract<Actor, { kind: "admin" }> | Response> {
-  const header = req.headers.get("authorization") ?? "";
-  const jwt = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
-  if (!jwt) return json({ error: "unauthorized" }, 401);
-  const { data, error } = await db.auth.getUser(jwt);
-  if (error || !data?.user?.id) return json({ error: "unauthorized" }, 401);
-  const { data: admin } = await db.from("admins").select("role").eq("user_id", data.user.id).maybeSingle();
-  if (!admin) return json({ error: "forbidden" }, 403);
-  if (!roles.includes(admin.role)) return json({ error: "forbidden" }, 403);
-  return { kind: "admin", userId: data.user.id, role: admin.role };
+  try {
+    const ctx = await requireAdmin(req, db, roles);
+    return { kind: "admin", userId: ctx.user.id, email: ctx.user.email, role: ctx.admin.role };
+  } catch (e) {
+    if (isHttpError(e)) return json({ error: e.code, ...e.extra }, e.status);
+    throw e;
+  }
 }
 
 export async function cronOrRole(req: Request, d: OutboundDeps, roles: AdminRole[]): Promise<Actor | Response> {
@@ -63,55 +66,19 @@ export async function cronOrRole(req: Request, d: OutboundDeps, roles: AdminRole
   return requireRole(req, d.db, roles);
 }
 
-export const auditWho = (a: Actor) => (a.kind === "system" ? { actor_role: "system" } : { actor_role: "admin", actor_id: a.userId });
-
 // ---------------------------------------------------------------------------
-// Providers
+// Providers: the shared deliverSms / deliverEmail (Africa's Talking, Resend) in live mode
 // ---------------------------------------------------------------------------
-const TIMEOUT_MS = 15_000;
+const toResult = (d: { ok: boolean; providerId?: string; costKes?: number; error?: string }, fallback: string): SendResult =>
+  d.ok ? { ok: true, providerId: d.providerId ?? fallback, cost: d.costKes } : { ok: false, error: d.error ?? "send_failed" };
 
-// Africa's Talking: statusCode 100 processed, 101 sent, 102 queued.
-export async function atSendSms(to: string, message: string): Promise<SendResult> {
-  const key = Deno.env.get("AT_API_KEY");
-  const username = Deno.env.get("AT_USERNAME");
-  const sender = Deno.env.get("AT_SENDER");
-  if (!key || !username || !sender) return { ok: false, error: "sms_not_configured" };
-  try {
-    const host = username === "sandbox" ? "api.sandbox.africastalking.com" : "api.africastalking.com";
-    const r = await fetch(`https://${host}/version1/messaging`, {
-      method: "POST",
-      headers: { apiKey: key, Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({ username, to, message, from: sender }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    if (!r.ok) return { ok: false, error: `sms_http_${r.status}` };
-    const data = await r.json();
-    const rec = data?.SMSMessageData?.Recipients?.[0];
-    if (!rec || ![100, 101, 102].includes(Number(rec.statusCode))) return { ok: false, error: `sms_${String(rec?.status ?? "rejected").slice(0, 60)}` };
-    const cost = parseFloat(String(rec.cost ?? "").replace(/[^0-9.]/g, ""));
-    return { ok: true, providerId: String(rec.messageId ?? "at"), cost: Number.isFinite(cost) ? cost : undefined };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? `sms_${e.name}` : "sms_failed" };
-  }
+export async function sendSms(to: string, message: string): Promise<SendResult> {
+  return toResult(await deliverSms(to, message), "at");
 }
 
-export async function resendSendEmail(to: string, subject: string, body: string): Promise<SendResult> {
-  const key = Deno.env.get("RESEND_API_KEY");
-  const from = Deno.env.get("MAIL_FROM");
-  if (!key || !from) return { ok: false, error: "email_not_configured" };
-  try {
-    const r = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to, subject, text: body }),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-    });
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok || !data?.id) return { ok: false, error: `email_http_${r.status}` };
-    return { ok: true, providerId: String(data.id) };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? `email_${e.name}` : "email_failed" };
-  }
+export async function sendEmail(to: string, subject: string, body: string): Promise<SendResult> {
+  const html = `<p>${escapeHtml(body).replace(/\r?\n/g, "<br>")}</p>`;
+  return toResult(await deliverEmail(to, subject, html), "resend");
 }
 
 // ---------------------------------------------------------------------------

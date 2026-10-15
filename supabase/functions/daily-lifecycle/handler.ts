@@ -1,5 +1,6 @@
 import { json, wrap } from "../_shared/seller.ts";
-import { auditWho, cronOrRole, isResponse, type OutboundDeps } from "../_shared/outbound.ts";
+import { writeAudit } from "../_shared/audit.ts";
+import { cronOrRole, isResponse, type OutboundDeps } from "../_shared/outbound.ts";
 
 // Runs once a day at 07:00 Nairobi (see supabase/cron/schedule.sql) with the x-cron-secret header.
 // An owner can also run it by hand; running it again the same day is harmless.
@@ -15,11 +16,12 @@ export const dailyLifecycle = (d: OutboundDeps) => wrap(async (req) => {
   if (r.error) return json({ error: "server_error" }, 500);
   const result = (r.data ?? { inApp: 0, queued: 0 }) as { inApp: number; queued: number };
 
-  await d.db.from("audit_log").insert({
-    ...auditWho(actor),
-    action: "daily_lifecycle",
-    entity: "system",
-    data: { inApp: result.inApp, queued: result.queued },
+  await writeAudit(d.db, {
+    actor: actor.kind === "admin" ? { id: actor.userId, email: actor.email } : null,
+    actorRole: actor.kind === "admin" ? "admin" : "system",
+    action: "lifecycle.daily",
+    targetType: "system",
+    after: { inApp: result.inApp, queued: result.queued },
   });
 
   return json({ ok: true, inApp: result.inApp, queued: result.queued });
