@@ -5,4 +5,3 @@ export const api = isLive
   : await import("./mock.js");
 
 export default api;
-export { api as default };
