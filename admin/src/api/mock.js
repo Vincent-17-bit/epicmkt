@@ -1,3 +1,5 @@
+import { queryBusinesses } from "./mockBusinesses.js";
+
 const mockCounts = {
   brief: "4 applications are waiting, 2 payments need confirming and 6 sellers expire this week",
   liveBusinesses: 142,
@@ -23,6 +25,19 @@ const mockPayments = [
   { receipt: "RCP-1025", businessName: "Umoja Hardware", amount: 2500, status: "Pending", mpesaCode: "MPESA-4412" },
   { receipt: "RCP-1026", businessName: "Green Valley Foods", amount: 4500, status: "Rejected", mpesaCode: "MPESA-4413" },
 ];
+
+const latency = (ms = 160) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export async function listBusinesses({ page = 0, pageSize = 50, ...query } = {}) {
+  await latency();
+  const rows = queryBusinesses(query);
+  return { rows: rows.slice(page * pageSize, (page + 1) * pageSize), total: rows.length };
+}
+
+export async function listAllBusinesses(query = {}) {
+  await latency();
+  return queryBusinesses(query);
+}
 
 export const mockAdminApi = {
   async getAdminCounts() {

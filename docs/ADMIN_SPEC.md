@@ -50,3 +50,9 @@ A duplicate M-Pesa code is a hard block (409 `duplicate_mpesa_code`), not an ack
 ### admin-reset-seller-password
 
 `{ businessId, reason }`: new temporary password, `must_change_password = true`, sent by SMS and email, audited. The reason is required.
+
+## 7C. Businesses
+
+Table fed by server-side pagination and filters: tabs All, Live, Expiring soon, In grace, Expired, Paused, Suspended, Unlisted, Flagged, Deleted (recycle bin); filters: category, county/town, plan, verified, featured, status, days-left range, has open flags, has unconfirmed payment, agent, created date; sort by name, paid_until (soonest first), created, last edit, last login, strikes, items count, health score; search by name, phone, seller ID, slug, owner. Columns: logo and name, category, town, owner and phone, status chip, plan, verified, featured, paid_until with compact countdown, items, flags, health ring, last login. Column chooser, saved views, bulk select and bulk actions (suspend, unsuspend, unlist, feature, extend days, message, tag, assign agent, export CSV).
+
+Status rules: Live = light-blue chip + fa-circle-check; Expiring soon = tint chip + fa-bell; Grace = tint chip + fa-clock; Expired / Suspended = black chip with white text + fa-ban; Flagged = danger chip + fa-flag. Status never relies on colour alone. A business is visible to customers only if status = live AND not deleted AND today (EAT) <= paid_until + grace_days (1). Health score = profile completeness, price freshness, recent login, open reports. Dangerous bulk actions (suspend, unlist, extend days) need a reason and typed confirmation. All times display in Africa/Nairobi.
