@@ -72,7 +72,7 @@ const priceText = (r) => {
 export function buildPeek(type, r, extra = {}) {
   if (!r) return null;
   const biz = extra.business ?? {};
-  const pageHref = PEEK_PAGES[type];
+  const pageHref = type === "business" && r.id ? `/admin/businesses/${r.id}` : PEEK_PAGES[type];
   switch (type) {
     case "business":
       return {

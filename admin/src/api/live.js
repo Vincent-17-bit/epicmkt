@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabase.js";
 import { buildPeek } from "../lib/peek.js";
+import * as businesses from "./liveBusinesses.js";
 
 const NOT_CONFIGURED = "Supabase admin API not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable live data.";
 
@@ -61,6 +62,7 @@ export const liveAdminApi = {
   },
   adminSearch,
   adminPeek,
+  ...businesses,
 };
 
 export default liveAdminApi;

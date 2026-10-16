@@ -1,5 +1,6 @@
 import { buildPeek } from "../lib/peek.js";
 import { SCOPES } from "../lib/search.js";
+import * as businesses from "./mockBusinesses.js";
 
 const mockCounts = {
   brief: "4 applications are waiting, 2 payments need confirming and 6 sellers expire this week",
@@ -106,6 +107,7 @@ export const mockAdminApi = {
   },
   adminSearch,
   adminPeek,
+  ...businesses,
 };
 
 export default mockAdminApi;
