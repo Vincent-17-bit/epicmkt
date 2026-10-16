@@ -30,13 +30,13 @@ export const isMockMode = () => messagingMode() === "mock";
 export const MOCK_SMS_COST_KES = 0.8;
 
 const TIMEOUT_MS = 10_000;
-const E164_KE = /^\+254[17]\d{8}$/;
+const E164 = /^\+[1-9]\d{7,14}$/;
 
 const AT_OK = new Set([100, 101, 102]); // Processed, Sent, Queued
 
 /** Africa's Talking answers HTTP 201 even when a recipient fails, so the per-recipient status decides. */
 export async function deliverSms(to: string, message: string, deps: DeliveryDeps = {}): Promise<Delivery> {
-  if (!E164_KE.test(to)) return { ok: false, mock: false, error: "invalid_phone" };
+  if (!E164.test(to)) return { ok: false, mock: false, error: "invalid_phone" };
   if (!message.trim()) return { ok: false, mock: false, error: "empty_message" };
 
   if (messagingMode() === "mock") {

@@ -21,11 +21,11 @@ export const mpesaCode = z.string().trim().toUpperCase().regex(/^[A-Z0-9]{10}$/,
 /** Whole shillings, 1 to 1,000,000. */
 export const kes = z.number().int().min(1).max(1_000_000);
 
-/** Kenyan number in any common form, stored as +2547XXXXXXXX or +2541XXXXXXXX. */
+/** Any phone number, stored as E.164. Kenyan local forms are converted to +254. */
 export const kenyanPhone = z.string().max(24).transform((v, ctx) => {
   const n = normalizePhone(v);
   if (!n) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid Kenyan phone number" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid phone number, with country code for numbers outside Kenya" });
     return z.NEVER;
   }
   return n;

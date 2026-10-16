@@ -21,7 +21,7 @@ export function RequestForm({ initial, onSent }) {
     const cleanRef = ref.trim().toUpperCase();
     const norm = normalizePhone(phone);
     if (!REF.test(cleanRef)) next.ref = "Enter your reference number, for example EPM-2026-ABC234";
-    if (!norm) next.phone = "Enter a valid Kenyan phone number, for example 0712 345 678";
+    if (!norm) next.phone = "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
     setErrors(next);
     setFormError("");
     if (Object.keys(next).length) return document.querySelector('form [aria-invalid="true"]')?.focus();

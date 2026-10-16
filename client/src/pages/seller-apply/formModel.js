@@ -176,7 +176,7 @@ export function friendly(issue) {
     (issue.code === "too_small" && issue.type === "string" && Number(issue.minimum) <= 1);
   if (empty) return `${label} is required`;
   if (path.startsWith("contacts.businessPhones") || ["phone", "altPhone", "contacts.whatsapp"].includes(path))
-    return "Enter a valid Kenyan phone number, for example 0712 345 678";
+    return "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
   return FORMAT[path] ?? `${label}: please check this`;
 }
 

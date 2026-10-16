@@ -12,25 +12,36 @@ export const normalizeText = (value) =>
 
 export const slugify = (value) => normalizeText(value).replace(/\s/g, "-");
 
-export const toE164KE = (phone) => {
-  const digits = String(phone).replace(/\D/g, "");
+/** Digits only, country code included, no "+". Kenyan local numbers get 254. Other countries need their code. */
+export const toE164 = (phone) => {
+  const s = String(phone ?? "").replace(/[\s\-().]/g, "");
+  if (/^(?:\+|00)[1-9]\d{7,14}$/.test(s)) return s.replace(/^(?:\+|00)/, "");
+  const digits = s.replace(/\D/g, "");
   if (digits.startsWith("254")) return digits;
   if (digits.startsWith("0")) return `254${digits.slice(1)}`;
   if (digits.length === 9) return `254${digits}`;
   return digits;
 };
+export const toE164KE = toE164;
 
-export const isValidPhoneKE = (phone) => /^254[71]\d{8}$/.test(toE164KE(phone));
-
-export const formatPhoneKE = (phone) => {
-  const d = toE164KE(phone);
-  return `0${d.slice(3, 6)} ${d.slice(6, 9)} ${d.slice(9)}`;
+export const isValidPhone = (phone) => {
+  const s = String(phone ?? "").replace(/[\s\-().]/g, "");
+  return /^(?:254|0)[1-9]\d{8}$/.test(s) || /^(?:\+|00)[1-9]\d{7,14}$/.test(s);
 };
+export const isValidPhoneKE = isValidPhone;
 
-export const telLink = (phone) => `tel:+${toE164KE(phone)}`;
+/** Kenyan numbers show as 0712 345 678, others as +CC and the rest. */
+export const formatPhone = (phone) => {
+  const d = toE164(phone);
+  if (/^254\d{9}$/.test(d)) return `0${d.slice(3, 6)} ${d.slice(6, 9)} ${d.slice(9)}`;
+  return `+${d}`;
+};
+export const formatPhoneKE = formatPhone;
+
+export const telLink = (phone) => `tel:+${toE164(phone)}`;
 
 export const whatsappLink = (phone, text) =>
-  `https://wa.me/${toE164KE(phone)}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
+  `https://wa.me/${toE164(phone)}${text ? `?text=${encodeURIComponent(text)}` : ""}`;
 
 export const directionsLink = (lat, lng) =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;

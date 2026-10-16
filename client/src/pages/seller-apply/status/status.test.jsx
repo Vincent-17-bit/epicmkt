@@ -44,7 +44,7 @@ describe("check my application", () => {
     mount();
     await user.click(await screen.findByRole("button", { name: "Send me a code" }));
     expect(screen.getByText("Enter your reference number, for example EPM-2026-ABC234")).toBeInTheDocument();
-    expect(screen.getByText(/valid Kenyan phone number/)).toBeInTheDocument();
+    expect(screen.getByText(/valid phone number/)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Reference number"), "EPM-2026-NOPE99");
     await user.type(screen.getByLabelText("Phone number"), "0700000000");
     await user.click(screen.getByRole("button", { name: "Send me a code" }));

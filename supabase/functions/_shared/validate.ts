@@ -18,8 +18,13 @@ const noEmoji = (s: string) => !/\p{Extended_Pictographic}/u.test(s);
 export const nairobiToday = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
 
 export function normalizePhone(raw: string): string | null {
-  const m = raw.replace(/[\s\-().]/g, "").match(/^(?:\+?254|0)([71]\d{8})$/);
-  return m ? `+254${m[1]}` : null;
+  const s = String(raw ?? "").replace(/[\s\-().]/g, '');
+  // Kenyan numbers in local or 254 form: 0712345678, 254712345678
+  let m = s.match(/^(?:254|0)([1-9]\d{8})$/);
+  if (m) return `+254${m[1]}`;
+  // Any other country: +CC... or 00CC..., 8 to 15 digits, first digit not 0
+  m = s.match(/^(?:\+|00)([1-9]\d{7,14})$/);
+  return m ? `+${m[1]}` : null;
 }
 
 const text = (min: number, max: number) => z.string().transform(clean).pipe(z.string().min(min).max(max));
@@ -27,7 +32,7 @@ const text = (min: number, max: number) => z.string().transform(clean).pipe(z.st
 const phone = z.string().max(24).transform((v, ctx) => {
   const n = normalizePhone(v);
   if (!n) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid Kenyan phone number" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a valid phone number, with country code for numbers outside Kenya" });
     return z.NEVER;
   }
   return n;

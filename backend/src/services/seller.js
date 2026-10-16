@@ -50,7 +50,7 @@ export async function updateSellerBusiness(sellerId, patch) {
     if (!EDITABLE.includes(key)) throw new ValidationError(`Field not editable: ${key}`, { [key]: "Not editable" });
   }
   for (const key of ["phone", "whatsapp"]) {
-    if (key in patch && !isValidPhoneKE(patch[key])) fields[key] = "Enter a valid Kenyan number";
+    if (key in patch && !isValidPhoneKE(patch[key])) fields[key] = "Enter a valid phone number";
   }
   for (const key of ["coverUrl", "logoUrl"]) {
     if (key in patch && !isImageRef(patch[key])) fields[key] = "Enter a valid image link";
