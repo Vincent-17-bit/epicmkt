@@ -4,6 +4,11 @@ const notConfigured = () => {
 
 export const listBusinesses = notConfigured;
 export const listAllBusinesses = notConfigured;
+export const getBusinessTabCounts = notConfigured;
+export const getBusinessFilterOptions = notConfigured;
+export const bulkBusinessAction = notConfigured;
+export const undoBulkBusinessAction = notConfigured;
+export const listAuditEntries = notConfigured;
 
 export const liveAdminApi = {
   async getAdminCounts() {

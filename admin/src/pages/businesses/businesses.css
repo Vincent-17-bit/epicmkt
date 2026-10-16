@@ -1,0 +1,77 @@
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 1rem;
+  background: var(--admin-surface);
+  box-shadow: var(--admin-shadow);
+}
+
+.filters__check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  font-size: 0.9rem;
+}
+
+.filters__check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--admin-primary);
+}
+
+.filters__actions {
+  display: flex;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+}
+
+.field--group {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.field--group legend {
+  padding: 0;
+  margin-bottom: 0.35rem;
+}
+
+.biz-name {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.biz-logo {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--admin-primary);
+  border-radius: 50%;
+  background: var(--admin-primary-tint);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.biz-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.dt--mobile .biz-name {
+  flex-direction: row-reverse;
+}

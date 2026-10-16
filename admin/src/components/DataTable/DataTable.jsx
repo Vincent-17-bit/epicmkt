@@ -58,7 +58,8 @@ export default function DataTable({
   const [sort, setSort] = useState(defaultSort);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(stored.pageSize ?? 50);
-  const [hidden, setHidden] = useState(stored.hidden ?? []);
+  const defaultHidden = useMemo(() => columns.filter((column) => column.hiddenByDefault).map((column) => column.key), [columns]);
+  const [hidden, setHidden] = useState(stored.hidden ?? defaultHidden);
   const [density, setDensity] = useState(stored.density ?? "comfortable");
   const [views, setViews] = useState(stored.views ?? []);
   const [selected, setSelected] = useState(() => new Map());
@@ -94,6 +95,7 @@ export default function DataTable({
 
   useEffect(() => {
     setPage(0);
+    setSelected(new Map());
   }, [extraKey]);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export default function DataTable({
     const onKey = (event) => {
       if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target;
-      if (target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
+      if (target instanceof HTMLElement && (target.isContentEditable || target.closest("[role='dialog']") || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))) return;
       event.preventDefault();
       searchRef.current?.focus();
     };
@@ -177,7 +179,7 @@ export default function DataTable({
     setSearch(state.search ?? "");
     setSort(state.sort ?? defaultSort);
     setPageSize(state.pageSize ?? 50);
-    setHidden(state.hidden ?? []);
+    setHidden(state.hidden ?? defaultHidden);
     setDensity(state.density ?? "comfortable");
     setPage(0);
     onExtraChange?.(state.extra);
