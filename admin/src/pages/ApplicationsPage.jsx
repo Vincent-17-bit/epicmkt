@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { api } from "../api/index.js";
 import { useQuery } from "@tanstack/react-query";
 
@@ -39,7 +40,7 @@ export default function ApplicationsPage() {
                   ))
                 : data.map((row) => (
                     <tr key={row.reference || row.businessName}>
-                      <td>{row.reference}</td>
+                      <td><Link className="inline-link" to={`/admin/applications/${row.id}`}>{row.reference}</Link></td>
                       <td>{row.businessName}</td>
                       <td>{row.ownerName}</td>
                       <td><span className="status-pill status-pill--neutral">{row.status}</span></td>
