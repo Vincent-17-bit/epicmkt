@@ -214,3 +214,77 @@ test("a new submitted application notifies the admins once per submission", asyn
   const after = await one(`select count(*)::int as n, bool_and(business_id is null) as nobiz from admin_notifications where kind = 'application_submitted'`);
   assert.equal(after.n, before + 1);
 });
+
+// ---- B2a: assigning applications from the queue ----------------------------------------------------
+
+const APP_COLS = `business_name, registered, year_established, sbp_number, sbp_expiry, county, town, address, lat, lng, whatsapp, terms_version, privacy_version, authorised,
+                  category_id, plan_key, price_at_submission, plan_snapshot, owner_full_name, owner_id_type, owner_id_number, phone, email`;
+const APP_VALS = `'Biz', false, 2020, 'SBP1', '2099-01-01', 'Nairobi', 'Nairobi', 'Street', -1.28, 36.8, '+254700000001', '1', '1', true,
+                  'barber', 'standard', 500, '{}', 'Owner', 'national_id', '12345678', '+254700000001', 'o@x.co'`;
+const appId = (n) => `30000000-0000-0000-0000-00000000b2${String(n).padStart(2, "0")}`;
+const addApp = (n, status) => sql(c, `insert into applications (id, status, submitted_at, ${APP_COLS}) values ('${appId(n)}', '${status}', now(), ${APP_VALS})`);
+const assign = (who, idList, reviewer) => tx(c, who,
+  async (k) => (await k.query(`select public.admin_assign_applications($1::uuid[], $2::uuid) as r`, [idList, reviewer])).rows[0].r, { commit: true });
+const reviewerOf = async (n) => (await one(`select reviewer_id from applications where id = $1`, [appId(n)])).reviewer_id;
+
+test("admin_list_reviewers: owners and reviewers can read it, others cannot, and it lists only people who can review", async () => {
+  const list = await tx(c, as("reviewer"), async (k) => (await k.query(`select * from public.admin_list_reviewers()`)).rows);
+  assert.deepEqual(list.map((r) => r.role).sort(), ["owner", "reviewer"]);
+  assert.ok(list.some((r) => r.user_id === U.reviewer && r.email === "reviewer@test"));
+  assert.equal((await tx(c, as("owner"), async (k) => (await k.query(`select * from public.admin_list_reviewers()`)).rows)).length, 2);
+  await rejects(c, as("finance"), `select * from public.admin_list_reviewers()`, [], /forbidden/);
+  await rejects(c, as("support"), `select * from public.admin_list_reviewers()`, [], /forbidden/);
+  await rejects(c, asA, `select * from public.admin_list_reviewers()`, [], /forbidden|permission denied/);
+});
+
+test("assign: the owner can assign any open application to a reviewer and clear it again, and every change is audited", async () => {
+  await addApp(1, "submitted"); await addApp(2, "under_review"); await addApp(3, "changes_requested"); await addApp(4, "activated"); await addApp(5, "rejected");
+  const out = await assign(as("owner"), [appId(1), appId(2), appId(3), appId(4), appId(5)], U.reviewer);
+  assert.deepEqual(out, { updated: 3, skipped: 2 }); // activated and rejected are finished, so they are skipped
+  assert.equal(await reviewerOf(1), U.reviewer);
+  assert.equal(await reviewerOf(4), null);
+  // status is never touched by assigning
+  assert.deepEqual((await sql(c, `select status from applications where id in ($1,$2,$3) order by id`, [appId(1), appId(2), appId(3)])).map((r) => r.status), ["submitted", "under_review", "changes_requested"]);
+  // assigning to the same person again changes nothing
+  assert.deepEqual(await assign(as("owner"), [appId(1)], U.reviewer), { updated: 0, skipped: 1 });
+  assert.deepEqual(await assign(as("owner"), [appId(1), appId(2)], null), { updated: 2, skipped: 0 });
+  assert.equal(await reviewerOf(1), null);
+  const audit = await sql(c, `select action, count(*)::int as n from audit_log where action in ('application.assign','application.unassign') group by action order by action`);
+  assert.deepEqual(audit, [{ action: "application.assign", n: 3 }, { action: "application.unassign", n: 2 }]);
+  const events = await sql(c, `select type, data->>'to' as to_id from application_events where application_id = $1 order by id`, [appId(1)]);
+  assert.deepEqual(events, [{ type: "assigned", to_id: U.reviewer }, { type: "unassigned", to_id: null }]);
+});
+
+test("assign: a reviewer can take work for themselves but not hand it over or touch a colleague's", async () => {
+  const other = "00000000-0000-0000-0000-0000000000c4";
+  await sql(c, `insert into auth.users (id, email) values ('${other}', 'other@test'); insert into public.admins (user_id, role, email) values ('${other}', 'reviewer', 'other@test')`);
+  await addApp(10, "submitted"); await addApp(11, "submitted"); await addApp(12, "submitted");
+  await sql(c, `update applications set reviewer_id = $1 where id = $2`, [other, appId(11)]);
+  await sql(c, `update applications set reviewer_id = $1 where id = $2`, [U.reviewer, appId(12)]);
+
+  // takes the free one and keeps their own; the colleague's is skipped
+  assert.deepEqual(await assign(as("reviewer"), [appId(10), appId(11), appId(12)], U.reviewer), { updated: 1, skipped: 2 });
+  assert.equal(await reviewerOf(10), U.reviewer);
+  assert.equal(await reviewerOf(11), other);
+  // cannot assign to somebody else, not even a free application
+  await addApp(13, "submitted");
+  await rejects(c, as("reviewer"), `select public.admin_assign_applications(array['${appId(13)}']::uuid[], '${other}')`, [], /forbidden/);
+  // can clear their own, but not a colleague's
+  assert.deepEqual(await assign(as("reviewer"), [appId(10), appId(11)], null), { updated: 1, skipped: 1 });
+  assert.equal(await reviewerOf(10), null);
+  assert.equal(await reviewerOf(11), other);
+  // the owner overrides
+  assert.deepEqual(await assign(as("owner"), [appId(11)], U.reviewer), { updated: 1, skipped: 0 });
+});
+
+test("assign: finance, support and sellers are forbidden; only owners and reviewers can be assignees; the batch is capped", async () => {
+  await addApp(20, "submitted");
+  for (const who of [as("finance"), as("support"), asA]) await rejects(c, who, `select public.admin_assign_applications(array['${appId(20)}']::uuid[], null)`, [], /forbidden|permission denied/);
+  await rejects(c, as("owner"), `select public.admin_assign_applications(array['${appId(20)}']::uuid[], '${U.finance}')`, [], /invalid_reviewer/);
+  await rejects(c, as("owner"), `select public.admin_assign_applications(array['${appId(20)}']::uuid[], '00000000-0000-0000-0000-00000000dead')`, [], /invalid_reviewer/);
+  const many = Array.from({ length: 101 }, (_, i) => `00000000-0000-4000-8000-${String(i).padStart(12, "0")}`);
+  await rejects(c, as("owner"), `select public.admin_assign_applications($1::uuid[], null)`, [many], /too_many/);
+  // empty and duplicate input are harmless
+  assert.deepEqual(await assign(as("owner"), [], U.reviewer), { updated: 0, skipped: 0 });
+  assert.deepEqual(await assign(as("owner"), [appId(20), appId(20)], U.reviewer), { updated: 1, skipped: 0 });
+});

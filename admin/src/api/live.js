@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabase.js";
 import { normalizeCounts } from "./counts.js";
 import { buildDashboard } from "./dashboard.js";
 import { monthKeys, monthStartIso } from "../lib/series.js";
+import { QUEUE_TABS, filterOps, normalizeQuery, orderOps, pageRange } from "../lib/queueQuery.js";
 
 /** One RPC, role-checked in SQL (public.admin_counts). Non-admins get an empty object, which normalises to zeros. */
 export async function getAdminCounts() {
@@ -103,5 +104,91 @@ export function subscribeLive({ onChange, onNotification, onStatus } = {}) {
   channel.subscribe((status) => {
     onStatus?.(status === "SUBSCRIBED" ? "live" : status === "CONNECTING" || status === "JOINING" ? "connecting" : "offline");
   });
+  return () => { supabase.removeChannel(channel); };
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Applications queue (B2a). Row-level security limits applications to owners and reviewers, so any other role gets
+// an empty list. The columns below leave out ID numbers, the SBP/KRA details and the documents on purpose: the queue
+// does not need them, and the review page (B2b) reads them one application at a time, with an audit entry.
+// ---------------------------------------------------------------------------------------------------------------
+
+const APPLICATION_COLUMNS = "id,reference_no,status,business_name,owner_full_name,phone,county,town,category_id,plan_key,price_at_submission,verification_level,completeness_hint,registered,submitted_at,review_started_at,reviewer_id,updated_at,category:categories(name)";
+const flatten = (row) => { const { category, ...rest } = row; return { ...rest, category_name: category?.name ?? null }; };
+const applyOps = (builder, ops) => ops.reduce((b, [method, ...args]) => b[method](...args), builder);
+
+/** One page of the queue for a query (see lib/queueQuery.js) and the total that matches. `me` is the admin's user id. */
+export async function listApplications(query, { me = null } = {}) {
+  const q = normalizeQuery(query);
+  let builder = applyOps(supabase.from("applications").select(APPLICATION_COLUMNS, { count: "exact" }), filterOps(q, { me }));
+  for (const [column, options] of orderOps(q)) builder = builder.order(column, options);
+  const { data, count, error } = await builder.range(...pageRange(q));
+  if (error) throw new Error("Could not load the applications.");
+  return { rows: (data ?? []).map(flatten), total: count ?? 0 };
+}
+
+/** The number on every tab for the current search and filters (the tab and the SLA filter are left out on purpose). */
+export async function getApplicationTabCounts(query, { me = null } = {}) {
+  const q = normalizeQuery(query);
+  const real = QUEUE_TABS.filter((tab) => tab.status);
+  const results = await Promise.all(real.map((tab) =>
+    applyOps(supabase.from("applications").select("id", { count: "exact", head: true }).eq("status", tab.status), filterOps(q, { me, skip: ["status", "sla"] })).then(ok)));
+  const counts = Object.fromEntries(real.map((tab, i) => [tab.id, results[i].count]));
+  counts.all = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  return counts;
+}
+
+/** Every row that matches (not just the page), for CSV. Reads 1000 at a time and stops at `max`. */
+export async function exportApplications(query, { me = null, max = 5000 } = {}) {
+  const q = normalizeQuery(query);
+  const rows = [];
+  let total = 0;
+  for (let from = 0; from < max; from += 1000) {
+    let builder = applyOps(supabase.from("applications").select(APPLICATION_COLUMNS, { count: "exact" }), filterOps(q, { me }));
+    for (const [column, options] of orderOps(q)) builder = builder.order(column, options);
+    const { data, count, error } = await builder.range(from, Math.min(from + 999, max - 1));
+    if (error) throw new Error("Could not export the applications.");
+    total = count ?? 0;
+    rows.push(...(data ?? []).map(flatten));
+    if ((data ?? []).length < 1000 || rows.length >= total) break;
+  }
+  return { rows, total, truncated: total > rows.length };
+}
+
+/** Categories for the filter. Reviewers can read the public list. */
+export async function getQueueCategories() {
+  const { data, error } = await supabase.from("categories").select("id,name").order("name", { ascending: true });
+  if (error) throw new Error("Could not load the categories.");
+  return data ?? [];
+}
+
+/** Owners and reviewers an application can be assigned to: [{ id, name, email, role }]. */
+export async function getReviewers() {
+  const { data, error } = await supabase.rpc("admin_list_reviewers");
+  if (error) throw new Error("Could not load the reviewers.");
+  return (data ?? []).map((r) => ({ id: r.user_id, name: r.display_name || (r.email ? r.email.split("@")[0] : "Unnamed"), email: r.email ?? "", role: r.role }));
+}
+
+const ASSIGN_ERRORS = {
+  forbidden: "Your role cannot assign these applications.",
+  too_many: "Select up to 100 applications at a time.",
+  invalid_reviewer: "That person cannot review applications.",
+};
+/** reviewerId null clears the assignee. Returns { updated, skipped }. The third argument is only used by the demo. */
+export async function assignApplications(ids, reviewerId) {
+  const { data, error } = await supabase.rpc("admin_assign_applications", { p_ids: ids, p_reviewer: reviewerId });
+  if (error) throw new Error(ASSIGN_ERRORS[error.message] ?? "Could not assign the applications.");
+  return { updated: Number(data?.updated) || 0, skipped: Number(data?.skipped) || 0 };
+}
+
+/**
+ * Realtime for the queue page: calls onRow(row) for every inserted or updated application this role may read, and
+ * onStatus with "connecting" | "live" | "offline". Returns the unsubscribe function. Realtime only says that something
+ * moved; the list is always re-read from the server, so a missed event never leaves a wrong number on screen.
+ */
+export function subscribeApplications({ onRow, onStatus } = {}) {
+  const channel = supabase.channel("admin-applications-queue");
+  channel.on("postgres_changes", { event: "*", schema: "public", table: "applications" }, (payload) => onRow?.(payload.new ?? null, payload.eventType));
+  channel.subscribe((status) => onStatus?.(status === "SUBSCRIBED" ? "live" : status === "CONNECTING" || status === "JOINING" ? "connecting" : "offline"));
   return () => { supabase.removeChannel(channel); };
 }

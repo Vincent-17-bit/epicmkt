@@ -15,6 +15,7 @@ const ANY = ["reviewer", "finance", "support"]; // any admin; the owner is alway
 
 export const ACTIONS = {
   "applications.view": { label: "open applications", roles: ["reviewer"] },
+  "applications.assign": { label: "assign applications to reviewers", roles: ["reviewer"] },
   "applications.decide": { label: "approve, reject or return applications", roles: ["reviewer"] },
   "documents.view": { label: "open application documents", roles: ["reviewer"] },
   "changes.view": { label: "see change requests", roles: ["reviewer"] },

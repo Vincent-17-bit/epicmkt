@@ -13,4 +13,5 @@ export { EmptyState, EMPTY_ILLUSTRATIONS } from "./EmptyState.jsx";
 export { ConfirmDialog } from "./ConfirmDialog.jsx";
 export { CountUp } from "./CountUp.jsx";
 export { Sparkline } from "./Sparkline.jsx";
+export { DataTable } from "./DataTable/DataTable.jsx";
 export { cx } from "./cx.js";

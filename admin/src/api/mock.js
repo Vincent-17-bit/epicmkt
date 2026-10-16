@@ -1,5 +1,7 @@
 import { normalizeCounts } from "./counts.js";
 import { buildDashboard } from "./dashboard.js";
+import { QUEUE_TABS, runQuery } from "../lib/queueQuery.js";
+import { MOCK_CATEGORIES, MOCK_REVIEWERS, makeApplication, seedApplications } from "./mockApplications.js";
 
 // Built-in demo data, used while VITE_SUPABASE_URL is empty. Same shapes as the live API, so every screen works the same.
 const HOUR = 3_600_000;
@@ -19,7 +21,16 @@ const state = {
   notifications: [],
   seq: 0,
   tick: 0,
+  apps: null, // built on first use, see applications()
+  me: MOCK_REVIEWERS[0].id, // the signed-in admin, as last reported by the queue page
 };
+
+// The demo's applications, shared by the queue, the counts and the dashboard so they always agree.
+const applications = () => (state.apps ??= seedApplications());
+const applicationListeners = new Set();
+const announceRow = (row, event) => { for (const listener of applicationListeners) listener(row, event); };
+const countStatus = (status) => applications().filter((a) => a.status === status).length;
+const APP_COUNT_KEYS = { submitted: "submitted", under_review: "under_review", changes_requested: "changes_requested", awaiting_payment: "approved", payment_confirming: "payment_confirming" };
 
 function seedNotifications(now) {
   const make = (minutesAgo, kind, data, name, read = false) => ({
@@ -37,12 +48,17 @@ function seedNotifications(now) {
   ];
 }
 
+function oldestWaiting() {
+  const waiting = applications().filter((a) => a.status === "submitted" && a.submitted_at).sort((a, b) => a.submitted_at.localeCompare(b.submitted_at));
+  return waiting[0] ? { id: waiting[0].id, at: waiting[0].submitted_at } : null;
+}
+
 function rawFor(now) {
   const t = now.getTime();
   return {
     waitingOver24h: 2,
     oldest: {
-      applications: { id: "mock-app-1", at: new Date(t - 27 * HOUR).toISOString() },
+      applications: oldestWaiting() ?? { id: "mock-app-1", at: new Date(t - 27 * HOUR).toISOString() },
       payments: new Date(t - 9 * HOUR).toISOString(), flags: new Date(t - 70 * HOUR).toISOString(),
       failedMessages: new Date(t - 5 * HOUR).toISOString(), changes: new Date(t - 30 * HOUR).toISOString(),
       expiry: new Date(t + 2 * DAY).toISOString(),
@@ -58,14 +74,15 @@ function rawFor(now) {
 
 export async function getAdminCounts() {
   await wait(60);
-  return normalizeCounts(state.counts);
+  const derived = Object.fromEntries(Object.entries(APP_COUNT_KEYS).map(([key, status]) => [key, countStatus(status)]));
+  return normalizeCounts({ ...state.counts, ...derived });
 }
 
 export async function getDashboard() {
   await wait();
   const now = new Date();
   const data = buildDashboard(rawFor(now), now);
-  data.waitingOver24h = state.counts.submitted > 0 ? 2 : 0;
+  data.waitingOver24h = applications().filter((a) => a.status === "submitted" && now - Date.parse(a.submitted_at) > DAY).length;
   return data;
 }
 
@@ -81,11 +98,14 @@ export async function markNotificationsRead(ids) {
   for (const n of state.notifications) if (!n.read_at && (ids === "all" || ids.includes(n.id))) n.read_at = at;
 }
 
-export async function startReview() {
+export async function startReview(applicationId) {
   await wait(250);
-  state.counts.submitted = Math.max(0, state.counts.submitted - 1);
-  state.counts.under_review += 1;
-  return "under_review";
+  const app = applications().find((a) => a.id === applicationId);
+  if (app && app.status === "submitted") {
+    Object.assign(app, { status: "under_review", reviewer_id: app.reviewer_id ?? state.me, review_started_at: new Date().toISOString() });
+    announceRow({ ...app }, "UPDATE");
+  }
+  return app?.status ?? "under_review";
 }
 
 // The demo has no database to push changes, so it makes one up every 40 seconds, like a quiet day at the office.
@@ -99,7 +119,14 @@ export function subscribeLive({ onChange, onNotification, onStatus } = {}) {
   const id = setInterval(() => {
     if (state.notifications.length === 0) seedNotifications(Date.now());
     const event = EVENTS[state.tick++ % EVENTS.length];
-    for (const [key, by] of Object.entries(event.counts)) state.counts[key] += by;
+    for (const [key, by] of Object.entries(event.counts)) if (key !== "submitted") state.counts[key] += by;
+    if (event.counts.submitted) {
+      const app = makeApplication({ status: "submitted", hoursAgo: 0.01, seed: 900 + state.tick, now: Date.now() });
+      app.business_name = event.data.business_name;
+      app.reference_no = event.data.reference_no;
+      applications().push(app);
+      announceRow({ ...app }, "INSERT");
+    }
     const row = {
       id: `mock-${++state.seq}`, kind: event.kind, business_id: event.name ? `b-${state.seq}` : null, data: event.data,
       business: event.name ? { name: event.name } : null, read_at: null, created_at: new Date().toISOString(),
@@ -109,4 +136,72 @@ export function subscribeLive({ onChange, onNotification, onStatus } = {}) {
     onNotification?.(row);
   }, 40_000);
   return () => clearInterval(id);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Applications queue (B2a): the demo runs the same rules as the server (lib/queueQuery.js) over in-memory rows.
+// ---------------------------------------------------------------------------------------------------------------
+
+const withCategory = (row) => ({ ...row, category_name: MOCK_CATEGORIES.find((c) => c.id === row.category_id)?.name ?? row.category_name ?? null });
+
+export async function listApplications(query, { me = null } = {}) {
+  await wait(140);
+  if (me) state.me = me;
+  const { rows, total } = runQuery(applications(), query, { me });
+  return { rows: rows.map(withCategory), total };
+}
+
+export async function getApplicationTabCounts(query, { me = null } = {}) {
+  await wait(80);
+  const real = QUEUE_TABS.filter((tab) => tab.status);
+  const counts = Object.fromEntries(real.map((tab) => [tab.id, runQuery(applications(), { ...query, status: tab.id }, { me, skip: ["status", "sla"], paginate: false }).rows.filter((a) => a.status === tab.status).length]));
+  counts.all = Object.values(counts).reduce((sum, n) => sum + n, 0);
+  return counts;
+}
+
+export async function exportApplications(query, { me = null, max = 5000 } = {}) {
+  await wait(250);
+  const { rows, total } = runQuery(applications(), query, { me, paginate: false });
+  return { rows: rows.slice(0, max).map(withCategory), total, truncated: total > max };
+}
+
+export async function getQueueCategories() {
+  await wait(40);
+  return MOCK_CATEGORIES.map((c) => ({ ...c }));
+}
+
+export async function getReviewers() {
+  await wait(60);
+  return MOCK_REVIEWERS.map((r) => ({ ...r }));
+}
+
+// The demo enforces the same rules as admin_assign_applications in 0012: owners assign anything, reviewers only take
+// work for themselves, and finished applications are left alone.
+export async function assignApplications(ids, reviewerId, actor = { userId: state.me, role: "owner" }) {
+  await wait(300);
+  const unique = [...new Set(ids ?? [])];
+  if (unique.length === 0) return { updated: 0, skipped: 0 };
+  if (unique.length > 100) throw new Error("Select up to 100 applications at a time.");
+  const isOwner = actor.role === "owner";
+  if (!isOwner && actor.role !== "reviewer") throw new Error("Your role cannot assign these applications.");
+  if (reviewerId && !MOCK_REVIEWERS.some((r) => r.id === reviewerId)) throw new Error("That person cannot review applications.");
+  if (reviewerId && !isOwner && reviewerId !== actor.userId) throw new Error("Your role cannot assign these applications.");
+  let updated = 0;
+  for (const id of unique) {
+    const app = applications().find((a) => a.id === id);
+    if (!app || !["submitted", "under_review", "changes_requested"].includes(app.status)) continue;
+    if (app.reviewer_id === (reviewerId ?? null)) continue;
+    if (!isOwner && app.reviewer_id && app.reviewer_id !== actor.userId) continue;
+    app.reviewer_id = reviewerId ?? null;
+    announceRow({ ...app }, "UPDATE");
+    updated += 1;
+  }
+  return { updated, skipped: unique.length - updated };
+}
+
+export function subscribeApplications({ onRow, onStatus } = {}) {
+  onStatus?.("live");
+  const listener = (row, event) => onRow?.(row, event);
+  applicationListeners.add(listener);
+  return () => { applicationListeners.delete(listener); };
 }

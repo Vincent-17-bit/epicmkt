@@ -36,6 +36,7 @@ export function useLiveSync() {
       onNotification: (row) => {
         if (!row?.id || seen.has(row.id)) return;
         seen.add(row.id);
+        if ((useLiveStore.getState().quiet[row.kind] ?? 0) > 0) return; // the open page is showing its own
         const note = describeNotification(row);
         toast.info(note.detail || note.title, { title: note.title, duration: 6000, action: { label: "View", onAction: () => navigate(note.to) } });
         if (useLiveStore.getState().soundOn) playChime();

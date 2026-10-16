@@ -19,6 +19,10 @@ export const useLiveStore = create((set, get) => ({
   connection: "connecting", // "connecting" | "live" | "offline"
   drawerOpen: false,
   snoozed: loadSnoozed(), // { [queueRowId]: untilMs }, kept in this browser only
+  // Notification kinds a page handles itself (for example the applications queue shows its own "new application"
+  // toast), so the layout does not show a second one. Counted, so two pages mounting in a row cannot clear each other.
+  quiet: {},
+  hush: (kind) => { const quiet = get().quiet; set({ quiet: { ...quiet, [kind]: (quiet[kind] ?? 0) + 1 } }); return () => { const q = get().quiet; set({ quiet: { ...q, [kind]: Math.max(0, (q[kind] ?? 1) - 1) } }); }; },
 
   setSound: (on) => { write(SOUND_KEY, on ? "on" : "off"); set({ soundOn: on }); },
   setConnection: (connection) => set({ connection }),

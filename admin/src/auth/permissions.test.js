@@ -10,6 +10,7 @@ test("matches the README role table", () => {
   // Applications and documents: owner and reviewer only.
   assert.deepEqual(ROLES.filter((r) => roleCan(r, "applications.view")), ["owner", "reviewer"]);
   assert.deepEqual(ROLES.filter((r) => roleCan(r, "documents.view")), ["owner", "reviewer"]);
+  assert.deepEqual(ROLES.filter((r) => roleCan(r, "applications.assign")), ["owner", "reviewer"]);
   // Catalogue and settings: owner only.
   assert.deepEqual(ROLES.filter((r) => roleCan(r, "catalogue.edit")), ["owner"]);
   assert.deepEqual(ROLES.filter((r) => roleCan(r, "settings.edit")), ["owner"]);

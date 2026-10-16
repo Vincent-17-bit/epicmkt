@@ -47,7 +47,7 @@ await check("every part of the page is there", async (page) => {
 await check("the brief is rule-based, shows three buttons and they navigate", async (page) => {
   await openDashboard(page);
   const brief = await page.locator("[role='status']", { hasText: "applications are waiting" }).innerText();
-  assert.match(brief, /^4 applications are waiting \(2 for over 24 hours\), 8 payments need confirming and 6 sellers expire within 7 days\./);
+  assert.match(brief, /^38 applications are waiting \(\d+ for over 24 hours\), 8 payments need confirming and 6 sellers expire within 7 days\./);
   await page.getByRole("button", { name: "Review queue" }).click();
   await page.waitForURL(/\/admin\/applications\?status=submitted/);
 });

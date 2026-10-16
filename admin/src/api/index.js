@@ -11,3 +11,12 @@ export const getNotifications = (options) => impl.getNotifications(options);
 export const markNotificationsRead = (ids) => impl.markNotificationsRead(ids);
 export const startReview = (applicationId) => impl.startReview(applicationId);
 export const subscribeLive = (handlers) => impl.subscribeLive(handlers);
+
+// Applications queue (B2a)
+export const listApplications = (query, options) => impl.listApplications(query, options);
+export const getApplicationTabCounts = (query, options) => impl.getApplicationTabCounts(query, options);
+export const exportApplications = (query, options) => impl.exportApplications(query, options);
+export const getQueueCategories = () => impl.getQueueCategories();
+export const getReviewers = () => impl.getReviewers();
+export const assignApplications = (ids, reviewerId, actor) => impl.assignApplications(ids, reviewerId, actor);
+export const subscribeApplications = (handlers) => impl.subscribeApplications(handlers);
