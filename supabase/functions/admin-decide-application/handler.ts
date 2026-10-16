@@ -103,6 +103,9 @@ export const adminDecideApplication = (d: AdminDeps) =>
       text = `EpicMKT: your application ${ref} is back in the review queue.`;
     }
 
+    // A custom message from the reviewer rides along on every action (request_changes already includes it).
+    if (note && action !== "request_changes") text = `${text} ${note}`;
+
     const outbox: { channel: "sms" | "email"; to: string | null; subject: string | null; body: string }[] = [];
     if (channels.sms) outbox.push({ channel: "sms", to: app.phone, subject: null, body: text });
     if (channels.email) outbox.push({ channel: "email", to: app.email, subject, body: text });
