@@ -1,5 +1,5 @@
 import { get, set } from "react-hook-form";
-import { applicationSchema } from "../../shared/validators.js";
+import { applicationSchema, normalizePhone } from "../../shared/validators.js";
 
 export const STEPS = [
   { id: "type", title: "Business type", paths: ["categoryId"] },
@@ -176,7 +176,7 @@ export function friendly(issue) {
     (issue.code === "too_small" && issue.type === "string" && Number(issue.minimum) <= 1);
   if (empty) return `${label} is required`;
   if (path.startsWith("contacts.businessPhones") || ["phone", "altPhone", "contacts.whatsapp"].includes(path))
-    return "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
+    return PHONE_HELP;
   return FORMAT[path] ?? `${label}: please check this`;
 }
 
@@ -188,13 +188,41 @@ export const requiredTemplateMissing = (cat, values = {}) =>
     return blank(v) || (Array.isArray(v) && v.length === 0);
   });
 
+export const PHONE_HELP = "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
+
+/** [path, message] pairs for the business phones and the WhatsApp number, one per offending input. */
+export function phoneErrors(contacts = {}) {
+  const out = [];
+  const phones = Array.isArray(contacts.businessPhones) && contacts.businessPhones.length ? contacts.businessPhones : [""];
+  phones.forEach((raw, i) => {
+    const v = String(raw ?? "").trim();
+    if (!v) {
+      if (i === 0) out.push(["contacts.businessPhones.0", "Enter your business phone number"]);
+    } else if (!normalizePhone(v)) {
+      out.push([`contacts.businessPhones.${i}`, PHONE_HELP]);
+    }
+  });
+  if (!contacts.whatsappSame) {
+    const w = String(contacts.whatsapp ?? "").trim();
+    if (!w) out.push(["contacts.whatsapp", "Enter your WhatsApp number, or tick \"Same as my first business phone\""]);
+    else if (!normalizePhone(w)) out.push(["contacts.whatsapp", PHONE_HELP]);
+  }
+  return out;
+}
+
 export function validateAll(values, cat) {
   const errors = {};
   const add = (path, message) => {
     if (!get(errors, path)) set(errors, path, { type: "validation", message });
   };
   const parsed = applicationSchema.safeParse(toPayload(values, cat));
-  if (!parsed.success) parsed.error.issues.forEach((i) => add(i.path.join("."), friendly(i)));
+  // Phones are checked field by field below, so each message lands on the box that caused it.
+  const isPhonePath = (path) => path === "contacts.whatsapp" || path === "contacts.businessPhones" || path.startsWith("contacts.businessPhones.");
+  if (!parsed.success) parsed.error.issues.forEach((i) => {
+    const path = i.path.join(".");
+    if (!isPhonePath(path)) add(path, friendly(i));
+  });
+  phoneErrors(values.contacts).forEach(([path, message]) => add(path, message));
   for (const f of requiredTemplateMissing(cat, values.templateValues)) add(`templateValues.${f.key}`, `${f.label} is required`);
   return errors;
 }
