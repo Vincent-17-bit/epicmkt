@@ -1,5 +1,6 @@
 .dt {
   --dt-row: 60px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -29,7 +30,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1 1 260px;
+  flex: 1 1 min(100%, 260px);
+  min-width: 0;
   max-width: 420px;
   height: 2.25rem;
   padding: 0 0.7rem;
@@ -373,6 +375,12 @@
 
 .dt--mobile .dt__skeleton {
   border: none;
+}
+
+@media (max-width: 480px) {
+  .dt__search kbd {
+    display: none;
+  }
 }
 
 @media (max-width: 768px) {
