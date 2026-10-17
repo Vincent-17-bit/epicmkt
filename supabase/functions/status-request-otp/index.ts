@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone } from "../_shared/validate.ts";
-import { clientIp, corsHeaders, isProduction, json, sendSms, sha256Hex } from "../_shared/http.ts";
+import { clientIp, corsHeaders, isProduction, json, sha256Hex } from "../_shared/http.ts";
+import { deliverSms } from "../_shared/providers.ts";
 import { OTP_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -37,7 +38,10 @@ Deno.serve(async (req) => {
     id, reference_no: ref, phone, code_hash: await sha256Hex(`${id}:${code}`), expires_at: nowPlus(OTP_MINUTES),
   });
   if (ins.error) return json(GENERIC);
-  if (isProduction()) await sendSms(phone, `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`);
+  if (isProduction()) {
+    const sent = await deliverSms(phone, `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`);
+    if (!sent.ok) console.error("otp_sms_failed", sent.error);
+  }
   await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "otp_requested", data: {} });
   return json(GENERIC);
 });
