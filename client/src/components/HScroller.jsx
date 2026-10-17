@@ -93,7 +93,7 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
         aria-busy={busy}
       >
         {Children.map(children, (child, index) => (
-          <li key={child?.key ?? index} className={styles.cell} data-wide={child?.props?.["data-wide"] ? "true" : undefined}>
+          <li key={child?.key ?? index} className={styles.cell}>
             {child}
           </li>
         ))}

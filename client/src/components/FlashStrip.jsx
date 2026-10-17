@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt } from "@fortawesome/free-solid-svg-icons";
 import { useFlashStrip } from "../hooks/useFlashSales.js";
-import { useMediaQuery } from "../hooks/useMediaQuery.js";
 import { t } from "../i18n/index.js";
 import FlashSaleCard from "./FlashSaleCard.jsx";
 import FlashSkeleton from "./FlashSkeleton.jsx";
@@ -25,7 +24,6 @@ function SeeAllTile({ to }) {
 
 function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, heat = true, heading = null }) {
   const { entries, isPending, isError, refetch } = useFlashStrip({ businessId, categoryId });
-  const desktop = useMediaQuery("(min-width: 1024px)");
   const seeAll = categoryId ? `/flash?category=${encodeURIComponent(categoryId)}` : "/flash";
 
   if (!isPending && !isError && entries.length === 0) return null;
@@ -42,8 +40,8 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
       {isPending
         ? Array.from({ length: 4 }, (_, index) => <FlashSkeleton key={index} />)
         : [
-            ...entries.map((entry, index) => (
-              <FlashSaleCard key={entry.sale.id} entry={entry} size={desktop && index === 0 && heat ? "hero" : "standard"} data-wide={desktop && index === 0 && heat ? "true" : undefined} />
+            ...entries.map((entry) => (
+              <FlashSaleCard key={entry.sale.id} entry={entry} />
             )),
             <SeeAllTile key="all" to={seeAll} />
           ]}

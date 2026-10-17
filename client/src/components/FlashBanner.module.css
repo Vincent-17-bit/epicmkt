@@ -43,7 +43,10 @@
 }
 
 .fuse {
+  --fuse-track: rgb(255 255 255 / 0.35);
+  --fuse-fill: #ffffff;
   margin-top: var(--space-1);
+  border-radius: 2px;
 }
 
 .panel {

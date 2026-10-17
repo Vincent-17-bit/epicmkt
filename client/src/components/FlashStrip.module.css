@@ -7,23 +7,24 @@
   height: 100%;
   min-height: 14rem;
   padding: var(--space-3);
-  border: 2px dashed var(--flash-price-sale);
-  border-radius: 14px;
+  border: 1px solid var(--flash-card-border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: var(--flash-card-shadow);
   color: var(--text);
   font-weight: 700;
   text-align: center;
   text-decoration: none;
-  transition: background-color var(--dur) ease;
 }
 
 .tileBolt {
-  color: var(--flash-price-sale);
+  color: var(--flash-accent-text);
   font-size: var(--text-xl);
 }
 
 @media (hover: hover) {
   .tile:hover {
-    background: var(--flash-save-bg);
+    background: var(--surface-2);
   }
 }
 
@@ -51,7 +52,7 @@
 }
 
 .plainBolt {
-  color: var(--flash-price-sale);
+  color: var(--flash-accent-text);
 }
 
 .error {

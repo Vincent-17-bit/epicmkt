@@ -3,6 +3,7 @@
   gap: var(--space-2);
   margin-block: var(--space-5);
   padding: var(--space-4) 0 var(--space-2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--flash-section-bg);
   content-visibility: auto;
@@ -28,12 +29,11 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--text-xl);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .bolt {
-  color: var(--flash-price-sale);
-  transform-origin: 50% 80%;
+  color: var(--flash-accent-text);
 }
 
 .count {
@@ -48,9 +48,9 @@
 
 .underline {
   width: 4.5rem;
-  height: 4px;
+  height: 3px;
   border-radius: 2px;
-  background: var(--flash-gradient);
+  background: var(--flash-accent);
 }
 
 .side {
@@ -66,11 +66,10 @@
   gap: var(--space-2);
   padding: 4px var(--space-2) 4px var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--flash-gradient);
-  color: var(--flash-band-text);
+  background: var(--flash-tile-bg);
+  color: var(--flash-tile-text);
   font-size: var(--text-xs);
-  font-weight: 800;
-  text-transform: uppercase;
+  font-weight: 700;
 }
 
 .seeAll {
@@ -87,26 +86,4 @@
 .seeAll:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .bolt {
-    animation: zap 2.2s ease-in-out infinite;
-  }
-}
-
-@keyframes zap {
-  0%,
-  70%,
-  100% {
-    transform: scale(1) rotate(0);
-  }
-
-  80% {
-    transform: scale(1.25) rotate(-8deg);
-  }
-
-  90% {
-    transform: scale(1.1) rotate(6deg);
-  }
 }

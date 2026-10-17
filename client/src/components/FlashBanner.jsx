@@ -32,7 +32,7 @@ export default function FlashBanner({ flash, pricing, unit, bannerRef, ended = f
         <span className={styles.sr} role="status">
           {remaining}
         </span>
-        <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} animate className={styles.fuse} />
+        <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} className={styles.fuse} />
       </section>
 
       {pricing && (

@@ -19,25 +19,17 @@ const states = [
   ["ended", -SECOND]
 ];
 
-const sparkPairs = {
-  light: [
-    ["flash-spark", "flash-tile-bg", 3],
-    ["flash-tile-bg", "surface-3", 3]
-  ],
-  dark: [["flash-spark", "surface-3", 3]]
-};
-
 const flashPairs = [
-  ["flash-band-text", "flash-gradient", 4.5],
+  ["flash-band-text", "flash-accent", 4.5],
+  ["flash-band-ink", "flash-band-bg", 4.5],
   ["flash-tile-text", "flash-tile-bg", 4.5],
   ["flash-tile-label", "flash-tile-bg", 4.5],
   ["flash-tile-urgent-text", "flash-tile-bg", 4.5],
-  ["flash-tile-critical-text", "flash-tile-critical-bg", 4.5],
-  ["flash-tile-edge", "flash-tile-bg", 3],
-  ["flash-burst-text", "flash-burst-gradient", 4.5],
   ["flash-save-text", "flash-save-bg", 4.5],
   ["flash-price-sale", "surface", 4.5],
+  ["flash-price-sale", "flash-band-bg", 4.5],
   ["flash-price-sale", "flash-save-bg", 4.5],
+  ["flash-accent-text", "surface", 4.5],
   ["text", "flash-section-bg", 4.5],
   ["offer-stub-text", "offer-stub-gradient", 4.5],
   ["offer-body-text", "offer-body-bg", 4.5],
@@ -66,7 +58,7 @@ const makeEntry = (id, name, hue, endsInMs, discount, extra = {}) => ({
   business
 });
 
-export default function FlashBlocks({ Block, Contrast, paneRef, theme }) {
+export default function FlashBlocks({ Block, Contrast, paneRef }) {
   const ends = useMemo(() => states.map(([name, ms]) => [name, new Date(Date.now() + ms).toISOString()]), []);
   const cards = useMemo(
     () => [
@@ -76,7 +68,7 @@ export default function FlashBlocks({ Block, Contrast, paneRef, theme }) {
     ],
     []
   );
-  const list = useMemo(() => [...flashPairs, ...sparkPairs[theme]], [theme]);
+  const list = flashPairs;
   const share = useMemo(() => [new Date(Date.now() - 6 * HOUR).toISOString(), new Date(Date.now() + 6 * HOUR).toISOString()], []);
 
   return (
@@ -99,9 +91,9 @@ export default function FlashBlocks({ Block, Contrast, paneRef, theme }) {
         </div>
       </Block>
 
-      <Block title="Fuse bar and starburst">
+      <Block title="Fuse bar and discount badge">
         <div className={styles.stack}>
-          <FuseBar startsAt={share[0]} endsAt={share[1]} animate />
+          <FuseBar startsAt={share[0]} endsAt={share[1]} />
           <div className={styles.row}>
             <Starburst discount={{ type: "percent", value: 35 }} />
             <Starburst discount={{ type: "amount_off", value: 150 }} />

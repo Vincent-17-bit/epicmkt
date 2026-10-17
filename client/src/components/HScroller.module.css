@@ -1,5 +1,5 @@
 .frame {
-  --cell: clamp(220px, 64vw, 280px);
+  --cell: clamp(150px, 42vw, 200px);
   position: relative;
   min-width: 0;
 }
@@ -48,9 +48,15 @@
   scroll-snap-align: start;
 }
 
+@media (min-width: 768px) {
+  .frame {
+    --cell: clamp(190px, 25vw, 210px);
+  }
+}
+
 @media (min-width: 1024px) {
-  .cell[data-wide="true"] {
-    flex-basis: calc(var(--cell) * 2 + 12px);
+  .frame {
+    --cell: clamp(200px, 20vw, 220px);
   }
 }
 
