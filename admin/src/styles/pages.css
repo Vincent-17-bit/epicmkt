@@ -106,6 +106,7 @@
   margin-bottom: var(--admin-space-3);
 }
 
+.panel__header h2,
 .panel__header h3 {
   font-size: var(--admin-text-md);
 }

@@ -14,7 +14,7 @@ export default function ApplicationsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Applications queue</h3>
+          <h2>Applications queue</h2>
           <Button>Bulk assign</Button>
         </div>
 

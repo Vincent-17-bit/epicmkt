@@ -5,7 +5,7 @@ export default function SettingsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>System settings</h3>
+          <h2>System settings</h2>
           <Button variant="primary">Save changes</Button>
         </div>
 

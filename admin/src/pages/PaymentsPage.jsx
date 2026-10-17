@@ -14,7 +14,7 @@ export default function PaymentsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Payments and subscriptions</h3>
+          <h2>Payments and subscriptions</h2>
           <Button>Record manual payment</Button>
         </div>
 
