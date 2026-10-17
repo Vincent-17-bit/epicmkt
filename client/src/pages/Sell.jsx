@@ -1,23 +1,23 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
-  faCheck,
-  faMinus,
   faChartSimple,
   faLocationDot,
   faPhone,
   faQrcode,
   faShieldHalved,
-  faStore,
-  faStar
+  faStore
 } from "@fortawesome/free-solid-svg-icons";
-import { PLAN_FEATURES, PLAN_PRICE_KES, formatKes } from "@epicmkt/shared";
+import { formatKes } from "@epicmkt/shared";
+import { PlanComparison, startingPrice } from "@epicmkt/shared/plans";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import Accordion from "../components/Accordion.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { useCatalog } from "./seller-apply/useCatalog.js";
 import styles from "./Sell.module.css";
 
 const REGISTER = "/sell/register";
@@ -52,21 +52,6 @@ const steps = [
   { title: "Get contacted", text: "Customers call, message or visit you directly. You keep the sale, because EpicMKT never touches orders or payments." }
 ];
 
-const yes = { yes: true };
-const no = { yes: false };
-
-const rows = [
-  { label: "Your own business page", standard: yes, premium: yes },
-  { label: "Call, WhatsApp and Directions buttons", standard: yes, premium: yes },
-  { label: "Opening hours, services and prices", standard: yes, premium: yes },
-  { label: "Short link and QR code", standard: yes, premium: yes },
-  { label: "Views and contact statistics", standard: yes, premium: yes },
-  { label: "Photos in your gallery", standard: { text: `Up to ${PLAN_FEATURES.standard.maxGallery}` }, premium: { text: `Up to ${PLAN_FEATURES.premium.maxGallery}` } },
-  { label: "Social media links", standard: PLAN_FEATURES.standard.socials ? yes : no, premium: PLAN_FEATURES.premium.socials ? yes : no },
-  { label: "Featured badge", standard: PLAN_FEATURES.standard.featured ? yes : no, premium: PLAN_FEATURES.premium.featured ? yes : no },
-  { label: "Shown first in search results", standard: PLAN_FEATURES.standard.priorityRanking ? yes : no, premium: PLAN_FEATURES.premium.priorityRanking ? yes : no }
-];
-
 const faqs = [
   {
     q: "Does EpicMKT take a cut of my sales?",
@@ -94,18 +79,14 @@ const faqs = [
   }
 ];
 
-function Mark({ cell, label }) {
-  if (cell.text) return <span className={styles.cellText}>{cell.text}</span>;
-  return (
-    <>
-      <FontAwesomeIcon icon={cell.yes ? faCheck : faMinus} className={cell.yes ? styles.yes : styles.no} aria-hidden="true" />
-      <span className={styles.srOnly}>{cell.yes ? `${label}: included` : `${label}: not included`}</span>
-    </>
-  );
-}
-
 export default function Sell() {
   usePageTitle("Become a seller");
+  const { catalog, isLoading, isError, refetch } = useCatalog();
+  const [chosen, setChosen] = useState("");
+  const categories = catalog?.categories ?? [];
+  const from = startingPrice(categories);
+  const cheapest = [...categories].sort((x, y) => x.plans.standard.price - y.plans.standard.price)[0];
+  const category = categories.find((c) => c.id === chosen) ?? cheapest ?? null;
   return (
     <>
       <Container className={styles.crumbRow}>
@@ -120,8 +101,7 @@ export default function Sell() {
             Get your business found by customers nearby
           </h1>
           <p className={styles.heroText}>
-            List your business on EpicMKT and let people call, message you on WhatsApp or get directions in one tap. Plans start at{" "}
-            {formatKes(PLAN_PRICE_KES.standard)} a month.
+            List your business on EpicMKT and let people call, message you on WhatsApp or get directions in one tap. {from !== null ? <>Plans start at {formatKes(from)} a month.</> : "Simple monthly plans."}
           </p>
           <div className={styles.heroActions}>
             <Button as={Link} to={REGISTER} size="lg" iconRight={faArrowRight}>
@@ -186,58 +166,38 @@ export default function Sell() {
           </h2>
           <p className={styles.lead}>Simple monthly pricing. Choose the plan that fits and register when you are ready.</p>
         </div>
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>Comparison of Standard and Premium plans</caption>
-            <thead>
-              <tr>
-                <td className={styles.corner} />
-                <th scope="col" className={styles.plan}>
-                  <span className={styles.planName}>Standard</span>
-                  <span className={styles.price}>{formatKes(PLAN_PRICE_KES.standard)}</span>
-                  <span className={styles.per}>per month</span>
-                </th>
-                <th scope="col" className={`${styles.plan} ${styles.premium}`}>
-                  <span className={styles.planName}>
-                    <FontAwesomeIcon icon={faStar} /> Premium
-                  </span>
-                  <span className={styles.price}>{formatKes(PLAN_PRICE_KES.premium)}</span>
-                  <span className={styles.per}>per month</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.label}>
-                  <th scope="row" className={styles.rowLabel}>
-                    {row.label}
-                  </th>
-                  <td className={styles.cell}>
-                    <Mark cell={row.standard} label={row.label} />
-                  </td>
-                  <td className={`${styles.cell} ${styles.premiumCell}`}>
-                    <Mark cell={row.premium} label={row.label} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td className={styles.corner} />
-                <td className={styles.cta}>
-                  <Button as={Link} to={REGISTER} variant="secondary" size="sm">
-                    Choose Standard
-                  </Button>
-                </td>
-                <td className={`${styles.cta} ${styles.premiumCell}`}>
-                  <Button as={Link} to={REGISTER} size="sm">
-                    Choose Premium
-                  </Button>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        {isLoading ? <p role="status">Loading plans…</p> : null}
+        {isError ? (
+          <p role="alert">
+            We could not load the plans.{" "}
+            <Button size="sm" variant="secondary" onClick={() => refetch()}>
+              Try again
+            </Button>
+          </p>
+        ) : null}
+        {category ? (
+          <>
+            <p>
+              <label htmlFor="plan-category">Prices for </label>
+              <select id="plan-category" value={category.id} onChange={(e) => setChosen(e.target.value)}>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </p>
+            <PlanComparison
+              plans={category.plans}
+              globalLimits={catalog.globalLimits}
+              renderCta={(planKey) => (
+                <Button as={Link} to={REGISTER} variant={planKey === "premium" ? "primary" : "secondary"} size="sm">
+                  {planKey === "premium" ? "Choose Premium" : "Choose Standard"}
+                </Button>
+              )}
+            />
+          </>
+        ) : null}
         <p className={styles.fine}>
           <FontAwesomeIcon icon={faShieldHalved} /> Prices are in Kenya shillings per month. EpicMKT lists businesses only and does not handle orders or
           payments.

@@ -254,3 +254,9 @@
     display: block;
   }
 }
+
+.trial {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}

@@ -1,0 +1,37 @@
+.tableWrap {
+  overflow-x: auto;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.table { width: 100%; min-width: 20rem; border-collapse: collapse; }
+.corner { width: 40%; }
+.plan { padding: var(--space-4) var(--space-2); font-weight: 400; text-align: center; vertical-align: bottom; }
+.plan > span { display: block; }
+.planName { font-size: var(--text-md); font-weight: 700; }
+.badge {
+  display: inline-block !important;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.price { margin-top: var(--space-1); font-size: var(--text-xl); font-weight: 700; line-height: 1.1; }
+.per { color: var(--text-muted); font-size: var(--text-xs); font-weight: 600; }
+.trial { margin-top: var(--space-1); font-size: var(--text-xs); font-weight: 700; }
+.premium, .premiumCell { background: var(--primary-tint); color: var(--on-primary-tint); }
+.rowLabel { padding: var(--space-3) var(--space-4); font-size: var(--text-sm); font-weight: 600; text-align: left; }
+.cell { padding: var(--space-3) var(--space-2); text-align: center; vertical-align: top; }
+.table tbody tr:nth-child(even) .rowLabel,
+.table tbody tr:nth-child(even) .cell:not(.premiumCell) { background: var(--surface-2); }
+.cellText { font-size: var(--text-sm); font-weight: 700; }
+.list { margin: 0; padding: 0; list-style: none; font-size: var(--text-sm); text-align: left; }
+.list li + li { margin-top: var(--space-2); }
+.yes { color: var(--verified); font-size: 1.125rem; }
+.no { color: var(--text-muted); }
+.cta { padding: var(--space-4) var(--space-2); text-align: center; }
+.cta a, .cta button { width: 100%; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

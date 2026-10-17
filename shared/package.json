@@ -7,6 +7,23 @@
     ".": "./src/index.js",
     "./tokens.css": "./src/tokens.css",
     "./reset.css": "./src/reset.css",
-    "./billing": "./src/billing.js"
+    "./billing": "./src/billing.js",
+    "./plans": "./src/plans/index.js"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1",
+    "@fortawesome/react-fontawesome": "^0.2.2",
+    "@fortawesome/free-solid-svg-icons": "^6.6.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "@fortawesome/react-fontawesome": {
+      "optional": true
+    },
+    "@fortawesome/free-solid-svg-icons": {
+      "optional": true
+    }
   }
 }

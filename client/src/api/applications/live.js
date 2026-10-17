@@ -6,6 +6,7 @@ const normalizePlan = (p) => ({
   topBenefits: p.top_benefits,
   features: p.features,
   badge: p.badge,
+  trialDays: p.trial_days ?? 0,
   updatedAt: p.updated_at,
 });
 
@@ -13,7 +14,7 @@ export async function getCatalogPricing() {
   const [cats, limits] = await Promise.all([
     supabase
       .from('categories')
-      .select('id,name,grp,icon,tier,sort,template,extra_docs,plans(plan_key,price_kes,items_limit,top_benefits,features,badge,updated_at)')
+      .select('id,name,grp,icon,tier,sort,template,extra_docs,plans(plan_key,price_kes,items_limit,top_benefits,features,badge,trial_days,updated_at)')
       .eq('active', true)
       .order('sort'),
     supabase.from('global_limits').select('standard,premium,updated_at').eq('id', 1).single(),

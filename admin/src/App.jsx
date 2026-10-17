@@ -4,6 +4,7 @@ import CommandCenterPage from "./pages/CommandCenterPage.jsx";
 import ApplicationsPage from "./pages/ApplicationsPage.jsx";
 import BusinessesPage from "./pages/BusinessesPage.jsx";
 import PaymentsPage from "./pages/PaymentsPage.jsx";
+import PlansPage from "./pages/plans/PlansPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import DataTableTestPage from "./pages/DataTableTestPage.jsx";
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="businesses" element={<BusinessesPage />} />
         <Route path="payments" element={<PaymentsPage />} />
+        <Route path="plans" element={<PlansPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="table-test" element={<DataTableTestPage />} />
       </Route>

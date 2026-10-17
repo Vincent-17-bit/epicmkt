@@ -1,0 +1,31 @@
+.plans-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; align-items: start; margin-top: 1rem; }
+@media (max-width: 1100px) { .plans-layout { grid-template-columns: minmax(0, 1fr); } }
+.plans-preview { position: sticky; top: 1rem; }
+@media (max-width: 1100px) { .plans-preview { position: static; } }
+.plans-preview__note { color: var(--admin-muted); font-size: 0.8125rem; }
+.plans-category, .plans-history-controls label { display: grid; gap: 0.25rem; font-size: 0.8125rem; }
+.plans-history-controls { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.plan-editor { margin: 0 0 1rem; padding: 0.75rem; border: 1px solid var(--admin-border); border-radius: 0.5rem; min-width: 0; }
+.plan-editor legend { padding: 0 0.375rem; font-weight: 700; }
+.plan-editor__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); gap: 0.75rem; }
+.field { display: grid; gap: 0.25rem; margin-bottom: 0.5rem; font-size: 0.8125rem; }
+.field input, .field select { width: 100%; min-width: 0; }
+.field__error { color: var(--admin-danger); font-size: 0.8125rem; }
+.field__hint { color: var(--admin-muted); font-size: 0.75rem; }
+.plans-impact { margin: 0.75rem 0; padding: 0.75rem; border: 1px solid var(--admin-primary); border-radius: 0.5rem; background: var(--admin-primary-tint); }
+.plans-impact ul, .plans-impact__list { margin: 0.375rem 0 0; padding-left: 1.125rem; display: grid; gap: 0.375rem; }
+.plans-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.5rem; margin-top: 0.75rem; }
+.plans-actions > span { margin-right: auto; color: var(--admin-muted); font-size: 0.8125rem; }
+.plans-scroll { overflow-x: auto; }
+.plans-limits { width: 100%; border-collapse: collapse; }
+.plans-limits th, .plans-limits td { padding: 0.5rem; border-bottom: 1px solid var(--admin-border); text-align: left; vertical-align: top; }
+.plans-inline { display: inline-flex; align-items: center; gap: 0.375rem; font-size: 0.8125rem; }
+.plans-coupon-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 0.75rem; align-items: end; margin-bottom: 1rem; }
+.plans-versions { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+.plans-versions li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.625rem; border: 1px solid var(--admin-border); border-radius: 0.5rem; }
+.plans-versions__reason { margin: 0.25rem 0 0; color: var(--admin-muted); font-size: 0.8125rem; }
+.plans-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.plans-preview { --border-strong: var(--admin-border); --surface: var(--admin-surface); --surface-2: var(--admin-bg); --text-muted: var(--admin-muted); --primary: var(--admin-primary); --on-primary: #111111; --primary-tint: var(--admin-primary-tint); --on-primary-tint: var(--admin-text); --verified: var(--admin-primary-strong); --radius-card: 0.75rem; --radius-pill: 999px; --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-xl: 1.5rem; }
+.plans-preview__switch { display: flex; flex-wrap: wrap; gap: 0.375rem; }
+.plans-preview__switch button[aria-pressed="true"] { background: var(--admin-primary-tint); border-color: var(--admin-primary); }
+.plans-preview { --space-5: 1.25rem; --text-lg: 1.125rem; --surface-2: var(--admin-bg); --border: var(--admin-border); --text: var(--admin-text); --on-surface: var(--admin-text); --radius-md: 0.5rem; --text-base: 1rem; }

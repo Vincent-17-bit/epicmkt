@@ -13,6 +13,7 @@ const toPlan = (row, o = {}) => ({
   topBenefits: o.topBenefits ?? row.top_benefits,
   features: row.features,
   badge: o.badge === undefined ? row.badge : o.badge,
+  trialDays: o.trialDays ?? 0,
   updatedAt: o.updatedAt ?? NOW,
 });
 
