@@ -1,5 +1,8 @@
 import { api } from "../api/index.js";
 import { useQuery } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCreditCard } from "@fortawesome/free-solid-svg-icons";
+import Button from "../components/Button.jsx";
 
 export default function PaymentsPage() {
   const { data = [], isLoading } = useQuery({
@@ -12,10 +15,10 @@ export default function PaymentsPage() {
       <section className="panel">
         <div className="panel__header">
           <h3>Payments and subscriptions</h3>
-          <button type="button" className="secondary-button">Record manual payment</button>
+          <Button>Record manual payment</Button>
         </div>
 
-        <div className="table-shell">
+        <div className="table-shell" role="region" aria-label="Payments and subscriptions" tabIndex={0}>
           <table>
             <thead>
               <tr>
@@ -29,7 +32,7 @@ export default function PaymentsPage() {
             <tbody>
               {isLoading
                 ? Array.from({ length: 4 }).map((_, index) => (
-                    <tr key={index}><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td></tr>
+                    <tr key={index}><td><span className="skeleton" role="status" aria-label="Loading" /></td><td><span className="skeleton" role="status" aria-label="Loading" /></td><td><span className="skeleton" role="status" aria-label="Loading" /></td><td><span className="skeleton" role="status" aria-label="Loading" /></td><td><span className="skeleton" role="status" aria-label="Loading" /></td></tr>
                   ))
                 : data.map((row) => (
                     <tr key={row.receipt || row.mpesaCode}>
@@ -43,6 +46,13 @@ export default function PaymentsPage() {
             </tbody>
           </table>
         </div>
+        {!isLoading && !data.length ? (
+          <div className="empty-state">
+            <FontAwesomeIcon icon={faCreditCard} className="empty-state__icon" />
+            <p className="empty-state__title">No payments yet</p>
+            <p>Confirmed and pending payments will show up here.</p>
+          </div>
+        ) : null}
       </section>
     </div>
   );

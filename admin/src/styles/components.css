@@ -1,0 +1,325 @@
+/* ---------- Buttons ---------- */
+
+.admin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--admin-space-2);
+  min-height: var(--admin-tap);
+  padding: 0 var(--admin-space-4);
+  border: 1px solid var(--admin-input-border);
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: var(--admin-text-sm);
+  font-weight: 600;
+  line-height: var(--admin-leading-tight);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--admin-dur) ease, border-color var(--admin-dur) ease;
+}
+
+.admin-button:hover {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-tint-solid);
+}
+
+.admin-button:active {
+  background: var(--admin-primary-tint-solid);
+  border-color: var(--admin-primary-pressed);
+}
+
+.admin-button[aria-pressed="true"],
+.admin-button[aria-expanded="true"] {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-tint-solid);
+}
+
+.admin-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.admin-button--primary {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary);
+  color: var(--admin-on-primary);
+  font-weight: 700;
+}
+
+.admin-button--primary:hover {
+  border-color: var(--admin-primary-strong);
+  background: var(--admin-primary-strong);
+}
+
+.admin-button--primary:active {
+  border-color: var(--admin-primary-pressed);
+  background: var(--admin-primary-pressed);
+}
+
+.admin-button--danger {
+  border-color: var(--admin-danger);
+  background: var(--admin-danger);
+  color: var(--admin-danger-ink);
+  font-weight: 700;
+}
+
+.admin-button--danger:hover,
+.admin-button--danger:active {
+  border-color: var(--admin-danger);
+  background: var(--admin-danger);
+  opacity: 0.9;
+}
+
+.admin-button--ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+.admin-button--icon {
+  flex: none;
+  width: var(--admin-tap);
+  padding: 0;
+}
+
+.admin-button--icon.admin-button--header {
+  border-color: transparent;
+  background: transparent;
+}
+
+.admin-button--icon.admin-button--header:hover {
+  background: var(--admin-primary-tint-solid);
+}
+
+.admin-button--block {
+  width: 100%;
+}
+
+.admin-button--menu {
+  justify-content: flex-start;
+  width: 100%;
+  border-color: transparent;
+  background: transparent;
+  font-weight: 500;
+  text-align: left;
+}
+
+/* ---------- Chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--admin-space-2);
+  min-height: 1.75rem;
+  padding: 0 var(--admin-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--admin-radius-pill);
+  font-size: var(--admin-text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.chip--live {
+  background: var(--admin-primary);
+  color: #111111;
+}
+
+.chip--tint {
+  background: var(--admin-primary-tint-solid);
+  border-color: var(--admin-primary);
+  color: var(--admin-text);
+}
+
+.chip--black {
+  background: #000000;
+  border-color: rgb(255 255 255 / 0.35);
+  color: #ffffff;
+}
+
+.chip--neutral {
+  background: var(--admin-surface-2);
+  border-color: var(--admin-border);
+  color: var(--admin-text);
+}
+
+.chip--danger {
+  background: var(--admin-danger);
+  color: var(--admin-danger-ink);
+}
+
+/* ---------- Tabs: scrolls sideways with snap and faded edges ---------- */
+
+.tabs {
+  --tabs-fade-start: 0px;
+  --tabs-fade-end: 0px;
+  display: flex;
+  gap: var(--admin-space-2);
+  padding: var(--admin-space-1) 0;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--tabs-fade-start), #000 calc(100% - var(--tabs-fade-end)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--tabs-fade-start), #000 calc(100% - var(--tabs-fade-end)), transparent 100%);
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs__tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--admin-space-2);
+  min-height: var(--admin-tap);
+  padding: 0 var(--admin-space-4);
+  border: 1px solid var(--admin-input-border);
+  border-radius: var(--admin-radius-pill);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: var(--admin-text-sm);
+  font-weight: 600;
+  scroll-snap-align: start;
+  scroll-margin-inline: var(--admin-space-6);
+  cursor: pointer;
+  transition: background var(--admin-dur) ease, border-color var(--admin-dur) ease;
+}
+
+.tabs__tab:hover {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary-tint-solid);
+}
+
+.tabs__tab:active {
+  background: var(--admin-primary-tint-solid);
+}
+
+.tabs__tab[aria-selected="true"] {
+  border-color: var(--admin-primary);
+  background: var(--admin-primary);
+  color: var(--admin-on-primary);
+}
+
+.tabs__count {
+  min-width: 1.5rem;
+  padding: 0 var(--admin-space-2);
+  border-radius: var(--admin-radius-pill);
+  background: var(--admin-primary-tint-solid);
+  color: var(--admin-text);
+  font-size: var(--admin-text-xs);
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabs__tab[aria-selected="true"] .tabs__count {
+  background: #111111;
+  color: #ffffff;
+}
+
+/* ---------- Form fields ---------- */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--admin-space-1);
+  font-size: var(--admin-text-sm);
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.field textarea,
+.dt select {
+  min-height: var(--admin-tap);
+  padding: 0 var(--admin-space-3);
+  border: 1px solid var(--admin-input-border);
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: var(--admin-text-md);
+  font-weight: 400;
+}
+
+.field textarea {
+  min-height: 6rem;
+  padding: var(--admin-space-3);
+  resize: vertical;
+}
+
+.field--group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field--group legend {
+  padding: 0;
+  margin-bottom: var(--admin-space-1);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--admin-space-3);
+  min-height: var(--admin-tap);
+  font-size: var(--admin-text-sm);
+}
+
+.check input {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--admin-primary-pressed);
+}
+
+/* ---------- Empty and not-found states ---------- */
+
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--admin-space-2);
+  padding: var(--admin-space-6) var(--admin-space-4);
+  color: var(--admin-muted);
+  text-align: center;
+}
+
+.empty-state__icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--admin-primary-strong);
+}
+
+.empty-state__title {
+  color: var(--admin-text);
+  font-size: var(--admin-text-lg);
+  font-weight: 700;
+}
+
+.link {
+  color: var(--admin-link);
+  font-weight: 600;
+}
+
+/* ---------- Health ring ---------- */
+
+.health-ring {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+}
+
+.health-ring svg {
+  position: absolute;
+  inset: 0;
+}
+
+.health-ring__value {
+  position: relative;
+  font-size: var(--admin-text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

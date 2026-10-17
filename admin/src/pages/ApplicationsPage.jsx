@@ -1,5 +1,8 @@
 import { api } from "../api/index.js";
 import { useQuery } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faInbox } from "@fortawesome/free-solid-svg-icons";
+import Button from "../components/Button.jsx";
 
 export default function ApplicationsPage() {
   const { data = [], isLoading } = useQuery({
@@ -12,10 +15,10 @@ export default function ApplicationsPage() {
       <section className="panel">
         <div className="panel__header">
           <h3>Applications queue</h3>
-          <button type="button" className="secondary-button">Bulk assign</button>
+          <Button>Bulk assign</Button>
         </div>
 
-        <div className="table-shell">
+        <div className="table-shell" role="region" aria-label="Applications queue" tabIndex={0}>
           <table>
             <thead>
               <tr>
@@ -30,11 +33,11 @@ export default function ApplicationsPage() {
               {isLoading
                 ? Array.from({ length: 3 }).map((_, index) => (
                     <tr key={index}>
-                      <td><span className="skeleton" /></td>
-                      <td><span className="skeleton" /></td>
-                      <td><span className="skeleton" /></td>
-                      <td><span className="skeleton" /></td>
-                      <td><span className="skeleton" /></td>
+                      <td><span className="skeleton" role="status" aria-label="Loading" /></td>
+                      <td><span className="skeleton" role="status" aria-label="Loading" /></td>
+                      <td><span className="skeleton" role="status" aria-label="Loading" /></td>
+                      <td><span className="skeleton" role="status" aria-label="Loading" /></td>
+                      <td><span className="skeleton" role="status" aria-label="Loading" /></td>
                     </tr>
                   ))
                 : data.map((row) => (
@@ -49,6 +52,13 @@ export default function ApplicationsPage() {
             </tbody>
           </table>
         </div>
+        {!isLoading && !data.length ? (
+          <div className="empty-state">
+            <FontAwesomeIcon icon={faInbox} className="empty-state__icon" />
+            <p className="empty-state__title">No applications waiting</p>
+            <p>New seller applications will show up here.</p>
+          </div>
+        ) : null}
       </section>
     </div>
   );

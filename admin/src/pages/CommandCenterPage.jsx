@@ -1,5 +1,6 @@
 import { api } from "../api/index.js";
 import { useQuery } from "@tanstack/react-query";
+import Button from "../components/Button.jsx";
 
 export default function CommandCenterPage() {
   const { data, isLoading } = useQuery({
@@ -17,16 +18,16 @@ export default function CommandCenterPage() {
   return (
     <div className="page-shell">
       <section className="hero-card">
-        <div>
+        <div className="hero-card__copy">
           <p className="eyebrow">Today’s brief</p>
           <h2>
             {data?.brief ?? "4 applications are waiting, 2 payments need confirming and 6 sellers expire this week"}
           </h2>
         </div>
         <div className="hero-card__actions">
-          <button type="button" className="primary-button">Review queue</button>
-          <button type="button" className="secondary-button">Confirm payments</button>
-          <button type="button" className="secondary-button">Send broadcast</button>
+          <Button variant="primary">Review queue</Button>
+          <Button>Confirm payments</Button>
+          <Button>Send broadcast</Button>
         </div>
       </section>
 
@@ -34,7 +35,7 @@ export default function CommandCenterPage() {
         {kpis.map((item) => (
           <div key={item.label} className="kpi-card">
             <span className="kpi-card__label">{item.label}</span>
-            <strong>{isLoading ? "--" : item.value}</strong>
+            <strong className="kpi-card__value">{isLoading ? <span className="skeleton" role="status" aria-label="Loading" /> : item.value}</strong>
             <div className="sparkline" aria-hidden="true" />
           </div>
         ))}
@@ -44,7 +45,7 @@ export default function CommandCenterPage() {
         <section className="panel">
           <div className="panel__header">
             <h3>Needs your attention</h3>
-            <span className="link-button">View all</span>
+            <span className="panel__meta">Top items</span>
           </div>
           <ul className="stack-list">
             <li><span>Applications over 24h</span><strong>4</strong></li>
@@ -57,7 +58,7 @@ export default function CommandCenterPage() {
         <section className="panel">
           <div className="panel__header">
             <h3>Live activity</h3>
-            <span className="link-button">Realtime</span>
+            <span className="panel__meta">Realtime</span>
           </div>
           <ul className="activity-list">
             <li>New application from Umoja Market submitted 2 minutes ago</li>

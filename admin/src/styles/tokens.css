@@ -67,6 +67,8 @@
   --admin-muted: #4b5563;
   --admin-primary: #38b6ff;
   --admin-primary-strong: #1ea3f0;
+  --admin-primary-pressed: #0f8fd9;
+  --admin-surface-2: #f9fafb;
   --admin-primary-tint: #e6f5ff;
   --admin-primary-tint-solid: #e6f5ff;
   --admin-on-primary: #111111;
@@ -91,6 +93,8 @@
   --admin-muted: #a1a1aa;
   --admin-primary: #38b6ff;
   --admin-primary-strong: #66c7ff;
+  --admin-primary-pressed: #1ea3f0;
+  --admin-surface-2: #1f1f1f;
   --admin-primary-tint: rgb(56 182 255 / 0.16);
   --admin-primary-tint-solid: #1c303c;
   --admin-on-primary: #111111;

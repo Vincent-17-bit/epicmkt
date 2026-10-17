@@ -1,0 +1,89 @@
+html {
+  scrollbar-gutter: auto;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-size: var(--admin-text-md);
+  line-height: var(--admin-leading-normal);
+}
+
+body {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.is-scroll-locked,
+.is-scroll-locked body {
+  overflow: hidden;
+}
+
+.admin-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.admin-skip {
+  position: fixed;
+  top: var(--admin-space-2);
+  left: var(--admin-space-2);
+  z-index: var(--admin-z-toast);
+  padding: var(--admin-space-3) var(--admin-space-4);
+  border-radius: var(--admin-radius-control);
+  background: var(--admin-primary);
+  color: var(--admin-on-primary);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+
+.admin-skip:focus-visible {
+  transform: none;
+}
+
+.admin-icon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.skeleton {
+  display: block;
+  width: 100%;
+  height: 0.9rem;
+  border-radius: var(--admin-radius-pill);
+  background: linear-gradient(90deg, var(--admin-skeleton-a), var(--admin-skeleton-b), var(--admin-skeleton-a));
+  background-size: 200% 100%;
+  animation: shimmer 1.1s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
