@@ -28,6 +28,12 @@
   --admin-shadow: 0 18px 32px rgb(0 0 0 / 0.42);
 }
 
+/* The app shell never scrolls the page (panes scroll internally), so don't let the
+   shared reset's `scrollbar-gutter: stable` reserve a dead strip down the right edge. */
+html {
+  scrollbar-gutter: auto;
+}
+
 html, body, #root {
   margin: 0;
   min-height: 100%;
@@ -51,53 +57,140 @@ select {
   box-sizing: border-box;
 }
 
+/* =====================================================================
+   App shell + sidebar
+
+   Layout mode is state-driven via data-mode on .admin-app:
+     desktop  >=1024px   in-flow sidebar, Expanded (272px) <-> Rail (76px), persisted
+     tablet   768-1023   76px rail in flow; expanding OVERLAYS the content (no reflow)
+     mobile   <768px     off-canvas drawer, min(86vw, 320px)
+   .is-rail         -> the sidebar is showing its icon-only rail
+   .is-overlay-open -> a tablet/mobile drawer is open (backdrop + scroll lock)
+   ===================================================================== */
+:root {
+  --sb-expanded: 272px;
+  --sb-rail: 76px;
+  --sb-dur: 240ms;
+  --sb-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --admin-status-ok: #34d399;
+}
+
+html.admin-scroll-lock,
+html.admin-scroll-lock body {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 .admin-app {
   display: flex;
   height: 100dvh;
   width: 100%;
+  overflow: hidden;
   background: var(--admin-bg);
 }
 
+.admin-app[data-mode="mobile"] {
+  --sb-expanded: min(86vw, 320px);
+}
+
+/* The slot reserves the sidebar's in-flow footprint. It never animates, so the
+   content reflows once instead of on every frame. */
+.admin-sidebar-slot {
+  position: relative;
+  z-index: 50;
+  flex: none;
+  width: var(--sb-expanded);
+}
+
+.admin-app[data-mode="desktop"].is-rail .admin-sidebar-slot,
+.admin-app[data-mode="tablet"] .admin-sidebar-slot {
+  width: var(--sb-rail);
+}
+
+.admin-app[data-mode="mobile"] .admin-sidebar-slot {
+  width: 0;
+}
+
 .admin-sidebar {
-  width: 272px;
-  min-width: 272px;
-  background: #111111;
-  color: #f3f4f6;
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--sb-expanded);
   display: flex;
   flex-direction: column;
-  padding: 1rem 0.75rem;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  transition: width 220ms ease, min-width 220ms ease;
+  overflow: hidden;
+  background: #111111;
+  color: #f3f4f6;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08);
+  transition: width var(--sb-dur) var(--sb-ease), box-shadow var(--sb-dur) ease;
 }
 
-.admin-sidebar.is-collapsed {
-  width: 88px;
-  min-width: 88px;
+.admin-app.is-rail .admin-sidebar {
+  width: var(--sb-rail);
 }
 
+/* Tablet: the expanded sidebar floats above the content. */
+.admin-app[data-mode="tablet"].is-overlay-open .admin-sidebar {
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 24px 0 48px rgba(0, 0, 0, 0.35);
+}
+
+/* Mobile: off-canvas drawer moved with transform only. */
+.admin-app[data-mode="mobile"] .admin-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform 260ms var(--sb-ease), visibility 0s linear 260ms, box-shadow 260ms ease;
+}
+
+.admin-app[data-mode="mobile"].is-overlay-open .admin-sidebar {
+  transform: translateX(0);
+  visibility: visible;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.08), 24px 0 48px rgba(0, 0, 0, 0.45);
+  transition: transform 260ms var(--sb-ease), visibility 0s, box-shadow 260ms ease;
+}
+
+/* ---- Brand row: logo, copy and toggle are pinned by coordinates so the ---- */
+/* ---- icon column never moves between expanded and rail.                ---- */
 .admin-sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.5rem 1rem;
+  position: relative;
+  flex: none;
+  height: 72px;
+  transition: height var(--sb-dur) var(--sb-ease);
+}
+
+.admin-app.is-rail .admin-sidebar__brand {
+  height: 112px;
 }
 
 .admin-sidebar__logo {
-  width: 2.25rem;
-  height: 2.25rem;
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   background: var(--admin-primary);
   color: #111111;
+  font-size: 1.1rem;
   font-weight: 800;
 }
 
 .admin-sidebar__brand-copy {
+  position: absolute;
+  top: 16px;
+  left: 70px;
+  width: calc(var(--sb-expanded) - 70px - 58px);
+  height: 40px;
   display: flex;
   flex-direction: column;
-  line-height: 1.1;
-  flex: 1;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  line-height: 1.15;
+  opacity: 1;
+  transition: opacity 160ms ease 90ms;
 }
 
 .admin-sidebar__brand-copy strong {
@@ -110,38 +203,94 @@ select {
 }
 
 .admin-sidebar__toggle {
-  width: 2rem;
-  height: 2rem;
+  position: absolute;
+  top: 18px;
+  left: calc(var(--sb-expanded) - 50px);
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.04);
   color: #f3f4f6;
+  font-size: 0.8rem;
   cursor: pointer;
+  transition: top var(--sb-dur) var(--sb-ease), left var(--sb-dur) var(--sb-ease), background 160ms ease;
 }
 
+.admin-sidebar__toggle:hover {
+  background: rgba(56, 182, 255, 0.18);
+}
+
+/* Rail: the toggle drops onto its own row, centred under the logo. */
+.admin-app.is-rail .admin-sidebar__toggle {
+  top: 64px;
+  left: 20px;
+}
+
+/* Mobile close button gets a full 44px touch target. */
+.admin-app[data-mode="mobile"] .admin-sidebar__toggle {
+  top: 14px;
+  left: calc(var(--sb-expanded) - 58px);
+  width: 44px;
+  height: 44px;
+}
+
+.admin-app.is-rail .admin-sidebar__brand-copy,
+.admin-app.is-rail .admin-nav-item__label,
+.admin-app.is-rail .admin-nav-item__badge {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+/* ---- Nav: scrolls on its own; brand and footer stay pinned ---- */
 .admin-sidebar__nav {
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem 0.25rem;
-  flex: 1;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem 0.75rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
 }
 
+.admin-app.is-rail .admin-sidebar__nav {
+  scrollbar-width: none;
+}
+
+.admin-app.is-rail .admin-sidebar__nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Fixed three-part grid: [icon | label | badge]. The grid never changes between
+   modes; the rail simply clips the label/badge columns (which are faded out). */
 .admin-nav-item {
-  display: flex;
+  position: relative;
+  flex: none;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-height: 3rem;
-  padding: 0.7rem 0.8rem;
+  column-gap: 0.75rem;
+  height: 3rem;
+  padding: 0 14px;
   border-radius: 0.875rem;
-  color: #f3f4f6;
+  color: #e5e7eb;
+  font-size: 0.925rem;
+  font-weight: 500;
   text-decoration: none;
-  transition: background 180ms ease, transform 180ms ease;
+  transition: background 160ms ease, color 160ms ease;
 }
 
 .admin-nav-item:hover {
   background: rgba(56, 182, 255, 0.12);
+  color: #ffffff;
 }
 
 .admin-nav-item.is-active {
@@ -150,25 +299,108 @@ select {
   font-weight: 700;
 }
 
-.admin-nav-item__badge {
-  min-width: 1.5rem;
-  padding: 0.15rem 0.45rem;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.88);
-  color: #ffffff;
-  font-size: 0.68rem;
-  text-align: center;
+/* Active indicator: a bar on the sidebar's outer edge, present in both modes. */
+.admin-nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: -0.75rem;
+  top: 50%;
+  width: 4px;
+  height: 24px;
+  border-radius: 0 4px 4px 0;
+  background: var(--admin-primary);
+  transform: translateY(-50%);
 }
 
+.admin-nav-item__icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 1.05rem;
+}
+
+.admin-nav-item__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 160ms ease 90ms;
+}
+
+.admin-nav-item__badge {
+  min-width: 1.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(56, 182, 255, 0.18);
+  color: #bfe6ff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 1;
+  transition: opacity 160ms ease 90ms;
+}
+
+.admin-nav-item.is-active .admin-nav-item__badge {
+  background: #111111;
+  color: #ffffff;
+}
+
+/* Rail badge: a mini count pinned to the icon's top-right corner. */
+.admin-nav-item__mini {
+  position: absolute;
+  top: -10px;
+  right: -14px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--admin-primary);
+  color: #111111;
+  box-shadow: 0 0 0 2px #111111;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.6);
+  transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms;
+}
+
+.admin-app.is-rail .admin-nav-item__mini {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 160ms ease 120ms, transform 160ms ease 120ms, visibility 0s;
+}
+
+.admin-nav-item.is-active .admin-nav-item__mini {
+  background: #111111;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px var(--admin-primary);
+}
+
+/* ---- Footer: full card when expanded, single status dot in the rail ---- */
 .admin-sidebar__footer {
-  padding: 0.5rem 0.25rem 0;
+  flex: none;
+  padding: 0.5rem 0.75rem calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
 .admin-system-card {
+  width: calc(var(--sb-expanded) - 1.5rem);
+  overflow: hidden;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0.9rem;
   padding: 0.9rem;
+  white-space: nowrap;
+  animation: admin-fade-in 200ms ease 120ms both;
 }
 
 .admin-system-card__title {
@@ -180,8 +412,87 @@ select {
 .admin-system-card__content {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 0.5rem;
   font-size: 0.8rem;
+}
+
+.admin-status-dot {
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 0.875rem;
+  cursor: default;
+}
+
+.admin-status-dot:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-status-dot span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--admin-status-ok);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.22);
+}
+
+/* Short viewports (landscape phones): keep the pinned footer compact. */
+@media (max-height: 520px) {
+  .admin-system-card {
+    padding: 0.55rem 0.75rem;
+  }
+
+  .admin-system-card__title {
+    display: none;
+  }
+}
+
+/* ---- Backdrop (tablet + mobile overlay) ---- */
+.admin-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgb(0 0 0 / 0.5);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity var(--sb-dur) ease, visibility 0s linear var(--sb-dur);
+}
+
+.admin-app.is-overlay-open .admin-backdrop {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity var(--sb-dur) ease, visibility 0s;
+}
+
+.admin-app[data-mode="desktop"] .admin-backdrop {
+  display: none;
+}
+
+/* ---- Rail tooltip: one fixed element, positioned from the item's rect ---- */
+.admin-tooltip {
+  position: fixed;
+  z-index: 55;
+  max-width: min(18rem, calc(100vw - 6rem));
+  padding: 0.4rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 0.5rem;
+  background: #111111;
+  color: #ffffff;
+  box-shadow: var(--admin-shadow);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  pointer-events: none;
+  transform: translateY(-50%);
+  animation: admin-fade-in 120ms ease both;
+}
+
+@keyframes admin-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .admin-main {
@@ -196,10 +507,12 @@ select {
   background: var(--admin-header);
   border-bottom: 1px solid var(--admin-border);
   display: flex;
+  flex: none;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
   min-height: 72px;
 }
 
@@ -208,25 +521,47 @@ select {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.admin-header__left {
+  flex: 1 1 12rem;
+}
+
+.admin-header__right {
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
+.admin-header__titles {
+  min-width: 0;
 }
 
 .admin-breadcrumb {
+  overflow: hidden;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
   opacity: 0.7;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .admin-page-title {
   margin: 0.2rem 0 0;
+  overflow: hidden;
   font-size: clamp(1.25rem, 1.1rem + 0.7vw, 2rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-global-search {
   display: flex;
+  flex: 1 1 14rem;
   align-items: center;
   gap: 0.5rem;
-  min-width: 280px;
+  min-width: 9rem;
+  max-width: 20rem;
   padding: 0.65rem 0.8rem;
   border-radius: 999px;
   border: 1px solid var(--admin-border);
@@ -793,51 +1128,41 @@ th {
   color: var(--admin-primary);
 }
 
-.admin-mobile-only {
-  display: none;
-}
-
 @keyframes shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-@media (max-width: 768px) {
-  body {
-    overflow: auto;
-  }
+/* ---- Header: shrinks and wraps instead of overflowing; hamburger only on mobile ---- */
+.admin-hamburger {
+  flex: none;
+  width: 2.75rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
 
-  .admin-app {
-    display: block;
-  }
+.admin-icon-button,
+.admin-theme-toggle,
+.admin-avatar {
+  flex: none;
+}
 
-  .admin-sidebar {
-    position: fixed;
-    inset: 0 auto 0 0;
-    width: 82%;
-    max-width: 320px;
-    z-index: 20;
-  }
+.admin-app[data-mode="mobile"] .admin-header {
+  padding: 0.75rem 1rem;
+  gap: 0.75rem;
+}
 
-  .admin-main {
-    min-height: 100dvh;
-  }
+.admin-app[data-mode="mobile"] .admin-header__right {
+  flex: 1 1 100%;
+  margin-left: 0;
+}
 
-  .admin-mobile-only {
-    display: inline-flex;
-  }
+.admin-app[data-mode="mobile"] .admin-global-search {
+  min-width: 0;
+  max-width: none;
+}
 
-  .admin-global-search {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .admin-header {
-    flex-wrap: wrap;
-  }
-
-  .admin-header__right {
-    width: 100%;
-    justify-content: flex-end;
-  }
+.admin-app[data-mode="mobile"] .admin-theme-toggle {
+  padding: 0 0.6rem;
 }
