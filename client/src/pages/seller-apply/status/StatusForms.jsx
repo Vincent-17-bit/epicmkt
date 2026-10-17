@@ -27,8 +27,8 @@ export function RequestForm({ initial, onSent }) {
     if (Object.keys(next).length) return document.querySelector('form [aria-invalid="true"]')?.focus();
     setBusy(true);
     try {
-      const res = await requestStatusOtp({ referenceNo: cleanRef, phone: norm });
-      onSent({ ref: cleanRef, phone: norm, message: res.message });
+      const res = await requestStatusOtp({ referenceNo: cleanRef, phone: norm, channel: "sms" });
+      onSent({ ref: cleanRef, phone: norm, channel: "sms", message: res.message });
     } catch (err) {
       const key = err?.details?.error ?? err?.message;
       setFormError(
@@ -46,7 +46,7 @@ export function RequestForm({ initial, onSent }) {
   return (
     <form className={styles.card} onSubmit={submit} noValidate aria-labelledby="check-title">
       <h1 id="check-title">Check my application</h1>
-      <p className={styles.small}>Enter your reference number and phone number. We will send a code by SMS.</p>
+      <p className={styles.small}>Enter your reference number and phone number. We will send a code by SMS. If it cannot be delivered, we send it to the email on your application.</p>
       <div className={form.field}>
         <label htmlFor="status-ref" className={form.label}>Reference number</label>
         <input id="status-ref" className={form.input} value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" placeholder="EPM-2026-ABC234" aria-invalid={errors.ref ? true : undefined} aria-describedby={errors.ref ? "status-ref-err" : undefined} />
@@ -71,7 +71,8 @@ export function CodeForm({ details, onVerified, onBack }) {
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(false);
   const [wait, setWait] = useState(60);
-  const [resent, setResent] = useState("");
+  const [channel, setChannel] = useState(details.channel ?? "sms");
+  const [notice, setNotice] = useState(details.message);
 
   useEffect(() => {
     if (wait <= 0) return undefined;
@@ -82,7 +83,7 @@ export function CodeForm({ details, onVerified, onBack }) {
   const verify = async (e) => {
     e.preventDefault();
     setError("");
-    if (!/^\d{6}$/.test(code)) return setError("Enter the 6 digit code from your SMS.");
+    if (!/^\d{6}$/.test(code)) return setError("Enter the 6 digit code we sent you.");
     setBusy(true);
     try {
       const session = await verifyStatusOtp({ referenceNo: details.ref, phone: details.phone, code });
@@ -102,15 +103,15 @@ export function CodeForm({ details, onVerified, onBack }) {
     }
   };
 
-  const resend = async () => {
+  const send = async (next) => {
     setError("");
-    setResent("");
     try {
-      await requestStatusOtp({ referenceNo: details.ref, phone: details.phone });
+      const res = await requestStatusOtp({ referenceNo: details.ref, phone: details.phone, channel: next });
+      setChannel(next);
       setLocked(false);
       setCode("");
       setWait(60);
-      setResent("If these details match an application, we have sent a new code.");
+      setNotice(res.message);
     } catch (err) {
       setError(err?.details?.retryAfter > 60 ? "You have asked for too many codes. Please try again in an hour." : "Please wait a minute before asking for another code.");
     }
@@ -119,20 +120,23 @@ export function CodeForm({ details, onVerified, onBack }) {
   return (
     <form className={styles.card} onSubmit={verify} noValidate aria-labelledby="code-title">
       <h1 id="code-title">Enter your code</h1>
-      <p role="status">If these details match an application, we have sent a code.</p>
+      <p role="status">{notice}</p>
       {devTools && <p className={styles.small}>Development: the code is 123456.</p>}
       <div className={form.field}>
         <label htmlFor="status-code" className={form.label}>6 digit code</label>
         <input id="status-code" className={form.input} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} disabled={locked} aria-invalid={error ? true : undefined} aria-describedby={error ? "status-code-err" : undefined} />
         <ErrorLine id="status-code-err" message={error} />
       </div>
-      {resent && <p role="status" className={styles.small}>{resent}</p>}
+      <p className={styles.small}>Only the newest code works. Codes expire in 10 minutes.</p>
       <div className={styles.formActions}>
         <Button type="submit" disabled={busy || locked}>
           {busy ? "Checking" : "Check my application"}
         </Button>
-        <Button variant="secondary" onClick={resend} disabled={wait > 0}>
+        <Button variant="secondary" onClick={() => send(channel)} disabled={wait > 0}>
           {wait > 0 ? `Resend in ${wait}s` : "Send a new code"}
+        </Button>
+        <Button variant="secondary" onClick={() => send(channel === "sms" ? "email" : "sms")} disabled={wait > 0}>
+          {channel === "sms" ? "Send to email instead" : "Send by SMS instead"}
         </Button>
         <Button variant="secondary" onClick={onBack}>
           Change details

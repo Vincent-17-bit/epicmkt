@@ -29,6 +29,14 @@ describe('status otp', () => {
     expect(good.message).toMatch(/if these details match/i);
   });
 
+  it('words the reply by channel and still answers the same for wrong details', async () => {
+    const sms = await requestStatusOtp({ referenceNo: 'EPM-2026-DEMO01', phone: PHONE, channel: 'sms' });
+    const email = await requestStatusOtp({ referenceNo: 'EPM-2026-ZZZZZZ', phone: PHONE, channel: 'email' });
+    expect(sms.message).toMatch(/to your phone, or to the email on the application/);
+    expect(email.message).toMatch(/to the email on the application\./);
+    expect(await requestStatusOtp({ referenceNo: 'nope', phone: 'abc', channel: 'email' })).toEqual(email);
+  });
+
   it('gives no code and no session for wrong details', async () => {
     await requestStatusOtp({ referenceNo: 'EPM-2026-DEMO01', phone: '0799999999' });
     await expect(verifyStatusOtp({ referenceNo: 'EPM-2026-DEMO01', phone: '0799999999', code: '123456' })).rejects.toThrow('invalid_code');

@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryRouter, RouterProvider } from "react-router-dom";
@@ -20,6 +20,10 @@ const mount = () => {
       <RouterProvider router={router} />
     </QueryClientProvider>
   );
+};
+
+const tick = async (seconds) => {
+  for (let i = 0; i < seconds; i++) await act(async () => { vi.advanceTimersByTime(1000); });
 };
 
 async function signIn(user, ref, phone = "0712345678") {
@@ -53,6 +57,31 @@ describe("check my application", () => {
     await user.click(screen.getByRole("button", { name: "Check my application" }));
     expect(await screen.findByText(/not correct or has expired/)).toBeInTheDocument();
   }, 20000);
+
+  it("offers email instead of SMS once the wait is over, and back again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      mount();
+      await user.type(await screen.findByLabelText("Reference number"), "EPM-2026-DEMO01");
+      await user.type(screen.getByLabelText("Phone number"), "0712345678");
+      await user.click(screen.getByRole("button", { name: "Send me a code" }));
+      expect(await screen.findByText(/we have sent a code to your phone, or to the email on the application if the SMS cannot be delivered/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Send to email instead" })).toBeDisabled();
+      await tick(61);
+      await user.click(screen.getByRole("button", { name: "Send to email instead" }));
+      expect(await screen.findByText(/we have sent a code to the email on the application\./)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Send by SMS instead" })).toBeDisabled();
+      await tick(61);
+      await user.click(screen.getByRole("button", { name: "Send by SMS instead" }));
+      expect(await screen.findByText(/to your phone, or to the email on the application/)).toBeInTheDocument();
+      await user.type(screen.getByLabelText("6 digit code"), "123456");
+      await user.click(screen.getByRole("button", { name: "Check my application" }));
+      expect(await screen.findByText(/DEMO01/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  }, 30000);
 
   it("shows admin flags with icon and text, and only flagged items are editable", async () => {
     const user = userEvent.setup();

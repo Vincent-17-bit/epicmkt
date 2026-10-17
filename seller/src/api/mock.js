@@ -60,7 +60,13 @@ export const forgotVerify = async ({ sellerId, code, newPassword }) => {
   state.password = newPassword;
   return { ok: true };
 };
-export const requestOtp = async () => { signedIn(); await wait(); return { ok: true, sentTo: "+2547*****678" }; };
+export const requestOtp = async (channel) => {
+  signedIn();
+  await wait();
+  return channel === "email"
+    ? { ok: true, channel: "email", fellBack: false, sentTo: "o***@example.com", canUseEmail: true }
+    : { ok: true, channel: "sms", fellBack: false, sentTo: "+2547*****678", canUseEmail: true };
+};
 export const changePassword = async ({ code, newPassword }) => {
   signedIn();
   await wait();

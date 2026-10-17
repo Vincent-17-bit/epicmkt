@@ -24,9 +24,14 @@ const pushEvent = (rec, type) => {
 const normRef = (v) => String(v ?? '').trim().toUpperCase();
 const keyOf = (ref, phone) => `${ref}:${phone}`;
 
-export async function requestStatusOtp({ referenceNo, phone }) {
+const OTP_MESSAGE = {
+  sms: 'If these details match an application, we have sent a code to your phone, or to the email on the application if the SMS cannot be delivered.',
+  email: 'If these details match an application, we have sent a code to the email on the application.',
+};
+
+export async function requestStatusOtp({ referenceNo, phone, channel }) {
   await wait(300);
-  const generic = { ok: true, message: 'If these details match an application, we have sent a code.' };
+  const generic = { ok: true, message: OTP_MESSAGE[channel === 'email' ? 'email' : 'sms'] };
   const ref = normRef(referenceNo);
   const norm = normalizePhone(String(phone ?? ''));
   if (!REF.test(ref) || !norm) return generic;

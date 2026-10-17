@@ -1,7 +1,8 @@
 import { applicationSchema } from "./validate.ts";
 
+export { OTP_MINUTES } from "./otpDelivery.ts";
+
 export const SESSION_MINUTES = 30;
-export const OTP_MINUTES = 10;
 
 export const FIELD_COLUMNS: Record<string, string> = {
   "owner.fullName": "owner_full_name",

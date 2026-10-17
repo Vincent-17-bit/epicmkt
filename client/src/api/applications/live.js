@@ -75,7 +75,7 @@ async function call(name, body) {
   return res.data;
 }
 
-export const requestStatusOtp = ({ referenceNo, phone }) => call('status-request-otp', { referenceNo, phone });
+export const requestStatusOtp = ({ referenceNo, phone, channel }) => call('status-request-otp', { referenceNo, phone, channel });
 
 export const verifyStatusOtp = ({ referenceNo, phone, code }) => call('status-verify-otp', { referenceNo, phone, code });
 

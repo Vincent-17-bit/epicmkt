@@ -18,7 +18,7 @@ for (const k of ["log", "info", "warn", "error", "debug"] as const) {
   (console as any)[k] = (...a: unknown[]) => { logs.push(a.map(String).join(" ")); };
 }
 
-const BIZ = { id: "b1", seller_id: "ES100001", phone: "+254712345678", name: "Shop A", status: "live", user_id: "u1" };
+const BIZ = { id: "b1", seller_id: "ES100001", phone: "+254712345678", name: "Shop A", status: "live", user_id: "u1", application_id: "a1", email: "listing@example.com" };
 const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, "").replace(/\+/g, "-").replace(/\//g, "_");
 const jwt = (claims: Record<string, unknown> = {}) => `${b64({ alg: "HS256" })}.${b64({ sub: "u1", ...claims })}.sig`;
 const TOKEN = jwt({ session_id: "sess-1" });
@@ -36,15 +36,18 @@ type World = {
   removed: string[];
   files: Map<string, Uint8Array>;
   sms: { to: string; message: string }[];
+  emails: { to: string; subject: string; html: string }[];
+  smsOk: boolean;
+  emailOk: boolean;
   issuedCodes: string[];
 };
 
 function world(): World {
   return {
-    tables: { businesses: [{ ...BIZ }], items: [{ id: "i1", business_id: "b1" }, { id: "i2", business_id: "other" }], item_media: [], login_events: [], audit_log: [], faqs: [{ id: "f1", business_id: "b1" }], user_id: [] } as any,
+    tables: { businesses: [{ ...BIZ }], applications: [{ id: "a1", email: "owner@example.com" }], items: [{ id: "i1", business_id: "b1" }, { id: "i2", business_id: "other" }], item_media: [], login_events: [], audit_log: [], faqs: [{ id: "f1", business_id: "b1" }], user_id: [] } as any,
     rpcCalls: [], rpcResults: {}, counters: new Map(), failures: new Map(),
     users: new Map([[TOKEN, { id: "u1" }]]), passwordUpdates: [], signIns: [], validPassword: "Correct-Horse9",
-    removed: [], files: new Map(), sms: [], issuedCodes: [],
+    removed: [], files: new Map(), sms: [], emails: [], smsOk: true, emailOk: true, issuedCodes: [],
   };
 }
 
@@ -117,7 +120,10 @@ function deps(w: World): Deps {
       },
     },
   };
-  return { db, anon, salt: "salt", code: () => "123456", sms: (to, message) => (w.sms.push({ to, message }), Promise.resolve(true)) };
+  return { db, anon, salt: "salt", code: () => "123456",
+    sms: (to, message) => (w.sms.push({ to, message }), Promise.resolve(w.smsOk)),
+    email: (to, subject, html) => (w.emails.push({ to, subject, html }), Promise.resolve(w.emailOk)),
+  };
 }
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
@@ -192,6 +198,39 @@ Deno.test("forgot-request: same answer for known and unknown IDs, SMS only when 
   assertEquals((await read(await sellerForgotRequest(deps(world()))(post({ sellerId: "bad id!" })))).status, 200);
 });
 
+Deno.test("forgot-request: a failed SMS falls back to the application email, with the same answer for unknown IDs", async () => {
+  const w = world();
+  w.smsOk = false;
+  const h = sellerForgotRequest(deps(w));
+  const known = await read(await h(post({ sellerId: "ES100001" })));
+  const unknown = await read(await h(post({ sellerId: "ES555555" })));
+  assertEquals(known, unknown);
+  assertEquals(w.emails.length, 1);
+  assertEquals(w.emails[0].to, "owner@example.com");
+  assertStringIncludes(w.emails[0].html, "123456");
+});
+
+Deno.test("forgot-request: choosing email sends no SMS, and never uses the editable listing email", async () => {
+  const w = world();
+  const h = sellerForgotRequest(deps(w));
+  const known = await read(await h(post({ sellerId: "ES100001", channel: "email" })));
+  const unknown = await read(await h(post({ sellerId: "ES555555", channel: "email" })));
+  assertEquals(known, unknown);
+  assertEquals(w.sms.length, 0);
+  assertEquals(w.emails.map((e) => e.to), ["owner@example.com"]);
+  assert(!JSON.stringify(w.emails).includes("listing@example.com"));
+});
+
+Deno.test("forgot-request: no application email means no email attempt and an unchanged answer", async () => {
+  const w = world();
+  w.tables.applications = [];
+  w.smsOk = false;
+  const known = await read(await sellerForgotRequest(deps(w))(post({ sellerId: "ES100001" })));
+  const unknown = await read(await sellerForgotRequest(deps(world()))(post({ sellerId: "ES555555" })));
+  assertEquals(known, unknown);
+  assertEquals(w.emails.length, 0);
+});
+
 Deno.test("forgot-verify: resets the password and signs out every session", async () => {
   const w = world();
   const h = sellerForgotVerify(deps(w));
@@ -236,9 +275,36 @@ Deno.test("otp-request and change-password need a seller JWT", async () => {
   assertEquals((await sellerOtpRequest(deps(noBiz))(authed({ purpose: "change_password" }))).status, 403);
   const ok = await read(await req(authed({ purpose: "change_password" })));
   assertEquals(ok.status, 200);
-  assertEquals(ok.body, { ok: true, sentTo: "+2547*****678" });
+  assertEquals(ok.body, { ok: true, channel: "sms", fellBack: false, sentTo: "+2547*****678", canUseEmail: true });
   assertEquals(w.sms.length, 1);
   assertEquals((await sellerChangePassword(deps(w))(post({ code: "123456", newPassword: "Brand-New-Pass1" }))).status, 401);
+});
+
+Deno.test("otp-request: email on request, automatic fallback, and honest failures", async () => {
+  const viaEmail = world();
+  const e = await read(await sellerOtpRequest(deps(viaEmail))(authed({ purpose: "change_password", channel: "email" })));
+  assertEquals(e.body, { ok: true, channel: "email", fellBack: false, sentTo: "o***@example.com", canUseEmail: true });
+  assertEquals(viaEmail.sms.length, 0);
+  assertEquals(viaEmail.emails[0].to, "owner@example.com");
+
+  const fallback = world();
+  fallback.smsOk = false;
+  const f = await read(await sellerOtpRequest(deps(fallback))(authed({ purpose: "change_password" })));
+  assertEquals(f.body, { ok: true, channel: "email", fellBack: true, sentTo: "o***@example.com", canUseEmail: true });
+
+  const both = world();
+  both.smsOk = false;
+  both.emailOk = false;
+  const b = await read(await sellerOtpRequest(deps(both))(authed({ purpose: "change_password" })));
+  assertEquals(b.status, 502);
+  assertEquals(b.body, { error: "delivery_failed", canUseEmail: true });
+
+  const none = world();
+  none.tables.applications = [];
+  const n = await read(await sellerOtpRequest(deps(none))(authed({ purpose: "change_password", channel: "email" })));
+  assertEquals(n.status, 409);
+  assertEquals(n.body.error, "email_unavailable");
+  assertEquals(none.rpcCalls.filter((c) => c.name === "seller_otp_issue").length, 0);
 });
 
 Deno.test("otp-request: resend wait is a 429 with the retry time", async () => {

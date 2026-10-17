@@ -47,4 +47,8 @@ export async function sendSms(to: string, message: string): Promise<boolean> {
   return (await deliverSms(to, message)).ok;
 }
 
+export async function sendEmail(to: string, subject: string, html: string): Promise<boolean> {
+  return (await deliverEmail(to, subject, html)).ok;
+}
+
 export { isProduction };

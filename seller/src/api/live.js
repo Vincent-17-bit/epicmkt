@@ -31,9 +31,9 @@ export const login = async (sellerId, password) => {
   return { expiresAt: session.expires_at };
 };
 export const logout = async () => { await need().auth.signOut(); };
-export const forgotRequest = (sellerId) => fn("seller-forgot-request", { sellerId });
+export const forgotRequest = (sellerId, channel) => fn("seller-forgot-request", { sellerId, channel });
 export const forgotVerify = ({ sellerId, code, newPassword }) => fn("seller-forgot-verify", { sellerId, code, newPassword });
-export const requestOtp = () => fn("seller-otp-request", { purpose: "change_password" });
+export const requestOtp = (channel) => fn("seller-otp-request", { purpose: "change_password", channel });
 export const changePassword = ({ code, newPassword }) => fn("seller-change-password", { code, newPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
