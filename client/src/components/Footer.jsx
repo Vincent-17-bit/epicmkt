@@ -101,7 +101,7 @@ export default function Footer() {
   const toTop = () => {
     const main = document.getElementById("main");
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    main?.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
     main?.focus({ preventScroll: true });
   };
 

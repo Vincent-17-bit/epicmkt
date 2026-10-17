@@ -1,7 +1,7 @@
 .shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  min-height: 100dvh;
   padding-top: var(--header-h);
 }
 
@@ -9,16 +9,12 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 0;
 }
 
 .main {
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
 }
 
 .page {
