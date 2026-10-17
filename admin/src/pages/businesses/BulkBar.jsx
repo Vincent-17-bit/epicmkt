@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/index.js";
-import Button from "../../components/Button.jsx";
+import OverflowActions from "../../components/OverflowActions.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { downloadCsv, toCsv } from "../../components/DataTable/csv.js";
 import { todayEat } from "../../lib/time.js";
@@ -14,6 +14,7 @@ export default function BulkBar({ rows, ids, clear, tab, options }) {
   const client = useQueryClient();
   const toast = useToast();
   const available = tab === "deleted" ? BIN_ACTIONS : ACTIVE_ACTIONS;
+  const items = available.map((name) => ({ key: name, label: BULK[name].label, icon: BULK[name].icon }));
   const refresh = () => client.invalidateQueries({ queryKey: ["business-table"] });
 
   const submit = async ({ action: name, reason, params }) => {
@@ -42,13 +43,7 @@ export default function BulkBar({ rows, ids, clear, tab, options }) {
 
   return (
     <>
-      <div className="bulk">
-        {available.map((name) => (
-          <Button key={name} size="sm" icon={BULK[name].icon} onClick={() => setAction(name)}>
-            {BULK[name].label}
-          </Button>
-        ))}
-      </div>
+      <OverflowActions items={items} onSelect={setAction} />
       {action ? <BulkDialog action={action} count={ids.length} options={options} onClose={() => setAction(null)} onSubmit={submit} /> : null}
     </>
   );

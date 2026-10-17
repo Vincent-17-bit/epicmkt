@@ -299,6 +299,9 @@
 }
 
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--admin-tap);
   color: var(--admin-link);
   font-weight: 600;
 }

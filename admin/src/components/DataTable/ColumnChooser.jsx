@@ -7,7 +7,7 @@ export default function ColumnChooser({ columns, hidden, onToggle, onReset }) {
       <ul className="dt__list">
         {columns.map((column) => (
           <li key={column.key}>
-            <label className="dt__check">
+            <label className="check">
               <input
                 type="checkbox"
                 checked={column.locked || !hidden.includes(column.key)}

@@ -12,6 +12,7 @@ export const columns = [
     key: "name",
     header: "Business",
     locked: true,
+    card: "title",
     min: 240,
     grow: 2,
     sortKey: true,
@@ -43,6 +44,7 @@ export const columns = [
   {
     key: "status",
     header: "Status",
+    card: "status",
     min: 150,
     render: (row) => <StatusChip state={deriveState(row)} />,
     csv: (row) => STATE_META[deriveState(row)].label,
@@ -75,6 +77,7 @@ export const columns = [
   {
     key: "paidUntil",
     header: "Paid until",
+    card: "metric",
     min: 150,
     sortKey: true,
     render: (row) => (

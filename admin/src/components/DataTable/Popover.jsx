@@ -23,7 +23,7 @@ function place(trigger, panel) {
   return { top, left, maxHeight: Math.max(room, 0) };
 }
 
-export default function Popover({ label, icon, title = label, children }) {
+export default function Popover({ label, icon, title = label, labelAlways = false, children }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState(null);
   const phone = useMediaQuery(BELOW_MD);
@@ -31,6 +31,11 @@ export default function Popover({ label, icon, title = label, children }) {
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const panelId = useId();
+  const close = () => {
+    setOpen(false);
+    triggerRef.current?.focus({ preventScroll: true });
+  };
+  const content = typeof children === "function" ? children({ close }) : children;
 
   useLayoutEffect(() => {
     if (!open || phone) return undefined;
@@ -81,7 +86,7 @@ export default function Popover({ label, icon, title = label, children }) {
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((value) => !value)}
       >
-        {label}
+        <span className={labelAlways ? undefined : "dt__label"}>{label}</span>
       </Button>
       {open && !phone ? (
         <div
@@ -92,12 +97,12 @@ export default function Popover({ label, icon, title = label, children }) {
           className="dt__panel"
           style={position ? { top: position.top, left: position.left, maxHeight: position.maxHeight } : { visibility: "hidden" }}
         >
-          {children}
+          {content}
         </div>
       ) : null}
       {open && phone ? (
         <Sheet title={title} onClose={() => setOpen(false)}>
-          <div className="sheet__body">{children}</div>
+          <div className="sheet__body">{content}</div>
         </Sheet>
       ) : null}
     </div>

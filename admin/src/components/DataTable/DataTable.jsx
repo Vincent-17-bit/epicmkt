@@ -10,8 +10,10 @@ import {
   faChevronUp,
   faDownload,
   faMagnifyingGlass,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import Button from "../Button.jsx";
+import { BELOW_MD } from "../../lib/breakpoints.js";
 import { useMediaQuery } from "../../lib/useMediaQuery.js";
 import { todayEat } from "../../lib/time.js";
 import ColumnChooser from "./ColumnChooser.jsx";
@@ -23,10 +25,34 @@ import "./DataTable.css";
 const HEAD_HEIGHT = 44;
 const CHECK_WIDTH = 44;
 const ROW_HEIGHT = { comfortable: 60, compact: 44 };
+const CARD_HEIGHT = 132;
+const CARD_GAP = 12;
 const PAGE_SIZES = [25, 50, 100];
 const PAGE_JUMP = 10;
 
 const stop = (event) => event.stopPropagation();
+
+function Check({ checked, onChange, label, inputRef, tabIndex }) {
+  return (
+    <label className="dt__checkbox">
+      <input ref={inputRef} type="checkbox" tabIndex={tabIndex} checked={checked} onChange={onChange} aria-label={label} />
+    </label>
+  );
+}
+
+/**
+ * Columns may carry `card: "title" | "status" | "metric"` to place them in the
+ * phone card. Everything else goes into the card's expandable detail list.
+ */
+function splitCard(visible) {
+  const title = visible.find((column) => column.card === "title") ?? visible[0];
+  const status = visible.find((column) => column.card === "status");
+  const metric = visible.find((column) => column.card === "metric");
+  const details = visible.filter((column) => column !== title && column !== status && column !== metric);
+  return { title, status, metric, details };
+}
+
+const cell = (column, row) => (column.render ? column.render(row) : column.accessor?.(row));
 
 export default function DataTable({
   columns,
@@ -34,6 +60,7 @@ export default function DataTable({
   fetchPage,
   fetchAll,
   rowKey = "id",
+  rowLabel,
   storageKey,
   defaultSort,
   extra,
@@ -48,10 +75,11 @@ export default function DataTable({
 }) {
   const stored = useMemo(() => readStore(storageKey), [storageKey]);
   const uid = useId();
-  const mobile = useMediaQuery("(max-width: 768px)");
+  const mobile = useMediaQuery(BELOW_MD);
   const searchRef = useRef(null);
   const scrollRef = useRef(null);
   const headCheckRef = useRef(null);
+  const selectionRef = useRef(null);
 
   const [searchText, setSearchText] = useState("");
   const [search, setSearch] = useState("");
@@ -63,6 +91,7 @@ export default function DataTable({
   const [density, setDensity] = useState(stored.density ?? "comfortable");
   const [views, setViews] = useState(stored.views ?? []);
   const [selected, setSelected] = useState(() => new Map());
+  const [expanded, setExpanded] = useState(() => new Set());
   const [active, setActive] = useState(-1);
   const [exporting, setExporting] = useState(false);
 
@@ -80,6 +109,9 @@ export default function DataTable({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const visible = columns.filter((column) => column.locked || !hidden.includes(column.key));
   const rowId = (row) => row[rowKey];
+  const labelOf = (row) => rowLabel?.(row) ?? "row";
+  const hasSelection = selected.size > 0;
+  const stickyBar = mobile && hasSelection;
 
   useEffect(() => {
     writeStore(storageKey, { pageSize, hidden, density, views });
@@ -118,14 +150,30 @@ export default function DataTable({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // The sticky bulk bar publishes its height so the page, the list and the
+  // toast stack can keep clear of it.
+  useEffect(() => {
+    const node = selectionRef.current;
+    const root = document.documentElement;
+    if (!stickyBar || !node) return undefined;
+    const publish = () => root.style.setProperty("--admin-bulkbar-h", `${node.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty("--admin-bulkbar-h");
+    };
+  }, [stickyBar]);
+
   const scrollMargin = mobile ? 0 : HEAD_HEIGHT;
   const virtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => (mobile ? 190 : ROW_HEIGHT[density]),
+    estimateSize: () => (mobile ? CARD_HEIGHT : ROW_HEIGHT[density]),
     getItemKey: (index) => (rows[index] ? rowId(rows[index]) : index),
     overscan: 8,
-    gap: mobile ? 12 : 0,
+    gap: mobile ? CARD_GAP : 0,
     scrollMargin,
     scrollPaddingStart: scrollMargin,
   });
@@ -146,6 +194,15 @@ export default function DataTable({
       return next;
     });
   }, [rowKey]);
+
+  const toggleExpanded = (id) => {
+    setExpanded((previous) => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const togglePage = () => {
     setSelected((previous) => {
@@ -226,12 +283,120 @@ export default function DataTable({
   const from = total ? page * pageSize + 1 : 0;
   const to = Math.min(total, (page + 1) * pageSize);
   const selectedRows = [...selected.values()];
+  const card = splitCard(visible);
+  const classes = ["dt", mobile && "dt--mobile", `dt--${density}`, hasSelection && "dt--selecting"].filter(Boolean).join(" ");
+
+  const renderCard = (row, item) => {
+    const id = rowId(row);
+    const isSelected = selected.has(id);
+    const isOpen = expanded.has(id);
+    const detailId = `${uid}-d${item.index}`;
+    const name = labelOf(row);
+    return (
+      <div
+        key={item.key}
+        ref={virtualizer.measureElement}
+        data-index={item.index}
+        id={`${uid}-r${item.index}`}
+        role="row"
+        aria-selected={selectable ? isSelected : undefined}
+        className={["dt__row", "dt__card", item.index === active && "is-active", isSelected && "is-selected"].filter(Boolean).join(" ")}
+        style={{ transform: `translateY(${item.start}px)` }}
+        onClick={() => {
+          setActive(item.index);
+          onRowOpen?.(row);
+        }}
+      >
+        <div className="dt__card-top">
+          {selectable ? (
+            <div className="dt__cell dt__cell--check" role="gridcell" onClick={stop}>
+              <Check checked={isSelected} onChange={() => toggleRow(row)} label={`Select ${name}`} />
+            </div>
+          ) : null}
+          <div className="dt__card-title" role="gridcell">{cell(card.title, row)}</div>
+          {card.details.length ? (
+            <div role="gridcell" onClick={stop}>
+              <button
+                type="button"
+                className="dt__toggle"
+                aria-expanded={isOpen}
+                aria-controls={isOpen ? detailId : undefined}
+                aria-label={`${isOpen ? "Hide" : "Show"} details for ${name}`}
+                onClick={() => toggleExpanded(id)}
+              >
+                <FontAwesomeIcon icon={isOpen ? faChevronUp : faChevronDown} className="admin-icon" />
+              </button>
+            </div>
+          ) : null}
+        </div>
+        {card.status || card.metric ? (
+          <div className="dt__card-meta">
+            {card.status ? <div className="dt__card-status" role="gridcell">{cell(card.status, row)}</div> : null}
+            {card.metric ? (
+              <div className="dt__card-metric" role="gridcell">
+                <span className="dt__card-label">{card.metric.label ?? card.metric.header}</span>
+                {cell(card.metric, row)}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        {isOpen ? (
+          <div id={detailId} role="gridcell" className="dt__card-details">
+            <dl>
+              {card.details.map((column) => (
+                <div key={column.key} className="dt__detail">
+                  <dt>{column.label ?? column.header}</dt>
+                  <dd>{cell(column, row)}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
+
+  const renderTableRow = (row, item) => {
+    const isSelected = selected.has(rowId(row));
+    return (
+      <div
+        key={item.key}
+        ref={virtualizer.measureElement}
+        data-index={item.index}
+        id={`${uid}-r${item.index}`}
+        role="row"
+        aria-selected={selectable ? isSelected : undefined}
+        className={["dt__row", item.index === active && "is-active", isSelected && "is-selected", onRowOpen && "is-clickable"].filter(Boolean).join(" ")}
+        style={{ transform: `translateY(${item.start - scrollMargin}px)`, gridTemplateColumns: template }}
+        onClick={() => {
+          setActive(item.index);
+          onRowOpen?.(row);
+        }}
+      >
+        {selectable ? (
+          <div className="dt__cell dt__cell--check" role="gridcell" onClick={stop}>
+            <Check tabIndex={-1} checked={isSelected} onChange={() => toggleRow(row)} label={`Select ${labelOf(row)}`} />
+          </div>
+        ) : null}
+        {visible.map((column, index) => (
+          <div
+            key={column.key}
+            className={["dt__cell", index === 0 && "dt__cell--first"].filter(Boolean).join(" ")}
+            role="gridcell"
+            style={{ justifyContent: column.align === "end" ? "flex-end" : "flex-start" }}
+          >
+            {cell(column, row)}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
-    <section className={`dt ${mobile ? "dt--mobile" : ""} dt--${density}`} aria-busy={isFetching}>
+    <section className={classes} aria-busy={isFetching} style={{ "--dt-check-w": selectable ? `${CHECK_WIDTH}px` : "0px" }}>
       <div className="dt__bar">
         <label className="dt__search">
-          <FontAwesomeIcon icon={faMagnifyingGlass} />
+          <FontAwesomeIcon icon={faMagnifyingGlass} className="admin-icon" />
           <input
             ref={searchRef}
             type="search"
@@ -248,8 +413,8 @@ export default function DataTable({
           />
           <kbd aria-hidden="true">/</kbd>
         </label>
-        {toolbar}
         <div className="dt__tools">
+          {toolbar}
           {mobile && sortable.length ? (
             <div className="dt__sort-mobile">
               <select value={sort?.key} aria-label="Sort by" onChange={(event) => setSort({ key: event.target.value, dir: sort?.dir ?? "asc" })}>
@@ -257,28 +422,32 @@ export default function DataTable({
                   <option key={column.key} value={column.sortKey === true ? column.key : column.sortKey}>{column.label ?? column.header}</option>
                 ))}
               </select>
-              <Button size="sm" icon={faArrowDownWideShort} aria-label={`Sort ${sort?.dir === "desc" ? "descending" : "ascending"}`} onClick={() => setSort({ ...sort, dir: sort?.dir === "desc" ? "asc" : "desc" })} />
+              <Button icon={faArrowDownWideShort} aria-label={`Sort ${sort?.dir === "desc" ? "descending" : "ascending"}`} onClick={() => setSort({ ...sort, dir: sort?.dir === "desc" ? "asc" : "desc" })} />
             </div>
           ) : null}
           <SavedViews views={views} onApply={applyView} onDelete={(id) => setViews((current) => current.filter((view) => view.id !== id))} onSave={saveView} />
           <ColumnChooser columns={columns} hidden={hidden} onToggle={toggleColumn} onReset={() => setHidden([])} />
-          <Button size="sm" aria-pressed={density === "compact"} onClick={() => setDensity((current) => (current === "compact" ? "comfortable" : "compact"))}>
-            {density === "compact" ? "Comfortable" : "Compact"}
-          </Button>
-          <Button size="sm" icon={faDownload} disabled={exporting || !total} onClick={exportCsv}>
+          {mobile ? null : (
+            <Button aria-pressed={density === "compact"} onClick={() => setDensity((current) => (current === "compact" ? "comfortable" : "compact"))}>
+              {density === "compact" ? "Comfortable" : "Compact"}
+            </Button>
+          )}
+          <Button icon={faDownload} disabled={exporting || !total} onClick={exportCsv}>
             {exporting ? "Exporting" : "CSV"}
           </Button>
         </div>
       </div>
 
-      {selected.size ? (
-        <div className="dt__selection" role="status">
-          <strong>{selected.size} selected</strong>
-          {fetchAll && pageAll && selected.size < total ? (
-            <button type="button" className="dt__link" onClick={selectMatching}>Select all {total}</button>
-          ) : null}
-          {renderBulk ? renderBulk({ rows: selectedRows, ids: selectedRows.map(rowId), clear: clearSelection }) : null}
-          <button type="button" className="dt__link" onClick={clearSelection}>Clear</button>
+      {hasSelection ? (
+        <div ref={selectionRef} className="dt__selection" role="region" aria-label="Bulk actions">
+          <div className="dt__selection-info">
+            <Button icon={faXmark} className="admin-button--ghost" aria-label="Clear selection" onClick={clearSelection} />
+            <strong role="status">{selected.size} selected</strong>
+            {fetchAll && pageAll && selected.size < total ? (
+              <button type="button" className="dt__link" onClick={selectMatching}>Select all {total}</button>
+            ) : null}
+          </div>
+          {renderBulk ? renderBulk({ rows: selectedRows, ids: selectedRows.map(rowId), clear: clearSelection, compact: mobile }) : null}
         </div>
       ) : null}
 
@@ -287,6 +456,7 @@ export default function DataTable({
         className="dt__scroll"
         role="grid"
         tabIndex={0}
+        aria-label={searchPlaceholder}
         aria-rowcount={total}
         aria-multiselectable={selectable || undefined}
         aria-activedescendant={active >= 0 ? `${uid}-r${active}` : undefined}
@@ -300,24 +470,24 @@ export default function DataTable({
             <div className="dt__head" role="row" style={{ gridTemplateColumns: template }}>
               {selectable ? (
                 <div className="dt__hcell dt__hcell--check" role="columnheader">
-                  <input ref={headCheckRef} type="checkbox" tabIndex={-1} checked={pageAll} onChange={togglePage} aria-label="Select all rows on this page" />
+                  <Check inputRef={headCheckRef} checked={pageAll} onChange={togglePage} label="Select all rows on this page" />
                 </div>
               ) : null}
-              {visible.map((column) => {
+              {visible.map((column, index) => {
                 const key = column.sortKey === true ? column.key : column.sortKey;
                 const dir = key && sort?.key === key ? sort.dir : null;
                 return (
                   <div
                     key={column.key}
-                    className="dt__hcell"
+                    className={["dt__hcell", index === 0 && "dt__hcell--first"].filter(Boolean).join(" ")}
                     role="columnheader"
                     aria-sort={dir ? (dir === "asc" ? "ascending" : "descending") : undefined}
                     style={{ justifyContent: column.align === "end" ? "flex-end" : "flex-start" }}
                   >
                     {key ? (
-                      <button type="button" tabIndex={-1} className="dt__sort" onClick={() => changeSort(key)}>
+                      <button type="button" className="dt__sort" onClick={() => changeSort(key)}>
                         {column.header}
-                        {dir ? <FontAwesomeIcon icon={dir === "asc" ? faChevronUp : faChevronDown} /> : null}
+                        {dir ? <FontAwesomeIcon icon={dir === "asc" ? faChevronUp : faChevronDown} className="admin-icon" /> : null}
                       </button>
                     ) : (
                       column.header
@@ -330,7 +500,7 @@ export default function DataTable({
 
           {isLoading
             ? Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="dt__skeleton"><span className="skeleton" /></div>
+                <div key={index} className="dt__skeleton"><span className="skeleton" role="status" aria-label="Loading" /></div>
               ))
             : null}
 
@@ -338,40 +508,7 @@ export default function DataTable({
             {virtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
               if (!row) return null;
-              const isSelected = selected.has(rowId(row));
-              return (
-                <div
-                  key={item.key}
-                  ref={virtualizer.measureElement}
-                  data-index={item.index}
-                  id={`${uid}-r${item.index}`}
-                  role="row"
-                  aria-selected={selectable ? isSelected : undefined}
-                  className={["dt__row", item.index === active && "is-active", isSelected && "is-selected", onRowOpen && "is-clickable"].filter(Boolean).join(" ")}
-                  style={{ transform: `translateY(${item.start - scrollMargin}px)`, gridTemplateColumns: mobile ? undefined : template }}
-                  onClick={() => {
-                    setActive(item.index);
-                    onRowOpen?.(row);
-                  }}
-                >
-                  {selectable ? (
-                    <div className="dt__cell dt__cell--check" role="gridcell" onClick={stop}>
-                      <input type="checkbox" tabIndex={-1} checked={isSelected} onChange={() => toggleRow(row)} aria-label="Select row" />
-                    </div>
-                  ) : null}
-                  {visible.map((column) => (
-                    <div
-                      key={column.key}
-                      className="dt__cell"
-                      role="gridcell"
-                      data-label={column.label ?? column.header}
-                      style={{ justifyContent: !mobile && column.align === "end" ? "flex-end" : undefined }}
-                    >
-                      {column.render ? column.render(row) : column.accessor?.(row)}
-                    </div>
-                  ))}
-                </div>
-              );
+              return mobile ? renderCard(row, item) : renderTableRow(row, item);
             })}
           </div>
 
@@ -379,7 +516,7 @@ export default function DataTable({
           {isError ? (
             <div className="dt__state" role="alert">
               <p>{error?.message ?? "Could not load rows"}</p>
-              <Button size="sm" onClick={() => refetch()}>Retry</Button>
+              <Button onClick={() => refetch()}>Retry</Button>
             </div>
           ) : null}
         </div>
@@ -391,9 +528,9 @@ export default function DataTable({
           <select value={pageSize} aria-label="Rows per page" onChange={(event) => { setPageSize(Number(event.target.value)); setPage(0); }}>
             {PAGE_SIZES.map((size) => <option key={size} value={size}>{size} per page</option>)}
           </select>
-          <Button size="sm" icon={faChevronLeft} aria-label="Previous page" disabled={page === 0} onClick={() => setPage((value) => value - 1)} />
-          <span>{page + 1} / {pageCount}</span>
-          <Button size="sm" icon={faChevronRight} aria-label="Next page" disabled={page >= pageCount - 1} onClick={() => setPage((value) => value + 1)} />
+          <Button icon={faChevronLeft} aria-label="Previous page" disabled={page === 0} onClick={() => setPage((value) => value - 1)} />
+          <span className="dt__page">{page + 1} / {pageCount}</span>
+          <Button icon={faChevronRight} aria-label="Next page" disabled={page >= pageCount - 1} onClick={() => setPage((value) => value + 1)} />
         </div>
       </div>
     </section>
