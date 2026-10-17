@@ -78,7 +78,7 @@ export default function BulkDialog({ action, count, options, onClose, onSubmit }
           <fieldset className="field field--group">
             <legend>Channels</legend>
             {CHANNELS.map(([id, label]) => (
-              <label key={id} className="filters__check">
+              <label key={id} className="check">
                 <input
                   type="checkbox"
                   checked={channels.includes(id)}

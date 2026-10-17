@@ -29,8 +29,9 @@ export default function ConfirmDialog({
 
   return (
     <Modal title={title} onClose={busy ? noop : onCancel}>
-      <form className="modal__form" onSubmit={submit}>
-        {summary ? <p className="modal__summary">{summary}</p> : null}
+      <form className="sheet__form" onSubmit={submit}>
+        <div className="sheet__body">
+        {summary ? <p>{summary}</p> : null}
         {children}
         <label className="field">
           Reason (required)
@@ -43,9 +44,10 @@ export default function ConfirmDialog({
           </label>
         ) : null}
         {error ? <p className="modal__error" role="alert">{error}</p> : null}
-        <div className="modal__footer">
+        </div>
+        <div className="sheet__footer">
           <Button onClick={onCancel} disabled={busy}>Cancel</Button>
-          <Button type="submit" variant="primary" className={danger ? "admin-button--danger" : ""} disabled={!ready}>
+          <Button type="submit" variant={danger ? "danger" : "primary"} disabled={!ready}>
             {busy ? "Working" : confirmLabel}
           </Button>
         </div>

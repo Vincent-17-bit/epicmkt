@@ -17,13 +17,13 @@ function ToastItem({ item, onDismiss }) {
   }, [item.id, item.duration, onDismiss]);
 
   return (
-    <div className={`toast toast--${item.tone}`} role={item.tone === "error" ? "alert" : "status"}>
-      {item.tone === "error" ? <FontAwesomeIcon icon={faTriangleExclamation} /> : null}
+    <div className={`toast toast--${item.tone}`} role={item.tone === "error" ? "alert" : undefined}>
+      {item.tone === "error" ? <FontAwesomeIcon icon={faTriangleExclamation} className="admin-icon" /> : null}
       <span className="toast__message">{item.message}</span>
       {item.actionLabel ? (
         <button
           type="button"
-          className="toast__action"
+          className="toast__button toast__action"
           onClick={() => {
             onDismiss(item.id);
             item.onAction?.();
@@ -32,8 +32,8 @@ function ToastItem({ item, onDismiss }) {
           {item.actionLabel}
         </button>
       ) : null}
-      <button type="button" className="toast__close" aria-label="Dismiss" onClick={() => onDismiss(item.id)}>
-        <FontAwesomeIcon icon={faXmark} />
+      <button type="button" className="toast__button" aria-label="Dismiss" onClick={() => onDismiss(item.id)}>
+        <FontAwesomeIcon icon={faXmark} className="admin-icon" />
       </button>
     </div>
   );

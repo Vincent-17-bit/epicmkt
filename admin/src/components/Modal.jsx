@@ -1,58 +1,13 @@
-import { useEffect, useId, useRef } from "react";
-import { createPortal } from "react-dom";
+import { BELOW_MD } from "../lib/breakpoints.js";
+import { useMediaQuery } from "../lib/useMediaQuery.js";
+import Sheet from "./Sheet.jsx";
 
-const FOCUSABLE = 'a[href],button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
-
+/** Centered dialog from md up, bottom sheet on phones. Always above sheets. */
 export default function Modal({ title, onClose, children }) {
-  const ref = useRef(null);
-  const closeRef = useRef(onClose);
-  const titleId = useId();
-  closeRef.current = onClose;
-
-  useEffect(() => {
-    const node = ref.current;
-    const previous = document.activeElement;
-    node.querySelector(FOCUSABLE)?.focus();
-
-    const onKey = (event) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        closeRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = [...node.querySelectorAll(FOCUSABLE)];
-      if (!items.length) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    node.addEventListener("keydown", onKey);
-    return () => {
-      node.removeEventListener("keydown", onKey);
-      previous?.focus?.();
-    };
-  }, []);
-
-  return createPortal(
-    <div
-      className="modal-backdrop"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) closeRef.current();
-      }}
-    >
-      <div ref={ref} className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId} className="modal__title">{title}</h2>
-        {children}
-      </div>
-    </div>,
-    document.body,
+  const phone = useMediaQuery(BELOW_MD);
+  return (
+    <Sheet title={title} onClose={onClose} layer="modal" placement={phone ? "bottom" : "center"}>
+      {children}
+    </Sheet>
   );
 }

@@ -86,10 +86,8 @@
 }
 
 .dt__panel {
-  position: absolute;
-  top: calc(100% + 0.4rem);
-  right: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: var(--admin-z-popover);
   width: 15rem;
   max-height: 20rem;
   overflow: auto;
@@ -389,10 +387,6 @@
     width: 100%;
   }
 
-  .dt__panel {
-    right: auto;
-    left: 0;
-  }
 }
 
 .dt__stack {
