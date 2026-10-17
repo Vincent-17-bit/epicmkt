@@ -75,7 +75,13 @@
 
 .dt__sort-mobile {
   display: flex;
+  flex: 1 1 auto;
   gap: var(--admin-space-2);
+  min-width: 0;
+}
+
+.dt__sort-mobile .dt__select {
+  flex: 1 1 auto;
 }
 
 .dt__pop {
@@ -391,6 +397,8 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--admin-space-2);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .dt__page {

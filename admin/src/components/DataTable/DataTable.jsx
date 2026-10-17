@@ -417,7 +417,7 @@ export default function DataTable({
           {toolbar}
           {mobile && sortable.length ? (
             <div className="dt__sort-mobile">
-              <select value={sort?.key} aria-label="Sort by" onChange={(event) => setSort({ key: event.target.value, dir: sort?.dir ?? "asc" })}>
+              <select className="dt__select" value={sort?.key} aria-label="Sort by" onChange={(event) => setSort({ key: event.target.value, dir: sort?.dir ?? "asc" })}>
                 {sortable.map((column) => (
                   <option key={column.key} value={column.sortKey === true ? column.key : column.sortKey}>{column.label ?? column.header}</option>
                 ))}
@@ -525,7 +525,7 @@ export default function DataTable({
       <div className="dt__foot">
         <span>{total ? `${from}–${to} of ${total}` : "0 results"}</span>
         <div className="dt__pager">
-          <select value={pageSize} aria-label="Rows per page" onChange={(event) => { setPageSize(Number(event.target.value)); setPage(0); }}>
+          <select className="dt__select" value={pageSize} aria-label="Rows per page" onChange={(event) => { setPageSize(Number(event.target.value)); setPage(0); }}>
             {PAGE_SIZES.map((size) => <option key={size} value={size}>{size} per page</option>)}
           </select>
           <Button icon={faChevronLeft} aria-label="Previous page" disabled={page === 0} onClick={() => setPage((value) => value - 1)} />

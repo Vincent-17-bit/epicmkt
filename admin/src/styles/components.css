@@ -14,7 +14,7 @@
   font-size: var(--admin-text-sm);
   font-weight: 600;
   line-height: var(--admin-leading-tight);
-  white-space: nowrap;
+  text-align: center;
   cursor: pointer;
   transition: background var(--admin-dur) ease, border-color var(--admin-dur) ease;
 }
@@ -89,10 +89,6 @@
 
 .admin-button--icon.admin-button--header:hover {
   background: var(--admin-primary-tint-solid);
-}
-
-.admin-button--block {
-  width: 100%;
 }
 
 .admin-button--menu {
@@ -232,7 +228,8 @@
 .field input,
 .field select,
 .field textarea,
-.dt select {
+.dt__select {
+  min-width: 0;
   min-height: var(--admin-tap);
   padding: 0 var(--admin-space-3);
   border: 1px solid var(--admin-input-border);

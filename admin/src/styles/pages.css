@@ -135,6 +135,11 @@
   gap: var(--admin-space-4);
 }
 
+.stack-list span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .stack-list strong {
   font-variant-numeric: tabular-nums;
 }
@@ -198,6 +203,7 @@
 
 .setting-group {
   display: flex;
+  min-width: 0;
   flex-direction: column;
   gap: var(--admin-space-2);
 }
@@ -208,6 +214,8 @@
 }
 
 .setting-group input {
+  width: 100%;
+  min-width: 0;
   min-height: var(--admin-tap);
   padding: 0 var(--admin-space-3);
   border: 1px solid var(--admin-input-border);
