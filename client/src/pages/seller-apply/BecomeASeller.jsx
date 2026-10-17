@@ -22,6 +22,7 @@ import DocumentsStep from "./DocumentsStep.jsx";
 import PlanStep from "./PlanStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
 import SuccessScreen from "./SuccessScreen.jsx";
+import { saveSession } from "./status/sessionStore.js";
 import LeaveDialog from "./LeaveDialog.jsx";
 import PricingEditor from "./PricingEditor.jsx";
 import styles from "./page.module.css";
@@ -206,7 +207,8 @@ export default function BecomeASeller() {
       );
       await clearDraft();
       docs.reset();
-      setDone({ referenceNo: res.referenceNo, email: payload.email });
+      if (res.session) saveSession(res.session);
+      setDone({ referenceNo: res.referenceNo, email: payload.email, remembered: !!res.session });
       setPhase("done");
     } catch (e) {
       setPhase("failed");
@@ -231,7 +233,7 @@ export default function BecomeASeller() {
   if (phase === "done" && done) {
     return (
       <div className={styles.page}>
-        <SuccessScreen referenceNo={done.referenceNo} email={done.email} />
+        <SuccessScreen referenceNo={done.referenceNo} email={done.email} remembered={done.remembered} />
         <div className={styles.spacer} />
       </div>
     );

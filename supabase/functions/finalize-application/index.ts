@@ -1,7 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MIME_BY_KIND, SLOT_LIMITS, requiredSlots } from "../_shared/validate.ts";
 import { pdfIsSafe, sniff } from "../_shared/files.ts";
-import { clientIp, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
+import { clientIp, corsHeaders, escapeHtml, json, randomToken, sendMail, sha256Hex } from "../_shared/http.ts";
+import { REMEMBER_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -84,5 +85,10 @@ Deno.serve(async (req) => {
      <p>Your reference number is <b>${ref}</b>. Keep it safe: you will use it with your phone number to check your application.</p>`,
   );
 
-  return json({ ok: true, referenceNo: app.reference_no });
+  const token = randomToken();
+  const expiresAt = nowPlus(REMEMBER_MINUTES);
+  const sess = await db.from("status_sessions").insert({
+    token_hash: await sha256Hex(token), application_id: app.id, expires_at: expiresAt, remembered: true,
+  });
+  return json({ ok: true, referenceNo: app.reference_no, ...(sess.error ? {} : { session: { token, expiresAt, remembered: true } }) });
 });

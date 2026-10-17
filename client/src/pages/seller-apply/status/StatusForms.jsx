@@ -7,6 +7,7 @@ import form from "../form.module.css";
 import styles from "./status.module.css";
 
 const REF = /^EPM-\d{4}-[A-Z0-9]{6}$/;
+const EXAMPLE = `EPM-${new Date().getFullYear()}-ABC234`;
 
 export function RequestForm({ initial, onSent }) {
   const [ref, setRef] = useState(initial.ref ?? "");
@@ -20,7 +21,7 @@ export function RequestForm({ initial, onSent }) {
     const next = {};
     const cleanRef = ref.trim().toUpperCase();
     const norm = normalizePhone(phone);
-    if (!REF.test(cleanRef)) next.ref = "Enter your reference number, for example EPM-2026-ABC234";
+    if (!REF.test(cleanRef)) next.ref = `Enter your reference number, for example ${EXAMPLE}`;
     if (!norm) next.phone = "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
     setErrors(next);
     setFormError("");
@@ -49,7 +50,7 @@ export function RequestForm({ initial, onSent }) {
       <p className={styles.small}>Enter your reference number and phone number. We will send a code by SMS.</p>
       <div className={form.field}>
         <label htmlFor="status-ref" className={form.label}>Reference number</label>
-        <input id="status-ref" className={form.input} value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" placeholder="EPM-2026-ABC234" aria-invalid={errors.ref ? true : undefined} aria-describedby={errors.ref ? "status-ref-err" : undefined} />
+        <input id="status-ref" className={form.input} value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" placeholder={EXAMPLE} aria-invalid={errors.ref ? true : undefined} aria-describedby={errors.ref ? "status-ref-err" : undefined} />
         <ErrorLine id="status-ref-err" message={errors.ref} />
       </div>
       <div className={form.field}>
@@ -72,6 +73,7 @@ export function CodeForm({ details, onVerified, onBack }) {
   const [locked, setLocked] = useState(false);
   const [wait, setWait] = useState(60);
   const [resent, setResent] = useState("");
+  const [remember, setRemember] = useState(true);
 
   useEffect(() => {
     if (wait <= 0) return undefined;
@@ -85,7 +87,7 @@ export function CodeForm({ details, onVerified, onBack }) {
     if (!/^\d{6}$/.test(code)) return setError("Enter the 6 digit code from your SMS.");
     setBusy(true);
     try {
-      const session = await verifyStatusOtp({ referenceNo: details.ref, phone: details.phone, code });
+      const session = await verifyStatusOtp({ referenceNo: details.ref, phone: details.phone, code, remember });
       onVerified({ ...session, ref: details.ref });
     } catch (err) {
       const key = err?.details?.error ?? err?.message;
@@ -126,6 +128,10 @@ export function CodeForm({ details, onVerified, onBack }) {
         <input id="status-code" className={form.input} inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} disabled={locked} aria-invalid={error ? true : undefined} aria-describedby={error ? "status-code-err" : undefined} />
         <ErrorLine id="status-code-err" message={error} />
       </div>
+      <label className={form.checkRow}>
+        <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+        <span>Remember this device for 30 days</span>
+      </label>
       {resent && <p role="status" className={styles.small}>{resent}</p>}
       <div className={styles.formActions}>
         <Button type="submit" disabled={busy || locked}>

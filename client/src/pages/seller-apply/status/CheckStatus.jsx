@@ -4,29 +4,19 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
 import { usePageTitle } from "../../../hooks/usePageTitle.js";
-import { getApplication } from "../../../api/applications/index.js";
+import { endStatusSession, getApplication } from "../../../api/applications/index.js";
 import Skeleton from "../../../components/Skeleton.jsx";
 import Button from "../../../components/Button.jsx";
 import { CodeForm, RequestForm } from "./StatusForms.jsx";
 import ApplicationView from "./ApplicationView.jsx";
 import AdminSimulator from "./AdminSimulator.jsx";
+import { clearSession, readSession, saveSession } from "./sessionStore.js";
 import styles from "./status.module.css";
-
-const KEY = "epicmkt.status.session";
-
-const read = () => {
-  try {
-    const s = JSON.parse(sessionStorage.getItem(KEY) ?? "null");
-    return s && new Date(s.expiresAt).getTime() > Date.now() ? s : null;
-  } catch {
-    return null;
-  }
-};
 
 export default function CheckStatus() {
   usePageTitle("Check my application");
   const qc = useQueryClient();
-  const [session, setSession] = useState(read);
+  const [session, setSession] = useState(readSession);
   const [details, setDetails] = useState(null);
   const [form, setForm] = useState({});
   const [expired, setExpired] = useState(false);
@@ -42,9 +32,8 @@ export default function CheckStatus() {
   });
 
   const signOut = () => {
-    try {
-      sessionStorage.removeItem(KEY);
-    } catch {}
+    if (session) endStatusSession(session).catch(() => {});
+    clearSession();
     qc.removeQueries({ queryKey: ["status-app"] });
     setSession(null);
     setDetails(null);
@@ -60,16 +49,14 @@ export default function CheckStatus() {
   }, [query.error]);
 
   useEffect(() => {
-    if (!session) return undefined;
+    if (!session || session.remembered) return undefined;
     const ms = new Date(session.expiresAt).getTime() - Date.now();
     const t = setTimeout(onExpired, Math.max(0, ms));
     return () => clearTimeout(t);
   }, [session]);
 
   const verified = (s) => {
-    try {
-      sessionStorage.setItem(KEY, JSON.stringify(s));
-    } catch {}
+    saveSession(s);
     setExpired(false);
     setSession(s);
   };
@@ -113,7 +100,7 @@ export default function CheckStatus() {
       <>
         {expired && (
           <p className={styles.notice} role="status">
-            Your session ended after 30 minutes. Check your application again to continue.
+            Your session has ended. Check your application again to continue.
           </p>
         )}
         <RequestForm initial={form} onSent={(d) => { setForm({ ref: d.ref, phone: d.phone }); setDetails(d); }} />
