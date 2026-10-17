@@ -25,4 +25,6 @@ export const liveAdminApi = {
   },
 };
 
+export const { getAdminCounts, getApplications, getBusinesses, getPayments } = liveAdminApi;
+
 export default liveAdminApi;

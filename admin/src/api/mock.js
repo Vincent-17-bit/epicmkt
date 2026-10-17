@@ -67,3 +67,5 @@ export const mockAdminApi = {
     return mockPayments;
   },
 };
+
+export const { getAdminCounts, getApplications, getBusinesses, getPayments } = mockAdminApi;
