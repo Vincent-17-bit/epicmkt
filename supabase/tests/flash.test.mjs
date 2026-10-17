@@ -409,3 +409,18 @@ test("the job and the view agree on what is live", async () => {
   const viaStatus = (await sql(c, `select id from flash_sales where status in ('scheduled','live') order by id`)).map((r) => r.id);
   assert.deepEqual((await visible()).sort(), viaStatus);
 });
+
+test("the public business and item views show only listed rows of visible businesses", async () => {
+  const shown = await item(ids.bizB, "Shown", 100);
+  const hidden = await item(ids.bizB, "Hidden", 100, { visible: false });
+  const adminHidden = await item(ids.bizB, "Admin hidden", 100, { hidden_by_admin: true });
+  const rows = await tx(c, anon, (k) => sql(k, `select id from public_items where business_id = $1`, [ids.bizB]));
+  assert.deepEqual(rows.map((r) => r.id), [shown]);
+  assert.ok(![hidden, adminHidden].some((id) => rows.some((r) => r.id === id)));
+  const biz = await tx(c, anon, (k) => sql(k, `select slug from public_businesses order by slug`));
+  assert.deepEqual(biz.map((r) => r.slug), ["shop-a", "shop-b"]);
+  await sql(c, `update businesses set status = 'paused' where id = '${ids.bizB}'`);
+  assert.deepEqual((await tx(c, anon, (k) => sql(k, `select slug from public_businesses`))).map((r) => r.slug), ["shop-a"]);
+  assert.equal((await tx(c, anon, (k) => sql(k, `select id from public_items where business_id = $1`, [ids.bizB]))).length, 0);
+  await rejects(c, anon, `select email from public_businesses`, [], /column "email" does not exist/);
+});

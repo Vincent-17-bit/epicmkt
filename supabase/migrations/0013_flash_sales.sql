@@ -414,6 +414,27 @@ where s.status in ('scheduled','live')
 revoke all on public.public_flash_sales from public;
 grant select on public.public_flash_sales to anon, authenticated, service_role;
 
+create or replace view public.public_businesses with (security_barrier = true) as
+select
+  b.id, b.slug, b.name, b.category_id, b.plan_key, b.verification_level, b.tagline, b.description,
+  b.phone, b.whatsapp, b.socials, b.amenities, b.payment_methods, b.delivery_area,
+  b.county, b.town, b.address, b.lat, b.lng, b.logo_path, b.cover_path, b.tags, b.hours, b.created_at
+from public.businesses b
+where public.business_is_visible(b);
+revoke all on public.public_businesses from public;
+grant select on public.public_businesses to anon, authenticated, service_role;
+
+create or replace view public.public_items with (security_barrier = true) as
+select
+  i.id, i.business_id, i.name, i.description, i.section, i.price, i.price_max, i.price_type, i.unit,
+  i.availability, i.sort, i.created_at,
+  coalesce((select jsonb_agg(m.path order by m.sort, m.created_at) from public.item_media m where m.item_id = i.id and m.kind = 'image'), '[]'::jsonb) as image_paths
+from public.items i
+join public.businesses b on b.id = i.business_id
+where public.business_is_visible(b) and i.visible and not i.hidden_by_admin and not i.removed_by_admin;
+revoke all on public.public_items from public;
+grant select on public.public_items to anon, authenticated, service_role;
+
 do $$
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
