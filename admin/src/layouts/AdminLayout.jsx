@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useTheme } from "../lib/theme.js";
 
 const navItems = [
   { label: "Command Center", to: "/admin", end: true, badge: "12" },
@@ -11,16 +12,7 @@ const navItems = [
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem("epicmkt-admin-theme");
-    if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
-
-  useMemo(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("epicmkt-admin-theme", theme);
-  }, [theme]);
+  const { theme, toggle } = useTheme();
 
   return (
     <div className="admin-app">
@@ -87,7 +79,7 @@ export default function AdminLayout() {
               type="button"
               className="admin-theme-toggle"
               aria-label="Toggle theme"
-              onClick={() => setTheme((value) => (value === "light" ? "dark" : "light"))}
+              onClick={toggle}
             >
               {theme === "light" ? "Dark" : "Light"}
             </button>

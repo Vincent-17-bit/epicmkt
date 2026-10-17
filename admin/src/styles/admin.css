@@ -1,32 +1,4 @@
-:root {
-  --admin-bg: #f3f4f6;
-  --admin-surface: #ffffff;
-  --admin-header: #ffffff;
-  --admin-border: #e5e7eb;
-  --admin-text: #111111;
-  --admin-muted: #6b7280;
-  --admin-primary: #38b6ff;
-  --admin-primary-strong: #1ea3f0;
-  --admin-primary-tint: #e6f5ff;
-  --admin-danger: #dc2626;
-  --admin-danger-ink: #ffffff;
-  --admin-shadow: 0 12px 24px rgb(17 17 17 / 0.08);
-}
-
-[data-theme="dark"] {
-  --admin-bg: #0f0f10;
-  --admin-surface: #171717;
-  --admin-header: #171717;
-  --admin-border: #2a2a2a;
-  --admin-text: #f3f4f6;
-  --admin-muted: #9ca3af;
-  --admin-primary: #38b6ff;
-  --admin-primary-strong: #66c7ff;
-  --admin-primary-tint: rgb(56 182 255 / 0.16);
-  --admin-danger: #f87171;
-  --admin-danger-ink: #111111;
-  --admin-shadow: 0 18px 32px rgb(0 0 0 / 0.42);
-}
+@import "./tokens.css";
 
 html, body, #root {
   margin: 0;

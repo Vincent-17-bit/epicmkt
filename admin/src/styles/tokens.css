@@ -1,0 +1,105 @@
+/*
+ * Admin design tokens.
+ *
+ * Breakpoints (media queries cannot read custom properties, so they are
+ * repeated as literals and mirrored in src/lib/breakpoints.js):
+ *   md = 768px   table -> cards, modal -> sheet, popover -> bottom sheet,
+ *                bulk bar -> sticky bottom bar
+ *   lg = 1024px  sidebar is inline (below: drawer), filters are inline
+ *                (below: sheet), global search is a field (below: icon)
+ *
+ * Stacking order, lowest to highest:
+ *   sticky cells < header < bulk bar < popover < drawer scrim < drawer
+ *   < sheet scrim < sheet < modal < toast
+ */
+:root {
+  --admin-z-sticky: 2;
+  --admin-z-header: 20;
+  --admin-z-bulkbar: 30;
+  --admin-z-popover: 40;
+  --admin-z-drawer-scrim: 50;
+  --admin-z-drawer: 55;
+  --admin-z-sheet-scrim: 60;
+  --admin-z-sheet: 65;
+  --admin-z-modal: 70;
+  --admin-z-toast: 80;
+
+  --admin-text-xs: 0.75rem;
+  --admin-text-sm: 0.875rem;
+  --admin-text-md: 1rem;
+  --admin-text-lg: 1.25rem;
+  --admin-text-xl: 1.5rem;
+  --admin-text-2xl: 2rem;
+  --admin-leading-tight: 1.4;
+  --admin-leading-normal: 1.5;
+  --admin-leading-relaxed: 1.6;
+
+  --admin-space-1: 0.25rem;
+  --admin-space-2: 0.5rem;
+  --admin-space-3: 0.75rem;
+  --admin-space-4: 1rem;
+  --admin-space-5: 1.5rem;
+  --admin-space-6: 2rem;
+
+  --admin-radius-sm: 8px;
+  --admin-radius-control: 12px;
+  --admin-radius-card: 12px;
+  --admin-radius-pill: 999px;
+
+  --admin-tap: 2.75rem;
+  --admin-header-h: 4rem;
+  --admin-sidebar-w: 17rem;
+  --admin-sidebar-w-collapsed: 5rem;
+  --admin-safe-top: env(safe-area-inset-top, 0px);
+  --admin-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --admin-safe-left: env(safe-area-inset-left, 0px);
+  --admin-safe-right: env(safe-area-inset-right, 0px);
+  --admin-bulkbar-h: 0px;
+  --admin-dur: 180ms;
+
+  color-scheme: light;
+  --admin-bg: #f3f4f6;
+  --admin-surface: #ffffff;
+  --admin-header: #ffffff;
+  --admin-border: #e5e7eb;
+  --admin-input-border: #6b7280;
+  --admin-text: #111111;
+  --admin-muted: #4b5563;
+  --admin-primary: #38b6ff;
+  --admin-primary-strong: #1ea3f0;
+  --admin-primary-tint: #e6f5ff;
+  --admin-primary-tint-solid: #e6f5ff;
+  --admin-on-primary: #111111;
+  --admin-link: #0369a1;
+  --admin-danger: #b91c1c;
+  --admin-danger-ink: #ffffff;
+  --admin-scrim: rgb(17 17 17 / 0.5);
+  --admin-skeleton-a: #e5e7eb;
+  --admin-skeleton-b: #f3f4f6;
+  --admin-shadow: 0 1px 2px rgb(17 17 17 / 0.06), 0 1px 3px rgb(17 17 17 / 0.1);
+  --admin-shadow-raised: 0 10px 24px rgb(17 17 17 / 0.16);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --admin-bg: #0f0f10;
+  --admin-surface: #171717;
+  --admin-header: #171717;
+  --admin-border: #2a2a2a;
+  --admin-input-border: #8b8f98;
+  --admin-text: #f3f4f6;
+  --admin-muted: #a1a1aa;
+  --admin-primary: #38b6ff;
+  --admin-primary-strong: #66c7ff;
+  --admin-primary-tint: rgb(56 182 255 / 0.16);
+  --admin-primary-tint-solid: #1c303c;
+  --admin-on-primary: #111111;
+  --admin-link: #66c7ff;
+  --admin-danger: #f87171;
+  --admin-danger-ink: #111111;
+  --admin-scrim: rgb(0 0 0 / 0.7);
+  --admin-skeleton-a: #232323;
+  --admin-skeleton-b: #2e2e2e;
+  --admin-shadow: 0 1px 2px rgb(0 0 0 / 0.6);
+  --admin-shadow-raised: 0 12px 28px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(56 182 255 / 0.35);
+}

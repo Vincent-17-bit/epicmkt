@@ -7,6 +7,9 @@ import "@epicmkt/shared/tokens.css";
 import "./styles/admin.css";
 import App from "./App.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
+import { applyTheme, initialTheme } from "./lib/theme.js";
+
+applyTheme(initialTheme());
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -21,7 +24,7 @@ const queryClient = new QueryClient({
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ToastProvider>
           <App />
         </ToastProvider>
