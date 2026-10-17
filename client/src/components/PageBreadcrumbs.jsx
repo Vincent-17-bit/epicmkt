@@ -32,7 +32,7 @@ export default function PageBreadcrumbs() {
   const onCrumbClick = (crumb, index) => {
     logEvent("breadcrumb_click", { level: index, target: crumb.to });
     const keepsPage = crumb.key.startsWith("b-") && trail[trail.length - 1]?.key.startsWith("i-");
-    if (!keepsPage) document.getElementById("main")?.scrollTo(0, 0);
+    if (!keepsPage) window.scrollTo(0, 0);
   };
 
   return <Breadcrumbs trail={trail} loading={status === "loading"} back={back} onCrumbClick={onCrumbClick} onCrumbIntent={prefetch} />;

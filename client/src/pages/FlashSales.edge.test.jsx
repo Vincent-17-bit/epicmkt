@@ -67,13 +67,12 @@ describe("flash and offers breadcrumb edge cases", () => {
     expect(document.querySelectorAll('script[type="application/ld+json"]')).toHaveLength(1);
   });
 
-  it("logs the Home click and resets the main scroll", async () => {
+  it("logs the Home click and resets the page scroll", async () => {
     logEvent.mockClear();
     mount("/flash", <PageBreadcrumbs />);
-    const main = document.getElementById("main");
-    main.scrollTo = vi.fn();
+    const scrollTo = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
     await userEvent.setup().click(screen.getByRole("link", { name: "Home" }));
     expect(logEvent).toHaveBeenCalledWith("breadcrumb_click", { level: 0, target: "/" });
-    expect(main.scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(scrollTo).toHaveBeenCalledWith(0, 0);
   });
 });

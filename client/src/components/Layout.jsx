@@ -12,7 +12,6 @@ import UpdatePrompt from "./UpdatePrompt.jsx";
 import styles from "./Layout.module.css";
 
 export default function Layout() {
-  const mainRef = useRef(null);
   const { pathname, hash, key } = useLocation();
   const navType = useNavigationType();
   const current = useRef({ key, pathname });
@@ -27,10 +26,9 @@ export default function Layout() {
   }, []);
 
   useEffect(() => {
-    const main = mainRef.current;
-    const onScroll = () => saveScroll(current.current.key, current.current.pathname, main.scrollTop);
-    main?.addEventListener("scroll", onScroll, { passive: true });
-    return () => main?.removeEventListener("scroll", onScroll);
+    const onScroll = () => saveScroll(current.current.key, current.current.pathname, window.scrollY);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   useEffect(() => {
@@ -39,9 +37,9 @@ export default function Layout() {
       return undefined;
     }
     const top = navType === "POP" ? savedScroll(key) ?? 0 : 0;
-    mainRef.current?.scrollTo(0, top);
+    window.scrollTo(0, top);
     if (!top) return undefined;
-    const frame = requestAnimationFrame(() => mainRef.current?.scrollTo(0, top));
+    const frame = requestAnimationFrame(() => window.scrollTo(0, top));
     return () => cancelAnimationFrame(frame);
   }, [pathname, hash, key]);
 
@@ -60,7 +58,7 @@ export default function Layout() {
       <Header />
       <div className={styles.content} {...behind}>
         <OfflineBanner />
-        <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
+        <main id="main" tabIndex={-1} className={styles.main}>
           <div className={styles.page}>
             <Outlet />
           </div>
