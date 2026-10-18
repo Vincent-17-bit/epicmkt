@@ -1,18 +1,34 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthContext.jsx";
+import { useAdminCounts, useLiveRefresh } from "../hooks/useAdminCounts.js";
+import { badgeText, navBadges } from "../lib/counts.js";
 import { initialsOf } from "../lib/initials.js";
 
+// `hint` is what the badge number means, for the tooltip and screen readers.
 const navItems = [
-  { label: "Command Center", to: "/admin", end: true, badge: "12" },
-  { label: "Applications", to: "/admin/applications", badge: "7" },
-  { label: "Businesses", to: "/admin/businesses", badge: "64" },
-  { label: "Payments", to: "/admin/payments", badge: "3" },
+  { label: "Command Center", to: "/admin", end: true, hint: "items need your attention" },
+  { label: "Applications", to: "/admin/applications", hint: "applications waiting for a decision" },
+  { label: "Businesses", to: "/admin/businesses", hint: "sellers expiring within 7 days or in grace" },
+  { label: "Payments", to: "/admin/payments", hint: "payments to confirm" },
   { label: "Settings", to: "/admin/settings" },
 ];
 
+// The page the current URL belongs to ("/admin/applications/123" is Applications).
+function currentPage(pathname) {
+  const match = navItems
+    .filter((item) => (item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)))
+    .sort((a, b) => b.to.length - a.to.length)[0];
+  return match?.label ?? "Admin";
+}
+
 export default function AdminLayout() {
   const { admin, demo, signOut } = useAuth();
+  const { pathname } = useLocation();
+  const pageTitle = currentPage(pathname);
+  const counts = useAdminCounts();
+  const badges = navBadges(counts.data);
+  useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => {
@@ -43,17 +59,25 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-sidebar__nav" aria-label="Admin navigation">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) => `admin-nav-item ${isActive ? "is-active" : ""}`}
-            >
-              <span className="admin-nav-item__label">{item.label}</span>
-              {item.badge ? <span className="admin-nav-item__badge">{item.badge}</span> : null}
-            </NavLink>
-          ))}
+          {navItems.map((item) => {
+            const text = badgeText(badges[item.to]);
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `admin-nav-item ${isActive ? "is-active" : ""}`}
+              >
+                <span className="admin-nav-item__label">{item.label}</span>
+                {text ? (
+                  <span className="admin-nav-item__badge" title={`${badges[item.to]} ${item.hint}`}>
+                    {text}
+                    <span className="sr-only"> {item.hint}</span>
+                  </span>
+                ) : null}
+              </NavLink>
+            );
+          })}
         </nav>
 
         <div className="admin-sidebar__footer">
@@ -74,8 +98,8 @@ export default function AdminLayout() {
               ☰
             </button>
             <div>
-              <div className="admin-breadcrumb">Overview / Command Center</div>
-              <h1 className="admin-page-title">Command Center</h1>
+              <div className="admin-breadcrumb">Overview / {pageTitle}</div>
+              <h1 className="admin-page-title">{pageTitle}</h1>
             </div>
           </div>
 

@@ -26,9 +26,10 @@
     "test:seller-backend": "npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn && npm run test:fn:db",
     "test:seller-ui": "npm test -w seller",
     "test:client": "npm test -w client",
-    "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client",
+    "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client && npm run test:admin-ui",
     "seed:admin": "node --env-file=scripts/.env scripts/seed.ts",
-    "test:admin-backend": "npm run test:fn && npm run test:db"
+    "test:admin-backend": "npm run test:fn && npm run test:db",
+    "test:admin-ui": "npm test -w admin"
   },
   "devDependencies": {
     "pg": "^8.23.1"

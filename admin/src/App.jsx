@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import CommandCenterPage from "./pages/CommandCenterPage.jsx";
 import ApplicationsPage from "./pages/ApplicationsPage.jsx";
+import ApplicationDetailPage from "./pages/applications/ApplicationDetailPage.jsx";
 import BusinessesPage from "./pages/BusinessesPage.jsx";
 import PaymentsPage from "./pages/PaymentsPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<CommandCenterPage />} />
           <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="applications/:id" element={<ApplicationDetailPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="settings" element={<SettingsPage />} />

@@ -1,20 +1,11 @@
 import { businessFilterOptions, countBusinessTabs, queryBusinesses } from "./mockBusinesses.js";
+import { mockApplicationCounts } from "./mockApplications.js";
+import { normalizeCounts } from "../lib/counts.js";
 
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
-
-const mockCounts = {
-  brief: "4 applications are waiting, 2 payments need confirming and 6 sellers expire this week",
-  liveBusinesses: 142,
-  applicationsWaiting: 14,
-  unconfirmedPayments: 3,
-  expiringSoon: 6,
-};
-
-const mockApplications = [
-  { reference: "APP-2049", businessName: "Mara Fresh Mart", ownerName: "Alice Njeri", status: "Submitted", submittedAt: "Today, 09:12" },
-  { reference: "APP-2050", businessName: "Umoja Hardware", ownerName: "John Ouma", status: "Under review", submittedAt: "Today, 11:40" },
-  { reference: "APP-2051", businessName: "Green Valley Foods", ownerName: "Mary Wambui", status: "Needs changes", submittedAt: "Yesterday" },
-];
+export {
+  decideApplication, getApplication, getApplicationDocumentUrl, listApplications, openApplication,
+} from "./mockApplications.js";
 
 const mockBusinesses = [
   { name: "Mara Fresh Mart", town: "Nairobi", plan: "Premium", status: "Live", paidUntil: "2026-11-18" },
@@ -53,17 +44,27 @@ export async function getBusinessFilterOptions() {
   return businessFilterOptions();
 }
 
-export const mockAdminApi = {
-  async getAdminCounts() {
-    return mockCounts;
-  },
-  async getApplications() {
-    return mockApplications;
-  },
-  async getBusinesses() {
-    return mockBusinesses;
-  },
-  async getPayments() {
-    return mockPayments;
-  },
-};
+// Same shape the live API returns: the admin_counts() fields, run through normalizeCounts. The application
+// numbers come from the mock store, so they change when a demo application is approved or rejected.
+export async function getAdminCounts() {
+  await latency(80);
+  const { over24h, ...apps } = mockApplicationCounts();
+  return normalizeCounts(
+    {
+      ...apps,
+      live: 142, expiring_7d: 6, in_grace: 2, expired: 9, suspended: 1,
+      open_flags: 9, open_reports: 4, unconfirmed_payments: 3, failed_messages: 3, pending_changes: 6,
+    },
+    { applicationsOver24h: over24h },
+  );
+}
+
+export async function getBusinesses() {
+  await latency(80);
+  return copy(mockBusinesses);
+}
+
+export async function getPayments() {
+  await latency(80);
+  return copy(mockPayments);
+}

@@ -24,6 +24,21 @@ export function compactCountdown(days) {
   return `${-days}d over`;
 }
 
+// "just now", "5m ago", "3h ago", "2d ago", then the calendar date for anything older than two weeks.
+export function timeAgo(value, now = new Date()) {
+  if (!value) return "";
+  const then = new Date(value).getTime();
+  if (!Number.isFinite(then)) return "";
+  const minutes = Math.floor((now.getTime() - then) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 14) return `${days}d ago`;
+  return dateFmt.format(new Date(then));
+}
+
 export function formatDate(value) {
   return value ? dateFmt.format(new Date(value)) : "";
 }
