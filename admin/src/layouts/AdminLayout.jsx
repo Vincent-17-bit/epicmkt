@@ -11,6 +11,7 @@ const navItems = [
   { label: "Applications", to: "/admin/applications", hint: "applications waiting for a decision" },
   { label: "Businesses", to: "/admin/businesses", hint: "sellers expiring within 7 days or in grace" },
   { label: "Payments", to: "/admin/payments", hint: "payments to confirm" },
+  { label: "Flash sales", to: "/admin/flash-sales" },
   { label: "Settings", to: "/admin/settings" },
 ];
 

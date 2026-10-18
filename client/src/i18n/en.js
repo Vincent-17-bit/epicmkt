@@ -78,6 +78,7 @@ export default {
   "flash.atStore": "Flash sales at this store",
   "flash.loadFailed": "We could not load flash sales.",
   "flash.retry": "Try again",
+  "flash.offline": "Offline: may be out of date",
   "flash.empty": "No flash sales right now. Check back soon.",
   "flash.scrollLeft": "Scroll flash sales left",
   "flash.scrollRight": "Scroll flash sales right",

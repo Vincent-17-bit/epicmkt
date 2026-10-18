@@ -97,4 +97,4 @@ export async function submitApplication({ payload, files, startedAt, hp }, onFil
   return { referenceNo: ref };
 }
 
-export { requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication, submitPaymentCode } from './mockStatus';
+export { requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication } from './mockStatus';

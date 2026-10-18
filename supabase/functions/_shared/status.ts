@@ -172,7 +172,7 @@ export async function viewApplication(db: any, a: any) {
     flags: (flags ?? []).map(flagView),
     events: (events ?? []).map((e: any) => ({ type: e.type, at: e.created_at })),
     payment: showPay
-      ? { method: m?.type ?? null, number: m?.number ?? null, account: m?.account ?? null, name: m?.name ?? null, amount: a.price_at_submission, code: a.payment_code }
+      ? { method: m?.type ?? null, number: m?.number ?? null, account: m?.type === "paybill" ? a.business_name : null, name: m?.name ?? null, amount: a.price_at_submission, code: a.payment_code }
       : null,
   };
 }

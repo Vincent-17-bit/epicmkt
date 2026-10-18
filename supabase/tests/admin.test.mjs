@@ -102,7 +102,7 @@ test("applications are visible to owner and reviewer only; payments are readable
 
   for (const role of ["owner", "reviewer", "finance", "support"]) assert.ok((await count(as(role), "payments")) >= 0, role);
   const pay = (who) => tx(c, who, (k) => k.query(`insert into payments (business_id, amount_kes, kind, status, mpesa_code, plan_key, source, submitted_at)
-        values ('${ids.bizA}', 500, 'renewal', 'submitted', 'ZZ${Math.floor(Math.random() * 1e8)}', 'standard', 'seller', now())`));
+        values ('${ids.bizA}', 500, 'renewal', 'submitted', 'ZZ${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}', 'standard', 'seller', now())`));
   await pay(as("finance"));
   await pay(as("owner"));
   await rejects(c, as("support"), `insert into payments (business_id, amount_kes, kind, status, mpesa_code, plan_key, source, submitted_at) values ('${ids.bizA}', 500, 'renewal', 'submitted', 'SUPPORT001', 'standard', 'seller', now())`, [], /row-level security|permission denied/);

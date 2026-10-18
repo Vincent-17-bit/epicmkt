@@ -131,3 +131,26 @@ supabase functions deploy admin-reset-seller-password --no-verify-jwt
 - All browser writes must go through edge functions and RPCs.
 - Admin and audit access are enforced using `public.is_admin()` and `public.has_role()`.
 - Realtime is enabled for the admin dashboard tables.
+
+## Automatic M-Pesa payments (Paybill)
+
+Sellers pay the EpicMKT Paybill and type their **exact business name as the account number**. Nobody pastes an M-Pesa code.
+Safaricom (Daraja C2B) tells the backend about each payment, and the backend records it.
+
+1. Set the Paybill business number once: edit and run `supabase/set-mpesa.sql` in the SQL editor (until then approving fails with `mpesa_not_configured`).
+2. Set the function secrets (see `.env.example`): `MPESA_CALLBACK_SECRET`, plus `supabase secrets set --env-file supabase/.env`, then deploy `pay-callback`.
+3. Register the callback URLs with Safaricom once per environment: `node --env-file=scripts/.env scripts/register-mpesa-c2b.mjs`.
+   The URLs are `<SUPABASE_URL>/functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/confirmation` and `/validation`.
+   (Safaricom rejects URLs containing "mpesa" or "safaricom", so the function is called `pay-callback`.)
+
+What happens on each payment (`mpesa_record_c2b` in migration `0012`):
+
+| Outcome | When | Result |
+|---|---|---|
+| `matched` | account equals one approved application's business name (case and extra spaces ignored) and the amount covers the price | transaction code saved, application moves to `payment_confirming`, admin is notified |
+| `amount_short` | account matches, but less than the price was paid | application stays `approved`, admin sees it |
+| `extra` | the application already has a payment waiting | admin sees it |
+| `unmatched` | no single business has that name | admin sees it |
+
+Every transaction is stored once in `mpesa_transactions` (Safaricom retries are ignored) and listed for admins in the `admin_payment_queue` view.
+An admin still presses **Confirm** on the Payments page; that creates the seller login exactly as before.

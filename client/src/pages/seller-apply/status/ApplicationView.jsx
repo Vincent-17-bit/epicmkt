@@ -144,7 +144,7 @@ export default function ApplicationView({ app, session, onRefresh, onExpired, on
       )}
 
       {(app.status === "approved" || app.status === "payment_confirming") && (
-        <PaymentCard app={app} session={session} onDone={onRefresh} onExpired={onExpired} />
+        <PaymentCard app={app} onDone={onRefresh} />
       )}
 
       {editable && open.length > 0 && (

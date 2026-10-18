@@ -113,20 +113,25 @@ describe("check my application", () => {
     expect(screen.getByLabelText("Full names")).toHaveAttribute("aria-invalid", "true");
   }, 20000);
 
-  it("shows the payment card, then payment under confirmation", async () => {
+  it("shows Paybill steps with the business name as the account, and asks for no code", async () => {
     const user = userEvent.setup();
     mount();
     await signIn(user, "EPM-2026-DEMO05");
     expect(await screen.findByRole("heading", { name: "Approved, awaiting payment" })).toBeInTheDocument();
     expect(screen.getByText("123456")).toBeInTheDocument();
     expect(screen.getByText("KES 500")).toBeInTheDocument();
-    await user.type(screen.getByLabelText("M-Pesa transaction code"), "short");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    expect(await screen.findByText(/10 character M-Pesa/)).toBeInTheDocument();
-    await user.clear(screen.getByLabelText("M-Pesa transaction code"));
-    await user.type(screen.getByLabelText("M-Pesa transaction code"), "QWE4RTY5UI");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    expect((await screen.findAllByRole("heading", { name: /Payment under confirmation/ })).length).toBe(2);
+    expect(screen.getByText(/Account number:/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy account number" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("M-Pesa transaction code")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "I have paid" })).not.toBeInTheDocument();
+  }, 30000);
+
+  it("shows payment received once the backend has recorded the payment", async () => {
+    const user = userEvent.setup();
+    mount();
+    await signIn(user, "EPM-2026-DEMO06");
+    expect(await screen.findByRole("heading", { name: /Payment received/ })).toBeInTheDocument();
+    expect(screen.getByText("QWE4RTY5UI")).toBeInTheDocument();
   }, 30000);
 
   it("shows the rejection reason and the activated message", async () => {

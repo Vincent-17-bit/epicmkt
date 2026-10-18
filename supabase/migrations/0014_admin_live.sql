@@ -1,5 +1,5 @@
--- Admin live data (phase B1): the Businesses table and the Command Center "Live activity" feed.
--- Additive over 0001-0011 and safe to re-run. Every function checks the caller itself (is_admin / has_role),
+-- Admin live data (phase B1, migration 0014): the Businesses table and the Command Center "Live activity" feed.
+-- Additive over 0001-0013 and safe to re-run. Every function checks the caller itself (is_admin / has_role),
 -- so nothing here is reachable by a seller or by anon.
 --
 --   admin_businesses_v            one row per business with the derived fields the table needs (state, days left,

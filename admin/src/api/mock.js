@@ -3,6 +3,8 @@ import { mockApplicationCounts } from "./mockApplications.js";
 import { normalizeCounts } from "../lib/counts.js";
 
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
+export { endFlashSale, listFlashSales } from "./mockFlash.js";
+
 export {
   decideApplication, getApplication, getApplicationDocumentUrl, listApplications, openApplication,
 } from "./mockApplications.js";
@@ -13,10 +15,11 @@ const mockBusinesses = [
   { name: "Green Valley Foods", town: "Mombasa", plan: "Premium", status: "Expiring soon", paidUntil: "2026-10-15" },
 ];
 
-const mockPayments = [
-  { receipt: "RCP-1024", businessName: "Mara Fresh Mart", amount: 3200, status: "Confirmed", mpesaCode: "MPESA-4411" },
-  { receipt: "RCP-1025", businessName: "Umoja Hardware", amount: 2500, status: "Pending", mpesaCode: "MPESA-4412" },
-  { receipt: "RCP-1026", businessName: "Green Valley Foods", amount: 4500, status: "Rejected", mpesaCode: "MPESA-4413" },
+let mockPayments = [
+  { key: "t1", receipt: null, reference: "EPM-2026-ABC234", businessName: "Mara Fresh Mart", account: "Mara Fresh Mart", amount: 3200, expected: 3200, status: "awaiting_confirmation", mpesaCode: "SGH4K9L2QW", phone: "2547****678", payerName: "JOHN DOE", paybill: "247247", at: "2026-10-18T08:40:00Z", applicationId: "a1" },
+  { key: "t2", receipt: null, reference: "EPM-2026-QRS552", businessName: "Green Valley Foods", account: "Green Valley Foods", amount: 2000, expected: 4500, status: "amount_short", mpesaCode: "SGF9Z8Y7X6", phone: "2547****912", payerName: "MARY W", paybill: "247247", at: "2026-10-18T07:15:00Z", applicationId: "a2" },
+  { key: "t3", receipt: null, reference: null, businessName: "No matching business", account: "Umoja Hardwar", amount: 2500, expected: null, status: "unmatched", mpesaCode: "SGG1A2B3C4", phone: "2547****111", payerName: "PETER K", paybill: "247247", at: "2026-10-17T14:05:00Z", applicationId: null },
+  { key: "t4", receipt: "EPM-R-2026-000041", reference: "EPM-2026-XYZ981", businessName: "Pwani Pastries", account: "Pwani Pastries", amount: 2500, expected: 2500, status: "confirmed", mpesaCode: "SGE5D6C7B8", phone: "2547****345", payerName: "AMINA S", paybill: "247247", at: "2026-10-16T10:20:00Z", applicationId: "a4" },
 ];
 
 const latency = (ms = 160) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -78,4 +81,11 @@ export async function getBusinesses() {
 export async function getPayments() {
   await latency(80);
   return copy(mockPayments);
+}
+
+// Demo only: marks the row confirmed, the way the real function would after creating the seller login.
+export async function confirmPayment({ mpesaCode }) {
+  await latency();
+  mockPayments = mockPayments.map((row) => (row.mpesaCode === mpesaCode ? { ...row, status: "confirmed", receipt: "EPM-R-2026-000099" } : row));
+  return { ok: true, kind: "activation", sellerId: "ES100999", temporaryPassword: "demo-password", smsSent: true };
 }

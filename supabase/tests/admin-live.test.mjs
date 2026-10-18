@@ -214,6 +214,6 @@ test("the migration can be re-run", async () => {
   const { readFileSync } = await import("node:fs");
   const { join, dirname } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
-  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0012_admin_live.sql");
+  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0014_admin_live.sql");
   await c.query(readFileSync(file, "utf8"));
 });

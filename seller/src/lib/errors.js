@@ -30,7 +30,33 @@ const MESSAGES = {
   intervals_overlap: "Intervals cannot overlap or touch. Merge them into one.",
   invalid_note: "Keep the note to 120 characters of plain text.",
   limit_reached: "You have reached the limit of 60 upcoming exceptions. Delete one you no longer need, then try again.",
+  invalid_discount: "Enter a valid discount: 1 to 99 percent, or an amount above 0.",
+  discount_too_large: "That discount would make the price zero. Use a smaller discount.",
+  sale_price_not_lower: "The sale price must be lower than the regular price.",
+  item_not_discountable: "Flash sales need an item with a fixed or starting price.",
+  item_unavailable: "This item is hidden or out of stock, so it cannot go on sale.",
+  item_not_found: "Choose one of your items.",
+  item_has_sale: "This item already has a flash sale in that time.",
+  invalid_window: "Choose an end time after the start.",
+  ends_in_past: "Choose an end time in the future.",
+  duration_too_long: "A flash sale can run for 7 days at most.",
+  invalid_headline: "Keep the headline between 3 and 80 characters of plain text.",
+  invalid_after_end: "Choose what happens to the item when the sale ends.",
+  flash_closed: "This sale has already ended.",
+  flash_locked: "A sale that has started can only change its headline and note.",
+  business_not_active: "Your listing is not active, so you cannot start a flash sale.",
+  not_found: "We could not find that flash sale.",
   ...PROOF_ERRORS,
 };
 
-export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => MESSAGES[e?.code] ?? fallback;
+const LIMITS = {
+  flash_concurrent: "You have reached the number of flash sales you can run at the same time on your plan.",
+  flash_per_month: "You have used all the flash sales your plan allows this month.",
+};
+export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => {
+  if (e?.code === "limit_reached") {
+    const key = String(e.message ?? "").split(":")[1];
+    if (LIMITS[key]) return LIMITS[key];
+  }
+  return MESSAGES[e?.code] ?? fallback;
+};

@@ -27,9 +27,10 @@ const FROM: Record<Action, string[]> = {
 
 type Mpesa = { type?: string; number?: string; name?: string; account?: string };
 
-const payTo = (m: Mpesa, ref: string) =>
+// Paybill: the account number is the seller's exact business name, so every payment is traceable to them.
+const payTo = (m: Mpesa, businessName: string) =>
   m.type === "paybill"
-    ? `Paybill ${m.number}, Account ${m.account || ref}`
+    ? `Paybill ${m.number}, Account ${businessName}`
     : `Till ${m.number}${m.name ? ` (${m.name})` : ""}`;
 
 const bad = (error: string) => json({ error }, 400);
@@ -86,7 +87,7 @@ export const adminDecideApplication = (d: AdminDeps) =>
         patch.plan_snapshot = { ...(app.plan_snapshot ?? {}), priceOverride: { amount: priceOverride, reason, by: c.admin.user.id, at: now } };
       }
       subject = `Your EpicMKT application ${ref} is approved`;
-      text = `EpicMKT: ${app.business_name} is approved. Pay KES ${amount} to M-Pesa ${payTo(mpesa, ref)}, then enter the M-Pesa code on your status page.`;
+      text = `EpicMKT: ${app.business_name} is approved. Pay KES ${amount} to M-Pesa ${payTo(mpesa, app.business_name)}, then enter the M-Pesa code on your status page.`;
     }
 
     if (action === "set_verification") {

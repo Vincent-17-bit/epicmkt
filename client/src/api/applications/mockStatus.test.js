@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication, submitPaymentCode,
+  requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication,
 } from './mockStatus';
 import { simSeed, simFlag, simSetStatus } from './mockStatus';
 import { findApplication } from './mockStore';
@@ -69,7 +69,6 @@ describe('status session', () => {
     await expect(getApplication({ token: 'nope' })).rejects.toThrow('session_expired');
     await expect(getApplication(undefined)).rejects.toThrow('session_expired');
     await expect(resubmitApplication({ token: 'nope' })).rejects.toThrow('session_expired');
-    await expect(submitPaymentCode({ token: 'nope' }, 'ABCDE12345')).rejects.toThrow('session_expired');
   });
 
   it('returns the application with a valid token and expires after 30 minutes', async () => {
@@ -84,7 +83,7 @@ describe('status session', () => {
   });
 
   it('shows payment details only when approved or confirming', async () => {
-    expect((await getApplication(await login('EPM-2026-DEMO05'))).payment).toMatchObject({ method: 'till', amount: 500 });
+    expect((await getApplication(await login('EPM-2026-DEMO05'))).payment).toMatchObject({ method: 'paybill', amount: 500 });
     expect((await getApplication(await login('EPM-2026-DEMO07'))).payment).toBeNull();
   });
 });
@@ -125,14 +124,17 @@ describe('corrections', () => {
   });
 });
 
-describe('payment code', () => {
-  it('accepts a 10 character code once when approved', async () => {
-    const session = await login('EPM-2026-DEMO05');
-    await expect(submitPaymentCode(session, 'short')).rejects.toThrow('invalid_code_format');
-    await expect(submitPaymentCode(session, 'qwe4rty5ui')).resolves.toMatchObject({ status: 'payment_confirming' });
-    const view = await getApplication(session);
+describe('payment details', () => {
+  it('shows the Paybill, the business name as the account, and the price once approved', async () => {
+    const view = await getApplication(await login('EPM-2026-DEMO05'));
+    expect(view.status).toBe('approved');
+    expect(view.payment).toMatchObject({ method: 'paybill', amount: 500 });
+    expect(view.payment.account).toBe(view.business.name);
+  });
+
+  it('shows the received code once the payment has arrived', async () => {
+    const view = await getApplication(await login('EPM-2026-DEMO06'));
     expect(view.status).toBe('payment_confirming');
     expect(view.payment.code).toBe('QWE4RTY5UI');
-    await expect(submitPaymentCode(session, 'QWE4RTY5UI')).rejects.toThrow('not_editable');
   });
 });

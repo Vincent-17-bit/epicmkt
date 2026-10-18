@@ -9,6 +9,5 @@ export const verifyStatusOtp = async (...args) => (await adapter()).verifyStatus
 export const getApplication = async (...args) => (await adapter()).getApplication(...args);
 export const saveCorrections = async (...args) => (await adapter()).saveCorrections(...args);
 export const resubmitApplication = async (...args) => (await adapter()).resubmitApplication(...args);
-export const submitPaymentCode = async (...args) => (await adapter()).submitPaymentCode(...args);
 
 export const devTools = import.meta.env.DEV && !import.meta.env.VITE_SUPABASE_URL ? () => import('./devTools') : null;

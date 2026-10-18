@@ -33,4 +33,11 @@ export const SELLER_API = [
   "listExceptions",
   "saveException",
   "deleteException",
+  "getServerTime",
+  "listItems",
+  "listFlashSales",
+  "getFlashQuota",
+  "createFlashSale",
+  "updateFlashSale",
+  "endFlashSale",
 ];

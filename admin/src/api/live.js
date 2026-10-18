@@ -8,11 +8,14 @@ const notConfigured = () => {
 };
 
 // Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
-// audited RPCs (suspend, extend, tag, message...) and the audit viewer. Everything else on the Businesses page,
-// the Payments page and the Command Center is live below.
+// audited RPCs (suspend, extend, tag, message...), the audit viewer, and the flash sales list. Everything else on
+// the Businesses page, the Payments page and the Command Center is live below.
 export const bulkBusinessAction = notConfigured;
 export const undoBulkBusinessAction = notConfigured;
 export const listAuditEntries = notConfigured;
+export const listFlashSales = notConfigured;
+export const endFlashSale = notConfigured;
+export const getBusinesses = notConfigured;
 
 const client = () => {
   if (!supabase) throw new ApiError("unauthorized", "Supabase is not configured.");
@@ -40,7 +43,7 @@ export async function getAdminCounts() {
   return normalizeCounts(data, { applicationsOver24h: overdue.error ? null : overdue.count });
 }
 
-// ---- Businesses: server-side paging, filters, search and sort (migration 0012_admin_live.sql) -----------------------
+// ---- Businesses: server-side paging, filters, search and sort (migration 0014_admin_live.sql) -----------------------
 
 const MAX_EXPORT = 5000;
 
@@ -73,26 +76,6 @@ export async function getBusinessTabCounts({ extra } = {}) {
 export async function getBusinessFilterOptions() {
   const { data } = check(await client().rpc("admin_business_filter_options"));
   return { categories: [], counties: [], plans: [], agents: [], ...(data ?? {}) };
-}
-
-// ---- Payments -------------------------------------------------------------------------------------------------
-
-const titleCase = (value) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : "");
-
-export async function getPayments() {
-  const { data } = check(await client()
-    .from("payments")
-    .select("id, receipt_no, amount_kes, status, mpesa_code, business:businesses(name), application:applications(business_name)")
-    .order("created_at", { ascending: false })
-    .limit(200));
-  return (data ?? []).map((r) => ({
-    id: r.id,
-    receipt: r.receipt_no ?? "",
-    businessName: r.business?.name ?? r.application?.business_name ?? "",
-    amount: r.amount_kes,
-    status: titleCase(r.status),
-    mpesaCode: r.mpesa_code ?? "",
-  }));
 }
 
 // ---- Live activity: the Command Center feed --------------------------------------------------------------------
@@ -280,4 +263,53 @@ export async function getApplicationDocumentUrl({ applicationId, slotKey, path }
   const { data, error } = await db.storage.from("applications").createSignedUrl(path, 60);
   if (error || !data?.signedUrl) throw toApiError(error ?? new Error("no signed url"));
   return { url: data.signedUrl, expiresIn: 60 };
+}
+
+// ---- Payments ------------------------------------------------------------------------------------------------
+// Payments arrive by themselves: Safaricom tells the pay-callback function, which records the M-Pesa code.
+// This reads the admin_payment_queue view (received transactions plus payments recorded by hand).
+
+export async function getPayments() {
+  const { data } = check(
+    await client().from("admin_payment_queue").select("*").order("at", { ascending: false }).limit(200),
+  );
+  return (data ?? []).map((r) => ({
+    key: r.row_key,
+    receipt: r.receipt_no,
+    reference: r.reference,
+    businessName: r.business_name,
+    account: r.account,
+    amount: Number(r.amount_kes),
+    expected: r.expected_kes == null ? null : Number(r.expected_kes),
+    status: r.status,
+    mpesaCode: r.mpesa_code,
+    phone: r.phone,
+    payerName: r.payer_name,
+    paybill: r.paybill_number,
+    at: r.at,
+    applicationId: r.application_id,
+    businessId: r.business_id,
+  }));
+}
+
+const CONFIRM_ERRORS = {
+  duplicate_mpesa_code: "This M-Pesa code is already recorded on another payment.",
+  invalid_status: "This application is no longer waiting for payment.",
+  forbidden: "Your role cannot confirm payments.",
+  not_found: "That application could not be found.",
+  rate_limited: "Too many tries. Wait a moment and try again.",
+};
+
+// Same function the rest of the admin uses: it creates the seller login and sends it by SMS and e-mail.
+// When the amount differs from the price it answers with warnings; that comes back as a normal result with
+// `requiresAcknowledgement: true` so the page can ask, then call again with acknowledgeWarnings.
+export async function confirmPayment({ applicationId, mpesaCode, amount, acknowledgeWarnings = false }) {
+  try {
+    return await callFunction("admin-confirm-payment", {
+      applicationId, mpesaCode, amount: Math.round(amount), months: 1, action: "confirm", acknowledgeWarnings,
+    });
+  } catch (e) {
+    if (e?.details?.requiresAcknowledgement) return e.details;
+    throw new Error(CONFIRM_ERRORS[e?.code] ?? "Could not confirm the payment. Try again.");
+  }
 }
