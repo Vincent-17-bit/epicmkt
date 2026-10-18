@@ -373,7 +373,7 @@ export const __mock = {
     p.receiptNo = `EPM-R-2026-${String(900 + ++bill.seq).padStart(6, "0")}`;
     emit("payments", "UPDATE", p);
     emit("businesses", "UPDATE", bill.business);
-    post("payment", "Payment received", `We received KES ${p.amount}. Receipt ${p.receiptNo}.`, { payment_id: p.id }, `payment:${p.id}`);
+    post("payment", "Payment received", `We received KSh ${p.amount}. Receipt ${p.receiptNo}.`, { payment_id: p.id }, `payment:${p.id}`);
     return p;
   },
   rejectPayment(id, reason = null) {

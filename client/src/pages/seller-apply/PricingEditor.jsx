@@ -52,7 +52,7 @@ export default function PricingEditor({ category }) {
             <option value="standard">Standard</option>
             <option value="premium">Premium</option>
           </select>
-          {field("price", "Price (KES)", "number")}
+          {field("price", "Price (KSh)", "number")}
           {field("items", "Item limit", "number")}
           {field("b0", "Benefit 1")}
           {field("b1", "Benefit 2")}

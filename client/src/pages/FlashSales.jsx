@@ -12,7 +12,6 @@ import Container from "../components/Container.jsx";
 import FlashSaleCard from "../components/FlashSaleCard.jsx";
 import FlashSkeleton from "../components/FlashSkeleton.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import CardGrid from "../components/CardGrid.jsx";
 import styles from "./FlashSales.module.css";
 
 const PAGE = 12;
@@ -163,13 +162,13 @@ export default function FlashSales() {
           )}
 
           {query.isPending ? (
-            <CardGrid aria-busy="true">
+            <ul className={styles.grid} aria-busy="true">
               {Array.from({ length: 8 }, (_, i) => (
                 <li key={i}>
                   <FlashSkeleton />
                 </li>
               ))}
-            </CardGrid>
+            </ul>
           ) : query.isError ? (
             <div className={styles.message} role="alert">
               <p>{t("flash.loadFailed")}</p>
@@ -186,13 +185,13 @@ export default function FlashSales() {
               <p className={styles.shown} aria-live="polite">
                 {t("flash.shown")} {entries.length} {t("flash.of")} {total}
               </p>
-              <CardGrid>
+              <ul className={styles.grid}>
                 {entries.map((entry) => (
                   <li key={entry.sale.id}>
                     <FlashSaleCard entry={entry} />
                   </li>
                 ))}
-              </CardGrid>
+              </ul>
               {query.hasNextPage && (
                 <div className={styles.more}>
                   <button type="button" className={styles.action} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>

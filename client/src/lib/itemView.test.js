@@ -6,20 +6,20 @@ const item = { name: "Fade and beard" };
 describe("chatMessage", () => {
   it("states the regular price", () => {
     const pricing = { regularPrice: 300, salePrice: 300, savings: 0 };
-    expect(chatMessage({ item, pricing })).toBe("Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    expect(chatMessage({ item, pricing })).toBe("Hi, I saw Fade and beard (KSh 300) on EpicMKT");
   });
 
   it("states the flash sale with the old price", () => {
     const pricing = { regularPrice: 300, salePrice: 240, savings: 60 };
     expect(chatMessage({ item, pricing })).toBe(
-      "Hi, I saw the flash sale on Fade and beard: KES 240 (was KES 300) on EpicMKT"
+      "Hi, I saw the flash sale on Fade and beard: KSh 240 (was KSh 300) on EpicMKT"
     );
   });
 
   it("includes the chosen variant and its price", () => {
     const pricing = { regularPrice: 2500, salePrice: 2250, savings: 250 };
     const variant = { label: "Small", regularPrice: 3500, salePrice: 3500, savings: 0 };
-    expect(chatMessage({ item, variant, pricing })).toBe("Hi, I saw Fade and beard (Small) (KES 3,500) on EpicMKT");
+    expect(chatMessage({ item, variant, pricing })).toBe("Hi, I saw Fade and beard (Small) (KSh 3,500) on EpicMKT");
   });
 
   it("omits the price when there is none", () => {
@@ -89,7 +89,7 @@ describe("countdown", () => {
 describe("offer helpers", () => {
   it("labels values", () => {
     expect(offerValueLabel({ kind: "percent_off", value: 10 })).toBe("10% off");
-    expect(offerValueLabel({ kind: "amount_off", value: 300 })).toBe("KES 300 off");
+    expect(offerValueLabel({ kind: "amount_off", value: 300 })).toBe("KSh 300 off");
     expect(offerValueLabel({ kind: "multi_buy", valueText: "2 for 250" })).toBe("2 for 250");
     expect(offerValueLabel({ kind: "freebie" })).toBe("Free gift");
   });

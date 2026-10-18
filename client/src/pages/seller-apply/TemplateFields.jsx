@@ -17,7 +17,7 @@ function Control({ field, name, aria }) {
     case "price":
       return (
         <div className={styles.priceWrap}>
-          {field.type === "price" && <span className={styles.prefix}>KES</span>}
+          {field.type === "price" && <span className={styles.prefix}>KSh</span>}
           <input
             className={form.input}
             type="number"

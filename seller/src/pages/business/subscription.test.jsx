@@ -70,7 +70,7 @@ describe("Subscription: the payment card", () => {
     expect(text("pay-number")).toContain("247247");
     expect(text("pay-name")).toBe("EpicMKT Ltd");
     expect(text("pay-account")).toContain("EPM-2026-ABC234");
-    expect(text("pay-amount")).toContain("KES 450");
+    expect(text("pay-amount")).toContain("KSh 450");
   });
 
   it("renewal: Seller ID as account, current plan price as amount", async () => {
@@ -78,7 +78,7 @@ describe("Subscription: the payment card", () => {
     await screen.findByTestId("payment-card");
     expect(screen.getByRole("heading", { name: "Renew your subscription" })).toBeInTheDocument();
     expect(text("pay-account")).toContain("ES100001");
-    expect(text("pay-amount")).toContain("KES 500");
+    expect(text("pay-amount")).toContain("KSh 500");
   });
 
   it("upgrade: the prorated difference from the category change quote", async () => {
@@ -89,7 +89,7 @@ describe("Subscription: the payment card", () => {
     await screen.findByRole("heading", { name: "Upgrade to Premium", level: 2 });
     const expected = categoryChangeQuote({ oldPrice: 500, newPrice: 1500, paidUntil: paid, now: new Date("2026-10-05T09:00:00Z") }).extraDueNow;
     expect(expected).toBe(500);
-    await waitFor(() => expect(text("pay-amount")).toContain(`KES ${expected.toLocaleString("en-KE")}`));
+    await waitFor(() => expect(text("pay-amount")).toContain(`KSh ${expected.toLocaleString("en-KE")}`));
     expect(text("pay-account")).toContain("ES100001");
   });
 
@@ -103,14 +103,14 @@ describe("Subscription: the payment card", () => {
     await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
     await screen.findByRole("option", { name: /Salon/ });
     await user.selectOptions(screen.getByLabelText("New category"), "salon");
-    expect(await screen.findByTestId("category-quote")).toHaveTextContent("Pay KES 150 now");
-    expect(screen.getByTestId("category-quote")).toHaveTextContent("KES 800 per month from your next renewal");
+    expect(await screen.findByTestId("category-quote")).toHaveTextContent("Pay KSh 150 now");
+    expect(screen.getByTestId("category-quote")).toHaveTextContent("KSh 800 per month from your next renewal");
     await user.click(screen.getByRole("button", { name: "Request change" }));
     const pending = await screen.findByTestId("category-pending");
     expect(pending).toHaveTextContent("Waiting for admin approval");
-    await user.click(within(pending).getByRole("button", { name: "Pay KES 150" }));
+    await user.click(within(pending).getByRole("button", { name: "Pay KSh 150" }));
     await screen.findByRole("heading", { name: "Pay for your category change" });
-    await waitFor(() => expect(text("pay-amount")).toContain("KES 150"));
+    await waitFor(() => expect(text("pay-amount")).toContain("KSh 150"));
     expect(text("pay-account")).toContain("ES100001");
   });
 
@@ -121,7 +121,7 @@ describe("Subscription: the payment card", () => {
     await user.selectOptions(screen.getByLabelText("New category"), "kiosk");
     const q = await screen.findByTestId("category-quote");
     expect(q).toHaveTextContent("Nothing to pay now");
-    expect(q).toHaveTextContent("KES 300 per month from your next renewal");
+    expect(q).toHaveTextContent("KSh 300 per month from your next renewal");
     await user.click(screen.getByRole("button", { name: "Request change" }));
     const pending = await screen.findByTestId("category-pending");
     expect(pending).toHaveTextContent("Nothing to pay now");
@@ -148,7 +148,7 @@ describe("Subscription: the payment card", () => {
     expect(steps.children).toHaveLength(5);
     expect(steps).toHaveTextContent("Enter the Paybill number 247247");
     expect(steps).toHaveTextContent("Type ES100001 as the account number");
-    expect(steps).toHaveTextContent("exact amount, KES 500");
+    expect(steps).toHaveTextContent("exact amount, KSh 500");
   });
 
   it("without the Paybill setting: we will send the details by SMS, the code field still works", async () => {
@@ -227,7 +227,7 @@ describe("Subscription: I have paid, duplicate codes and live updates", () => {
     const user = userEvent.setup();
     await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
     await user.click(await screen.findByRole("button", { name: "Upgrade to Premium" }));
-    await waitFor(() => expect(text("pay-amount")).toContain("KES 500"));
+    await waitFor(() => expect(text("pay-amount")).toContain("KSh 500"));
     await user.type(screen.getByLabelText("M-Pesa transaction code"), "UPGRADE123");
     await user.click(screen.getByRole("button", { name: "I have paid" }));
     await screen.findByTestId("payment-confirming");
@@ -252,10 +252,10 @@ describe("Subscription: plans for the seller's own category and history", () => 
     await signedInApp();
     const std = await screen.findByTestId("plan-standard");
     const prem = screen.getByTestId("plan-premium");
-    expect(std).toHaveTextContent("KES 500");
+    expect(std).toHaveTextContent("KSh 500");
     expect(std).toHaveTextContent("30 items");
     expect(std).toHaveTextContent("Your plan");
-    expect(prem).toHaveTextContent("KES 1,500");
+    expect(prem).toHaveTextContent("KSh 1,500");
     expect(prem).toHaveTextContent("100 items");
     expect(prem).toHaveTextContent("Featured badge");
     expect(prem).toHaveTextContent("Best value");
@@ -267,7 +267,7 @@ describe("Subscription: plans for the seller's own category and history", () => 
     await signedInApp();
     const table = await screen.findByTestId("payment-history");
     const row = within(table).getAllByTestId("payment-row")[0];
-    expect(row).toHaveTextContent("KES 500");
+    expect(row).toHaveTextContent("KSh 500");
     expect(row).toHaveTextContent("QA11BB22CC");
     expect(row).toHaveTextContent("20 Aug 2026 to 20 Sep 2026");
     const labels = [...row.querySelectorAll("td")].map((td) => td.getAttribute("data-label"));

@@ -128,7 +128,7 @@ describe("ItemPage layout and actions", () => {
     mount();
     await ready();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(buy().getByText("KES 300")).toBeInTheDocument();
+    expect(buy().getByText("KSh 300")).toBeInTheDocument();
     expect(buy().getByText("/ cut")).toBeInTheDocument();
     expect(screen.queryByTestId("flash-row")).toBeNull();
     expect(screen.queryByText(/% off/)).toBeNull();
@@ -140,7 +140,7 @@ describe("ItemPage layout and actions", () => {
     await ready();
     const chats = screen.getAllByRole("link", { name: /Chat Seller/ });
     expect(chats).toHaveLength(3);
-    chats.forEach((a) => expect(decodeURIComponent(a.getAttribute("href"))).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT"));
+    chats.forEach((a) => expect(decodeURIComponent(a.getAttribute("href"))).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KSh 300) on EpicMKT"));
     const stores = screen.getAllByRole("link", { name: /Visit Store/ });
     expect(stores).toHaveLength(3);
     stores.forEach((a) => expect(a).toHaveAttribute("href", "/b/fade-kings"));
@@ -186,11 +186,11 @@ describe("ItemPage flash sale", () => {
     const row = screen.getByTestId("flash-row");
     expect(within(row).getByText("Flash sale")).toBeInTheDocument();
     expect(row).toHaveTextContent(/Closing in\s*(02 : 00 : 0\d|01 : 59 : \d\d)/);
-    expect(buy().getByText("KES 225")).toBeInTheDocument();
-    expect(buy().getByText("KES 300").tagName).toBe("S");
+    expect(buy().getByText("KSh 225")).toBeInTheDocument();
+    expect(buy().getByText("KSh 300").tagName).toBe("S");
     expect(buy().getByText("25% off")).toBeInTheDocument();
-    expect(buy().getByText(/You save KES 75/)).toBeInTheDocument();
-    expect(decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"))).toContain("flash sale on Fade and beard: KES 225 (was KES 300)");
+    expect(buy().getByText(/You save KSh 75/)).toBeInTheDocument();
+    expect(decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"))).toContain("flash sale on Fade and beard: KSh 225 (was KSh 300)");
   });
 
   it("lists the sale window and quantity under additional details and the headline under about", async () => {
@@ -210,8 +210,8 @@ describe("ItemPage flash sale", () => {
     await ready();
     expect(screen.queryByTestId("flash-row")).toBeNull();
     expect(screen.queryByText("25% off")).toBeNull();
-    expect(buy().getByText("KES 300")).toBeInTheDocument();
-    expect(screen.queryByText("KES 225")).toBeNull();
+    expect(buy().getByText("KSh 300")).toBeInTheDocument();
+    expect(screen.queryByText("KSh 225")).toBeNull();
     expect(screen.queryByText("Sale starts")).toBeNull();
   });
 
@@ -251,12 +251,12 @@ describe("ItemPage availability and variants", () => {
     load({ pricing: { ...pricing(2500, 2500), variants } });
     mount();
     await screen.findByRole("radio", { name: "Medium", checked: true });
-    expect(screen.getAllByText("KES 2,500").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("KSh 2,500").length).toBeGreaterThan(0);
 
     await user.click(screen.getByRole("radio", { name: "Small" }));
     expect(screen.getByRole("radio", { name: "Small", checked: true })).toBeInTheDocument();
-    expect(screen.getAllByText("KES 3,500").length).toBeGreaterThan(0);
-    expect(decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"))).toContain("Fade and beard (Small) (KES 3,500)");
+    expect(screen.getAllByText("KSh 3,500").length).toBeGreaterThan(0);
+    expect(decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"))).toContain("Fade and beard (Small) (KSh 3,500)");
 
     screen.getByRole("radio", { name: "Small" }).focus();
     await user.keyboard("{ArrowRight}");
@@ -351,7 +351,7 @@ describe("ItemPage on phones", () => {
     mount();
     await ready();
     const bar = screen.getByRole("navigation", { name: "Contact actions" });
-    expect(within(bar).getByText("KES 225")).toBeInTheDocument();
+    expect(within(bar).getByText("KSh 225")).toBeInTheDocument();
     expect(within(bar).getByRole("link", { name: /Chat Seller/ })).toBeInTheDocument();
     expect(within(bar).getByRole("link", { name: /Visit Store/ })).toHaveAttribute("href", "/b/fade-kings");
   });

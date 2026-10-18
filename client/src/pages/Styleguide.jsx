@@ -353,7 +353,7 @@ function Pane({ theme }) {
         </div>
       </Block>
 
-      <FlashBlocks Block={Block} Contrast={Contrast} paneRef={paneRef} theme={theme} />
+      <FlashBlocks Block={Block} Contrast={Contrast} paneRef={paneRef} />
 
       <Block title="Contrast">
         <Contrast paneRef={paneRef} />

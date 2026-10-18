@@ -30,7 +30,7 @@ const offer = (id, businessId, title, kind, extra = {}) => {
 export const seedOffers = () => [
   offer("p_001", "b_001", "Student week", "percent_off", { value: 10, description: "10% off any cut with a student ID.", code: "STUDENT10", endsInDays: 5, conditions: { minSpend: 100 }, terms: "Show a valid student ID at the chair." }),
   offer("p_002", "b_001", "Bring a friend", "multi_buy", { valueText: "2 for 250", appliesTo: "items", itemIds: ["haircut", "kids-cut"], description: "Adult cut and kids cut together.", endsInDays: 21 }),
-  offer("p_003", "b_017", "Braids refresh", "amount_off", { value: 300, valueText: "KES 300 off", appliesTo: "section", sectionId: "braids", description: "Off any braiding service.", endsInDays: 10 }),
+  offer("p_003", "b_017", "Braids refresh", "amount_off", { value: 300, valueText: "KSh 300 off", appliesTo: "section", sectionId: "braids", description: "Off any braiding service.", endsInDays: 10 }),
   offer("p_004", "b_013", "First week free", "free_service", { valueText: "7 days free", description: "Try the gym free as a new member.", conditions: { newCustomersOnly: true }, endsInDays: null }),
   offer("p_005", "b_007", "Free BP check", "free_service", { valueText: "Free check", appliesTo: "items", itemIds: ["multivitamin-30-tablets", "digital-thermometer"], description: "With either of these items.", endsInDays: 18 }),
   offer("p_006", "b_010", "Seed season", "percent_off", { value: 10, appliesTo: "section", sectionId: "seed", description: "On two or more bags.", endsInDays: 25 }),

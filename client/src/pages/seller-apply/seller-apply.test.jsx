@@ -74,7 +74,7 @@ describe("plan step", () => {
     setPlanOverride("juice-shop", "standard", { price: 777 });
     act(() => form.setValue("categoryId", "juice-shop"));
     expect(await screen.findByText("Packages for Juice shop")).toBeInTheDocument();
-    expect(screen.getAllByText("KES 777").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("KSh 777").length).toBeGreaterThan(0);
   });
 
   it("shows a retry state and no prices when loading fails", async () => {
@@ -82,7 +82,7 @@ describe("plan step", () => {
     mountStep((c) => <PlanStep catalog={c} />, { categoryId: "bakery" });
     expect(await screen.findByRole("alert", {}, { timeout: 4000 })).toHaveTextContent(/could not load/i);
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
-    expect(screen.queryByText(/KES/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/KSh/)).not.toBeInTheDocument();
   });
 });
 

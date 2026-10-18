@@ -12,10 +12,10 @@ const cat = {
 
 describe('billing helpers', () => {
   it('formats money', () => {
-    expect(formatKes(1500)).toBe('KES 1,500');
+    expect(formatKes(1500)).toBe('KSh 1,500');
     expect(formatKes(0)).toBe('Free');
     expect(formatKes(NaN)).toBe('');
-    expect(formatKesPerMonth(500)).toBe('KES 500 / month');
+    expect(formatKesPerMonth(500)).toBe('KSh 500 / month');
   });
 
   it('reads plans and prices', () => {
@@ -34,7 +34,7 @@ describe('billing helpers', () => {
 
   it('summarises a plan', () => {
     expect(summarizePlan(cat, 'premium')).toMatchObject({
-      categoryId: 'bakery', label: 'Premium', price: 1000, priceText: 'KES 1,000', perMonthText: 'KES 1,000 / month', itemsLimit: 100, badge: 'Best value',
+      categoryId: 'bakery', label: 'Premium', price: 1000, priceText: 'KSh 1,000', perMonthText: 'KSh 1,000 / month', itemsLimit: 100, badge: 'Best value',
     });
     expect(summarizePlan(cat, 'gold')).toBeNull();
   });

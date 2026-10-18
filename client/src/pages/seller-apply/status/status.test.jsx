@@ -119,7 +119,7 @@ describe("check my application", () => {
     await signIn(user, "EPM-2026-DEMO05");
     expect(await screen.findByRole("heading", { name: "Approved, awaiting payment" })).toBeInTheDocument();
     expect(screen.getByText("123456")).toBeInTheDocument();
-    expect(screen.getByText("KES 500")).toBeInTheDocument();
+    expect(screen.getByText("KSh 500")).toBeInTheDocument();
     await user.type(screen.getByLabelText("M-Pesa transaction code"), "short");
     await user.click(screen.getByRole("button", { name: "I have paid" }));
     expect(await screen.findByText(/10 character M-Pesa/)).toBeInTheDocument();

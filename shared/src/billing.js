@@ -7,7 +7,7 @@ export const planLabel = (planKey) => PLAN_LABELS[planKey] ?? planKey;
 export function formatKes(amount) {
   if (!Number.isFinite(amount)) return '';
   if (amount === 0) return 'Free';
-  return `KES ${amount.toLocaleString('en-KE')}`;
+  return `KSh ${amount.toLocaleString('en-KE')}`;
 }
 
 export const formatKesPerMonth = (amount) => (amount === 0 ? 'Free' : `${formatKes(amount)} / month`);

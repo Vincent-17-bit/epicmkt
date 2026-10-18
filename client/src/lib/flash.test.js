@@ -53,7 +53,7 @@ describe("spoken labels", () => {
 describe("discountBadge", () => {
   it("follows the discount type", () => {
     expect(discountBadge({ type: "percent", value: 35 })).toEqual({ kind: "percent", text: "-35%" });
-    expect(discountBadge({ type: "amount_off", value: 150 })).toEqual({ kind: "amount", text: "KES 150 OFF" });
+    expect(discountBadge({ type: "amount_off", value: 150 })).toEqual({ kind: "amount", text: "KSh 150 OFF" });
     expect(discountBadge({ type: "sale_price", value: 15 })).toEqual({ kind: "deal", text: "DEAL" });
   });
 });

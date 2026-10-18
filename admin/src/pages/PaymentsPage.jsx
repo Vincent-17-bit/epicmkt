@@ -35,7 +35,7 @@ export default function PaymentsPage() {
                     <tr key={row.receipt || row.mpesaCode}>
                       <td>{row.receipt}</td>
                       <td>{row.businessName}</td>
-                      <td>KES {row.amount}</td>
+                      <td>KSh {row.amount}</td>
                       <td><span className="status-pill status-pill--neutral">{row.status}</span></td>
                       <td>{row.mpesaCode}</td>
                     </tr>

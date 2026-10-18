@@ -19,7 +19,7 @@ describe("printable receipt", () => {
       Category: "Barber",
       Plan: "Standard",
       For: "Renewal",
-      Amount: "KES 500",
+      Amount: "KSh 500",
       "M-Pesa code": "QA11BB22CC",
       "Period covered": "20 Aug 2026 to 20 Sep 2026",
     });
@@ -64,6 +64,6 @@ describe("printable receipt", () => {
       payment: { receiptNo: "R1", amount: 1500, kind: "upgrade", planKey: "premium", mpesaCode: "ABCDEFGHIJ", confirmedAt: "2026-02-28T07:05:00Z", periodStart: "2026-01-31", periodEnd: "2026-02-28" },
       business: { name: "Shop", sellerId: "ES1", planKey: "standard" }, categoryName: "Barber", issuer: { name: "EpicMKT" },
     });
-    expect(m).toMatchObject({ receiptNo: "R1", businessName: "Shop", category: "Barber", plan: "Premium", purpose: "Upgrade to Premium", amountText: "KES 1,500", mpesaCode: "ABCDEFGHIJ", period: "31 Jan 2026 to 28 Feb 2026", paidAt: "28 Feb 2026, 10:05 EAT" });
+    expect(m).toMatchObject({ receiptNo: "R1", businessName: "Shop", category: "Barber", plan: "Premium", purpose: "Upgrade to Premium", amountText: "KSh 1,500", mpesaCode: "ABCDEFGHIJ", period: "31 Jan 2026 to 28 Feb 2026", paidAt: "28 Feb 2026, 10:05 EAT" });
   });
 });

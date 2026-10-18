@@ -21,8 +21,8 @@
   gap: var(--space-3);
   padding: var(--space-3);
   border-radius: var(--radius-card);
-  background: var(--flash-gradient);
-  color: var(--flash-band-text);
+  background: var(--flash-band-bg);
+  color: var(--flash-band-ink);
 }
 
 .row {
@@ -40,9 +40,9 @@
 }
 
 .cell {
-  width: clamp(220px, 64vw, 280px);
+  width: clamp(168px, 42vw, 220px);
 }
 
 .compact {
-  width: clamp(160px, 46vw, 200px);
+  width: clamp(150px, 42vw, 200px);
 }
