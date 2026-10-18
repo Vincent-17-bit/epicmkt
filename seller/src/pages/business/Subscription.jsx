@@ -21,6 +21,7 @@ export default function Subscription() {
   const [mode, setMode] = useState({ purpose: null });
   const [received, setReceived] = useState(null);
   const watching = useRef(new Set());
+  const seen = useRef(null);
 
   const sub = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription });
   const payments = useQuery({ queryKey: ["payments"], queryFn: api.listPayments });
@@ -31,7 +32,7 @@ export default function Subscription() {
     retry: false,
   });
 
-  // The seller's own payment and business rows. When the admin (or a future automatic matcher) confirms a payment,
+  // The seller's own payment and business rows. When a payment arrives (automatically, or confirmed by an admin),
   // these change and everything below refetches by itself: no reload.
   useRealtime(["payments", "businesses"], () => {
     qc.invalidateQueries({ queryKey: ["subscription"] });
@@ -40,10 +41,20 @@ export default function Subscription() {
     qc.invalidateQueries({ queryKey: ["changes"] });
   });
 
+  // A payment that appears after the page opened is a payment that just arrived (automatic, or confirmed by an admin).
   useEffect(() => {
-    for (const p of payments.data ?? []) {
+    const list = payments.data;
+    if (!list) return;
+    if (seen.current === null) {
+      seen.current = new Set(list.map((p) => p.id));
+      for (const p of list) if (p.status === "submitted") watching.current.add(p.id);
+      return;
+    }
+    for (const p of list) {
+      const isNew = !seen.current.has(p.id);
+      seen.current.add(p.id);
       if (p.status === "submitted") watching.current.add(p.id);
-      if (p.status === "confirmed" && watching.current.has(p.id)) {
+      if (p.status === "confirmed" && (isNew || watching.current.has(p.id))) {
         watching.current.delete(p.id);
         setReceived(p);
         setMode({ purpose: null });
@@ -52,15 +63,20 @@ export default function Subscription() {
     }
   }, [payments.data]);
 
+  // Tell the server what is being paid for, so money for an upgrade is applied as the upgrade and not as a renewal.
+  useEffect(() => {
+    api.setPaymentIntent({ purpose: mode.purpose, targetPlan: mode.targetPlan ?? null, category: mode.category ?? null, changeId: mode.changeId ?? null }).catch(() => {});
+  }, [mode]);
+
   const choose = useCallback((next) => {
     setReceived(null);
     setMode(next);
     payRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, []);
 
-  const submit = async (code) => {
-    await api.submitPayment({ code, purpose: mode.purpose, targetPlan: mode.targetPlan ?? null, category: mode.category ?? null, changeId: mode.changeId ?? null });
-    await Promise.all([qc.invalidateQueries({ queryKey: ["payments"] }), qc.invalidateQueries({ queryKey: ["instructions"] })]);
+  const applyCredit = async () => {
+    await api.applyCredit({ purpose: mode.purpose, targetPlan: mode.targetPlan ?? null, category: mode.category ?? null, changeId: mode.changeId ?? null });
+    await Promise.all([qc.invalidateQueries({ queryKey: ["payments"] }), qc.invalidateQueries({ queryKey: ["instructions"] }), qc.invalidateQueries({ queryKey: ["subscription"] })]);
   };
 
   if (sub.isLoading) return <div className={ui.page}><p role="status">Loading</p></div>;
@@ -105,7 +121,7 @@ export default function Subscription() {
         {instr.error && !open && !received ? (
           <section className={ui.card}><p className={ui.error} role="alert">{instr.error.code === "renew_first" ? "Renew your subscription first." : "We could not load the payment details."}</p></section>
         ) : (
-          <PaymentCard instructions={instr.data} openPayment={open} received={received} onSubmit={submit} onDismissReceived={() => setReceived(null)} />
+          <PaymentCard instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)} />
         )}
       </div>
 

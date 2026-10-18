@@ -134,23 +134,24 @@ supabase functions deploy admin-reset-seller-password --no-verify-jwt
 
 ## Automatic M-Pesa payments (Paybill)
 
-Sellers pay the EpicMKT Paybill and type their **exact business name as the account number**. Nobody pastes an M-Pesa code.
-Safaricom (Daraja C2B) tells the backend about each payment, and the backend records it.
+Everyone pays the same Paybill with an account number and an amount. **Nobody types an M-Pesa code.** The account number is a
+short code (the applicant's application reference, then the seller's Seller ID), not the business name: two shops can share a
+name, and the Paybill account field is short. Safaricom (Daraja C2B) tells the backend about each payment and the backend records
+it. The full list of scenarios and what each person sees is in [`docs/PAYMENTS.md`](../docs/PAYMENTS.md).
 
-1. Set the Paybill business number once: edit and run `supabase/set-mpesa.sql` in the SQL editor (until then approving fails with `mpesa_not_configured`).
-2. Set the function secrets (see `.env.example`): `MPESA_CALLBACK_SECRET`, plus `supabase secrets set --env-file supabase/.env`, then deploy `pay-callback`.
-3. Register the callback URLs with Safaricom once per environment: `node --env-file=scripts/.env scripts/register-mpesa-c2b.mjs`.
+Setup, once per environment:
+
+1. Apply migrations `0012` and `0015`.
+2. Set the Paybill business number: edit and run `supabase/set-mpesa.sql` in the SQL editor (until then approving fails with `mpesa_not_configured`).
+3. Set `MPESA_CALLBACK_SECRET` (see `.env.example`), run `supabase secrets set --env-file supabase/.env`, then deploy `pay-callback`.
+4. Register the callback URLs with Safaricom: `node --env-file=scripts/.env scripts/register-mpesa-c2b.mjs`.
    The URLs are `<SUPABASE_URL>/functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/confirmation` and `/validation`.
    (Safaricom rejects URLs containing "mpesa" or "safaricom", so the function is called `pay-callback`.)
 
-What happens on each payment (`mpesa_record_c2b` in migration `0012`):
+How it works (`mpesa_ingest` and friends, migration `0015`):
 
-| Outcome | When | Result |
-|---|---|---|
-| `matched` | account equals one approved application's business name (case and extra spaces ignored) and the amount covers the price | transaction code saved, application moves to `payment_confirming`, admin is notified |
-| `amount_short` | account matches, but less than the price was paid | application stays `approved`, admin sees it |
-| `extra` | the application already has a payment waiting | admin sees it |
-| `unmatched` | no single business has that name | admin sees it |
-
-Every transaction is stored once in `mpesa_transactions` (Safaricom retries are ignored) and listed for admins in the `admin_payment_queue` view.
-An admin still presses **Confirm** on the Payments page; that creates the seller login exactly as before.
+- Every callback is stored raw in `mpesa_callbacks` first. Every payment is stored once in `mpesa_transactions` (retries are ignored), whatever its account or amount.
+- The account is matched to one application reference, then one Seller ID, then (fallback) one business name. Two shops with the same name are never guessed between: the payer's hashed phone can break the tie, otherwise an admin assigns it with one click.
+- Money is credit on the application or business. Whole months are taken from it, the rest waits. So short payments, top-ups, 3-month prepayments and overpayments are one mechanism.
+- Renewals for existing sellers apply automatically (`payments` row with `source = 'auto'`). A first payment waits for an admin's **Confirm** (that creates the login). Upgrades and category changes are applied automatically when the seller opened that payment in the portal.
+- The admin Payments page reads the `admin_payment_queue` view. Owner and finance can assign, ignore and reprocess (`admin_mpesa_*` functions).

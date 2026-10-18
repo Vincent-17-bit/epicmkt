@@ -27,10 +27,11 @@ const FROM: Record<Action, string[]> = {
 
 type Mpesa = { type?: string; number?: string; name?: string; account?: string };
 
-// Paybill: the account number is the seller's exact business name, so every payment is traceable to them.
-const payTo = (m: Mpesa, businessName: string) =>
+// Paybill: the account number is the application reference (a short code that is unique to this applicant, so two shops
+// with the same name can never be confused). The payment is recognised automatically; nobody sends a code.
+const payTo = (m: Mpesa, ref: string) =>
   m.type === "paybill"
-    ? `Paybill ${m.number}, Account ${businessName}`
+    ? `Paybill ${m.number}, Account ${ref}`
     : `Till ${m.number}${m.name ? ` (${m.name})` : ""}`;
 
 const bad = (error: string) => json({ error }, 400);
@@ -76,7 +77,9 @@ export const adminDecideApplication = (d: AdminDeps) =>
       const mpesa = (setting.data?.value ?? {}) as Mpesa;
       if (!mpesa.number) return json({ error: "mpesa_not_configured" }, 409);
       const amount = priceOverride ?? app.price_at_submission;
-      next = "approved";
+      // Someone may have paid before the approval. Their money is already credited on the application.
+      const alreadyPaid = Number(app.credit_kes ?? 0) >= amount;
+      next = alreadyPaid ? "payment_confirming" : "approved";
       patch = {
         status: next,
         verification_level: verificationLevel ?? app.verification_level,
@@ -87,7 +90,9 @@ export const adminDecideApplication = (d: AdminDeps) =>
         patch.plan_snapshot = { ...(app.plan_snapshot ?? {}), priceOverride: { amount: priceOverride, reason, by: c.admin.user.id, at: now } };
       }
       subject = `Your EpicMKT application ${ref} is approved`;
-      text = `EpicMKT: ${app.business_name} is approved. Pay KES ${amount} to M-Pesa ${payTo(mpesa, app.business_name)}, then enter the M-Pesa code on your status page.`;
+      text = alreadyPaid
+        ? `EpicMKT: ${app.business_name} is approved and your payment is received. We are confirming it and will send your login shortly.`
+        : `EpicMKT: ${app.business_name} is approved. Pay KES ${amount} to M-Pesa ${payTo(mpesa, ref)}. We recognise your payment automatically, no code needed. You may pay several months at once.`;
     }
 
     if (action === "set_verification") {

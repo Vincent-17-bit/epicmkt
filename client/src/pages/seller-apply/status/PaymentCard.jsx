@@ -28,8 +28,9 @@ export default function PaymentCard({ app, onDone }) {
           <FontAwesomeIcon icon={faCircleCheck} /> Payment received
         </h2>
         <p>
-          We received your M-Pesa payment{pay?.code ? <> (code <strong>{pay.code}</strong>)</> : null}. We are confirming it now and will send your
-          login details by SMS or WhatsApp. You do not need to do anything else.
+          We received your M-Pesa payment{pay?.code ? <> (code <strong>{pay.code}</strong>)</> : null}
+          {pay?.months > 1 ? <>, which covers <strong>{pay.months} months</strong></> : null}. We are confirming it now and will send your
+          login details by SMS. You do not need to do anything else.
         </p>
       </section>
     );
@@ -52,23 +53,37 @@ export default function PaymentCard({ app, onDone }) {
   );
 
   const isPaybill = pay?.method === "paybill" && pay?.number && pay?.account;
+  const received = Number(pay?.received ?? 0);
+  const balance = Number(pay?.balance ?? pay?.amount ?? 0);
 
   return (
     <section className={styles.card} aria-labelledby="pay-title">
       <h2 id="pay-title">Pay by M-Pesa</h2>
       {isPaybill ? (
-        <ol className={styles.paySteps}>
-          <li>Open <strong>M-Pesa</strong> on your phone and choose <strong>Lipa na M-Pesa</strong>, then <strong>Paybill</strong>.</li>
-          <li>
-            Business number: <strong>{pay.number}</strong> {copyBtn("number", pay.number, "Copy business number")}
-          </li>
-          <li>
-            Account number: <strong>{pay.account}</strong> {copyBtn("account", pay.account, "Copy account number")}
-            <span className={styles.payHint}> Use your business name exactly as shown, including capitals and spaces. This is how we know the payment is yours.</span>
-          </li>
-          <li>Amount: <strong>{formatKes(pay.amount)}</strong></li>
-          <li>Enter your M-Pesa PIN and send.</li>
-        </ol>
+        <>
+          {received > 0 && balance > 0 && (
+            <p role="status" className={styles.payHint}>
+              We already received <strong>{formatKes(received)}</strong>. Please pay the remaining <strong>{formatKes(balance)}</strong> to the same account number below to finish your first month.
+            </p>
+          )}
+          <ol className={styles.paySteps}>
+            <li>Open <strong>M-Pesa</strong> on your phone and choose <strong>Lipa na M-Pesa</strong>, then <strong>Paybill</strong>.</li>
+            <li>
+              Business number: <strong>{pay.number}</strong> {copyBtn("number", pay.number, "Copy business number")}
+            </li>
+            <li>
+              Account number: <strong>{pay.account}</strong> {copyBtn("account", pay.account, "Copy account number")}
+              <span className={styles.payHint}> Type it exactly as shown. This short code is yours alone, so we always know the payment is for your shop, even if another shop has the same name.</span>
+            </li>
+            <li>
+              Amount: <strong>{formatKes(balance > 0 ? balance : pay.amount)}</strong>
+              <span className={styles.payHint}>
+                {" "}You can pay for more months now if you like: {formatKes(pay.amount * 2)} for 2 months, {formatKes(pay.amount * 3)} for 3 months. Extra months are added to your listing automatically. If you pay a different amount, nothing is lost: it is recorded and counted toward your payment.
+              </span>
+            </li>
+            <li>Enter your M-Pesa PIN and send.</li>
+          </ol>
+        </>
       ) : (
         <p>We will send you the payment details by SMS shortly.</p>
       )}

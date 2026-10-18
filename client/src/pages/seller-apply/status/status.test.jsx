@@ -121,6 +121,7 @@ describe("check my application", () => {
     expect(screen.getByText("123456")).toBeInTheDocument();
     expect(screen.getByText("KES 500")).toBeInTheDocument();
     expect(screen.getByText(/Account number:/)).toBeInTheDocument();
+    expect(screen.getByText("EPM-2026-DEMO05")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy account number" })).toBeInTheDocument();
     expect(screen.queryByLabelText("M-Pesa transaction code")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "I have paid" })).not.toBeInTheDocument();

@@ -24,6 +24,16 @@ const pushEvent = (rec, type) => {
 const normRef = (v) => String(v ?? '').trim().toUpperCase();
 const keyOf = (ref, phone) => `${ref}:${phone}`;
 
+// Same fields the live status-get returns. The account number is the application reference.
+function paymentView(rec) {
+  const price = rec.priceAtSubmission;
+  const received = rec.creditKes ?? 0;
+  return {
+    method: 'paybill', number: '123456', account: rec.referenceNo, name: 'EpicMKT (demo)', amount: price,
+    received, balance: Math.max(price - received, 0), months: price > 0 ? Math.floor(received / price) : 0, code: rec.paymentCode ?? null,
+  };
+}
+
 export async function requestStatusOtp({ referenceNo, phone }) {
   await wait(300);
   const generic = { ok: true, message: 'If these details match an application, we have sent a code.' };
@@ -124,7 +134,7 @@ async function view(rec) {
     flags: (rec.flags ?? []).map(flagView),
     events: (rec.events ?? []).filter((e) => PUBLIC_EVENTS.includes(e.type)),
     payment: showPay
-      ? { method: 'paybill', number: '123456', account: p.business?.name ?? null, name: 'EpicMKT (demo)', amount: rec.priceAtSubmission, code: rec.paymentCode ?? null }
+      ? paymentView(rec)
       : null
   };
 }
@@ -278,7 +288,7 @@ export function simSeed() {
       { flags: [flag('business.sbpNumber', 'The permit number does not match the document.', { addressedAt: now })] }
     ],
     ['DEMO05', 'approved', 'Dala Cakes', { adminNote: 'Welcome. Please pay to activate.' }],
-    ['DEMO06', 'payment_confirming', 'Pwani Pastries', { paymentCode: 'QWE4RTY5UI' }],
+    ['DEMO06', 'payment_confirming', 'Pwani Pastries', { paymentCode: 'QWE4RTY5UI', creditKes: 500 }],
     ['DEMO07', 'activated', 'Nyanza Breads', {}],
     ['DEMO08', 'rejected', 'Quick Cakes', { rejectionReason: 'The permit has been cancelled by the county.' }]
   ];

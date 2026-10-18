@@ -2,13 +2,14 @@
 export const business = (b) => b && ({
   id: b.id, sellerId: b.seller_id, name: b.name, status: b.status, planKey: b.plan_key, categoryId: b.category_id,
   paidUntil: b.paid_until ?? null, verificationLevel: b.verification_level, announcement: b.announcement ?? null,
+  creditKes: Number(b.credit_kes ?? 0),
 });
 
 export const payment = (p) => ({
   id: p.id, businessId: p.business_id, amount: p.amount_kes, kind: p.kind, status: p.status,
   mpesaCode: p.mpesa_code ?? null, planKey: p.plan_key ?? null, categoryId: p.category_id ?? null, accountRef: p.account_ref ?? null,
   confirmedVia: p.confirmed_via ?? null, declineReason: p.decline_reason ?? null, receiptNo: p.receipt_no ?? null,
-  periodStart: p.period_start ?? null, periodEnd: p.period_end ?? null,
+  periodStart: p.period_start ?? null, periodEnd: p.period_end ?? null, months: p.months ?? 1,
   submittedAt: p.submitted_at ?? null, confirmedAt: p.confirmed_at ?? null, createdAt: p.created_at,
 });
 
@@ -16,6 +17,7 @@ export const instructions = (r) => ({
   purpose: r.purpose, amount: r.amount_kes, account: r.account, planKey: r.plan_key, categoryId: r.category_id,
   listingState: r.listing_state, quote: r.quote ?? null, configured: !!r.configured,
   method: r.method ?? null, number: r.number ?? null, name: r.name ?? null, hasOpenSubmission: !!r.has_open_submission,
+  creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
 });
 
 export const message = (m) => ({

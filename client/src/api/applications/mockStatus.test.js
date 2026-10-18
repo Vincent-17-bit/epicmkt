@@ -129,7 +129,9 @@ describe('payment details', () => {
     const view = await getApplication(await login('EPM-2026-DEMO05'));
     expect(view.status).toBe('approved');
     expect(view.payment).toMatchObject({ method: 'paybill', amount: 500 });
-    expect(view.payment.account).toBe(view.business.name);
+    // The account number is the application reference, never the business name.
+    expect(view.payment.account).toBe('EPM-2026-DEMO05');
+    expect(view.payment).toMatchObject({ received: 0, balance: 500, months: 0 });
   });
 
   it('shows the received code once the payment has arrived', async () => {

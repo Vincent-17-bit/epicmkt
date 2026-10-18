@@ -128,6 +128,17 @@ export const flagView = (f: any) => ({
 });
 
 const PLAN_NAME: Record<string, string> = { standard: "Standard", premium: "Premium" };
+// What the applicant is shown to pay. The account number is their application reference. `received` is money already
+// credited to them (a part payment or a prepayment) and `balance` is what is still needed for the first month.
+function paymentView(a: any, m: any) {
+  const price = a.plan_snapshot?.priceOverride?.amount ?? a.price_at_submission;
+  const received = Number(a.credit_kes ?? 0);
+  return {
+    method: m?.type ?? null, number: m?.number ?? null, account: m?.type === "paybill" ? a.reference_no : null, name: m?.name ?? null,
+    amount: price, received, balance: Math.max(price - received, 0), months: price > 0 ? Math.floor(received / price) : 0, code: a.payment_code,
+  };
+}
+
 const PUBLIC_EVENTS = ["submitted", "under_review", "changes_requested", "approved", "payment_submitted", "activated", "rejected"];
 
 export async function viewApplication(db: any, a: any) {
@@ -172,7 +183,7 @@ export async function viewApplication(db: any, a: any) {
     flags: (flags ?? []).map(flagView),
     events: (events ?? []).map((e: any) => ({ type: e.type, at: e.created_at })),
     payment: showPay
-      ? { method: m?.type ?? null, number: m?.number ?? null, account: m?.type === "paybill" ? a.business_name : null, name: m?.name ?? null, amount: a.price_at_submission, code: a.payment_code }
+      ? paymentView(a, m)
       : null,
   };
 }

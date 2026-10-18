@@ -141,109 +141,129 @@ describe("Subscription: the payment card", () => {
     expect(spy.mock.calls.map((c) => c[0])).toEqual(["247247", "ES100001", "500"]);
   });
 
-  it("explains the steps with the right numbers", async () => {
+  it("explains the steps with the right numbers and asks for no code", async () => {
     await signedInApp();
     await screen.findByTestId("payment-card");
     const steps = screen.getByTestId("payment-card").querySelector("ol");
-    expect(steps.children).toHaveLength(5);
+    expect(steps.children).toHaveLength(4);
     expect(steps).toHaveTextContent("Enter the Paybill number 247247");
     expect(steps).toHaveTextContent("Type ES100001 as the account number");
-    expect(steps).toHaveTextContent("exact amount, KES 500");
+    expect(steps).toHaveTextContent("amount, KES 500");
+    expect(screen.getByTestId("payment-card")).toHaveTextContent("You do not need to send us any code");
   });
 
-  it("without the Paybill setting: we will send the details by SMS, the code field still works", async () => {
+  it("without the Paybill setting: we will send the details by SMS", async () => {
     await signedInApp("/business/subscription", () => { M.state.paybill = null; });
     expect(await screen.findByTestId("pay-pending-details")).toHaveTextContent("We will send you the payment details by SMS shortly.");
     expect(screen.queryByTestId("pay-account")).toBeNull();
-    expect(screen.getByLabelText("M-Pesa transaction code")).toBeInTheDocument();
   });
 });
 
-describe("Subscription: I have paid, duplicate codes and live updates", () => {
-  it("rejects a badly formatted code before sending", async () => {
-    const user = userEvent.setup();
-    await signedInApp();
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "abc12");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("10 character M-Pesa code");
-    expect(M.state.payments.filter((p) => p.status === "submitted")).toHaveLength(0);
-  });
-
-  it("refuses a code already used on another business", async () => {
-    const user = userEvent.setup();
-    await signedInApp();
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "otherbiz01");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("already been used");
-    expect(M.state.payments.some((p) => p.mpesaCode === "OTHERBIZ01")).toBe(false);
-    expect(screen.queryByTestId("payment-confirming")).toBeNull();
-  });
-
-  it("records the code as submitted and shows Payment under confirmation", async () => {
-    const user = userEvent.setup();
-    await signedInApp();
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "abcd123456");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    const card = await screen.findByTestId("payment-confirming");
-    expect(card).toHaveTextContent("Payment under confirmation");
-    expect(card).toHaveTextContent("ABCD123456");
-    const row = M.state.payments.find((p) => p.mpesaCode === "ABCD123456");
-    expect([row.status, row.amount, row.accountRef, row.kind]).toEqual(["submitted", 500, "ES100001", "renewal"]);
-  });
-
-  it("updates by itself when the payment is confirmed: Payment received and the new paid_until, no reload", async () => {
-    const user = userEvent.setup();
+describe("Subscription: payments arrive by themselves", () => {
+  const ready = async (paidUntil = "2026-10-20") => {
     setTime("2026-10-05T09:00:00Z");
-    await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "LIVE123456");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    await screen.findByTestId("payment-confirming");
+    await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight(paidUntil); });
+    await screen.findByTestId("payment-card");
+  };
+
+  it("has no code field and no I have paid button anywhere", async () => {
+    await ready();
+    expect(screen.queryByLabelText("M-Pesa transaction code")).toBeNull();
+    expect(screen.queryByRole("button", { name: "I have paid" })).toBeNull();
+  });
+
+  it("a renewal that arrives shows Payment received and the new paid until date, with no reload", async () => {
+    await ready();
     expect(text("sum-paid-until")).toBe("20 Oct 2026");
-
-    const id = M.state.payments.find((p) => p.mpesaCode === "LIVE123456").id;
-    act(() => { M.confirmPayment(id, "auto"); });
-
+    act(() => { M.autoPay(500); });
     const received = await screen.findByTestId("payment-received");
     expect(received).toHaveTextContent("Payment received");
     expect(received).toHaveTextContent("paid until 20 Nov 2026");
     await waitFor(() => expect(text("sum-paid-until")).toBe("20 Nov 2026"));
-    expect(screen.queryByTestId("payment-confirming")).toBeNull();
     const rows = screen.getAllByTestId("payment-row");
     expect(within(rows[0]).getByText("Payment received")).toBeInTheDocument();
     expect(within(rows[0]).getByRole("link", { name: /^EPM-R-/ })).toBeInTheDocument();
   });
 
-  it("an admin confirmation looks the same as an automatic one", async () => {
+  it("KES 1,500 on a 500 plan adds three months at once", async () => {
+    await ready();
+    act(() => { M.autoPay(1500); });
+    const received = await screen.findByTestId("payment-received");
+    expect(received).toHaveTextContent("covers 3 months");
+    expect(received).toHaveTextContent("paid until 20 Jan 2027");
+    await waitFor(() => expect(text("sum-paid-until")).toBe("20 Jan 2027"));
+  });
+
+  it("choosing 3 months shows KES 1,500 and copies that amount", async () => {
     const user = userEvent.setup();
-    await signedInApp();
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "ADMIN12345");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    await screen.findByTestId("payment-confirming");
-    act(() => { M.confirmPayment(M.state.payments[0].id, "admin"); });
+    const spy = vi.spyOn(navigator.clipboard, "writeText");
+    await ready();
+    await user.selectOptions(screen.getByLabelText("How many months do you want to pay for?"), "3");
+    expect(text("pay-amount")).toContain("KES 1,500");
+    await user.click(screen.getByRole("button", { name: "Copy amount" }));
+    expect(spy.mock.calls.at(-1)[0]).toBe("1500");
+  });
+
+  it("a part payment is kept as credit: the card says so and asks only for the rest", async () => {
+    await ready();
+    act(() => { M.autoPay(300); });
+    const credit = await screen.findByTestId("pay-credit");
+    expect(credit).toHaveTextContent("KES 300");
+    expect(credit).toHaveTextContent("you only need to pay KES 200");
+    await waitFor(() => expect(text("pay-amount")).toContain("KES 200"));
+    expect(text("sum-paid-until")).toBe("20 Oct 2026");
+    act(() => { M.autoPay(200); });
+    expect(await screen.findByTestId("payment-received")).toHaveTextContent("paid until 20 Nov 2026");
+  });
+
+  it("an overpayment renews whole months and keeps the rest as credit", async () => {
+    const user = userEvent.setup();
+    await ready();
+    act(() => { M.autoPay(1600); });
+    await screen.findByTestId("payment-received");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(await screen.findByTestId("pay-credit")).toHaveTextContent("KES 100");
+  });
+
+  it("money paid for an upgrade is applied as the upgrade, not as a renewal month", async () => {
+    const user = userEvent.setup();
+    await ready();
+    await user.click(await screen.findByRole("button", { name: "Upgrade to Premium" }));
+    await waitFor(() => expect(text("pay-amount")).toContain("KES 500"));
+    act(() => { M.autoPay(500); });
+    await waitFor(() => expect(text("sum-plan")).toContain("Premium"));
+    expect(text("sum-paid-until")).toBe("20 Oct 2026");
     expect(await screen.findByTestId("payment-received")).toBeInTheDocument();
   });
 
-  it("an upgrade confirmed in the background switches the plan on screen", async () => {
+  it("a part payment toward an upgrade is held, not turned into a renewal", async () => {
     const user = userEvent.setup();
-    await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
+    await ready();
     await user.click(await screen.findByRole("button", { name: "Upgrade to Premium" }));
     await waitFor(() => expect(text("pay-amount")).toContain("KES 500"));
-    await user.type(screen.getByLabelText("M-Pesa transaction code"), "UPGRADE123");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
-    await screen.findByTestId("payment-confirming");
-    act(() => { M.confirmPayment(M.state.payments[0].id); });
+    act(() => { M.autoPay(300); });
+    await waitFor(() => expect(text("pay-amount")).toContain("KES 200"));
+    expect(text("sum-plan")).toContain("Standard");
+    expect(text("sum-paid-until")).toBe("20 Oct 2026");
+  });
+
+  it("credit that is already there can be used for the upgrade with one button", async () => {
+    const user = userEvent.setup();
+    await ready();
+    M.setBusiness({ creditKes: 600 });
+    await user.click(await screen.findByRole("button", { name: "Upgrade to Premium" }));
+    await user.click(await screen.findByRole("button", { name: "Use my KES 500 credit" }));
     await waitFor(() => expect(text("sum-plan")).toContain("Premium"));
   });
 
-  it("a rejected payment returns to the card so the seller can try again", async () => {
-    const user = userEvent.setup();
-    await signedInApp();
-    await user.type(await screen.findByLabelText("M-Pesa transaction code"), "WRONG12345");
-    await user.click(screen.getByRole("button", { name: "I have paid" }));
+  it("an admin confirmation of a payment they recorded looks the same", async () => {
+    await ready();
+    M.state.payments.unshift({ id: "pay-admin", businessId: "biz-1", amount: 500, kind: "renewal", status: "submitted", mpesaCode: "ADMIN12345", planKey: "standard", categoryId: "barber",
+      accountRef: "ES100001", confirmedVia: null, declineReason: null, receiptNo: null, periodStart: null, periodEnd: null, months: 1, submittedAt: "2026-10-05T08:00:00Z", confirmedAt: null, createdAt: "2026-10-05T08:00:00Z" });
+    M.emit("payments");
     await screen.findByTestId("payment-confirming");
-    act(() => { M.rejectPayment(M.state.payments[0].id, "No such transaction"); });
-    await screen.findByTestId("payment-card");
-    expect(within(screen.getAllByTestId("payment-row")[0]).getByText("Not matched")).toBeInTheDocument();
+    act(() => { M.confirmPayment("pay-admin", "admin"); });
+    expect(await screen.findByTestId("payment-received")).toBeInTheDocument();
   });
 });
 

@@ -15,11 +15,17 @@ const mockBusinesses = [
   { name: "Green Valley Foods", town: "Mombasa", plan: "Premium", status: "Expiring soon", paidUntil: "2026-10-15" },
 ];
 
+const tx = (n, o) => ({
+  key: `t${n}`, txId: `t${n}`, receipt: null, reference: null, town: null, account: null, expected: null, credit: null, suggestedMonths: null,
+  phone: null, payerName: null, paybill: "247247", applicationId: null, businessId: null, appStatus: null, appPaymentCode: null,
+  candidates: [], note: null, matchMethod: "reference", ...o,
+});
 let mockPayments = [
-  { key: "t1", receipt: null, reference: "EPM-2026-ABC234", businessName: "Mara Fresh Mart", account: "Mara Fresh Mart", amount: 3200, expected: 3200, status: "awaiting_confirmation", mpesaCode: "SGH4K9L2QW", phone: "2547****678", payerName: "JOHN DOE", paybill: "247247", at: "2026-10-18T08:40:00Z", applicationId: "a1" },
-  { key: "t2", receipt: null, reference: "EPM-2026-QRS552", businessName: "Green Valley Foods", account: "Green Valley Foods", amount: 2000, expected: 4500, status: "amount_short", mpesaCode: "SGF9Z8Y7X6", phone: "2547****912", payerName: "MARY W", paybill: "247247", at: "2026-10-18T07:15:00Z", applicationId: "a2" },
-  { key: "t3", receipt: null, reference: null, businessName: "No matching business", account: "Umoja Hardwar", amount: 2500, expected: null, status: "unmatched", mpesaCode: "SGG1A2B3C4", phone: "2547****111", payerName: "PETER K", paybill: "247247", at: "2026-10-17T14:05:00Z", applicationId: null },
-  { key: "t4", receipt: "EPM-R-2026-000041", reference: "EPM-2026-XYZ981", businessName: "Pwani Pastries", account: "Pwani Pastries", amount: 2500, expected: 2500, status: "confirmed", mpesaCode: "SGE5D6C7B8", phone: "2547****345", payerName: "AMINA S", paybill: "247247", at: "2026-10-16T10:20:00Z", applicationId: "a4" },
+  tx(1, { businessName: "Mara Fresh Mart", town: "Kisumu", reference: "EPM-2026-ABC234", account: "EPM-2026-ABC234", amount: 1500, expected: 500, credit: 1500, suggestedMonths: 3, status: "awaiting_confirmation", mpesaCode: "SGH4K9L2QW", payerName: "JOHN DOE", at: "2026-10-18T08:40:00Z", applicationId: "a1", appStatus: "payment_confirming", appPaymentCode: "SGH4K9L2QW" }),
+  tx(2, { businessName: "No matching business", account: "Upendo Shop", amount: 500, status: "needs_assignment", mpesaCode: "SGF9Z8Y7X6", payerName: "MARY W", at: "2026-10-18T07:15:00Z", note: "ambiguous_name", matchMethod: null,
+    candidates: [{ type: "application", id: "a2", name: "Upendo Shop", ref: "EPM-2026-DDD444", town: "Maseno", status: "approved", reason: "name" }, { type: "application", id: "a3", name: "Upendo Shop", ref: "EPM-2026-EEE555", town: "Kiambu", status: "approved", reason: "name" }] }),
+  tx(3, { businessName: "Green Valley Foods", town: "Nakuru", reference: "EPM-2026-QRS552", account: "EPM-2026-QRS552", amount: 300, expected: 500, credit: 300, status: "part_paid", mpesaCode: "SGG1A2B3C4", payerName: "PETER K", at: "2026-10-17T14:05:00Z", applicationId: "a4", appStatus: "approved" }),
+  tx(4, { businessName: "Pwani Pastries", town: "Mombasa", reference: "ES100210", account: "ES100210", amount: 1500, expected: 500, status: "renewed", receipt: "EPM-R-2026-000041", mpesaCode: "SGE5D6C7B8", payerName: "AMINA S", at: "2026-10-16T10:20:00Z", businessId: "b1" }),
 ];
 
 const latency = (ms = 160) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -89,3 +95,34 @@ export async function confirmPayment({ mpesaCode }) {
   mockPayments = mockPayments.map((row) => (row.mpesaCode === mpesaCode ? { ...row, status: "confirmed", receipt: "EPM-R-2026-000099" } : row));
   return { ok: true, kind: "activation", sellerId: "ES100999", temporaryPassword: "demo-password", smsSent: true };
 }
+
+export async function getUnprocessedCallbacks() {
+  await latency(80);
+  return [{ id: "cb1", at: "2026-10-18T06:00:00Z", error: "database was busy", code: "SGZ1Y2X3W4", amount: "250.00", account: "EPM-2026-ZZZ999" }];
+}
+
+export async function searchPayTargets(query) {
+  await latency(80);
+  const all = [
+    { type: "application", id: "a2", name: "Upendo Shop", ref: "EPM-2026-DDD444", town: "Maseno", status: "approved", reason: "search" },
+    { type: "application", id: "a3", name: "Upendo Shop", ref: "EPM-2026-EEE555", town: "Kiambu", status: "approved", reason: "search" },
+    { type: "business", id: "b1", name: "Pwani Pastries", ref: "ES100210", town: "Mombasa", status: "live", reason: "search" },
+  ];
+  const q = String(query ?? "").toLowerCase();
+  return q.length < 2 ? [] : all.filter((x) => `${x.name} ${x.town} ${x.ref}`.toLowerCase().includes(q));
+}
+
+export async function assignPayment({ txId, type, id }) {
+  await latency();
+  mockPayments = mockPayments.map((row) => (row.txId === txId ? { ...row, status: type === "business" ? "renewed" : "awaiting_confirmation", businessName: id, candidates: [], note: null } : row));
+  return { outcome: "ready" };
+}
+
+export async function ignorePayment({ txId }) {
+  await latency();
+  mockPayments = mockPayments.map((row) => (row.txId === txId ? { ...row, status: "ignored" } : row));
+  return { outcome: "ignored" };
+}
+
+export async function reprocessCallback() { await latency(); return { outcome: "needs_assignment" }; }
+export async function dismissCallback() { await latency(); }

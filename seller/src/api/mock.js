@@ -129,9 +129,10 @@ function resetBilling() {
   bill.now = null;
   bill.listeners = new Set();
   bill.usedCodes = new Set(["OTHERBIZ01"]);
+  bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0 };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];
@@ -163,6 +164,13 @@ const emit = (table, type = "UPDATE", row = {}) => bill.listeners.forEach((l) =>
 const copy = (v) => JSON.parse(JSON.stringify(v));
 const priceOf = (cat, plan) => CATEGORIES[cat]?.prices?.[plan] ?? null;
 const nairobiDay = (d) => dayOf(d);
+// start + n calendar months, from the start date itself (31 Jan + 1 month = 28 Feb, + 2 months = 31 Mar), as the server does.
+const addMonthsTo = (day, n) => {
+  const [y, m, d] = day.split("-").map(Number);
+  const target = new Date(Date.UTC(y, m - 1 + n, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(d, last))).toISOString().slice(0, 10);
+};
 const businessForInstructions = () => ({
   sellerId: bill.business.sellerId, planKey: bill.business.planKey, categoryId: bill.business.categoryId, paidUntil: bill.business.paidUntil,
   hasConfirmedPayment: bill.payments.some((p) => p.status === "confirmed"),
@@ -199,28 +207,34 @@ export const getPaymentInstructions = async ({ purpose = null, targetPlan = null
   signedIn();
   await wait();
   const r = instructionsFor({ purpose, targetPlan, category });
-  return { ...r, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted") };
+  const credit = bill.business.creditKes ?? 0;
+  return { ...r, creditKes: credit, amountDue: Math.max(r.amount - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted") };
 };
-export const submitPayment = async ({ code, purpose = null, targetPlan = null, category = null, changeId = null }) => {
-  signedIn();
-  await wait();
-  const value = normalizeMpesaCode(code);
-  if (!isMpesaCode(value)) throw new ApiError("invalid_code_format");
-  const mine = bill.payments.find((p) => p.mpesaCode === value && p.status !== "rejected");
-  if (mine) return copy(mine);
-  if (bill.usedCodes.has(value)) throw new ApiError("code_already_used");
-  if (bill.payments.some((p) => p.status === "submitted")) throw new ApiError("payment_already_submitted");
-  const q = instructionsFor({ purpose, targetPlan, category });
-  if (q.amount <= 0) throw new ApiError("nothing_to_pay");
-  if (q.purpose === "category_change" && !bill.changes.some((c) => c.id === changeId && c.status === "pending" && c.newValue === category)) throw new ApiError("change_not_found");
+// Spend credit on an upgrade or category change: a confirmed payment funded from credit (the server does the same).
+const spendCredit = (q, changeId = null) => {
+  bill.business.creditKes -= q.amount;
   const row = {
-    id: `pay-${++bill.seq + 1}`, businessId: bill.business.id, amount: q.amount, kind: q.purpose, status: "submitted", mpesaCode: value,
+    id: `pay-${++bill.seq + 1}`, businessId: bill.business.id, amount: q.amount, kind: q.purpose, status: "submitted", mpesaCode: null,
     planKey: q.planKey, categoryId: q.categoryId, accountRef: q.account, confirmedVia: null, declineReason: null, receiptNo: null,
-    periodStart: null, periodEnd: null, submittedAt: clockNow().toISOString(), confirmedAt: null, createdAt: clockNow().toISOString(), changeId,
+    periodStart: null, periodEnd: null, months: 1, submittedAt: clockNow().toISOString(), confirmedAt: null, createdAt: clockNow().toISOString(), changeId,
   };
   bill.payments.unshift(row);
-  emit("payments", "INSERT", row);
-  return copy(row);
+  __mock.confirmPayment(row.id, "auto");
+  return { outcome: "applied", payment_id: row.id };
+};
+export const applyCredit = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
+  signedIn();
+  await wait();
+  const q = instructionsFor({ purpose, targetPlan, category });
+  if (q.amount <= 0) throw new ApiError("nothing_to_pay");
+  if ((bill.business.creditKes ?? 0) < q.amount) throw new ApiError("not_enough_credit");
+  if (q.purpose === "category_change" && !bill.changes.some((c) => c.id === changeId && c.status === "pending" && c.newValue === category)) throw new ApiError("change_not_found");
+  if (q.purpose === "first" || q.purpose === "renewal") return __mock.autoPay(0);
+  return spendCredit(q, changeId);
+};
+export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
+  signedIn();
+  bill.intent = purpose === "upgrade" || purpose === "category_change" ? { purpose, targetPlan, category, changeId } : null;
 };
 export const listPayments = async () => { signedIn(); await wait(); return copy(bill.payments); };
 export const getReceipt = async (id) => {
@@ -457,6 +471,7 @@ export const __mock = {
       Object.assign(p, { periodStart: today, periodEnd: paid });
     }
     p.status = "confirmed";
+    p.months = p.months ?? 1;
     p.confirmedVia = via;
     p.confirmedAt = clockNow().toISOString();
     p.receiptNo = `EPM-R-2026-${String(900 + ++bill.seq).padStart(6, "0")}`;
@@ -464,6 +479,55 @@ export const __mock = {
     emit("businesses", "UPDATE", bill.business);
     post("payment", "Payment received", `We received KES ${p.amount}. Receipt ${p.receiptNo}.`, { payment_id: p.id }, `payment:${p.id}`);
     return p;
+  },
+  // What the server does when Safaricom reports a payment for this seller: the money is credited, whole months are
+  // taken from the credit and the listing is extended; anything left stays as credit. 0 just re-checks the credit.
+  autoPay(amount) {
+    const price = priceOf(bill.business.categoryId, bill.business.planKey);
+    bill.business.creditKes = (bill.business.creditKes ?? 0) + amount;
+    if (bill.intent) {
+      // Money for an upgrade or category change is held for it, never taken as a renewal month.
+      let q = null;
+      try { q = instructionsFor(bill.intent); } catch { bill.intent = null; }
+      if (q && q.amount > 0) {
+        if (bill.business.creditKes >= q.amount) {
+          const changeId = bill.intent.changeId;
+          bill.intent = null;
+          const out = spendCredit(q, changeId);
+          emit("businesses", "UPDATE", bill.business);
+          if (bill.business.creditKes < price) return out;
+        } else {
+          post("payment", "Payment received, balance due", `We received KES ${amount}. KES ${q.amount - bill.business.creditKes} more is needed.`, {}, null);
+          emit("businesses", "UPDATE", bill.business);
+          return { outcome: "held", credit: bill.business.creditKes };
+        }
+      }
+    }
+    const months = Math.min(Math.floor(bill.business.creditKes / price), 12);
+    const day = (d) => new Date(`${d}T00:00:00+03:00`).toISOString();
+    if (months >= 1) {
+      const today = nairobiDay(clockNow());
+      const paid = bill.business.paidUntil ? nairobiDay(bill.business.paidUntil) : null;
+      const late = paid && today <= new Date(new Date(`${paid}T00:00:00Z`).getTime() + DAY).toISOString().slice(0, 10);
+      const start = late ? paid : today;
+      const end = addMonthsTo(start, months);
+      bill.business.paidUntil = day(end);
+      if (["pending", "expired"].includes(bill.business.status)) bill.business.status = "live";
+      bill.business.creditKes -= months * price;
+      const row = {
+        id: `pay-${++bill.seq + 1}`, businessId: bill.business.id, amount: months * price, kind: "renewal", status: "confirmed", mpesaCode: `AUTO${String(bill.seq).padStart(6, "0")}`,
+        planKey: bill.business.planKey, categoryId: bill.business.categoryId, accountRef: bill.business.sellerId, confirmedVia: "auto", declineReason: null,
+        receiptNo: `EPM-R-2026-${String(900 + ++bill.seq).padStart(6, "0")}`, periodStart: start, periodEnd: end, months, submittedAt: clockNow().toISOString(),
+        confirmedAt: clockNow().toISOString(), createdAt: clockNow().toISOString(), changeId: null,
+      };
+      bill.payments.unshift(row);
+      emit("payments", "INSERT", row);
+      post("payment", "Payment received", `We received your payment. ${months} month${months === 1 ? "" : "s"} added. Receipt ${row.receiptNo}.`, { payment_id: row.id }, `payment:${row.id}`);
+    } else {
+      post("payment", "Payment received, balance due", `We received KES ${amount}. One month costs KES ${price}.`, {}, null);
+    }
+    emit("businesses", "UPDATE", bill.business);
+    return { outcome: months >= 1 ? "applied" : "part_paid", months, credit: bill.business.creditKes };
   },
   rejectPayment(id, reason = null) {
     const p = bill.payments.find((x) => x.id === id);

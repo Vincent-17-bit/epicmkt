@@ -52,6 +52,8 @@ export const adminConfirmPayment = (d: AdminDeps) =>
         ...target, amount_kes: amount, plan_key: planKey, category_id: categoryId, months, mpesa_code: mpesaCode,
         kind: app ? "first" : "renewal", source: "admin", status: "rejected", decline_reason: reason, submitted_at: now,
       }).select("id").single());
+      // The money received for this code stops counting toward the application (the ledger keeps the transaction).
+      try { await d.db.rpc("mpesa_void_for_code", { p_code: mpesaCode, p_reason: reason }); } catch (_) { /* no M-Pesa transaction behind this code */ }
       if (app) {
         await must(d.db.from("applications").update({ status: "approved", payment_code: null }).eq("id", app.id));
         await must(d.db.from("application_events").insert({ application_id: app.id, actor: "admin", type: "payment_rejected", data: { by: c.admin.user.id, reason, code: mpesaCode } }));
@@ -165,6 +167,10 @@ export const adminConfirmPayment = (d: AdminDeps) =>
       await undo(paymentId);
       throw e;
     }
+
+    // Money received over the web as M-Pesa credit: mark it applied, and carry anything beyond the months paid for
+    // onto the new business as credit (it may already cover more months). Never blocks the activation.
+    try { await d.db.rpc("mpesa_settle_activation", { p_application: a.id, p_business: created.businessId, p_payment: paymentId, p_consumed: unit * months }); } catch (_) {}
 
     await must(d.db.from("application_events").insert({
       application_id: a.id, actor: "admin", type: "activated",

@@ -271,16 +271,20 @@ export async function getApplicationDocumentUrl({ applicationId, slotKey, path }
 
 export async function getPayments() {
   const { data } = check(
-    await client().from("admin_payment_queue").select("*").order("at", { ascending: false }).limit(200),
+    await client().from("admin_payment_queue").select("*").order("at", { ascending: false }).limit(300),
   );
   return (data ?? []).map((r) => ({
     key: r.row_key,
+    txId: r.tx_id,
     receipt: r.receipt_no,
     reference: r.reference,
     businessName: r.business_name,
+    town: r.town,
     account: r.account,
     amount: Number(r.amount_kes),
     expected: r.expected_kes == null ? null : Number(r.expected_kes),
+    credit: r.credit_kes == null ? null : Number(r.credit_kes),
+    suggestedMonths: r.suggested_months,
     status: r.status,
     mpesaCode: r.mpesa_code,
     phone: r.phone,
@@ -289,8 +293,50 @@ export async function getPayments() {
     at: r.at,
     applicationId: r.application_id,
     businessId: r.business_id,
+    appStatus: r.app_status,
+    appPaymentCode: r.app_payment_code,
+    candidates: r.candidates ?? [],
+    note: r.note,
+    matchMethod: r.match_method,
   }));
 }
+
+// Callbacks Safaricom sent that were saved but could not be turned into a payment (a database hiccup, an odd payload).
+export async function getUnprocessedCallbacks() {
+  const { data } = check(
+    await client().from("mpesa_callbacks").select("id, received_at, error, body")
+      .eq("processed", false).is("dismissed_at", null).order("received_at", { ascending: false }).limit(20),
+  );
+  return (data ?? []).map((r) => ({
+    id: r.id, at: r.received_at, error: r.error,
+    code: r.body?.TransID ?? null, amount: r.body?.TransAmount ?? null, account: r.body?.BillRefNumber ?? null,
+  }));
+}
+
+export async function searchPayTargets(query) {
+  const { data } = check(await client().rpc("admin_mpesa_search_targets", { p_q: query }));
+  return data ?? [];
+}
+
+const PAYMENT_ERRORS = {
+  forbidden: "Your role cannot change payments.",
+  already_handled: "Someone already handled this payment. Refresh the page.",
+  already_applied: "This payment was already turned into months, so it cannot be ignored here.",
+  reason_required: "Write a short reason.",
+  application_not_payable: "That application was rejected, so it cannot receive a payment.",
+  target_not_found: "That business could not be found.",
+};
+const run = async (call) => {
+  try {
+    return check(await call).data;
+  } catch (e) {
+    throw new Error(PAYMENT_ERRORS[e?.code] ?? PAYMENT_ERRORS[String(e?.message ?? "").match(/[a-z_]+$/)?.[0]] ?? "Could not save that. Try again.");
+  }
+};
+export const assignPayment = ({ txId, type, id }) => run(client().rpc("admin_mpesa_assign", { p_tx: txId, p_type: type, p_id: id }));
+export const ignorePayment = ({ txId, reason }) => run(client().rpc("admin_mpesa_ignore", { p_tx: txId, p_reason: reason }));
+export const reprocessCallback = (id) => run(client().rpc("admin_mpesa_reprocess", { p_callback: id }));
+export const dismissCallback = (id) => run(client().rpc("admin_mpesa_dismiss_callback", { p_callback: id }));
 
 const CONFIRM_ERRORS = {
   duplicate_mpesa_code: "This M-Pesa code is already recorded on another payment.",

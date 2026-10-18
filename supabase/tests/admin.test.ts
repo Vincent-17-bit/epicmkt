@@ -86,8 +86,21 @@ Deno.test("decide: reject needs a reason, approve queues payment instructions, o
   const w2 = world();
   w2.tables.site_settings[0].value = { type: "paybill", number: "400200" };
   const pb = await decide(w2).run({ applicationId: APP_ID, action: "approve", channels: { sms: true } });
-  assert(w2.tables.messages[0].body.includes("Paybill 400200, Account " + w2.tables.applications[0].business_name));
+  // The account number is the application reference, never the business name (two shops can share a name).
+  assert(w2.tables.messages[0].body.includes("Paybill 400200, Account EPM-2026-ABC234"));
+  assert(!w2.tables.messages[0].body.includes("Account Mama Pima"));
+  assert(w2.tables.messages[0].body.includes("no code needed"));
   assertEquals(pb.status, 200);
+
+  // Paid before approval: the money is already credited, so approval goes straight to payment_confirming.
+  const w4 = world();
+  w4.tables.site_settings[0].value = { type: "paybill", number: "400200" };
+  w4.tables.applications[0].credit_kes = 1500;
+  const early = await decide(w4).run({ applicationId: APP_ID, action: "approve", channels: { sms: true } });
+  assertEquals(early.body.status, "payment_confirming");
+  assertEquals(w4.tables.applications[0].status, "payment_confirming");
+  assert(w4.tables.messages[0].body.includes("payment is received"));
+  assert(!w4.tables.messages[0].body.includes("Pay KES"));
 
   const w3 = world();
   w3.tables.site_settings[0].value = { type: "till", number: "" };

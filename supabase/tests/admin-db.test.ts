@@ -210,6 +210,46 @@ Deno.test("real schema: rate limit counts in hit_rate_limit", async () => {
   assertEquals(last, 429);
 });
 
+const ingest = async (account: string, amount: number, id: string) =>
+  (await q(`select public.mpesa_ingest('confirmation', $1::jsonb, null) as r`, [JSON.stringify({
+    TransID: id, TransTime: "20261014093000", TransAmount: String(amount), BusinessShortCode: "247247", BillRefNumber: account, MSISDN: "254712345678", FirstName: "Wanjiru",
+  })]))[0].r;
+
+Deno.test("real schema: the client pays 1,600 for a 500 plan; one Confirm activates 3 months and keeps the 100 as credit", async () => {
+  await seed();
+  await client.query(`update public.applications set status = 'approved', payment_code = null where id = $1`, [APP_B]);
+  const [{ reference_no }] = await q(`select reference_no from public.applications where id = $1`, [APP_B]);
+
+  const got = await ingest(reference_no, 1600, "SGH4K9L2QW");
+  assertEquals(got.outcome, "ready");
+  const [{ payment_code }] = await q(`select payment_code from public.applications where id = $1`, [APP_B]);
+  assertEquals(payment_code, "SGH4K9L2QW");
+
+  const r = await read(await confirm(as("tok-finance", pay({ mpesaCode: payment_code, amount: 1500, months: 3 }))));
+  assertEquals(r.status, 200);
+  assertEquals(r.body.kind, "activation");
+  const [biz] = await q(`select credit_kes::int as credit, public.nairobi_day(paid_until)::text as paid_day from public.businesses`);
+  assertEquals(biz.credit, 100);
+  assertEquals(biz.paid_day, "2027-01-14");
+  const [app] = await q(`select credit_kes::int as credit from public.applications where id = $1`, [APP_B]);
+  assertEquals(app.credit, 0);
+  const [tx] = await q(`select state, target_type, payment_id is not null as linked from public.mpesa_transactions where trans_id = 'SGH4K9L2QW'`);
+  assertEquals(tx, { state: "applied", target_type: "business", linked: true });
+});
+
+Deno.test("real schema: rejecting a payment takes its money back and re-opens the application", async () => {
+  await seed();
+  await client.query(`update public.applications set status = 'approved', payment_code = null where id = $1`, [APP_B]);
+  const [{ reference_no }] = await q(`select reference_no from public.applications where id = $1`, [APP_B]);
+  await ingest(reference_no, 500, "SGH4K9L2QX");
+  const r = await read(await confirm(as("tok-finance", pay({ mpesaCode: "SGH4K9L2QX", action: "reject", reason: "Not in the statement" }))));
+  assertEquals(r.status, 200);
+  const [app] = await q(`select status, payment_code, credit_kes::int as credit from public.applications where id = $1`, [APP_B]);
+  assertEquals(app, { status: "approved", payment_code: null, credit: 0 });
+  const [tx] = await q(`select state, note from public.mpesa_transactions where trans_id = 'SGH4K9L2QX'`);
+  assertEquals(tx, { state: "ignored", note: "Not in the statement" });
+});
+
 Deno.test("close", async () => {
   await client.end();
 });

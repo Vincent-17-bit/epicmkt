@@ -1,43 +1,7 @@
 // Pure helpers for the Safaricom C2B callback. No Deno or network APIs here, so they can be tested anywhere.
 // Safaricom does not allow "mpesa", "safaricom" and similar words in callback URLs, so this function is named pay-callback.
-
-export type C2B = {
-  transId: string;
-  amount: number;
-  account: string;
-  msisdn: string;
-  name: string;
-  shortCode: string;
-  transTime: string | null;
-};
-
-const text = (v: unknown) => (v == null ? "" : String(v)).trim();
-
-/** "20261018143005" is Nairobi time (UTC+3). Returns an ISO string, or null when it cannot be read. */
-export function parseTransTime(v: unknown): string | null {
-  const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})$/.exec(text(v));
-  if (!m) return null;
-  const [, y, mo, d, h, mi, s] = m;
-  const ms = Date.UTC(+y, +mo - 1, +d, +h - 3, +mi, +s);
-  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
-}
-
-/** Reads a C2B confirmation body. Returns null when it is not a usable payment notice. */
-export function parseC2B(body: any): C2B | null {
-  if (!body || typeof body !== "object") return null;
-  const transId = text(body.TransID).toUpperCase();
-  const amount = Number(text(body.TransAmount));
-  if (!/^[A-Z0-9]{10}$/.test(transId) || !Number.isFinite(amount) || amount <= 0) return null;
-  return {
-    transId,
-    amount,
-    account: text(body.BillRefNumber),
-    msisdn: text(body.MSISDN),
-    name: [body.FirstName, body.MiddleName, body.LastName].map(text).filter(Boolean).join(" "),
-    shortCode: text(body.BusinessShortCode),
-    transTime: parseTransTime(body.TransTime),
-  };
-}
+// All parsing of the payment itself happens in the database (mpesa_ingest), so a payload we did not expect is
+// still stored raw instead of being dropped here.
 
 /** Constant-time comparison so the URL secret cannot be guessed from response timing. */
 export function sameSecret(a: string, b: string): boolean {
@@ -54,7 +18,46 @@ export function routeOf(pathname: string): { secret: string; kind: string } | nu
   const parts = pathname.split("/").filter(Boolean);
   const i = parts.indexOf("pay-callback");
   if (i < 0 || parts.length < i + 3) return null;
-  return { secret: decodeURIComponent(parts[i + 1]), kind: parts[i + 2] };
+  try {
+    return { secret: decodeURIComponent(parts[i + 1]), kind: parts[i + 2] };
+  } catch {
+    return null;
+  }
+}
+
+/** The body as JSON, or { _raw } holding the text when it is not JSON. Never throws, so nothing is lost. */
+export function bodyOf(text: string): Record<string, unknown> {
+  try {
+    const v = JSON.parse(text);
+    return v && typeof v === "object" && !Array.isArray(v) ? v : { _raw: text.slice(0, 5000) };
+  } catch {
+    return { _raw: text.slice(0, 5000) };
+  }
 }
 
 export const ACCEPTED = { ResultCode: 0, ResultDesc: "Accepted" };
+
+/** Which outcomes deserve an e-mail to the admin, and what it says. Routine renewals do not. */
+export function alertFor(r: { outcome?: string; note?: string | null; business_name?: string | null; reference_no?: string | null; balance?: number },
+                         tx: { amount?: number; code?: string; account?: string }): { subject: string; lines: string[] } | null {
+  const money = `KES ${Number(tx.amount ?? 0).toLocaleString("en-KE")}`;
+  switch (r.outcome) {
+    case "needs_assignment":
+      return {
+        subject: `M-Pesa payment needs assigning: ${tx.code}`,
+        lines: [`${money} arrived with the account “${tx.account ?? ""}” and could not be matched to one business (${r.note ?? "no match"}).`, "Open Payments in the admin site and assign it. The money is recorded and safe."],
+      };
+    case "ready":
+      return {
+        subject: `M-Pesa payment ready to confirm: ${r.business_name ?? tx.code}`,
+        lines: [`${money} (code ${tx.code}) was paid for ${r.business_name ?? "an application"} (${r.reference_no ?? ""}).`, "Open Payments in the admin site and press Confirm to activate the seller."],
+      };
+    case "error":
+      return {
+        subject: `M-Pesa callback could not be processed: ${tx.code ?? ""}`,
+        lines: ["A callback from Safaricom was saved but could not be processed. Open Payments in the admin site to reprocess or dismiss it."],
+      };
+    default:
+      return null;
+  }
+}

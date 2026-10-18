@@ -74,8 +74,12 @@ export const getSubscription = async () => {
 };
 export const getPaymentInstructions = async ({ purpose = null, targetPlan = null, category = null } = {}) =>
   shape.instructions(await rpc("seller_payment_instructions", { p_purpose: purpose, p_target_plan: targetPlan, p_category: category }));
-export const submitPayment = async ({ code, purpose = null, targetPlan = null, category = null, changeId = null }) =>
-  shape.payment(await rpc("seller_submit_payment", { p_code: code, p_purpose: purpose, p_target_plan: targetPlan, p_category: category, p_change_id: changeId }));
+export const applyCredit = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) =>
+  rpc("seller_apply_credit", { p_purpose: purpose, p_target_plan: targetPlan, p_category: category, p_change_id: changeId });
+// Tells the server what the seller is about to pay for, so money for an upgrade is not taken as a renewal.
+export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
+  await rpc("seller_set_payment_intent", { p_purpose: purpose, p_target_plan: targetPlan, p_category: category, p_change_id: changeId });
+};
 export const listPayments = async () => (await rows(need().from("payments").select("*").order("created_at", { ascending: false }).limit(200))).map(shape.payment);
 export const getReceipt = async (id) => {
   const p = await rows(need().from("payments").select("*").eq("id", id).maybeSingle());
