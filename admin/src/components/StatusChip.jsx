@@ -1,5 +1,5 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBan, faBell, faCircleCheck, faClock, faEyeSlash, faFlag, faPause, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBan, faBell, faCircleCheck, faClock, faEyeSlash, faFlag, faHourglassHalf, faPause, faTrash } from "@fortawesome/free-solid-svg-icons";
 
 export const STATE_META = {
   live: { label: "Live", icon: faCircleCheck, tone: "live" },
@@ -9,6 +9,7 @@ export const STATE_META = {
   suspended: { label: "Suspended", icon: faBan, tone: "black" },
   paused: { label: "Paused", icon: faPause, tone: "neutral" },
   unlisted: { label: "Unlisted", icon: faEyeSlash, tone: "neutral" },
+  pending: { label: "Pending", icon: faHourglassHalf, tone: "neutral" },
   deleted: { label: "Deleted", icon: faTrash, tone: "neutral" },
 };
 

@@ -7,11 +7,9 @@ const notConfigured = () => {
   throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
 };
 
-// Not built yet: these stay behind the "not connected" message so a page never shows made-up data.
-export const listBusinesses = notConfigured;
-export const listAllBusinesses = notConfigured;
-export const getBusinessTabCounts = notConfigured;
-export const getBusinessFilterOptions = notConfigured;
+// Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
+// audited RPCs (suspend, extend, tag, message...), the audit viewer, and the flash sales list. Everything else on
+// the Businesses page, the Payments page and the Command Center is live below.
 export const bulkBusinessAction = notConfigured;
 export const undoBulkBusinessAction = notConfigured;
 export const listAuditEntries = notConfigured;
@@ -43,6 +41,48 @@ export async function getAdminCounts() {
   ]);
   const { data } = check(counts);
   return normalizeCounts(data, { applicationsOver24h: overdue.error ? null : overdue.count });
+}
+
+// ---- Businesses: server-side paging, filters, search and sort (migration 0014_admin_live.sql) -----------------------
+
+const MAX_EXPORT = 5000;
+
+const businessArgs = ({ search = "", sort, extra } = {}, page) => ({
+  p_tab: extra?.tab ?? "all",
+  p_search: search.trim() || null,
+  p_sort: sort?.key ?? "paidUntil",
+  p_dir: sort?.dir === "desc" ? "desc" : "asc",
+  p_filters: extra?.filters ?? {},
+  p_limit: page.limit,
+  p_offset: page.offset,
+});
+
+export async function listBusinesses({ page = 0, pageSize = 50, ...query } = {}) {
+  const { data } = check(await client().rpc("admin_businesses_query", businessArgs(query, { limit: pageSize, offset: page * pageSize })));
+  return { rows: data?.rows ?? [], total: data?.total ?? 0 };
+}
+
+// "Select all" and CSV export. Capped, so one click cannot pull the whole table through the browser.
+export async function listAllBusinesses(query = {}) {
+  const { data } = check(await client().rpc("admin_businesses_query", businessArgs(query, { limit: MAX_EXPORT, offset: 0 })));
+  return data?.rows ?? [];
+}
+
+export async function getBusinessTabCounts({ extra } = {}) {
+  const { data } = check(await client().rpc("admin_business_tab_counts", { p_filters: extra?.filters ?? {} }));
+  return data ?? {};
+}
+
+export async function getBusinessFilterOptions() {
+  const { data } = check(await client().rpc("admin_business_filter_options"));
+  return { categories: [], counties: [], plans: [], agents: [], ...(data ?? {}) };
+}
+
+// ---- Live activity: the Command Center feed --------------------------------------------------------------------
+
+export async function getAdminActivity({ limit = 15 } = {}) {
+  const { data } = check(await client().rpc("admin_activity", { p_limit: limit }));
+  return data ?? [];
 }
 
 // ---- Applications --------------------------------------------------------------------------------------------

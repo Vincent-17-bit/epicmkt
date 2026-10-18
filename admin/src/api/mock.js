@@ -62,6 +62,17 @@ export async function getAdminCounts() {
   );
 }
 
+// Demo mode only. The live API reads these from admin_activity(); the sample lines used to sit in the page itself.
+export async function getAdminActivity() {
+  await latency(80);
+  return [
+    { id: "demo-1", text: "New application from Umoja Market submitted 2 minutes ago", to: "/admin/applications" },
+    { id: "demo-2", text: "Payment code MPESA-1047 matched and awaiting confirmation", to: "/admin/payments" },
+    { id: "demo-3", text: "2 seller reports were flagged for review", to: null },
+    { id: "demo-4", text: "Reminder batch completed for 6 expiring sellers", to: null },
+  ];
+}
+
 export async function getBusinesses() {
   await latency(80);
   return copy(mockBusinesses);
