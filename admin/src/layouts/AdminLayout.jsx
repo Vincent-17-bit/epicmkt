@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useAuth } from "../auth/AuthContext.jsx";
+import { initialsOf } from "../lib/initials.js";
 
 const navItems = [
   { label: "Command Center", to: "/admin", end: true, badge: "12" },
@@ -10,6 +12,8 @@ const navItems = [
 ];
 
 export default function AdminLayout() {
+  const { admin, demo, signOut } = useAuth();
+  const displayName = admin?.displayName || admin?.email || "Admin";
   const [collapsed, setCollapsed] = useState(false);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("epicmkt-admin-theme");
@@ -91,7 +95,19 @@ export default function AdminLayout() {
             >
               {theme === "light" ? "Dark" : "Light"}
             </button>
-            <div className="admin-avatar" aria-label="User profile">AO</div>
+            <div
+              className="admin-avatar"
+              role="img"
+              aria-label={`Signed in as ${displayName}`}
+              title={admin?.role ? `${displayName} (${admin.role})` : displayName}
+            >
+              {initialsOf(displayName)}
+            </div>
+            {demo ? null : (
+              <button type="button" className="admin-theme-toggle" onClick={signOut}>
+                Sign out
+              </button>
+            )}
           </div>
         </header>
 

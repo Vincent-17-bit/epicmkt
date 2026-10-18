@@ -1,0 +1,136 @@
+/* Sign-in screen and the "checking your session" gate. Uses the tokens from admin.css. */
+
+.admin-login,
+.admin-gate {
+  height: 100dvh;
+  overflow-y: auto;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1rem;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-login__card {
+  width: 100%;
+  max-width: 24rem;
+  padding: 2rem 1.75rem;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 1.1rem;
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-login__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.admin-login__brand div:last-child {
+  display: grid;
+  line-height: 1.2;
+}
+
+.admin-login__brand span {
+  font-size: 0.75rem;
+  color: var(--admin-muted);
+}
+
+.admin-login__logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--admin-primary);
+  color: #111111;
+  font-weight: 800;
+}
+
+.admin-login__title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+}
+
+.admin-login__lead {
+  margin: 0 0 1.25rem;
+  color: var(--admin-muted);
+  font-size: 0.9rem;
+}
+
+.admin-login__error {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--admin-danger);
+  border-radius: 0.75rem;
+  color: var(--admin-danger);
+  font-size: 0.88rem;
+}
+
+.admin-login__field {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.admin-login__field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--admin-muted);
+}
+
+.admin-login__field input {
+  height: 2.75rem;
+  padding: 0 0.9rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-login__field input:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 1px;
+  border-color: var(--admin-primary);
+}
+
+.admin-login__field input:disabled {
+  opacity: 0.6;
+}
+
+.admin-login__submit {
+  width: 100%;
+  font-weight: 700;
+}
+
+.admin-login__submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.admin-gate {
+  align-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.admin-gate h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.admin-gate p {
+  margin: 0;
+  max-width: 28rem;
+  color: var(--admin-muted);
+}
+
+.admin-gate__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
