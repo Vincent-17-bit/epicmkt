@@ -84,9 +84,9 @@ Deno.test("decide: reject needs a reason, approve queues payment instructions, o
   assertEquals(w.sms.length, 0);
 
   const w2 = world();
-  w2.tables.site_settings[0].value = { type: "paybill", number: "400200", account: "" };
+  w2.tables.site_settings[0].value = { type: "paybill", number: "400200" };
   const pb = await decide(w2).run({ applicationId: APP_ID, action: "approve", channels: { sms: true } });
-  assert(w2.tables.messages[0].body.includes("Paybill 400200, Account EPM-2026-ABC234"));
+  assert(w2.tables.messages[0].body.includes("Paybill 400200, Account " + w2.tables.applications[0].business_name));
   assertEquals(pb.status, 200);
 
   const w3 = world();

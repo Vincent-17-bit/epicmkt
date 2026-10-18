@@ -100,5 +100,3 @@ export async function saveCorrections(session, patch, files = []) {
 
 export const resubmitApplication = (session) => call('status-resubmit', { token: session.token });
 
-export const submitPaymentCode = (session, mpesaCode) =>
-  call('status-payment-code', { token: session.token, code: mpesaCode });

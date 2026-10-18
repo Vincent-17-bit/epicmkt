@@ -124,7 +124,7 @@ async function view(rec) {
     flags: (rec.flags ?? []).map(flagView),
     events: (rec.events ?? []).filter((e) => PUBLIC_EVENTS.includes(e.type)),
     payment: showPay
-      ? { method: 'till', number: '123456', account: null, name: 'EpicMKT (demo)', amount: rec.priceAtSubmission, code: rec.paymentCode ?? null }
+      ? { method: 'paybill', number: '123456', account: p.business?.name ?? null, name: 'EpicMKT (demo)', amount: rec.priceAtSubmission, code: rec.paymentCode ?? null }
       : null
   };
 }
@@ -189,21 +189,6 @@ export async function resubmitApplication(session) {
     return r;
   });
   return { ok: true, status: 'submitted' };
-}
-
-export async function submitPaymentCode(session, mpesaCode) {
-  await wait(300);
-  const rec = sessionRecord(session);
-  if (rec.status !== 'approved') throw apiError('not_editable');
-  const code = String(mpesaCode ?? '').trim().toUpperCase();
-  if (!/^[A-Z0-9]{10}$/.test(code)) throw apiError('invalid_code_format');
-  updateApplication(rec.referenceNo, (r) => {
-    r.paymentCode = code;
-    r.status = 'payment_confirming';
-    pushEvent(r, 'payment_submitted');
-    return r;
-  });
-  return { ok: true, status: 'payment_confirming' };
 }
 
 export { isDocPath, docSlot, getPath };
