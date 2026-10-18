@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MIME_BY_KIND, SLOT_LIMITS, requiredSlots } from "../_shared/validate.ts";
 import { pdfIsSafe, sniff } from "../_shared/files.ts";
+import { formatKsh } from "../_shared/money.ts";
 import { clientIp, corsHeaders, escapeHtml, json, sendMail, sha256Hex } from "../_shared/http.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
     Deno.env.get("ADMIN_EMAIL"),
     `New seller application ${app.reference_no}`,
     `<p><b>${escapeHtml(app.business_name)}</b> (${escapeHtml(cat?.name)})</p>
-     <p>Owner: ${escapeHtml(app.owner_full_name)}<br>Phone: ${escapeHtml(app.phone)}<br>Plan: ${escapeHtml(app.plan_key)} at KES ${escapeHtml(app.price_at_submission)}</p>
+     <p>Owner: ${escapeHtml(app.owner_full_name)}<br>Phone: ${escapeHtml(app.phone)}<br>Plan: ${escapeHtml(app.plan_key)} at ${escapeHtml(formatKsh(app.price_at_submission))}</p>
      <p>Reference: ${ref}</p>`,
   );
   await sendMail(

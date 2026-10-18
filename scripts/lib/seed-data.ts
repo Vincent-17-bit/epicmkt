@@ -76,12 +76,12 @@ const SMS_ERRORS = ["at_InvalidPhoneNumber", "at_InsufficientBalance", "at_Inval
 const EMAIL_ERRORS = ["provider_http_422", "provider_unreachable", "email_not_configured"];
 
 export const TEMPLATES: Row[] = [
-  { key: "application_approved", channel: "sms", subject: null, body_en: "EpicMKT: your application {reference} is approved. Pay KES {amount} to activate your listing.", body_sw: "EpicMKT: ombi lako {reference} limeidhinishwa. Lipa KES {amount} ili kuwezesha biashara yako." },
+  { key: "application_approved", channel: "sms", subject: null, body_en: "EpicMKT: your application {reference} is approved. Pay KSh {amount} to activate your listing.", body_sw: "EpicMKT: ombi lako {reference} limeidhinishwa. Lipa KSh {amount} ili kuwezesha biashara yako." },
   { key: "application_changes", channel: "sms", subject: null, body_en: "EpicMKT: we need a few changes to {reference}. Open Check my application to see what to fix.", body_sw: "EpicMKT: tunahitaji marekebisho kwa {reference}. Fungua Check my application kuona." },
-  { key: "payment_received", channel: "sms", subject: null, body_en: "EpicMKT: we received KES {amount}. Your listing is paid until {date}. Receipt {receipt}.", body_sw: "EpicMKT: tumepokea KES {amount}. Biashara yako imelipiwa hadi {date}. Risiti {receipt}." },
+  { key: "payment_received", channel: "sms", subject: null, body_en: "EpicMKT: we received KSh {amount}. Your listing is paid until {date}. Receipt {receipt}.", body_sw: "EpicMKT: tumepokea KSh {amount}. Biashara yako imelipiwa hadi {date}. Risiti {receipt}." },
   { key: "renewal_reminder", channel: "sms", subject: null, body_en: "EpicMKT: your listing expires in {days} days. Renew to stay visible.", body_sw: "EpicMKT: biashara yako inaisha baada ya siku {days}. Lipia ili uendelee kuonekana." },
   { key: "welcome_email", channel: "email", subject: "Welcome to EpicMKT", body_en: "<p>Hello {name}, your listing is live.</p>", body_sw: null },
-  { key: "payment_receipt_email", channel: "email", subject: "Your EpicMKT receipt {receipt}", body_en: "<p>We received KES {amount}. Receipt {receipt}.</p>", body_sw: null },
+  { key: "payment_receipt_email", channel: "email", subject: "Your EpicMKT receipt {receipt}", body_en: "<p>We received KSh {amount}. Receipt {receipt}.</p>", body_sw: null },
 ];
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");

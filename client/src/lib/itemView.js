@@ -1,7 +1,7 @@
-import { formatValue, slugify, visibleFields } from "@epicmkt/shared";
+import { formatKes, formatValue, slugify, visibleFields } from "@epicmkt/shared";
 import { itemPath } from "../config/breadcrumbs.js";
 
-const kes = (amount) => `KSh ${Number(amount).toLocaleString("en-KE")}`;
+const kes = formatKes;
 
 export function chatMessage({ item, variant, pricing }) {
   const name = variant ? `${item.name} (${variant.label})` : item.name;

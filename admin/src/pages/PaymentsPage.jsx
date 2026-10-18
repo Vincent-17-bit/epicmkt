@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 import { api } from "../api/index.js";
 import { useQuery } from "@tanstack/react-query";
 
@@ -35,7 +36,7 @@ export default function PaymentsPage() {
                     <tr key={row.receipt || row.mpesaCode}>
                       <td>{row.receipt}</td>
                       <td>{row.businessName}</td>
-                      <td>KSh {row.amount}</td>
+                      <td>{formatKes(row.amount)}</td>
                       <td><span className="status-pill status-pill--neutral">{row.status}</span></td>
                       <td>{row.mpesaCode}</td>
                     </tr>

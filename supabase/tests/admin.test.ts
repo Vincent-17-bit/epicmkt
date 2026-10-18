@@ -26,7 +26,7 @@ Deno.test("decide: preview renders messages per channel and sends nothing", asyn
   assertEquals(Object.keys(r.body.messages).sort(), ["email", "sms"]);
   assertEquals(r.body.messages.sms.to, "+254712345678");
   assertEquals(r.body.messages.email.to, "wanjiru@example.com");
-  assert(r.body.messages.sms.body.includes("KES 500"));
+  assert(r.body.messages.sms.body.includes("KSh 500"));
   assert(r.body.messages.sms.body.includes("Till 123456"));
   assertEquals(JSON.stringify(w.tables), before);
   assertEquals(w.sms.length, 0);
@@ -75,7 +75,7 @@ Deno.test("decide: reject needs a reason, approve queues payment instructions, o
   assertEquals(ok.body.queued, ["sms", "email"]);
   assertEquals(w.tables.applications[0].status, "approved");
   assertEquals(w.tables.applications[0].plan_snapshot.priceOverride.amount, 300);
-  assert(w.tables.messages[0].body.includes("KES 300"));
+  assert(w.tables.messages[0].body.includes("KSh 300"));
   assertEquals(w.tables.messages.map((m) => m.status), ["queued", "queued"]);
   assertEquals(w.tables.application_events[0].type, "approve");
   assertEquals(w.tables.audit_log[0].action, "application.approve");

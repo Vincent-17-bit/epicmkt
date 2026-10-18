@@ -1,6 +1,7 @@
 import { adminFn, audit, json, must, queueMessages, z, type AdminDeps } from "../_shared/adminKit.ts";
 import { addCalendarMonth, nairobiDay, nairobiMidnight, eatToday, formatDay, laterDate } from "../_shared/dates.ts";
 import { uniqueSlug } from "../_shared/ids.ts";
+import { formatKsh } from "../_shared/money.ts";
 import { sellerEmail } from "../_shared/seller.ts";
 import { escapeHtml } from "../_shared/http.ts";
 
@@ -63,7 +64,7 @@ export const adminConfirmPayment = (d: AdminDeps) =>
     const warnings: { code: string; message: string }[] = [];
     const dupes = await d.db.from("payments").select("id").eq("mpesa_code", mpesaCode).neq("status", "rejected");
     if (dupes.data?.length > 0) return duplicateCode();
-    if (amount !== unit * months) warnings.push({ code: "amount_differs", message: `Expected KES ${unit * months} for ${months} month(s), received KES ${amount}.` });
+    if (amount !== unit * months) warnings.push({ code: "amount_differs", message: `Expected ${formatKsh(unit * months)} for ${months} month(s), received ${formatKsh(amount)}.` });
     if (warnings.length && !acknowledgeWarnings) return json({ ok: false, requiresAcknowledgement: true, warnings }, 409);
 
     const confirmed = (extra: Row) => ({
@@ -86,7 +87,7 @@ export const adminConfirmPayment = (d: AdminDeps) =>
         await d.db.from("payments").delete().eq("id", pay.id);
         throw new Error("renewal_failed");
       }
-      const text = `EpicMKT: payment received (KES ${amount}). Your listing is paid until ${formatDay(paidUntil)}. Receipt ${pay.receipt_no}.`;
+      const text = `EpicMKT: payment received (${formatKsh(amount)}). Your listing is paid until ${formatDay(paidUntil)}. Receipt ${pay.receipt_no}.`;
       await queueMessages(d, [
         { channel: "sms", to_address: biz.phone, subject: null },
         { channel: "email", to_address: biz.email, subject: "Payment received" },

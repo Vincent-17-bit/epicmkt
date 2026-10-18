@@ -1,4 +1,5 @@
 import { adminFn, audit, json, must, z, type AdminDeps } from "../_shared/adminKit.ts";
+import { formatKsh } from "../_shared/money.ts";
 
 const Body = z.object({
   applicationId: z.string().uuid(),
@@ -86,7 +87,7 @@ export const adminDecideApplication = (d: AdminDeps) =>
         patch.plan_snapshot = { ...(app.plan_snapshot ?? {}), priceOverride: { amount: priceOverride, reason, by: c.admin.user.id, at: now } };
       }
       subject = `Your EpicMKT application ${ref} is approved`;
-      text = `EpicMKT: ${app.business_name} is approved. Pay KES ${amount} to M-Pesa ${payTo(mpesa, ref)}, then enter the M-Pesa code on your status page.`;
+      text = `EpicMKT: ${app.business_name} is approved. Pay ${formatKsh(amount)} to M-Pesa ${payTo(mpesa, ref)}, then enter the M-Pesa code on your status page.`;
     }
 
     if (action === "set_verification") {

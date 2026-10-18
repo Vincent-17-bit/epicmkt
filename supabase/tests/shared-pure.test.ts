@@ -103,7 +103,7 @@ test("SMS: extension characters cost two septets", () => {
 });
 
 test("SMS: GSM-7 accents and the basic table stay GSM-7", () => {
-  const info = countSms("Habari! Bei ni KES 1,500 @ duka. Café à ñ ü £ $ ¥ § ¿ ¡ Ø å Δ Ω\nOK");
+  const info = countSms("Habari! Bei ni KSh 1,500 @ duka. Café à ñ ü £ $ ¥ § ¿ ¡ Ø å Δ Ω\nOK");
   assert.equal(info.encoding, "GSM-7");
   assert.deepEqual(info.unicodeChars, []);
 });

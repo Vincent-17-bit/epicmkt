@@ -1,4 +1,4 @@
-import { passwordProblems } from "@epicmkt/shared";
+import { passwordProblems, formatKes } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { EXCEPTION_LIMIT, checkProofBatch, checkReply, inspectProof, validateException } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -373,7 +373,7 @@ export const __mock = {
     p.receiptNo = `EPM-R-2026-${String(900 + ++bill.seq).padStart(6, "0")}`;
     emit("payments", "UPDATE", p);
     emit("businesses", "UPDATE", bill.business);
-    post("payment", "Payment received", `We received KSh ${p.amount}. Receipt ${p.receiptNo}.`, { payment_id: p.id }, `payment:${p.id}`);
+    post("payment", "Payment received", `We received ${formatKes(p.amount)}. Receipt ${p.receiptNo}.`, { payment_id: p.id }, `payment:${p.id}`);
     return p;
   },
   rejectPayment(id, reason = null) {

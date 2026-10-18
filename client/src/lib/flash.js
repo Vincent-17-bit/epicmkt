@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 import { t } from "../i18n/index.js";
 import { itemPath } from "../config/breadcrumbs.js";
 
@@ -60,11 +61,11 @@ export function urgencyLabel(urgency) {
 
 export const kes = (n) => Number(n).toLocaleString("en-KE");
 
-export const kesText = (n) => `${t("flash.currency")} ${kes(n)}`;
+export const kesText = (n) => formatKes(n);
 
 export function discountBadge(discount) {
   if (discount?.type === "percent") return { kind: "percent", text: `-${discount.value}%` };
-  if (discount?.type === "amount_off") return { kind: "amount", text: `${t("flash.currency")} ${kes(discount.value)} ${t("flash.off")}` };
+  if (discount?.type === "amount_off") return { kind: "amount", text: `${formatKes(discount.value)} ${t("flash.off")}` };
   return { kind: "deal", text: t("flash.deal") };
 }
 

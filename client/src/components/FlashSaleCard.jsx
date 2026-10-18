@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 import { memo } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -41,7 +42,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
   const urgency = useUrgency(sale.endsAt);
   const remaining = useCountdownLabel(sale.endsAt);
   const compact = size === "compact";
-  const aria = `${t("flash.cardLabel")}: ${item.name}, ${t("flash.currency")} ${kes(pricing.salePrice)}, ${remaining}`;
+  const aria = `${t("flash.cardLabel")}: ${item.name}, ${formatKes(pricing.salePrice)}, ${remaining}`;
 
   const price = (
     <span className={styles.prices}>
@@ -113,7 +114,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
           <span className={styles.tags}>
             {pricing.savings > 0 && (
               <span className={styles.save}>
-                {t("flash.save")} {t("flash.currency")} {kes(pricing.savings)}
+                {t("flash.save")} {formatKes(pricing.savings)}
               </span>
             )}
             {sale.quantityNote && (

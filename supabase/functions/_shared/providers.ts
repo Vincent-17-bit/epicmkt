@@ -26,7 +26,7 @@ export function messagingMode(): "live" | "mock" {
 }
 export const isMockMode = () => messagingMode() === "mock";
 
-/** KES per SMS part in mock mode, close to the real Africa's Talking price, so cost columns look plausible. */
+/** KSh per SMS part in mock mode, close to the real Africa's Talking price, so cost columns look plausible. */
 export const MOCK_SMS_COST_KES = 0.8;
 
 const TIMEOUT_MS = 10_000;

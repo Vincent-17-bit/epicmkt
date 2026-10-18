@@ -1,3 +1,5 @@
+import { formatKes as formatKsh } from './utils.js';
+
 export const PLAN_KEYS = ['standard', 'premium'];
 
 export const PLAN_LABELS = { standard: 'Standard', premium: 'Premium' };
@@ -7,7 +9,7 @@ export const planLabel = (planKey) => PLAN_LABELS[planKey] ?? planKey;
 export function formatKes(amount) {
   if (!Number.isFinite(amount)) return '';
   if (amount === 0) return 'Free';
-  return `KSh ${amount.toLocaleString('en-KE')}`;
+  return formatKsh(amount);
 }
 
 export const formatKesPerMonth = (amount) => (amount === 0 ? 'Free' : `${formatKes(amount)} / month`);
