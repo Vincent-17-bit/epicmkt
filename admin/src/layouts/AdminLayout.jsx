@@ -95,14 +95,14 @@ export default function AdminLayout() {
             >
               {theme === "light" ? "Dark" : "Light"}
             </button>
-            <div
+            <Link
+              to="/admin/account"
               className="admin-avatar"
-              role="img"
-              aria-label={`Signed in as ${displayName}`}
-              title={admin?.role ? `${displayName} (${admin.role})` : displayName}
+              aria-label={`Account of ${displayName}`}
+              title={admin?.role ? `${displayName} (${admin.role}): account and password` : displayName}
             >
               {initialsOf(displayName)}
-            </div>
+            </Link>
             {demo ? null : (
               <button type="button" className="admin-theme-toggle" onClick={signOut}>
                 Sign out

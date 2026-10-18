@@ -1,5 +1,5 @@
 const notConfigured = () => {
-  throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
+  throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
 };
 
 export const listBusinesses = notConfigured;
@@ -12,16 +12,16 @@ export const listAuditEntries = notConfigured;
 
 export const liveAdminApi = {
   async getAdminCounts() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
+    throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
   },
   async getApplications() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
+    throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
   },
   async getBusinesses() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
+    throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
   },
   async getPayments() {
-    throw new Error("Supabase admin API not configured. Set VITE_SUPABASE_URL to enable live data.");
+    throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
   },
 };
 

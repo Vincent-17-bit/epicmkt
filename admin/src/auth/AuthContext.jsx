@@ -6,15 +6,19 @@ const AuthContext = createContext(null);
 
 const DEMO_ADMIN = { userId: "demo", role: "owner", email: null, displayName: "Demo admin" };
 const IDLE = { userId: null, state: "idle", admin: null, message: null };
+const NOT_CONFIGURED = { error: new Error(configError ?? "Supabase is not configured.") };
 
-// status: loading | signedOut | admin | error
+// status: loading | signedOut | recovering | admin | error
 // "admin" means a Supabase session exists AND this user has a row in public.admins.
+// "recovering" means the person proved their email with a reset code and must now choose a new
+// password: they are NOT let into the admin until that is done.
 export function AuthProvider({ children }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState(null);
   const [sessionReady, setSessionReady] = useState(!supabase);
   const [adminState, setAdminState] = useState(IDLE);
   const [denied, setDenied] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export function AuthProvider({ children }) {
   const userEmail = session?.user?.email ?? null;
 
   useEffect(() => {
-    if (!supabase || !userId) {
+    if (!supabase || !userId || recovering) {
       setAdminState(IDLE);
       return undefined;
     }
@@ -89,10 +93,10 @@ export function AuthProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [userId, userEmail, attempt]);
+  }, [userId, userEmail, attempt, recovering]);
 
   const signIn = useCallback(async (email, password) => {
-    if (!supabase) return { error: new Error(configError ?? "Supabase is not configured.") };
+    if (!supabase) return NOT_CONFIGURED;
     setDenied(false);
     const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
     return { error: error ?? null };
@@ -100,6 +104,55 @@ export function AuthProvider({ children }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut({ scope: "local" });
+  }, []);
+
+  // ---- Forgot password: email -> code -> new password -> sign in again --------------------------------
+  const sendRecoveryCode = useCallback(async (email) => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+    return { error: error ?? null };
+  }, []);
+
+  const verifyRecoveryCode = useCallback(async (email, code) => {
+    if (!supabase) return NOT_CONFIGURED;
+    setDenied(false);
+    setRecovering(true); // before the session appears, so the admin lookup never runs half-way
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: code, type: "recovery" });
+    if (error) {
+      setRecovering(false);
+      return { error };
+    }
+    return { error: null };
+  }, []);
+
+  const cancelRecovery = useCallback(async () => {
+    if (supabase) await supabase.auth.signOut({ scope: "local" });
+    setRecovering(false);
+  }, []);
+
+  const finishRecovery = useCallback(async (password) => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return { error };
+    // A forgotten password may mean someone else has a session: end all of them, then sign in fresh.
+    await supabase.auth.signOut({ scope: "global" });
+    setRecovering(false);
+    return { error: null };
+  }, []);
+
+  // ---- Change password while signed in: code to the account email, then the new password --------------
+  const sendChangeCode = useCallback(async () => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.reauthenticate();
+    return { error: error ?? null };
+  }, []);
+
+  const changePassword = useCallback(async (password, code) => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.updateUser({ password, nonce: code });
+    if (error) return { error };
+    await supabase.auth.signOut({ scope: "others" }); // other devices must sign in again
+    return { error: null };
   }, []);
 
   const retry = useCallback(() => setAttempt((n) => n + 1), []);
@@ -110,6 +163,7 @@ export function AuthProvider({ children }) {
     else if (!supabase) status = "signedOut";
     else if (!sessionReady) status = "loading";
     else if (!userId) status = "signedOut";
+    else if (recovering) status = "recovering";
     else if (adminState.userId !== userId) status = "loading";
     else if (adminState.state === "ok") status = "admin";
     else if (adminState.state === "error") status = "error";
@@ -124,9 +178,19 @@ export function AuthProvider({ children }) {
       configError,
       signIn,
       signOut,
+      sendRecoveryCode,
+      verifyRecoveryCode,
+      cancelRecovery,
+      finishRecovery,
+      sendChangeCode,
+      changePassword,
       retry,
     };
-  }, [sessionReady, userId, adminState, denied, signIn, signOut, retry]);
+  }, [
+    sessionReady, userId, recovering, adminState, denied,
+    signIn, signOut, sendRecoveryCode, verifyRecoveryCode, cancelRecovery, finishRecovery,
+    sendChangeCode, changePassword, retry,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

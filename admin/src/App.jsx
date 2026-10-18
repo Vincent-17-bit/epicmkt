@@ -8,6 +8,7 @@ import SettingsPage from "./pages/SettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
 import DataTableTestPage from "./pages/DataTableTestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
+import AccountPage from "./pages/AccountPage.jsx";
 import RequireAdmin from "./auth/RequireAdmin.jsx";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="businesses" element={<BusinessesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="account" element={<AccountPage />} />
           <Route path="table-test" element={<DataTableTestPage />} />
         </Route>
       </Route>

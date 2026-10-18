@@ -134,3 +134,123 @@
   justify-content: center;
   margin-top: 0.5rem;
 }
+
+/* Password eye, helper text, success note and text buttons. */
+.admin-password {
+  position: relative;
+}
+
+.admin-password input {
+  width: 100%;
+  padding-right: 2.9rem;
+  height: 2.75rem;
+  padding-left: 0.9rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
+.admin-password input:focus-visible {
+  outline: 2px solid var(--admin-primary);
+  outline-offset: 1px;
+  border-color: var(--admin-primary);
+}
+
+.admin-password__toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  transform: translateY(-50%);
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+}
+
+.admin-password__toggle:hover {
+  color: var(--admin-text);
+}
+
+.admin-password__toggle:focus-visible {
+  outline: 2px solid var(--admin-primary);
+}
+
+.admin-login__hint {
+  color: var(--admin-muted);
+  font-size: 0.78rem;
+}
+
+.admin-login__success {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--admin-primary);
+  border-radius: 0.75rem;
+  background: var(--admin-primary-tint);
+  color: var(--admin-text);
+  font-size: 0.88rem;
+}
+
+.admin-login__link {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.4rem;
+  border: 0;
+  background: transparent;
+  color: var(--admin-primary-strong);
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.admin-login__link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.admin-login__link:disabled {
+  color: var(--admin-muted);
+  cursor: not-allowed;
+}
+
+.admin-login__code {
+  letter-spacing: 0.35em;
+  font-size: 1.15rem;
+  text-align: center;
+}
+
+/* Account page */
+.account-panel {
+  max-width: 34rem;
+}
+
+.account-details {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.account-details div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.account-details dt {
+  font-size: 0.75rem;
+  color: var(--admin-muted);
+}
+
+.account-details dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.account-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
