@@ -1,4 +1,4 @@
-import { CASE_INSENSITIVE_PATHS, SEARCH_QUERY_MAX, STATIC_TRAILS } from "../config/breadcrumbs.js";
+import { CASE_INSENSITIVE_PATHS, SEARCH_QUERY_MAX, STATIC_TRAILS, parseItemPath } from "../config/breadcrumbs.js";
 import { t as translate } from "../i18n/index.js";
 
 const HOME = (t) => ({ key: "home", label: t("breadcrumb.home"), to: "/", icon: "house" });
@@ -61,17 +61,24 @@ export function getTrail({ pathname, search = "", categories, towns, business, t
     if (category) trail.push(categoryCrumb(category));
     if (category && biz.townSlug && biz.area) trail.push(townCrumb(category, { slug: biz.townSlug, name: biz.area }));
 
-    const itemId = params.get("item");
-    const item = itemId ? biz.services?.find((svc) => svc.id === itemId) : null;
-    const invalidItem = Boolean(itemId) && !item;
+    trail.push({ key: `b-${biz.id}`, label: biz.name });
+    return { status: "ready", trail, invalidItem: false };
+  }
 
-    if (item) {
-      trail.push({ key: `b-${biz.id}`, label: biz.name, to: `/b/${biz.slug}` });
-      trail.push({ key: `i-${item.id}`, label: item.name });
-    } else {
-      trail.push({ key: `b-${biz.id}`, label: biz.name });
-    }
-    return { status: "ready", trail, invalidItem };
+  const itemRoute = parseItemPath(path);
+  if (itemRoute) {
+    if (business.status === "pending" || categories.status === "pending") return loading;
+    if (business.status === "error" || !business.data) return notFound;
+    const biz = business.data;
+    const category = categories.data?.find((c) => c.id === biz.categoryId);
+    const trail = [home];
+    if (category?.group) trail.push({ key: `g-${category.group}`, label: category.group });
+    if (category) trail.push(categoryCrumb(category));
+    trail.push({ key: `b-${biz.id}`, label: biz.name, to: `/b/${biz.slug}` });
+
+    const item = biz.services?.find((svc) => svc.id === itemRoute.itemId);
+    trail.push(item ? { key: `i-${item.id}`, label: item.name } : { key: "i-unavailable", label: t("breadcrumbs.itemUnavailable") });
+    return { status: "ready", trail, invalidItem: !item };
   }
 
   return none;

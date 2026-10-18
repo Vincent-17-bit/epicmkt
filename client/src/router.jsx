@@ -41,6 +41,7 @@ export const router = createBrowserRouter([
           { path: "flash", element: <FlashSales /> },
           { path: "offers", element: <Offers /> },
           { path: "b/:slug", element: <Business /> },
+          { path: "b/:slug/item/:itemId", lazy: async () => ({ Component: (await import("./pages/ItemPage.jsx")).default }) },
           { path: "s/:shortcode", element: <ShortLink /> },
           { path: "about", element: <About /> },
           { path: "contact", element: <Contact /> },

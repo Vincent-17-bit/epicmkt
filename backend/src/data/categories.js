@@ -25,6 +25,25 @@ const deliveryBlock = (feeLabel = "Delivery fee") => [
   amount("delivery-radius", "Delivery distance", { group: "Delivery", unit: "km", showIf: { key: "delivery", equals: true } })
 ];
 
+const GROUP_OF = {
+  barbershops: "Beauty and grooming",
+  salons: "Beauty and grooming",
+  "water-refill": "Water and energy",
+  chemists: "Health and wellness",
+  gyms: "Health and wellness",
+  agrovets: "Farming",
+  "car-wash": "Vehicles",
+  mechanics: "Vehicles",
+  tailors: "Fashion and tailoring",
+  hardware: "Building and hardware",
+  mpesa: "Money and services",
+  groceries: "Food and drink",
+  butchery: "Food and drink",
+  eateries: "Food and drink",
+  bakery: "Food and drink",
+  "phone-repair": "Phones and electronics"
+};
+
 export const categories = [
   {
     id: "barbershops", name: "Barbershops", singular: "Barbershop", icon: "scissors", hue: 210, blurb: "Cuts, fades and shaves",
@@ -246,4 +265,4 @@ export const categories = [
       flag("warranty", "Repair warranty")
     ]
   }
-];
+].map((category) => ({ ...category, group: GROUP_OF[category.id] ?? null }));

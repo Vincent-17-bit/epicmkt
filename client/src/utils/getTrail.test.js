@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getTrail, pageTitle } from "./getTrail.js";
 
-const categories = { status: "success", data: [{ id: "barbershops", name: "Barbershops" }, { id: "gyms", name: "Gyms" }] };
+const categories = { status: "success", data: [{ id: "barbershops", name: "Barbershops", group: "Beauty and grooming" }, { id: "gyms", name: "Gyms", group: "Health and wellness" }] };
 const towns = { status: "success", data: [{ slug: "maseno", name: "Maseno" }, { slug: "kisumu-cbd", name: "Kisumu CBD" }] };
 const biz = {
   id: "b_001",
@@ -20,12 +20,10 @@ const labels = (r) => r.trail.map((c) => c.label);
 const targets = (r) => r.trail.map((c) => c.to);
 
 describe("getTrail", () => {
-  it("ignores every query param except item on a business page", () => {
+  it("ignores every query param on a business page", () => {
     const search = "?section=cuts&offer=p_001&utm_source=x&src=qr";
     const plain = getTrail({ ...base, business, pathname: "/b/fade-kings" });
     expect(getTrail({ ...base, business, pathname: "/b/fade-kings", search })).toEqual(plain);
-    const withItem = getTrail({ ...base, business, pathname: "/b/fade-kings", search: `${search}&item=skin-fade` });
-    expect(labels(withItem)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
   });
 
   it("has no trail on Home", () => {
@@ -82,17 +80,30 @@ describe("getTrail", () => {
     expect(labels(r)).toEqual(["Home", "Barbershops", "Fade Kings Barbershop"]);
   });
 
-  it("adds the item as the last crumb and links the business", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade" });
-    expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
-    expect(r.trail[3].to).toBe("/b/fade-kings");
+  it("builds the item page trail: home, group, category, business, item", () => {
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/item/skin-fade" });
+    expect(labels(r)).toEqual(["Home", "Beauty and grooming", "Barbershops", "Fade Kings Barbershop", "Skin fade"]);
+    expect(targets(r)).toEqual(["/", undefined, "/c/barbershops", "/b/fade-kings", undefined]);
     expect(r.invalidItem).toBe(false);
   });
 
-  it("drops an invalid item and flags it", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=nope" });
-    expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop"]);
+  it("leaves the group out when the category has none", () => {
+    const plain = { status: "success", data: [{ id: "barbershops", name: "Barbershops" }] };
+    const r = getTrail({ ...base, categories: plain, business, pathname: "/b/fade-kings/item/skin-fade" });
+    expect(labels(r)).toEqual(["Home", "Barbershops", "Fade Kings Barbershop", "Skin fade"]);
+  });
+
+  it("shows Item unavailable as the last crumb for an unknown item and flags it", () => {
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/item/nope" });
+    expect(labels(r).at(-1)).toBe("Item unavailable");
+    expect(r.trail.at(-1).to).toBeUndefined();
+    expect(r.trail.at(-2).to).toBe("/b/fade-kings");
     expect(r.invalidItem).toBe(true);
+  });
+
+  it("is loading or not found on the item page like the business page", () => {
+    expect(getTrail({ ...base, pathname: "/b/fade-kings/item/skin-fade" }).status).toBe("loading");
+    expect(getTrail({ ...base, business: { status: "error", data: undefined }, pathname: "/b/fade-kings/item/skin-fade" }).status).toBe("not-found");
   });
 
   it("is loading while the business or categories are pending", () => {
@@ -145,8 +156,8 @@ describe("getTrail", () => {
   });
 
   it("never adds Flash sales or Offers to a business or item trail", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade&from=flash" });
-    expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/item/skin-fade", search: "?from=flash" });
+    expect(labels(r)).toEqual(["Home", "Beauty and grooming", "Barbershops", "Fade Kings Barbershop", "Skin fade"]);
   });
 
   it("links the seller crumb on the register page", () => {

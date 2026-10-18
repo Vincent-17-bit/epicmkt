@@ -1,4 +1,5 @@
 import { formatValue, slugify, visibleFields } from "@epicmkt/shared";
+import { itemPath } from "../config/breadcrumbs.js";
 
 const kes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
@@ -119,7 +120,7 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
     name: item.business.name,
     url: `${siteUrl}/b/${item.business.slug}`
   };
-  const url = `${siteUrl}/b/${item.business.slug}?item=${encodeURIComponent(item.id)}`;
+  const url = `${siteUrl}${itemPath(item.business.slug, item.id)}`;
   const data = {
     "@context": "https://schema.org",
     "@type": item.kind === "service" ? "Service" : "Product",
@@ -138,8 +139,42 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
       price: item.pricing.salePrice,
       availability: AVAILABILITY[item.availability] ?? AVAILABILITY.available,
       seller,
-      ...(item.flash ? { priceValidUntil: item.flash.sale.endsAt } : {})
+      ...(item.flash
+        ? { priceValidUntil: item.flash.sale.endsAt, validFrom: item.flash.sale.startsAt, validThrough: item.flash.sale.endsAt }
+        : {})
     };
   }
   return data;
+}
+
+export const PREVIEW_CHARS = 600;
+
+export function paragraphs(text) {
+  return String(text ?? "")
+    .split(/\n{2,}|\r\n\r\n/)
+    .map((part) => part.replace(/\s*\n\s*/g, " ").trim())
+    .filter(Boolean);
+}
+
+export function previewText(text, max = PREVIEW_CHARS) {
+  const clean = String(text ?? "").trim();
+  if (clean.length <= max) return { text: clean, truncated: false };
+  const cut = clean.slice(0, max);
+  const at = Math.max(cut.lastIndexOf("\n\n"), cut.lastIndexOf(". "), cut.lastIndexOf(" "));
+  const end = at > max * 0.6 ? at : max;
+  return { text: `${cut.slice(0, end).replace(/[,;:\s]+$/, "")}…`, truncated: true };
+}
+
+export function endedPricing(pricing) {
+  if (!pricing) return pricing;
+  const plain = (row) => ({ ...row, salePrice: row.regularPrice, savings: 0, discountPercent: 0 });
+  return { ...plain(pricing), variants: (pricing.variants ?? []).map(plain) };
+}
+
+export function priceParts(pricing, priceType = "fixed") {
+  if (!pricing || !Number.isFinite(pricing.regularPrice)) return { kind: "contact", amount: null, prefix: null };
+  if (pricing.salePrice === 0 || (pricing.regularPrice === 0 && pricing.savings <= 0) || priceType === "free") {
+    return { kind: "free", amount: 0, prefix: null };
+  }
+  return { kind: pricing.savings > 0 ? "sale" : "regular", amount: pricing.salePrice, prefix: priceType === "from" || priceType === "range" ? priceType : null };
 }

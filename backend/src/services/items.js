@@ -225,6 +225,43 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
+export async function getSimilarItems(itemId, { businessId, limit = 12, origin } = {}) {
+  await delay();
+  runSweep();
+  const found = locate(itemId, businessId);
+  if (!found || found.business.status !== BUSINESS_STATUS.ACTIVE) return [];
+  const from = originOf(origin);
+  const rows = [];
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    if (business.id === found.business.id || business.categoryId !== found.business.categoryId) continue;
+    business.services.forEach((svc, index) => {
+      if ((svc.status ?? "listed") !== "listed") return;
+      const item = toItem(business, svc, index);
+      const sale = liveSaleFor(item, business);
+      rows.push({
+        ...item,
+        pricing: buildPricing(item, sale),
+        flash: sale ? flashParts(item, sale) : null,
+        business: sellerCard(business, from)
+      });
+    });
+  }
+  const rank = (row) => [
+    row.availability === "unavailable" ? 1 : 0,
+    found.item.section && row.section === found.item.section ? 0 : 1,
+    row.flash ? 0 : 1,
+    row.business.distanceKm ?? Infinity
+  ];
+  rows.sort((a, b) => {
+    const ra = rank(a);
+    const rb = rank(b);
+    for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i] - rb[i];
+    return 0;
+  });
+  return rows.slice(0, limit);
+}
+
 const HOUR_MS = 3600000;
 const WINDOWS = { "1h": HOUR_MS, "24h": 24 * HOUR_MS };
 

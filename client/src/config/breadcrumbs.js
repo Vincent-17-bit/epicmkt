@@ -18,3 +18,17 @@ export const STATIC_TRAILS = {
 };
 
 export const RESULTS_KEY = "epicmkt.results";
+
+export const ITEM_PATH = /^\/b\/([^/]+)\/item\/([^/]+)$/;
+
+export const itemPath = (slug, itemId) => `/b/${encodeURIComponent(slug)}/item/${encodeURIComponent(itemId)}`;
+
+export const parseItemPath = (pathname) => {
+  const match = ITEM_PATH.exec(pathname.replace(/\/+$/, ""));
+  if (!match) return null;
+  try {
+    return { slug: decodeURIComponent(match[1]), itemId: decodeURIComponent(match[2]) };
+  } catch {
+    return null;
+  }
+};

@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getBusiness, getCategories, getSearchFacets, getTowns } from "../api/index.js";
 import { t } from "../i18n/index.js";
+import { parseItemPath } from "../config/breadcrumbs.js";
 import { getTrail } from "../utils/getTrail.js";
 
 const STALE = 5 * 60_000;
@@ -23,8 +24,8 @@ export function useBreadcrumbs() {
     enabled: Boolean(businessSlug)
   });
 
-  const itemId = new URLSearchParams(search).get("item");
-  const item = useQuery({ queryKey: ["item", business.data?.id, itemId], queryFn: skipToken });
+  const itemId = parseItemPath(pathname)?.itemId ?? null;
+  const item = useQuery({ queryKey: ["item", businessSlug, itemId], queryFn: skipToken });
   const itemVanished = Boolean(itemId) && item.isError && item.error?.name === "NotFoundError" && item.data !== undefined;
 
   const result = getTrail({
@@ -54,11 +55,7 @@ export function useBreadcrumbs() {
 
   let trail = result.trail;
   if (itemVanished && result.status === "ready" && business.data) {
-    const last = trail[trail.length - 1];
-    const unavailable = { key: "i-unavailable", label: t("breadcrumbs.itemUnavailable") };
-    trail = last.key.startsWith("i-")
-      ? [...trail.slice(0, -1), unavailable]
-      : [...trail.slice(0, -1), { ...last, to: `/b/${business.data.slug}` }, unavailable];
+    trail = [...trail.slice(0, -1), { key: "i-unavailable", label: t("breadcrumbs.itemUnavailable") }];
   }
 
   return { ...result, trail, prefetch };

@@ -106,10 +106,10 @@ function MoreMenu({ items, offset, onCrumbClick, onCrumbIntent }) {
   );
 }
 
-export default function Breadcrumbs({ trail = [], loading = false, back = null, compact, onCrumbClick, onCrumbIntent }) {
+export default function Breadcrumbs({ trail = [], loading = false, back = null, compact, scrollable = false, onCrumbClick, onCrumbIntent }) {
   const mobile = useMobile(compact);
   const last = trail.length - 1;
-  const collapse = mobile && trail.length > 4;
+  const collapse = mobile && !scrollable && trail.length > 4;
   const hidden = collapse ? trail.slice(1, last - 1) : [];
 
   const parts = collapse
@@ -122,7 +122,7 @@ export default function Breadcrumbs({ trail = [], loading = false, back = null, 
     : trail.map((crumb, index) => ({ crumb, index }));
 
   return (
-    <div className={styles.bar} aria-busy={loading || undefined}>
+    <div className={`${styles.bar} ${scrollable ? styles.scroll : ""}`} aria-busy={loading || undefined}>
       <nav className={styles.trail} aria-label={t("breadcrumb.label")}>
         <ol className={styles.list}>
           {loading ? (
@@ -148,8 +148,12 @@ export default function Breadcrumbs({ trail = [], loading = false, back = null, 
                   <span className={styles.current} aria-current="page" title={part.crumb.label.length > CURRENT_MAX ? part.crumb.label : undefined}>
                     {part.crumb.label}
                   </span>
-                ) : (
+                ) : part.crumb.to ? (
                   <CrumbLink crumb={part.crumb} index={part.index} onCrumbClick={onCrumbClick} onCrumbIntent={onCrumbIntent} />
+                ) : (
+                  <span className={styles.plain} title={part.crumb.label.length > ANCESTOR_MAX ? part.crumb.label : undefined}>
+                    {part.crumb.label}
+                  </span>
                 )}
               </li>
             ))

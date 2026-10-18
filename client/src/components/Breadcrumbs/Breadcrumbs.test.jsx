@@ -1,28 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import Breadcrumbs from "./Breadcrumbs.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ItemDetail from "../ItemDetail.jsx";
-
-const detail = {
-  id: "skin-fade",
-  name: "Skin fade",
-  images: [],
-  specs: [],
-  offers: [],
-  flash: null,
-  availability: "available",
-  pricing: { regularPrice: 300, salePrice: 300, savings: 0, discountPercent: 0, variants: [] },
-  business: { slug: "fade-kings", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678", townName: "Maseno", isOpen: true }
-};
-
-vi.mock("../../api/index.js", () => ({
-  logContactEvent: vi.fn(),
-  logEvent: vi.fn(),
-  items: { getDetail: vi.fn(async () => detail), getStoreSelective: vi.fn(async () => []) }
-}));
 
 const trail4 = [
   { key: "home", label: "Home", to: "/", icon: "house" },
@@ -150,47 +131,37 @@ describe("Breadcrumbs", () => {
   });
 });
 
-describe("Item sheet trail", () => {
-  const business = { id: "b_001", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678" };
-  const item = { id: "skin-fade", name: "Skin fade", priceKes: 300 };
+describe("Item page trail", () => {
+  const itemTrail = [
+    { key: "home", label: "Home", to: "/", icon: "house" },
+    { key: "g-beauty", label: "Beauty and grooming" },
+    { key: "c-barbershops", label: "Barbershops", to: "/c/barbershops" },
+    { key: "b-1", label: "Fade Kings Barbershop", to: "/b/fade-kings" },
+    { key: "i-skin-fade", label: "Skin fade" }
+  ];
 
-  function Harness() {
-    const { search } = useLocation();
-    const open = new URLSearchParams(search).get("item") === "skin-fade";
-    return (
-      <>
-        <Breadcrumbs trail={open ? trail5 : trail4.slice(0, 3).concat([{ key: "b", label: business.name }])} compact={false} />
-        {open && <ItemDetail business={business} itemId="skin-fade" onClose={() => window.__closed?.()} onSelect={() => {}} onReport={() => {}} />}
-      </>
-    );
-  }
-
-  it("shows a compact trail with the business and the item", async () => {
-    mount(<ItemDetail business={business} itemId="skin-fade" onClose={() => {}} onSelect={() => {}} onReport={() => {}} />);
-    const nav = screen.getByRole("navigation", { name: "Item" });
-    expect(within(nav).getByRole("button", { name: /Fade Kings Barbershop/ })).toBeInTheDocument();
-    await waitFor(() => expect(within(nav).getByText("Skin fade")).toHaveAttribute("aria-current", "page"));
+  it("shows a crumb without a URL as plain text, not a link", () => {
+    mount(<Breadcrumbs trail={itemTrail} compact={false} />);
+    expect(screen.getByText("Beauty and grooming").closest("a")).toBeNull();
+    expect(screen.getByRole("link", { name: "Barbershops" })).toHaveAttribute("href", "/c/barbershops");
+    expect(screen.getByRole("link", { name: "Fade Kings Barbershop" })).toHaveAttribute("href", "/b/fade-kings");
   });
 
-  it("closes the sheet when the Business button is pressed", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    mount(<ItemDetail business={business} itemId="skin-fade" onClose={onClose} onSelect={() => {}} onReport={() => {}} />);
-    await user.click(screen.getByRole("button", { name: /Fade Kings Barbershop/ }));
-    expect(onClose).toHaveBeenCalled();
+  it("marks the last crumb as the current page and not a link", () => {
+    mount(<Breadcrumbs trail={itemTrail} compact={false} />);
+    expect(screen.getByText("Skin fade")).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Skin fade" })).toBeNull();
   });
 
-  it("removes the item from the URL when the page Business crumb is clicked", async () => {
-    const user = userEvent.setup();
-    mount(
-      <Routes>
-        <Route path="/b/:slug" element={<Harness />} />
-      </Routes>,
-      "/b/fade-kings?item=skin-fade"
-    );
-    expect(screen.getByTestId("where")).toHaveTextContent("?item=skin-fade");
-    const page = screen.getAllByRole("navigation", { name: "Breadcrumb" })[0];
-    await user.click(within(page).getByRole("link", { name: "Fade Kings Barbershop" }));
-    expect(screen.getByTestId("where")).toHaveTextContent(/^\/b\/fade-kings$/);
+  it("keeps the full trail on phones when scrollable instead of collapsing it", () => {
+    mount(<Breadcrumbs trail={itemTrail} compact scrollable />);
+    expect(screen.queryByRole("button", { name: /hidden/i })).toBeNull();
+    expect(screen.getByText("Beauty and grooming")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Barbershops" })).toBeInTheDocument();
+  });
+
+  it("still collapses long trails on phones by default", () => {
+    mount(<Breadcrumbs trail={itemTrail} compact />);
+    expect(screen.getByRole("button", { name: /hidden/i })).toBeInTheDocument();
   });
 });

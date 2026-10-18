@@ -3,7 +3,8 @@ import { formatKes } from "@epicmkt/shared";
 import { t } from "../i18n/index.js";
 import styles from "./OfferTicket.module.css";
 
-export default function OfferTicket({ view, onSeeItems }) {
+export default function OfferTicket({ view, onSeeItems, level = 4 }) {
+  const Heading = `h${level}`;
   const { offer, remainingMs, appliesToLabel } = view;
   const expiry = offerExpiry(remainingMs);
   const notes = [
@@ -15,7 +16,7 @@ export default function OfferTicket({ view, onSeeItems }) {
     <article className={styles.ticket}>
       <div className={styles.value}>{offerValueLabel(offer)}</div>
       <div className={styles.body}>
-        <h4 className={styles.title}>{offer.title}</h4>
+        <Heading className={styles.title}>{offer.title}</Heading>
         {offer.description && <p className={styles.description}>{offer.description}</p>}
         <p className={styles.meta}>
           <span>{appliesToLabel}</span>

@@ -23,13 +23,35 @@ describe("results memory", () => {
     expect(mod.readResults().historyIdx).toBeNull();
   });
 
-  it("keeps the value across item swaps and sheet open or close", () => {
+  it("keeps the value across the business page and its item pages", () => {
     mod.trackResults(loc("a", "/search", "?q=cut"), 1);
     mod.trackResults(loc("b", "/b/fade-kings"), 2);
-    mod.trackResults(loc("c", "/b/fade-kings", "?item=fade"), 3);
-    mod.trackResults(loc("d", "/b/fade-kings", "?item=kids"), 3);
-    mod.trackResults(loc("e", "/b/fade-kings"), 3);
+    mod.trackResults(loc("c", "/b/fade-kings/item/fade"), 3);
+    mod.trackResults(loc("d", "/b/fade-kings/item/kids"), 4);
+    mod.trackResults(loc("e", "/b/fade-kings"), 5);
     expect(mod.readResults().businessSlug).toBe("fade-kings");
+  });
+
+  it("records results when an item page opens straight from a listing", () => {
+    mod.trackResults(loc("a", "/flash"), 1);
+    mod.trackResults(loc("b", "/b/fade-kings/item/fade"), 2);
+    expect(mod.readResults()).toMatchObject({ path: "/flash", businessSlug: "fade-kings", historyIdx: 1 });
+  });
+
+  it("clears results when an item page of another store opens", () => {
+    mod.trackResults(loc("a", "/flash"), 1);
+    mod.trackResults(loc("b", "/b/fade-kings/item/fade"), 2);
+    mod.trackResults(loc("c", "/b/other/item/x"), 3);
+    expect(mod.readResults()).toBeNull();
+  });
+
+  it("remembers scroll on home, listings and business pages only", () => {
+    mod.saveScroll("h", "/", 500);
+    mod.saveScroll("b", "/b/fade-kings", 300);
+    mod.saveScroll("i", "/b/fade-kings/item/fade", 200);
+    expect(mod.savedScroll("h")).toBe(500);
+    expect(mod.savedScroll("b")).toBe(300);
+    expect(mod.savedScroll("i")).toBeUndefined();
   });
 
   it("deletes the value on a different slug or a non-listing origin", () => {

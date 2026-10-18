@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,6 +16,7 @@ import {
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { directionsLink, distanceKm, formatDistance, formatKes, slugify, telLink, visibleFields, whatsappLink } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
+import { itemPath } from "../config/breadcrumbs.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
@@ -26,7 +27,6 @@ import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import ItemDetail from "../components/ItemDetail.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import Lightbox from "../components/Lightbox.jsx";
 import QrCode from "../components/QrCode.jsx";
@@ -69,8 +69,7 @@ function Section({ title, children, id }) {
 export default function Business() {
   const { slug } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const itemId = searchParams.get("item");
   const [lightbox, setLightbox] = useState(null);
   const [reporting, setReporting] = useState(false);
@@ -112,20 +111,7 @@ export default function Business() {
     if (data && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }, [data, location.hash]);
 
-  const openItem = (id) => setSearchParams({ item: id }, { state: { sheetFrom: "page" } });
-  const swapItem = (id) => setSearchParams({ item: id }, { replace: true, state: location.state });
-  const closeItem = () => {
-    if (location.state?.sheetFrom === "page") navigate(-1);
-    else
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete("item");
-          return next;
-        },
-        { replace: true }
-      );
-  };
+  if (itemId) return <Navigate to={itemPath(slug, itemId)} replace />;
 
   if (isError && error?.name === "NotFoundError") return <NotFound />;
 
@@ -186,7 +172,7 @@ export default function Business() {
 
   return (
     <article className={styles.root} style={{ "--hue": data.hue ?? 210 }}>
-      <Container className={styles.crumbRow} {...(itemId ? { inert: "", "aria-hidden": true } : {})}>
+      <Container className={styles.crumbRow}>
         <PageBreadcrumbs />
       </Container>
       <header className={styles.hero}>
@@ -305,13 +291,13 @@ export default function Business() {
                 <ul className={styles.services}>
                 {group.items.map((svc) => (
                   <li key={svc.id} className={styles.service}>
-                    <button type="button" className={styles.serviceBtn} onClick={() => openItem(svc.id)} aria-haspopup="dialog">
+                    <Link to={itemPath(data.slug, svc.id)} className={styles.serviceBtn}>
                       {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
                       <span className={styles.serviceText}>
                         <span className={styles.h3}>{svc.name}</span>
                         {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
                       </span>
-                    </button>
+                    </Link>
                   </li>
                 ))}
                 </ul>
@@ -419,16 +405,6 @@ export default function Business() {
       </nav>
 
       <Lightbox items={data.gallery} index={lightbox} onIndex={setLightbox} onClose={() => setLightbox(null)} />
-      {itemId && (
-        <ItemDetail
-          business={data}
-          itemId={itemId}
-          distanceKm={distance}
-          onClose={closeItem}
-          onSelect={swapItem}
-          onReport={() => setReporting(true)}
-        />
-      )}
       <ReportDialog business={data} open={reporting} onClose={() => setReporting(false)} />
     </article>
   );

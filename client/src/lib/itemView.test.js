@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, limitGroups, offerExpiry, offerTarget, offerValueLabel } from "./itemView.js";
+import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, endedPricing, limitGroups, offerExpiry, offerTarget, offerValueLabel, paragraphs, previewText, priceParts } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -109,7 +109,17 @@ describe("buildItemJsonLd", () => {
     const data = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 240 }, flash: { sale: { endsAt: "2026-10-04T10:00:00.000Z" } } }, siteUrl: "https://e.test" });
     expect(data["@type"]).toBe("Product");
     expect(data.offers).toMatchObject({ price: 240, priceCurrency: "KES", priceValidUntil: "2026-10-04T10:00:00.000Z", availability: "https://schema.org/LimitedAvailability" });
-    expect(data.offers.url).toBe("https://e.test/b/shop?item=a%20b");
+    expect(data.offers.url).toBe("https://e.test/b/shop/item/a%20b");
+    expect(data.url).toBe("https://e.test/b/shop/item/a%20b");
+  });
+
+  it("adds validFrom and validThrough to the offer of a flash sale only", () => {
+    const sale = { startsAt: "2026-10-03T10:00:00.000Z", endsAt: "2026-10-04T10:00:00.000Z" };
+    const flash = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 240 }, flash: { sale } }, siteUrl: "https://e.test" });
+    expect(flash.offers).toMatchObject({ validFrom: sale.startsAt, validThrough: sale.endsAt, priceValidUntil: sale.endsAt });
+    const plain = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 240 }, flash: null }, siteUrl: "https://e.test" });
+    expect(plain.offers.validThrough).toBeUndefined();
+    expect(plain.offers.validFrom).toBeUndefined();
   });
 
   it("builds a Service without priceValidUntil when no sale", () => {
@@ -145,5 +155,41 @@ describe("offerTarget", () => {
   it("sends item offers to the section of the first sectioned item", () => {
     expect(offerTarget({ appliesTo: "items", itemIds: ["wig", "haircut"] }, business)).toBe("/b/fade-kings?section=cuts");
     expect(offerTarget({ appliesTo: "items", itemIds: ["wig"] }, business)).toBe("/b/fade-kings");
+  });
+});
+
+describe("item page helpers", () => {
+  it("splits a description into paragraphs", () => {
+    expect(paragraphs("One.\n\nTwo line\nwrapped.\n\n\n")).toEqual(["One.", "Two line wrapped."]);
+    expect(paragraphs("")).toEqual([]);
+    expect(paragraphs(null)).toEqual([]);
+  });
+
+  it("keeps short text whole and cuts long text at a word with an ellipsis", () => {
+    expect(previewText("Short text")).toEqual({ text: "Short text", truncated: false });
+    const long = "word ".repeat(300);
+    const cut = previewText(long, 100);
+    expect(cut.truncated).toBe(true);
+    expect(cut.text.length).toBeLessThanOrEqual(101);
+    expect(cut.text.endsWith("…")).toBe(true);
+    expect(cut.text).not.toMatch(/wor…$/);
+  });
+
+  it("turns an ended flash price back into the regular price, variants included", () => {
+    const ended = endedPricing({ regularPrice: 300, salePrice: 225, savings: 75, discountPercent: 25, variants: [{ id: "a", regularPrice: 400, salePrice: 300, savings: 100, discountPercent: 25 }] });
+    expect(ended).toMatchObject({ salePrice: 300, savings: 0, discountPercent: 0 });
+    expect(ended.variants[0]).toMatchObject({ salePrice: 400, savings: 0, discountPercent: 0 });
+    expect(endedPricing(null)).toBeNull();
+  });
+
+  it("classifies prices: regular, sale, from, free and contact", () => {
+    const row = (regularPrice, salePrice) => ({ regularPrice, salePrice, savings: regularPrice - salePrice });
+    expect(priceParts(row(300, 300))).toEqual({ kind: "regular", amount: 300, prefix: null });
+    expect(priceParts(row(300, 225))).toEqual({ kind: "sale", amount: 225, prefix: null });
+    expect(priceParts(row(300, 300), "from")).toMatchObject({ kind: "regular", prefix: "from" });
+    expect(priceParts(row(0, 0))).toEqual({ kind: "free", amount: 0, prefix: null });
+    expect(priceParts(row(300, 300), "free").kind).toBe("free");
+    expect(priceParts(null).kind).toBe("contact");
+    expect(priceParts({ regularPrice: null }).kind).toBe("contact");
   });
 });

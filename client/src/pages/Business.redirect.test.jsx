@@ -19,7 +19,7 @@ const biz = {
   attributes: {},
   services: [
     { id: "fade", name: "Fade", priceKes: 300, section: "Cuts" },
-    { id: "kids", name: "Kids cut", priceKes: 100, section: "Cuts" }
+    { id: "hair dye", name: "Hair dye", priceKes: 900, section: "Colour" }
   ]
 };
 
@@ -28,22 +28,13 @@ vi.mock("../components/FlashStrip.jsx", () => ({ default: () => null }));
 vi.mock("../components/TemplateDetails.jsx", () => ({ default: () => null }));
 vi.mock("../components/QrCode.jsx", () => ({ default: () => null }));
 vi.mock("../components/PageBreadcrumbs.jsx", () => ({ default: () => <nav aria-label="page trail" /> }));
-vi.mock("../components/ItemDetail.jsx", () => ({
-  default: ({ itemId, onClose, onSelect }) => (
-    <div role="dialog" aria-label="sheet">
-      <span>open:{itemId}</span>
-      <button onClick={() => onSelect("kids")}>swap</button>
-      <button onClick={onClose}>close</button>
-    </div>
-  )
-}));
 
 function Probe() {
-  const { pathname, search, state } = useLocation();
+  const { pathname, search } = useLocation();
   const navigate = useNavigate();
   return (
     <div>
-      <p data-testid="loc">{`${pathname}${search}|${JSON.stringify(state)}`}</p>
+      <p data-testid="loc">{`${pathname}${search}`}</p>
       <button onClick={() => navigate(-1)}>back</button>
     </div>
   );
@@ -56,6 +47,7 @@ const mount = (entries, index) =>
         <Probe />
         <Routes>
           <Route path="/b/:slug" element={<Business />} />
+          <Route path="/b/:slug/item/:itemId" element={<p>item page</p>} />
           <Route path="*" element={null} />
         </Routes>
       </QueryClientProvider>
@@ -64,33 +56,37 @@ const mount = (entries, index) =>
 
 const loc = () => screen.getByTestId("loc").textContent;
 
-describe("Business sheet history", () => {
-  it("pushes from a page card with sheetFrom, swaps by replace, closes with back", async () => {
+describe("Business page and the item route", () => {
+  it("redirects an old ?item= link to the item page, replacing the history entry", async () => {
+    const user = userEvent.setup();
+    mount(["/", "/b/fade-kings?item=fade"], 1);
+    expect(await screen.findByText("item page")).toBeInTheDocument();
+    expect(loc()).toBe("/b/fade-kings/item/fade");
+    await user.click(screen.getByText("back"));
+    expect(loc()).toBe("/");
+  });
+
+  it("encodes the item id in the redirect", async () => {
+    mount(["/b/fade-kings?item=hair%20dye"], 0);
+    await screen.findByText("item page");
+    expect(loc()).toBe("/b/fade-kings/item/hair%20dye");
+  });
+
+  it("links each service to its own item page instead of opening a dialog", async () => {
     const user = userEvent.setup();
     mount(["/", "/b/fade-kings"], 1);
-    await user.click(await screen.findByRole("button", { name: /Fade/ }));
-    expect(loc()).toBe('/b/fade-kings?item=fade|{"sheetFrom":"page"}');
-
-    await user.click(screen.getByText("swap"));
-    expect(loc()).toBe('/b/fade-kings?item=kids|{"sheetFrom":"page"}');
-
-    await user.click(screen.getByText("close"));
-    expect(loc()).toBe("/b/fade-kings|null");
-    await user.click(screen.getByText("back"));
-    expect(loc()).toBe("/|null");
-  });
-
-  it("closes a cold or cross-page open by replacing, never leaving the page", async () => {
-    const user = userEvent.setup();
-    mount(["/b/fade-kings?item=fade"], 0);
-    await user.click(await screen.findByText("close"));
-    expect(loc()).toBe("/b/fade-kings|null");
+    const link = await screen.findByRole("link", { name: /Fade/ });
+    expect(link).toHaveAttribute("href", "/b/fade-kings/item/fade");
     expect(screen.queryByRole("dialog")).toBeNull();
+    await user.click(link);
+    expect(loc()).toBe("/b/fade-kings/item/fade");
+    await user.click(screen.getByText("back"));
+    expect(loc()).toBe("/b/fade-kings");
   });
 
-  it("makes the page trail inert while the sheet is open", async () => {
-    mount(["/b/fade-kings?item=fade"], 0);
-    await screen.findByRole("dialog");
-    expect(screen.getByLabelText("page trail", { selector: "nav", hidden: true }).parentElement).toHaveAttribute("inert");
+  it("stays on the business page when item is empty", async () => {
+    mount(["/b/fade-kings?item="], 0);
+    expect(await screen.findByRole("link", { name: /Fade/ })).toBeInTheDocument();
+    expect(loc()).toBe("/b/fade-kings?item=");
   });
 });

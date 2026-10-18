@@ -23,8 +23,9 @@ function SeeAllTile({ to }) {
   );
 }
 
-function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, heat = true, heading = null }) {
-  const { entries, isPending, isError, refetch } = useFlashStrip({ businessId, categoryId });
+function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, heat = true, heading = null, exclude = null, size = null }) {
+  const { entries: all, isPending, isError, refetch } = useFlashStrip({ businessId, categoryId, limit: exclude ? 11 : 10 });
+  const entries = exclude ? all.filter((e) => !(e.item.id === exclude.itemId && e.business.id === exclude.businessId)) : all;
   const desktop = useMediaQuery("(min-width: 1024px)");
   const seeAll = categoryId ? `/flash?category=${encodeURIComponent(categoryId)}` : "/flash";
 
@@ -43,7 +44,7 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
         ? Array.from({ length: 4 }, (_, index) => <FlashSkeleton key={index} />)
         : [
             ...entries.map((entry, index) => (
-              <FlashSaleCard key={entry.sale.id} entry={entry} size={desktop && index === 0 && heat ? "hero" : "standard"} data-wide={desktop && index === 0 && heat ? "true" : undefined} />
+              <FlashSaleCard key={entry.sale.id} entry={entry} size={size ?? (desktop && index === 0 && heat ? "hero" : "standard")} data-wide={desktop && index === 0 && heat ? "true" : undefined} />
             )),
             <SeeAllTile key="all" to={seeAll} />
           ]}

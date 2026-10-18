@@ -10,19 +10,22 @@ import Skeleton from "./Skeleton.jsx";
 import styles from "./StoreSelective.module.css";
 
 const LIMIT = 12;
+
+export const storeSelectiveOptions = (businessId, excludeItemId) => ({
+  queryKey: ["store-selective", businessId, excludeItemId],
+  queryFn: () => items.getStoreSelective(businessId, { excludeItemId, limit: LIMIT }),
+  staleTime: 30_000
+});
 const DRAG_THRESHOLD = 5;
 
-export default function StoreSelective({ businessId, businessSlug, excludeItemId, onSelect, onSeeAll }) {
+export default function StoreSelective({ businessId, businessSlug, excludeItemId, onSelect, onSeeAll, level = 3 }) {
+  const Heading = `h${level}`;
   const rowRef = useRef(null);
   const drag = useRef({ active: false, moved: false, startX: 0, startLeft: 0 });
   const [edges, setEdges] = useState({ left: false, right: false });
   const [dragging, setDragging] = useState(false);
 
-  const { data, isPending } = useQuery({
-    queryKey: ["store-selective", businessId, excludeItemId],
-    queryFn: () => items.getStoreSelective(businessId, { excludeItemId, limit: LIMIT }),
-    staleTime: 30_000
-  });
+  const { data, isPending } = useQuery(storeSelectiveOptions(businessId, excludeItemId));
 
   const measure = useCallback(() => {
     const row = rowRef.current;
@@ -97,9 +100,9 @@ export default function StoreSelective({ businessId, businessSlug, excludeItemId
 
   return (
     <section className={styles.section} aria-labelledby="store-selective-title">
-      <h3 id="store-selective-title" className={styles.title}>
+      <Heading id="store-selective-title" className={styles.title}>
         {t("item.storeSelective")}
-      </h3>
+      </Heading>
       <div className={styles.frame}>
         <ul
           ref={rowRef}

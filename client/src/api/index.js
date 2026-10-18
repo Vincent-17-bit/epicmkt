@@ -19,7 +19,8 @@ export const logEvent = (name, payload) => backend.logEvent(name, payload);
 export const getServerTime = () => backend.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => backend.getItemDetail(itemId, opts),
-  getStoreSelective: (businessId, opts) => backend.getStoreSelective(businessId, opts)
+  getStoreSelective: (businessId, opts) => backend.getStoreSelective(businessId, opts),
+  getSimilar: (itemId, opts) => backend.getSimilarItems(itemId, opts)
 };
 export const flash = {
   getForItem: (itemId, businessId) => backend.getFlashForItem(itemId, businessId),

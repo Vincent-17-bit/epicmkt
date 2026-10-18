@@ -1,4 +1,5 @@
 import { t } from "../i18n/index.js";
+import { itemPath } from "../config/breadcrumbs.js";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -67,7 +68,7 @@ export function discountBadge(discount) {
   return { kind: "deal", text: t("flash.deal") };
 }
 
-export const saleHref = (entry) => `/b/${entry.business.slug}?item=${encodeURIComponent(entry.item.id)}`;
+export const saleHref = (entry) => itemPath(entry.business.slug, entry.item.id);
 
 export function fuseShare(startsAt, endsAt, now) {
   const start = Date.parse(startsAt);
@@ -77,7 +78,7 @@ export function fuseShare(startsAt, endsAt, now) {
   return Math.min(1, Math.max(0, (end - now) / span));
 }
 
-export function formatEndsAt(endsAt) {
+export function formatEat(iso) {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Africa/Nairobi",
     weekday: "short",
@@ -86,7 +87,9 @@ export function formatEndsAt(endsAt) {
     hour: "numeric",
     minute: "2-digit",
     hour12: true
-  }).formatToParts(new Date(endsAt));
+  }).formatToParts(new Date(iso));
   const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
   return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} EAT`;
 }
+
+export const formatEndsAt = formatEat;

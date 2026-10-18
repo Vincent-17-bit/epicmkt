@@ -16,7 +16,7 @@ vi.mock("../api/index.js", () => ({
 const run = (client) =>
   renderHook(() => useBreadcrumbs(), {
     wrapper: ({ children }) => (
-      <MemoryRouter initialEntries={["/b/fade-kings?item=fade"]}>
+      <MemoryRouter initialEntries={["/b/fade-kings/item/fade"]}>
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </MemoryRouter>
     )
@@ -27,12 +27,12 @@ const gone = () => Object.assign(new Error("nf"), { name: "NotFoundError" });
 describe("useBreadcrumbs item unavailable", () => {
   it("replaces the last crumb with plain Item unavailable when a loaded item vanishes", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    client.setQueryData(["item", "b_001", "fade"], { id: "fade" });
+    client.setQueryData(["item", "fade-kings", "fade"], { id: "fade" });
     const { result } = run(client);
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.trail.at(-1).label).toBe("Fade");
 
-    await client.fetchQuery({ queryKey: ["item", "b_001", "fade"], queryFn: () => Promise.reject(gone()), staleTime: 0 }).catch(() => {});
+    await client.fetchQuery({ queryKey: ["item", "fade-kings", "fade"], queryFn: () => Promise.reject(gone()), staleTime: 0 }).catch(() => {});
     await waitFor(() => expect(result.current.trail.at(-1).label).toBe("Item unavailable"));
     expect(result.current.trail.at(-1).to).toBeUndefined();
     expect(result.current.trail.at(-2).to).toBe("/b/fade-kings");
@@ -40,7 +40,7 @@ describe("useBreadcrumbs item unavailable", () => {
 
   it("leaves the trail alone when the item never loaded", async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    await client.fetchQuery({ queryKey: ["item", "b_001", "fade"], queryFn: () => Promise.reject(gone()) }).catch(() => {});
+    await client.fetchQuery({ queryKey: ["item", "fade-kings", "fade"], queryFn: () => Promise.reject(gone()) }).catch(() => {});
     const { result } = run(client);
     await waitFor(() => expect(result.current.status).toBe("ready"));
     expect(result.current.trail.at(-1).label).toBe("Fade");

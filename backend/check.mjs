@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { validateTemplate, validateAttributes, FIELD_TYPES } from "@epicmkt/shared";
 import { categories as templates } from "./src/data/categories.js";
 import { businesses as seeded } from "./src/data/businesses.js";
-import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getTowns, logEvent, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getSimilarItems, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getTowns, logEvent, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
@@ -181,5 +181,15 @@ for (const b of seeded.filter((x) => ["barbershops", "salons", "gyms", "chemists
   assert.ok(b.services.length >= 8, b.id);
   assert.ok(b.services.every((svc) => svc.specs.length >= 4 && svc.specs.length <= 10), b.id);
   assert.ok(b.services.every((svc) => svc.description), b.id);
+}
+{
+  const categories = await getCategories();
+  assert.ok(categories.every((c) => typeof c.group === "string" && c.group.length > 0), "every category has a group");
+  const similar = await getSimilarItems("fade-and-beard", { businessId: "b_001", limit: 12 });
+  const home = seeded.find((b) => b.id === "b_001");
+  assert.ok(similar.length > 0 && similar.length <= 12);
+  assert.ok(similar.every((row) => row.businessId !== "b_001" && row.status === "listed" && row.business.categoryId === home.categoryId));
+  assert.ok(similar.every((row) => (row.pricing === null || Number.isFinite(row.pricing.salePrice))));
+  assert.deepEqual(await getSimilarItems("nope", { businessId: "b_001" }), []);
 }
 console.log("items ok");

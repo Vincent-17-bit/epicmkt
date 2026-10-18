@@ -4,8 +4,10 @@ const INSENSITIVE_LISTINGS = ["/flash", "/offers"];
 
 const positions = new Map();
 
+const remembersScroll = (pathname) => isListing(pathname) || pathname === "/" || /^\/b\/[^/]+\/?$/.test(pathname);
+
 export function saveScroll(key, pathname, top) {
-  if (isListing(pathname)) positions.set(key, top);
+  if (remembersScroll(pathname)) positions.set(key, top);
 }
 
 export const savedScroll = (key) => positions.get(key);

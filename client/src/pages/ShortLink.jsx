@@ -1,7 +1,8 @@
-import { Navigate, useParams } from "react-router-dom";
+import { Navigate, useLocation, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { resolveShortcode } from "../api/index.js";
+import { itemPath } from "../config/breadcrumbs.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
@@ -10,13 +11,17 @@ import styles from "./Business.module.css";
 
 export default function ShortLink() {
   const { shortcode } = useParams();
+  const { search } = useLocation();
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["shortcode", shortcode],
     queryFn: () => resolveShortcode(shortcode),
     retry: false
   });
 
-  if (data) return <Navigate to={`/b/${data.slug}`} replace />;
+  if (data) {
+    const itemId = new URLSearchParams(search).get("item");
+    return <Navigate to={itemId ? itemPath(data.slug, itemId) : `/b/${data.slug}`} replace />;
+  }
   if (isError && error?.name === "NotFoundError") return <NotFound />;
   if (isError) {
     return (

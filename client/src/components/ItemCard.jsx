@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { formatKes } from "@epicmkt/shared";
+import { itemPath } from "../config/breadcrumbs.js";
 import { t } from "../i18n/index.js";
 import FlashChip from "./FlashChip.jsx";
 import styles from "./ItemCard.module.css";
@@ -9,12 +11,12 @@ export default function ItemCard({ item, onSelect, className = "" }) {
   const availability = item.availability ?? "available";
 
   return (
-    <button
-      type="button"
+    <Link
+      to={itemPath(item.businessSlug, item.id)}
       data-card=""
       className={`${styles.card} ${className}`}
       onClick={() => onSelect?.(item)}
-      aria-haspopup="dialog"
+      draggable="false"
     >
       <span className={styles.media}>
         {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
@@ -43,6 +45,6 @@ export default function ItemCard({ item, onSelect, className = "" }) {
           </span>
         </span>
       </span>
-    </button>
+    </Link>
   );
 }

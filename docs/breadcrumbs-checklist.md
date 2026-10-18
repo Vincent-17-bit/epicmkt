@@ -12,10 +12,12 @@ For each case, confirm the trail text, that every crumb except the last is a lin
    - Open a category, open a business. Same trail. "Back to results" returns to the category.
 4. Business via the featured carousel on Home
    - Trail is correct. No "Back to results" button, since Home is not a results page.
-5. Item deep link
-   - Open `/b/<slug>?item=<id>`. The sheet opens; the page trail ends with the item; the sheet header shows "< Business > Item".
-   - Press the Business crumb: the sheet closes, `?item` is gone, and the page keeps its scroll position.
-   - Open `/b/<slug>?item=nope`: the item crumb is absent, the URL loses `?item`, and the toast "That item is no longer available" shows.
+5. Item page
+   - Open `/b/<slug>/item/<id>`. It is a normal page: the trail is Home > Category group > Category > Business > Item, the group crumb is plain text, and the item crumb is the current page (`aria-current`).
+   - Press the Business crumb: the business page opens at the top. Browser Back returns to the item page.
+   - Open the old `/b/<slug>?item=<id>`: it redirects (replace) to `/b/<slug>/item/<id>`, so Back does not return to the old URL.
+   - Open `/b/<slug>/item/nope`: the page shows "This item is no longer available" with Visit Store, and the last crumb reads "Item unavailable".
+   - On a phone the trail scrolls sideways instead of collapsing, with a Back button above it.
 6. Town and category pages
    - `/c/<slug>` shows Home > Category. `/c/<slug>?town=<town>` shows Home > Category > Town, and the Category crumb clears the town.
 7. Static pages

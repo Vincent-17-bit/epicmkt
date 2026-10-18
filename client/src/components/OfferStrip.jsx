@@ -5,17 +5,18 @@ import styles from "./OfferStrip.module.css";
 
 const VISIBLE = 2;
 
-export default function OfferStrip({ offers, onSeeItems }) {
+export default function OfferStrip({ offers, onSeeItems, level = 3 }) {
+  const Heading = `h${level}`;
   const [all, setAll] = useState(false);
   if (!offers.length) return null;
   const shown = all ? offers : offers.slice(0, VISIBLE);
 
   return (
     <section className={styles.strip} aria-label={t("item.offers")}>
-      <h3 className={styles.title}>{t("item.offers")}</h3>
+      <Heading className={styles.title}>{t("item.offers")}</Heading>
       <div className={styles.list}>
         {shown.map((view) => (
-          <OfferTicket key={view.offer.id} view={view} onSeeItems={onSeeItems} />
+          <OfferTicket key={view.offer.id} view={view} onSeeItems={onSeeItems} level={level + 1} />
         ))}
       </div>
       {offers.length > VISIBLE && (

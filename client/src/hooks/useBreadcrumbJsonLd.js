@@ -5,10 +5,11 @@ import { CASE_INSENSITIVE_PATHS, SITE_URL } from "../config/breadcrumbs.js";
 const ID = "breadcrumb-jsonld";
 
 export function buildJsonLd(trail, here) {
+  const linked = trail.filter((crumb, i) => crumb.to || i === trail.length - 1);
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    itemListElement: trail.map((crumb, i) => ({
+    itemListElement: linked.map((crumb, i) => ({
       "@type": "ListItem",
       position: i + 1,
       name: crumb.label,
