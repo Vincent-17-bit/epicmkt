@@ -9,6 +9,8 @@ export const getBusinessFilterOptions = notConfigured;
 export const bulkBusinessAction = notConfigured;
 export const undoBulkBusinessAction = notConfigured;
 export const listAuditEntries = notConfigured;
+export const listFlashSales = notConfigured;
+export const endFlashSale = notConfigured;
 
 export const liveAdminApi = {
   async getAdminCounts() {

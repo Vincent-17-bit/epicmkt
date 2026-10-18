@@ -6,6 +6,7 @@ const navItems = [
   { label: "Applications", to: "/admin/applications", badge: "7" },
   { label: "Businesses", to: "/admin/businesses", badge: "64" },
   { label: "Payments", to: "/admin/payments", badge: "3" },
+  { label: "Flash sales", to: "/admin/flash-sales" },
   { label: "Settings", to: "/admin/settings" },
 ];
 
