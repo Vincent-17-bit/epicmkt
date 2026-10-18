@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { flash, getCategories } from "../api/index.js";
 import { useLiveSales } from "../hooks/useCountdown.js";
+import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
@@ -28,6 +29,7 @@ export default function FlashSales() {
   usePageTitle(t("flash.title"));
   const [params, setParams] = useSearchParams();
   const coords = useGeoStore((s) => s.coords);
+  const online = useOnlineStatus();
 
   const category = params.get("category") ?? "";
   const town = params.get("town") ?? "";
@@ -162,7 +164,11 @@ export default function FlashSales() {
             </button>
           )}
 
-          {query.isPending ? (
+          {query.isPending && !online ? (
+            <div className={styles.message} role="status">
+              <p>{t("flash.offline")}</p>
+            </div>
+          ) : query.isPending ? (
             <CardGrid aria-busy="true">
               {Array.from({ length: 8 }, (_, i) => (
                 <li key={i}>
@@ -170,7 +176,7 @@ export default function FlashSales() {
                 </li>
               ))}
             </CardGrid>
-          ) : query.isError ? (
+          ) : query.isError && entries.length === 0 ? (
             <div className={styles.message} role="alert">
               <p>{t("flash.loadFailed")}</p>
               <button type="button" className={styles.action} onClick={() => query.refetch()}>
@@ -183,6 +189,11 @@ export default function FlashSales() {
             </div>
           ) : (
             <>
+              {!online && (
+                <p className={styles.offline} role="status">
+                  {t("flash.offline")}
+                </p>
+              )}
               <p className={styles.shown} aria-live="polite">
                 {t("flash.shown")} {entries.length} {t("flash.of")} {total}
               </p>

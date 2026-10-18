@@ -3,6 +3,8 @@ import { mockApplicationCounts } from "./mockApplications.js";
 import { normalizeCounts } from "../lib/counts.js";
 
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
+export { endFlashSale, listFlashSales } from "./mockFlash.js";
+
 export {
   decideApplication, getApplication, getApplicationDocumentUrl, listApplications, openApplication,
 } from "./mockApplications.js";

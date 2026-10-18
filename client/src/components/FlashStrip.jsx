@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt } from "@fortawesome/free-solid-svg-icons";
 import { useFlashStrip } from "../hooks/useFlashSales.js";
 import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import { t } from "../i18n/index.js";
 import FlashSaleCard from "./FlashSaleCard.jsx";
 import FlashSkeleton from "./FlashSkeleton.jsx";
@@ -26,11 +27,12 @@ function SeeAllTile({ to }) {
 function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, heat = true, heading = null }) {
   const { entries, isPending, isError, refetch } = useFlashStrip({ businessId, categoryId });
   const desktop = useMediaQuery("(min-width: 1024px)");
+  const online = useOnlineStatus();
   const seeAll = categoryId ? `/flash?category=${encodeURIComponent(categoryId)}` : "/flash";
 
   if (!isPending && !isError && entries.length === 0) return null;
 
-  const body = isError ? (
+  const body = isError && entries.length === 0 ? (
     <div className={styles.error} role="alert">
       <p>{t("flash.loadFailed")}</p>
       <button type="button" className={styles.retry} onClick={() => refetch()}>
@@ -38,6 +40,12 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
       </button>
     </div>
   ) : (
+    <>
+    {!online && entries.length > 0 && (
+      <p className={styles.offline} role="status">
+        {t("flash.offline")}
+      </p>
+    )}
     <HScroller leftLabel={t("flash.scrollLeft")} rightLabel={t("flash.scrollRight")} busy={isPending}>
       {isPending
         ? Array.from({ length: 4 }, (_, index) => <FlashSkeleton key={index} />)
@@ -48,6 +56,7 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
             <SeeAllTile key="all" to={seeAll} />
           ]}
     </HScroller>
+    </>
   );
 
   if (!heat) {

@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { checkProofBatch, checkReply } from "@epicmkt/shared";
+import { checkProofBatch, checkReply, flashQuota } from "@epicmkt/shared";
 
 const need = () => {
   if (!supabase) throw new ApiError("not_configured", "The portal is not configured.");
@@ -135,7 +135,7 @@ export const uploadProofs = async (flagId, files, { alreadyAttached = 0 } = {}) 
   return attachments;
 };
 
-const TABLES = ["payments", "businesses", "messages", "flags", "flag_attachments"];
+const TABLES = ["payments", "businesses", "messages", "flags", "flag_attachments", "flash_sales"];
 /** Row-level security applies to realtime, so a seller only ever receives their own rows. */
 export const subscribe = (tables, onEvent) => {
   const client = need();
@@ -156,3 +156,55 @@ export const listExceptions = async () => {
 export const saveException = ({ id = null, date, kind, intervals = [], note = null }) =>
   rpc("seller_save_exception", { p_id: id, p_date: date, p_kind: kind, p_intervals: intervals, p_note: note });
 export const deleteException = (id) => rpc("seller_delete_exception", { p_id: id });
+
+const FLASH_CONSTRAINTS = {
+  flash_sales_value: "invalid_discount",
+  flash_sales_headline_check: "invalid_headline",
+  flash_sales_quantity_note_check: "invalid_note",
+  flash_sales_window: "invalid_window",
+  flash_sales_duration: "duration_too_long",
+  "row-level security": "not_found",
+};
+const flashFail = (error) => {
+  const message = error.message ?? "request_failed";
+  const hit = Object.keys(FLASH_CONSTRAINTS).find((k) => message.includes(k));
+  if (hit) return new ApiError(FLASH_CONSTRAINTS[hit], message);
+  const [code] = message.split(":");
+  return new ApiError(code.trim().replace(/\s+/g, "_"), message);
+};
+const flashRows = async (q) => {
+  const { data, error } = await q;
+  if (error) throw flashFail(error);
+  return data;
+};
+
+export const getServerTime = async () => {
+  const { data, error } = await need().rpc("get_server_time");
+  if (error) throw flashFail(error);
+  return { now: new Date(data).toISOString() };
+};
+export const listItems = async () =>
+  (await flashRows(need().from("items").select("id, name, price, price_type, availability, visible, hidden_by_admin, removed_by_admin").order("name"))).map(shape.ownItem);
+export const listFlashSales = async () =>
+  (await flashRows(need().from("flash_sales").select("*, items(name, price)").order("starts_at", { ascending: false }).limit(100))).map(shape.flashSale);
+export const getFlashQuota = async () => {
+  const [sub, sales] = await Promise.all([getSubscription(), listFlashSales()]);
+  const { now } = await getServerTime();
+  return flashQuota(sales, sub.limits[sub.business.planKey], Date.parse(now));
+};
+export const createFlashSale = async ({ itemId, discountType, discountValue, startsAt, endsAt, headline, quantityNote, afterEnd }) => {
+  const business = await flashRows(need().from("businesses").select("id").maybeSingle());
+  if (!business) throw new ApiError("not_a_seller");
+  const row = await flashRows(need().from("flash_sales").insert({
+    business_id: business.id, item_id: itemId, discount_type: discountType, discount_value: discountValue, starts_at: startsAt ?? new Date().toISOString(),
+    ends_at: endsAt, headline: headline || null, quantity_note: quantityNote || null, after_end: afterEnd,
+  }).select("*, items(name, price)").single());
+  return shape.flashSale(row);
+};
+export const updateFlashSale = async (id, { headline, quantityNote }) =>
+  shape.flashSale(await flashRows(need().from("flash_sales").update({ headline: headline || null, quantity_note: quantityNote || null }).eq("id", id).select("*, items(name, price)").single()));
+export const endFlashSale = async (id) => {
+  const { error } = await need().rpc("seller_end_flash_sale", { p_id: id });
+  if (error) throw flashFail(error);
+  return true;
+};

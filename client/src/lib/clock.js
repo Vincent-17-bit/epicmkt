@@ -1,9 +1,14 @@
 import { getServerTime } from "../api/index.js";
 
+const MAX_ROUND_TRIP_MS = 4000;
+const WAKE_EVENTS = ["visibilitychange", "pageshow", "focus"];
+
 const listeners = new Set();
 let offset = 0;
+let synced = false;
 let tick = 0;
 let timer = null;
+let pending = null;
 
 const snap = () => Math.floor((Date.now() + offset) / 1000) * 1000;
 
@@ -27,6 +32,8 @@ const resume = () => {
 
 export const serverNow = () => Date.now() + offset;
 
+export const isSynced = () => synced;
+
 export const getSnapshot = () => (timer === null ? snap() : tick);
 
 export function subscribe(listener) {
@@ -34,31 +41,47 @@ export function subscribe(listener) {
   if (timer === null) {
     tick = snap();
     schedule();
-    document.addEventListener("visibilitychange", resume);
+    WAKE_EVENTS.forEach((name) => (name === "visibilitychange" ? document : window).addEventListener(name, resume));
   }
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0 && timer !== null) {
       window.clearTimeout(timer);
-      document.removeEventListener("visibilitychange", resume);
+      WAKE_EVENTS.forEach((name) => (name === "visibilitychange" ? document : window).removeEventListener(name, resume));
       timer = null;
     }
   };
 }
 
-export async function syncServerTime() {
-  const sent = Date.now();
-  try {
-    const { now } = await getServerTime();
-    const received = Date.now();
-    offset = Date.parse(now) - (sent + received) / 2;
-    if (timer !== null) {
-      window.clearTimeout(timer);
-      emit();
+export function syncServerTime() {
+  if (pending) return pending;
+  pending = (async () => {
+    const sent = Date.now();
+    try {
+      const { now } = await getServerTime();
+      const received = Date.now();
+      const server = Date.parse(now);
+      if (!Number.isFinite(server) || received < sent) return;
+      if (synced && received - sent > MAX_ROUND_TRIP_MS) return;
+      offset = server - (sent + received) / 2;
+      synced = true;
+      if (timer !== null) {
+        window.clearTimeout(timer);
+        emit();
+      }
+    } catch {
+      return;
+    } finally {
+      pending = null;
     }
-  } catch {
-    return;
-  }
+  })();
+  return pending;
 }
 
 export const clockOffset = () => offset;
+
+export function resetClock() {
+  offset = 0;
+  synced = false;
+  pending = null;
+}

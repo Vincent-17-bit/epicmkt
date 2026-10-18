@@ -27,7 +27,7 @@ export const store = {
   events: [],
   analytics: [],
   reports: [],
-  flashSales: seedFlashSales(),
+  flashSales: import.meta.env?.VITE_SUPABASE_URL ? [] : seedFlashSales(),
   offers: seedOffers(),
   notifications: [],
   latency: { min: 150, max: 450 }
