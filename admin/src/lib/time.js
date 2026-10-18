@@ -19,6 +19,7 @@ export function daysLeft(paidUntil, now = new Date()) {
 }
 
 export function compactCountdown(days) {
+  if (!Number.isFinite(days)) return "";
   if (days > 0) return `${days}d`;
   if (days === 0) return "Today";
   return `${-days}d over`;

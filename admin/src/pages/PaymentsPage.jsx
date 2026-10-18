@@ -32,7 +32,7 @@ export default function PaymentsPage() {
                     <tr key={index}><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td><td><span className="skeleton" /></td></tr>
                   ))
                 : data.map((row) => (
-                    <tr key={row.receipt || row.mpesaCode}>
+                    <tr key={row.id ?? (row.receipt || row.mpesaCode)}>
                       <td>{row.receipt}</td>
                       <td>{row.businessName}</td>
                       <td>KES {row.amount}</td>

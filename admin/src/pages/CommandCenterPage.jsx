@@ -1,13 +1,25 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api/index.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import { canReview, describeError } from "../lib/applications.js";
 import { briefFor } from "../lib/counts.js";
+import { describeActivity } from "../lib/activity.js";
+import { timeAgo } from "../lib/time.js";
+
+export const ACTIVITY_KEY = ["admin-activity"];
 
 export default function CommandCenterPage() {
   const navigate = useNavigate();
-  const { admin, demo } = useAuth();
+  const { admin } = useAuth();
   const { data, isPending, isError, error, refetch, isFetching } = useAdminCounts();
+  const activity = useQuery({
+    queryKey: ACTIVITY_KEY,
+    queryFn: () => api.getAdminActivity({ limit: 15 }),
+    refetchInterval: 60_000,
+    placeholderData: (previous) => previous,
+  });
 
   // "--" while loading or when the numbers could not be fetched. Never a made-up zero.
   const show = (value) => (isPending || (isError && !data) ? "--" : value ?? "--");
@@ -85,15 +97,29 @@ export default function CommandCenterPage() {
           <div className="panel__header">
             <h3>Live activity</h3>
           </div>
-          {demo ? (
+          {activity.isPending ? (
+            <p className="muted">Loading activity</p>
+          ) : activity.isError && !activity.data ? (
+            <div className="banner banner--error" role="alert">
+              <span>Could not load the activity. {describeError(activity.error)}</span>
+              <button type="button" className="secondary-button admin-button--sm" onClick={() => activity.refetch()} disabled={activity.isFetching}>
+                {activity.isFetching ? "Retrying" : "Try again"}
+              </button>
+            </div>
+          ) : activity.data?.length ? (
             <ul className="activity-list">
-              <li>New application from Umoja Market submitted 2 minutes ago</li>
-              <li>Payment code MPESA-1047 matched and awaiting confirmation</li>
-              <li>2 seller reports were flagged for review</li>
-              <li>Reminder batch completed for 6 expiring sellers</li>
+              {activity.data.map((row) => {
+                const { text, to } = describeActivity(row);
+                return (
+                  <li key={row.id}>
+                    {to ? <Link to={to}>{text}</Link> : <span>{text}</span>}
+                    {row.at ? <time className="muted" dateTime={row.at}> · {timeAgo(row.at)}</time> : null}
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <p className="muted">The activity feed is not connected yet. The numbers on this page are live.</p>
+            <p className="muted">Nothing has happened yet. New applications, payments and seller requests show up here as they arrive.</p>
           )}
         </section>
       </div>

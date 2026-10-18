@@ -7,16 +7,12 @@ const notConfigured = () => {
   throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
 };
 
-// Not built yet: these stay behind the "not connected" message so a page never shows made-up data.
-export const listBusinesses = notConfigured;
-export const listAllBusinesses = notConfigured;
-export const getBusinessTabCounts = notConfigured;
-export const getBusinessFilterOptions = notConfigured;
+// Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
+// audited RPCs (suspend, extend, tag, message...) and the audit viewer. Everything else on the Businesses page,
+// the Payments page and the Command Center is live below.
 export const bulkBusinessAction = notConfigured;
 export const undoBulkBusinessAction = notConfigured;
 export const listAuditEntries = notConfigured;
-export const getBusinesses = notConfigured;
-export const getPayments = notConfigured;
 
 const client = () => {
   if (!supabase) throw new ApiError("unauthorized", "Supabase is not configured.");
@@ -42,6 +38,68 @@ export async function getAdminCounts() {
   ]);
   const { data } = check(counts);
   return normalizeCounts(data, { applicationsOver24h: overdue.error ? null : overdue.count });
+}
+
+// ---- Businesses: server-side paging, filters, search and sort (migration 0012_admin_live.sql) -----------------------
+
+const MAX_EXPORT = 5000;
+
+const businessArgs = ({ search = "", sort, extra } = {}, page) => ({
+  p_tab: extra?.tab ?? "all",
+  p_search: search.trim() || null,
+  p_sort: sort?.key ?? "paidUntil",
+  p_dir: sort?.dir === "desc" ? "desc" : "asc",
+  p_filters: extra?.filters ?? {},
+  p_limit: page.limit,
+  p_offset: page.offset,
+});
+
+export async function listBusinesses({ page = 0, pageSize = 50, ...query } = {}) {
+  const { data } = check(await client().rpc("admin_businesses_query", businessArgs(query, { limit: pageSize, offset: page * pageSize })));
+  return { rows: data?.rows ?? [], total: data?.total ?? 0 };
+}
+
+// "Select all" and CSV export. Capped, so one click cannot pull the whole table through the browser.
+export async function listAllBusinesses(query = {}) {
+  const { data } = check(await client().rpc("admin_businesses_query", businessArgs(query, { limit: MAX_EXPORT, offset: 0 })));
+  return data?.rows ?? [];
+}
+
+export async function getBusinessTabCounts({ extra } = {}) {
+  const { data } = check(await client().rpc("admin_business_tab_counts", { p_filters: extra?.filters ?? {} }));
+  return data ?? {};
+}
+
+export async function getBusinessFilterOptions() {
+  const { data } = check(await client().rpc("admin_business_filter_options"));
+  return { categories: [], counties: [], plans: [], agents: [], ...(data ?? {}) };
+}
+
+// ---- Payments -------------------------------------------------------------------------------------------------
+
+const titleCase = (value) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : "");
+
+export async function getPayments() {
+  const { data } = check(await client()
+    .from("payments")
+    .select("id, receipt_no, amount_kes, status, mpesa_code, business:businesses(name), application:applications(business_name)")
+    .order("created_at", { ascending: false })
+    .limit(200));
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    receipt: r.receipt_no ?? "",
+    businessName: r.business?.name ?? r.application?.business_name ?? "",
+    amount: r.amount_kes,
+    status: titleCase(r.status),
+    mpesaCode: r.mpesa_code ?? "",
+  }));
+}
+
+// ---- Live activity: the Command Center feed --------------------------------------------------------------------
+
+export async function getAdminActivity({ limit = 15 } = {}) {
+  const { data } = check(await client().rpc("admin_activity", { p_limit: limit }));
+  return data ?? [];
 }
 
 // ---- Applications --------------------------------------------------------------------------------------------
