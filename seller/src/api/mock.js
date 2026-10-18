@@ -1,6 +1,6 @@
 import { passwordProblems } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { EXCEPTION_LIMIT, checkProofBatch, checkReply, inspectProof, validateException } from "@epicmkt/shared";
+import { EXCEPTION_LIMIT, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -120,7 +120,7 @@ const ITEMS = { barber: { standard: 30, premium: 100 }, salon: { standard: 30, p
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { items: [], flash: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 
 function resetBilling() {
@@ -147,6 +147,15 @@ function resetBilling() {
   ];
   bill.changes = [];
   bill.exceptions = [];
+  bill.items = [
+    { id: "it-fade", name: "Fade cut", price: 500, priceType: "fixed", availability: "available", visible: true, hiddenByAdmin: false },
+    { id: "it-beard", name: "Beard trim", price: 300, priceType: "fixed", availability: "available", visible: true, hiddenByAdmin: false },
+    { id: "it-dye", name: "Hair dye", price: 1200, priceType: "from", availability: "available", visible: true, hiddenByAdmin: false },
+    { id: "it-gel", name: "Styling gel", price: 400, priceType: "fixed", availability: "out_of_stock", visible: true, hiddenByAdmin: false },
+    { id: "it-old", name: "Old special", price: 250, priceType: "fixed", availability: "available", visible: false, hiddenByAdmin: false },
+    { id: "it-quote", name: "Wedding package", price: null, priceType: "contact", availability: "available", visible: true, hiddenByAdmin: false },
+  ];
+  bill.flash = [];
 }
 resetBilling();
 
@@ -309,6 +318,86 @@ export const replyFlag = async (id, reply) => {
   return { id: q.id, status: q.status };
 };
 
+const FLASH_LIMITS = { standard: { flashSalesConcurrent: 1, flashSalesPerMonth: 3 }, premium: { flashSalesConcurrent: 5, flashSalesPerMonth: 10 } };
+const nowMs = () => clockNow().getTime();
+
+const settleFlash = () => {
+  const at = nowMs();
+  for (const sale of bill.flash) {
+    if (sale.status === "scheduled" && Date.parse(sale.startsAt) <= at) sale.status = "live";
+    if ((sale.status === "live" || sale.status === "scheduled") && Date.parse(sale.endsAt) <= at) closeFlash(sale, "time");
+  }
+};
+function closeFlash(sale, reason) {
+  const at = clockNow().toISOString();
+  Object.assign(sale, { status: sale.status === "scheduled" && Date.parse(sale.startsAt) > nowMs() ? "cancelled" : "ended", endedAt: at, endedReason: reason });
+  const item = bill.items.find((i) => i.id === sale.itemId);
+  if (sale.afterEnd === "unlist" && item && item.visible && (reason === "time" || reason === "seller")) item.visible = false;
+  if (reason === "time") post("general", "Flash sale ended", `Your flash sale on "${sale.itemName}" has ended.${sale.afterEnd === "unlist" ? " The item was unlisted as you chose." : ""}`, { flash_sale_id: sale.id }, `flash_end:${sale.id}`);
+  emit("flash_sales", "UPDATE", sale);
+}
+const flashView = (sale) => ({ ...copy(sale), regularPrice: bill.items.find((i) => i.id === sale.itemId)?.price ?? null });
+const flashCheckItem = (item) => {
+  if (!item) throw new ApiError("item_not_found");
+  if (!item.visible || item.hiddenByAdmin || ["out_of_stock", "unavailable"].includes(item.availability)) throw new ApiError("item_unavailable");
+  if (!(item.price > 0) || !["fixed", "from"].includes(item.priceType)) throw new ApiError("item_not_discountable");
+};
+
+export const getServerTime = async () => ({ now: clockNow().toISOString() });
+export const listItems = async () => { signedIn(); await wait(); return copy(bill.items); };
+export const listFlashSales = async () => { signedIn(); await wait(); settleFlash(); return bill.flash.map(flashView).sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)); };
+export const getFlashQuota = async () => {
+  signedIn();
+  await wait();
+  settleFlash();
+  return flashQuota(bill.flash, FLASH_LIMITS[bill.business.planKey], nowMs());
+};
+export const createFlashSale = async (input) => {
+  signedIn();
+  await wait();
+  settleFlash();
+  const item = bill.items.find((i) => i.id === input.itemId);
+  flashCheckItem(item);
+  const v = validateFlashSale({ ...input, itemPrice: item.price }, nowMs());
+  if (!v.ok) throw new ApiError(v.error);
+  const { startsAt, endsAt } = v.value;
+  const open = bill.flash.filter((s) => ["scheduled", "live"].includes(s.status));
+  if (open.some((s) => s.itemId === item.id && s.startsAt < endsAt && startsAt < s.endsAt)) throw new ApiError("item_has_sale");
+  const limits = FLASH_LIMITS[bill.business.planKey];
+  if (open.filter((s) => s.startsAt < endsAt && startsAt < s.endsAt).length >= limits.flashSalesConcurrent) throw new ApiError("limit_reached", "limit_reached:flash_concurrent");
+  if (flashQuota([...bill.flash, { status: "scheduled", startsAt, endsAt }], limits, nowMs()).monthlyUsed > limits.flashSalesPerMonth) throw new ApiError("limit_reached", "limit_reached:flash_per_month");
+  const sale = {
+    id: `fs-${++bill.seq}`, itemId: item.id, itemName: item.name, headline: v.value.headline, startsAt, endsAt, discountType: v.value.discountType, discountValue: v.value.discountValue,
+    quantityNote: v.value.quantityNote, afterEnd: v.value.afterEnd, status: Date.parse(startsAt) <= nowMs() ? "live" : "scheduled", endedAt: null, endedReason: null, createdAt: clockNow().toISOString(),
+  };
+  bill.flash.push(sale);
+  emit("flash_sales", "INSERT", sale);
+  return flashView(sale);
+};
+export const updateFlashSale = async (id, { headline, quantityNote }) => {
+  signedIn();
+  await wait();
+  settleFlash();
+  const sale = bill.flash.find((s) => s.id === id);
+  if (!sale) throw new ApiError("not_found");
+  if (!["scheduled", "live"].includes(sale.status)) throw new ApiError("flash_closed");
+  const v = validateFlashSale({ itemPrice: 1000, discountType: "percent", discountValue: 10, endsAt: new Date(nowMs() + 60000).toISOString(), afterEnd: "keep", headline, quantityNote }, nowMs());
+  if (!v.ok) throw new ApiError(v.error);
+  Object.assign(sale, { headline: v.value.headline, quantityNote: v.value.quantityNote });
+  emit("flash_sales", "UPDATE", sale);
+  return flashView(sale);
+};
+export const endFlashSale = async (id) => {
+  signedIn();
+  await wait();
+  settleFlash();
+  const sale = bill.flash.find((s) => s.id === id);
+  if (!sale) throw new ApiError("not_found");
+  if (!["scheduled", "live"].includes(sale.status)) throw new ApiError("flash_closed");
+  closeFlash(sale, "seller");
+  return true;
+};
+
 const todayNairobi = () => nairobiDay(clockNow());
 const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
 export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };
@@ -336,7 +425,7 @@ export const deleteException = async (id) => {
 };
 
 export const subscribe = (tables, onEvent) => {
-  const entry = { tables: tables?.length ? tables : ["payments", "businesses", "messages", "flags", "flag_attachments"], fn: onEvent };
+  const entry = { tables: tables?.length ? tables : ["payments", "businesses", "messages", "flags", "flag_attachments", "flash_sales"], fn: onEvent };
   bill.listeners.add(entry);
   return () => bill.listeners.delete(entry);
 };

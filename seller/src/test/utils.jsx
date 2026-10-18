@@ -17,7 +17,7 @@ export async function signedInApp(path = "/business/subscription", prepare) {
   mock.resetMock();
   setTime(null);
   await api.login("ES100001", "Demo-Passw0rd");
-  prepare?.();
+  await prepare?.();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } } });
   const view = render(
     <QueryClientProvider client={client}>

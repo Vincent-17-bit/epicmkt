@@ -37,3 +37,14 @@ export const question = (f, extra = {}) => ({
 export const plans = (rows) => Object.fromEntries(rows.map((p) => [p.plan_key, {
   price: p.price_kes, itemsLimit: p.items_limit, topBenefits: p.top_benefits, features: p.features ?? {}, badge: p.badge ?? null,
 }]));
+
+export const ownItem = (i) => ({
+  id: i.id, name: i.name, price: i.price === null || i.price === undefined ? null : Number(i.price), priceType: i.price_type,
+  availability: i.availability, visible: i.visible, hiddenByAdmin: !!(i.hidden_by_admin || i.removed_by_admin),
+});
+
+export const flashSale = (s) => ({
+  id: s.id, itemId: s.item_id, itemName: s.items?.name ?? s.item_name ?? "", regularPrice: s.items?.price === undefined || s.items?.price === null ? null : Number(s.items.price),
+  headline: s.headline ?? null, startsAt: s.starts_at, endsAt: s.ends_at, discountType: s.discount_type, discountValue: Number(s.discount_value),
+  quantityNote: s.quantity_note ?? null, afterEnd: s.after_end, status: s.status, endedAt: s.ended_at ?? null, endedReason: s.ended_reason ?? null, createdAt: s.created_at,
+});

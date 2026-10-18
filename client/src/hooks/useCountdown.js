@@ -7,6 +7,7 @@ import { invalidateFlash } from "../lib/flashSync.js";
 
 const MINUTE = 60000;
 const CLOCK_SYNC_MS = 5 * MINUTE;
+const RETRY_MS = 2000;
 
 export function useServerNow() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
@@ -39,24 +40,32 @@ export function useLiveSales(entries) {
   const seen = useRef("");
   const read = () => {
     const now = getSnapshot();
-    const synced = isSynced();
+    const waitForServer = !isSynced() && navigator.onLine !== false;
     const live = [];
     const reached = [];
     for (const entry of entries) {
       const over = Date.parse(entry.sale.endsAt) <= now;
       if (over) reached.push(entry.sale.id);
-      if (!over || !synced) live.push(entry.sale.id);
+      if (!over || waitForServer) live.push(entry.sale.id);
     }
     return `${live.join("|")}#${reached.join("|")}`;
   };
   const key = useSyncExternalStore(subscribe, read, read);
   const [liveKey, reachedKey] = key.split("#");
   useEffect(() => {
-    if (reachedKey === seen.current) return;
+    if (reachedKey === seen.current) return undefined;
     seen.current = reachedKey;
-    if (!reachedKey) return;
-    invalidateSnapshot();
-    invalidateFlash(queryClient);
+    if (!reachedKey) return undefined;
+    const refresh = () => {
+      invalidateSnapshot();
+      invalidateFlash(queryClient);
+    };
+    refresh();
+    const retry = window.setInterval(refresh, RETRY_MS);
+    return () => {
+      seen.current = "";
+      window.clearInterval(retry);
+    };
   }, [reachedKey, queryClient]);
   return useMemo(() => {
     const ids = new Set(liveKey ? liveKey.split("|") : []);
