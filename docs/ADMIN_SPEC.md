@@ -21,7 +21,7 @@ Validation errors return 400, a missing role 403, a rate limit 429.
 - `preview: true` returns the rendered messages per channel and sends or queues nothing.
 - `request_changes` needs at least one open flag or a note.
 - `reject` needs a reason.
-- `approve` moves the application to `approved` and queues the payment-instructions messages: M-Pesa Till or Paybill from `site_settings`, amount = `price_at_submission`, or the override with a recorded reason.
+- `approve` moves the application to `approved` and queues the payment-instructions messages: M-Pesa Paybill (business number from `site_settings`, account = the applicant's exact business name), amount = `price_at_submission`, or the override with a recorded reason.
 - Every action appends `application_events` and queues messages to the phone and email the applicant gave.
 
 ### admin-confirm-payment

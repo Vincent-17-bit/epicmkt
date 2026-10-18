@@ -21,9 +21,6 @@ verify_jwt = false
 [functions.status-resubmit]
 verify_jwt = false
 
-[functions.status-payment-code]
-verify_jwt = false
-
 [functions.seller-login]
 verify_jwt = false
 
@@ -55,4 +52,8 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.proofs-purge]
+verify_jwt = false
+
+# Called by Safaricom, not by a signed-in user. The secret in the URL path is the protection.
+[functions.pay-callback]
 verify_jwt = false

@@ -1,0 +1,241 @@
+/* Applications queue and review page. Colours and spacing come from the admin tokens in styles/admin.css. */
+
+.applications__toolbar {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.applications__search {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.applications__search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.6rem;
+  background: var(--admin-surface);
+  color: var(--admin-text);
+}
+
+.applications__table td a {
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+/* Codes and amounts read as one unit: never break "EPM-2026-AB2041" or "Standard KES 1,500" across lines. */
+.applications__table td:first-child,
+.applications__table td:nth-child(5),
+.applications__table td:last-child {
+  white-space: nowrap;
+}
+
+.applications__row {
+  cursor: pointer;
+}
+
+.applications__row:hover {
+  background: rgba(56, 182, 255, 0.07);
+}
+
+.applications__overdue {
+  margin-left: 0.5rem;
+}
+
+.applications__empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.applications__pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.applications__pager-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.applications__channels {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.applications__channels legend {
+  float: left;
+  margin-right: 1rem;
+  padding: 0;
+}
+
+.applications__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+  background: var(--admin-primary-tint);
+}
+
+.applications__preview p {
+  margin: 0;
+}
+
+.applications__message {
+  margin: 0;
+}
+
+.applications__message figcaption {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--admin-muted);
+}
+
+.applications__message blockquote {
+  margin: 0.25rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-left: 3px solid var(--admin-primary);
+  background: var(--admin-surface);
+  white-space: pre-wrap;
+}
+
+.field--inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.detail__back {
+  margin: 0;
+}
+
+.detail__back a {
+  color: var(--admin-primary);
+  font-weight: 600;
+}
+
+.detail__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.detail__title {
+  margin: 0 0 0.25rem;
+  font-size: clamp(1.2rem, 1.1rem + 0.7vw, 1.8rem);
+}
+
+.detail__head p {
+  margin: 0;
+}
+
+.detail__chips {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.detail__grid {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0;
+}
+
+.detail__field {
+  display: grid;
+  grid-template-columns: minmax(8rem, 35%) 1fr;
+  gap: 0.75rem;
+}
+
+.detail__field dt {
+  color: var(--admin-muted);
+  font-size: 0.8rem;
+}
+
+.detail__field dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.detail__list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.75rem;
+}
+
+.detail__list-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.detail__inline-chip {
+  margin-left: 0.5rem;
+}
+
+.detail__hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+}
+
+.detail__timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.detail__timeline li {
+  display: flex;
+  flex-direction: column;
+  padding-left: 0.8rem;
+  border-left: 3px solid var(--admin-border);
+}
+
+@media (max-width: 640px) {
+  .detail__field {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
+  }
+
+  .detail__list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

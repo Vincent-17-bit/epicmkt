@@ -5,8 +5,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@epicmkt/shared/reset.css";
 import "@epicmkt/shared/tokens.css";
 import "./styles/admin.css";
+import "./styles/login.css";
 import App from "./App.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
+import { AuthProvider } from "./auth/AuthContext.jsx";
+import { applySavedTheme } from "./lib/theme.js";
+
+applySavedTheme();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,7 +28,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
