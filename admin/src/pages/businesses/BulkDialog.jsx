@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { PROOF_ACCEPT, PROOF_MAX_FILES, checkProofBatch } from "@epicmkt/shared";
+import Button from "../../components/Button.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import { BULK } from "./bulk.js";
 
@@ -12,8 +14,12 @@ export default function BulkDialog({ action, count, options, onClose, onSubmit }
   const config = BULK[action];
   const [featured, setFeatured] = useState("yes");
   const [days, setDays] = useState("7");
-  const [channels, setChannels] = useState(["sms", "email", "inApp"]);
+  const [channels, setChannels] = useState(["inApp"]);
   const [body, setBody] = useState("");
+  const [subject, setSubject] = useState("");
+  const [needsReply, setNeedsReply] = useState(false);
+  const [files, setFiles] = useState([]);
+  const picker = useRef(null);
   const [tag, setTag] = useState("");
   const [mode, setMode] = useState("add");
   const [agent, setAgent] = useState("");
@@ -24,7 +30,10 @@ export default function BulkDialog({ action, count, options, onClose, onSubmit }
   const forms = {
     feature: { params: { featured: featured === "yes" }, valid: true },
     extend: { params: { days: dayCount }, valid: Number.isInteger(dayCount) && dayCount >= 1 && dayCount <= 365 },
-    message: { params: { channels, body: body.trim() }, valid: channels.length > 0 && body.trim().length > 0 },
+    message: {
+      params: { channels, subject: subject.trim() || undefined, body: body.trim(), needsReply, files },
+      valid: channels.length > 0 && (body.trim().length > 0 || (files.length > 0 && channels.includes("inApp"))),
+    },
     tag: { params: { tag: tag.trim(), mode }, valid: tag.trim().length > 0 && tag.trim().length <= 30 },
     assign: { params: { agent: agent === "__none__" ? null : agent }, valid: agent !== "" },
   };
@@ -39,6 +48,15 @@ export default function BulkDialog({ action, count, options, onClose, onSubmit }
       setError(failure.message);
       setBusy(false);
     }
+  };
+
+  const pick = (event) => {
+    const next = [...files, ...Array.from(event.target.files ?? [])];
+    event.target.value = "";
+    const check = checkProofBatch(next);
+    if (check.error) return setError(check.error === "attachments_limit" ? "You can attach up to 3 files." : check.error === "file_too_large" ? `${check.file} is over 8 MB.` : `${check.file} must be a JPG, PNG, WebP or PDF.`);
+    setError("");
+    setFiles(next);
   };
 
   const noun = count === 1 ? "business" : "businesses";
@@ -89,9 +107,30 @@ export default function BulkDialog({ action, count, options, onClose, onSubmit }
             ))}
           </fieldset>
           <label className="field">
-            Message
-            <textarea value={body} maxLength={480} onChange={(event) => setBody(event.target.value)} />
+            Subject (optional)
+            <input value={subject} maxLength={150} onChange={(event) => setSubject(event.target.value)} />
           </label>
+          <label className="field">
+            Message
+            <textarea value={body} maxLength={4000} onChange={(event) => setBody(event.target.value)} />
+          </label>
+          {channels.includes("inApp") ? (
+            <>
+              <label className="filters__check">
+                <input type="checkbox" checked={needsReply} onChange={(event) => setNeedsReply(event.target.checked)} />
+                Ask the seller to reply (shows under their Questions)
+              </label>
+              <div className="field">
+                <input ref={picker} type="file" accept={PROOF_ACCEPT} multiple hidden onChange={pick} aria-label="Attach files" />
+                <Button onClick={() => picker.current?.click()} disabled={files.length >= PROOF_MAX_FILES}>Attach a file (JPG, PNG, WebP or PDF, up to 8 MB)</Button>
+                {files.map((item, index) => (
+                  <span key={`${item.name}-${index}`} className="modal__summary">
+                    {item.name} <button type="button" className="link-button" onClick={() => setFiles(files.filter((_, i) => i !== index))} aria-label={`Remove ${item.name}`}>Remove</button>
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : null}
         </>
       ) : null}
 

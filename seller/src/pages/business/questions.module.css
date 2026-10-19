@@ -77,3 +77,11 @@
     padding: var(--space-4);
   }
 }
+
+.thread {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

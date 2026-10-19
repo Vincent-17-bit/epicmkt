@@ -49,10 +49,12 @@ describe("Subscription: summary, calendar months and grace", () => {
     expect(await screen.findByTestId("banner-expiring")).toHaveTextContent("ends in 2 days");
   });
 
-  it("suspended and unlisted sellers keep the page and see their banner", async () => {
-    const { unmount } = await signedInApp("/business/subscription", () => M.state.business.status = "suspended");
-    expect(await screen.findByTestId("banner-suspended")).toHaveTextContent("still renew, read your notifications and answer questions");
-    expect(await screen.findByTestId("payment-card")).toBeInTheDocument();
+  it("a suspended seller is locked out and sees why; a paused seller keeps the page and sees the banner", async () => {
+    const { unmount } = await signedInApp("/business/subscription", () => { M.state.business.status = "suspended"; M.state.business.statusReason = "Selling counterfeit goods"; });
+    expect(await screen.findByTestId("suspended-banner")).toHaveTextContent("Selling counterfeit goods");
+    expect(await screen.findByTestId("locked")).toBeInTheDocument();
+    expect(screen.queryByTestId("payment-card")).toBeNull();
+    expect(screen.queryByRole("link", { name: "Subscription" })).toBeNull();
     unmount();
     await signedInApp("/business/subscription", () => M.state.business.status = "paused");
     expect(await screen.findByTestId("banner-paused")).toHaveTextContent("unlisted");

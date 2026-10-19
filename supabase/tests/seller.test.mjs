@@ -265,8 +265,8 @@ test("change requests, replies, messages, pause and deletion", async () => {
     assert.equal((await sql(k, `select seller_pause_listing(false) as s`))[0].s, "live");
   });
   await sql(c, `update businesses set status = 'suspended' where id = '${ids.bizB}'`);
-  await rejects(c, asB, `select seller_pause_listing(true)`, [], /invalid_status/);
-  await rejects(c, asB, `select seller_pause_listing(false)`, [], /invalid_status/);
+  await rejects(c, asB, `select seller_pause_listing(true)`, [], /account_suspended/);
+  await rejects(c, asB, `select seller_pause_listing(false)`, [], /account_suspended/);
   await sql(c, `update businesses set status = 'live' where id = '${ids.bizB}'`);
 
   await rejects(c, asA, `select seller_request_deletion('Wrong name')`, [], /name_mismatch/);

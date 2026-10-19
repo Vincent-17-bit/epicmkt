@@ -282,8 +282,8 @@ describe("limit of 60", () => {
 });
 
 describe("access and layout", () => {
-  it("works for suspended, unlisted and expired sellers", async () => {
-    for (const status of ["suspended", "paused", "expired"]) {
+  it("works for unlisted and expired sellers, but a suspended seller is locked out of the page", async () => {
+    for (const status of ["paused", "expired"]) {
       const user = userEvent.setup();
       const { unmount } = await signedInApp("/business/exceptions", () => { setTime(NOW); M.state.business.status = status; M.state.exceptions = []; });
       await user.click(await screen.findByRole("button", { name: "Add exception" }));
@@ -292,6 +292,9 @@ describe("access and layout", () => {
       await waitFor(() => expect(rows()).toHaveLength(1));
       unmount();
     }
+    await signedInApp("/business/exceptions", () => { setTime(NOW); M.state.business.status = "suspended"; M.state.exceptions = []; });
+    expect(await screen.findByTestId("locked")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add exception" })).toBeNull();
   });
 
   it("is in the navigation", async () => {

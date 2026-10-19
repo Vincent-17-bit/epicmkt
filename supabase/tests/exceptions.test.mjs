@@ -127,14 +127,17 @@ test("a closed day ignores any intervals sent with it; a note is plain text stor
   assert.equal(e.note, "<b>Back soon</b> & thanks");
 });
 
-test("works for suspended, paused and expired sellers", async () => {
-  for (const status of ["suspended", "paused", "expired"]) {
+test("works for paused and expired sellers, but a suspended seller is locked out", async () => {
+  for (const status of ["paused", "expired"]) {
     await reset();
     await sql(c, `update businesses set status = '${status}' where id = '${ids.bizA}'`);
     const e = await save(asA, addDays(today, 3));
     assert.equal(e.kind, "closed", status);
     assert.equal((await tx(c, asA, (k) => sql(k, `select seller_delete_exception('${e.id}') as r`), { commit: true }))[0].r, true);
   }
+  await reset();
+  await sql(c, `update businesses set status = 'suspended' where id = '${ids.bizA}'`);
+  await rejects(c, asA, `select seller_save_exception(null, '${addDays(today, 3)}'::date, 'closed', '[]', null)`, [], /account_suspended/);
   await sql(c, `update businesses set status = 'live' where id = '${ids.bizA}'`);
 });
 

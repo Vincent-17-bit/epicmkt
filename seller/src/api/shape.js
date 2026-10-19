@@ -2,7 +2,7 @@
 export const business = (b) => b && ({
   id: b.id, sellerId: b.seller_id, name: b.name, status: b.status, planKey: b.plan_key, categoryId: b.category_id,
   paidUntil: b.paid_until ?? null, verificationLevel: b.verification_level, announcement: b.announcement ?? null,
-  creditKes: Number(b.credit_kes ?? 0),
+  creditKes: Number(b.credit_kes ?? 0), strikes: b.strikes ?? 0, statusReason: b.status_reason ?? null,
 });
 
 export const payment = (p) => ({
@@ -20,8 +20,12 @@ export const instructions = (r) => ({
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
 });
 
-export const message = (m) => ({
+export const messageFile = (a) => ({ id: a.id, messageId: a.message_id, name: a.original_name, mime: a.mime, size: a.size_bytes, path: a.path, by: a.uploaded_by });
+
+export const message = (m, attachments = []) => ({
   id: m.id, kind: m.kind, subject: m.subject, body: m.body, data: m.data ?? {}, readAt: m.read_at ?? null, createdAt: m.created_at,
+  sender: m.sender ?? "system", threadId: m.thread_id ?? m.id, parentId: m.parent_id ?? null, needsReply: !!m.needs_reply,
+  deliveredAt: m.delivered_at ?? null, adminDeliveredAt: m.admin_delivered_at ?? null, adminReadAt: m.admin_read_at ?? null, attachments,
 });
 
 export const change = (c) => ({

@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api/index.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts, useLiveRefresh } from "../hooks/useAdminCounts.js";
 import { badgeText, navBadges } from "../lib/counts.js";
@@ -11,6 +13,7 @@ const navItems = [
   { label: "Applications", to: "/admin/applications", hint: "applications waiting for a decision" },
   { label: "Businesses", to: "/admin/businesses", hint: "sellers expiring within 7 days or in grace" },
   { label: "Payments", to: "/admin/payments", hint: "payments to confirm" },
+  { label: "Messages", to: "/admin/messages", hint: "unread messages from sellers" },
   { label: "Flash sales", to: "/admin/flash-sales" },
   { label: "Settings", to: "/admin/settings" },
 ];
@@ -28,7 +31,8 @@ export default function AdminLayout() {
   const { pathname } = useLocation();
   const pageTitle = currentPage(pathname);
   const counts = useAdminCounts();
-  const badges = navBadges(counts.data);
+  const unreadMessages = useQuery({ queryKey: ["admin-unread-messages"], queryFn: () => api.getUnreadMessages(), refetchInterval: 60_000, retry: false });
+  const badges = { ...navBadges(counts.data), "/admin/messages": unreadMessages.data || 0 };
   useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
   const [collapsed, setCollapsed] = useState(false);

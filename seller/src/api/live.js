@@ -3,6 +3,8 @@ import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
 import { checkProofBatch, checkReply, flashQuota } from "@epicmkt/shared";
 
+const BUCKET = "message-files";
+
 const need = () => {
   if (!supabase) throw new ApiError("not_configured", "The portal is not configured.");
   return supabase;
@@ -101,7 +103,32 @@ export const listCategoryPlans = async () => {
 export const listMessages = async ({ kinds = null } = {}) => {
   let q = need().from("messages").select("*").order("created_at", { ascending: false }).limit(200);
   if (kinds?.length) q = q.in("kind", kinds);
-  return (await rows(q)).map(shape.message);
+  const list = await rows(q);
+  const files = list.length ? await rows(need().from("message_attachments").select("*").in("message_id", list.map((m) => m.id))) : [];
+  return list.map((m) => shape.message(m, files.filter((f) => f.message_id === m.id).map(shape.messageFile)));
+};
+// Tells the server this device received the messages (two green ticks on the sender's side).
+export const ackDelivered = async () => rpc("message_ack_delivered", { p_ids: null });
+export const sendMessage = async ({ parentId, body, files = [] }) => {
+  const check = checkProofBatch(files);
+  if (check.error) throw new ApiError(check.error, undefined, { file: check.file });
+  const business = await rows(need().from("businesses").select("id").maybeSingle());
+  if (!business) throw new ApiError("not_a_seller");
+  const attachments = [];
+  for (const f of files) {
+    const safe = f.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(-100);
+    const path = `${business.id}/${crypto.randomUUID()}-${safe}`;
+    const { error } = await need().storage.from(BUCKET).upload(path, f, { contentType: f.type });
+    if (error) throw new ApiError("file_not_uploaded");
+    attachments.push({ path, name: f.name, mime: f.type, size: f.size });
+  }
+  return shape.message(await rpc("seller_send_message", { p_parent: parentId, p_body: body ?? "", p_attachments: attachments }));
+};
+// Files are private. A short lived link is made for each click.
+export const openAttachment = async (path) => {
+  const { data, error } = await need().storage.from(BUCKET).createSignedUrl(path, 300);
+  if (error) throw new ApiError("file_not_found");
+  return data.signedUrl;
 };
 export const unreadCount = async () => {
   const { count, error } = await need().from("messages").select("id", { count: "exact", head: true }).is("read_at", null);
@@ -139,7 +166,7 @@ export const uploadProofs = async (flagId, files, { alreadyAttached = 0 } = {}) 
   return attachments;
 };
 
-const TABLES = ["payments", "businesses", "messages", "flags", "flag_attachments", "flash_sales"];
+const TABLES = ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"];
 /** Row-level security applies to realtime, so a seller only ever receives their own rows. */
 export const subscribe = (tables, onEvent) => {
   const client = need();
