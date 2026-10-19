@@ -54,3 +54,25 @@ export const flashSale = (s) => ({
   headline: s.headline ?? null, startsAt: s.starts_at, endsAt: s.ends_at, discountType: s.discount_type, discountValue: Number(s.discount_value),
   quantityNote: s.quantity_note ?? null, afterEnd: s.after_end, status: s.status, endedAt: s.ended_at ?? null, endedReason: s.ended_reason ?? null, createdAt: s.created_at,
 });
+
+const num = (v) => (v === null || v === undefined ? null : Number(v));
+export const mediaUrl = (path) => (path && import.meta.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
+
+export const catalogItem = (i) => ({
+  id: i.id, name: i.name, description: i.description ?? "", section: i.section ?? null,
+  price: num(i.price), priceMax: num(i.price_max), priceType: i.price_type, unit: i.unit ?? null, salePrice: num(i.sale_price),
+  availability: i.availability, stockCount: i.stock_count ?? null, trackStock: !!i.track_stock, lowStockThreshold: i.low_stock_threshold ?? 3,
+  showStockCount: !!i.show_stock_count, availableFrom: i.available_from ?? null, season: i.season ?? null,
+  visible: !!i.visible, draft: !!i.draft, sort: i.sort ?? 0, hiddenByAdmin: !!i.hidden_by_admin, removedByAdmin: !!i.removed_by_admin,
+  adminHideReason: i.admin_hide_reason ?? i.admin_reason ?? null, tags: i.tags ?? [], badge: i.badge ?? null, variants: i.variants ?? [],
+  priceConfirmedAt: i.price_confirmed_at ?? null, createdAt: i.created_at, updatedAt: i.updated_at,
+  imagePaths: i.image_paths ?? [], imageCount: (i.image_paths ?? []).length, hasVideo: !!i.has_video,
+  inFlashSale: !!i.in_flash_sale,
+});
+
+export const catalog = (r) => ({
+  shop: { slug: r.shop.slug, status: r.shop.status, live: !!r.shop.live, planKey: r.shop.plan_key, itemsLimit: r.shop.items_limit ?? null },
+  items: (r.items ?? []).map(catalogItem),
+});
+
+export const signal = (s) => ({ itemId: s.item_id, openFlags: s.open_flags ?? 0, reports30d: s.reports_30d ?? 0 });

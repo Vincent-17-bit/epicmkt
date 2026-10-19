@@ -8,6 +8,7 @@ import Notifications from "./pages/business/Notifications.jsx";
 import Questions from "./pages/business/Questions.jsx";
 import Exceptions from "./pages/business/Exceptions.jsx";
 import Flash from "./pages/business/Flash.jsx";
+import Catalog from "./pages/business/catalog/Catalog.jsx";
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="questions" element={<Questions />} />
           <Route path="exceptions" element={<Exceptions />} />
+          <Route path="catalog" element={<Catalog />} />
           <Route path="flash" element={<Flash />} />
         </Route>
       </Route>

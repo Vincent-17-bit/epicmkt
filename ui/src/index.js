@@ -20,3 +20,4 @@ export { default as HoursTable } from "./business/HoursTable.jsx";
 export { BusinessPageError, BusinessPageSkeleton } from "./business/BusinessStates.jsx";
 export { groupServices } from "./business/groupServices.js";
 export { isPreview } from "./preview.js";
+export { default as ItemCard } from "./ItemCard.jsx";

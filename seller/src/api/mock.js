@@ -1,4 +1,4 @@
-import { passwordProblems } from "@epicmkt/shared";
+import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { EXCEPTION_LIMIT, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -103,9 +103,18 @@ export const requestDeletion = async (name) => {
 export const catalogStats = async () => {
   signedIn();
   await wait();
-  return { total: 0, visible: 0, hidden: 0, hidden_by_admin: 0, out_of_stock: 0, limited_stock: 0, unavailable: 0, without_photo: 0, stale_prices: 0, items_limit: 20, open_flags: 0, unread_messages: 0 };
+  const now = clockNow().getTime();
+  const rows = enrichItems(bill.items, bill.signals, { now });
+  const c = computeStats(rows);
+  return {
+    total: c.total, visible: rows.filter((i) => i.visibility === "showing").length, hidden: rows.filter((i) => !i.visible).length,
+    hidden_by_me: c.hidden_me, hidden_by_admin: c.hidden_admin, drafts: c.draft, available: c.available, out_of_stock: c.out_of_stock,
+    limited_stock: c.limited_stock, unavailable: rows.filter((i) => i.availability === "unavailable").length, by_appointment: c.by_appointment,
+    seasonal: c.seasonal, coming_soon: c.coming_soon, low_stock: c.low_stock, without_photo: c.no_photo, stale_prices: c.stale_price,
+    reported: c.reported, flagged: c.flagged, items_limit: ITEMS[bill.business.categoryId]?.[bill.business.planKey] ?? 0, open_flags: 0, unread_messages: 0,
+  };
 };
-export const itemSignals = async () => { signedIn(); await wait(); return []; };
+export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...state.business } }; };
 
@@ -153,14 +162,22 @@ function resetBilling() {
   ];
   bill.changes = [];
   bill.exceptions = [];
+  const mk = (n, id, name, price, priceType, availability, visible, extra = {}) => ({
+    id, name, price, priceType, availability, visible, hiddenByAdmin: false,
+    description: "", section: null, priceMax: null, unit: null, salePrice: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false,
+    availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [],
+    priceConfirmedAt: ISO(now - 5 * DAY), createdAt: ISO(now - (60 - n) * DAY), updatedAt: ISO(now - (30 - n) * DAY), imageCount: 1, imagePaths: [`demo/${id}.webp`], hasVideo: false, ...extra,
+  });
   bill.items = [
-    { id: "it-fade", name: "Fade cut", price: 500, priceType: "fixed", availability: "available", visible: true, hiddenByAdmin: false },
-    { id: "it-beard", name: "Beard trim", price: 300, priceType: "fixed", availability: "available", visible: true, hiddenByAdmin: false },
-    { id: "it-dye", name: "Hair dye", price: 1200, priceType: "from", availability: "available", visible: true, hiddenByAdmin: false },
-    { id: "it-gel", name: "Styling gel", price: 400, priceType: "fixed", availability: "out_of_stock", visible: true, hiddenByAdmin: false },
-    { id: "it-old", name: "Old special", price: 250, priceType: "fixed", availability: "available", visible: false, hiddenByAdmin: false },
-    { id: "it-quote", name: "Wedding package", price: null, priceType: "contact", availability: "available", visible: true, hiddenByAdmin: false },
+    mk(1, "it-fade", "Fade cut", 500, "fixed", "available", true, { section: "Haircuts", tags: ["barber", "fade"], description: "A clean fade finished with a hot towel and styling." }),
+    mk(2, "it-beard", "Beard trim", 300, "fixed", "available", true, { section: "Haircuts", salePrice: 250 }),
+    mk(3, "it-dye", "Hair dye", 1200, "from", "available", true, { section: "Colour", imageCount: 0, imagePaths: [] }),
+    mk(4, "it-gel", "Styling gel", 400, "fixed", "out_of_stock", true, { section: "Products", trackStock: true, stockCount: 0, priceConfirmedAt: ISO(now - 200 * DAY) }),
+    mk(5, "it-old", "Old special", 250, "fixed", "available", false, { section: "Haircuts" }),
+    mk(6, "it-quote", "Wedding package", null, "contact", "available", true),
   ];
+  bill.signals = [];
+  bill.views = [];
   bill.flash = [];
 }
 resetBilling();
@@ -409,6 +426,120 @@ const flashCheckItem = (item) => {
 
 export const getServerTime = async () => ({ now: clockNow().toISOString() });
 export const listItems = async () => { signedIn(); await wait(); return copy(bill.items); };
+const itemsLimit = () => ITEMS[bill.business.categoryId]?.[bill.business.planKey] ?? 0;
+const shopLive = () => bill.business.status === "live" && Boolean(bill.business.paidUntil) && Date.parse(bill.business.paidUntil) > clockNow().getTime();
+const inFlashSale = (id) => bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status));
+export const getCatalog = async () => {
+  signedIn();
+  await wait();
+  settleFlash();
+  return { shop: { slug: "demo-shop", status: bill.business.status, live: shopLive(), planKey: bill.business.planKey, itemsLimit: itemsLimit() }, items: copy(bill.items).map((i) => ({ ...i, inFlashSale: inFlashSale(i.id) })).sort((a, b) => a.sort - b.sort) };
+};
+export const saveItem = async (id, f) => {
+  signedIn();
+  await wait();
+  const now = clockNow().toISOString();
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability };
+  if (id) {
+    const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+    if (!item) throw new ApiError("item_not_found");
+    const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
+    if (priceChanged && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
+    Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
+    return id;
+  }
+  if (bill.items.length >= itemsLimit()) throw new ApiError("limit_reached");
+  const made = { id: `it-new-${++bill.seq}`, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  bill.items.push(made);
+  return made.id;
+};
+export const bulkItems = async (action, ids, args = {}) => {
+  signedIn();
+  await wait();
+  if (!["hide", "show", "delete", "move_section", "set_availability", "price_percent", "confirm_prices"].includes(action)) throw new ApiError("invalid_action");
+  if (!Array.isArray(ids) || ids.length === 0) throw new ApiError("no_items");
+  if (ids.length > 500) throw new ApiError("too_many_items");
+  const targets = bill.items.filter((i) => ids.includes(i.id) && !i.removedByAdmin);
+  let skipped = ids.length - targets.length;
+  let affected = 0;
+  const now = clockNow().toISOString();
+  if (action === "hide") targets.forEach((i) => { if (i.visible) { i.visible = false; affected += 1; } });
+  else if (action === "show") targets.forEach((i) => { if (!i.visible || i.draft) { i.visible = true; i.draft = false; affected += 1; } });
+  else if (action === "delete") {
+    const gone = new Set(targets.map((i) => i.id));
+    bill.items = bill.items.filter((i) => !gone.has(i.id));
+    affected = gone.size;
+  } else if (action === "move_section") {
+    const section = String(args.section ?? "").trim() || null;
+    if (section && section.length > 60) throw new ApiError("invalid_section");
+    targets.forEach((i) => { if (i.section !== section) { i.section = section; affected += 1; } });
+  } else if (action === "set_availability") {
+    if (!["available", "limited_stock", "out_of_stock", "unavailable", "by_appointment"].includes(args.availability)) throw new ApiError("invalid_availability");
+    targets.forEach((i) => { if (i.availability !== args.availability) { i.availability = args.availability; affected += 1; } });
+  } else if (action === "price_percent") {
+    settleFlash();
+    const eligible = targets.filter((i) => !inFlashSale(i.id));
+    const preview = previewPriceChange(eligible, args.percent);
+    if (!preview.ok) throw new ApiError("invalid_percent");
+    const next = applyPricePreview(eligible, preview);
+    skipped += targets.length - eligible.length;
+    eligible.forEach((i, n) => { Object.assign(i, { price: next[n].price, priceMax: next[n].priceMax, salePrice: next[n].salePrice, priceConfirmedAt: next[n].price === i.price ? i.priceConfirmedAt : now }); });
+    affected = preview.affected;
+    skipped += preview.skipped;
+  } else targets.forEach((i) => { i.priceConfirmedAt = now; affected += 1; });
+  targets.forEach((i) => { i.updatedAt = now; });
+  return { affected, skipped };
+};
+export const reorderItems = async (ids) => {
+  signedIn();
+  await wait();
+  if (!Array.isArray(ids) || ids.length === 0) throw new ApiError("no_items");
+  let changed = 0;
+  ids.forEach((id, n) => {
+    const item = bill.items.find((i) => i.id === id);
+    if (item && item.sort !== n + 1) { item.sort = n + 1; changed += 1; }
+  });
+  return changed;
+};
+export const duplicateItem = async (id) => {
+  signedIn();
+  await wait();
+  const src = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+  if (!src) throw new ApiError("item_not_found");
+  if (bill.items.length >= itemsLimit()) throw new ApiError("limit_reached");
+  const now = clockNow().toISOString();
+  const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: 0, imagePaths: [], hasVideo: false, createdAt: now, updatedAt: now, priceConfirmedAt: now };
+  bill.items.push(copyOf);
+  return copyOf.id;
+};
+export const importItems = async (rows) => {
+  signedIn();
+  await wait();
+  if (bill.business.planKey !== "premium") throw new ApiError("premium_required");
+  if (!Array.isArray(rows) || rows.length === 0) throw new ApiError("no_rows");
+  if (rows.length > 500) throw new ApiError("too_many_rows");
+  if (bill.items.length + rows.length > itemsLimit()) throw new ApiError("limit_reached");
+  if (rows.some((r) => [r.name, r.section, r.unit].some((v) => /^[=+\-@]/.test(String(v ?? ""))))) throw new ApiError("formula_rejected");
+  const now = clockNow().toISOString();
+  let sort = Math.max(0, ...bill.items.map((i) => i.sort));
+  const made = rows.map((r) => ({
+    id: `it-imp-${++bill.seq}`, name: r.name, price: r.price ?? null, priceMax: r.price_max ?? null, priceType: r.price_type, unit: r.unit ?? null, salePrice: null,
+    availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
+    section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),
+    tags: r.tags ?? [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
+  }));
+  bill.items.push(...made);
+  return { created: made.length };
+};
+export const getSavedViews = async () => { signedIn(); await wait(); return copy(bill.views); };
+export const saveSavedViews = async (views) => {
+  signedIn();
+  await wait();
+  const check = validateSavedViews(views);
+  if (!check.ok) throw new ApiError(views?.length > MAX_SAVED_VIEWS ? "too_many_views" : "invalid_view", check.message);
+  bill.views = copy(views);
+  return copy(bill.views);
+};
 export const listFlashSales = async () => { signedIn(); await wait(); settleFlash(); return bill.flash.map(flashView).sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1)); };
 export const getFlashQuota = async () => {
   signedIn();
@@ -499,6 +630,8 @@ export const __mock = {
   state: bill,
   emit,
   setClock: (iso) => { bill.now = iso; },
+  setSignals: (rows) => { bill.signals = rows; },
+  setItems: (rows) => { bill.items = rows; },
   setPaybill: (v) => { bill.paybill = v; emit("businesses"); },
   setBusiness: (patch) => { Object.assign(bill.business, patch); emit("businesses", "UPDATE", bill.business); },
   setPaidInDays: (days) => { bill.business.paidUntil = ISO(clockNow().getTime() + days * DAY); emit("businesses", "UPDATE", bill.business); },

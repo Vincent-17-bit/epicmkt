@@ -56,7 +56,7 @@ export const markRead = (ids = null) => rpc("seller_mark_read", { p_ids: ids });
 export const pauseListing = (pause) => rpc("seller_pause_listing", { p_pause: pause });
 export const requestDeletion = (name) => rpc("seller_request_deletion", { p_name: name });
 export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_stale_days: staleDays });
-export const itemSignals = () => rpc("seller_item_signals");
+export const itemSignals = async () => (await rpc("seller_item_signals")).map(shape.signal);
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
 export const exportData = () => fn("seller-export-data", {});
 
@@ -216,6 +216,18 @@ export const getServerTime = async () => {
 };
 export const listItems = async () =>
   (await flashRows(need().from("items").select("id, name, price, price_type, availability, visible, hidden_by_admin, removed_by_admin").order("name"))).map(shape.ownItem);
+export const getCatalog = async () => shape.catalog(await rpc("seller_catalog_items"));
+const itemRow = (f) => ({
+  name: f.name, description: f.description || null, section: f.section || null, price_type: f.priceType, price: f.price, price_max: f.priceMax ?? null,
+  sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
+});
+export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
+export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
+export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
+export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
+export const importItems = (rows) => rpc("seller_import_items", { p_rows: rows });
+export const getSavedViews = () => rpc("seller_get_views");
+export const saveSavedViews = (views) => rpc("seller_save_views", { p_views: views });
 export const listFlashSales = async () =>
   (await flashRows(need().from("flash_sales").select("*, items(name, price)").order("starts_at", { ascending: false }).limit(100))).map(shape.flashSale);
 export const getFlashQuota = async () => {
