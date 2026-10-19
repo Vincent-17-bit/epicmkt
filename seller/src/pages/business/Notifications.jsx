@@ -2,8 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDateTime } from "@epicmkt/shared/billing";
+import { receiptOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { BELL_KEY } from "../../components/Layout.jsx";
+import { AttachmentList } from "../../components/MessageParts.jsx";
+import Ticks from "../../components/Ticks.jsx";
 import { errorText } from "../../lib/errors.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import ui from "../../styles/ui.module.css";
@@ -18,6 +21,7 @@ export const FILTERS = [
   { id: "strike", label: "Strikes", kinds: ["strike"] },
   { id: "report", label: "Customer reports", kinds: ["report"] },
   { id: "question", label: "Questions", kinds: ["question"] },
+  { id: "message", label: "Messages", kinds: ["general"] },
 ];
 
 const KIND_LABEL = { approval: "Approval", reminder: "Reminder", grace: "Grace", expiry: "Expired", change: "Change request", removal: "Removal", strike: "Strike", report: "Customer report", payment: "Payment", question: "Question", general: "Message" };
@@ -70,7 +74,10 @@ export default function Notifications() {
               </div>
               <h2>{m.subject}</h2>
               <p>{m.body}</p>
+              <AttachmentList files={m.attachments} />
               <div className={styles.meta}>
+                {m.sender === "seller" && <Ticks state={receiptOf(m)} />}
+                {m.sender === "admin" && m.needsReply && <Link className={ui.link} to={`/business/questions#thread-${m.threadId}`}>Reply to EpicMKT</Link>}
                 {m.kind === "question" && <Link className={ui.link} to="/business/questions">Answer this question</Link>}
                 {["payment", "reminder", "grace", "expiry"].includes(m.kind) && <Link className={ui.link} to="/business/subscription">Open subscription</Link>}
                 {!m.readAt && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={mark.isPending} onClick={() => mark.mutate([m.id])} aria-label={`Mark "${m.subject}" as read`}>Mark read</button>}

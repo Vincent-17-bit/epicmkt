@@ -5,6 +5,7 @@ import ApplicationsPage from "./pages/ApplicationsPage.jsx";
 import ApplicationDetailPage from "./pages/applications/ApplicationDetailPage.jsx";
 import BusinessesPage from "./pages/BusinessesPage.jsx";
 import PaymentsPage from "./pages/PaymentsPage.jsx";
+import MessagesPage from "./pages/MessagesPage.jsx";
 import FlashSalesPage from "./pages/FlashSalesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="applications/:id" element={<ApplicationDetailPage />} />
           <Route path="businesses" element={<BusinessesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
+          <Route path="messages" element={<MessagesPage />} />
           <Route path="flash-sales" element={<FlashSalesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="account" element={<AccountPage />} />

@@ -6,3 +6,4 @@ export * from "./seller/media.js";
 export * from "./seller/proofs.js";
 export * from "./seller/exceptions.js";
 export * from "./seller/flash.js";
+export * from "./receipts.js";

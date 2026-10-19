@@ -1,5 +1,6 @@
 import { addDays } from "../lib/time.js";
 import { agents, businessStore } from "./mockBusinesses.js";
+import { addMessage, uploadMessageFiles } from "./mockMessages.js";
 
 const actor = "Admin (AO)";
 const MIN_REASON = 5;
@@ -21,6 +22,7 @@ const handlers = {
     patch: (row, params) => ({ featured: params.featured }),
   },
   extend: { applies: (row) => !row.deleted, patch: (row, params) => ({ paidUntil: addDays(row.paidUntil, params.days) }) },
+  strike: { applies: (row) => !row.deleted, patch: (row) => ({ strikes: (row.strikes ?? 0) + 1 }) },
   message: { applies: (row) => !row.deleted, patch: null },
   tag: {
     applies: (row, params) => !row.deleted && (params.mode === "remove" ? row.tags.includes(params.tag) : !row.tags.includes(params.tag)),
@@ -41,7 +43,7 @@ function validate(action, params) {
   }
   if (action === "message") {
     const body = (params.body ?? "").trim();
-    if (!body || body.length > 480) throw fail("invalid_input", "Message must be 1 to 480 characters");
+    if ((!body && !params.files?.length) || body.length > 4000) throw fail("invalid_input", "Write a message (up to 4000 characters) or attach a file");
     if (!Array.isArray(params.channels) || !params.channels.length || params.channels.some((channel) => !CHANNELS.includes(channel))) {
       throw fail("invalid_input", "Choose at least one channel");
     }
@@ -66,6 +68,11 @@ export async function bulkBusinessAction({ action, ids, reason, params = {} }) {
   const wanted = new Set(ids);
   const targets = businessStore.filter((row) => wanted.has(row.id) && handler.applies(row, cleaned));
   const before = [];
+
+  if (action === "message" && cleaned.channels.includes("inApp")) {
+    const attachments = await uploadMessageFiles(cleaned.files ?? []);
+    for (const row of targets) addMessage({ business: row, subject: cleaned.subject, body: cleaned.body || "Sent you a file.", needsReply: !!cleaned.needsReply, attachments });
+  }
 
   if (handler.patch) {
     for (const row of targets) {

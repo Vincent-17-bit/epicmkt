@@ -33,6 +33,11 @@ export const resetMock = () => {
 const signedIn = () => {
   if (!state.signedIn) throw new ApiError("unauthorized");
 };
+// Same rule as the server: a suspended seller can read and answer messages, and do nothing else.
+const writer = () => {
+  signedIn();
+  if (bill.business?.status === "suspended") throw new ApiError("account_suspended");
+};
 
 export const login = async (sellerId, password) => {
   await wait();
@@ -71,7 +76,7 @@ export const changePassword = async ({ code, newPassword }) => {
   return { ok: true };
 };
 export const updateProfile = async (patch) => {
-  signedIn();
+  writer();
   await wait();
   const allowed = ["tagline", "description", "whatsapp", "email", "socials", "amenities", "payment_methods", "delivery_area", "address", "logo_path", "cover_path", "tags", "announcement", "profile"];
   const bad = Object.keys(patch).find((k) => !allowed.includes(k));
@@ -80,9 +85,9 @@ export const updateProfile = async (patch) => {
   Object.assign(state.business, patch);
   return { ...state.business };
 };
-export const confirmPrices = async () => { signedIn(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
+export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
-  signedIn();
+  writer();
   await wait();
   const from = pause ? "live" : "paused";
   if (state.business.status !== from) throw new ApiError("invalid_status");
@@ -90,7 +95,7 @@ export const pauseListing = async (pause) => {
   return state.business.status;
 };
 export const requestDeletion = async (name) => {
-  signedIn();
+  writer();
   await wait();
   if (String(name).trim().toLowerCase() !== state.business.name.toLowerCase()) throw new ApiError("name_mismatch");
   state.business.status = "deleted";
@@ -132,7 +137,7 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0 };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];
@@ -255,7 +260,7 @@ export const quoteCategoryChange = async (category) => {
 export const listCategoryPlans = async () => { signedIn(); await wait(); return copy(Object.values(CATEGORIES)); };
 
 export const requestChange = async (field, value) => {
-  signedIn();
+  writer();
   await wait();
   if (!["name", "category_id", "phone", "town", "pin", "licence"].includes(field)) throw new ApiError("field_not_allowed");
   if (bill.changes.some((c) => c.field === field && c.status === "pending")) throw new ApiError("change_already_pending");
@@ -271,7 +276,7 @@ export const requestChange = async (field, value) => {
 };
 const listingStateOf = () => instructionsFor({ purpose: "renewal" }).listingState;
 export const cancelChange = async (id) => {
-  signedIn();
+  writer();
   await wait();
   const row = bill.changes.find((c) => c.id === id && c.status === "pending");
   if (!row) throw new ApiError("not_found_or_not_pending");
@@ -280,18 +285,63 @@ export const cancelChange = async (id) => {
 };
 export const listChanges = async () => { signedIn(); await wait(); return copy(bill.changes); };
 
+const fillMessage = ({ dedupe, ...m }) => ({
+  sender: "system", threadId: m.id, parentId: null, needsReply: false, deliveredAt: null, adminDeliveredAt: null, adminReadAt: null, attachments: [], ...m,
+});
 export const listMessages = async ({ kinds = null } = {}) => {
   signedIn();
   await wait();
-  return copy(bill.messages.filter((m) => !kinds?.length || kinds.includes(m.kind)).map(({ dedupe, ...m }) => m));
+  return copy(bill.messages.filter((m) => !kinds?.length || kinds.includes(m.kind)).map(fillMessage));
 };
+export const ackDelivered = async () => {
+  signedIn();
+  let n = 0;
+  for (const m of bill.messages) {
+    if (m.sender && m.sender !== "seller" && !m.deliveredAt) { m.deliveredAt = clockNow().toISOString(); n += 1; }
+  }
+  if (n) emit("messages", "UPDATE", {});
+  return n;
+};
+export const sendMessage = async ({ parentId, body, files = [] }) => {
+  signedIn();
+  await wait();
+  const parent = bill.messages.find((m) => m.id === parentId);
+  if (!parent) throw new ApiError("message_not_found");
+  const thread = bill.messages.filter((m) => (m.threadId ?? m.id) === (parent.threadId ?? parent.id));
+  if (!thread.some((m) => m.sender === "admin" && m.needsReply)) throw new ApiError("reply_not_allowed");
+  const check = checkProofBatch(files);
+  if (check.error) throw new ApiError(check.error, undefined, { file: check.file });
+  let text = String(body ?? "").trim();
+  if (!text) {
+    if (!files.length) throw new ApiError("reply_too_short");
+    text = "Sent a file.";
+  }
+  if (text.length > 2000) throw new ApiError("reply_too_long");
+  const attachments = [];
+  for (const f of files) {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const bad = inspectProof(bytes, f.type);
+    if (bad) throw new ApiError(bad, undefined, { file: f.name });
+    attachments.push({ id: `ma${++bill.seq}`, name: f.name, mime: f.type, size: bytes.length, path: `biz-1/${f.name}`, by: "seller" });
+  }
+  const now = clockNow().toISOString();
+  const m = {
+    id: `msg${++bill.seq}`, kind: "general", subject: `Re: ${String(parent.subject ?? "Message").replace(/^(Re: )+/, "")}`, body: text, data: {},
+    readAt: now, createdAt: now, sender: "seller", threadId: parent.threadId ?? parent.id, parentId, needsReply: false, deliveredAt: now,
+    adminDeliveredAt: null, adminReadAt: null, attachments,
+  };
+  bill.messages.unshift(m);
+  emit("messages", "INSERT", m);
+  return copy(m);
+};
+export const openAttachment = async (path) => { signedIn(); return `https://files.invalid/${encodeURIComponent(path)}`; };
 export const unreadCount = async () => { signedIn(); return bill.messages.filter((m) => !m.readAt).length; };
 export const markRead = async (ids = null) => {
   signedIn();
   await wait();
   let n = 0;
   for (const m of bill.messages) {
-    if (!m.readAt && (!ids || ids.includes(m.id))) { m.readAt = clockNow().toISOString(); n += 1; }
+    if (!m.readAt && (!ids || ids.includes(m.id))) { m.readAt = clockNow().toISOString(); m.deliveredAt ??= m.readAt; n += 1; }
   }
   if (n) emit("messages", "UPDATE", {});
   return n;
@@ -367,7 +417,7 @@ export const getFlashQuota = async () => {
   return flashQuota(bill.flash, FLASH_LIMITS[bill.business.planKey], nowMs());
 };
 export const createFlashSale = async (input) => {
-  signedIn();
+  writer();
   await wait();
   settleFlash();
   const item = bill.items.find((i) => i.id === input.itemId);
@@ -389,7 +439,7 @@ export const createFlashSale = async (input) => {
   return flashView(sale);
 };
 export const updateFlashSale = async (id, { headline, quantityNote }) => {
-  signedIn();
+  writer();
   await wait();
   settleFlash();
   const sale = bill.flash.find((s) => s.id === id);
@@ -402,7 +452,7 @@ export const updateFlashSale = async (id, { headline, quantityNote }) => {
   return flashView(sale);
 };
 export const endFlashSale = async (id) => {
-  signedIn();
+  writer();
   await wait();
   settleFlash();
   const sale = bill.flash.find((s) => s.id === id);
@@ -416,7 +466,7 @@ const todayNairobi = () => nairobiDay(clockNow());
 const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
 export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };
 export const saveException = async ({ id = null, date, kind, intervals = [], note = null }) => {
-  signedIn();
+  writer();
   await wait();
   const v = validateException({ date, kind, intervals, note }, todayNairobi());
   if (!v.ok) throw new ApiError(v.error);
@@ -430,7 +480,7 @@ export const saveException = async ({ id = null, date, kind, intervals = [], not
   return copy(bill.exceptions.find((e) => e.id === key));
 };
 export const deleteException = async (id) => {
-  signedIn();
+  writer();
   await wait();
   const found = bill.exceptions.some((e) => e.id === id);
   bill.exceptions = bill.exceptions.filter((e) => e.id !== id);
@@ -439,7 +489,7 @@ export const deleteException = async (id) => {
 };
 
 export const subscribe = (tables, onEvent) => {
-  const entry = { tables: tables?.length ? tables : ["payments", "businesses", "messages", "flags", "flag_attachments", "flash_sales"], fn: onEvent };
+  const entry = { tables: tables?.length ? tables : ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"], fn: onEvent };
   bill.listeners.add(entry);
   return () => bill.listeners.delete(entry);
 };
@@ -453,6 +503,23 @@ export const __mock = {
   setBusiness: (patch) => { Object.assign(bill.business, patch); emit("businesses", "UPDATE", bill.business); },
   setPaidInDays: (days) => { bill.business.paidUntil = ISO(clockNow().getTime() + days * DAY); emit("businesses", "UPDATE", bill.business); },
   post,
+  /** What staff do: send a message (optionally asking for a reply), or open a seller's reply. */
+  adminSend({ parentId = null, subject = "Message from EpicMKT", body, needsReply = false, files = [] }) {
+    const id = `msg${++bill.seq}`;
+    const parent = parentId ? bill.messages.find((m) => m.id === parentId) : null;
+    const m = {
+      id, kind: "general", subject: parent ? `Re: ${String(parent.subject).replace(/^(Re: )+/, "")}` : subject, body, data: {}, readAt: null, createdAt: clockNow().toISOString(),
+      sender: "admin", threadId: parent ? parent.threadId ?? parent.id : id, parentId, needsReply, deliveredAt: null, adminDeliveredAt: null, adminReadAt: null, attachments: files,
+    };
+    bill.messages.unshift(m);
+    emit("messages", "INSERT", m);
+    return m;
+  },
+  adminRead(id) {
+    const m = bill.messages.find((x) => x.id === id);
+    if (m) { m.adminDeliveredAt ??= clockNow().toISOString(); m.adminReadAt = clockNow().toISOString(); emit("messages", "UPDATE", m); }
+    return m;
+  },
   confirmPayment(id, via = "admin") {
     const p = bill.payments.find((x) => x.id === id);
     if (!p || p.status === "confirmed") return p;

@@ -46,6 +46,12 @@ const MESSAGES = {
   flash_locked: "A sale that has started can only change its headline and note.",
   business_not_active: "Your listing is not active, so you cannot start a flash sale.",
   not_found: "We could not find that flash sale.",
+  account_suspended: "Your account is suspended, so you cannot do this.",
+  message_not_found: "We could not find that message.",
+  reply_not_allowed: "EpicMKT has not asked for a reply to this message.",
+  reply_too_short: "Write a reply or attach a file.",
+  reply_too_long: "Keep your reply to 2000 characters.",
+  file_not_found: "We could not open that file.",
   ...PROOF_ERRORS,
 };
 

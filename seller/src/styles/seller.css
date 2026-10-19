@@ -13,6 +13,8 @@
   --info-bg: #e6f5ff;
   --info-text: #0b3a5a;
   --info-border: #8fd0f7;
+  --tick-green: #15803d;
+  --tick-blue: #0369a1;
 }
 
 [data-theme="dark"] {
@@ -28,6 +30,8 @@
   --info-bg: #0e2a3c;
   --info-text: #bfe6ff;
   --info-border: #1f5f87;
+  --tick-green: #4ade80;
+  --tick-blue: #38bdf8;
 }
 
 html,
