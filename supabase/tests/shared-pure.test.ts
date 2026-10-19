@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { addCalendarMonth, addDays, daysLeft, diffDays, isDay, listingState, nairobiDay, nairobiMidnight, renewalPeriod } from "../functions/_shared/dates.ts";
 import { countSms, GSM7, toGsmFriendly, UCS2 } from "../functions/_shared/sms.ts";
 import { generatePassword, generateReferenceNo, generateSellerId, randomId, REFERENCE_RE, SAFE_ALPHABET, SELLER_ID_RE } from "../functions/_shared/ids.ts";
+import { deliverSms, useDevOtp } from "../functions/_shared/providers.ts";
 import { passwordProblems } from "../functions/_shared/synced/password.js";
 
 test("addCalendarMonth clamps to the end of a shorter month", () => {
@@ -186,4 +187,53 @@ test("reference numbers, seller IDs and generated passwords have the expected sh
     assert.deepEqual(passwordProblems(p, { sellerId: "ES123456", phone: "+254712345678" }), []);
     assert.ok(!/[01IOl]/.test(p));
   }
+});
+
+// ---- One-time codes: when the fixed dev code is allowed, and when a real SMS must go out -------------------------
+
+const withEnv = async (vars: Record<string, string>, run: () => Promise<void> | void) => {
+  const g = globalThis as any;
+  const prior = g.Deno;
+  g.Deno = { ...(prior ?? {}), env: { get: (k: string) => vars[k] } };
+  try { await run(); } finally { g.Deno = prior; }
+};
+
+test("dev OTP (fixed 123456, no SMS) only when not production AND messaging is mock", async () => {
+  await withEnv({}, () => assert.equal(useDevOtp(), true)); // a bare local project
+  await withEnv({ APP_ENV: "development", MESSAGING_MODE: "mock" }, () => assert.equal(useDevOtp(), true));
+  // The reported bug: Africa's Talking is live but APP_ENV is not "production". A real code must be sent.
+  await withEnv({ APP_ENV: "staging", MESSAGING_MODE: "live" }, () => assert.equal(useDevOtp(), false));
+  await withEnv({ MESSAGING_MODE: "live" }, () => assert.equal(useDevOtp(), false));
+  // Production never uses the fixed code, even if someone leaves MESSAGING_MODE=mock on.
+  await withEnv({ APP_ENV: "production" }, () => assert.equal(useDevOtp(), false));
+  await withEnv({ APP_ENV: "production", MESSAGING_MODE: "mock" }, () => assert.equal(useDevOtp(), false));
+});
+
+test("OTP SMS reaches Africa's Talking when live, outside production too", async () => {
+  await withEnv({ APP_ENV: "staging", MESSAGING_MODE: "live", AT_API_KEY: "k", AT_USERNAME: "epicmkt", AT_SENDER: "EPICMKT" }, async () => {
+    const calls: Array<{ url: string; body: string }> = [];
+    const fetch = async (url: string, init?: RequestInit) => {
+      calls.push({ url, body: String(init?.body) });
+      return new Response(JSON.stringify({ SMSMessageData: { Recipients: [{ statusCode: 101, status: "Success", messageId: "ATXid_1", cost: "KES 0.8000" }] } }), { status: 201 });
+    };
+    const r = await deliverSms("+254712345678", "Your EpicMKT code is 482913. It expires in 10 minutes.", { fetch });
+    assert.equal(r.ok, true);
+    assert.equal(r.mock, false);
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /^https:\/\/api\.africastalking\.com\/version1\/messaging$/);
+    assert.match(calls[0].body, /to=%2B254712345678/);
+  });
+});
+
+test("OTP SMS failures name their cause instead of passing as sent", async () => {
+  const reply = (statusCode: number, status: string) => async () =>
+    new Response(JSON.stringify({ SMSMessageData: { Recipients: [{ statusCode, status }] } }), { status: 201 });
+  await withEnv({ APP_ENV: "production" }, async () => {
+    assert.equal((await deliverSms("+254712345678", "x")).error, "sms_not_configured");
+  });
+  await withEnv({ APP_ENV: "production", AT_API_KEY: "k", AT_USERNAME: "epicmkt" }, async () => {
+    assert.equal((await deliverSms("+254712345678", "x", { fetch: reply(405, "InsufficientBalance") })).error, "at_InsufficientBalance");
+    assert.equal((await deliverSms("+254712345678", "x", { fetch: reply(407, "InvalidSenderId") })).error, "at_InvalidSenderId");
+    assert.equal((await deliverSms("+254712345678", "x", { fetch: async () => new Response("", { status: 401 }) })).error, "provider_http_401");
+  });
 });

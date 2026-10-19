@@ -26,6 +26,13 @@ export function messagingMode(): "live" | "mock" {
 }
 export const isMockMode = () => messagingMode() === "mock";
 
+/**
+ * The development shortcut for one-time codes: the fixed code 123456 and no SMS.
+ * Only when this is NOT production AND messaging is in mock mode. Production always issues a random code, and any
+ * environment with MESSAGING_MODE=live sends a real SMS, so an OTP can never be both "live" and silently unsent.
+ */
+export const useDevOtp = () => !isProduction() && isMockMode();
+
 /** KES per SMS part in mock mode, close to the real Africa's Talking price, so cost columns look plausible. */
 export const MOCK_SMS_COST_KES = 0.8;
 
