@@ -4,6 +4,7 @@ import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { describeError } from "../lib/systemStatus.js";
 
 const STATUSES = [["", "All"], ["live", "Live"], ["scheduled", "Scheduled"], ["ended", "Ended"]];
 const REASONS = { time: "Ended on time", seller: "Ended by seller", admin: "Stopped by admin", item_removed: "Item removed", subscription: "Listing not active" };
@@ -16,7 +17,7 @@ export default function FlashSalesPage() {
   const [target, setTarget] = useState(null);
   const [error, setError] = useState("");
 
-  const { data = [], isLoading, isError, refetch } = useQuery({
+  const { data = [], isLoading, isError, error: loadError, refetch } = useQuery({
     queryKey: ["admin-flash-sales", status],
     queryFn: () => api.listFlashSales({ status }),
     refetchInterval: 30_000,
@@ -47,7 +48,10 @@ export default function FlashSalesPage() {
         </div>
 
         {isError ? (
-          <p role="alert">We could not load flash sales. <Button onClick={() => refetch()}>Try again</Button></p>
+          <div role="alert">
+            <p>We could not load flash sales. <Button onClick={() => refetch()}>Try again</Button></p>
+            <p><strong>{describeError(loadError).title}.</strong> {describeError(loadError).cause}</p>
+          </div>
         ) : (
           <div className="table-shell">
             <table>

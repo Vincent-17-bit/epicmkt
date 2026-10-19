@@ -1,5 +1,6 @@
 import { supabase } from "../lib/supabaseClient.js";
 import { normalizeCounts } from "../lib/counts.js";
+import { describeDiscount } from "../lib/flash.js";
 import { DEFAULT_TAB, PAGE_SIZE, searchFilter, tabById, tabSortAscending } from "../lib/applications.js";
 import { ApiError, toApiError } from "./errors.js";
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_TYPES } from "@epicmkt/shared";
@@ -9,11 +10,9 @@ const notConfigured = () => {
 };
 
 // Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
-// audited RPCs (suspend, extend, tag, message...), the audit viewer, and the flash sales list. Everything else on
+// audited RPCs (suspend, extend, tag, message...) and the audit viewer. Everything else on
 // the Businesses page, the Payments page and the Command Center is live below.
 export const listAuditEntries = notConfigured;
-export const listFlashSales = notConfigured;
-export const endFlashSale = notConfigured;
 export const getBusinesses = notConfigured;
 
 const client = () => {
@@ -439,4 +438,49 @@ export async function openMessageFile(path) {
   const { data, error } = await client().storage.from(FILE_BUCKET).createSignedUrl(path, 300);
   if (error) throw new ApiError("not_found", "We could not open that file.");
   return data.signedUrl;
+}
+
+// ---- Flash sales (migration 0013_flash_sales.sql) ---------------------------------------------------------------
+
+// Admins read every flash sale (policy "admin all flash_sales"). The business and item names come along in the
+// same request. "ended" also lists cancelled sales (a scheduled sale an admin stopped before it started).
+export async function listFlashSales({ status = "" } = {}) {
+  let query = client()
+    .from("flash_sales")
+    .select("id, starts_at, ends_at, status, ended_reason, discount_type, discount_value, business:businesses(name), item:items(name)")
+    .order("ends_at", { ascending: false })
+    .limit(200);
+  if (status === "ended") query = query.in("status", ["ended", "cancelled"]);
+  else if (status) query = query.eq("status", status);
+
+  const { data } = check(await query);
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    businessName: row.business?.name ?? "Unknown business",
+    itemName: row.item?.name ?? "Removed item",
+    discount: describeDiscount(row.discount_type, row.discount_value),
+    startsAt: row.starts_at,
+    endsAt: row.ends_at,
+    status: row.status,
+    endedReason: row.ended_reason,
+  }));
+}
+
+const FLASH_END_TEXT = {
+  reason_required: "Give a reason of at least 3 characters.",
+  not_found: "This flash sale no longer exists.",
+  flash_closed: "This flash sale has already ended.",
+  forbidden: "Your role is not allowed to end flash sales.",
+};
+
+// admin_end_flash_sale ends or cancels the sale, puts customers back on the normal price, tells the seller and
+// writes the audit entry, all in one transaction.
+export async function endFlashSale({ id, reason }) {
+  const { error } = await client().rpc("admin_end_flash_sale", { p_id: id, p_reason: String(reason ?? "").trim() });
+  if (error) {
+    const known = FLASH_END_TEXT[String(error.message ?? "").trim()] ?? (error.code === "42501" ? FLASH_END_TEXT.forbidden : null);
+    if (known) throw new ApiError("flash_end_failed", known);
+    throw toApiError(error);
+  }
+  return { ok: true };
 }

@@ -55,13 +55,14 @@ export function useLiveRefresh() {
         queryClient.invalidateQueries({ queryKey: ["business-table"] });
         queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
         queryClient.invalidateQueries({ queryKey: ["admin-unread-messages"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-flash-sales"] });
       }, 400); // a burst of changes becomes one refresh
     };
 
     let channel = null;
     try {
       channel = supabase.channel("admin-live");
-      for (const table of ["applications", "payments", "flags", "admin_notifications", "audit_log", "businesses", "messages", "message_attachments"]) {
+      for (const table of ["applications", "payments", "flags", "admin_notifications", "audit_log", "businesses", "messages", "message_attachments", "flash_sales"]) {
         channel.on("postgres_changes", { event: "*", schema: "public", table }, refresh);
       }
       channel.subscribe((status, err) => setRealtime(status, err?.message ?? ""));

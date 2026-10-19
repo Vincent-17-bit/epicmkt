@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/lib/counts.test.js src/lib/applications.test.js src/api/errors.test.js src/api/messages.test.js src/lib/activity.test.js src/lib/systemStatus.test.js"
+    "test": "node --test src/lib/counts.test.js src/lib/applications.test.js src/api/errors.test.js src/api/messages.test.js src/lib/activity.test.js src/lib/systemStatus.test.js src/lib/flash.test.js"
   },
   "dependencies": {
     "@epicmkt/admin-backend": "*",
