@@ -1,0 +1,76 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller portal shows the same markup 1`] = `
+<button
+  aria-haspopup="dialog"
+  class="_card_71452e "
+  data-card=""
+  type="button"
+>
+  <span
+    class="_media_71452e"
+  >
+    <img
+      alt=""
+      class="_img_71452e"
+      decoding="async"
+      draggable="false"
+      loading="lazy"
+      src="https://example.test/a.webp"
+    />
+    <span
+      class="_chip_71452e"
+    >
+      -
+      20
+      %
+    </span>
+  </span>
+  <span
+    class="_text_71452e"
+  >
+    <span
+      class="_name_71452e"
+    >
+      Fade cut
+    </span>
+    <span
+      class="_meta_71452e"
+    >
+      <span
+        class="_prices_71452e"
+      >
+        <span
+          class="_price_71452e"
+        >
+          KSh 400
+        </span>
+        <s
+          class="_was_71452e"
+        >
+          <span
+            class="_sr_71452e"
+          >
+            Was
+             
+          </span>
+          KSh 500
+        </s>
+      </span>
+      <span
+        class="_avail_71452e"
+      >
+        <span
+          aria-hidden="true"
+          class="_dot_71452e _limited_71452e"
+        />
+        <span
+          class="_sr_71452e"
+        >
+          Limited
+        </span>
+      </span>
+    </span>
+  </span>
+</button>
+`;

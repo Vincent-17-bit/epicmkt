@@ -144,3 +144,46 @@
   bottom: var(--space-2);
   left: var(--space-2);
 }
+
+.shell {
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-width: 0;
+  height: 100%;
+}
+
+.shell.dimmed .card {
+  opacity: 0.55;
+}
+
+.shell.selected .card {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+}
+
+.overlay {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  left: 2px;
+  aspect-ratio: 4 / 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-2);
+  overflow: hidden;
+  border-radius: calc(var(--radius-card) - 2px) calc(var(--radius-card) - 2px) 0 0;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2) 0 0;
+}
