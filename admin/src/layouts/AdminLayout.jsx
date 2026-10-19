@@ -6,6 +6,7 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts, useLiveRefresh } from "../hooks/useAdminCounts.js";
 import { badgeText, navBadges } from "../lib/counts.js";
 import { initialsOf } from "../lib/initials.js";
+import SystemStatusCard from "../components/SystemStatusCard.jsx";
 
 // `hint` is what the badge number means, for the tooltip and screen readers.
 const navItems = [
@@ -86,13 +87,7 @@ export default function AdminLayout() {
         </nav>
 
         <div className="admin-sidebar__footer">
-          <div className="admin-system-card">
-            <div className="admin-system-card__title">System Status</div>
-            <div className="admin-system-card__content">
-              <span className="status-pill status-pill--healthy">Healthy</span>
-              <span>Last sync: 4 mins ago</span>
-            </div>
-          </div>
+          <SystemStatusCard />
         </div>
       </aside>
 
