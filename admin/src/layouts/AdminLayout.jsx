@@ -87,7 +87,7 @@ export default function AdminLayout() {
         </nav>
 
         <div className="admin-sidebar__footer">
-          <SystemStatusCard />
+          <SystemStatusCard collapsed={collapsed} onExpand={() => setCollapsed(false)} />
         </div>
       </aside>
 

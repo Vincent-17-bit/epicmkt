@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import { supabase } from "../lib/supabaseClient.js";
@@ -15,6 +15,24 @@ export function useAdminCounts() {
     refetchInterval: REFRESH_MS,
     placeholderData: (previous) => previous, // keep showing the last numbers while a refresh runs
   });
+}
+
+// The state of the realtime connection, kept outside React so the System Status card can show it.
+// Values: "unused" (demo data), "connecting", or a Supabase channel status: SUBSCRIBED, CHANNEL_ERROR, TIMED_OUT, CLOSED.
+let realtimeState = { status: supabase ? "connecting" : "unused", message: "" };
+const realtimeListeners = new Set();
+function setRealtime(status, message = "") {
+  realtimeState = { status, message };
+  realtimeListeners.forEach((listener) => listener());
+}
+export function useRealtimeStatus() {
+  return useSyncExternalStore(
+    (listener) => {
+      realtimeListeners.add(listener);
+      return () => realtimeListeners.delete(listener);
+    },
+    () => realtimeState,
+  );
 }
 
 // Live mode only: when an application, payment or flag changes, refresh the numbers and the queue straight away
@@ -46,14 +64,16 @@ export function useLiveRefresh() {
       for (const table of ["applications", "payments", "flags", "admin_notifications", "audit_log", "businesses", "messages", "message_attachments"]) {
         channel.on("postgres_changes", { event: "*", schema: "public", table }, refresh);
       }
-      channel.subscribe();
-    } catch {
+      channel.subscribe((status, err) => setRealtime(status, err?.message ?? ""));
+    } catch (error) {
       channel = null;
+      setRealtime("CHANNEL_ERROR", error?.message ?? "");
     }
 
     return () => {
       clearTimeout(timer);
       if (channel) supabase.removeChannel(channel);
+      setRealtime("connecting");
     };
   }, [queryClient]);
 }
