@@ -46,6 +46,26 @@ const MESSAGES = {
   flash_locked: "A sale that has started can only change its headline and note.",
   business_not_active: "Your listing is not active, so you cannot start a flash sale.",
   not_found: "We could not find that flash sale.",
+  invalid_action: "That action is not available.",
+  no_items: "Choose at least one item.",
+  too_many_items: "Choose at most 500 items at a time.",
+  invalid_section: "Keep the section name to 60 characters.",
+  invalid_availability: "Choose a valid availability.",
+  invalid_percent: "Enter a percentage from -90 to 300, other than 0.",
+  price_too_large: "That change would make a price too large. Nothing was changed.",
+  premium_required: "Paste and CSV import is part of the Premium plan.",
+  no_rows: "There are no rows to import.",
+  too_many_rows: "Import at most 500 rows at a time.",
+  formula_rejected: "A cell starts with = + - or @. Remove that character and try again.",
+  too_many_views: "You can save at most 10 views. Delete one first.",
+  invalid_view: "Use a name of up to 30 letters, numbers and spaces.",
+  duplicate_view: "You already have a view with that name.",
+  invalid_item: "Check the item details and try again.",
+  item_in_flash_sale: "This item is in a flash sale, so its price cannot change until the sale ends. You can still edit everything else.",
+  invalid_price: "Check the price. Use numbers only, and keep the sale price below the regular price.",
+  invalid_name: "Use 2 to 120 characters for the name.",
+  invalid_text: "One of the text fields is too long.",
+  invalid_availability: "Choose an availability.",
   account_suspended: "Your account is suspended, so you cannot do this.",
   message_not_found: "We could not find that message.",
   reply_not_allowed: "EpicMKT has not asked for a reply to this message.",
@@ -56,13 +76,15 @@ const MESSAGES = {
 };
 
 const LIMITS = {
+  items: "You have reached the number of items your plan allows. Delete one or upgrade your plan.",
   flash_concurrent: "You have reached the number of flash sales you can run at the same time on your plan.",
   flash_per_month: "You have used all the flash sales your plan allows this month.",
 };
 export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => {
   if (e?.code === "limit_reached") {
-    const key = String(e.message ?? "").split(":")[1];
+    const key = String(e.message ?? "").split(":")[1] ?? "items";
     if (LIMITS[key]) return LIMITS[key];
+    if (!e.message) return LIMITS.items;
   }
   return MESSAGES[e?.code] ?? fallback;
 };

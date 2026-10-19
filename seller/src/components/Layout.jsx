@@ -60,6 +60,7 @@ export default function Layout() {
       <header className={styles.header}>
         <Link to="/business/subscription" className={styles.brand}>EpicMKT Seller</Link>
         <nav className={styles.nav} aria-label="Business">
+          {!suspended && <NavLink to="/business/catalog">My listings</NavLink>}
           {!suspended && <NavLink to="/business/subscription">Subscription</NavLink>}
           <Bell count={unread.data ?? 0} />
           <NavLink to="/business/questions">Questions</NavLink>
