@@ -27,6 +27,11 @@ const go = async (user, get) => {
   await waitFor(() => expect(get()).toBeEnabled());
   await user.click(get());
 };
+const openMenu = async (user, id) => {
+  const trigger = within(card(id)).getByRole("button", { name: /^More actions/ });
+  if (trigger.getAttribute("aria-expanded") !== "true") await user.click(trigger);
+  return within(card(id)).getByRole("menu");
+};
 const tileCount = (key) => Number(within(tile(key)).getByText(/^\d+$/).textContent);
 
 const make = (n, extra = {}) => ({
@@ -55,9 +60,10 @@ describe("listing cards and summary", () => {
     const bare = render(<ItemCard item={cardItemOf(M.state.items[0])} labels={LABELS} />).container.querySelector("[data-card]");
     expect(seller.outerHTML).toBe(bare.outerHTML);
     expect(within(first).getAllByText("Available")).toHaveLength(2);
-    for (const label of ["Edit", "Duplicate", "Hide", "Confirm price", "View as customer"]) {
-      const pattern = new RegExp(`^${label}`);
-      expect(within(first).queryByRole("button", { name: pattern }) ?? within(first).queryByRole("link", { name: pattern })).not.toBeNull();
+    expect(within(first).getByRole("button", { name: /^Edit/ })).toBeInTheDocument();
+    const menu = await openMenu(userEvent.setup(), "it-fade");
+    for (const label of ["Duplicate", "Hide", "Confirm price", "View as customer"]) {
+      expect(within(menu).getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeInTheDocument();
     }
   });
 
@@ -89,7 +95,8 @@ describe("listing cards and summary", () => {
     expect(within(card("it-gel")).getByText("1 report")).toBeInTheDocument();
     expect(within(card("it-gel")).getByRole("img", { name: "Flagged, 1 open" })).toBeInTheDocument();
     expect(within(card("it-gel")).getByText("Price may be out of date")).toBeInTheDocument();
-    expect(within(card("it-fade")).getByRole("button", { name: /^Hide/ })).toBeDisabled();
+    const user = userEvent.setup();
+    expect(within(await openMenu(user, "it-fade")).getByRole("menuitem", { name: /^Hide/ })).toBeDisabled();
     expect(within(card("it-beard")).getByRole("button", { name: /^Edit/ })).toBeDisabled();
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("2 of 6 items are showing to customers");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("2 hidden by admin");
@@ -102,13 +109,13 @@ describe("listing cards and summary", () => {
     expect(screen.getByTestId("shop-not-live")).toHaveTextContent("Your shop is not live");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("0 of 6 items are showing to customers");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("5 not showing because your shop is not live");
-    expect(within(card("it-fade")).getByRole("button", { name: /^View as customer/ })).toBeDisabled();
+    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toBeDisabled();
   });
 
   it("links View as customer to the shop page for the item", async () => {
     await open();
     await ready();
-    expect(within(card("it-fade")).getByRole("link", { name: /^View as customer/ })).toHaveAttribute("href", "/b/demo-shop?item=it-fade");
+    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toHaveAttribute("href", "/b/demo-shop?item=it-fade");
   });
 });
 
@@ -335,15 +342,19 @@ describe("quick actions", () => {
     const user = userEvent.setup();
     await open();
     await ready();
-    await go(user, () => within(card("it-fade")).getByRole("button", { name: /^Hide/ }));
+    await openMenu(user, "it-fade");
+    await go(user, () => within(card("it-fade")).getByRole("menuitem", { name: /^Hide/ }));
     await waitFor(() => expect(M.state.items[0].visible).toBe(false));
     await waitFor(() => expect(screen.getByTestId("ribbon-it-fade")).toHaveTextContent("Hidden by you"));
-    await go(user, () => within(card("it-fade")).getByRole("button", { name: /^Show/ }));
+    await openMenu(user, "it-fade");
+    await go(user, () => within(card("it-fade")).getByRole("menuitem", { name: /^Show/ }));
     await waitFor(() => expect(M.state.items[0].visible).toBe(true));
-    await go(user, () => within(card("it-gel")).getByRole("button", { name: /^Confirm price/ }));
+    await openMenu(user, "it-gel");
+    await go(user, () => within(card("it-gel")).getByRole("menuitem", { name: /^Confirm price/ }));
     await waitFor(() => expect(Date.now() - Date.parse(M.state.items[3].priceConfirmedAt)).toBeLessThan(60000));
     await waitFor(() => expect(within(card("it-gel")).queryByText("Price may be out of date")).toBeNull());
-    await go(user, () => within(card("it-fade")).getByRole("button", { name: /^Duplicate/ }));
+    await openMenu(user, "it-fade");
+    await go(user, () => within(card("it-fade")).getByRole("menuitem", { name: /^Duplicate/ }));
     await waitFor(() => expect(M.state.items).toHaveLength(7));
     expect(M.state.items[6]).toMatchObject({ name: "Fade cut (copy)", draft: true, visible: false });
     expect((await screen.findAllByText("Fade cut (copy)")).length).toBeGreaterThan(0);
@@ -354,11 +365,13 @@ describe("quick actions", () => {
     await open();
     await ready();
     expect(ids().slice(0, 2)).toEqual(["it-fade", "it-beard"]);
-    await user.click(screen.getByRole("button", { name: "Move Fade cut down" }));
+    await openMenu(user, "it-fade");
+    await user.click(screen.getByRole("menuitem", { name: "Move Fade cut down" }));
     await waitFor(() => expect(ids().slice(0, 2)).toEqual(["it-beard", "it-fade"]));
-    expect(screen.getByRole("button", { name: "Move Beard trim up" })).toBeDisabled();
+    await openMenu(user, "it-beard");
+    expect(screen.getByRole("menuitem", { name: "Move Beard trim up" })).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "name_asc" } });
-    await waitFor(() => expect(screen.queryByRole("button", { name: /^Move .* down$/ })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("menuitem", { name: /^Move .* down$/ })).toBeNull());
   });
 
   it("adds and edits an item with validation", async () => {
