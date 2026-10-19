@@ -428,10 +428,12 @@ export const getServerTime = async () => ({ now: clockNow().toISOString() });
 export const listItems = async () => { signedIn(); await wait(); return copy(bill.items); };
 const itemsLimit = () => ITEMS[bill.business.categoryId]?.[bill.business.planKey] ?? 0;
 const shopLive = () => bill.business.status === "live" && Boolean(bill.business.paidUntil) && Date.parse(bill.business.paidUntil) > clockNow().getTime();
+const inFlashSale = (id) => bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status));
 export const getCatalog = async () => {
   signedIn();
   await wait();
-  return { shop: { slug: "demo-shop", status: bill.business.status, live: shopLive(), planKey: bill.business.planKey, itemsLimit: itemsLimit() }, items: copy(bill.items).sort((a, b) => a.sort - b.sort) };
+  settleFlash();
+  return { shop: { slug: "demo-shop", status: bill.business.status, live: shopLive(), planKey: bill.business.planKey, itemsLimit: itemsLimit() }, items: copy(bill.items).map((i) => ({ ...i, inFlashSale: inFlashSale(i.id) })).sort((a, b) => a.sort - b.sort) };
 };
 export const saveItem = async (id, f) => {
   signedIn();
@@ -475,10 +477,13 @@ export const bulkItems = async (action, ids, args = {}) => {
     if (!["available", "limited_stock", "out_of_stock", "unavailable", "by_appointment"].includes(args.availability)) throw new ApiError("invalid_availability");
     targets.forEach((i) => { if (i.availability !== args.availability) { i.availability = args.availability; affected += 1; } });
   } else if (action === "price_percent") {
-    const preview = previewPriceChange(targets, args.percent);
+    settleFlash();
+    const eligible = targets.filter((i) => !inFlashSale(i.id));
+    const preview = previewPriceChange(eligible, args.percent);
     if (!preview.ok) throw new ApiError("invalid_percent");
-    const next = applyPricePreview(targets, preview);
-    targets.forEach((i, n) => { Object.assign(i, { price: next[n].price, priceMax: next[n].priceMax, salePrice: next[n].salePrice, priceConfirmedAt: next[n].price === i.price ? i.priceConfirmedAt : now }); });
+    const next = applyPricePreview(eligible, preview);
+    skipped += targets.length - eligible.length;
+    eligible.forEach((i, n) => { Object.assign(i, { price: next[n].price, priceMax: next[n].priceMax, salePrice: next[n].salePrice, priceConfirmedAt: next[n].price === i.price ? i.priceConfirmedAt : now }); });
     affected = preview.affected;
     skipped += preview.skipped;
   } else targets.forEach((i) => { i.priceConfirmedAt = now; affected += 1; });

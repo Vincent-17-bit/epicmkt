@@ -51,7 +51,7 @@ export function PriceDialog({ open, items, onClose, onApply }) {
         <div data-testid="price-preview">
           <p className={styles.hint}>
             {preview.affected} {preview.affected === 1 ? "item changes" : "items change"}
-            {preview.skipped > 0 ? `, ${preview.skipped} skipped (no fixed price)` : ""}. Nothing is saved until you confirm.
+            {preview.skipped > 0 ? `, ${preview.skipped} skipped (no fixed price, or in a flash sale)` : ""}. Nothing is saved until you confirm.
           </p>
           <div className={styles.tableWrap}>
             <table className={styles.table}>

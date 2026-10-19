@@ -90,3 +90,13 @@ test("reorder moves one id", () => {
   assert.deepEqual(reorderIds(["a", "b"], 0, 0), ["a", "b"]);
   assert.deepEqual(reorderIds(["a", "b"], 0, 5), ["a", "b"]);
 });
+
+test("preview skips items that are in a flash sale", () => {
+  const items = [row("a", { price: 1000 }), row("b", { price: 500, inFlashSale: true }), row("c", { price: 200, inFlashSale: false })];
+  const p = previewPriceChange(items, 10);
+  assert.equal(p.affected, 2);
+  assert.equal(p.skipped, 1);
+  assert.deepEqual(p.rows.map((r) => r.id), ["a", "c"]);
+  const next = applyPricePreview(items, p);
+  assert.equal(next[1].price, 500);
+});

@@ -468,6 +468,29 @@ describe("bulk tools", () => {
     expect(M.state.items[5].price).toBeNull();
   });
 
+  it("skips items in a flash sale in the preview and in the result", async () => {
+    const user = userEvent.setup();
+    await open("/business/catalog", async () => {
+      setTime("2026-10-17T09:00:00.000Z");
+      await api.createFlashSale({ itemId: "it-fade", discountType: "percent", discountValue: 20, endsAt: "2026-10-17T15:00:00Z", afterEnd: "keep" });
+    });
+    await ready();
+    const before = M.state.items.find((i) => i.id === "it-fade").price;
+    const others = Object.fromEntries(M.state.items.filter((i) => i.id !== "it-fade").map((i) => [i.id, i.price]));
+    await user.click(within(card("it-fade")).getByRole("checkbox"));
+    await user.click(within(screen.getByTestId("bulk-bar")).getByRole("button", { name: /^Select all/ }));
+    await user.click(within(screen.getByTestId("bulk-bar")).getByRole("button", { name: "Change prices" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change prices" });
+    await user.type(within(dialog).getByLabelText("Percent change"), "10");
+    const preview = await within(dialog).findByTestId("price-preview");
+    expect(preview).toHaveTextContent("4 items change, 2 skipped");
+    expect(preview).toHaveTextContent(/flash sale/);
+    expect(within(preview).queryByTestId("after-it-fade")).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Change 4 prices" }));
+    await waitFor(() => expect(M.state.items.filter((i) => i.id !== "it-fade" && i.price !== null && i.priceType !== "free").every((i) => i.price !== others[i.id])).toBe(true));
+    expect(M.state.items.find((i) => i.id === "it-fade").price).toBe(before);
+  });
+
   it("deletes with Undo, and commits the delete if the page is left", async () => {
     const user = userEvent.setup();
     const view = await open();

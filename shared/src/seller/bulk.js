@@ -35,7 +35,7 @@ export const previewPriceChange = (items, percent) => {
   let skipped = 0;
   for (const item of items) {
     const priced = ["fixed", "from", "range"].includes(item.priceType) && typeof item.price === "number";
-    if (!priced) {
+    if (!priced || item.inFlashSale) {
       skipped += 1;
       continue;
     }
