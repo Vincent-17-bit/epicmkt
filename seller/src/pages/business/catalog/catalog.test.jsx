@@ -5,7 +5,8 @@ import { render, screen, within, waitFor, fireEvent } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { ItemCard } from "@epicmkt/ui";
 import { SORT_OPTIONS } from "@epicmkt/shared";
-import { M, signedInApp } from "../../../test/utils.jsx";
+import * as api from "../../../api/index.js";
+import { M, signedInApp, setTime } from "../../../test/utils.jsx";
 import { cardItemOf } from "./cardItem.js";
 
 const LABELS = { was: "Was", availability: (k) => ({ available: "Available", limited: "Limited", unavailable: "Unavailable" })[k] };
@@ -379,6 +380,30 @@ describe("quick actions", () => {
     await user.type(within(edit).getByLabelText("Price (KES)"), "500");
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(M.state.items.at(-1).price).toBe(500));
+  });
+
+  it("locks the price of an item in a flash sale but lets everything else save", async () => {
+    const user = userEvent.setup();
+    let target;
+    await open("/business/catalog", async () => {
+      setTime("2026-10-17T09:00:00.000Z");
+      target = M.state.items.find((i) => i.priceType === "fixed" && i.price && i.visible && !i.removedByAdmin && !i.hiddenByAdmin);
+      await api.createFlashSale({ itemId: target.id, discountType: "percent", discountValue: 20, endsAt: "2026-10-17T15:00:00Z", afterEnd: "keep" });
+    });
+    await ready();
+    const before = target.price;
+    await go(user, () => within(card(target.id)).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    await user.clear(within(edit).getByLabelText("Price (KES)"));
+    await user.type(within(edit).getByLabelText("Price (KES)"), String(before + 100));
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    expect(await within(edit).findByRole("alert")).toHaveTextContent(/flash sale/i);
+    expect(M.state.items.find((i) => i.id === target.id).price).toBe(before);
+    await user.clear(within(edit).getByLabelText("Price (KES)"));
+    await user.type(within(edit).getByLabelText("Price (KES)"), String(before));
+    await user.type(within(edit).getByLabelText("Name"), " promo");
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.find((i) => i.id === target.id).name).toMatch(/promo$/));
   });
 });
 

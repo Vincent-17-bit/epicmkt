@@ -221,16 +221,7 @@ const itemRow = (f) => ({
   name: f.name, description: f.description || null, section: f.section || null, price_type: f.priceType, price: f.price, price_max: f.priceMax ?? null,
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
 });
-export const saveItem = async (id, fields) => {
-  const business = await rows(need().from("businesses").select("id").maybeSingle());
-  if (!business) throw new ApiError("not_a_seller");
-  if (id) {
-    const row = await rows(need().from("items").update(itemRow(fields)).eq("id", id).select("id").maybeSingle());
-    if (!row) throw new ApiError("item_not_found");
-    return row.id;
-  }
-  return (await rows(need().from("items").insert({ ...itemRow(fields), business_id: business.id, draft: true, visible: false }).select("id").single())).id;
-};
+export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
 export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
