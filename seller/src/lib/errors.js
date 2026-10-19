@@ -72,6 +72,12 @@ const MESSAGES = {
   reply_too_short: "Write a reply or attach a file.",
   reply_too_long: "Keep your reply to 2000 characters.",
   file_not_found: "We could not open that file.",
+  unsupported_type: "Use a JPG, PNG or WebP image.",
+  too_large: "Each image must be 10 MB or smaller.",
+  too_small: "Each image must be at least 200 pixels on both sides.",
+  too_big_dimensions: "That image is larger than 8000 pixels. Use a smaller one.",
+  unreadable: "We could not read that image. Try another one.",
+  photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };
 

@@ -446,10 +446,21 @@ export default function Catalog() {
           open
           item={editing}
           onClose={() => setEditing(undefined)}
-          onSave={async (value) => {
-            await api.saveItem(editing?.id ?? null, value);
+          onPhotosChanged={refresh}
+          onSave={async (value, files = []) => {
+            const id = await api.saveItem(editing?.id ?? null, value);
+            const failed = [];
+            for (const file of files) {
+              try {
+                await api.uploadItemPhoto(id, file);
+              } catch (err) {
+                failed.push(errorText(err));
+                if (err?.code === "photo_limit") break;
+              }
+            }
             await refresh();
-            setNotice({ tone: "ok", text: editing ? "Item saved." : "Item added as a draft." });
+            const base = editing ? "Item saved." : "Item added as a draft.";
+            setNotice(failed.length ? { tone: "error", text: `${base} ${files.length - failed.length} of ${files.length} photos uploaded. ${failed[0]} Open Edit to add the rest.` } : { tone: "ok", text: base });
             setEditing(undefined);
           }}
         />

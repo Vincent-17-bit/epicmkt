@@ -116,6 +116,25 @@ export const catalogStats = async () => {
 };
 export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
+export const uploadItemPhoto = async (itemId, file) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (item.imagePaths.length >= (bill.business.planKey === "premium" ? 15 : 7)) throw new ApiError("photo_limit");
+  const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.webp`;
+  item.imagePaths.push(path);
+  item.imageCount = item.imagePaths.length;
+  return { path };
+};
+export const removeItemPhoto = async (path) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.imagePaths.includes(path));
+  if (!item) return;
+  item.imagePaths = item.imagePaths.filter((p) => p !== path);
+  item.imageCount = item.imagePaths.length;
+};
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...state.business } }; };
 
 // ---------------------------------------------------------------------------

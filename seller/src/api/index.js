@@ -27,6 +27,8 @@ export const requestDeletion = (...a) => impl.requestDeletion(...a);
 export const catalogStats = (...a) => impl.catalogStats(...a);
 export const itemSignals = (...a) => impl.itemSignals(...a);
 export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
+export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);
+export const removeItemPhoto = (...a) => impl.removeItemPhoto(...a);
 export const exportData = (...a) => impl.exportData(...a);
 export const getSubscription = (...a) => impl.getSubscription(...a);
 export const getPaymentInstructions = (...a) => impl.getPaymentInstructions(...a);

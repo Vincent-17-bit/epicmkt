@@ -32,6 +32,13 @@ const openMenu = async (user, id) => {
   if (trigger.getAttribute("aria-expanded") !== "true") await user.click(trigger);
   return within(card(id)).getByRole("menu");
 };
+const pngFile = (name, side = 300) => {
+  const b = new Uint8Array(33);
+  b.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52]);
+  new DataView(b.buffer).setUint32(16, side);
+  new DataView(b.buffer).setUint32(20, side);
+  return new File([b], name, { type: "image/png" });
+};
 const tileCount = (key) => Number(within(tile(key)).getByText(/^\d+$/).textContent);
 
 const make = (n, extra = {}) => ({
@@ -393,6 +400,52 @@ describe("quick actions", () => {
     await user.type(within(edit).getByLabelText("Price (KES)"), "500");
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(M.state.items.at(-1).price).toBe(500));
+  });
+
+  it("adds photos to a new item, to an existing item, and removes one", async () => {
+    const user = userEvent.setup();
+    let n = 0;
+    URL.createObjectURL = vi.fn(() => `blob:photo-${++n}`);
+    URL.revokeObjectURL = vi.fn();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Photo item");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    const input = dialog.querySelector('input[type="file"]');
+    await user.upload(input, [pngFile("a.png"), pngFile("b.png")]);
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
+    expect(within(dialog).getByText("Cover")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Remove photo 2" }));
+    expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Photo item", imageCount: 1 }));
+    const made = M.state.items.at(-1);
+    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
+    await user.upload(edit.querySelector('input[type="file"]'), pngFile("c.png"));
+    await waitFor(() => expect(made.imageCount).toBe(2));
+    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2);
+    await user.click(within(edit).getByRole("button", { name: "Remove photo 1" }));
+    await waitFor(() => expect(made.imageCount).toBe(1));
+    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
+  });
+
+  it("rejects a file that is not an image or is too small", async () => {
+    const user = userEvent.setup();
+    URL.createObjectURL = vi.fn(() => "blob:x");
+    URL.revokeObjectURL = vi.fn();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const input = dialog.querySelector('input[type="file"]');
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array(40)], "x.png", { type: "image/png" }), pngFile("tiny.png", 50)] } });
+    expect(await within(dialog).findByText(/x\.png: Use a JPG, PNG or WebP image/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/tiny\.png: Each image must be at least 200 pixels/)).toBeInTheDocument();
+    expect(within(dialog).queryAllByRole("button", { name: /^Remove photo/ })).toHaveLength(0);
   });
 
   it("locks the price of an item in a flash sale but lets everything else save", async () => {

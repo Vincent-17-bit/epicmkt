@@ -17,6 +17,8 @@ export const SELLER_API = [
   "catalogStats",
   "itemSignals",
   "finalizeMedia",
+  "uploadItemPhoto",
+  "removeItemPhoto",
   "exportData",
   "getSubscription",
   "getPaymentInstructions",

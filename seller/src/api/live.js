@@ -58,6 +58,27 @@ export const requestDeletion = (name) => rpc("seller_request_deletion", { p_name
 export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_stale_days: staleDays });
 export const itemSignals = async () => (await rpc("seller_item_signals")).map(shape.signal);
 export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
+const MEDIA_BUCKET = "seller-media";
+const PHOTO_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+export const uploadItemPhoto = async (itemId, file) => {
+  const ext = PHOTO_EXT[file.type];
+  if (!ext) throw new ApiError("unsupported_type");
+  const business = await rows(need().from("businesses").select("id").maybeSingle());
+  if (!business) throw new ApiError("not_a_seller");
+  const path = `${business.id}/${itemId}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await need().storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type });
+  if (error) throw new ApiError("file_not_uploaded");
+  try {
+    await finalizeMedia({ itemId, path });
+  } catch (e) {
+    throw e.code === "limit_reached" ? new ApiError("photo_limit") : e;
+  }
+  return { path };
+};
+export const removeItemPhoto = async (path) => {
+  await rows(need().from("item_media").delete().eq("path", path));
+  await need().storage.from(MEDIA_BUCKET).remove([path]);
+};
 export const exportData = () => fn("seller-export-data", {});
 
 export const getSubscription = async () => {

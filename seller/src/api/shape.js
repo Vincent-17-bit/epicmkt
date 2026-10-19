@@ -56,7 +56,7 @@ export const flashSale = (s) => ({
 });
 
 const num = (v) => (v === null || v === undefined ? null : Number(v));
-export const mediaUrl = (path) => (path && import.meta.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
+export const mediaUrl = (path) => (path?.startsWith("blob:") ? path : path && import.meta.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
 
 export const catalogItem = (i) => ({
   id: i.id, name: i.name, description: i.description ?? "", section: i.section ?? null,
