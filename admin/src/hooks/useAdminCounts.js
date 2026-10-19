@@ -56,6 +56,7 @@ export function useLiveRefresh() {
         queryClient.invalidateQueries({ queryKey: ["admin-messages"] });
         queryClient.invalidateQueries({ queryKey: ["admin-unread-messages"] });
         queryClient.invalidateQueries({ queryKey: ["admin-flash-sales"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
       }, 400); // a burst of changes becomes one refresh
     };
 

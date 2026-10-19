@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faBars, faChevronLeft, faChevronRight, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -7,6 +9,8 @@ import { useAdminCounts, useLiveRefresh } from "../hooks/useAdminCounts.js";
 import { badgeText, navBadges } from "../lib/counts.js";
 import { initialsOf } from "../lib/initials.js";
 import SystemStatusCard from "../components/SystemStatusCard.jsx";
+import GlobalSearch from "../components/GlobalSearch.jsx";
+import NotificationBell from "../components/NotificationBell.jsx";
 
 // `hint` is what the badge number means, for the tooltip and screen readers.
 const navItems = [
@@ -37,6 +41,8 @@ export default function AdminLayout() {
   useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => setMobileOpen(false), [pathname]); // choosing a page closes the phone menu
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("epicmkt-admin-theme");
     if (saved) return saved;
@@ -50,7 +56,7 @@ export default function AdminLayout() {
 
   return (
     <div className="admin-app">
-      <aside className={`admin-sidebar ${collapsed ? "is-collapsed" : ""}`}>
+      <aside id="admin-sidebar" className={`admin-sidebar ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "is-mobile-open" : ""}`}>
         <div className="admin-sidebar__brand">
           <div className="admin-sidebar__logo">E</div>
           {!collapsed && <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>}
@@ -60,7 +66,7 @@ export default function AdminLayout() {
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => setCollapsed((value) => !value)}
           >
-            {collapsed ? "›" : "‹"}
+            <FontAwesomeIcon icon={collapsed ? faChevronRight : faChevronLeft} />
           </button>
         </div>
 
@@ -91,11 +97,20 @@ export default function AdminLayout() {
         </div>
       </aside>
 
+      {mobileOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" onClick={() => setMobileOpen(false)} /> : null}
+
       <div className="admin-main">
         <header className="admin-header">
           <div className="admin-header__left">
-            <button type="button" className="admin-icon-button admin-mobile-only" aria-label="Open menu">
-              ☰
+            <button
+              type="button"
+              className="admin-icon-button admin-mobile-only"
+              aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileOpen}
+              aria-controls="admin-sidebar"
+              onClick={() => setMobileOpen((value) => !value)}
+            >
+              <FontAwesomeIcon icon={faBars} />
             </button>
             <div>
               <div className="admin-breadcrumb">Overview / {pageTitle}</div>
@@ -104,20 +119,15 @@ export default function AdminLayout() {
           </div>
 
           <div className="admin-header__right">
-            <label className="admin-global-search" aria-label="Search admin">
-              <span>⌕</span>
-              <input type="search" placeholder="Search everything" readOnly />
-            </label>
-            <button type="button" className="admin-icon-button" aria-label="Notifications">
-              🔔
-            </button>
+            <GlobalSearch />
+            <NotificationBell />
             <button
               type="button"
               className="admin-theme-toggle"
               aria-label="Toggle theme"
               onClick={() => setTheme((value) => (value === "light" ? "dark" : "light"))}
             >
-              {theme === "light" ? "Dark" : "Light"}
+              <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} /> {theme === "light" ? "Dark" : "Light"}
             </button>
             <Link
               to="/admin/account"

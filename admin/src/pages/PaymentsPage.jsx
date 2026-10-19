@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { matchesText } from "../lib/globalSearch.js";
 import { api } from "../api/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -100,6 +102,8 @@ function AssignPanel({ row, onClose, onDone }) {
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const q = params.get("q") ?? "";
   const [notice, setNotice] = useState(null);
   const [filter, setFilter] = useState("action");
   const [assigning, setAssigning] = useState(null);
@@ -143,7 +147,10 @@ export default function PaymentsPage() {
   const needs = rowsAll.filter((r) => NEEDS_ACTION.has(r.status));
   const unassigned = rowsAll.filter((r) => r.status === "needs_assignment").length;
   const ready = rowsAll.filter((r) => r.status === "awaiting_confirmation").length;
-  const rows = filter === "action" ? needs : rowsAll;
+  // Opened from a header search result: show every payment that matches it, whatever its status.
+  const rows = q
+    ? rowsAll.filter((r) => matchesText([r.mpesaCode, r.appPaymentCode, r.businessName, r.payerName, r.reference, r.receipt, r.account, r.phone], q))
+    : filter === "action" ? needs : rowsAll;
   const stuck = callbacks.data ?? [];
 
   return (
@@ -151,6 +158,12 @@ export default function PaymentsPage() {
       <section className="panel">
         <div className="panel__header">
           <h3>Payments</h3>
+          {q ? (
+            <p className="muted" role="status">
+              Showing payments matching “{q}”.{" "}
+              <button type="button" className="admin-bell__markall" onClick={() => setParams({}, { replace: true })}>Clear</button>
+            </p>
+          ) : null}
           <div className="pay-chips" role="tablist" aria-label="Filter payments">
             <button type="button" role="tab" aria-selected={filter === "action"} className={filter === "action" ? "chip chip--on" : "chip"} onClick={() => setFilter("action")}>
               Needs action ({needs.length})

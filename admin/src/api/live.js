@@ -484,3 +484,48 @@ export async function endFlashSale({ id, reason }) {
   }
   return { ok: true };
 }
+
+// ---- Header search (admin_search, migration 0008_admin.sql) ------------------------------------------------------
+
+// Searches businesses, items, applications, payments and FAQs in one call. Under 2 characters returns nothing.
+export async function globalSearch(query) {
+  const term = String(query ?? "").trim();
+  if (term.length < 2) return {};
+  const { data } = check(await client().rpc("admin_search", { q: term, scopes: null, lim: 6 }));
+  return data ?? {};
+}
+
+// ---- Notifications: what sellers and applicants did, from admin_notifications (migration 0004_core.sql) ----------
+
+export async function getNotifications({ limit = 20 } = {}) {
+  const { data } = check(
+    await client()
+      .from("admin_notifications")
+      .select("id, kind, data, read_at, created_at, business:businesses(name)")
+      .order("created_at", { ascending: false })
+      .limit(limit),
+  );
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    at: row.created_at,
+    kind: row.kind,
+    business_name: row.business?.name ?? row.data?.business_name ?? null,
+    data: row.data ?? {},
+    read: Boolean(row.read_at),
+  }));
+}
+
+export async function getUnreadNotificationCount() {
+  const { count } = check(
+    await client().from("admin_notifications").select("id", { count: "exact", head: true }).is("read_at", null),
+  );
+  return count ?? 0;
+}
+
+// ids = a list to mark, or omitted to mark everything unread.
+export async function markNotificationsRead(ids) {
+  let query = client().from("admin_notifications").update({ read_at: new Date().toISOString() }).is("read_at", null);
+  if (Array.isArray(ids)) query = query.in("id", ids);
+  check(await query);
+  return { ok: true };
+}

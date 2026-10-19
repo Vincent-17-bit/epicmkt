@@ -8,6 +8,8 @@ export {
   ackMessagesDelivered, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
 } from "./mockMessages.js";
 
+import { searchMockApplications } from "./mockApplications.js";
+
 export {
   decideApplication, getApplication, getApplicationDocumentUrl, listApplications, openApplication,
 } from "./mockApplications.js";
@@ -129,3 +131,37 @@ export async function ignorePayment({ txId }) {
 
 export async function reprocessCallback() { await latency(); return { outcome: "needs_assignment" }; }
 export async function dismissCallback() { await latency(); }
+
+// ---- Demo header search and notifications ----------------------------------------------------------------------
+
+export async function globalSearch(query) {
+  await latency(80);
+  const term = String(query ?? "").trim().toLowerCase();
+  if (term.length < 2) return {};
+  return {
+    applications: searchMockApplications(term),
+    businesses: mockBusinesses
+      .filter((b) => [b.name, b.town].some((v) => v.toLowerCase().includes(term)))
+      .map((b, i) => ({ id: `mb-${i}`, name: b.name, town: b.town, status: b.status.toLowerCase(), seller_id: null })),
+    payments: mockPayments
+      .filter((p) => [p.mpesaCode, p.businessName, p.payerName].some((v) => String(v ?? "").toLowerCase().includes(term)))
+      .map((p) => ({ id: p.txId, mpesa_code: p.mpesaCode, amount_kes: p.amount, status: p.status, business_name: p.businessName })),
+  };
+}
+
+let mockNotifications = [
+  { id: "mn-1", at: new Date(Date.now() - 2 * 60_000).toISOString(), kind: "application_submitted", business_name: "Umoja Market", data: {}, read: false },
+  { id: "mn-2", at: new Date(Date.now() - 25 * 60_000).toISOString(), kind: "payment_submitted", business_name: "Mara Fresh Mart", data: { kind: "renewal" }, read: false },
+  { id: "mn-3", at: new Date(Date.now() - 3 * 3600_000).toISOString(), kind: "change_request", business_name: "Fade Kings", data: { field: "phone" }, read: true },
+];
+export async function getNotifications() {
+  await latency(60);
+  return mockNotifications.map((n) => ({ ...n }));
+}
+export async function getUnreadNotificationCount() {
+  return mockNotifications.filter((n) => !n.read).length;
+}
+export async function markNotificationsRead(ids) {
+  mockNotifications = mockNotifications.map((n) => (!Array.isArray(ids) || ids.includes(n.id) ? { ...n, read: true } : n));
+  return { ok: true };
+}

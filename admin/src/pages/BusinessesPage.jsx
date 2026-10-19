@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { faFilter } from "@fortawesome/free-solid-svg-icons";
 import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
@@ -15,6 +16,8 @@ const DEFAULT_SORT = { key: "paidUntil", dir: "asc" };
 const ID_PREFIX = "businesses";
 
 export default function BusinessesPage() {
+  const [params] = useSearchParams();
+  const initialSearch = params.get("q") ?? "";
   const [tab, setTab] = useState("all");
   const [filters, setFilters] = useState(emptyFilters);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -56,6 +59,7 @@ export default function BusinessesPage() {
           onExtraChange={applyExtra}
           exportName="businesses"
           searchPlaceholder="Search name, phone, seller ID, slug, owner"
+          initialSearch={initialSearch}
           emptyText={tab === "deleted" ? "The recycle bin is empty" : "No businesses match"}
           selectable
           toolbar={

@@ -44,6 +44,7 @@ export default function DataTable({
   onRowOpen,
   exportName = "export",
   searchPlaceholder = "Search",
+  initialSearch = "",
   emptyText = "Nothing to show",
 }) {
   const stored = useMemo(() => readStore(storageKey), [storageKey]);
@@ -53,8 +54,15 @@ export default function DataTable({
   const scrollRef = useRef(null);
   const headCheckRef = useRef(null);
 
-  const [searchText, setSearchText] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchText, setSearchText] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
+
+  // Opened from a header search result: show that search, and follow it if the person searches again.
+  useEffect(() => {
+    setSearchText(initialSearch);
+    setSearch(initialSearch);
+    setPage(0);
+  }, [initialSearch]);
   const [sort, setSort] = useState(defaultSort);
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(stored.pageSize ?? 50);

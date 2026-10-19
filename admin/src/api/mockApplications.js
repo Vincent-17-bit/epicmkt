@@ -237,3 +237,13 @@ export async function getApplicationDocumentUrl({ applicationId, slotKey }) {
   const html = `<!doctype html><title>Demo document</title><body style="font:16px system-ui;padding:2rem"><h1>Demo document</h1><p>${slotKey} for ${entry.app.businessName}.</p><p>Demo mode has no real files.</p></body>`;
   return { url: URL.createObjectURL(new Blob([html], { type: "text/html" })), expiresIn: 60 };
 }
+
+// Demo header search: same raw shape the admin_search() function returns.
+export function searchMockApplications(term) {
+  const needle = String(term ?? "").trim().toLowerCase();
+  if (needle.length < 2) return [];
+  return all()
+    .filter((a) => [a.reference, a.businessName, a.ownerName, a.phone, a.email].some((v) => String(v).toLowerCase().includes(needle)))
+    .slice(0, 6)
+    .map((a) => ({ id: a.id, reference_no: a.reference, business_name: a.businessName, owner_full_name: a.ownerName, phone: a.phone, status: a.status }));
+}
