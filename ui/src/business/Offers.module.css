@@ -1,0 +1,33 @@
+.h3 {
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.offers {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offer {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.offerIcon {
+  flex: none;
+  margin-top: var(--space-1);
+  color: var(--verified);
+}
+
+.offerMeta {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

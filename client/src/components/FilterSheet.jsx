@@ -1,39 +1,12 @@
-import { useEffect, useRef } from "react";
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { BottomSheet } from "@epicmkt/ui";
 import Button from "./Button.jsx";
 import IconButton from "./IconButton.jsx";
 import styles from "./FilterSheet.module.css";
 
 export default function FilterSheet({ open, onClose, total, onClear, canClear, children }) {
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return undefined;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const query = window.matchMedia("(min-width: 1024px)");
-    const onChange = () => query.matches && onClose();
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, [open, onClose]);
-
   return (
-    <dialog
-      ref={ref}
-      className={styles.sheet}
-      aria-labelledby="filter-sheet-title"
-      onClose={onClose}
-      onClick={(e) => e.target === ref.current && onClose()}
-    >
+    <BottomSheet open={open} onClose={onClose} labelledBy="filter-sheet-title" closeAbove="(min-width: 1024px)">
       {open && (
         <div className={styles.inner}>
           <div className={styles.head}>
@@ -55,6 +28,6 @@ export default function FilterSheet({ open, onClose, total, onClear, canClear, c
           </div>
         </div>
       )}
-    </dialog>
+    </BottomSheet>
   );
 }

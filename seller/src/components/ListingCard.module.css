@@ -1,0 +1,16 @@
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2);
+}
+
+.flag {
+  padding: 2px var(--space-2);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}

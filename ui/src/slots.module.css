@@ -1,0 +1,29 @@
+.frame {
+  position: relative;
+  display: grid;
+}
+
+.root {
+  position: relative;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.overlay > * {
+  pointer-events: auto;
+}
+
+.quickActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.frame > .quickActions {
+  padding-top: var(--space-2);
+}

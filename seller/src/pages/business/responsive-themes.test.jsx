@@ -7,7 +7,7 @@ import { signedInApp } from "../../test/utils.jsx";
 
 const root = process.cwd();
 const read = (p) => readFileSync(join(root, p), "utf8");
-const sharedTokens = readFileSync(join(root, "..", "shared", "src", "tokens.css"), "utf8");
+const sharedTokens = readFileSync(join(root, "..", "ui", "src", "styles", "tokens.css"), "utf8");
 const sellerCss = read("src/styles/seller.css");
 
 const cssFiles = [];
@@ -31,8 +31,11 @@ describe("themes", () => {
     const rootVars = block(sharedTokens, ":root {");
     const used = new Set();
     for (const f of cssFiles) for (const m of read(f).matchAll(/var\((--[a-z0-9-]+)/g)) used.add(m[1]);
+    // Layout hooks a caller may set; each is read with a built-in fallback, so it is not a theme token.
+    const OPTIONAL_HOOKS = new Set(["--view-as-height"]);
     const missing = [];
     for (const v of used) {
+      if (OPTIONAL_HOOKS.has(v)) continue;
       const inRoot = rootVars.includes(`${v}:`);
       if (!inRoot && !(light.includes(`${v}:`) && dark.includes(`${v}:`))) missing.push(v);
     }

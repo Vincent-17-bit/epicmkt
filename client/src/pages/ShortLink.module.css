@@ -1,0 +1,6 @@
+.state {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-block: var(--space-7);
+}
