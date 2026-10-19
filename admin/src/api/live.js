@@ -2,6 +2,7 @@ import { supabase } from "../lib/supabaseClient.js";
 import { normalizeCounts } from "../lib/counts.js";
 import { DEFAULT_TAB, PAGE_SIZE, searchFilter, tabById, tabSortAscending } from "../lib/applications.js";
 import { ApiError, toApiError } from "./errors.js";
+import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_TYPES } from "@epicmkt/shared";
 
 const notConfigured = () => {
   throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
@@ -10,8 +11,6 @@ const notConfigured = () => {
 // Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
 // audited RPCs (suspend, extend, tag, message...), the audit viewer, and the flash sales list. Everything else on
 // the Businesses page, the Payments page and the Command Center is live below.
-export const bulkBusinessAction = notConfigured;
-export const undoBulkBusinessAction = notConfigured;
 export const listAuditEntries = notConfigured;
 export const listFlashSales = notConfigured;
 export const endFlashSale = notConfigured;
@@ -358,4 +357,86 @@ export async function confirmPayment({ applicationId, mpesaCode, amount, acknowl
     if (e?.details?.requiresAcknowledgement) return e.details;
     throw new Error(CONFIRM_ERRORS[e?.code] ?? "Could not confirm the payment. Try again.");
   }
+}
+
+
+// ---- Messages to sellers, bulk actions and conversations (migration 0016_conversations.sql) ---------------------
+
+const FILE_BUCKET = "message-files";
+const ext = (name) => (String(name).includes(".") ? String(name).split(".").pop().toLowerCase() : "");
+
+// Staff files go to one private bucket under admin/. The database checks the path, type and size again.
+export async function uploadMessageFiles(files = []) {
+  if (files.length > PROOF_MAX_FILES) throw new ApiError("too_many_files", "You can attach up to 3 files.");
+  const out = [];
+  for (const f of files) {
+    if (!PROOF_TYPES[f.type]?.includes(ext(f.name))) throw new ApiError("type_not_allowed", "Only JPG, PNG, WebP and PDF files can be sent.");
+    if (f.size > PROOF_MAX_BYTES || f.size === 0) throw new ApiError("file_too_large", "Each file must be 8 MB or smaller.");
+    const safe = f.name.replace(/[^A-Za-z0-9._-]/g, "_").slice(-100);
+    const path = `admin/${crypto.randomUUID()}-${safe}`;
+    const { error } = await client().storage.from(FILE_BUCKET).upload(path, f, { contentType: f.type });
+    if (error) throw new ApiError("file_not_uploaded", "A file did not upload. Attach it again.");
+    out.push({ path, name: f.name, mime: f.type, size: f.size });
+  }
+  return out;
+}
+
+// Suspend, unsuspend, strike, tag, feature, extend, message and export. Every change is audited on the server.
+export async function bulkBusinessAction({ action, ids, reason, params = {} }) {
+  const { files, ...rest } = params;
+  const sent = action === "message" && files?.length ? { ...rest, attachments: await uploadMessageFiles(files) } : rest;
+  const { data } = check(await client().rpc("admin_bulk_business_action", { p_action: action, p_ids: ids, p_reason: reason, p_params: sent }));
+  return data;
+}
+
+// The server changes are audited and not reversible from here, so no undo token is ever returned.
+export async function undoBulkBusinessAction() {
+  throw new ApiError("nothing_to_undo", "This action can no longer be undone.");
+}
+
+const toMessage = (m, files) => ({
+  id: m.id, businessId: m.business_id, businessName: m.businesses?.name ?? "Business", sellerId: m.businesses?.seller_id ?? "",
+  sender: m.sender, kind: m.kind, subject: m.subject ?? "Message", body: m.body, needsReply: !!m.needs_reply,
+  threadId: m.thread_id ?? m.id, parentId: m.parent_id ?? null, createdAt: m.created_at,
+  readAt: m.read_at ?? null, deliveredAt: m.delivered_at ?? null, adminDeliveredAt: m.admin_delivered_at ?? null, adminReadAt: m.admin_read_at ?? null,
+  attachments: files.filter((f) => f.message_id === m.id).map((f) => ({ id: f.id, name: f.original_name, mime: f.mime, size: f.size_bytes, path: f.path })),
+});
+
+export async function listMessages({ businessId = null } = {}) {
+  const db = client();
+  let mq = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null).order("created_at", { ascending: false }).limit(1000);
+  let fq = db.from("message_attachments").select("*").order("created_at", { ascending: false }).limit(1000);
+  if (businessId) { mq = mq.eq("business_id", businessId); fq = fq.eq("business_id", businessId); }
+  const [messages, files] = await Promise.all([mq, fq]);
+  const f = check(files).data ?? [];
+  return (check(messages).data ?? []).map((m) => toMessage(m, f));
+}
+
+// Staff answer inside an existing thread (parentId), or start one for one business.
+export async function sendMessage({ parentId = null, businessId = null, subject = null, body = "", needsReply = false, files = [] }) {
+  const attachments = files.length ? await uploadMessageFiles(files) : [];
+  const { data } = check(await client().rpc("admin_send_message", {
+    p_business_ids: businessId ? [businessId] : null, p_subject: subject, p_body: body, p_needs_reply: needsReply,
+    p_attachments: attachments, p_parent: parentId, p_reason: null,
+  }));
+  return data;
+}
+
+// Opening a seller's messages turns the seller's ticks blue. This device receiving them gives two green ticks.
+export async function markMessagesRead({ businessId = null } = {}) {
+  const { data } = check(await client().rpc("admin_mark_messages_read", { p_business: businessId, p_ids: null }));
+  return data;
+}
+export async function ackMessagesDelivered() {
+  const { data } = check(await client().rpc("message_ack_delivered", { p_ids: null }));
+  return data;
+}
+export async function getUnreadMessages() {
+  const { data } = check(await client().rpc("admin_unread_messages"));
+  return data ?? 0;
+}
+export async function openMessageFile(path) {
+  const { data, error } = await client().storage.from(FILE_BUCKET).createSignedUrl(path, 300);
+  if (error) throw new ApiError("not_found", "We could not open that file.");
+  return data.signedUrl;
 }

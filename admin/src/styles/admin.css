@@ -951,3 +951,149 @@ th {
   gap: 1rem;
   flex-wrap: wrap;
 }
+
+/* Message ticks and the Messages page */
+:root,
+[data-theme="light"] {
+  --tick-green: #15803d;
+  --tick-blue: #0369a1;
+}
+
+[data-theme="dark"] {
+  --tick-green: #4ade80;
+  --tick-blue: #38bdf8;
+}
+
+.ticks {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  color: var(--tick-green);
+}
+
+.ticks[data-state="read"] {
+  color: var(--tick-blue);
+}
+
+.ticks svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.msg-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.msg-list ul,
+.msg-bubbles,
+.msg-files {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.msg-list__item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: start;
+  background: transparent;
+  color: inherit;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.msg-list__item[data-active="true"] {
+  border-color: var(--tick-blue);
+}
+
+.msg-list__name {
+  font-weight: 700;
+}
+
+.msg-list__sub {
+  font-size: 0.85em;
+  opacity: 0.8;
+}
+
+.msg-thread__item {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+}
+
+.msg-thread__item h4 {
+  margin: 0;
+}
+
+.msg-bubble {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+  border-radius: 8px;
+}
+
+.msg-bubble[data-unread="true"] {
+  border-color: var(--tick-blue);
+}
+
+.msg-bubble__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85em;
+}
+
+.msg-bubble__body {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.msg-files li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.3));
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+
+.msg-compose {
+  display: grid;
+  gap: 8px;
+}
+
+.msg-compose__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.msg-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+@media (max-width: 52rem) {
+  .msg-layout {
+    grid-template-columns: 1fr;
+  }
+}

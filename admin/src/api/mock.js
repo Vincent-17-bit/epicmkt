@@ -4,6 +4,9 @@ import { normalizeCounts } from "../lib/counts.js";
 
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
+export {
+  ackMessagesDelivered, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
+} from "./mockMessages.js";
 
 export {
   decideApplication, getApplication, getApplicationDocumentUrl, listApplications, openApplication,

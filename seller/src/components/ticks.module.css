@@ -1,0 +1,18 @@
+.ticks {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  color: var(--tick-green);
+}
+
+.ticks[data-state="read"] {
+  color: var(--tick-blue);
+}
+
+.ticks svg {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}

@@ -61,6 +61,12 @@ const MESSAGES = {
   invalid_view: "Use a name of up to 30 letters, numbers and spaces.",
   duplicate_view: "You already have a view with that name.",
   invalid_item: "Check the item details and try again.",
+  account_suspended: "Your account is suspended, so you cannot do this.",
+  message_not_found: "We could not find that message.",
+  reply_not_allowed: "EpicMKT has not asked for a reply to this message.",
+  reply_too_short: "Write a reply or attach a file.",
+  reply_too_long: "Keep your reply to 2000 characters.",
+  file_not_found: "We could not open that file.",
   ...PROOF_ERRORS,
 };
 

@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PROOF_ACCEPT, PROOF_MAX_FILES, REPLY_MAX, REPLY_MIN, checkProofBatch, checkReply } from "@epicmkt/shared";
+import { PROOF_ACCEPT, PROOF_MAX_FILES, REPLY_MAX, REPLY_MIN, checkProofBatch, checkReply, groupThreads, receiptOf } from "@epicmkt/shared";
 import { formatDateTime } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
+import { MessageBubble, ReplyBox } from "../../components/MessageParts.jsx";
+import { BELL_KEY } from "../../components/Layout.jsx";
 import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
 import { useRealtime } from "../../lib/useRealtime.js";
@@ -93,11 +95,41 @@ function ReplyForm({ q, onDone }) {
   );
 }
 
+// A conversation staff started and asked you to answer. Replies to replies stay in the same thread.
+function Conversation({ thread, onSent }) {
+  const last = thread.last;
+  return (
+    <li id={`thread-${thread.id}`} className={styles.q} data-testid="conversation" data-needs-reply={thread.needsReply}>
+      <div className={styles.meta}>
+        <span className={`${ui.pill} ${ui.tone_warning}`}>Conversation</span>
+      </div>
+      <h2>{thread.subject}</h2>
+      <ul className={styles.thread} aria-label="Messages in this conversation">
+        {thread.messages.map((m) => <MessageBubble key={m.id} m={m} receipt={receiptOf(m)} />)}
+      </ul>
+      <ReplyBox id={thread.id} onSend={async ({ body, files }) => { await api.sendMessage({ parentId: last.id, body, files }); await onSent(); }} />
+    </li>
+  );
+}
+
 export default function Questions() {
   const qc = useQueryClient();
   const list = useQuery({ queryKey: ["questions"], queryFn: api.listQuestions });
-  const refresh = () => qc.invalidateQueries({ queryKey: ["questions"] });
-  useRealtime(["flags", "flag_attachments"], refresh);
+  const messages = useQuery({ queryKey: ["messages", "conversations"], queryFn: () => api.listMessages({ kinds: null }) });
+  const threads = groupThreads(messages.data ?? []).filter((t) => t.needsReply);
+  const refresh = () => {
+    qc.invalidateQueries({ queryKey: ["questions"] });
+    qc.invalidateQueries({ queryKey: ["messages"] });
+    qc.invalidateQueries({ queryKey: BELL_KEY });
+  };
+  useRealtime(["flags", "flag_attachments", "messages", "message_attachments"], refresh);
+
+  // Opening a conversation is what turns staff's ticks blue.
+  const unreadIds = threads.flatMap((t) => t.messages.filter((m) => m.sender !== "seller" && !m.readAt).map((m) => m.id));
+  const unreadKey = unreadIds.join(",");
+  useEffect(() => {
+    if (unreadIds.length) api.markRead(unreadIds).then(refresh).catch(() => {});
+  }, [unreadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className={ui.page}>
@@ -105,13 +137,18 @@ export default function Questions() {
         <h1>Questions from EpicMKT</h1>
         <p className={ui.muted}>Answer in plain text. You can attach up to 3 proof files. EpicMKT staff can open them; you cannot download them again.</p>
       </div>
+      {threads.length > 0 && (
+        <ul className={styles.list} aria-label="Conversations">
+          {threads.map((t) => <Conversation key={t.id} thread={t} onSent={refresh} />)}
+        </ul>
+      )}
       {list.isLoading ? (
         <p role="status">Loading</p>
       ) : list.error ? (
         <p className={ui.error} role="alert">We could not load your questions.</p>
-      ) : (list.data ?? []).length === 0 ? (
+      ) : (list.data ?? []).length === 0 ? (threads.length > 0 ? null : (
         <p className={ui.muted} data-testid="empty">No questions right now.</p>
-      ) : (
+      )) : (
         <ul className={styles.list} aria-label="Questions">
           {list.data.map((q) => {
             const s = STATUS[q.status] ?? STATUS.open;
