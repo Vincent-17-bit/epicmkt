@@ -22,9 +22,10 @@ export default function BulkBar({ rows, ids, clear, tab, options }) {
 
     const undo = async () => {
       try {
-        await api.undoBulkBusinessAction(result.undoToken);
+        const outcome = await api.undoBulkBusinessAction(result.undoToken);
         refresh();
-        toast.push({ message: "Undone" });
+        const left = outcome.skipped ? `, ${outcome.skipped} left as they are because they changed since` : "";
+        toast.push({ message: `Undone for ${outcome.restored} ${outcome.restored === 1 ? "business" : "businesses"}${left}` });
       } catch (failure) {
         toast.push({ message: failure.message, tone: "error" });
       }
@@ -37,6 +38,7 @@ export default function BulkBar({ rows, ids, clear, tab, options }) {
       message: summarize(name, params, result),
       actionLabel: result.undoToken ? "Undo" : undefined,
       onAction: undo,
+      duration: result.undoToken ? 30000 : undefined,
     });
   };
 

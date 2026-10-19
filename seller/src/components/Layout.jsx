@@ -41,8 +41,8 @@ export default function Layout() {
     ack();
   });
   useRealtime(["businesses"], () => qc.invalidateQueries({ queryKey: ["subscription"] }));
-  // A suspended seller can read notices and answer staff. Nothing else.
-  const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname);
+  // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
+  const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -60,7 +60,7 @@ export default function Layout() {
       <header className={styles.header}>
         <Link to="/business/subscription" className={styles.brand}>EpicMKT Seller</Link>
         <nav className={styles.nav} aria-label="Business">
-          {!suspended && <NavLink to="/business/subscription">Subscription</NavLink>}
+          <NavLink to="/business/subscription">Subscription</NavLink>
           <Bell count={unread.data ?? 0} />
           <NavLink to="/business/questions">Questions</NavLink>
           {!suspended && <NavLink to="/business/exceptions">Exceptions</NavLink>}
@@ -75,7 +75,7 @@ export default function Layout() {
         {suspended && (
           <div className={`${ui.banner} ${ui.tone_danger}`} role="alert" data-testid="suspended-banner">
             <h2>Your account is suspended</h2>
-            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can read your notifications and answer EpicMKT under Questions.</p>
+            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can still see your payments and pay under Subscription, read your notifications and answer EpicMKT under Questions.</p>
           </div>
         )}
         {!suspended && (business?.strikes ?? 0) > 0 && (

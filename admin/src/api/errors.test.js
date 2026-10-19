@@ -29,3 +29,11 @@ test("an ApiError passes through untouched", () => {
   const original = new ApiError("not_found");
   assert.equal(toApiError(original), original);
 });
+
+test("bulk action errors have text an admin can act on", async () => {
+  const { ACTION_TEXT } = await import("./errors.js");
+  assert.equal(toApiError({ message: "nothing_to_undo", code: "P0001" }).code, "nothing_to_undo");
+  assert.equal(toApiError({ message: "unknown_agent", code: "P0001" }).code, "unknown_agent");
+  assert.match(ACTION_TEXT.unknown_agent, /agent/i);
+  assert.match(ACTION_TEXT.nothing_to_undo, /undone/i);
+});

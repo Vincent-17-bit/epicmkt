@@ -3,8 +3,8 @@ import { billingBanners } from "@epicmkt/shared/billing";
 import { now } from "../lib/clock.js";
 import ui from "../styles/ui.module.css";
 
-export default function Banners({ business, onAction }) {
-  const list = billingBanners(business, now());
+export default function Banners({ business, onAction, skip = [] }) {
+  const list = billingBanners(business, now()).filter((b) => !skip.includes(b.id));
   if (!list.length) return null;
   return (
     <div role="region" aria-label="Subscription notices" className={ui.page} style={{ padding: 0, gap: "var(--space-3)" }}>
