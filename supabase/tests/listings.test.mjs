@@ -257,3 +257,14 @@ test("anonymous callers cannot reach the listing functions", async () => {
     await rejects(c, { role: "anon" }, `select ${fn}`, [], /permission denied/);
   }
 });
+
+test("a suspended seller cannot use any listing function", async () => {
+  await sql(c, `update businesses set status = 'suspended' where id = '${ids.bizA}'`);
+  const calls = [
+    "seller_catalog_items()", "seller_catalog_stats()", "seller_get_views()", "seller_save_views('[]'::jsonb)",
+    "seller_bulk_items('hide', array[gen_random_uuid()])", "seller_reorder_items(array[gen_random_uuid()])",
+    "seller_duplicate_item(gen_random_uuid())", "seller_import_items('[{\"name\":\"Ab\"}]'::jsonb)",
+  ];
+  for (const text of calls) await rejects(c, asA, `select ${text}`, [], /account_suspended/);
+  await sql(c, `update businesses set status = 'live' where id = '${ids.bizA}'`);
+});

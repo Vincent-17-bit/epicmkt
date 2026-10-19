@@ -29,6 +29,7 @@ declare
   v_b public.businesses;
   v_limit integer;
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   select * into v_b from public.businesses where id = v_id;
   select p.items_limit into v_limit from public.plans p where p.category_id = v_b.category_id and p.plan_key = v_b.plan_key;
@@ -66,6 +67,7 @@ declare
   v_b public.businesses;
   v_limit integer;
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   select * into v_b from public.businesses where id = v_id;
   select p.items_limit into v_limit from public.plans p where p.category_id = v_b.category_id and p.plan_key = v_b.plan_key;
@@ -97,6 +99,7 @@ declare
   v_section text;
   v_avail text;
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   if p_action is null or p_action not in ('hide','show','delete','move_section','set_availability','price_percent','confirm_prices') then
     raise exception 'invalid_action' using errcode = 'P0001';
@@ -169,6 +172,7 @@ declare
   v_id uuid := public.my_business_id();
   v_n integer;
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   if p_ids is null or cardinality(p_ids) = 0 or cardinality(p_ids) > 1000 then raise exception 'no_items' using errcode = 'P0001'; end if;
   if exists (select 1 from public.items i where i.business_id = v_id and i.id = any (p_ids)) is false then
@@ -188,6 +192,7 @@ declare
   v_src public.items;
   v_new uuid;
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   select * into v_src from public.items where id = p_id and business_id = v_id and not removed_by_admin;
   if not found then raise exception 'item_not_found' using errcode = 'P0001'; end if;
@@ -210,6 +215,7 @@ declare
   v_n integer := 0;
   v_tags text[];
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   select * into v_b from public.businesses where id = v_id;
   if v_b.plan_key <> 'premium' then raise exception 'premium_required' using errcode = 'P0001'; end if;
@@ -239,6 +245,7 @@ declare
   v jsonb;
   v_names text[] := '{}';
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   if p_views is null or jsonb_typeof(p_views) <> 'array' then raise exception 'invalid_views' using errcode = 'P0001'; end if;
   if jsonb_array_length(p_views) > 10 then raise exception 'too_many_views' using errcode = 'P0001'; end if;
@@ -264,6 +271,7 @@ language plpgsql stable security definer set search_path = public as $$
 declare
   v_id uuid := public.my_business_id();
 begin
+  perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   return coalesce((select s.settings -> 'saved_views' from public.seller_settings s where s.business_id = v_id), '[]'::jsonb);
 end $$;
