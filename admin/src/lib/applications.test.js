@@ -188,3 +188,13 @@ test("validation matches the edge function's rules", () => {
   assert.equal(validateDecision({ action: "approve", priceOverride: "1200", reason: "Agreed" }), "");
   assert.equal(validateDecision({ action: "return_to_queue" }), "");
 });
+
+test("a status-code request shows when its SMS failed or was never really sent", () => {
+  assert.equal(eventLabel({ type: "otp_requested", data: {} }), "Applicant requested a status code");
+  assert.equal(eventLabel({ type: "otp_requested", data: { sms: "sent" } }), "Applicant requested a status code");
+  assert.equal(
+    eventLabel({ type: "otp_requested", data: { sms: "failed", error: "at_InsufficientBalance" } }),
+    "Applicant requested a status code, but the SMS failed (at_InsufficientBalance)",
+  );
+  assert.match(eventLabel({ type: "otp_requested", data: { sms: "mock" } }), /mock mode/);
+});

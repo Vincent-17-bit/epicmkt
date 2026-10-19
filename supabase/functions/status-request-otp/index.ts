@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone } from "../_shared/validate.ts";
-import { clientIp, corsHeaders, isProduction, json, sha256Hex } from "../_shared/http.ts";
-import { deliverSms } from "../_shared/providers.ts";
+import { clientIp, corsHeaders, json, sha256Hex } from "../_shared/http.ts";
+import { deliverSms, useDevOtp } from "../_shared/providers.ts";
 import { OTP_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -32,16 +32,22 @@ Deno.serve(async (req) => {
   if (!app) return json(GENERIC);
 
   const id = crypto.randomUUID();
-  const code = isProduction() ? String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0") : "123456";
+  const devOtp = useDevOtp();
+  const code = devOtp ? "123456" : String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0");
   await db.from("otp_requests").update({ used: true }).eq("reference_no", ref).eq("phone", phone).eq("used", false);
   const ins = await db.from("otp_requests").insert({
     id, reference_no: ref, phone, code_hash: await sha256Hex(`${id}:${code}`), expires_at: nowPlus(OTP_MINUTES),
   });
   if (ins.error) return json(GENERIC);
-  if (isProduction()) {
+  // The reply stays generic on purpose (it must not reveal whether an application exists), so the outcome of the
+  // SMS is recorded where staff can see it: the application's event log, and the function log. Never the code.
+  let delivery: Record<string, unknown> = { sms: "skipped_dev_code" };
+  if (!devOtp) {
     const sent = await deliverSms(phone, `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`);
+    delivery = sent.ok ? { sms: sent.mock ? "mock" : "sent", providerId: sent.providerId } : { sms: "failed", error: sent.error };
     if (!sent.ok) console.error("otp_sms_failed", sent.error);
+    else if (sent.mock) console.error("otp_sms_mock", "a random code was issued but MESSAGING_MODE is mock, so nothing was sent");
   }
-  await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "otp_requested", data: {} });
+  await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "otp_requested", data: delivery });
   return json(GENERIC);
 });

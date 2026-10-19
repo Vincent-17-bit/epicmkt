@@ -177,7 +177,12 @@ const EVENT_LABELS = {
   payment_submitted: () => "Applicant submitted an M-Pesa code",
   payment_rejected: () => "Payment rejected",
   activated: () => "Activated, business created",
-  otp_requested: () => "Applicant requested a status code",
+  otp_requested: (e) => {
+    const base = "Applicant requested a status code";
+    if (e.data?.sms === "failed") return `${base}, but the SMS failed${e.data.error ? ` (${e.data.error})` : ""}`;
+    if (e.data?.sms === "mock") return `${base} (not sent: messaging is in mock mode)`;
+    return base;
+  },
   session_started: () => "Applicant opened the status page",
 };
 
