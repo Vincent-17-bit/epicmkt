@@ -109,8 +109,8 @@ test("far-future, malformed and unsafe input is refused", async () => {
     [addDays(today, 1), "special", [["08:00", "09:00"], ["10:00", "11:00"], ["12:00", "13:00"], ["14:00", "15:00"]], null, /too_many_intervals/],
     [addDays(today, 1), "special", [["25:00", "26:00"]], null, /invalid_time/],
     [addDays(today, 1), "special", [["8:00", "9:00"]], null, /invalid_time/],
-    [addDays(today, 1), "special", [["12:00", "09:00"]], null, /interval_order/],
-    [addDays(today, 1), "special", [["09:00", "09:00"]], null, /interval_order/],
+    [addDays(today, 1), "special", [["20:00", "02:00"], ["22:00", "23:00"]], null, /intervals_overlap/],
+    [addDays(today, 1), "special", [["09:00", "09:00"], ["10:00", "11:00"]], null, /intervals_overlap/],
     [addDays(today, 1), "special", [["09:00", "12:00"], ["11:00", "14:00"]], null, /intervals_overlap/],
     [addDays(today, 1), "special", [["09:00", "12:00"], ["12:00", "14:00"]], null, /intervals_overlap/],
     [addDays(today, 1), "closed", [], "x".repeat(121), /invalid_note/],
@@ -118,6 +118,15 @@ test("far-future, malformed and unsafe input is refused", async () => {
   ];
   for (const [d, k, i, n, re] of bad) await rejects(c, asA, `select seller_save_exception(null, $1::date, $2, $3::jsonb, $4)`, [d, k, JSON.stringify(i), n], re);
   assert.equal((await list()).length, 0);
+});
+
+test("an overnight interval (end not after start) is accepted and stored as given, sorted by start", async () => {
+  await reset();
+  const e = await save(asA, addDays(today, 2), "special", [["20:00", "02:00"], ["09:00", "12:00"]], "Late night");
+  assert.deepEqual(e.intervals, [["09:00", "12:00"], ["20:00", "02:00"]]);
+  assert.deepEqual((await save(asA, addDays(today, 3), "special", [["09:00", "09:00"]])).intervals, [["09:00", "09:00"]], "end equal to start is a full 24 hours");
+  await rejects(c, asA, `select seller_save_exception(null, $1::date, 'special', '[["20:00","02:00"],["22:00","23:00"]]'::jsonb)`, [addDays(today, 4)], /intervals_overlap/);
+  assert.equal((await list()).length, 2);
 });
 
 test("a closed day ignores any intervals sent with it; a note is plain text stored as given", async () => {
@@ -154,7 +163,7 @@ test("changes are audited without the note text", async () => {
 test("SQL and the shared JS validator agree", async () => {
   const dates = [addDays(today, -1), today, addDays(today, 1), addDays(today, 730), addDays(today, 731), "2026-02-30", "nonsense"];
   const kinds = ["closed", "special", "other"];
-  const intervalSets = [[], [["09:00", "12:00"]], [["09:00", "12:00"], ["13:00", "17:00"]], [["12:00", "09:00"]], [["09:00", "12:00"], ["11:00", "13:00"]], [["24:00", "25:00"]], [["09:00", "10:00"], ["11:00", "12:00"], ["13:00", "14:00"], ["15:00", "16:00"]]];
+  const intervalSets = [[], [["09:00", "12:00"]], [["09:00", "12:00"], ["13:00", "17:00"]], [["12:00", "09:00"]], [["20:00", "02:00"]], [["09:00", "09:00"]], [["20:00", "02:00"], ["22:00", "23:00"]], [["20:00", "02:00"], ["09:00", "12:00"]], [["09:00", "12:00"], ["11:00", "13:00"]], [["24:00", "25:00"]], [["09:00", "10:00"], ["11:00", "12:00"], ["13:00", "14:00"], ["15:00", "16:00"]]];
   const notes = [null, "ok", "x".repeat(121)];
   let n = 0;
   for (const date of dates) for (const kind of kinds) for (const intervals of intervalSets) for (const note of notes) {

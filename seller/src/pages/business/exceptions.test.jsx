@@ -111,15 +111,61 @@ describe("add", () => {
     fireEvent.change(screen.getByLabelText("Interval 1 opens"), { target: { value: "" } });
     await save();
     expect(screen.getByRole("alert")).toHaveTextContent("hours and minutes");
-    setTimes(0, "12:00", "09:00");
-    await save();
-    expect(screen.getByRole("alert")).toHaveTextContent("end after it starts");
     setTimes(0, "09:00", "12:00");
     await user.click(screen.getByRole("button", { name: "Add another interval" }));
     setTimes(1, "11:00", "14:00");
     await save();
     expect(screen.getByRole("alert")).toHaveTextContent("cannot overlap");
     expect(M.state.exceptions).toHaveLength(1);
+  });
+
+  it("explains overnight hours under the intervals and says which day the closing time falls on", async () => {
+    const user = userEvent.setup();
+    await open([]);
+    await screen.findByTestId("empty");
+    const save = () => user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    setDate("2026-10-23");
+    await user.click(screen.getByLabelText("Special hours"));
+    expect(screen.getByText(/Open past midnight\? Set the closing time earlier than the opening time/)).toBeInTheDocument();
+    expect(screen.queryByTestId("overnight-0")).toBeNull();
+    setTimes(0, "20:00", "02:00");
+    expect(screen.getByTestId("overnight-0")).toHaveTextContent("Closes at 02:00 on Sat 24 Oct 2026. The hours after midnight are part of this interval.");
+    setTimes(0, "09:00", "09:00");
+    expect(screen.getByTestId("overnight-0")).toHaveTextContent("Open for 24 hours.");
+    setTimes(0, "09:00", "17:00");
+    expect(screen.queryByTestId("overnight-0")).toBeNull();
+  });
+
+  it("saves an overnight interval and lists it as running into the next day", async () => {
+    const user = userEvent.setup();
+    await open([]);
+    await screen.findByTestId("empty");
+    const save = () => user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    setDate("2026-10-23");
+    await user.click(screen.getByLabelText("Special hours"));
+    setTimes(0, "20:00", "02:00");
+    await save();
+    expect(await screen.findByText("Special hours: 20:00 to 02:00 the next day")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(M.state.exceptions.find((e) => e.date === "2026-10-23")).toMatchObject({ kind: "special", intervals: [["20:00", "02:00"]] });
+  });
+
+  it("refuses a second interval on the same date as an overnight one", async () => {
+    const user = userEvent.setup();
+    await open([]);
+    await screen.findByTestId("empty");
+    const save = () => user.click(screen.getByRole("button", { name: "Save" }));
+    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    setDate("2026-10-23");
+    await user.click(screen.getByLabelText("Special hours"));
+    setTimes(0, "20:00", "02:00");
+    await user.click(screen.getByRole("button", { name: "Add another interval" }));
+    setTimes(1, "22:00", "23:00");
+    await save();
+    expect(screen.getByRole("alert")).toHaveTextContent("cannot overlap");
+    expect(M.state.exceptions).toHaveLength(0);
   });
 
   it("cancel closes the form without saving", async () => {

@@ -24,7 +24,10 @@ export function dayLabel(day) {
   return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
 }
 
-export const describeIntervals = (intervals) => (intervals ?? []).map(([a, b]) => `${a} to ${b}`).join(", ");
+/** An interval whose end is not after its start runs past midnight, to that time on the next day. */
+export const isOvernight = ([start, end]) => end <= start;
+
+export const describeIntervals = (intervals) => (intervals ?? []).map((iv) => `${iv[0]} to ${iv[1]}${isOvernight(iv) ? " the next day" : ""}`).join(", ");
 export const describeException = (e) => (e.kind === "closed" ? "Closed all day" : `Special hours: ${describeIntervals(e.intervals)}`);
 
 /** Returns { ok: true, value } or { ok: false, error, index? } with the same codes as the database. */
@@ -44,10 +47,12 @@ export function validateException({ date, kind, intervals, note }, today) {
     for (let i = 0; i < intervals.length; i++) {
       const iv = intervals[i];
       if (!Array.isArray(iv) || iv.length !== 2 || !TIME.test(iv[0] ?? "") || !TIME.test(iv[1] ?? "")) return { ok: false, error: "invalid_time", index: i };
-      if (iv[0] >= iv[1]) return { ok: false, error: "interval_order", index: i };
     }
     clean = [...intervals].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([a, b]) => [a, b]);
-    for (let i = 1; i < clean.length; i++) if (clean[i][0] <= clean[i - 1][1]) return { ok: false, error: "intervals_overlap", index: i };
+    // An overnight interval (end <= start) occupies the rest of this date, so nothing later the same date may touch it.
+    // The part after midnight belongs to the next date and is not compared with this date's other intervals.
+    const lastMinute = (iv) => (isOvernight(iv) ? "24:00" : iv[1]);
+    for (let i = 1; i < clean.length; i++) if (clean[i][0] <= lastMinute(clean[i - 1])) return { ok: false, error: "intervals_overlap", index: i };
   }
   return { ok: true, value: { date, kind, intervals: clean, note: text || null } };
 }

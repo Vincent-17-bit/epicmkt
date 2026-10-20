@@ -74,3 +74,46 @@ test("hours table rows: Monday to Sunday, each weekday as its next date, excepti
   assert.equal(rows.find((r) => r.day === "wed").changed, false);
   assert.equal(hoursRowsFor(weekly, [], at("2026-10-20", "09:30")).find((r) => r.day === "sun").text, "Closed");
 });
+
+test("overnight special: the after-midnight part belongs to the next date", () => {
+  const ex = [special("2026-10-23", [["20:00", "02:00"]])]; // Fri 23 Oct, 20:00 until 02:00 on Sat 24 Oct
+  const open = (date, time) => isOpenOn(weekly, ex, at(date, time));
+  assert.equal(open("2026-10-23", "19:59"), false, "Friday's weekly 08:00 to 18:00 is replaced, so the evening before 20:00 is closed");
+  assert.equal(open("2026-10-23", "20:00"), true);
+  assert.equal(open("2026-10-23", "23:59"), true);
+  assert.equal(open("2026-10-24", "00:00"), true, "midnight into Saturday, still open");
+  assert.equal(open("2026-10-24", "01:59"), true);
+  assert.equal(open("2026-10-24", "02:00"), false);
+  assert.equal(open("2026-10-24", "08:59"), false, "Saturday's own weekly hours start at 09:00");
+  assert.equal(open("2026-10-24", "09:00"), true);
+  assert.equal(open("2026-10-22", "01:00"), false, "the night before is not affected");
+  assert.deepEqual(closingInfo(weekly, ex, at("2026-10-23", "21:00")), { closesAt: "02:00", opensAt: null });
+  assert.deepEqual(closingInfo(weekly, ex, at("2026-10-24", "00:30")), { closesAt: "02:00", opensAt: null });
+  assert.deepEqual(closingInfo(weekly, ex, at("2026-10-23", "12:00")), { closesAt: null, opensAt: { day: "fri", time: "20:00", date: "2026-10-23" } });
+});
+
+test("overnight: the next date's own special exception takes over at its first interval's start", () => {
+  const ex = [special("2026-10-23", [["20:00", "02:00"]]), special("2026-10-24", [["10:00", "12:00"]])];
+  const open = (time) => isOpenOn(weekly, ex, at("2026-10-24", time));
+  assert.deepEqual(["00:30", "01:59", "02:00", "09:59", "10:00", "11:59", "12:00"].map(open), [true, true, false, false, true, true, false]);
+  assert.deepEqual(closingInfo(weekly, ex, at("2026-10-24", "05:00")), { closesAt: null, opensAt: { day: "sat", time: "10:00", date: "2026-10-24" } });
+});
+
+test("overnight: a closed next date cuts the carry-over at midnight, and the status says so", () => {
+  const ex = [special("2026-10-23", [["20:00", "02:00"]]), closed("2026-10-24")];
+  assert.equal(isOpenOn(weekly, ex, at("2026-10-23", "23:59")), true);
+  assert.equal(isOpenOn(weekly, ex, at("2026-10-24", "00:30")), false);
+  assert.deepEqual(closingInfo(weekly, ex, at("2026-10-23", "21:00")), { closesAt: "00:00", opensAt: null });
+});
+
+test("overnight: 09:00 to 09:00 is a full 24 hours, and a weekly overnight slot carries into the next weekday", () => {
+  const day = [special("2026-10-24", [["09:00", "09:00"]])]; // Sat 24 Oct; Sunday has no weekly hours
+  const stamps = [["2026-10-24", "08:30"], ["2026-10-24", "09:00"], ["2026-10-24", "23:00"], ["2026-10-25", "08:59"], ["2026-10-25", "09:00"]];
+  assert.deepEqual(stamps.map(([d, t]) => isOpenOn(weekly, day, at(d, t))), [false, true, true, true, false]);
+  const club = { fri: ["22:00", "04:00"] };
+  const openClub = (date, time) => isOpenOn(club, [], at(date, time));
+  assert.equal(openClub("2026-10-23", "23:00"), true);
+  assert.equal(openClub("2026-10-24", "03:00"), true, "Friday's slot is still open early on Saturday");
+  assert.equal(openClub("2026-10-24", "04:00"), false);
+  assert.equal(openClub("2026-10-23", "03:00"), false, "early Friday is Thursday's night, and Thursday has no hours");
+});

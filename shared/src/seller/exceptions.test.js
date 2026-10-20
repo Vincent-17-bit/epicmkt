@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { EXCEPTION_LIMIT, addDays, dayLabel, describeException, isRealDate, upcomingExceptions, validateException } from "./exceptions.js";
+import { EXCEPTION_LIMIT, addDays, dayLabel, describeException, isOvernight, isRealDate, upcomingExceptions, validateException } from "./exceptions.js";
 
 const today = "2026-10-12";
 const v = (o) => validateException({ date: "2026-10-20", kind: "closed", intervals: [], note: null, ...o }, today);
@@ -31,9 +31,24 @@ test("special hours: sorted intervals, at most 3, no overlap, start before end",
   assert.equal(v({ kind: "special", intervals: [["08:00", "09:00"], ["10:00", "11:00"], ["12:00", "13:00"], ["14:00", "15:00"]] }).error, "too_many_intervals");
   assert.equal(v({ kind: "special", intervals: [["9:00", "10:00"]] }).error, "invalid_time");
   assert.equal(v({ kind: "special", intervals: [["", ""]] }).error, "invalid_time");
-  assert.equal(v({ kind: "special", intervals: [["10:00", "09:00"]] }).error, "interval_order");
   assert.deepEqual(v({ kind: "special", intervals: [["09:00", "12:00"], ["11:00", "14:00"]] }), { ok: false, error: "intervals_overlap", index: 1 });
   assert.equal(v({ kind: "special", intervals: [["09:00", "12:00"], ["12:00", "14:00"]] }).error, "intervals_overlap");
+});
+
+test("overnight: an end that is not after the start means until that time the next day", () => {
+  assert.equal(isOvernight(["20:00", "02:00"]), true);
+  assert.equal(isOvernight(["09:00", "09:00"]), true);
+  assert.equal(isOvernight(["09:00", "17:00"]), false);
+  assert.deepEqual(v({ kind: "special", intervals: [["20:00", "02:00"]] }).value.intervals, [["20:00", "02:00"]]);
+  assert.equal(v({ kind: "special", intervals: [["10:00", "09:00"]] }).ok, true, "the old interval_order refusal is gone");
+  assert.equal(v({ kind: "special", intervals: [["09:00", "09:00"]] }).ok, true, "start equal to end is 24 hours");
+  assert.deepEqual(v({ kind: "special", intervals: [["20:00", "02:00"], ["09:00", "12:00"]] }).value.intervals, [["09:00", "12:00"], ["20:00", "02:00"]], "sorted by start, no overlap");
+  // An overnight interval fills the rest of its date, so anything that starts later the same date overlaps it.
+  assert.deepEqual(v({ kind: "special", intervals: [["20:00", "02:00"], ["22:00", "23:00"]] }), { ok: false, error: "intervals_overlap", index: 1 });
+  assert.equal(v({ kind: "special", intervals: [["20:00", "02:00"], ["20:00", "23:00"]] }).error, "intervals_overlap");
+  assert.equal(v({ kind: "special", intervals: [["09:00", "09:00"], ["10:00", "11:00"]] }).error, "intervals_overlap");
+  assert.equal(v({ kind: "special", intervals: [["8:00", "02:00"]] }).error, "invalid_time");
+  assert.equal(describeException({ kind: "special", intervals: [["20:00", "02:00"]] }), "Special hours: 20:00 to 02:00 the next day");
 });
 
 test("date and note limits", () => {

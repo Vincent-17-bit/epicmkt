@@ -26,8 +26,8 @@ const MESSAGES = {
   intervals_required: "Add at least one opening interval, or choose Closed all day.",
   too_many_intervals: "You can add up to 3 intervals for a day.",
   invalid_time: "Enter each time as hours and minutes.",
-  interval_order: "Each interval must end after it starts.",
-  intervals_overlap: "Intervals cannot overlap or touch. Merge them into one.",
+  interval_order: "Each interval must end after it starts.", // no longer raised: an earlier end means "until the next day"
+  intervals_overlap: "Intervals cannot overlap or touch. Merge them into one. An interval that runs past midnight fills the rest of its day, so nothing else can start later that day.",
   invalid_note: "Keep the note to 120 characters of plain text.",
   limit_reached: "You have reached the limit of 60 upcoming exceptions. Delete one you no longer need, then try again.",
   invalid_discount: "Enter a valid discount: 1 to 99 percent, or an amount above 0.",

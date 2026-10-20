@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
-  addDays, dayLabel, describeException, upcomingExceptions, validateException,
+  addDays, dayLabel, describeException, isOvernight, upcomingExceptions, validateException,
 } from "@epicmkt/shared";
 import { dayOf } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
@@ -14,6 +14,7 @@ import styles from "./exceptions.module.css";
 
 export const UNDO_MS = 8000;
 const todayOf = () => dayOf(now());
+const nextDayLabel = (date) => (date ? dayLabel(addDays(date, 1)) : "the next day");
 
 function ExceptionForm({ initial, existing, onSave, onCancel }) {
   const today = todayOf();
@@ -66,8 +67,12 @@ function ExceptionForm({ initial, existing, onSave, onCancel }) {
       {kind === "special" && (
         <fieldset className={styles.fieldset}>
           <legend>Opening intervals (up to {EXCEPTION_MAX_INTERVALS})</legend>
+          <p className={styles.count} id="exc-overnight-hint">
+            Open past midnight? Set the closing time earlier than the opening time, for example 20:00 to 02:00. The hours after midnight count for the next day.
+          </p>
           {intervals.map((iv, i) => (
-            <div key={i} className={styles.interval}>
+            <div key={i}>
+            <div className={styles.interval}>
               <div className={ui.field}>
                 <label className={ui.label} htmlFor={`exc-open-${i}`}>Interval {i + 1} opens</label>
                 <input id={`exc-open-${i}`} type="time" className={ui.input} value={iv[0]} onChange={(e) => setTime(i, 0, e.target.value)} />
@@ -77,6 +82,12 @@ function ExceptionForm({ initial, existing, onSave, onCancel }) {
                 <input id={`exc-close-${i}`} type="time" className={ui.input} value={iv[1]} onChange={(e) => setTime(i, 1, e.target.value)} />
               </div>
               <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={intervals.length === 1} onClick={() => setIntervals(intervals.filter((_, n) => n !== i))} aria-label={`Remove interval ${i + 1}`}>Remove</button>
+            </div>
+            {iv[0] && iv[1] && isOvernight(iv) && (
+              <p className={styles.count} data-testid={`overnight-${i}`}>
+                Closes at {iv[1]} on {nextDayLabel(date)}. {iv[0] === iv[1] ? "Open for 24 hours." : "The hours after midnight are part of this interval."}
+              </p>
+            )}
             </div>
           ))}
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} style={{ justifySelf: "start" }} disabled={intervals.length >= EXCEPTION_MAX_INTERVALS} onClick={() => setIntervals([...intervals, ["", ""]])}>Add another interval</button>
