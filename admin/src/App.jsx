@@ -14,6 +14,9 @@ import LoginPage from "./pages/LoginPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import RequireAdmin from "./auth/RequireAdmin.jsx";
 import RoleGuard from "./routes/RoleGuard.jsx";
+import ModerationPage from "./pages/ModerationPage.jsx";
+import ApprovalsPage from "./pages/ApprovalsPage.jsx";
+import ExpiryRadarPage from "./pages/ExpiryRadarPage.jsx";
 import BusinessDetailPage from "./pages/business/BusinessDetailPage.jsx";
 
 export default function App() {
@@ -27,6 +30,9 @@ export default function App() {
           <Route path="applications/:id" element={<RoleGuard permission="applications.view"><ApplicationDetailPage /></RoleGuard>} />
           <Route path="businesses" element={<RoleGuard permission="businesses.view"><BusinessesPage /></RoleGuard>} />
           <Route path="businesses/:id" element={<RoleGuard permission="businesses.view"><BusinessDetailPage /></RoleGuard>} />
+          <Route path="moderation" element={<RoleGuard permission="moderation.view"><ModerationPage /></RoleGuard>} />
+          <Route path="approvals" element={<RoleGuard permission="approvals.view"><ApprovalsPage /></RoleGuard>} />
+          <Route path="expiry-radar" element={<RoleGuard permission="expiry.view"><ExpiryRadarPage /></RoleGuard>} />
           <Route path="payments" element={<RoleGuard permission="payments.view"><PaymentsPage /></RoleGuard>} />
           <Route path="messages" element={<RoleGuard permission="messages.view"><MessagesPage /></RoleGuard>} />
           <Route path="flash-sales" element={<RoleGuard permission="flash.view"><FlashSalesPage /></RoleGuard>} />

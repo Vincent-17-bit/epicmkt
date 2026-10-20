@@ -29,6 +29,10 @@ export const ACTION_TEXT = {
   invalid_attachment_path: "A file could not be attached. Attach it again.",
   invalid_attachment_name: "A file name is not valid.",
   attachments_limit: "You can attach up to 3 files.",
+  already_decided: "Someone has already decided this request. Reload to see the result.",
+  invalid_category: "That category is no longer available, so the change cannot be approved.",
+  invalid_field: "This kind of change cannot be applied.",
+  invalid_state: "That filter is not recognised.",
 };
 
 // Turns whatever supabase-js hands back (a PostgREST error, a storage error, a thrown Error) into an ApiError

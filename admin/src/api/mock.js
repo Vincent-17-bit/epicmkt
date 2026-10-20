@@ -6,6 +6,10 @@ import { normalizeCounts } from "../lib/counts.js";
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export {
+  bulkSetItemsHidden, decideChangeRequest, getExpiryRadar, getModerationCounts, listCatalog, listChangeRequests, listFlags, listReports,
+  raiseFlag, setModerationFlag, setReportStatus,
+} from "./mockModeration.js";
+export {
   ackMessagesDelivered, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
 } from "./mockMessages.js";
 

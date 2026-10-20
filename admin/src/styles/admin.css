@@ -1454,3 +1454,15 @@ th {
 .biz-row-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; flex-shrink: 0; }
 .dt__link { color: inherit; text-decoration: none; }
 .dt__link:hover { text-decoration: underline; }
+
+/* Shared by Moderation, Approvals and the Expiry Radar */
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin: 12px 0; }
+.toolbar__bulk { display: flex; gap: 8px; align-items: center; margin-left: auto; }
+.muted { color: var(--admin-muted, #667085); font-size: 0.85em; }
+.text-danger { color: var(--admin-danger, #b42318); font-weight: 600; }
+.row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.pager { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+.load-error { padding: 12px 0; }
+.radar-summary { margin: 8px 0 16px; }
+.radar-group { margin-top: 20px; }
+.radar-group h4 { margin: 0 0 2px; display: flex; gap: 8px; align-items: center; }

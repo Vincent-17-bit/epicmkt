@@ -554,3 +554,29 @@ export const addBusinessNote = ({ id, body, pinned = false }) =>
 export const setBusinessNotePinned = ({ noteId, pinned }) =>
   detailRpc("admin_set_business_note_pinned", { p_note_id: noteId, p_pinned: pinned });
 export const deleteBusinessNote = (noteId) => detailRpc("admin_delete_business_note", { p_note_id: noteId });
+
+// ---- Moderation, catalogue, approvals and the Expiry Radar (migration 0024_admin_moderation_approvals.sql) ------
+
+const pageArgs = ({ page = 0, pageSize = 50 } = {}) => ({ p_limit: pageSize, p_offset: page * pageSize });
+
+export const getModerationCounts = () => detailRpc("admin_moderation_counts", {});
+export const listFlags = ({ status = "open", search = "", ...paging } = {}) =>
+  detailRpc("admin_flags_query", { p_status: status, p_search: search.trim() || null, ...pageArgs(paging) });
+export const listReports = ({ status = "open", search = "", ...paging } = {}) =>
+  detailRpc("admin_reports_query", { p_status: status, p_search: search.trim() || null, ...pageArgs(paging) });
+export const setReportStatus = ({ id, status, note = null }) => detailRpc("admin_set_report_status", { p_id: id, p_status: status, p_note: note });
+export const raiseFlag = ({ businessId, itemId = null, reason, message, dueDays = 3 }) =>
+  detailRpc("admin_raise_flag", { p_business: businessId, p_item: itemId, p_reason: reason, p_message: message, p_due_days: dueDays });
+
+export const listCatalog = ({ search = "", state = "all", category = "", ...paging } = {}) =>
+  detailRpc("admin_catalog_query", { p_search: search.trim() || null, p_state: state, p_category: category || null, ...pageArgs(paging) });
+export const bulkSetItemsHidden = ({ ids, hidden, reason = null }) =>
+  detailRpc("admin_bulk_set_items_hidden", { p_ids: ids, p_hidden: hidden, p_reason: reason });
+
+export const listChangeRequests = ({ status = "pending", ...paging } = {}) =>
+  detailRpc("admin_change_requests_query", { p_status: status, ...pageArgs(paging) });
+export const decideChangeRequest = ({ id, approve, note = null }) =>
+  detailRpc("admin_decide_change_request", { p_id: id, p_approve: approve, p_note: note });
+
+export const getExpiryRadar = ({ days = 30 } = {}) => detailRpc("admin_expiry_radar", { p_days: days });
+export const setModerationFlag = setFlagStatus;
