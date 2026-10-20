@@ -14,7 +14,7 @@ export class Json {
 export const json = (value: unknown) => new Json(value);
 
 export type SeedCategory = { id: string; name: string; grp?: string; tier?: string };
-export type SeedPlan = { category_id: string; plan_key: "standard" | "premium"; price_kes: number; items_limit: number };
+export type SeedPlan = { category_id: string; plan_key: "standard" | "premium"; price_kes: number; items_limit: number | null };
 export type SeedInput = { seed?: number; now?: Date; categories: SeedCategory[]; plans: SeedPlan[] };
 
 /** Insert order (parents first) and the order `--reset` deletes in is the reverse. */
@@ -167,7 +167,7 @@ export function buildSeed(input: SeedInput): SeedData {
       deleted_at: scenario === "deleted" ? iso(daysAgo(now, int(1, 15))) : null,
       created_at: iso(created),
     };
-    return { id, row, scenario, limit: p.items_limit, price: p.price_kes, paidDay, catId: cat.id, plan };
+    return { id, row, scenario, limit: p.items_limit ?? Number.POSITIVE_INFINITY, price: p.price_kes, paidDay, catId: cat.id, plan };
   });
   t.businesses = bizs.map((b) => b.row);
   const alive = bizs.filter((b) => b.scenario !== "deleted");
