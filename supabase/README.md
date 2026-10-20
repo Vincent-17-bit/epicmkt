@@ -143,6 +143,71 @@ supabase functions deploy daily-lifecycle --no-verify-jwt
 - Admin and audit access are enforced using `public.is_admin()` and `public.has_role()`.
 - Realtime is enabled for the admin dashboard tables.
 
+## Opening-hours exceptions
+
+One-off changes to a shop's weekly hours: a day it is closed, or a day it opens at different times. They are stored in
+`businesses.exceptions` (jsonb, default `[]`), added in `0004_core.sql`, written by the functions in
+`0007_exceptions.sql`, widened for overnight hours in `0025_exception_overnight.sql` and shown to customers by
+`0024_public_exceptions.sql`.
+
+### Shape
+
+```json
+[
+  { "id": "3f0c2a52-…", "date": "2026-12-25", "kind": "closed", "intervals": [], "note": "Christmas Day" },
+  { "id": "9b1d7e10-…", "date": "2026-12-31", "kind": "special", "intervals": [["09:00", "13:00"], ["20:00", "02:00"]], "note": null }
+]
+```
+
+- `date` is a Nairobi calendar date, `YYYY-MM-DD`. There is at most one exception per date (`date_taken`).
+- `kind` is `closed` (closed all day, `intervals` is always `[]`) or `special` (open only inside `intervals`).
+- `intervals` are `["HH:MM", "HH:MM"]` pairs, 24-hour, 1 to 3 of them for a `special` day, sorted by start and not
+  overlapping or touching. An interval whose end is not after its start runs past midnight: `["20:00", "02:00"]` is
+  open from 20:00 until 02:00 the next day, and `["09:00", "09:00"]` is 24 hours. The part after midnight belongs to the
+  next date. A `closed` exception on that next date cuts it at midnight; a `special` one takes over at its first
+  interval's start. An overnight interval fills the rest of its own date, so no other interval on that date may start
+  later.
+- `note` is optional plain text, at most 120 characters, no control characters, trimmed (blank becomes `null`).
+  Customers see it next to the hours for that date. Clients must render it as text, never as HTML.
+- The list is kept oldest first, sorted by date.
+
+### Limits and the date window
+
+- At most **60 upcoming** exceptions per business (`limit_reached:exceptions`). Editing an existing one at the limit
+  still works.
+- A date may be today (Nairobi) or up to **730 days** ahead. Past dates are refused (`date_in_past`), as are dates beyond
+  the window (`date_too_far`).
+- Past dates are removed on every write, so the stored list only ever holds today and upcoming dates.
+- Customers get today and upcoming only. `public_exceptions()` filters again on read, so an old one that is still stored
+  never reaches the customer site.
+
+### Functions (`0007_exceptions.sql`)
+
+All three are `security definer` and run only for `authenticated` and `service_role`, never `anon`.
+
+| Function | What it does |
+| --- | --- |
+| `seller_save_exception(p_id uuid, p_date date, p_kind text, p_intervals jsonb default '[]', p_note text default null)` | Adds an exception (`p_id` null) or edits one, and returns it. Passing the id of a deleted one puts it back, which is how Undo works. |
+| `seller_delete_exception(p_id uuid)` | Removes one. Returns `true` if it existed, `false` if not, so deleting twice is harmless. |
+| `exception_normalize(p_date, p_kind, p_intervals, p_note, p_today)` | The validation both functions use. It returns the cleaned exception or raises one of the error codes below. `shared/src/seller/exceptions.js` has the same rules for instant feedback in the seller app, and `supabase/tests/exceptions.test.mjs` checks the two agree. |
+
+Error codes: `invalid_date`, `date_in_past`, `date_too_far`, `invalid_kind`, `invalid_note`, `intervals_required`,
+`too_many_intervals`, `invalid_time`, `intervals_overlap`, `date_taken`, `limit_reached:exceptions`, `not_a_seller`,
+`account_suspended`. Changes are written to `audit_log` as `exception_added`, `exception_updated` and
+`exception_deleted` with the date and kind, never the note text.
+
+### Who can read and write it
+
+| Who | Read | Write |
+| --- | --- | --- |
+| The seller | Their own list, through the `seller reads own business` policy | Only through the two seller functions. Writing the column directly updates nothing, and `seller_update_profile` refuses an `exceptions` field. Paused and expired sellers can still use them; suspended sellers cannot. |
+| Another seller | Nothing | Nothing |
+| Admins | All of it, through the `admin all businesses` policy | The same policy |
+| Customers (`anon`, and signed-in people browsing) | Not the `businesses` table. Only `public_businesses.exceptions` and `public_flash_sales.business_exceptions`, today and upcoming, with just `id`, `date`, `kind`, `intervals` and `note` | Nothing |
+
+The customer site and the seller Preview both use `isOpenOn`, `closingInfo` and `hoursRowsFor` from
+`shared/src/utils.js`, so "open now", "opens at" and the hours table cannot disagree.
+
 ## Automatic M-Pesa payments (Paybill)
 
 Everyone pays the same Paybill with an account number and an amount. **Nobody types an M-Pesa code.** The account number is a
