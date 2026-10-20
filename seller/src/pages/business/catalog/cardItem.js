@@ -21,7 +21,10 @@ export const priceText = (item) => {
   return kes(item.price);
 };
 
-export const customerUrl = (slug, id) => `${import.meta.env?.VITE_CLIENT_URL ?? ""}/b/${slug}?item=${id}`;
+export const customerUrl = (slug, id) => {
+  const base = String(import.meta.env?.VITE_CLIENT_URL ?? "").trim().replace(/\/+$/, "");
+  return base ? `${base}/b/${slug}?item=${id}` : null;
+};
 
 export const readDevicePref = (key, fallback, allowed) => {
   let stored = null;

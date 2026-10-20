@@ -103,6 +103,7 @@ export function Actions({ item, shop, selected, onSelect, onEdit, onDuplicate, o
   const priced = ["fixed", "from", "range"].includes(item.priceType) && typeof item.price === "number";
   const showing = item.visibility === "showing";
   const canShow = item.visible && !item.draft ? "Hide" : "Show";
+  const viewUrl = customerUrl(shop.slug, item.id);
   return (
     <span className={styles.actions}>
       <label className={styles.pick}>
@@ -126,10 +127,10 @@ export function Actions({ item, shop, selected, onSelect, onEdit, onDuplicate, o
                 {canShow}
               </button>
               {priced && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onConfirm(item); }} disabled={locked || busy}>Confirm price</button>}
-              {showing && shop.live ? (
-                <a role="menuitem" className={styles.menuItem} href={customerUrl(shop.slug, item.id)} target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
+              {showing && shop.live && viewUrl ? (
+                <a role="menuitem" className={styles.menuItem} href={viewUrl} target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
               ) : (
-                <button type="button" role="menuitem" className={styles.menuItem} disabled title="Only items showing to customers can be viewed">View as customer</button>
+                <button type="button" role="menuitem" className={styles.menuItem} disabled title={showing && shop.live ? "The customer site address is not set up yet." : "Only items showing to customers can be viewed"}>View as customer</button>
               )}
               {canMove && (
                 <>

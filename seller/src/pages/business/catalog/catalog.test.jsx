@@ -53,6 +53,7 @@ beforeEach(() => {
   try { localStorage.clear(); } catch { /* none */ }
 });
 afterEach(() => {
+  vi.unstubAllEnvs();
   window.matchMedia = realMatchMedia;
   vi.useRealTimers();
 });
@@ -120,9 +121,17 @@ describe("listing cards and summary", () => {
   });
 
   it("links View as customer to the shop page for the item", async () => {
+    vi.stubEnv("VITE_CLIENT_URL", "https://shop.test/");
     await open();
     await ready();
-    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toHaveAttribute("href", "/b/demo-shop?item=it-fade");
+    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toHaveAttribute("href", "https://shop.test/b/demo-shop?item=it-fade");
+  });
+
+  it("disables View as customer when the customer site address is not set", async () => {
+    vi.stubEnv("VITE_CLIENT_URL", "");
+    await open();
+    await ready();
+    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toBeDisabled();
   });
 });
 
