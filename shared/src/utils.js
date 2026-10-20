@@ -185,6 +185,8 @@ export function weekSchedule(hours, exceptions, date) {
 const WEEK_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const DAY_LABELS = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
 
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /** "13:05" -> "1:05 PM". */
 export const formatClock = (time) => {
   const [h, m] = time.split(":").map(Number);
@@ -193,8 +195,8 @@ export const formatClock = (time) => {
 
 /**
  * Rows for the "Opening hours" table, Monday to Sunday, for the coming 7 days so each weekday is its next date.
- * { day, name, date, today, text, changed, note }: `changed` is true when an exception replaces the weekly hours
- * for that date, and `note` is that exception's note (plain text) or null.
+ * { day, name, date, dateLabel, today, text, changed, note }: `changed` is true when an exception replaces the weekly
+ * hours for that date, `dateLabel` is that date as "20 Oct", and `note` is the exception's note (plain text) or null.
  */
 export function hoursRowsFor(hours, exceptions, date) {
   return weekSchedule(hours, exceptions, date)
@@ -202,6 +204,7 @@ export function hoursRowsFor(hours, exceptions, date) {
       day: d.day,
       name: DAY_LABELS[d.day],
       date: d.date,
+      dateLabel: `${Number(d.date.slice(8))} ${MONTH_SHORT[Number(d.date.slice(5, 7)) - 1]}`,
       today: d.today,
       text: d.intervals.length ? d.intervals.map(([a, b]) => `${formatClock(a)} to ${formatClock(b)}`).join(", ") : "Closed",
       changed: Boolean(d.exception),

@@ -27,3 +27,17 @@
 .today th {
   font-weight: 700;
 }
+
+.date {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.note {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}

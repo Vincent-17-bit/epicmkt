@@ -99,6 +99,18 @@ describe("shop preview", () => {
       expect(within(within(page).getByText("Tuesday").closest("tr")).getByText("10:00 AM to 12:00 PM, 3:00 PM to 5:00 PM")).toBeInTheDocument();
     });
 
+    it("shows the note next to the hours for that date, as plain text", async () => {
+      freezeTuesday();
+      const note = "<b>Back</b> Wednesday & thanks";
+      await open(() => api.saveException({ date: "2026-10-20", kind: "closed", note }));
+      const page = await screen.findByTestId("shop-preview");
+      const row = within(page).getByText("Tuesday").closest("tr");
+      expect(within(row).getByText("20 Oct")).toBeInTheDocument();
+      expect(within(row).getByText(note)).toBeInTheDocument();
+      expect(row.querySelector("b")).toBeNull();
+      expect(within(within(page).getByText("Wednesday").closest("tr")).queryByText(note)).toBeNull();
+    });
+
     it("opens the shop on a Sunday the weekly hours say is closed", async () => {
       freezeTuesday();
       await open(() => api.saveException({ date: "2026-10-25", kind: "special", intervals: [["10:00", "14:00"]] }));
