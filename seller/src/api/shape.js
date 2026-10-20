@@ -70,6 +70,19 @@ export const catalogItem = (i) => ({
   inFlashSale: !!i.in_flash_sale,
 });
 
+const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;
+
+export const preview = (b, { categoryName, catalog: c, flashSales, nowMs }) => ({
+  shop: {
+    slug: b.slug, name: b.name, tagline: b.tagline ?? "", description: b.description ?? "", planKey: b.plan_key, status: b.status,
+    live: c.shop.live, verified: b.verification_level === "verified", county: b.county ?? "", town: b.town ?? "", address: b.address ?? "",
+    lat: b.lat ?? null, lng: b.lng ?? null, phone: b.phone ?? null, whatsapp: b.whatsapp ?? null, socials: b.socials ?? {}, hours: b.hours ?? {},
+    tags: b.tags ?? [], logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null, categoryName: categoryName ?? "",
+  },
+  items: c.items.filter(customerSees).sort((x, y) => x.sort - y.sort || Date.parse(y.createdAt) - Date.parse(x.createdAt)),
+  flashSales: flashSales.filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs && Date.parse(s.endsAt) > nowMs),
+});
+
 export const catalog = (r) => ({
   shop: { slug: r.shop.slug, status: r.shop.status, live: !!r.shop.live, planKey: r.shop.plan_key, itemsLimit: r.shop.items_limit ?? null },
   items: (r.items ?? []).map(catalogItem),

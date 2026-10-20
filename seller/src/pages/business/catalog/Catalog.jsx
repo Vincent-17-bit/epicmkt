@@ -383,7 +383,6 @@ export default function Catalog() {
                       <Row
                         key={item.id}
                         item={item}
-                        shop={shop}
                         selected={selected.has(item.id)}
                         handlers={handlers}
                         canMove={canMove}

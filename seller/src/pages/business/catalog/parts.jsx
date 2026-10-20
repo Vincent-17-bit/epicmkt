@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsis, faFlag } from "@fortawesome/free-solid-svg-icons";
 import { optionLabel, AVAILABILITY_OPTIONS } from "@epicmkt/shared";
-import { customerUrl } from "./cardItem.js";
 import styles from "./catalog.module.css";
 
 export const ribbonOf = (item) => {
@@ -97,13 +96,11 @@ function Menu({ label, children }) {
   );
 }
 
-export function Actions({ item, shop, selected, onSelect, onEdit, onDuplicate, onToggle, onConfirm, onMove, canMove, isFirst, isLast, busy }) {
+export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggle, onConfirm, onMove, canMove, isFirst, isLast, busy }) {
   const locked = item.removed;
   const adminHidden = item.visibility === "hidden_admin";
   const priced = ["fixed", "from", "range"].includes(item.priceType) && typeof item.price === "number";
-  const showing = item.visibility === "showing";
   const canShow = item.visible && !item.draft ? "Hide" : "Show";
-  const viewUrl = customerUrl(shop.slug, item.id);
   return (
     <span className={styles.actions}>
       <label className={styles.pick}>
@@ -127,11 +124,7 @@ export function Actions({ item, shop, selected, onSelect, onEdit, onDuplicate, o
                 {canShow}
               </button>
               {priced && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onConfirm(item); }} disabled={locked || busy}>Confirm price</button>}
-              {showing && shop.live && viewUrl ? (
-                <a role="menuitem" className={styles.menuItem} href={viewUrl} target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
-              ) : (
-                <button type="button" role="menuitem" className={styles.menuItem} disabled title={showing && shop.live ? "The customer site address is not set up yet." : "Only items showing to customers can be viewed"}>View as customer</button>
-              )}
+              <a role="menuitem" className={styles.menuItem} href="/business/preview" target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
               {canMove && (
                 <>
                   <button type="button" role="menuitem" className={styles.menuItem} onClick={() => onMove(item.id, -1)} disabled={isFirst || busy} aria-label={`Move ${item.name} up`}>Move up</button>

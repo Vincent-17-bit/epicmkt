@@ -117,21 +117,14 @@ describe("listing cards and summary", () => {
     expect(screen.getByTestId("shop-not-live")).toHaveTextContent("Your shop is not live");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("0 of 6 items are showing to customers");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("5 not showing because your shop is not live");
-    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toBeDisabled();
   });
 
-  it("links View as customer to the shop page for the item", async () => {
-    vi.stubEnv("VITE_CLIENT_URL", "https://shop.test/");
+  it("opens the shop preview from View as customer", async () => {
     await open();
     await ready();
-    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toHaveAttribute("href", "https://shop.test/b/demo-shop?item=it-fade");
-  });
-
-  it("disables View as customer when the customer site address is not set", async () => {
-    vi.stubEnv("VITE_CLIENT_URL", "");
-    await open();
-    await ready();
-    expect(within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ })).toBeDisabled();
+    const link = within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ });
+    expect(link).toHaveAttribute("href", "/business/preview");
+    expect(link).toHaveAttribute("target", "_blank");
   });
 });
 

@@ -18,6 +18,7 @@ export const SELLER_API = [
   "itemSignals",
   "finalizeMedia",
   "uploadItemPhoto",
+  "getShopPreview",
   "removeItemPhoto",
   "exportData",
   "getSubscription",

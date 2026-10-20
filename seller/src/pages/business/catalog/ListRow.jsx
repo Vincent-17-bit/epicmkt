@@ -3,7 +3,7 @@ import { priceText } from "./cardItem.js";
 import { Actions, Chips, Ribbon, Signals } from "./parts.jsx";
 import styles from "./catalog.module.css";
 
-export default function ListRow({ item, shop, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
+export default function ListRow({ item, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
   const src = mediaUrl(item.imagePaths?.[0]);
   return (
     <li
@@ -28,7 +28,6 @@ export default function ListRow({ item, shop, selected, handlers, canMove, isFir
       <Signals item={item} />
       <Actions
         item={item}
-        shop={shop}
         selected={selected}
         busy={busy}
         canMove={canMove}

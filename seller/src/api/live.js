@@ -242,6 +242,17 @@ const itemRow = (f) => ({
   name: f.name, description: f.description || null, section: f.section || null, price_type: f.priceType, price: f.price, price_max: f.priceMax ?? null,
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
 });
+export const getShopPreview = async () => {
+  const [b, catalog, flashSales, server] = await Promise.all([
+    rows(need().from("businesses").select("id, slug, name, category_id, plan_key, status, verification_level, tagline, description, phone, whatsapp, socials, county, town, address, lat, lng, logo_path, cover_path, tags, hours").maybeSingle()),
+    getCatalog(),
+    listFlashSales(),
+    getServerTime(),
+  ]);
+  if (!b) throw new ApiError("not_a_seller");
+  const category = await rows(need().from("categories").select("name").eq("id", b.category_id).maybeSingle());
+  return shape.preview(b, { categoryName: category?.name, catalog, flashSales, nowMs: Date.parse(server.now) });
+};
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });

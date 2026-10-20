@@ -3,7 +3,7 @@ import { cardItemOf } from "./cardItem.js";
 import { Actions, Chips, Ribbon, Signals } from "./parts.jsx";
 import styles from "./catalog.module.css";
 
-export default function ListingCard({ item, shop, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
+export default function ListingCard({ item, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
   const overlay = (
     <>
       <span className={styles.overlayTop}><span /><Signals item={item} /></span>
@@ -16,7 +16,6 @@ export default function ListingCard({ item, shop, selected, handlers, canMove, i
   const quickActions = (
     <Actions
       item={item}
-      shop={shop}
       selected={selected}
       busy={busy}
       canMove={canMove}
