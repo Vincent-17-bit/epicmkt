@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
+import { usePermissions } from "../hooks/usePermissions.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import { canReview, describeError } from "../lib/applications.js";
@@ -13,10 +14,12 @@ export const ACTIVITY_KEY = ["admin-activity"];
 export default function CommandCenterPage() {
   const navigate = useNavigate();
   const { admin } = useAuth();
+  const { can, why } = usePermissions();
   const { data, isPending, isError, error, refetch, isFetching } = useAdminCounts();
   const activity = useQuery({
     queryKey: ACTIVITY_KEY,
     queryFn: () => api.getAdminActivity({ limit: 15 }),
+    enabled: can("activity.view"),
     refetchInterval: 60_000,
     placeholderData: (previous) => previous,
   });
@@ -97,7 +100,9 @@ export default function CommandCenterPage() {
           <div className="panel__header">
             <h3>Live activity</h3>
           </div>
-          {activity.isPending ? (
+          {!can("activity.view") ? (
+            <p className="muted">{why("activity.view")}</p>
+          ) : activity.isPending ? (
             <p className="muted">Loading activity</p>
           ) : activity.isError && !activity.data ? (
             <div className="banner banner--error" role="alert">

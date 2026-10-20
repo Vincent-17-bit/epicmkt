@@ -1,15 +1,19 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { configError, isLive, supabase } from "../lib/supabaseClient.js";
+import { mfaStage } from "./mfa.js";
 
 const AuthContext = createContext(null);
 
 const DEMO_ADMIN = { userId: "demo", role: "owner", email: null, displayName: "Demo admin" };
 const IDLE = { userId: null, state: "idle", admin: null, message: null };
 const NOT_CONFIGURED = { error: new Error(configError ?? "Supabase is not configured.") };
+const NO_AAL = { userId: null, current: null, next: null, failed: false };
 
-// status: loading | signedOut | recovering | admin | error
-// "admin" means a Supabase session exists AND this user has a row in public.admins.
+// status: loading | signedOut | recovering | needsEnrol | needsChallenge | admin | error
+// "admin" means a Supabase session exists, this user has a row in public.admins, AND the session has passed
+// the authenticator (TOTP) step. "needsEnrol" = admin without an authenticator yet; "needsChallenge" = admin with
+// one, but this session has not entered a code yet.
 // "recovering" means the person proved their email with a reset code and must now choose a new
 // password: they are NOT let into the admin until that is done.
 export function AuthProvider({ children }) {
@@ -20,6 +24,7 @@ export function AuthProvider({ children }) {
   const [denied, setDenied] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [aal, setAal] = useState(NO_AAL);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -50,6 +55,20 @@ export function AuthProvider({ children }) {
 
   const userId = session?.user?.id ?? null;
   const userEmail = session?.user?.email ?? null;
+  const accessToken = session?.access_token ?? null;
+
+  // The assurance level says whether this session has passed the authenticator. It is re-read whenever the token
+  // changes (after a code is verified, and on every hourly refresh), but the last answer stays on screen meanwhile.
+  const readAal = useCallback(async () => {
+    if (!supabase || !userId) return;
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    setAal({ userId, current: data?.currentLevel ?? null, next: data?.nextLevel ?? null, failed: Boolean(error) });
+  }, [userId]);
+
+  useEffect(() => {
+    if (!supabase || !userId || recovering || adminState.state !== "ok" || adminState.userId !== userId) return;
+    readAal();
+  }, [accessToken, userId, recovering, adminState, readAal]);
 
   useEffect(() => {
     if (!supabase || !userId || recovering) {
@@ -155,7 +174,66 @@ export function AuthProvider({ children }) {
     return { error: null };
   }, []);
 
-  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  // ---- Authenticator app (TOTP): set up once, then a code on every sign-in -----------------------------
+  const enrolTotp = useCallback(async () => {
+    if (!supabase) return NOT_CONFIGURED;
+    // A half-finished earlier attempt blocks a new one with the same name, so clear unverified factors first.
+    const { data: all } = await supabase.auth.mfa.listFactors();
+    for (const factor of all?.all ?? []) {
+      if (factor.status === "unverified") await supabase.auth.mfa.unenroll({ factorId: factor.id });
+    }
+    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: "EpicMKT admin" });
+    if (error) return { error };
+    return { error: null, factorId: data.id, qr: data.totp.qr_code, secret: data.totp.secret };
+  }, []);
+
+  const verifyEnrol = useCallback(async (factorId, code) => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
+    if (error) return { error };
+    await readAal();
+    return { error: null };
+  }, [readAal]);
+
+  const challengeTotp = useCallback(async (code) => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+    if (listError) return { error: listError };
+    const factor = factors?.totp?.[0]; // listFactors returns verified factors only
+    if (!factor) return { error: new Error("No authenticator is set up on this account.") };
+    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: factor.id, code });
+    if (error) return { error };
+    await readAal();
+    return { error: null };
+  }, [readAal]);
+
+  // ---- Where am I signed in -------------------------------------------------------------------------
+  const listSessions = useCallback(async () => {
+    if (!supabase) return { error: NOT_CONFIGURED.error, sessions: [] };
+    const { data, error } = await supabase.rpc("admin_my_sessions");
+    if (error) return { error, sessions: [] };
+    return {
+      error: null,
+      sessions: (data ?? []).map((row) => ({
+        id: row.id,
+        createdAt: row.created_at,
+        lastActiveAt: row.updated_at ?? row.created_at,
+        userAgent: row.user_agent,
+        ip: row.ip,
+      })),
+    };
+  }, []);
+
+  const signOutOthers = useCallback(async () => {
+    if (!supabase) return NOT_CONFIGURED;
+    const { error } = await supabase.auth.signOut({ scope: "others" });
+    return { error: error ?? null };
+  }, []);
+
+  const retry = useCallback(() => {
+    setAttempt((n) => n + 1);
+    setAal(NO_AAL);
+  }, []);
 
   const value = useMemo(() => {
     let status;
@@ -165,8 +243,14 @@ export function AuthProvider({ children }) {
     else if (!userId) status = "signedOut";
     else if (recovering) status = "recovering";
     else if (adminState.userId !== userId) status = "loading";
-    else if (adminState.state === "ok") status = "admin";
-    else if (adminState.state === "error") status = "error";
+    else if (adminState.state === "ok") {
+      if (aal.userId !== userId) status = "loading";
+      else if (aal.failed) status = "error";
+      else {
+        const stage = mfaStage({ currentLevel: aal.current, nextLevel: aal.next });
+        status = stage === "ready" ? "admin" : stage;
+      }
+    } else if (adminState.state === "error") status = "error";
     else status = "loading";
 
     return {
@@ -174,7 +258,7 @@ export function AuthProvider({ children }) {
       admin: isLive ? adminState.admin : DEMO_ADMIN,
       demo: !isLive,
       denied,
-      errorMessage: adminState.message,
+      errorMessage: adminState.message ?? (aal.failed ? "We could not check your authenticator step." : null),
       configError,
       signIn,
       signOut,
@@ -184,12 +268,17 @@ export function AuthProvider({ children }) {
       finishRecovery,
       sendChangeCode,
       changePassword,
+      enrolTotp,
+      verifyEnrol,
+      challengeTotp,
+      listSessions,
+      signOutOthers,
       retry,
     };
   }, [
-    sessionReady, userId, recovering, adminState, denied,
+    sessionReady, userId, recovering, adminState, denied, aal,
     signIn, signOut, sendRecoveryCode, verifyRecoveryCode, cancelRecovery, finishRecovery,
-    sendChangeCode, changePassword, retry,
+    sendChangeCode, changePassword, enrolTotp, verifyEnrol, challengeTotp, listSessions, signOutOthers, retry,
   ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

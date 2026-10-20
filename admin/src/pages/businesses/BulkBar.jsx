@@ -6,10 +6,15 @@ import { useToast } from "../../components/Toast.jsx";
 import { downloadCsv, toCsv } from "../../components/DataTable/csv.js";
 import { todayEat } from "../../lib/time.js";
 import BulkDialog from "./BulkDialog.jsx";
+import { usePermissions } from "../../hooks/usePermissions.js";
 import { ACTIVE_ACTIONS, BIN_ACTIONS, BULK, summarize } from "./bulk.js";
 import { columns } from "./columns.jsx";
 
+// Extending a subscription is a finance action in the database; every other bulk action is reviewer or support.
+const permissionFor = (name) => (name === "extend" ? "businesses.extend" : "businesses.bulk");
+
 export default function BulkBar({ rows, ids, clear, tab, options }) {
+  const { can, why } = usePermissions();
   const [action, setAction] = useState(null);
   const client = useQueryClient();
   const toast = useToast();
@@ -44,7 +49,14 @@ export default function BulkBar({ rows, ids, clear, tab, options }) {
     <>
       <div className="bulk">
         {available.map((name) => (
-          <Button key={name} size="sm" icon={BULK[name].icon} onClick={() => setAction(name)}>
+          <Button
+            key={name}
+            size="sm"
+            icon={BULK[name].icon}
+            disabled={!can(permissionFor(name))}
+            title={why(permissionFor(name))}
+            onClick={() => setAction(name)}
+          >
             {BULK[name].label}
           </Button>
         ))}

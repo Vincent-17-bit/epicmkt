@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePermissions } from "../hooks/usePermissions.js";
 import { PROOF_ACCEPT, PROOF_MAX_FILES, checkProofBatch, groupThreads, receiptOf } from "@epicmkt/shared";
 import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
@@ -36,6 +37,7 @@ function Files({ files }) {
 }
 
 function Compose({ label, askReply = true, onSend, busy }) {
+  const { can, why } = usePermissions();
   const [body, setBody] = useState("");
   const [needsReply, setNeedsReply] = useState(false);
   const [files, setFiles] = useState([]);
@@ -63,6 +65,8 @@ function Compose({ label, askReply = true, onSend, busy }) {
       setError(failure.message);
     }
   };
+
+  if (!can("messages.send")) return <p className="muted">{why("messages.send")}</p>;
 
   return (
     <form className="msg-compose" onSubmit={submit} noValidate>

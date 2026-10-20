@@ -13,6 +13,7 @@ import {
 import { formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
 import ApplicationStatus from "./ApplicationStatus.jsx";
 import DecisionDialog from "./DecisionDialog.jsx";
+import { usePermissions } from "../../hooks/usePermissions.js";
 import "./applications.css";
 
 const ACTOR = { seller: "Applicant", admin: "Reviewer", system: "System" };
@@ -35,6 +36,7 @@ const showValue = (value) => {
 };
 
 export default function ApplicationDetailPage() {
+  const { can, why } = usePermissions();
   const { id } = useParams();
   const { admin } = useAuth();
   const toast = useToast();
@@ -175,6 +177,8 @@ export default function ApplicationDetailPage() {
               key={name}
               variant={name === "approve" ? "primary" : "secondary"}
               className={name === "reject" ? "admin-button--danger" : ""}
+              disabled={!can("applications.decide")}
+              title={why("applications.decide")}
               onClick={() => setAction(name)}
             >
               {ACTION_LABELS[name]}

@@ -10,17 +10,18 @@ import { badgeText, navBadges } from "../lib/counts.js";
 import { initialsOf } from "../lib/initials.js";
 import SystemStatusCard from "../components/SystemStatusCard.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
+import { usePermissions } from "../hooks/usePermissions.js";
 import NotificationBell from "../components/NotificationBell.jsx";
 
 // `hint` is what the badge number means, for the tooltip and screen readers.
 const navItems = [
   { label: "Command Center", to: "/admin", end: true, hint: "items need your attention" },
-  { label: "Applications", to: "/admin/applications", hint: "applications waiting for a decision" },
-  { label: "Businesses", to: "/admin/businesses", hint: "sellers expiring within 7 days or in grace" },
-  { label: "Payments", to: "/admin/payments", hint: "payments to confirm" },
-  { label: "Messages", to: "/admin/messages", hint: "unread messages from sellers" },
-  { label: "Flash sales", to: "/admin/flash-sales" },
-  { label: "Settings", to: "/admin/settings" },
+  { label: "Applications", to: "/admin/applications", permission: "applications.view", hint: "applications waiting for a decision" },
+  { label: "Businesses", to: "/admin/businesses", permission: "businesses.view", hint: "sellers expiring within 7 days or in grace" },
+  { label: "Payments", to: "/admin/payments", permission: "payments.view", hint: "payments to confirm" },
+  { label: "Messages", to: "/admin/messages", permission: "messages.view", hint: "unread messages from sellers" },
+  { label: "Flash sales", to: "/admin/flash-sales", permission: "flash.view" },
+  { label: "Settings", to: "/admin/settings", permission: "settings.view" },
 ];
 
 // The page the current URL belongs to ("/admin/applications/123" is Applications).
@@ -32,6 +33,7 @@ function currentPage(pathname) {
 }
 
 export default function AdminLayout() {
+  const { can } = usePermissions();
   const { admin, demo, signOut } = useAuth();
   const { pathname } = useLocation();
   const pageTitle = currentPage(pathname);
@@ -71,7 +73,7 @@ export default function AdminLayout() {
         </div>
 
         <nav className="admin-sidebar__nav" aria-label="Admin navigation">
-          {navItems.map((item) => {
+          {navItems.filter((item) => !item.permission || can(item.permission)).map((item) => {
             const text = badgeText(badges[item.to]);
             return (
               <NavLink

@@ -5,6 +5,7 @@ import PasswordField from "../components/PasswordField.jsx";
 import { useCooldown } from "../components/useCooldown.js";
 import { authMessage } from "../lib/authErrors.js";
 import { looksLikeCode, onlyDigits, passwordProblem } from "../lib/password.js";
+import { IDLE_NOTICE_KEY } from "../auth/IdleGuard.jsx";
 
 // Only send people back to another admin page, never to an outside address.
 function safeTarget(from) {
@@ -38,6 +39,15 @@ export default function LoginPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
+  const [idleNotice] = useState(() => {
+    try {
+      const text = sessionStorage.getItem(IDLE_NOTICE_KEY) ?? "";
+      sessionStorage.removeItem(IDLE_NOTICE_KEY);
+      return text;
+    } catch {
+      return "";
+    }
+  });
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [cooldown, startCooldown] = useCooldown(60);
@@ -148,7 +158,7 @@ export default function LoginPage() {
             <h1 className="admin-login__title">Sign in</h1>
             <p className="admin-login__lead">Use the email and password of your admin account.</p>
             {notice ? <p className="admin-login__error" role="alert">{notice}</p> : null}
-            {!notice && info ? <p className="admin-login__success" role="status">{info}</p> : null}
+            {!notice && (info || idleNotice) ? <p className="admin-login__success" role="status">{info || idleNotice}</p> : null}
 
             <div className="admin-login__field">
               <label htmlFor="admin-email">Email</label>

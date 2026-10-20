@@ -13,6 +13,7 @@ import DataTableTestPage from "./pages/DataTableTestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import RequireAdmin from "./auth/RequireAdmin.jsx";
+import RoleGuard from "./routes/RoleGuard.jsx";
 
 export default function App() {
   return (
@@ -21,13 +22,13 @@ export default function App() {
       <Route element={<RequireAdmin />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<CommandCenterPage />} />
-          <Route path="applications" element={<ApplicationsPage />} />
-          <Route path="applications/:id" element={<ApplicationDetailPage />} />
-          <Route path="businesses" element={<BusinessesPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
-          <Route path="messages" element={<MessagesPage />} />
-          <Route path="flash-sales" element={<FlashSalesPage />} />
-          <Route path="settings" element={<SettingsPage />} />
+          <Route path="applications" element={<RoleGuard permission="applications.view"><ApplicationsPage /></RoleGuard>} />
+          <Route path="applications/:id" element={<RoleGuard permission="applications.view"><ApplicationDetailPage /></RoleGuard>} />
+          <Route path="businesses" element={<RoleGuard permission="businesses.view"><BusinessesPage /></RoleGuard>} />
+          <Route path="payments" element={<RoleGuard permission="payments.view"><PaymentsPage /></RoleGuard>} />
+          <Route path="messages" element={<RoleGuard permission="messages.view"><MessagesPage /></RoleGuard>} />
+          <Route path="flash-sales" element={<RoleGuard permission="flash.view"><FlashSalesPage /></RoleGuard>} />
+          <Route path="settings" element={<RoleGuard permission="settings.view"><SettingsPage /></RoleGuard>} />
           <Route path="account" element={<AccountPage />} />
           <Route path="table-test" element={<DataTableTestPage />} />
         </Route>

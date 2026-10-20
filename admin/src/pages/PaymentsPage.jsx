@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { matchesText } from "../lib/globalSearch.js";
+import { usePermissions } from "../hooks/usePermissions.js";
 import { api } from "../api/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -102,6 +103,9 @@ function AssignPanel({ row, onClose, onDone }) {
 
 export default function PaymentsPage() {
   const queryClient = useQueryClient();
+  const { can, why } = usePermissions();
+  const canPay = can("payments.confirm");
+  const whyPay = why("payments.confirm");
   const [params, setParams] = useSearchParams();
   const q = params.get("q") ?? "";
   const [notice, setNotice] = useState(null);
@@ -193,8 +197,8 @@ export default function PaymentsPage() {
                     <div className="muted">{when(c.at)} · {c.error}</div>
                   </div>
                   <span>
-                    <button type="button" className="secondary-button" onClick={async () => { try { await api.reprocessCallback(c.id); } catch (e) { setNotice({ ok: false, text: e.message }); } refresh(); }}>Reprocess</button>{" "}
-                    <button type="button" className="secondary-button" onClick={async () => { try { await api.dismissCallback(c.id); } catch (e) { setNotice({ ok: false, text: e.message }); } refresh(); }}>Dismiss</button>
+                    <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={async () => { try { await api.reprocessCallback(c.id); } catch (e) { setNotice({ ok: false, text: e.message }); } refresh(); }}>Reprocess</button>{" "}
+                    <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={async () => { try { await api.dismissCallback(c.id); } catch (e) { setNotice({ ok: false, text: e.message }); } refresh(); }}>Dismiss</button>
                   </span>
                 </li>
               ))}
@@ -249,12 +253,12 @@ export default function PaymentsPage() {
                         <td>{when(row.at)}</td>
                         <td>
                           {row.status === "awaiting_confirmation" && row.applicationId ? (
-                            <button type="button" className="secondary-button" disabled={confirm.isPending} onClick={() => { setNotice(null); confirm.mutate(row); }}>
+                            <button type="button" className="secondary-button" disabled={confirm.isPending || !canPay} title={whyPay} onClick={() => { setNotice(null); confirm.mutate(row); }}>
                               Confirm {months ?? 1} month{(months ?? 1) === 1 ? "" : "s"}
                             </button>
                           ) : null}
                           {row.status === "needs_assignment" ? (
-                            <button type="button" className="secondary-button" onClick={() => setAssigning(assigning === row.key ? null : row.key)}>
+                            <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={() => setAssigning(assigning === row.key ? null : row.key)}>
                               {assigning === row.key ? "Close" : "Assign…"}
                             </button>
                           ) : null}

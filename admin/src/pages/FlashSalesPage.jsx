@@ -4,6 +4,7 @@ import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
 import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { usePermissions } from "../hooks/usePermissions.js";
 import { describeError } from "../lib/systemStatus.js";
 
 const STATUSES = [["", "All"], ["live", "Live"], ["scheduled", "Scheduled"], ["ended", "Ended"]];
@@ -11,6 +12,7 @@ const REASONS = { time: "Ended on time", seller: "Ended by seller", admin: "Stop
 const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
 
 export default function FlashSalesPage() {
+  const { can, why } = usePermissions();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [status, setStatus] = useState("");
@@ -85,7 +87,7 @@ export default function FlashSalesPage() {
                       </td>
                       <td>
                         {["live", "scheduled"].includes(row.status) && (
-                          <Button size="sm" onClick={() => { setError(""); setTarget(row); }} aria-label={`End ${row.itemName} flash sale`}>End sale</Button>
+                          <Button size="sm" disabled={!can("flash.end")} title={why("flash.end")} onClick={() => { setError(""); setTarget(row); }} aria-label={`End ${row.itemName} flash sale`}>End sale</Button>
                         )}
                       </td>
                     </tr>

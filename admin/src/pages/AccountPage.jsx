@@ -1,14 +1,46 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "../auth/AuthContext.jsx";
 import PasswordField from "../components/PasswordField.jsx";
 import { useCooldown } from "../components/useCooldown.js";
 import { authMessage } from "../lib/authErrors.js";
 import { looksLikeCode, onlyDigits, passwordProblem } from "../lib/password.js";
+import { ROLE_LABELS } from "../auth/permissions.js";
+import { usePermissions } from "../hooks/usePermissions.js";
+import { timeAgo } from "../lib/time.js";
 
-const ROLE_LABEL = { owner: "Owner", reviewer: "Reviewer", finance: "Finance", support: "Support" };
+const ROLE_LABEL = ROLE_LABELS;
+
+// "Chrome on Windows" from a user-agent string, without pulling in a library.
+function deviceName(agent) {
+  const text = String(agent ?? "");
+  const browser = /edg\//i.test(text) ? "Edge" : /opr\/|opera/i.test(text) ? "Opera" : /chrome|crios/i.test(text) ? "Chrome" : /firefox|fxios/i.test(text) ? "Firefox" : /safari/i.test(text) ? "Safari" : "Browser";
+  const system = /windows/i.test(text) ? "Windows" : /android/i.test(text) ? "Android" : /iphone|ipad|ios/i.test(text) ? "iOS" : /mac os/i.test(text) ? "macOS" : /linux/i.test(text) ? "Linux" : "";
+  return system ? `${browser} on ${system}` : browser;
+}
 
 export default function AccountPage() {
-  const { admin, demo, sendChangeCode, changePassword } = useAuth();
+  const { admin, demo, sendChangeCode, changePassword, listSessions, signOutOthers } = useAuth();
+  const { can, roleLabel } = usePermissions();
+  const [othersMsg, setOthersMsg] = useState("");
+  const sessions = useQuery({
+    queryKey: ["admin-my-sessions"],
+    queryFn: async () => {
+      const { error: failure, sessions: rows } = await listSessions();
+      if (failure) throw failure;
+      return rows;
+    },
+    enabled: !demo && can("security.view"),
+    retry: false,
+  });
+
+  async function handleSignOutOthers() {
+    setOthersMsg("");
+    const { error: failure } = await signOutOthers();
+    if (failure) return setOthersMsg("We could not sign out your other devices. Try again.");
+    setOthersMsg("Your other devices have been signed out.");
+    sessions.refetch();
+  }
   const [codeSent, setCodeSent] = useState(false);
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
@@ -61,6 +93,35 @@ export default function AccountPage() {
           <div><dt>Role</dt><dd>{ROLE_LABEL[admin?.role] ?? admin?.role ?? "—"}</dd></div>
         </dl>
       </section>
+
+      {demo ? null : (
+        <section className="panel account-panel">
+          <div className="panel__header">
+            <h3>Where you are signed in</h3>
+            <button type="button" className="secondary-button" onClick={handleSignOutOthers} disabled={sessions.isFetching}>
+              Sign out other devices
+            </button>
+          </div>
+          <p className="muted">Your role is {roleLabel}. You sign in with a password and a code from your authenticator app.</p>
+          {othersMsg ? <p role="status">{othersMsg}</p> : null}
+          {sessions.isError ? (
+            <p role="alert" className="admin-login__error">We could not load your sessions.</p>
+          ) : sessions.isPending ? (
+            <p className="muted">Loading…</p>
+          ) : sessions.data.length === 0 ? (
+            <p className="muted">No other sessions found.</p>
+          ) : (
+            <ul className="session-list">
+              {sessions.data.map((row) => (
+                <li key={row.id}>
+                  <strong>{deviceName(row.userAgent)}</strong>
+                  <span className="muted">{row.ip ? ` · ${row.ip}` : ""} · active {timeAgo(row.lastActiveAt) || "just now"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <section className="panel account-panel">
         <div className="panel__header">
