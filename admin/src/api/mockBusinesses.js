@@ -14,7 +14,7 @@ const plans = ["Basic", "Standard", "Premium"];
 export const agents = ["Faith Achieng", "Kevin Mutua", "Grace Wanjiru", "Brian Otieno"];
 const first = ["Alice", "John", "Mary", "Peter", "Grace", "Samuel", "Lucy", "David", "Esther", "James", "Naomi", "Joseph"];
 const last = ["Njeri", "Ouma", "Wambui", "Kamau", "Atieno", "Mwangi", "Kiptoo", "Otieno", "Wanjiku", "Mutua", "Chebet", "Odhiambo"];
-const left = ["Mara", "Umoja", "Green Valley", "Lakeside", "Savanna", "Rift", "Coast", "Highland", "Sunrise", "Baraka", "Jambo", "Tumaini"];
+const left = ["Kilele", "Tegemeo", "Bonde", "Lakeside", "Savanna", "Rift", "Coast", "Highland", "Sunrise", "Baraka", "Jambo", "Tumaini"];
 const right = ["Fresh Mart", "Hardware", "Foods", "Traders", "Boutique", "Electronics", "Pharmacy", "Auto Spares", "Supplies", "Bakers", "Furniture", "Beauty Hub"];
 
 function rng(seed) {

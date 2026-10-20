@@ -15,9 +15,9 @@ export {
 } from "./mockApplications.js";
 
 const mockBusinesses = [
-  { name: "Mara Fresh Mart", town: "Nairobi", plan: "Premium", status: "Live", paidUntil: "2026-11-18" },
-  { name: "Umoja Hardware", town: "Kisumu", plan: "Standard", status: "Live", paidUntil: "2026-11-02" },
-  { name: "Green Valley Foods", town: "Mombasa", plan: "Premium", status: "Expiring soon", paidUntil: "2026-10-15" },
+  { name: "Lakeside Provisions", town: "Nairobi", plan: "Premium", status: "Live", paidUntil: "2026-11-18" },
+  { name: "Rafiki Tools and Hardware", town: "Kisumu", plan: "Standard", status: "Live", paidUntil: "2026-11-02" },
+  { name: "Bustani Foods", town: "Mombasa", plan: "Premium", status: "Expiring soon", paidUntil: "2026-10-15" },
 ];
 
 const tx = (n, o) => ({
@@ -26,10 +26,10 @@ const tx = (n, o) => ({
   candidates: [], note: null, matchMethod: "reference", ...o,
 });
 let mockPayments = [
-  tx(1, { businessName: "Mara Fresh Mart", town: "Kisumu", reference: "EPM-2026-ABC234", account: "EPM-2026-ABC234", amount: 1500, expected: 500, credit: 1500, suggestedMonths: 3, status: "awaiting_confirmation", mpesaCode: "SGH4K9L2QW", payerName: "JOHN DOE", at: "2026-10-18T08:40:00Z", applicationId: "a1", appStatus: "payment_confirming", appPaymentCode: "SGH4K9L2QW" }),
+  tx(1, { businessName: "Lakeside Provisions", town: "Kisumu", reference: "EPM-2026-ABC234", account: "EPM-2026-ABC234", amount: 1500, expected: 500, credit: 1500, suggestedMonths: 3, status: "awaiting_confirmation", mpesaCode: "SGH4K9L2QW", payerName: "JOHN DOE", at: "2026-10-18T08:40:00Z", applicationId: "a1", appStatus: "payment_confirming", appPaymentCode: "SGH4K9L2QW" }),
   tx(2, { businessName: "No matching business", account: "Upendo Shop", amount: 500, status: "needs_assignment", mpesaCode: "SGF9Z8Y7X6", payerName: "MARY W", at: "2026-10-18T07:15:00Z", note: "ambiguous_name", matchMethod: null,
     candidates: [{ type: "application", id: "a2", name: "Upendo Shop", ref: "EPM-2026-DDD444", town: "Maseno", status: "approved", reason: "name" }, { type: "application", id: "a3", name: "Upendo Shop", ref: "EPM-2026-EEE555", town: "Kiambu", status: "approved", reason: "name" }] }),
-  tx(3, { businessName: "Green Valley Foods", town: "Nakuru", reference: "EPM-2026-QRS552", account: "EPM-2026-QRS552", amount: 300, expected: 500, credit: 300, status: "part_paid", mpesaCode: "SGG1A2B3C4", payerName: "PETER K", at: "2026-10-17T14:05:00Z", applicationId: "a4", appStatus: "approved" }),
+  tx(3, { businessName: "Bustani Foods", town: "Nakuru", reference: "EPM-2026-QRS552", account: "EPM-2026-QRS552", amount: 300, expected: 500, credit: 300, status: "part_paid", mpesaCode: "SGG1A2B3C4", payerName: "PETER K", at: "2026-10-17T14:05:00Z", applicationId: "a4", appStatus: "approved" }),
   tx(4, { businessName: "Pwani Pastries", town: "Mombasa", reference: "ES100210", account: "ES100210", amount: 1500, expected: 500, status: "renewed", receipt: "EPM-R-2026-000041", mpesaCode: "SGE5D6C7B8", payerName: "AMINA S", at: "2026-10-16T10:20:00Z", businessId: "b1" }),
 ];
 
@@ -151,7 +151,7 @@ export async function globalSearch(query) {
 
 let mockNotifications = [
   { id: "mn-1", at: new Date(Date.now() - 2 * 60_000).toISOString(), kind: "application_submitted", business_name: "Umoja Market", data: {}, read: false },
-  { id: "mn-2", at: new Date(Date.now() - 25 * 60_000).toISOString(), kind: "payment_submitted", business_name: "Mara Fresh Mart", data: { kind: "renewal" }, read: false },
+  { id: "mn-2", at: new Date(Date.now() - 25 * 60_000).toISOString(), kind: "payment_submitted", business_name: "Lakeside Provisions", data: { kind: "renewal" }, read: false },
   { id: "mn-3", at: new Date(Date.now() - 3 * 3600_000).toISOString(), kind: "change_request", business_name: "Fade Kings", data: { field: "phone" }, read: true },
 ];
 export async function getNotifications() {

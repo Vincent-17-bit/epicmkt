@@ -59,7 +59,7 @@ test("overdue means submitted and untouched for more than 24 hours", () => {
 
 test("search input cannot break out of the PostgREST or() filter", () => {
   assert.equal(searchTerm('a,b(c)"d%e*f\\g'), "a b c d e f g");
-  assert.equal(searchTerm("  Mara   Fresh  "), "Mara Fresh");
+  assert.equal(searchTerm("  Lakeside   Provisions  "), "Lakeside Provisions");
   assert.equal(searchTerm("x".repeat(200)).length, 60);
   assert.equal(searchFilter(""), "");
   assert.equal(searchFilter("a"), "");

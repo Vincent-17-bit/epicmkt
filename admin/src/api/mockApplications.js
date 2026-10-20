@@ -16,11 +16,11 @@ const base = {
 };
 
 const seed = [
-  { n: 2041, name: "Mara Fresh Mart", owner: "Alice Njeri", phone: "+254712345001", status: "submitted", hours: 31 },
-  { n: 2042, name: "Umoja Hardware", owner: "John Ouma", phone: "+254712345002", status: "submitted", hours: 27, town: "Kisumu", county: "Kisumu" },
+  { n: 2041, name: "Lakeside Provisions", owner: "Alice Njeri", phone: "+254712345001", status: "submitted", hours: 31 },
+  { n: 2042, name: "Rafiki Tools and Hardware", owner: "John Ouma", phone: "+254712345002", status: "submitted", hours: 27, town: "Kisumu", county: "Kisumu" },
   { n: 2043, name: "Zawadi Pharmacy", owner: "Grace Wanjiku", phone: "+254712345003", status: "submitted", hours: 6, plan: "premium", price: 3200, registered: true },
   { n: 2044, name: "Pwani Fish Traders", owner: "Hassan Mwinyi", phone: "+254712345004", status: "submitted", hours: 1, town: "Mombasa", county: "Mombasa" },
-  { n: 2045, name: "Green Valley Foods", owner: "Mary Wambui", phone: "+254712345005", status: "under_review", hours: 20, reviewerId: ME },
+  { n: 2045, name: "Bustani Foods", owner: "Mary Wambui", phone: "+254712345005", status: "under_review", hours: 20, reviewerId: ME },
   { n: 2046, name: "Tumaini Salon", owner: "Esther Akinyi", phone: "+254712345006", status: "under_review", hours: 10, reviewerId: "someone-else", town: "Kisumu", county: "Kisumu" },
   { n: 2047, name: "Baraka Electronics", owner: "Peter Kamau", phone: "+254712345007", status: "changes_requested", hours: 52, adminNote: "The permit photo is blurry. Please upload a clearer one." },
   { n: 2048, name: "Soko Bora Grocers", owner: "Lucy Chebet", phone: "+254712345008", status: "changes_requested", hours: 70, town: "Eldoret", county: "Uasin Gishu" },

@@ -4,9 +4,9 @@ const at = (offset) => new Date(Date.now() + offset).toISOString();
 
 let rows = [
   { id: "fs-1", businessName: "Fade Kings", itemName: "Fade and beard", discount: "20% off", startsAt: at(-2 * HOUR), endsAt: at(4 * HOUR), status: "live", endedReason: null },
-  { id: "fs-2", businessName: "Mara Fresh Mart", itemName: "Dairy meal 70kg", discount: "KES 200 off", startsAt: at(-3 * HOUR), endsAt: at(12 * HOUR), status: "live", endedReason: null },
-  { id: "fs-3", businessName: "Umoja Hardware", itemName: "Two burner cooker", discount: "Sale price KES 3,500", startsAt: at(5 * HOUR), endsAt: at(30 * HOUR), status: "scheduled", endedReason: null },
-  { id: "fs-4", businessName: "Green Valley Foods", itemName: "1 kg vanilla cake", discount: "15% off", startsAt: at(-30 * HOUR), endsAt: at(-6 * HOUR), status: "ended", endedReason: "time" },
+  { id: "fs-2", businessName: "Lakeside Provisions", itemName: "Dairy meal 70kg", discount: "KES 200 off", startsAt: at(-3 * HOUR), endsAt: at(12 * HOUR), status: "live", endedReason: null },
+  { id: "fs-3", businessName: "Rafiki Tools and Hardware", itemName: "Two burner cooker", discount: "Sale price KES 3,500", startsAt: at(5 * HOUR), endsAt: at(30 * HOUR), status: "scheduled", endedReason: null },
+  { id: "fs-4", businessName: "Bustani Foods", itemName: "1 kg vanilla cake", discount: "15% off", startsAt: at(-30 * HOUR), endsAt: at(-6 * HOUR), status: "ended", endedReason: "time" },
 ];
 
 const settle = () => {

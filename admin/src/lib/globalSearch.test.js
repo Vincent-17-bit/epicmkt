@@ -3,10 +3,10 @@ import assert from "node:assert/strict";
 import { MIN_QUERY, flatResults, matchesText, moveActive, toResultGroups } from "./globalSearch.js";
 
 const RAW = {
-  businesses: [{ id: "b1", name: "Mara Fresh Mart", seller_id: "ES100210", town: "Kisumu", status: "live" }],
-  items: [{ id: "i1", name: "Dairy meal 70kg", price: 3200, business_name: "Mara Fresh Mart" }],
+  businesses: [{ id: "b1", name: "Lakeside Provisions", seller_id: "ES100210", town: "Kisumu", status: "live" }],
+  items: [{ id: "i1", name: "Dairy meal 70kg", price: 3200, business_name: "Lakeside Provisions" }],
   applications: [{ id: "a1", reference_no: "EPM-2026-ABC234", business_name: "Upendo Shop", owner_full_name: "Mary W", status: "under_review" }],
-  payments: [{ id: "p1", mpesa_code: "SGH4K9L2QW", amount_kes: 1500, status: "submitted", business_name: "Mara Fresh Mart" }],
+  payments: [{ id: "p1", mpesa_code: "SGH4K9L2QW", amount_kes: 1500, status: "submitted", business_name: "Lakeside Provisions" }],
   faqs: [],
 };
 
@@ -18,9 +18,9 @@ test("groups come out in a fixed order and empty groups are dropped", () => {
 test("each result says where it opens", () => {
   const byKey = Object.fromEntries(toResultGroups(RAW).map((g) => [g.key, g.items[0]]));
   assert.equal(byKey.applications.to, "/admin/applications/a1");
-  assert.equal(byKey.businesses.to, "/admin/businesses?q=Mara%20Fresh%20Mart");
+  assert.equal(byKey.businesses.to, "/admin/businesses?q=Lakeside%20Provisions");
   assert.equal(byKey.payments.to, "/admin/payments?q=SGH4K9L2QW");
-  assert.equal(byKey.items.to, "/admin/businesses?q=Mara%20Fresh%20Mart");
+  assert.equal(byKey.items.to, "/admin/businesses?q=Lakeside%20Provisions");
   assert.equal(byKey.applications.subtitle, "EPM-2026-ABC234 · Mary W · under review");
   assert.equal(byKey.payments.title, "SGH4K9L2QW · KES 1,500");
 });
