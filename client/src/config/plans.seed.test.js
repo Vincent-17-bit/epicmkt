@@ -20,15 +20,24 @@ describe('plan seed data', () => {
   it('prices premium above standard in every tier', () => {
     Object.values(TIER_PLANS).forEach((t) => {
       expect(t.premium.price).toBeGreaterThan(t.standard.price);
-      expect(t.premium.items).toBeGreaterThan(t.standard.items);
     });
   });
 
-  it('matches the specified prices and item limits', () => {
-    expect(TIER_PLANS.A).toEqual({ standard: { price: 300, items: 15 }, premium: { price: 800, items: 40 } });
-    expect(TIER_PLANS.B).toEqual({ standard: { price: 500, items: 25 }, premium: { price: 1300, items: 70 } });
-    expect(TIER_PLANS.C).toEqual({ standard: { price: 800, items: 40 }, premium: { price: 2000, items: 100 } });
-    expect(TIER_PLANS.D).toEqual({ standard: { price: 1200, items: 50 }, premium: { price: 3000, items: 150 } });
+  it('matches the specified prices', () => {
+    expect(TIER_PLANS.A).toEqual({ standard: { price: 300 }, premium: { price: 800 } });
+    expect(TIER_PLANS.B).toEqual({ standard: { price: 500 }, premium: { price: 1300 } });
+    expect(TIER_PLANS.C).toEqual({ standard: { price: 800 }, premium: { price: 2000 } });
+    expect(TIER_PLANS.D).toEqual({ standard: { price: 1200 }, premium: { price: 3000 } });
+  });
+
+  it('never limits how many items a seller can list', () => {
+    categories.forEach((c) => {
+      planRows(c.id, c.tier).forEach((r) => {
+        expect(r.items_limit, `${c.id} ${r.plan_key}`).toBeNull();
+        expect(r.features.Catalog).toContain('Unlimited items');
+        expect(JSON.stringify(r)).not.toMatch(/Up to \d+ items/);
+      });
+    });
   });
 
   it('gives every category its own short benefits and grouped features', () => {

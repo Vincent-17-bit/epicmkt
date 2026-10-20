@@ -34,14 +34,14 @@ describe('live adapter', () => {
         ? query({
             data: [{
               id: 'bakery', name: 'Bakery', grp: 'Food', icon: 'bread-slice', tier: 'B', template: [], extra_docs: [],
-              plans: [{ plan_key: 'standard', price_kes: 500, items_limit: 30, top_benefits: ['a', 'b', 'c'], features: {}, badge: null, updated_at: 't' }],
+              plans: [{ plan_key: 'standard', price_kes: 500, items_limit: null, top_benefits: ['a', 'b', 'c'], features: {}, badge: null, updated_at: 't' }],
             }],
             error: null,
           })
         : query({ data: { standard: {}, premium: {}, updated_at: 't' }, error: null }),
     );
     const r = await getCatalogPricing();
-    expect(r.categories[0]).toMatchObject({ id: 'bakery', group: 'Food', plans: { standard: { price: 500, limits: { items: 30 } } } });
+    expect(r.categories[0]).toMatchObject({ id: 'bakery', group: 'Food', plans: { standard: { price: 500, limits: { items: null } } } });
     expect(r.globalLimits.updated_at).toBe('t');
   });
 

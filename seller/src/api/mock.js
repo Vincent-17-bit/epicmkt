@@ -111,7 +111,7 @@ export const catalogStats = async () => {
     hidden_by_me: c.hidden_me, hidden_by_admin: c.hidden_admin, drafts: c.draft, available: c.available, out_of_stock: c.out_of_stock,
     limited_stock: c.limited_stock, unavailable: rows.filter((i) => i.availability === "unavailable").length, by_appointment: c.by_appointment,
     seasonal: c.seasonal, coming_soon: c.coming_soon, low_stock: c.low_stock, without_photo: c.no_photo, stale_prices: c.stale_price,
-    reported: c.reported, flagged: c.flagged, items_limit: ITEMS[bill.business.categoryId]?.[bill.business.planKey] ?? 0, open_flags: 0, unread_messages: 0,
+    reported: c.reported, flagged: c.flagged, items_limit: null, open_flags: 0, unread_messages: 0,
   };
 };
 export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
@@ -146,10 +146,9 @@ const CATEGORIES = {
   kiosk: { id: "kiosk", name: "Kiosk", group: "Retail", prices: { standard: 300, premium: 900 } },
 };
 const FEATURES = {
-  standard: { Visibility: ["Listed in category lists and search"], Catalog: ["Up to {items} items", "Up to 7 photos and 1 video per item", "Up to 5 FAQs"], Support: ["Standard support"] },
-  premium: { Visibility: ["Featured badge on shop card", "Priority placement in lists and search"], Catalog: ["Up to {items} items", "Up to 15 photos and 3 videos per item", "Up to 20 FAQs"], Promotions: ["Unlimited active offers", "Announcement banner"], Support: ["Priority review and support"] },
+  standard: { Visibility: ["Listed in category lists and search"], Catalog: ["Unlimited items", "Up to 7 photos and 1 video per item", "Up to 5 FAQs"], Support: ["Standard support"] },
+  premium: { Visibility: ["Featured badge on shop card", "Priority placement in lists and search"], Catalog: ["Unlimited items", "Up to 15 photos and 3 videos per item", "Up to 20 FAQs"], Promotions: ["Unlimited active offers", "Announcement banner"], Support: ["Priority review and support"] },
 };
-const ITEMS = { barber: { standard: 30, premium: 100 }, salon: { standard: 30, premium: 100 }, kiosk: { standard: 30, premium: 100 } };
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
@@ -237,9 +236,9 @@ export const getSubscription = async () => {
   return {
     business: { ...copy(bill.business), categoryName: cat.name },
     plans: Object.fromEntries(["standard", "premium"].map((k) => [k, {
-      price: cat.prices[k], itemsLimit: ITEMS[cat.id][k], badge: k === "premium" ? "Best value" : null,
-      topBenefits: k === "premium" ? ["Featured badge", "Priority placement", "Unlimited offers"] : ["Listed in search", "Up to 30 items", "Standard support"],
-      features: Object.fromEntries(Object.entries(FEATURES[k]).map(([g, list]) => [g, list.map((t) => t.replace("{items}", ITEMS[cat.id][k]))])),
+      price: cat.prices[k], itemsLimit: null, badge: k === "premium" ? "Best value" : null,
+      topBenefits: k === "premium" ? ["Featured badge", "Priority placement", "Unlimited offers"] : ["Listed in search", "Unlimited items", "Standard support"],
+      features: Object.fromEntries(Object.entries(FEATURES[k]).map(([g, list]) => [g, list])),
     }])),
     limits: { standard: { photosPerItem: 7, videosPerItem: 1, faqs: 5, activeOffers: 8 }, premium: { photosPerItem: 15, videosPerItem: 3, faqs: 20, activeOffers: null } },
   };
@@ -445,14 +444,13 @@ const flashCheckItem = (item) => {
 
 export const getServerTime = async () => ({ now: clockNow().toISOString() });
 export const listItems = async () => { signedIn(); await wait(); return copy(bill.items); };
-const itemsLimit = () => ITEMS[bill.business.categoryId]?.[bill.business.planKey] ?? 0;
 const shopLive = () => bill.business.status === "live" && Boolean(bill.business.paidUntil) && Date.parse(bill.business.paidUntil) > clockNow().getTime();
 const inFlashSale = (id) => bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status));
 export const getCatalog = async () => {
   signedIn();
   await wait();
   settleFlash();
-  return { shop: { slug: "demo-shop", status: bill.business.status, live: shopLive(), planKey: bill.business.planKey, itemsLimit: itemsLimit() }, items: copy(bill.items).map((i) => ({ ...i, inFlashSale: inFlashSale(i.id) })).sort((a, b) => a.sort - b.sort) };
+  return { shop: { slug: "demo-shop", status: bill.business.status, live: shopLive(), planKey: bill.business.planKey, itemsLimit: null }, items: copy(bill.items).map((i) => ({ ...i, inFlashSale: inFlashSale(i.id) })).sort((a, b) => a.sort - b.sort) };
 };
 export const getShopPreview = async () => {
   signedIn();
@@ -482,7 +480,6 @@ export const saveItem = async (id, f) => {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  if (bill.items.length >= itemsLimit()) throw new ApiError("limit_reached");
   const made = { id: `it-new-${++bill.seq}`, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
@@ -540,7 +537,6 @@ export const duplicateItem = async (id) => {
   await wait();
   const src = bill.items.find((i) => i.id === id && !i.removedByAdmin);
   if (!src) throw new ApiError("item_not_found");
-  if (bill.items.length >= itemsLimit()) throw new ApiError("limit_reached");
   const now = clockNow().toISOString();
   const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: 0, imagePaths: [], hasVideo: false, createdAt: now, updatedAt: now, priceConfirmedAt: now };
   bill.items.push(copyOf);
@@ -552,7 +548,6 @@ export const importItems = async (rows) => {
   if (bill.business.planKey !== "premium") throw new ApiError("premium_required");
   if (!Array.isArray(rows) || rows.length === 0) throw new ApiError("no_rows");
   if (rows.length > 500) throw new ApiError("too_many_rows");
-  if (bill.items.length + rows.length > itemsLimit()) throw new ApiError("limit_reached");
   if (rows.some((r) => [r.name, r.section, r.unit].some((v) => /^[=+\-@]/.test(String(v ?? ""))))) throw new ApiError("formula_rejected");
   const now = clockNow().toISOString();
   let sort = Math.max(0, ...bill.items.map((i) => i.sort));

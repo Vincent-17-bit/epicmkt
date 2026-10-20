@@ -252,7 +252,7 @@ export default function Catalog() {
 
   const filterNode = (q, onChange) => <FilterPanel query={q} onChange={onChange} sections={sections} bounds={bounds} />;
 
-  const limitText = shop.itemsLimit ? `${enriched.length} of ${shop.itemsLimit} items used` : `${enriched.length} items`;
+  const limitText = `${enriched.length} ${enriched.length === 1 ? "item" : "items"} listed. No limit.`;
   const cards = mode !== "list";
 
   if (catalog.isLoading) return <div className={styles.page}><p className={ui.muted} role="status">Loading your listings.</p></div>;
@@ -429,7 +429,7 @@ export default function Catalog() {
         <ImportDialog
           open
           premium={shop.planKey === "premium"}
-          remaining={shop.itemsLimit ? Math.max(0, shop.itemsLimit - enriched.length) : 500}
+          remaining={500}
           onClose={() => setDialog(null)}
           onImport={async (rows) => {
             const out = await api.importItems(rows);

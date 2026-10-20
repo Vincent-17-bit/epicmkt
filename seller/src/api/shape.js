@@ -41,7 +41,7 @@ export const question = (f, extra = {}) => ({
 });
 
 export const plans = (rows) => Object.fromEntries(rows.map((p) => [p.plan_key, {
-  price: p.price_kes, itemsLimit: p.items_limit, topBenefits: p.top_benefits, features: p.features ?? {}, badge: p.badge ?? null,
+  price: p.price_kes, itemsLimit: null, topBenefits: p.top_benefits, features: p.features ?? {}, badge: p.badge ?? null,
 }]));
 
 export const ownItem = (i) => ({
@@ -84,7 +84,7 @@ export const preview = (b, { categoryName, catalog: c, flashSales, nowMs }) => (
 });
 
 export const catalog = (r) => ({
-  shop: { slug: r.shop.slug, status: r.shop.status, live: !!r.shop.live, planKey: r.shop.plan_key, itemsLimit: r.shop.items_limit ?? null },
+  shop: { slug: r.shop.slug, status: r.shop.status, live: !!r.shop.live, planKey: r.shop.plan_key, itemsLimit: null },
   items: (r.items ?? []).map(catalogItem),
 });
 

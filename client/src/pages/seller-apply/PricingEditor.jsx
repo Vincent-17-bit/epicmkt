@@ -16,7 +16,7 @@ export default function PricingEditor({ category }) {
 
   useEffect(() => {
     const p = category?.plans?.[plan];
-    if (p) setDraft({ price: p.price, items: p.limits.items, b0: p.topBenefits[0], b1: p.topBenefits[1], b2: p.topBenefits[2] });
+    if (p) setDraft({ price: p.price, b0: p.topBenefits[0], b1: p.topBenefits[1], b2: p.topBenefits[2] });
   }, [category?.id, plan, open]);
 
   if (!tools || !category) return null;
@@ -24,7 +24,6 @@ export default function PricingEditor({ category }) {
   const apply = () => {
     tools.setPlanOverride(category.id, plan, {
       price: Number(draft.price),
-      items: Number(draft.items),
       topBenefits: [draft.b0, draft.b1, draft.b2]
     });
     qc.invalidateQueries({ queryKey: ["catalog-pricing"] });
@@ -53,7 +52,6 @@ export default function PricingEditor({ category }) {
             <option value="premium">Premium</option>
           </select>
           {field("price", "Price (KES)", "number")}
-          {field("items", "Item limit", "number")}
           {field("b0", "Benefit 1")}
           {field("b1", "Benefit 2")}
           {field("b2", "Benefit 3")}

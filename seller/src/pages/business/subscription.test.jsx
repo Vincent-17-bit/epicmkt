@@ -275,10 +275,10 @@ describe("Subscription: plans for the seller's own category and history", () => 
     const std = await screen.findByTestId("plan-standard");
     const prem = screen.getByTestId("plan-premium");
     expect(std).toHaveTextContent("KES 500");
-    expect(std).toHaveTextContent("30 items");
+    expect(std).toHaveTextContent("Unlimited items");
     expect(std).toHaveTextContent("Your plan");
     expect(prem).toHaveTextContent("KES 1,500");
-    expect(prem).toHaveTextContent("100 items");
+    expect(prem).toHaveTextContent("Unlimited items");
     expect(prem).toHaveTextContent("Featured badge");
     expect(prem).toHaveTextContent("Best value");
     expect(screen.getByRole("heading", { name: /Standard or Premium for Barber/ })).toBeInTheDocument();

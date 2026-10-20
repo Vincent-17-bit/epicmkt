@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 
 const normalizePlan = (p) => ({
   price: p.price_kes,
-  limits: { items: p.items_limit },
+  limits: { items: null }, // no limit on listed items
   topBenefits: p.top_benefits,
   features: p.features,
   badge: p.badge,
@@ -13,7 +13,7 @@ export async function getCatalogPricing() {
   const [cats, limits] = await Promise.all([
     supabase
       .from('categories')
-      .select('id,name,grp,icon,tier,sort,template,extra_docs,plans(plan_key,price_kes,items_limit,top_benefits,features,badge,updated_at)')
+      .select('id,name,grp,icon,tier,sort,template,extra_docs,plans(plan_key,price_kes,top_benefits,features,badge,updated_at)')
       .eq('active', true)
       .order('sort'),
     supabase.from('global_limits').select('standard,premium,updated_at').eq('id', 1).single(),

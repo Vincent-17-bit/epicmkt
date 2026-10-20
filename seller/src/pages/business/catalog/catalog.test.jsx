@@ -617,19 +617,20 @@ describe("paste and CSV import", () => {
     expect(await screen.findByText("2 items imported as drafts.")).toBeInTheDocument();
   });
 
-  it("refuses rows over the plan limit with a clear message", async () => {
+  it("has no plan limit on how many items can be imported", async () => {
     const user = userEvent.setup();
     await open("/business/catalog", async () => {
       M.setBusiness({ planKey: "premium" });
       M.setItems(Array.from({ length: 98 }, (_, i) => make(i + 1)));
     });
     await ready();
+    expect(await screen.findByText(/98 items listed\. No limit\./)).toBeInTheDocument();
     await user.click(importButton());
     const dialog = await screen.findByRole("dialog", { name: "Import items" });
     fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: rows("One more\tfixed\t10\t\t\t\t", "Two more\tfixed\t10\t\t\t\t", "Three more\tfixed\t10\t\t\t\t") } });
     await user.click(within(dialog).getByRole("button", { name: "Preview" }));
-    expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("2 ready to import, 1 rejected");
-    expect(within(dialog).getByTestId("import-rejected")).toHaveTextContent("Over your plan limit. You can add 2 more items.");
+    expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("3 ready to import");
+    expect(within(dialog).queryByTestId("import-rejected")).not.toBeInTheDocument();
   });
 
   it("accepts a CSV file and rejects oversize and wrong-type files", async () => {

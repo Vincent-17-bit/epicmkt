@@ -9,7 +9,7 @@ const NOW = '2026-10-05T00:00:00.000Z';
 
 const toPlan = (row, o = {}) => ({
   price: o.price ?? row.price_kes,
-  limits: { items: o.items ?? row.items_limit },
+  limits: { items: null }, // no limit on listed items
   topBenefits: o.topBenefits ?? row.top_benefits,
   features: row.features,
   badge: o.badge === undefined ? row.badge : o.badge,

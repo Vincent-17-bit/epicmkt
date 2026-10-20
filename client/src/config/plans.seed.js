@@ -1,8 +1,8 @@
 export const TIER_PLANS = {
-  A: { standard: { price: 300, items: 15 }, premium: { price: 800, items: 40 } },
-  B: { standard: { price: 500, items: 25 }, premium: { price: 1300, items: 70 } },
-  C: { standard: { price: 800, items: 40 }, premium: { price: 2000, items: 100 } },
-  D: { standard: { price: 1200, items: 50 }, premium: { price: 3000, items: 150 } },
+  A: { standard: { price: 300 }, premium: { price: 800 } },
+  B: { standard: { price: 500 }, premium: { price: 1300 } },
+  C: { standard: { price: 800 }, premium: { price: 2000 } },
+  D: { standard: { price: 1200 }, premium: { price: 3000 } },
 };
 
 export const GLOBAL_LIMITS = {
@@ -48,14 +48,14 @@ const CATEGORY_BENEFITS = {
 const FEATURES = {
   standard: {
     Visibility: ['Listed in search and category pages', 'Call, WhatsApp and directions buttons', 'Opening hours, partial and temporary closure'],
-    Catalog: ['Manual item entry', 'Up to {items} items', 'Up to {photos} photos and {videos} video per item', 'Shop gallery of {gallery} photos', 'Up to {faqs} FAQs'],
+    Catalog: ['Manual item entry', 'Unlimited items', 'Up to {photos} photos and {videos} video per item', 'Shop gallery of {gallery} photos', 'Up to {faqs} FAQs'],
     Promotions: ['Up to {offers} active offers', '{flash} flash sales a month, 1 at a time'],
     Tools: ['Basic totals', 'Plain QR poster'],
     Support: ['Standard review and support'],
   },
   premium: {
     Visibility: ['Featured badge on shop card and business page', 'Priority placement in category lists and search', 'Eligible for the homepage Featured shops carousel', 'Premium label on your account', 'Opening hours, partial and temporary closure'],
-    Catalog: ['Manual item entry and bulk import', 'Up to {items} items', 'Up to {photos} photos and {videos} videos per item', 'Shop gallery of {gallery} photos', 'Up to {faqs} FAQs'],
+    Catalog: ['Manual item entry and bulk import', 'Unlimited items', 'Up to {photos} photos and {videos} videos per item', 'Shop gallery of {gallery} photos', 'Up to {faqs} FAQs'],
     Promotions: ['Unlimited active offers, schedule ahead', '{flash} flash sales a month, several at once', 'Announcement banner'],
     Tools: ['CSV and Excel import', 'Bulk price change', 'Team and timetable', 'Multiple branches', 'Branded QR poster in A4 and A5'],
     Support: ['Priority review and support'],
@@ -64,9 +64,9 @@ const FEATURES = {
 
 const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
 
-function features(planKey, items) {
+function features(planKey) {
   const g = GLOBAL_LIMITS[planKey];
-  const vars = { items, photos: g.photosPerItem, videos: g.videosPerItem, gallery: g.galleryPhotos, faqs: g.faqs, offers: g.activeOffers, flash: g.flashSalesPerMonth };
+  const vars = { photos: g.photosPerItem, videos: g.videosPerItem, gallery: g.galleryPhotos, faqs: g.faqs, offers: g.activeOffers, flash: g.flashSalesPerMonth };
   return Object.fromEntries(Object.entries(FEATURES[planKey]).map(([group, list]) => [group, list.map((t) => fill(t, vars))]));
 }
 
@@ -77,9 +77,9 @@ export function planRows(categoryId, tier) {
     category_id: categoryId,
     plan_key: planKey,
     price_kes: t[planKey].price,
-    items_limit: t[planKey].items,
+    items_limit: null, // no limit on how many items a seller can list
     top_benefits: benefits,
-    features: features(planKey, t[planKey].items),
+    features: features(planKey),
     badge: planKey === 'premium' ? 'Best value' : null,
   }));
 }

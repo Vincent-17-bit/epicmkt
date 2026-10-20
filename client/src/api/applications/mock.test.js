@@ -33,7 +33,7 @@ describe('mock adapter', () => {
       expect(Array.isArray(c.extraDocs)).toBe(true);
       ['standard', 'premium'].forEach((k) => {
         expect(c.plans[k].price).toEqual(expect.any(Number));
-        expect(c.plans[k].limits.items).toEqual(expect.any(Number));
+        expect(c.plans[k].limits.items).toBeNull(); // no limit on listed items
         expect(c.plans[k].topBenefits).toHaveLength(3);
       });
     });
