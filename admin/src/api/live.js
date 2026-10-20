@@ -529,3 +529,28 @@ export async function markNotificationsRead(ids) {
   check(await query);
   return { ok: true };
 }
+
+// ---- Business detail page (migration 0023_admin_business_detail.sql) -------------------------------------------
+
+const detailRpc = async (fn, args) => check(await client().rpc(fn, args)).data;
+
+export const getBusinessDetail = (id) => detailRpc("admin_business_detail", { p_id: id });
+export const getBusinessPayments = (id) => detailRpc("admin_business_payments", { p_id: id });
+export const getBusinessActivity = (id) => detailRpc("admin_business_activity", { p_id: id, p_limit: 50 });
+export const getBusinessItems = (id) => detailRpc("admin_business_items", { p_id: id });
+export const getBusinessFlags = (id) => detailRpc("admin_business_flags", { p_id: id });
+export const getBusinessNotes = (id) => detailRpc("admin_business_notes", { p_id: id });
+
+export const setItemHidden = ({ id, hidden, reason = null }) =>
+  detailRpc("admin_set_item_hidden", { p_id: id, p_hidden: hidden, p_reason: reason });
+export const setFlagStatus = ({ id, status, note = null }) =>
+  detailRpc("admin_set_flag_status", { p_id: id, p_status: status, p_note: note });
+// Hide a live business from customers (it becomes "paused"), or show it again.
+export const setBusinessVisibility = ({ id, visible, reason = null }) =>
+  detailRpc("admin_set_business_visibility", { p_id: id, p_visible: visible, p_reason: reason });
+
+export const addBusinessNote = ({ id, body, pinned = false }) =>
+  detailRpc("admin_add_business_note", { p_id: id, p_body: body, p_pinned: pinned });
+export const setBusinessNotePinned = ({ noteId, pinned }) =>
+  detailRpc("admin_set_business_note_pinned", { p_note_id: noteId, p_pinned: pinned });
+export const deleteBusinessNote = (noteId) => detailRpc("admin_delete_business_note", { p_note_id: noteId });

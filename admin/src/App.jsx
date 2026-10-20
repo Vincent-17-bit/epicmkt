@@ -14,6 +14,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import RequireAdmin from "./auth/RequireAdmin.jsx";
 import RoleGuard from "./routes/RoleGuard.jsx";
+import BusinessDetailPage from "./pages/business/BusinessDetailPage.jsx";
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="applications" element={<RoleGuard permission="applications.view"><ApplicationsPage /></RoleGuard>} />
           <Route path="applications/:id" element={<RoleGuard permission="applications.view"><ApplicationDetailPage /></RoleGuard>} />
           <Route path="businesses" element={<RoleGuard permission="businesses.view"><BusinessesPage /></RoleGuard>} />
+          <Route path="businesses/:id" element={<RoleGuard permission="businesses.view"><BusinessDetailPage /></RoleGuard>} />
           <Route path="payments" element={<RoleGuard permission="payments.view"><PaymentsPage /></RoleGuard>} />
           <Route path="messages" element={<RoleGuard permission="messages.view"><MessagesPage /></RoleGuard>} />
           <Route path="flash-sales" element={<RoleGuard permission="flash.view"><FlashSalesPage /></RoleGuard>} />

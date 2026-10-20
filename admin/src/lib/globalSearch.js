@@ -9,6 +9,7 @@ const kes = (value) => `KES ${Number(value ?? 0).toLocaleString("en-KE", { maxim
 const words = (text) => String(text ?? "").replace(/_/g, " ");
 const join = (...parts) => parts.filter((part) => part !== null && part !== undefined && String(part).trim() !== "").join(" · ");
 const toBusinesses = (name) => `/admin/businesses?q=${encodeURIComponent(name ?? "")}`;
+const toBusiness = (id, tab) => `/admin/businesses/${id}${tab ? `?tab=${tab}` : ""}`;
 
 const GROUPS = [
   {
@@ -19,7 +20,7 @@ const GROUPS = [
   {
     key: "businesses",
     label: "Businesses",
-    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.seller_id, r.town, words(r.status)), to: toBusinesses(r.name) }),
+    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.seller_id, r.town, words(r.status)), to: toBusiness(r.id) }),
   },
   {
     key: "payments",
@@ -29,12 +30,12 @@ const GROUPS = [
   {
     key: "items",
     label: "Items",
-    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.business_name, r.price !== null && r.price !== undefined ? kes(r.price) : null), to: toBusinesses(r.business_name) }),
+    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.business_name, r.price !== null && r.price !== undefined ? kes(r.price) : null), to: r.business_id ? toBusiness(r.business_id, "items") : toBusinesses(r.business_name) }),
   },
   {
     key: "faqs",
     label: "FAQs",
-    map: (r) => ({ id: r.id, title: r.question, subtitle: r.business_name, to: toBusinesses(r.business_name) }),
+    map: (r) => ({ id: r.id, title: r.question, subtitle: r.business_name, to: r.business_id ? toBusiness(r.business_id) : toBusinesses(r.business_name) }),
   },
 ];
 

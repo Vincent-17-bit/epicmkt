@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faMinus, faStar } from "@fortawesome/free-solid-svg-icons";
 import HealthRing from "../../components/HealthRing.jsx";
@@ -19,7 +20,7 @@ export const columns = [
       <div className="biz-name">
         <span className="biz-logo" aria-hidden="true">{row.name[0]}</span>
         <div className="dt__stack">
-          <strong>{row.name}</strong>
+          <Link className="dt__link" to={`/admin/businesses/${row.id}`}><strong>{row.name}</strong></Link>
           <span>{row.slug}</span>
         </div>
       </div>
