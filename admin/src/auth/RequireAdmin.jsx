@@ -1,8 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import IdleGuard from "./IdleGuard.jsx";
-import MfaChallengePage from "./MfaChallengePage.jsx";
-import MfaEnrolPage from "./MfaEnrolPage.jsx";
 
 // Route guard. This is a convenience for the person using the app: the real protection is the
 // database (row level security) and the edge functions, which check the admins row on every call.
@@ -30,10 +28,6 @@ export default function RequireAdmin() {
       </div>
     );
   }
-
-  // The URL stays put while these show, so a deep link lands where it was meant to once the person is through.
-  if (status === "needsEnrol") return <MfaEnrolPage />;
-  if (status === "needsChallenge") return <MfaChallengePage />;
 
   if (status !== "admin") {
     return <Navigate to="/admin/login" replace state={{ from: `${location.pathname}${location.search}` }} />;

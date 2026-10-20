@@ -4,20 +4,7 @@
 
 1. Email and password (Supabase Auth).
 2. The account must have a row in `public.admins`. Anyone else is signed straight back out.
-3. A 6-digit code from an authenticator app (TOTP). The first time, the admin scans a QR code to set one up; after that a code is asked for on every sign-in. Nothing under `/admin` shows until this is done.
-4. After 15 minutes without activity (warning at 13) the admin is signed out. The Account page lists the places a person is signed in and can sign out all other devices (`admin_my_sessions()`, migration 0022).
-
-Supabase setting needed once: Authentication, Multi-Factor, TOTP enrol and verify must be on (it is by default on new projects). If it is off, the setup screen says so.
-
-### An admin lost their phone
-
-The owner removes the old authenticator, and the admin sets up a new one at their next sign-in:
-
-```sql
-delete from auth.mfa_factors where user_id = '<the admin user id>';
-```
-
-(or Authentication, Users, the user, Remove MFA factor, in the Supabase dashboard).
+3. After 15 minutes without activity (warning at 13) the admin is signed out. The Account page lists the places a person is signed in and can sign out all other devices (`admin_my_sessions()`, migration 0022).
 
 ## Roles
 

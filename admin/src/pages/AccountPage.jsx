@@ -102,7 +102,7 @@ export default function AccountPage() {
               Sign out other devices
             </button>
           </div>
-          <p className="muted">Your role is {roleLabel}. You sign in with a password and a code from your authenticator app.</p>
+          <p className="muted">Your role is {roleLabel}.</p>
           {othersMsg ? <p role="status">{othersMsg}</p> : null}
           {sessions.isError ? (
             <p role="alert" className="admin-login__error">We could not load your sessions.</p>
