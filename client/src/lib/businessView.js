@@ -1,5 +1,5 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { DAYS, nairobiNow } from "@epicmkt/shared";
+import { DAYS, hoursRowsFor, nairobiNow } from "@epicmkt/shared";
 
 export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -23,10 +23,13 @@ export function statusText(business) {
   if (business.isOpen) return business.closesAt ? `Open now · Closes ${formatTime(business.closesAt)}` : "Open now";
   const next = business.opensAt;
   if (!next) return "Closed";
-  const today = nairobiNow().day;
-  const day = next.day === today ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
+  // Compare dates, not weekdays: "opens next Tuesday" must not read as "opens today" when today is a Tuesday.
+  const day = next.date ? (next.date === nairobiNow().date ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `) : next.day === nairobiNow().day ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
   return `Closed · Opens ${day}${formatTime(next.time)}`;
 }
+
+/** Rows for the Opening hours table; exceptions replace the weekly hours for their date. */
+export const hoursRows = (hours, exceptions) => hoursRowsFor(hours, exceptions);
 
 export const todayKey = () => nairobiNow().day;
 

@@ -177,3 +177,23 @@ test("SQL and the shared JS validator agree", async () => {
   }
   assert.ok(n > 200);
 });
+
+test("customers (anon) see only today and upcoming exceptions, with public fields only", async () => {
+  await reset();
+  await sql(c, `update businesses set status = 'live', paid_until = now() + interval '30 days' where id = '${ids.bizA}'`);
+  const old = { id: "00000000-0000-0000-0000-000000000001", date: addDays(today, -3), kind: "closed", intervals: [], note: "old", seller_only: "secret" };
+  const mk = (id, date, kind, intervals, note) => ({ id, date, kind, intervals, note, seller_only: "secret" });
+  const stored = [old, mk("00000000-0000-0000-0000-000000000002", today, "closed", [], "Holiday"), mk("00000000-0000-0000-0000-000000000003", addDays(today, 4), "special", [["10:00", "14:00"]], null), { id: "x", date: "not-a-date", kind: "closed" }];
+  await sql(c, `update businesses set exceptions = $1::jsonb where id = '${ids.bizA}'`, [JSON.stringify(stored)]);
+
+  const rows = await tx(c, { role: "anon" }, (k) => sql(k, `select slug, exceptions from public_businesses where id = '${ids.bizA}'`));
+  assert.equal(rows.length, 1, "the business is visible to customers");
+  assert.deepEqual(rows[0].exceptions, [
+    { id: "00000000-0000-0000-0000-000000000002", date: today, kind: "closed", intervals: [], note: "Holiday" },
+    { id: "00000000-0000-0000-0000-000000000003", date: addDays(today, 4), kind: "special", intervals: [["10:00", "14:00"]], note: null },
+  ], "past and malformed entries are gone, unknown keys are not passed on");
+
+  await rejects(c, { role: "anon" }, `select exceptions from businesses`, [], /permission denied/);
+  await reset();
+  assert.deepEqual((await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions, [], "no exceptions is an empty list");
+});

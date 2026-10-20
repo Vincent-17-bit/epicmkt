@@ -5,7 +5,7 @@ import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/
 import { distanceKm } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { DAY_NAMES, WEEK, expiryText, formatTime, socialLinks, statusText, todayKey } from "../lib/businessView.js";
+import { expiryText, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { visibleFields } from "@epicmkt/shared";
@@ -85,7 +85,6 @@ export default function Business() {
 
   const icon = categoryIcon(data.category?.icon);
   const shortUrl = `${window.location.origin}/s/${data.shortcode}`;
-  const today = todayKey();
   const origin = live ?? geo.coords;
   const distance = origin ? distanceKm(origin, data) : null;
   const hasDetails = visibleFields(data.category?.fields, data.attributes).some((f) => f.key in (data.attributes ?? {}));
@@ -106,13 +105,6 @@ export default function Business() {
     window.setTimeout(() => setShareNote(""), 2500);
   };
 
-  const hoursRows = WEEK.map((day) => ({
-    day,
-    name: DAY_NAMES[day],
-    today: day === today,
-    text: data.hours[day] ? `${formatTime(data.hours[day][0])} to ${formatTime(data.hours[day][1])}` : "Closed"
-  }));
-
   const locateLabel =
     geo.status === "asking" ? "Finding you" : geo.status === "denied" || geo.status === "unsupported" ? "Choose your town to see distance" : "Show distance from me";
 
@@ -125,7 +117,7 @@ export default function Business() {
       distanceKm={distance}
       fromTown={geo.town}
       locate={{ label: locateLabel, onClick: geo.request, disabled: geo.status === "asking" }}
-      hoursRows={hoursRows}
+      hoursRows={hoursRows(data.hours, data.exceptions)}
       formatExpiry={expiryText}
       details={hasDetails ? <TemplateDetails fields={data.category.fields} attributes={data.attributes} /> : null}
       detailsTitle={`${data.category?.singular} details`}

@@ -462,7 +462,7 @@ export const getShopPreview = async () => {
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",
     planKey: bill.business.planKey, status: bill.business.status, live: cat.shop.live, verified: bill.business.verificationLevel === "verified",
     county: "Kisumu", town: "Maseno", address: "Main Street", lat: -0.09, lng: 34.6, phone: "0712345678", whatsapp: "0712345678",
-    socials: { instagram: "demoshop" }, hours, tags: ["demo"], logoPath: null, coverPath: null, categoryName: "Barbershop",
+    socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: null, coverPath: null, categoryName: "Barbershop",
   };
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales });

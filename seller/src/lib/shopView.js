@@ -1,5 +1,5 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { nairobiNow } from "@epicmkt/shared";
+import { hoursRowsFor, nairobiNow } from "@epicmkt/shared";
 
 export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -14,19 +14,13 @@ export const statusText = (business) => {
   if (business.isOpen) return business.closesAt ? `Open now · Closes ${formatTime(business.closesAt)}` : "Open now";
   const next = business.opensAt;
   if (!next) return "Closed";
-  const day = next.day === nairobiNow().day ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
+  const sameDay = next.date ? next.date === nairobiNow().date : next.day === nairobiNow().day;
+  const day = sameDay ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
   return `Closed · Opens ${day}${formatTime(next.time)}`;
 };
 
-export const hoursRows = (hours) => {
-  const today = nairobiNow().day;
-  return WEEK.map((day) => ({
-    day,
-    name: DAY_NAMES[day],
-    today: day === today,
-    text: hours?.[day] ? `${formatTime(hours[day][0])} to ${formatTime(hours[day][1])}` : "Closed",
-  }));
-};
+// Same rows the customer page shows. Exceptions replace the weekly hours for their date.
+export const hoursRows = (hours, exceptions) => hoursRowsFor(hours, exceptions);
 
 const SOCIALS = {
   instagram: { label: "Instagram", icon: faInstagram, url: (h) => `https://instagram.com/${h}` },

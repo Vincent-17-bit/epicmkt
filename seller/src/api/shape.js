@@ -1,3 +1,5 @@
+import { nairobiNow, upcomingExceptions } from "@epicmkt/shared";
+
 // Database rows (snake_case) to the shapes the pages use (camelCase). Live and mock return the same shapes.
 export const business = (b) => b && ({
   id: b.id, sellerId: b.seller_id, name: b.name, status: b.status, planKey: b.plan_key, categoryId: b.category_id,
@@ -77,6 +79,8 @@ export const preview = (b, { categoryName, catalog: c, flashSales, nowMs }) => (
     slug: b.slug, name: b.name, tagline: b.tagline ?? "", description: b.description ?? "", planKey: b.plan_key, status: b.status,
     live: c.shop.live, verified: b.verification_level === "verified", county: b.county ?? "", town: b.town ?? "", address: b.address ?? "",
     lat: b.lat ?? null, lng: b.lng ?? null, phone: b.phone ?? null, whatsapp: b.whatsapp ?? null, socials: b.socials ?? {}, hours: b.hours ?? {},
+    // Customers only ever get today and upcoming dates, so the preview shows the same.
+    exceptions: upcomingExceptions(b.exceptions, nairobiNow().date).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals: intervals ?? [], note: note ?? null })),
     tags: b.tags ?? [], logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null, categoryName: categoryName ?? "",
   },
   items: c.items.filter(customerSees).sort((x, y) => x.sort - y.sort || Date.parse(y.createdAt) - Date.parse(x.createdAt)),

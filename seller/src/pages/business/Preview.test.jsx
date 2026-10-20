@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
 import * as api from "../../api/index.js";
 import { M, signedInApp, setTime } from "../../test/utils.jsx";
@@ -69,5 +69,41 @@ describe("shop preview", () => {
     await open();
     await screen.findByTestId("shop-preview");
     expect(screen.getByRole("link", { name: "Back to My listings" })).toHaveAttribute("href", "/business/catalog");
+  });
+
+  describe("opening-hours exceptions", () => {
+    // Tue 20 Oct 2026, 09:30 in Nairobi. The demo shop is open Monday to Saturday, 08:00 to 18:00.
+    const freezeTuesday = () => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T06:30:00Z") });
+    afterEach(() => vi.useRealTimers());
+
+    it("is open on a normal weekday", async () => {
+      freezeTuesday();
+      await open();
+      const page = await screen.findByTestId("shop-preview");
+      expect(within(page).getByText("Open now · Closes 6:00 PM")).toBeInTheDocument();
+    });
+
+    it("shows a closed day as closed, with the next opening, exactly as customers would see it", async () => {
+      freezeTuesday();
+      await open(() => api.saveException({ date: "2026-10-20", kind: "closed", note: "Public holiday" }));
+      const page = await screen.findByTestId("shop-preview");
+      expect(within(page).getByText("Closed · Opens Wed 8:00 AM")).toBeInTheDocument();
+      expect(within(within(page).getByText("Tuesday").closest("tr")).getByText("Closed")).toBeInTheDocument();
+    });
+
+    it("shows special hours for the date instead of the weekly hours", async () => {
+      freezeTuesday();
+      await open(() => api.saveException({ date: "2026-10-20", kind: "special", intervals: [["10:00", "12:00"], ["15:00", "17:00"]] }));
+      const page = await screen.findByTestId("shop-preview");
+      expect(within(page).getByText("Closed · Opens 10:00 AM")).toBeInTheDocument();
+      expect(within(within(page).getByText("Tuesday").closest("tr")).getByText("10:00 AM to 12:00 PM, 3:00 PM to 5:00 PM")).toBeInTheDocument();
+    });
+
+    it("opens the shop on a Sunday the weekly hours say is closed", async () => {
+      freezeTuesday();
+      await open(() => api.saveException({ date: "2026-10-25", kind: "special", intervals: [["10:00", "14:00"]] }));
+      const page = await screen.findByTestId("shop-preview");
+      expect(within(within(page).getByText("Sunday").closest("tr")).getByText("10:00 AM to 2:00 PM")).toBeInTheDocument();
+    });
   });
 });
