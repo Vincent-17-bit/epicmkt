@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faArrowDown, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
 import { getCategories, getFeaturedBusinesses } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { rotationSeed } from "../lib/rotation.js";
@@ -15,7 +15,7 @@ import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
 import BrowseResults from "../components/BrowseResults.jsx";
 import BusinessRail from "../components/BusinessRail.jsx";
-import HomeList from "../components/HomeList.jsx";
+import RecentlyAdded from "../components/RecentlyAdded.jsx";
 import NearYou from "../components/NearYou.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
@@ -68,6 +68,7 @@ export default function Home() {
     );
   const query = (params.get("q") ?? "").trim();
   const isSearch = location.pathname === "/search";
+  const isNewest = isSearch && !query && params.get("sort") === "newest";
   const { data, isPending, isError, isSuccess, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
@@ -77,7 +78,7 @@ export default function Home() {
   const category = slug ? data?.find((c) => c.id === slug) : null;
   const missing = Boolean(slug) && isSuccess && !category;
 
-  usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : isSearch ? "All businesses" : undefined);
+  usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : isSearch ? (isNewest ? "Recently added" : "All businesses") : undefined);
 
   if (missing) return <NotFound />;
 
@@ -106,9 +107,15 @@ export default function Home() {
       <>
         <PageBanner
           crumbs={<PageBreadcrumbs />}
-          icon={faMagnifyingGlass}
-          title={query ? `Results for "${query}"` : "All businesses"}
-          subtitle={query ? undefined : "Browse everything listed on EpicMKT, or use the search to narrow it down."}
+          icon={isNewest ? faClock : faMagnifyingGlass}
+          title={query ? `Results for "${query}"` : isNewest ? "Recently added" : "All businesses"}
+          subtitle={
+            query
+              ? undefined
+              : isNewest
+                ? "The newest businesses on EpicMKT, freshest first. Use the filters to narrow them down."
+                : "Browse everything listed on EpicMKT, or use the search to narrow it down."
+          }
         />
         <section className={styles.section}>
           <Container>
@@ -194,21 +201,9 @@ export default function Home() {
 
       <Featured />
 
-      <section className={styles.section} aria-labelledby="top-title">
-        <Container>
-          <h2 id="top-title" className={styles.heading}>
-            Top rated
-          </h2>
-          <HomeList sort="rating" />
-        </Container>
-      </section>
-
       <section className={styles.section} aria-labelledby="recent-title">
         <Container>
-          <h2 id="recent-title" className={styles.heading}>
-            Recently added
-          </h2>
-          <HomeList sort="newest" />
+          <RecentlyAdded />
         </Container>
       </section>
 
