@@ -26,6 +26,8 @@ const navItems = [
   { label: "Broadcasts", to: "/admin/broadcasts", permission: "messages.view" },
   { label: "Automation", to: "/admin/automation", permission: "automation.view" },
   { label: "Flash sales", to: "/admin/flash-sales", permission: "flash.view" },
+  { label: "Plans", to: "/admin/plans", permission: "plans.view" },
+  { label: "Categories", to: "/admin/categories", permission: "plans.view" },
   { label: "Settings", to: "/admin/settings", permission: "settings.view" },
 ];
 

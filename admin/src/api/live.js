@@ -597,3 +597,16 @@ export const sendBroadcast = (payload) => callFunction("admin-message", payload)
 export const getAutomationStatus = () => detailRpc("admin_automation_status", {});
 export const setJobActive = ({ name, active }) => detailRpc("admin_set_job_active", { p_name: name, p_active: active });
 export const runJob = (name) => detailRpc("admin_run_job", { p_name: name });
+
+// ---- Plans, categories and the template builder (migrations 0026_admin_plans.sql, 0027_admin_categories.sql) ------
+
+export const listPlans = () => detailRpc("admin_plans_list", {});
+export const getPlanHistory = ({ category, plan }) => detailRpc("admin_plan_history", { p_category: category, p_plan: plan });
+export const savePlan = ({ category, plan, price, benefits, badge = null, reason = null }) =>
+  detailRpc("admin_save_plan", { p_category: category, p_plan: plan, p_price: price, p_benefits: benefits, p_badge: badge || null, p_reason: reason });
+
+export const listCategories = () => detailRpc("admin_categories_list", {});
+export const saveCategory = ({ id, name, group, icon = "store", tier, sort = 0, active, template, extraDocs, reason = null }) =>
+  detailRpc("admin_save_category", {
+    p_id: id, p_name: name, p_grp: group, p_icon: icon, p_tier: tier, p_sort: sort, p_active: active, p_template: template, p_extra_docs: extraDocs, p_reason: reason,
+  });

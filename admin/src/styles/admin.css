@@ -1481,3 +1481,14 @@ th {
 .automation-problem--down { border-color: var(--admin-danger, #b42318); }
 .automation-problem--degraded { border-color: #b54708; }
 @media (max-width: 800px) { .compose { grid-template-columns: 1fr; } }
+
+/* Plans, categories and the template builder */
+.plan-impact { background: color-mix(in srgb, #b54708 10%, transparent); padding: 8px 12px; border-radius: 8px; margin: 0; }
+.plan-history { list-style: none; padding: 0; display: grid; gap: 12px; max-height: 50vh; overflow: auto; }
+.modal__form--wide { min-width: min(720px, 92vw); max-height: 80vh; overflow: auto; }
+.builder { border: 1px solid var(--admin-border, #d0d5dd); border-radius: 8px; padding: 12px; display: grid; gap: 12px; }
+.builder__item { border: 1px solid var(--admin-border, #d0d5dd); border-radius: 8px; padding: 10px; display: grid; gap: 8px; }
+.builder__row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+.builder__row > .field { flex: 1 1 160px; }
+.builder__flags { gap: 16px; }
+.builder__tools { display: flex; gap: 6px; }
