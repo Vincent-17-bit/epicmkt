@@ -402,10 +402,16 @@ const toMessage = (m, files) => ({
 
 export async function listMessages({ businessId = null } = {}) {
   const db = client();
-  let mq = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null).is("admin_hidden_at", null).order("created_at", { ascending: false }).limit(1000);
+  const build = (hidden) => {
+    let q = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null);
+    if (hidden) q = q.is("admin_hidden_at", null);
+    q = q.order("created_at", { ascending: false }).limit(1000);
+    return businessId ? q.eq("business_id", businessId) : q;
+  };
   let fq = db.from("message_attachments").select("*").order("created_at", { ascending: false }).limit(1000);
-  if (businessId) { mq = mq.eq("business_id", businessId); fq = fq.eq("business_id", businessId); }
-  const [messages, files] = await Promise.all([mq, fq]);
+  if (businessId) fq = fq.eq("business_id", businessId);
+  let [messages, files] = await Promise.all([build(true), fq]);
+  if (messages.error && /admin_hidden_at/.test(messages.error.message ?? "")) messages = await build(false);
   const f = check(files).data ?? [];
   return (check(messages).data ?? []).map((m) => toMessage(m, f));
 }
