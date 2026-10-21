@@ -84,13 +84,14 @@ export const exportData = () => fn("seller-export-data", {});
 export const getSubscription = async () => {
   const b = await rows(need().from("businesses").select("*").maybeSingle());
   if (!b) throw new ApiError("not_a_seller");
-  const [cat, plans, limits] = await Promise.all([
+  const [cat, plans, limits, graceDays] = await Promise.all([
     rows(need().from("categories").select("id, name").eq("id", b.category_id).maybeSingle()),
     rows(need().from("plans").select("*").eq("category_id", b.category_id)),
     rows(need().from("global_limits").select("*").eq("id", 1).maybeSingle()),
+    rpc("my_grace_days"),
   ]);
   return {
-    business: { ...shape.business(b), categoryName: cat?.name ?? b.category_id },
+    business: { ...shape.business(b), graceDays: Number(graceDays ?? 1), categoryName: cat?.name ?? b.category_id },
     plans: shape.plans(plans),
     limits: { standard: limits?.standard ?? {}, premium: limits?.premium ?? {} },
   };

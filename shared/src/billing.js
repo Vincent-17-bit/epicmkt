@@ -62,13 +62,13 @@ function shiftMonths(day, n) {
 
 export const addCalendarMonth = (date) => shiftMonths(toDay(date), 1);
 
-export const graceEndsAt = (paidUntil) => new Date(fromDay(toDay(paidUntil)).getTime() + DAY_MS);
+export const graceEndsAt = (paidUntil, graceDays = 1) => new Date(fromDay(toDay(paidUntil)).getTime() + graceDays * DAY_MS);
 
-export function listingState(paidUntil, now = new Date()) {
+export function listingState(paidUntil, now = new Date(), graceDays = 1) {
   const today = toDay(now);
   const paid = toDay(paidUntil);
   if (today <= paid) return 'active';
-  if (today <= graceEndsAt(paid).toISOString().slice(0, 10)) return 'grace';
+  if (today <= graceEndsAt(paid, graceDays).toISOString().slice(0, 10)) return 'grace';
   return 'expired';
 }
 
@@ -112,12 +112,14 @@ export const PAYMENT_KIND_LABELS = { first: 'First payment', renewal: 'Renewal',
  */
 export function subscriptionView(business, now = new Date()) {
   const paidUntil = business?.paidUntil ?? null;
-  const state = paidUntil ? listingState(paidUntil, now) : 'none';
+  const graceDays = business?.graceDays ?? 1;
+  const state = paidUntil ? listingState(paidUntil, now, graceDays) : 'none';
   return {
     state,
+    graceDays,
     status: business?.status ?? null,
     paidUntilDay: paidUntil ? toDay(paidUntil) : null,
-    graceEndsDay: paidUntil ? graceEndsAt(paidUntil).toISOString().slice(0, 10) : null,
+    graceEndsDay: paidUntil ? graceEndsAt(paidUntil, graceDays).toISOString().slice(0, 10) : null,
     daysLeft: daysLeft(paidUntil, now),
   };
 }
@@ -132,7 +134,7 @@ export function billingBanners(business, now = new Date()) {
     out.push({ id: 'paused', tone: 'info', title: 'Your listing is unlisted', text: 'It is paused and hidden from customers. You can resume it from your dashboard.' });
   }
   if (v.state === 'grace') {
-    out.push({ id: 'grace', tone: 'warning', title: 'Your subscription has ended', text: `You are in your 1 day of grace, until ${formatDay(v.graceEndsDay)}. Renew now to stay visible.`, action: 'renew' });
+    out.push({ id: 'grace', tone: 'warning', title: 'Your subscription has ended', text: `You are in your ${v.graceDays ?? 1} day${(v.graceDays ?? 1) === 1 ? '' : 's'} of grace, until ${formatDay(v.graceEndsDay)}. Renew now to stay visible.`, action: 'renew' });
   } else if (v.state === 'expired') {
     out.push({ id: 'expired', tone: 'danger', title: 'Your subscription has expired', text: `It ended on ${formatDay(v.paidUntilDay)}. Your listing is hidden until you renew.`, action: 'renew' });
   } else if (v.state === 'active' && v.daysLeft <= 7) {
@@ -155,7 +157,7 @@ const fail = (code) => Object.assign(new Error(code), { code });
  *   category_change  account = Seller ID, amount = prorated difference; a cheaper category costs nothing now
  */
 export function buildPaymentInstructions({ business, application = null, priceOf, setting = null, purpose = null, targetPlan = null, category = null, now = new Date() }) {
-  const state = business.paidUntil ? listingState(business.paidUntil, now) : 'none';
+  const state = business.paidUntil ? listingState(business.paidUntil, now, business.graceDays ?? 1) : 'none';
   const current = priceOf(business.categoryId, business.planKey);
   const kind = purpose ?? (!business.paidUntil && !business.hasConfirmedPayment ? 'first' : 'renewal');
   let amount;

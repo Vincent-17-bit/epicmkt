@@ -6,7 +6,7 @@
 export type Day = string; // "YYYY-MM-DD", a calendar day in EAT
 
 export const EAT_OFFSET_MS = 3 * 3_600_000;
-/** One day of grace after the paid-until day. Fixed: the SQL, the seller banners and this file all use 1. */
+/** The default grace after the paid-until day. A business can have its own; the database holds the setting. */
 export const GRACE_DAYS = 1;
 
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -77,12 +77,12 @@ export function addCalendarMonth(input: Date | string | number, n = 1): Day {
 export type ListingState = "none" | "active" | "grace" | "expired";
 
 /** Active through the whole paid-until day, then GRACE_DAYS of grace, then expired. */
-export function listingState(paidUntil: Date | string | number | null | undefined, now: Date | string | number = new Date()): ListingState {
+export function listingState(paidUntil: Date | string | number | null | undefined, now: Date | string | number = new Date(), graceDays: number = GRACE_DAYS): ListingState {
   if (paidUntil === null || paidUntil === undefined) return "none";
   const today = nairobiDay(now);
   const paid = nairobiDay(paidUntil);
   if (today <= paid) return "active";
-  if (today <= addDays(paid, GRACE_DAYS)) return "grace";
+  if (today <= addDays(paid, graceDays)) return "grace";
   return "expired";
 }
 
@@ -103,10 +103,10 @@ export type RenewalPeriod = {
  * paying early (or within the grace day) starts the new month on the paid-until day so no day is lost;
  * paying after that starts today. The new paid_until is `end`, stored as nairobiMidnight(end).
  */
-export function renewalPeriod(paidUntil: Date | string | number | null | undefined, now: Date | string | number = new Date()): RenewalPeriod {
+export function renewalPeriod(paidUntil: Date | string | number | null | undefined, now: Date | string | number = new Date(), graceDays: number = GRACE_DAYS): RenewalPeriod {
   const today = nairobiDay(now);
   const paid = paidUntil === null || paidUntil === undefined ? null : nairobiDay(paidUntil);
-  const continues = paid !== null && today <= addDays(paid, GRACE_DAYS);
+  const continues = paid !== null && today <= addDays(paid, graceDays);
   const start = continues ? (paid as Day) : today;
   return { start, end: addCalendarMonth(start), continuesPaidPeriod: continues };
 }

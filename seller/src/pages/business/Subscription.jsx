@@ -110,7 +110,7 @@ export default function Subscription() {
             </dd>
           </div>
         </dl>
-        <p className={ui.muted}>Each payment covers one calendar month: a month that starts on 31 Jan runs to 28 Feb. After it ends you have 1 day of grace.</p>
+        <p className={ui.muted}>Each payment covers one calendar month: a month that starts on 31 Jan runs to 28 Feb. After it ends you have {view.graceDays} day{view.graceDays === 1 ? "" : "s"} of grace.</p>
       </section>
 
       <div ref={payRef}>

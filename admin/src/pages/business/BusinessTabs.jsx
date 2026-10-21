@@ -36,6 +36,29 @@ export function OverviewTab({ detail }) {
   const b = detail.business;
   const s = detail.stats;
   const left = b.paid_until ? daysLeft(b.paid_until) : null;
+  const { can } = usePermissions();
+  const client = useQueryClient();
+  const toast = useToast();
+  const [graceOpen, setGraceOpen] = useState(false);
+  const [graceInput, setGraceInput] = useState("");
+  const [graceError, setGraceError] = useState("");
+  const overridden = b.grace_days !== null && b.grace_days !== undefined;
+  const graceNow = b.grace_days ?? b.grace_default ?? 1;
+  const graceValid = graceInput === "" || (/^\d+$/.test(graceInput) && Number(graceInput) <= 90);
+
+  const changeGrace = useMutation({
+    mutationFn: ({ days, reason }) => api.setBusinessGrace({ id: b.id, days, reason }),
+    onSuccess: () => {
+      setGraceOpen(false);
+      toast.push({ message: "Grace period updated." });
+      client.invalidateQueries({ queryKey: ["admin-business", b.id] });
+      client.invalidateQueries({ queryKey: ["admin-business-activity", b.id] });
+      client.invalidateQueries({ queryKey: ["business-table"] });
+      client.invalidateQueries({ queryKey: ["admin-counts"] });
+    },
+    onError: (failure) => setGraceError(failure?.message && failure.message !== failure.code ? failure.message : friendlyError(failure)),
+  });
+
   return (
     <div className="biz-overview">
       <ul className="biz-stats" aria-label="Summary">
@@ -71,6 +94,21 @@ export function OverviewTab({ detail }) {
             <Field name="Plan">{b.plan_key ? `${b.plan_key[0].toUpperCase()}${b.plan_key.slice(1)}` : ""}</Field>
             <Field name="Monthly price">{b.monthly_price ? kes(b.monthly_price) : ""}</Field>
             <Field name="Paid until">{b.paid_until ? `${formatDate(b.paid_until)} (${left < 0 ? `${-left} day${left === -1 ? "" : "s"} ago` : `${left} day${left === 1 ? "" : "s"} left`})` : ""}</Field>
+            <Field name="Grace period">
+              {`${graceNow} day${graceNow === 1 ? "" : "s"} (${overridden ? "set for this business" : "default"})`}
+              {can("businesses.extend") && !b.deleted_at ? (
+                <>
+                  {" "}
+                  <button
+                    type="button"
+                    className="admin-bell__markall"
+                    onClick={() => { setGraceInput(overridden ? String(b.grace_days) : ""); setGraceError(""); setGraceOpen(true); }}
+                  >
+                    Change
+                  </button>
+                </>
+              ) : null}
+            </Field>
             <Field name="First paid">{formatDate(b.first_paid_at)}</Field>
             <Field name="Credit">{b.credit_kes ? kes(b.credit_kes) : ""}</Field>
           </dl>
@@ -87,6 +125,24 @@ export function OverviewTab({ detail }) {
         </section>
       </div>
       {b.tagline || b.description ? <p className="muted">{b.tagline} {b.description}</p> : null}
+      {graceOpen ? (
+        <ConfirmDialog
+          title={`Grace period for ${b.name}`}
+          summary="After the paid date the shop stays visible for this many days. Then it is hidden from customers until a payment is confirmed."
+          confirmLabel="Save grace period"
+          valid={graceValid}
+          busy={changeGrace.isPending}
+          error={graceError}
+          onCancel={() => setGraceOpen(false)}
+          onConfirm={(reason) => { setGraceError(""); changeGrace.mutate({ days: graceInput === "" ? null : Number(graceInput), reason }); }}
+        >
+          <label className="field">
+            Days of grace (0 to 90)
+            <input type="number" min="0" max="90" step="1" inputMode="numeric" value={graceInput} onChange={(event) => setGraceInput(event.target.value)} />
+          </label>
+          <p className="muted">Leave empty to use the default of {b.grace_default ?? 1} day{(b.grace_default ?? 1) === 1 ? "" : "s"}.</p>
+        </ConfirmDialog>
+      ) : null}
     </div>
   );
 }

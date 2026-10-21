@@ -60,6 +60,12 @@ export const ACTION_TEXT = {
   job_not_scheduled: "That job is not scheduled. Run supabase/cron/schedule.sql first.",
   unknown_job: "That is not one of this app's jobs.",
   automation_not_configured: "Run now needs the project_url and cron_secret secrets in Vault. See docs/cron-runbook.md.",
+  invalid_settings: "Check the values and try again.",
+  invalid_grace_days: "Grace must be a whole number of days: 0 to 30 for everyone, 0 to 90 for one business.",
+  invalid_strike_threshold: "The strike threshold must be a whole number from 1 to 20.",
+  invalid_sms_sender: "The SMS sender must be 3 to 11 letters or numbers, with no spaces.",
+  invalid_quiet_hours: "Quiet hours need a start and an end time that are different.",
+  target_not_found: "That business no longer exists. Refresh the page.",
 };
 
 // Turns whatever supabase-js hands back (a PostgREST error, a storage error, a thrown Error) into an ApiError

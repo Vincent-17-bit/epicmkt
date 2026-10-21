@@ -9,7 +9,7 @@ const ACTIONS = {
   "message.queue": "Sent a broadcast", "message.retry": "Retried a message", "message.retry_failed": "Retried failed messages",
   "template.create": "Created a message template", "template.update": "Edited a message template",
   "job.pause": "Paused an automation job", "job.resume": "Resumed an automation job", "job.run": "Ran an automation job",
-  "plan.update": "Changed a plan", "category.create": "Created a category", "category.update": "Edited a category",
+  "plan.update": "Changed a plan", "business.grace": "Changed the grace period", "settings.update": "Changed system settings", "category.create": "Created a category", "category.update": "Edited a category",
 };
 
 /** "item.hide" -> "Hid an item". Unknown actions are made readable: "foo.bar_baz" -> "Foo: bar baz". */

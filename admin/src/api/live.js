@@ -10,7 +10,7 @@ const notConfigured = () => {
 };
 
 // Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
-// audited RPCs (suspend, extend, tag, message...) and the audit viewer. Everything else on
+// audited RPCs (suspend, extend, tag, message...). Everything else on
 // the Businesses page, the Payments page and the Command Center is live below.
 export const getBusinesses = notConfigured;
 
@@ -618,3 +618,13 @@ export const getAuditGroups = () => detailRpc("admin_audit_groups", {});
 // Kept for callers of the old stub: the latest entries, newest first.
 export const listAuditEntries = async ({ limit = 50 } = {}) => (await listAudit({ pageSize: limit })).rows;
 export const getAnalytics = ({ days = 30 } = {}) => detailRpc("admin_analytics", { p_days: days });
+
+// ---- Settings and grace (migration 0029_grace_and_settings.sql) -----------------------------------------------------
+
+export const getSettings = async () => check(await client().rpc("admin_get_settings")).data;
+
+export const saveSettings = async (settings, reason = null) =>
+  check(await client().rpc("admin_save_settings", { p_settings: settings, p_reason: reason })).data;
+
+export const setBusinessGrace = ({ id, days, reason }) =>
+  detailRpc("admin_set_business_grace", { p_business: id, p_days: days, p_reason: reason });

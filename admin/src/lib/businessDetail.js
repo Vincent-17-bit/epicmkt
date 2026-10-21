@@ -51,6 +51,8 @@ const AUDIT_LABELS = {
   "flag.status": "Changed a flag",
   "payment.confirm": "Confirmed a payment",
   "payment.reject": "Rejected a payment",
+  "business.grace": "Changed the grace period",
+  "settings.update": "Changed system settings",
 };
 
 /** "item.hide" -> "Hid an item". Unknown actions are made readable instead of hidden. */
@@ -63,7 +65,12 @@ export function auditLabel(action) {
 export const kes = (value) => `KES ${Number(value ?? 0).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
 
 /** The business as the status chip and countdown expect it. */
-export const stateInput = (business) => ({ status: business.status, paidUntil: business.paid_until, deleted: Boolean(business.deleted_at) });
+export const stateInput = (business) => ({
+  status: business.status,
+  paidUntil: business.paid_until,
+  deleted: Boolean(business.deleted_at),
+  graceDays: business.grace_days ?? business.grace_default ?? undefined,
+});
 
 /** Can this business be hidden from, or shown to, customers? (The database allows live and paused only.) */
 export const canToggleVisibility = (business) => !business.deleted_at && ["live", "paused"].includes(business.status);
