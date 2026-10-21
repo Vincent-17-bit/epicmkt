@@ -128,7 +128,7 @@ export default function Subscription() {
       <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />
       <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />
       <PaymentHistory payments={payments.data ?? []} />
-      <p className={ui.muted}>{formatKes(sub.data.plans[business.planKey].price)} per month is your current price.</p>
+      {sub.data.plans[business.planKey] && <p className={ui.muted}>{formatKes(sub.data.plans[business.planKey].price)} per month is your current price.</p>}
     </div>
   );
 }

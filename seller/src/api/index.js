@@ -1,13 +1,10 @@
-import * as backend from "@epicmkt/backend";
 import * as live from "./live.js";
 import * as mock from "./mock.js";
 
-const impl = import.meta.env?.VITE_API_MODE === "live" ? live : mock;
-
-export const getSellerBusiness = (sellerId) => backend.getSellerBusiness(sellerId);
-export const getSellerStats = (sellerId) => backend.getSellerStats(sellerId);
-export const updateSellerBusiness = (sellerId, patch) => backend.updateSellerBusiness(sellerId, patch);
-export const getCategories = () => backend.getCategories();
+// A production build always talks to the real Supabase project (data, auth, edge functions and realtime).
+// The in-browser demo only runs when it is asked for by name (VITE_API_MODE=mock), or in local dev and tests when nothing is set.
+const mode = import.meta.env?.VITE_API_MODE;
+const impl = mode === "mock" ? mock : mode === "live" || import.meta.env?.PROD ? live : mock;
 
 export const login = (...a) => impl.login(...a);
 export const logout = (...a) => impl.logout(...a);
