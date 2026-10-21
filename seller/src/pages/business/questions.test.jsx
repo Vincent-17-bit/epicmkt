@@ -15,8 +15,9 @@ async function reply(user, c, text) {
 
 describe("questions from the admin", () => {
   it("shows the question, due date, the item or FAQ concerned with a link, and the status", async () => {
-    setTime("2026-10-12T09:00:00Z");
     await signedInApp("/business/questions", () => {
+      // signedInApp resets the clock to real time first, so the fixed clock must be set here, after that reset.
+      setTime("2026-10-12T09:00:00Z");
       M.state.questions[0].dueAt = "2026-10-10T09:00:00Z";
       M.state.questions[1].dueAt = "2026-10-20T09:00:00Z";
     });
