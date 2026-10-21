@@ -42,7 +42,7 @@ export const saleRow = (over = {}) => {
 };
 
 export function createFakeSupabase() {
-  const state = { serverNow: null, sales: [], items: [], businesses: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false };
+  const state = { serverNow: null, sales: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false };
 
   const clock = () => state.serverNow ?? Date.now();
 
@@ -50,21 +50,28 @@ export function createFakeSupabase() {
     if (table === "public_flash_sales") return state.sales.map((row) => ({ ...row, server_now: iso(clock()) }));
     if (table === "public_items") return state.items;
     if (table === "public_businesses") return state.businesses;
+    if (table === "categories") return state.categories;
     return [];
   };
 
   const from = (table) => {
     const filters = [];
+    let window = null;
     const run = () => {
       state.calls.push(table);
       if (state.failing) return { data: null, error: state.failing };
-      const data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value));
+      let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value));
+      if (window) data = data.slice(window[0], window[1] + 1);
       return { data, error: null };
     };
     const query = {
       select: () => query,
       order: () => query,
       limit: () => query,
+      range: (from, to) => {
+        window = [from, to];
+        return query;
+      },
       eq: (col, value) => {
         filters.push([col, value]);
         return query;
