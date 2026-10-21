@@ -57,7 +57,8 @@
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: var(--z-toast);
+  /* Above the item sheet (z-index 80 in ItemDetail.module.css), which is where videos are opened from. */
+  z-index: 90;
   display: grid;
   place-items: center;
   padding: var(--space-4);

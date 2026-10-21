@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import MediaVideo from "./MediaVideo.jsx";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const cssText = (name) => readFileSync(join(here, name), "utf8");
 
 // jsdom does not play media. This stand-in records who was asked to play or pause, and fires the same `play` event a
 // browser fires, which is what the "one at a time" rule listens to.
@@ -135,6 +141,21 @@ describe("MediaVideo: the player", () => {
     expect(thumb()).toHaveFocus();
   });
 
+  it("Escape closes only the player: whatever is underneath, like the item sheet, does not see it", async () => {
+    const sheetEscape = vi.fn();
+    const onKey = (e) => e.key === "Escape" && sheetEscape();
+    document.addEventListener("keydown", onKey); // what ItemDetail does
+    const user = userEvent.setup();
+    render(<MediaVideo src="/v/a.mp4" label="Reel" />);
+    await user.click(thumb());
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(sheetEscape).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}"); // with the player closed, Escape reaches the sheet again
+    expect(sheetEscape).toHaveBeenCalledTimes(1);
+    document.removeEventListener("keydown", onKey);
+  });
+
   it("opening the player stops a running hover preview", async () => {
     const user = userEvent.setup();
     render(<MediaVideo src="/v/a.mp4" label="Reel" />);
@@ -176,5 +197,16 @@ describe("MediaVideo: one at a time", () => {
     pause.mockClear();
     await user.click(screen.getByRole("button", { name: "Play" }));
     expect(pause.mock.contexts).toContain(videoIn(one));
+  });
+});
+
+describe("MediaVideo: stacking", () => {
+  // jsdom cannot see stacking. This keeps the player above the item sheet it is opened from (it once opened underneath it).
+  it("the player scrim is stacked above the item sheet", () => {
+    const zOf = (css, selector) => Number(new RegExp(`${selector}\\s*{[^}]*?z-index:\\s*(\\d+)`).exec(css)?.[1]);
+    const sheet = zOf(cssText("ItemDetail.module.css"), "\\.root");
+    const scrim = zOf(cssText("MediaVideo.module.css"), "\\.scrim");
+    expect(Number.isFinite(sheet) && Number.isFinite(scrim)).toBe(true);
+    expect(scrim).toBeGreaterThan(sheet);
   });
 });

@@ -66,17 +66,25 @@ function Player({ src, poster, label, onClose }) {
     return () => events.forEach(([name, fn]) => el.removeEventListener(name, fn));
   }, []);
 
+  const closeNow = useRef(onClose);
+  closeNow.current = onClose;
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (e) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
+    // Escape closes the player and nothing else. The item sheet underneath also closes on Escape, so this listens in the
+    // capture phase and stops the event before the sheet sees it.
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      e.stopPropagation();
+      closeNow.current();
+    };
+    document.addEventListener("keydown", onKey, true);
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("keydown", onKey, true);
       document.body.style.overflow = previous;
     };
-  }, [onClose]);
+  }, []);
 
   const togglePlay = () => (playing ? safePause(videoRef.current) : safePlay(videoRef.current));
   const toggleSound = () => {
