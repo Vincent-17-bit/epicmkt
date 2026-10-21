@@ -1,4 +1,4 @@
--- 0025_exception_overnight.sql
+-- 0036_exception_overnight.sql
 -- Special-hours intervals may run past midnight: an interval whose end is not after its start (20:00 to 02:00,
 -- or 09:00 to 09:00 for a full 24 hours) means "until that time the next day". The after-midnight part counts for
 -- the next date. Only exception_normalize changes: the interval_order check is gone, and an overnight interval

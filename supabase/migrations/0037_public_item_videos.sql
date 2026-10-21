@@ -1,4 +1,4 @@
--- 0026_public_item_videos.sql
+-- 0037_public_item_videos.sql
 -- Customers can watch an item's videos. public_items already lists image paths; this adds the video paths, in the same
 -- order sellers set (sort, then upload time). Only the storage path leaves the database, exactly like image_paths, and
 -- only for items that are already public (visible, not draft, not hidden or removed by an admin, business live).

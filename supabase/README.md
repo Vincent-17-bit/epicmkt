@@ -147,8 +147,8 @@ supabase functions deploy daily-lifecycle --no-verify-jwt
 
 One-off changes to a shop's weekly hours: a day it is closed, or a day it opens at different times. They are stored in
 `businesses.exceptions` (jsonb, default `[]`), added in `0004_core.sql`, written by the functions in
-`0007_exceptions.sql`, widened for overnight hours in `0025_exception_overnight.sql` and shown to customers by
-`0024_public_exceptions.sql`.
+`0007_exceptions.sql`, widened for overnight hours in `0036_exception_overnight.sql` and shown to customers by
+`0035_public_exceptions.sql`.
 
 ### Shape
 

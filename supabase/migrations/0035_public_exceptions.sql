@@ -1,4 +1,4 @@
--- 0024_public_exceptions.sql
+-- 0035_public_exceptions.sql
 -- Customers see opening-hours exceptions (closed days, special hours) so "open now" and "opens at" are right.
 -- Only the public fields of today and upcoming dates leave the database: id, date, kind, intervals, note.
 -- Past dates are dropped here as well, so an old exception never reaches a customer even if it is still stored.
