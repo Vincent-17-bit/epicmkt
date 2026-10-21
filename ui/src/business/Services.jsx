@@ -19,7 +19,7 @@ export default function Services({ services, hitSection, mode = "live", onOpenIt
           <ul className={styles.services}>
             {group.items.map((svc) => (
               <li key={svc.id} className={styles.service}>
-                <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
+                <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))}>
                   {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
                   <span className={styles.serviceText}>
                     <span className={styles.h3}>{svc.name}</span>

@@ -1,7 +1,7 @@
 .page {
   display: grid;
   gap: var(--space-4);
-  max-width: 48rem;
+  max-width: 64rem;
   padding-block: var(--space-5) clamp(var(--space-5), 5vw, var(--space-7));
   margin-inline: auto;
 }
@@ -22,7 +22,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: clamp(10rem, 32vw, 18rem);
+  height: clamp(11rem, 36vw, 22rem);
   overflow: hidden;
   background: hsl(var(--hue) 70% 86%);
   color: hsl(var(--hue) 55% 30%);
@@ -44,7 +44,7 @@
   display: flex;
   align-items: flex-end;
   gap: var(--space-4);
-  max-width: 48rem;
+  max-width: 64rem;
   padding-bottom: var(--space-4);
 }
 
@@ -76,8 +76,8 @@
 }
 
 .name {
-  font-size: var(--text-2xl);
-  font-weight: 700;
+  font-size: var(--text-3xl);
+  font-weight: 800;
   line-height: 1.15;
 }
 
@@ -186,14 +186,13 @@
 
 .section {
   display: grid;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 2px solid var(--border);
+  gap: var(--space-4);
+  padding-top: var(--space-5);
 }
 
 .h2 {
   font-size: var(--text-xl);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .report {

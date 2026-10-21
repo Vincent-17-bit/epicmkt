@@ -29,7 +29,7 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
   const act = actionProps(preview).button(() => onSelect?.(item));
 
   const card = (
-    <button type="button" data-card="" className={`${styles.card} ${className}`} aria-haspopup="dialog" data-mode={preview ? "preview" : undefined} {...act}>
+    <button type="button" data-card="" className={`${styles.card} ${className}`} data-mode={preview ? "preview" : undefined} {...act}>
       <span className={styles.media}>
         {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
         {onSale && <DiscountChip percent={pricing.discountPercent} />}

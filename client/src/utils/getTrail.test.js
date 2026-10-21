@@ -20,11 +20,11 @@ const labels = (r) => r.trail.map((c) => c.label);
 const targets = (r) => r.trail.map((c) => c.to);
 
 describe("getTrail", () => {
-  it("ignores every query param except item on a business page", () => {
+  it("ignores every query param on a business page and adds the item from the path", () => {
     const search = "?section=cuts&offer=p_001&utm_source=x&src=qr";
     const plain = getTrail({ ...base, business, pathname: "/b/fade-kings" });
     expect(getTrail({ ...base, business, pathname: "/b/fade-kings", search })).toEqual(plain);
-    const withItem = getTrail({ ...base, business, pathname: "/b/fade-kings", search: `${search}&item=skin-fade` });
+    const withItem = getTrail({ ...base, business, pathname: "/b/fade-kings/i/skin-fade", search });
     expect(labels(withItem)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
   });
 
@@ -83,14 +83,14 @@ describe("getTrail", () => {
   });
 
   it("adds the item as the last crumb and links the business", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade" });
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/i/skin-fade" });
     expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
     expect(r.trail[3].to).toBe("/b/fade-kings");
     expect(r.invalidItem).toBe(false);
   });
 
   it("drops an invalid item and flags it", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=nope" });
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/i/nope" });
     expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop"]);
     expect(r.invalidItem).toBe(true);
   });
@@ -145,7 +145,7 @@ describe("getTrail", () => {
   });
 
   it("never adds Flash sales or Offers to a business or item trail", () => {
-    const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade&from=flash" });
+    const r = getTrail({ ...base, business, pathname: "/b/fade-kings/i/skin-fade", search: "?from=flash" });
     expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
   });
 

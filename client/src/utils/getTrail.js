@@ -51,7 +51,7 @@ export function getTrail({ pathname, search = "", categories, towns, business, t
     return { status: "ready", trail: [home, categoryCrumb(category), { key: `t-${town.slug}`, label: town.name }], invalidItem: false };
   }
 
-  const businessMatch = /^\/b\/([^/]+)$/.exec(path);
+  const businessMatch = /^\/b\/([^/]+)(?:\/i\/([^/]+))?$/.exec(path);
   if (businessMatch) {
     if (business.status === "pending" || categories.status === "pending") return loading;
     if (business.status === "error" || !business.data) return notFound;
@@ -61,7 +61,7 @@ export function getTrail({ pathname, search = "", categories, towns, business, t
     if (category) trail.push(categoryCrumb(category));
     if (category && biz.townSlug && biz.area) trail.push(townCrumb(category, { slug: biz.townSlug, name: biz.area }));
 
-    const itemId = params.get("item");
+    const itemId = businessMatch[2] ? decodeURIComponent(businessMatch[2]) : null;
     const item = itemId ? biz.services?.find((svc) => svc.id === itemId) : null;
     const invalidItem = Boolean(itemId) && !item;
 

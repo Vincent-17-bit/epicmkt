@@ -27,7 +27,7 @@ export default function ItemCard({
       data-card=""
       className={`${styles.card} ${className}`}
       onClick={() => onSelect?.(item)}
-      aria-haspopup="dialog"
+     
     >
       <span className={styles.media}>
         {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}

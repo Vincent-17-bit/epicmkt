@@ -2,7 +2,6 @@
 
 exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller portal shows the same markup 1`] = `
 <button
-  aria-haspopup="dialog"
   class="_card_71452e "
   data-card=""
   type="button"

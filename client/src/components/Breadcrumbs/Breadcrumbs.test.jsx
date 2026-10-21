@@ -4,25 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Breadcrumbs from "./Breadcrumbs.jsx";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import ItemDetail from "../ItemDetail.jsx";
-
-const detail = {
-  id: "skin-fade",
-  name: "Skin fade",
-  images: [],
-  specs: [],
-  offers: [],
-  flash: null,
-  availability: "available",
-  pricing: { regularPrice: 300, salePrice: 300, savings: 0, discountPercent: 0, variants: [] },
-  business: { slug: "fade-kings", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678", townName: "Maseno", isOpen: true }
-};
-
-vi.mock("../../api/index.js", () => ({
-  logContactEvent: vi.fn(),
-  logEvent: vi.fn(),
-  items: { getDetail: vi.fn(async () => detail), getStoreSelective: vi.fn(async () => []) }
-}));
 
 const trail4 = [
   { key: "home", label: "Home", to: "/", icon: "house" },
@@ -147,50 +128,5 @@ describe("Breadcrumbs", () => {
     mount(<Breadcrumbs trail={trail4} compact={false} back={{ label: "Back to results", onClick }} />);
     await user.click(screen.getByRole("button", { name: "Back to results" }));
     expect(onClick).toHaveBeenCalled();
-  });
-});
-
-describe("Item sheet trail", () => {
-  const business = { id: "b_001", name: "Fade Kings Barbershop", phone: "0712345678", whatsapp: "0712345678" };
-  const item = { id: "skin-fade", name: "Skin fade", priceKes: 300 };
-
-  function Harness() {
-    const { search } = useLocation();
-    const open = new URLSearchParams(search).get("item") === "skin-fade";
-    return (
-      <>
-        <Breadcrumbs trail={open ? trail5 : trail4.slice(0, 3).concat([{ key: "b", label: business.name }])} compact={false} />
-        {open && <ItemDetail business={business} itemId="skin-fade" onClose={() => window.__closed?.()} onSelect={() => {}} onReport={() => {}} />}
-      </>
-    );
-  }
-
-  it("shows a compact trail with the business and the item", async () => {
-    mount(<ItemDetail business={business} itemId="skin-fade" onClose={() => {}} onSelect={() => {}} onReport={() => {}} />);
-    const nav = screen.getByRole("navigation", { name: "Item" });
-    expect(within(nav).getByRole("button", { name: /Fade Kings Barbershop/ })).toBeInTheDocument();
-    await waitFor(() => expect(within(nav).getByText("Skin fade")).toHaveAttribute("aria-current", "page"));
-  });
-
-  it("closes the sheet when the Business button is pressed", async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-    mount(<ItemDetail business={business} itemId="skin-fade" onClose={onClose} onSelect={() => {}} onReport={() => {}} />);
-    await user.click(screen.getByRole("button", { name: /Fade Kings Barbershop/ }));
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it("removes the item from the URL when the page Business crumb is clicked", async () => {
-    const user = userEvent.setup();
-    mount(
-      <Routes>
-        <Route path="/b/:slug" element={<Harness />} />
-      </Routes>,
-      "/b/fade-kings?item=skin-fade"
-    );
-    expect(screen.getByTestId("where")).toHaveTextContent("?item=skin-fade");
-    const page = screen.getAllByRole("navigation", { name: "Breadcrumb" })[0];
-    await user.click(within(page).getByRole("link", { name: "Fade Kings Barbershop" }));
-    expect(screen.getByTestId("where")).toHaveTextContent(/^\/b\/fade-kings$/);
   });
 });

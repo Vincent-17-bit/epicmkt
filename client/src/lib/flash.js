@@ -67,7 +67,7 @@ export function discountBadge(discount) {
   return { kind: "deal", text: t("flash.deal") };
 }
 
-export const saleHref = (entry) => `/b/${entry.business.slug}?item=${encodeURIComponent(entry.item.id)}`;
+export const saleHref = (entry) => `/b/${entry.business.slug}/i/${encodeURIComponent(entry.item.id)}`;
 
 export function fuseShare(startsAt, endsAt, now) {
   const start = Date.parse(startsAt);

@@ -405,7 +405,6 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -436,7 +435,6 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -466,7 +464,6 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -1120,7 +1117,6 @@ exports[`extraction snapshots (dark) > ProductCard available 1`] = `
     data-theme="dark"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -1201,7 +1197,6 @@ exports[`extraction snapshots (dark) > ProductCard limited 1`] = `
     data-theme="dark"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -1282,7 +1277,6 @@ exports[`extraction snapshots (dark) > ProductCard unavailable 1`] = `
     data-theme="dark"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -1363,7 +1357,6 @@ exports[`extraction snapshots (dark) > ProductCard without pricing or image 1`] 
     data-theme="dark"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -2474,7 +2467,6 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -2505,7 +2497,6 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -2535,7 +2526,6 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                 class="service"
               >
                 <button
-                  aria-haspopup="dialog"
                   class="serviceBtn"
                   type="button"
                 >
@@ -3189,7 +3179,6 @@ exports[`extraction snapshots (light) > ProductCard available 1`] = `
     data-theme="light"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -3270,7 +3259,6 @@ exports[`extraction snapshots (light) > ProductCard limited 1`] = `
     data-theme="light"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -3351,7 +3339,6 @@ exports[`extraction snapshots (light) > ProductCard unavailable 1`] = `
     data-theme="light"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"
@@ -3432,7 +3419,6 @@ exports[`extraction snapshots (light) > ProductCard without pricing or image 1`]
     data-theme="light"
   >
     <button
-      aria-haspopup="dialog"
       class="card "
       data-card=""
       type="button"

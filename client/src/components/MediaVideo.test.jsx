@@ -199,14 +199,3 @@ describe("MediaVideo: one at a time", () => {
     expect(pause.mock.contexts).toContain(videoIn(one));
   });
 });
-
-describe("MediaVideo: stacking", () => {
-  // jsdom cannot see stacking. This keeps the player above the item sheet it is opened from (it once opened underneath it).
-  it("the player scrim is stacked above the item sheet", () => {
-    const zOf = (css, selector) => Number(new RegExp(`${selector}\\s*{[^}]*?z-index:\\s*(\\d+)`).exec(css)?.[1]);
-    const sheet = zOf(cssText("ItemDetail.module.css"), "\\.root");
-    const scrim = zOf(cssText("MediaVideo.module.css"), "\\.scrim");
-    expect(Number.isFinite(sheet) && Number.isFinite(scrim)).toBe(true);
-    expect(scrim).toBeGreaterThan(sheet);
-  });
-});

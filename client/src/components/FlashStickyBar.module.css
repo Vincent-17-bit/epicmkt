@@ -1,6 +1,6 @@
 .anchor {
   position: sticky;
-  top: 0;
+  top: var(--header-h);
   z-index: 4;
   height: 0;
 }

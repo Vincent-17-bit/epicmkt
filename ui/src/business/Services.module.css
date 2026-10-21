@@ -12,7 +12,7 @@
 }
 
 .services {
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12.5rem), 1fr));
 }
 
 .service {
@@ -21,6 +21,14 @@
   border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
   background: var(--surface);
+  transition: transform var(--dur) ease, border-color var(--dur) ease;
+}
+
+@media (hover: hover) {
+  .service:hover {
+    border-color: var(--text);
+    transform: translateY(-2px);
+  }
 }
 
 .serviceImg {
@@ -31,14 +39,14 @@
 
 .serviceText {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-1);
   padding: var(--space-3);
 }
 
 .price {
-  font-weight: 700;
+  font-size: var(--text-lg);
+  font-weight: 800;
   white-space: nowrap;
 }
 

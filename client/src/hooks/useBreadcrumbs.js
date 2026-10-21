@@ -11,6 +11,7 @@ export function useBreadcrumbs() {
   const { pathname, search } = useLocation();
   const queryClient = useQueryClient();
   const businessSlug = /^\/b\/([^/]+)/.exec(pathname)?.[1];
+  const pathItem = /^\/b\/[^/]+\/i\/([^/]+)/.exec(pathname)?.[1];
   const onCategory = /^\/c\/[^/]+$/.test(pathname);
   const wantsTown = onCategory && new URLSearchParams(search).has("town");
 
@@ -23,7 +24,7 @@ export function useBreadcrumbs() {
     enabled: Boolean(businessSlug)
   });
 
-  const itemId = new URLSearchParams(search).get("item");
+  const itemId = pathItem ? decodeURIComponent(pathItem) : null;
   const item = useQuery({ queryKey: ["item", business.data?.id, itemId], queryFn: skipToken });
   const itemVanished = Boolean(itemId) && item.isError && item.error?.name === "NotFoundError" && item.data !== undefined;
 

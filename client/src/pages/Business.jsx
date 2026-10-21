@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
 import { distanceKm } from "@epicmkt/shared";
@@ -11,7 +11,6 @@ import { usePageTitle } from "../hooks/usePageTitle.js";
 import { visibleFields } from "@epicmkt/shared";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import ItemDetail from "../components/ItemDetail.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -21,8 +20,8 @@ export default function Business() {
   const { slug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const itemId = searchParams.get("item");
+  const [searchParams] = useSearchParams();
+  const legacyItem = searchParams.get("item");
   const [reporting, setReporting] = useState(false);
   const [shareNote, setShareNote] = useState("");
   const geo = useGeoStore();
@@ -62,20 +61,14 @@ export default function Business() {
     if (data && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }, [data, location.hash]);
 
-  const openItem = (id) => setSearchParams({ item: id }, { state: { sheetFrom: "page" } });
-  const swapItem = (id) => setSearchParams({ item: id }, { replace: true, state: location.state });
-  const closeItem = () => {
-    if (location.state?.sheetFrom === "page") navigate(-1);
-    else
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete("item");
-          return next;
-        },
-        { replace: true }
-      );
-  };
+  const openItem = (id) => navigate(`/b/${slug}/i/${encodeURIComponent(id)}`);
+
+  if (legacyItem) {
+    const rest = new URLSearchParams(searchParams);
+    rest.delete("item");
+    const query = rest.toString();
+    return <Navigate to={`/b/${slug}/i/${encodeURIComponent(legacyItem)}${query ? `?${query}` : ""}${location.hash}`} replace />;
+  }
 
   if (isError && error?.name === "NotFoundError") return <NotFound />;
 
@@ -127,23 +120,12 @@ export default function Business() {
       shortUrl={shortUrl}
       hitSection={hit}
       shareNote={shareNote}
-      crumbInert={Boolean(itemId)}
       breadcrumbs={<PageBreadcrumbs />}
       onContact={(business, type) => logContactEvent({ businessId: business.id, type })}
       onShare={share}
       onOpenItem={openItem}
       onReport={() => setReporting(true)}
     >
-      {itemId && (
-        <ItemDetail
-          business={data}
-          itemId={itemId}
-          distanceKm={distance}
-          onClose={closeItem}
-          onSelect={swapItem}
-          onReport={() => setReporting(true)}
-        />
-      )}
       <ReportDialog business={data} open={reporting} onClose={() => setReporting(false)} />
     </BusinessPage>
   );

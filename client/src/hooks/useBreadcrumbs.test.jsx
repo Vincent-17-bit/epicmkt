@@ -16,7 +16,7 @@ vi.mock("../api/index.js", () => ({
 const run = (client) =>
   renderHook(() => useBreadcrumbs(), {
     wrapper: ({ children }) => (
-      <MemoryRouter initialEntries={["/b/fade-kings?item=fade"]}>
+      <MemoryRouter initialEntries={["/b/fade-kings/i/fade"]}>
         <QueryClientProvider client={client}>{children}</QueryClientProvider>
       </MemoryRouter>
     )

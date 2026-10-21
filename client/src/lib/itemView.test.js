@@ -109,7 +109,7 @@ describe("buildItemJsonLd", () => {
     const data = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 240 }, flash: { sale: { endsAt: "2026-10-04T10:00:00.000Z" } } }, siteUrl: "https://e.test" });
     expect(data["@type"]).toBe("Product");
     expect(data.offers).toMatchObject({ price: 240, priceCurrency: "KES", priceValidUntil: "2026-10-04T10:00:00.000Z", availability: "https://schema.org/LimitedAvailability" });
-    expect(data.offers.url).toBe("https://e.test/b/shop?item=a%20b");
+    expect(data.offers.url).toBe("https://e.test/b/shop/i/a%20b");
   });
 
   it("builds a Service without priceValidUntil when no sale", () => {

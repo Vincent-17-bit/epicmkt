@@ -119,7 +119,7 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
     name: item.business.name,
     url: `${siteUrl}/b/${item.business.slug}`
   };
-  const url = `${siteUrl}/b/${item.business.slug}?item=${encodeURIComponent(item.id)}`;
+  const url = `${siteUrl}/b/${item.business.slug}/i/${encodeURIComponent(item.id)}`;
   const data = {
     "@context": "https://schema.org",
     "@type": item.kind === "service" ? "Service" : "Product",
