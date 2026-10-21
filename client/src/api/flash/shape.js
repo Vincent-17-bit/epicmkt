@@ -40,8 +40,9 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   variants: []
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, price, priceType, unit, section, availability, imagePaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, price, priceType, unit, section, availability, imagePaths, videoPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
+  const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
   return {
     id,
     businessId,
@@ -56,6 +57,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, price,
     packSize: null,
     imageUrl: images[0]?.url ?? null,
     images,
+    videos,
     regularPrice: Number.isFinite(price) ? price : null,
     priceType: priceType ?? "fixed",
     unit: unit ?? null,

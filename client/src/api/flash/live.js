@@ -120,6 +120,7 @@ const itemRow = (row, business) =>
     section: row.section,
     availability: row.availability,
     imagePaths: row.image_paths,
+    videoPaths: row.video_paths,
     createdAt: row.created_at
   });
 

@@ -38,6 +38,7 @@ const toItem = (business, svc, index) => {
     packSize: svc.packSize ?? null,
     imageUrl: svc.imageUrl,
     images,
+    videos: svc.videos ?? [],
     regularPrice: Number.isFinite(svc.priceKes) ? svc.priceKes : null,
     priceType: svc.priceType ?? "fixed",
     unit: svc.unit ?? null,

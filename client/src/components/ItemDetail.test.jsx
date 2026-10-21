@@ -56,6 +56,25 @@ describe("ItemDetail", () => {
     expect(screen.getAllByRole("link", { name: /Visit Store/ })[0]).toHaveAttribute("href", "/b/fade-kings");
   });
 
+  it("shows an item's videos as thumbnails that never autoplay, and nothing when it has none", async () => {
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), videos: [{ id: "v1", url: "a.mp4", caption: "Fade and beard" }, { id: "v2", url: "b.webm", caption: "Fade and beard" }] });
+    const { container, unmount } = mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(screen.getAllByRole("button", { name: "Watch video: Fade and beard" })).toHaveLength(2);
+    const videos = container.querySelectorAll("video");
+    expect(videos).toHaveLength(2);
+    videos.forEach((v) => {
+      expect(v.hasAttribute("autoplay")).toBe(false);
+      expect(v.muted).toBe(true);
+    });
+    unmount();
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
+    const plain = mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(plain.container.querySelector("video")).toBeNull();
+  });
+
   it("uses the flash sale wording and shows both prices", async () => {
     mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 240) });
     mocks.getStoreSelective.mockResolvedValue([]);

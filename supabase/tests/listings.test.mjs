@@ -268,3 +268,19 @@ test("a suspended seller cannot use any listing function", async () => {
   for (const text of calls) await rejects(c, asA, `select ${text}`, [], /account_suspended/);
   await sql(c, `update businesses set status = 'live' where id = '${ids.bizA}'`);
 });
+
+test("customers get an item's video paths in the seller's order, apart from the image paths", async () => {
+  await sql(c, `delete from item_media`);
+  const withVideos = await item(ids.bizA, "Reel item");
+  const plain = await item(ids.bizA, "Photo only");
+  const draft = await item(ids.bizA, "Draft reel", { draft: true });
+  await sql(c, `insert into item_media (item_id, business_id, kind, path, mime, sort) values
+    ($1, $3, 'video', 'a/second.mp4', 'video/mp4', 2), ($1, $3, 'video', 'a/first.webm', 'video/webm', 1), ($1, $3, 'image', 'a/photo.webp', 'image/webp', 1),
+    ($2, $3, 'image', 'a/solo.webp', 'image/webp', 1), ($4, $3, 'video', 'a/draft.mp4', 'video/mp4', 1)`, [withVideos, plain, ids.bizA, draft]);
+  const rows = await tx(c, { role: "anon" }, (k) => sql(k, `select name, image_paths, video_paths from public_items where business_id = $1 order by name`, [ids.bizA]));
+  const by = Object.fromEntries(rows.map((r) => [r.name, r]));
+  assert.deepEqual(by["Reel item"].video_paths, ["a/first.webm", "a/second.mp4"]);
+  assert.deepEqual(by["Reel item"].image_paths, ["a/photo.webp"]);
+  assert.deepEqual(by["Photo only"].video_paths, []);
+  assert.equal(by["Draft reel"], undefined, "a draft item, and so its video, stays private");
+});

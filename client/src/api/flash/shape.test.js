@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { businessOf, cardOfBusiness, cardOfFlash } from "./shape.js";
+import { businessOf, cardOfBusiness, cardOfFlash, itemOf } from "./shape.js";
 import { hoursRows } from "../../lib/businessView.js";
 
 // Tue 20 Oct 2026, 09:30 in Nairobi (UTC+3).
@@ -48,5 +48,16 @@ describe("customer business shape with opening-hours exceptions", () => {
     expect(tuesday).toMatchObject({ today: true, text: "Closed", changed: true, date: "2026-10-20" });
     expect(rows.find((r) => r.day === "wed")).toMatchObject({ text: "8:00 AM to 6:00 PM", changed: false });
     expect(rows.map((r) => r.day)).toEqual(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+  });
+});
+
+describe("customer item shape with videos", () => {
+  it("turns video paths into video entries, apart from the images, and tolerates none", () => {
+    const item = itemOf({ id: "i1", name: "Reel item", imagePaths: ["a/photo.webp"], videoPaths: ["a/first.webm", "a/second.mp4"] });
+    expect(item.images).toHaveLength(1);
+    expect(item.videos.map((v) => v.id)).toEqual(["v1", "v2"]);
+    expect(item.videos[0]).toMatchObject({ caption: "Reel item" });
+    expect(item.videos[0].url).toMatch(/seller-media\/a\/first\.webm$/);
+    for (const videoPaths of [undefined, null, []]) expect(itemOf({ id: "i2", name: "Plain", videoPaths }).videos).toEqual([]);
   });
 });

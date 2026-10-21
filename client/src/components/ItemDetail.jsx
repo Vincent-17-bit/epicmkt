@@ -23,6 +23,7 @@ import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
+import MediaVideo from "./MediaVideo.jsx";
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -312,6 +313,13 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
             <>
               {current.flash && !hold && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
               <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
+              {current.videos?.length > 0 && (
+                <section className={styles.videos} aria-label={t("video.heading")}>
+                  {current.videos.map((video) => (
+                    <MediaVideo key={`${current.id}-${video.id}`} src={video.url} label={current.name} />
+                  ))}
+                </section>
+              )}
 
               {current.flash && (
                 <div className={styles.collapse} data-open={hold?.leaving ? "false" : "true"}>
