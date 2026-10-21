@@ -1,6 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { escapeHtml, json, sendMail } from "../_shared/http.ts";
 import { ACCEPTED, alertFor, bodyOf, routeOf, sameSecret } from "./parse.ts";
+import { realAdminDeps } from "../_shared/adminKit.ts";
+import { autoActivate } from "../_shared/activate.ts";
 
 // Safaricom (Daraja C2B) calls this when someone pays the EpicMKT Paybill:
 //   POST /functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/validation
@@ -35,7 +37,15 @@ Deno.serve(async (req) => {
   }
 
   const r = res.data as Record<string, any>;
-  const alert = r?.duplicate ? null : alertFor(r ?? {}, { amount: r?.amount, code: r?.code, account: r?.account });
+  let live = false;
+  if (!r?.duplicate && r?.outcome === "ready" && r?.application_id) {
+    try {
+      live = (await autoActivate(realAdminDeps(), r.application_id)).activated;
+    } catch (e) {
+      console.error("pay-callback: automatic activation failed", e instanceof Error ? e.message : e);
+    }
+  }
+  const alert = r?.duplicate || live ? null : alertFor(r ?? {}, { amount: r?.amount, code: r?.code, account: r?.account });
   if (alert) {
     try {
       await sendMail(Deno.env.get("ADMIN_EMAIL"), alert.subject, alert.lines.map((l) => `<p>${escapeHtml(l)}</p>`).join(""));

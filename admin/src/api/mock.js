@@ -16,7 +16,7 @@ export {
   raiseFlag, setModerationFlag, setReportStatus,
 } from "./mockModeration.js";
 export {
-  ackMessagesDelivered, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
+  ackMessagesDelivered, deleteConversation, deleteMessage, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
 } from "./mockMessages.js";
 
 import { searchMockApplications } from "./mockApplications.js";

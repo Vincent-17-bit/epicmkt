@@ -32,6 +32,7 @@ export const ACTIONS = {
   "expiry.view": { label: "see the expiry radar", roles: ANY },
   "messages.view": { label: "see seller messages", roles: ["reviewer", "support"] },
   "messages.send": { label: "message sellers", roles: ["reviewer", "support"] },
+  "messages.delete": { label: "delete messages and conversations", roles: ["reviewer", "support"] },
   "automation.view": { label: "see the automation status", roles: ANY },
   "automation.manage": { label: "pause or run automation jobs", roles: [] },
   "plans.view": { label: "see plans and prices", roles: ANY },

@@ -11,8 +11,7 @@ Safaricom tells our server about each payment, the server records it and does th
    (after). Whole months are taken from that balance; the rest waits. One mechanism covers short payments, top-ups,
    prepaying several months and overpaying.
 3. **The account number is a short code, never a business name.** See "Why not the business name" below.
-4. **A person is only needed when a person is needed.** Renewals apply by themselves. A first payment waits for one
-   Confirm click (that creates the seller's login). Anything unclear waits in the admin list with the money safe.
+4. **A person is only needed when a person is needed.** Renewals apply by themselves. A first payment that covers the current price goes live by itself (the seller's login is created and sent). Only unclear payments wait for an admin. Anything unclear waits in the admin list with the money safe.
 
 ## What the payer types as the account number
 
@@ -41,7 +40,7 @@ Please confirm the exact account-number limit for your Paybill with your Safaric
 
 | # | What happens | What the system does | What people see |
 |---|---|---|---|
-| 1 | Pays exactly the price, with the reference | Money credited; application moves to *payment confirming*; admin e-mailed | Client: "Payment received". Admin: **Ready to confirm** |
+| 1 | Pays exactly the price, with the reference | Money credited; the system re-checks the current price for the category and plan, creates the login and the business goes live | Client: login SMS and e-mail. Admin: payment shown as confirmed |
 | 2 | Pays **less** (KES 300 of 500) | Credited; application stays *approved* | Client SMS: "KES 200 more is needed, same account". Status page shows received and balance. Admin: **Part paid** |
 | 3 | Pays the rest later | Credit now covers the price; moves to *payment confirming* | As scenario 1 |
 | 4 | Pays **3 months** at once (KES 1,500) | Credit 1,500; admin sees "Covers 3 months" | Admin presses **Confirm 3 months**: seller is live for 3 months |

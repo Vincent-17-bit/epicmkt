@@ -228,7 +228,7 @@
   border-left: 3px solid var(--admin-border);
 }
 
-@media (max-width: 640px) {
+@media (max-width: 40rem) {
   .detail__field {
     grid-template-columns: 1fr;
     gap: 0.1rem;

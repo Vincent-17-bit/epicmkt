@@ -402,7 +402,7 @@ const toMessage = (m, files) => ({
 
 export async function listMessages({ businessId = null } = {}) {
   const db = client();
-  let mq = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null).order("created_at", { ascending: false }).limit(1000);
+  let mq = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null).is("admin_hidden_at", null).order("created_at", { ascending: false }).limit(1000);
   let fq = db.from("message_attachments").select("*").order("created_at", { ascending: false }).limit(1000);
   if (businessId) { mq = mq.eq("business_id", businessId); fq = fq.eq("business_id", businessId); }
   const [messages, files] = await Promise.all([mq, fq]);
@@ -427,6 +427,14 @@ export async function markMessagesRead({ businessId = null } = {}) {
 }
 export async function ackMessagesDelivered() {
   const { data } = check(await client().rpc("message_ack_delivered", { p_ids: null }));
+  return data;
+}
+export async function deleteMessage(id) {
+  const { data } = check(await client().rpc("admin_delete_message", { p_id: id }));
+  return data;
+}
+export async function deleteConversation({ businessId, threadId = null }) {
+  const { data } = check(await client().rpc("admin_delete_conversation", { p_business: businessId, p_thread: threadId }));
   return data;
 }
 export async function getUnreadMessages() {

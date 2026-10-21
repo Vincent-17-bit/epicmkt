@@ -80,6 +80,23 @@ export async function ackMessagesDelivered() {
   for (const m of store.messages) if (m.sender === "seller" && !m.adminDeliveredAt) { m.adminDeliveredAt = nowIso(); n += 1; }
   return n;
 }
+export async function deleteMessage(id) {
+  seed();
+  await latency();
+  const at = store.messages.findIndex((m) => m.id === id);
+  if (at < 0) throw new ApiError("message_not_found", "That message no longer exists.");
+  store.messages.splice(at, 1);
+  return 1;
+}
+export async function deleteConversation({ businessId, threadId = null }) {
+  seed();
+  await latency();
+  const before = store.messages.length;
+  store.messages = store.messages.filter((m) => !(m.businessId === businessId && (!threadId || m.threadId === threadId)));
+  const removed = before - store.messages.length;
+  if (!removed) throw new ApiError("message_not_found", "That message no longer exists.");
+  return removed;
+}
 export async function getUnreadMessages() {
   seed();
   return store.messages.filter((m) => m.sender === "seller" && !m.adminReadAt).length;

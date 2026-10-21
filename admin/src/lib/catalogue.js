@@ -107,7 +107,7 @@ export function planImpact(row, newPrice) {
   const live = Number(row.live_businesses) || 0;
   if (newPrice !== row.price_kes) {
     const diff = newPrice - row.price_kes;
-    lines.push(`New applicants will pay ${kes(newPrice)} a month instead of ${kes(row.price_kes)} (${diff > 0 ? "+" : "-"}${kes(Math.abs(diff))}).`);
+    lines.push(`New and unpaid applications will owe ${kes(newPrice)} a month instead of ${kes(row.price_kes)} (${diff > 0 ? "+" : "-"}${kes(Math.abs(diff))}), straight away on the seller and application pages.`);
     lines.push(live === 0
       ? "No live businesses are on this plan."
       : `${live} live ${live === 1 ? "business keeps" : "businesses keep"} the monthly price already set on ${live === 1 ? "its" : "their"} account (${kes(row.live_monthly_kes)} a month in total). Only a plan change by the seller picks up the new price.`);

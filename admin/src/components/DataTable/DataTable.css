@@ -1,5 +1,5 @@
 .dt {
-  --dt-row: 48px;
+  --dt-row: 3.429rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -10,7 +10,7 @@
 }
 
 .dt--compact {
-  --dt-row: 38px;
+  --dt-row: 2.714rem;
 }
 
 .dt[aria-busy="true"] .dt__scroll {
@@ -28,8 +28,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1 1 260px;
-  max-width: 420px;
+  flex: 1 1 18.571rem;
+  max-width: 30rem;
   height: 2.25rem;
   padding: 0 0.7rem;
   border: 1px solid var(--admin-border);
@@ -214,7 +214,7 @@
   z-index: 2;
   display: grid;
   align-items: center;
-  height: 36px;
+  height: 2.571rem;
   background: var(--admin-surface);
   border-bottom: 1px solid var(--admin-border);
 }
@@ -374,7 +374,7 @@
   border: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   .dt {
     padding: 0.75rem;
   }

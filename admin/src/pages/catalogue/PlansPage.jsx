@@ -106,7 +106,7 @@ export default function PlansPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header"><h3>Plans and pricing</h3></div>
-        <p className="muted">Price changes apply to new applications. Sellers already live keep the monthly price on their account.</p>
+        <p className="muted">Price changes reach new and unpaid applications and the seller and application pages straight away. A payment that covers the price and matches the category activates the shop automatically. Sellers already live keep the monthly price on their account.</p>
         {isError ? <LoadError what="plans" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
