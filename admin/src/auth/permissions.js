@@ -36,6 +36,7 @@ export const ACTIONS = {
   "automation.manage": { label: "pause or run automation jobs", roles: [] },
   "plans.view": { label: "see plans and prices", roles: ANY },
   "plans.edit": { label: "change plan prices and benefits", roles: ["finance"] },
+  "analytics.view": { label: "see analytics", roles: ANY },
   "flash.view": { label: "see flash sales", roles: ["reviewer", "support"] },
   "flash.end": { label: "end a flash sale", roles: ["reviewer", "support"] },
   "activity.view": { label: "see the live activity feed", roles: ["reviewer"] },

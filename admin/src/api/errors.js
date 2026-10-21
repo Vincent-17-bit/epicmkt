@@ -33,6 +33,7 @@ export const ACTION_TEXT = {
   invalid_category: "That category is no longer available, so the change cannot be approved.",
   invalid_field: "This kind of change cannot be applied.",
   invalid_state: "That filter is not recognised.",
+  invalid_range: "The end date must be after the start date.",
   plans_not_priced: "Set a price on both plans (Plans page) before switching this category on.",
   plan_not_found: "That plan no longer exists.",
   invalid_price: "Enter a whole price between 0 and 100,000.",

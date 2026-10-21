@@ -28,6 +28,8 @@ const navItems = [
   { label: "Flash sales", to: "/admin/flash-sales", permission: "flash.view" },
   { label: "Plans", to: "/admin/plans", permission: "plans.view" },
   { label: "Categories", to: "/admin/categories", permission: "plans.view" },
+  { label: "Analytics", to: "/admin/analytics", permission: "analytics.view" },
+  { label: "Audit log", to: "/admin/audit", permission: "audit.view" },
   { label: "Settings", to: "/admin/settings", permission: "settings.view" },
 ];
 

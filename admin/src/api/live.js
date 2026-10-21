@@ -12,7 +12,6 @@ const notConfigured = () => {
 // Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
 // audited RPCs (suspend, extend, tag, message...) and the audit viewer. Everything else on
 // the Businesses page, the Payments page and the Command Center is live below.
-export const listAuditEntries = notConfigured;
 export const getBusinesses = notConfigured;
 
 const client = () => {
@@ -610,3 +609,12 @@ export const saveCategory = ({ id, name, group, icon = "store", tier, sort = 0, 
   detailRpc("admin_save_category", {
     p_id: id, p_name: name, p_grp: group, p_icon: icon, p_tier: tier, p_sort: sort, p_active: active, p_template: template, p_extra_docs: extraDocs, p_reason: reason,
   });
+
+// ---- Audit viewer and Analytics (migration 0028_admin_audit_analytics.sql) ---------------------------------------
+
+export const listAudit = ({ search = "", action = "", actor = "", from = null, to = null, ...paging } = {}) =>
+  detailRpc("admin_audit_query", { p_search: search.trim() || null, p_action: action || null, p_actor: actor.trim() || null, p_from: from || null, p_to: to || null, ...pageArgs(paging) });
+export const getAuditGroups = () => detailRpc("admin_audit_groups", {});
+// Kept for callers of the old stub: the latest entries, newest first.
+export const listAuditEntries = async ({ limit = 50 } = {}) => (await listAudit({ pageSize: limit })).rows;
+export const getAnalytics = ({ days = 30 } = {}) => detailRpc("admin_analytics", { p_days: days });

@@ -21,6 +21,8 @@ import BroadcastsPage from "./pages/BroadcastsPage.jsx";
 import AutomationPage from "./pages/AutomationPage.jsx";
 import PlansPage from "./pages/catalogue/PlansPage.jsx";
 import CategoriesPage from "./pages/catalogue/CategoriesPage.jsx";
+import AuditPage from "./pages/AuditPage.jsx";
+import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import BusinessDetailPage from "./pages/business/BusinessDetailPage.jsx";
 
 export default function App() {
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="expiry-radar" element={<RoleGuard permission="expiry.view"><ExpiryRadarPage /></RoleGuard>} />
           <Route path="plans" element={<RoleGuard permission="plans.view"><PlansPage /></RoleGuard>} />
           <Route path="categories" element={<RoleGuard permission="plans.view"><CategoriesPage /></RoleGuard>} />
+          <Route path="analytics" element={<RoleGuard permission="analytics.view"><AnalyticsPage /></RoleGuard>} />
+          <Route path="audit" element={<RoleGuard permission="audit.view"><AuditPage /></RoleGuard>} />
           <Route path="payments" element={<RoleGuard permission="payments.view"><PaymentsPage /></RoleGuard>} />
           <Route path="broadcasts" element={<RoleGuard permission="messages.view"><BroadcastsPage /></RoleGuard>} />
           <Route path="automation" element={<RoleGuard permission="automation.view"><AutomationPage /></RoleGuard>} />
