@@ -1466,3 +1466,18 @@ th {
 .radar-summary { margin: 8px 0 16px; }
 .radar-group { margin-top: 20px; }
 .radar-group h4 { margin: 0 0 2px; display: flex; gap: 8px; align-items: center; }
+
+/* Broadcasts and Automation */
+.compose { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 24px; margin-top: 12px; }
+.compose__form { display: flex; flex-direction: column; gap: 12px; }
+.compose__actions { display: flex; gap: 8px; }
+.compose__preview { border: 1px solid var(--admin-border, #d0d5dd); border-radius: 8px; padding: 12px 16px; align-self: start; }
+.compose__preview blockquote { margin: 8px 0; padding: 8px 12px; border-left: 3px solid var(--admin-border, #d0d5dd); }
+.compose__template { padding: 8px 12px; border: 1px dashed var(--admin-border, #d0d5dd); border-radius: 8px; }
+.field-group { display: flex; gap: 16px; border: 0; padding: 0; }
+.log-summary { margin: 12px 0; }
+.automation-problems { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.automation-problem { padding: 10px 14px; border-radius: 8px; border-left: 4px solid; background: color-mix(in srgb, currentColor 6%, transparent); }
+.automation-problem--down { border-color: var(--admin-danger, #b42318); }
+.automation-problem--degraded { border-color: #b54708; }
+@media (max-width: 800px) { .compose { grid-template-columns: 1fr; } }

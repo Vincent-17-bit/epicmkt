@@ -580,3 +580,20 @@ export const decideChangeRequest = ({ id, approve, note = null }) =>
 
 export const getExpiryRadar = ({ days = 30 } = {}) => detailRpc("admin_expiry_radar", { p_days: days });
 export const setModerationFlag = setFlagStatus;
+
+// ---- Broadcasts, message log, templates and Automation (migration 0025_admin_messaging_console.sql) -------------
+
+export const listMessageLog = ({ channel = "all", status = "all", search = "", ...paging } = {}) =>
+  detailRpc("admin_message_log_query", { p_channel: channel, p_status: status, p_search: search.trim() || null, ...pageArgs(paging) });
+export const getMessageSummary = ({ days = 7 } = {}) => detailRpc("admin_message_summary", { p_days: days });
+export const retryMessage = (id) => detailRpc("admin_retry_message", { p_id: id });
+export const retryFailedMessages = ({ days = 7 } = {}) => detailRpc("admin_retry_failed_messages", { p_days: days });
+export const listTemplates = () => detailRpc("admin_templates_list", {});
+export const saveTemplate = ({ key, channel, subject = null, bodyEn, bodySw = null, transactional = false }) =>
+  detailRpc("admin_save_template", { p_key: key, p_channel: channel, p_subject: subject, p_body_en: bodyEn, p_body_sw: bodySw, p_transactional: transactional });
+// `payload` comes from buildBroadcast() in lib/messaging.js; with payload.preview the function only counts and renders samples.
+export const sendBroadcast = (payload) => callFunction("admin-message", payload);
+
+export const getAutomationStatus = () => detailRpc("admin_automation_status", {});
+export const setJobActive = ({ name, active }) => detailRpc("admin_set_job_active", { p_name: name, p_active: active });
+export const runJob = (name) => detailRpc("admin_run_job", { p_name: name });

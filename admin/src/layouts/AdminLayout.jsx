@@ -23,6 +23,8 @@ const navItems = [
   { label: "Moderation", to: "/admin/moderation", permission: "moderation.view", hint: "open flags and reports" },
   { label: "Payments", to: "/admin/payments", permission: "payments.view", hint: "payments to confirm" },
   { label: "Messages", to: "/admin/messages", permission: "messages.view", hint: "unread messages from sellers" },
+  { label: "Broadcasts", to: "/admin/broadcasts", permission: "messages.view" },
+  { label: "Automation", to: "/admin/automation", permission: "automation.view" },
   { label: "Flash sales", to: "/admin/flash-sales", permission: "flash.view" },
   { label: "Settings", to: "/admin/settings", permission: "settings.view" },
 ];

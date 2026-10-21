@@ -33,6 +33,16 @@ export const ACTION_TEXT = {
   invalid_category: "That category is no longer available, so the change cannot be approved.",
   invalid_field: "This kind of change cannot be applied.",
   invalid_state: "That filter is not recognised.",
+  invalid_channel: "Choose SMS, email or in-app.",
+  not_failed: "That message is not in a failed state.",
+  invalid_key: "Template keys use lower-case letters, numbers, dots, dashes and underscores (2 to 60 characters).",
+  sms_too_long: "SMS can be at most 612 characters.",
+  subject_required: "Email needs a subject.",
+  channel_locked: "A template's channel cannot be changed after it is created. Create a new template instead.",
+  cron_not_installed: "The scheduler (pg_cron) is not installed on this project.",
+  job_not_scheduled: "That job is not scheduled. Run supabase/cron/schedule.sql first.",
+  unknown_job: "That is not one of this app's jobs.",
+  automation_not_configured: "Run now needs the project_url and cron_secret secrets in Vault. See docs/cron-runbook.md.",
 };
 
 // Turns whatever supabase-js hands back (a PostgREST error, a storage error, a thrown Error) into an ApiError
