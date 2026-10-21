@@ -1,7 +1,27 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBars, faChevronLeft, faChevronRight, faMoon, faSun } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBars,
+  faBolt,
+  faBullhorn,
+  faChartLine,
+  faClockRotateLeft,
+  faComments,
+  faCreditCard,
+  faGaugeHigh,
+  faGear,
+  faGears,
+  faHourglassHalf,
+  faLayerGroup,
+  faMoon,
+  faShieldHalved,
+  faSitemap,
+  faStore,
+  faSun,
+  faUserCheck,
+  faFileSignature,
+} from "@fortawesome/free-solid-svg-icons";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -13,27 +33,39 @@ import GlobalSearch from "../components/GlobalSearch.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
 import NotificationBell from "../components/NotificationBell.jsx";
 
-// `hint` is what the badge number means, for the tooltip and screen readers.
-const navItems = [
-  { label: "Command Center", to: "/admin", end: true, hint: "items need your attention" },
-  { label: "Applications", to: "/admin/applications", permission: "applications.view", hint: "applications waiting for a decision" },
-  { label: "Businesses", to: "/admin/businesses", permission: "businesses.view", hint: "sellers expiring within 7 days or in grace" },
-  { label: "Expiry Radar", to: "/admin/expiry-radar", permission: "expiry.view" },
-  { label: "Approvals", to: "/admin/approvals", permission: "approvals.view", hint: "seller change requests waiting" },
-  { label: "Moderation", to: "/admin/moderation", permission: "moderation.view", hint: "open flags and reports" },
-  { label: "Payments", to: "/admin/payments", permission: "payments.view", hint: "payments to confirm" },
-  { label: "Messages", to: "/admin/messages", permission: "messages.view", hint: "unread messages from sellers" },
-  { label: "Broadcasts", to: "/admin/broadcasts", permission: "messages.view" },
-  { label: "Automation", to: "/admin/automation", permission: "automation.view" },
-  { label: "Flash sales", to: "/admin/flash-sales", permission: "flash.view" },
-  { label: "Plans", to: "/admin/plans", permission: "plans.view" },
-  { label: "Categories", to: "/admin/categories", permission: "plans.view" },
-  { label: "Analytics", to: "/admin/analytics", permission: "analytics.view" },
-  { label: "Audit log", to: "/admin/audit", permission: "audit.view" },
-  { label: "Settings", to: "/admin/settings", permission: "settings.view" },
+const navGroups = [
+  [
+    { label: "Command Center", to: "/admin", end: true, icon: faGaugeHigh, hint: "items need your attention" },
+  ],
+  [
+    { label: "Applications", to: "/admin/applications", icon: faFileSignature, permission: "applications.view", hint: "applications waiting for a decision" },
+    { label: "Businesses", to: "/admin/businesses", icon: faStore, permission: "businesses.view", hint: "sellers expiring within 7 days or in grace" },
+    { label: "Expiry Radar", to: "/admin/expiry-radar", icon: faHourglassHalf, permission: "expiry.view" },
+    { label: "Approvals", to: "/admin/approvals", icon: faUserCheck, permission: "approvals.view", hint: "seller change requests waiting" },
+  ],
+  [
+    { label: "Moderation", to: "/admin/moderation", icon: faShieldHalved, permission: "moderation.view", hint: "open flags and reports" },
+    { label: "Payments", to: "/admin/payments", icon: faCreditCard, permission: "payments.view", hint: "payments to confirm" },
+  ],
+  [
+    { label: "Messages", to: "/admin/messages", icon: faComments, permission: "messages.view", hint: "unread messages from sellers" },
+    { label: "Broadcasts", to: "/admin/broadcasts", icon: faBullhorn, permission: "messages.view" },
+    { label: "Automation", to: "/admin/automation", icon: faGears, permission: "automation.view" },
+  ],
+  [
+    { label: "Flash sales", to: "/admin/flash-sales", icon: faBolt, permission: "flash.view" },
+    { label: "Plans", to: "/admin/plans", icon: faLayerGroup, permission: "plans.view" },
+    { label: "Categories", to: "/admin/categories", icon: faSitemap, permission: "plans.view" },
+  ],
+  [
+    { label: "Analytics", to: "/admin/analytics", icon: faChartLine, permission: "analytics.view" },
+    { label: "Audit log", to: "/admin/audit", icon: faClockRotateLeft, permission: "audit.view" },
+    { label: "Settings", to: "/admin/settings", icon: faGear, permission: "settings.view" },
+  ],
 ];
 
-// The page the current URL belongs to ("/admin/applications/123" is Applications).
+const navItems = navGroups.flat();
+
 function currentPage(pathname) {
   const match = navItems
     .filter((item) => (item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)))
@@ -51,9 +83,8 @@ export default function AdminLayout() {
   const badges = { ...navBadges(counts.data), "/admin/messages": unreadMessages.data || 0 };
   useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
-  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  useEffect(() => setMobileOpen(false), [pathname]); // choosing a page closes the phone menu
+  useEffect(() => setMobileOpen(false), [pathname]);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("epicmkt-admin-theme");
     if (saved) return saved;
@@ -65,48 +96,52 @@ export default function AdminLayout() {
     localStorage.setItem("epicmkt-admin-theme", theme);
   }, [theme]);
 
+  const visibleGroups = navGroups
+    .map((group) => group.filter((item) => !item.permission || can(item.permission)))
+    .filter((group) => group.length > 0);
+
   return (
     <div className="admin-app">
-      <aside id="admin-sidebar" className={`admin-sidebar ${collapsed ? "is-collapsed" : ""} ${mobileOpen ? "is-mobile-open" : ""}`}>
-        <div className="admin-sidebar__brand">
-          <div className="admin-sidebar__logo">E</div>
-          {!collapsed && <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>}
-          <button
-            type="button"
-            className="admin-sidebar__toggle"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setCollapsed((value) => !value)}
-          >
-            <FontAwesomeIcon icon={collapsed ? faChevronRight : faChevronLeft} />
-          </button>
-        </div>
+      <div className="admin-rail">
+        <aside id="admin-sidebar" className={`admin-sidebar ${mobileOpen ? "is-mobile-open" : ""}`}>
+          <div className="admin-sidebar__brand">
+            <div className="admin-sidebar__logo">E</div>
+            <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>
+          </div>
 
-        <nav className="admin-sidebar__nav" aria-label="Admin navigation">
-          {navItems.filter((item) => !item.permission || can(item.permission)).map((item) => {
-            const text = badgeText(badges[item.to]);
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `admin-nav-item ${isActive ? "is-active" : ""}`}
-              >
-                <span className="admin-nav-item__label">{item.label}</span>
-                {text ? (
-                  <span className="admin-nav-item__badge" title={`${badges[item.to]} ${item.hint}`}>
-                    {text}
-                    <span className="sr-only"> {item.hint}</span>
-                  </span>
-                ) : null}
-              </NavLink>
-            );
-          })}
-        </nav>
+          <nav className="admin-sidebar__nav" aria-label="Admin navigation">
+            {visibleGroups.map((group) => (
+              <div key={group[0].to} className="admin-nav-group">
+                {group.map((item) => {
+                  const text = badgeText(badges[item.to]);
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      title={item.label}
+                      className={({ isActive }) => `admin-nav-item ${isActive ? "is-active" : ""}`}
+                    >
+                      <span className="admin-nav-item__icon"><FontAwesomeIcon icon={item.icon} fixedWidth /></span>
+                      <span className="admin-nav-item__label">{item.label}</span>
+                      {text ? (
+                        <span className="admin-nav-item__badge" title={`${badges[item.to]} ${item.hint}`}>
+                          {text}
+                          <span className="sr-only"> {item.hint}</span>
+                        </span>
+                      ) : null}
+                    </NavLink>
+                  );
+                })}
+              </div>
+            ))}
+          </nav>
 
-        <div className="admin-sidebar__footer">
-          <SystemStatusCard collapsed={collapsed} onExpand={() => setCollapsed(false)} />
-        </div>
-      </aside>
+          <div className="admin-sidebar__footer">
+            <SystemStatusCard />
+          </div>
+        </aside>
+      </div>
 
       {mobileOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" onClick={() => setMobileOpen(false)} /> : null}
 
@@ -123,8 +158,8 @@ export default function AdminLayout() {
             >
               <FontAwesomeIcon icon={faBars} />
             </button>
-            <div>
-              <div className="admin-breadcrumb">Overview / {pageTitle}</div>
+            <div className="admin-crumbs">
+              <span className="admin-breadcrumb">Overview /</span>
               <h1 className="admin-page-title">{pageTitle}</h1>
             </div>
           </div>

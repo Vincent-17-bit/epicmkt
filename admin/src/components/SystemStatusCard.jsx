@@ -1,17 +1,17 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHeartPulse } from "@fortawesome/free-solid-svg-icons";
 import { api } from "../api/index.js";
 import { useAdminCounts, useRealtimeStatus } from "../hooks/useAdminCounts.js";
+import { useDismiss } from "../hooks/useDismiss.js";
 import { buildChecks, systemStatus } from "../lib/systemStatus.js";
 import { timeAgo } from "../lib/time.js";
 
 const ICON = { ok: "✓", warn: "!", fail: "✕", pending: "…", skipped: "–" };
 const LEVEL_TEXT = { ok: "Passed", warn: "Warning", fail: "Failed", pending: "Checking", skipped: "Not used" };
 
-// Sidebar status card driven by real data. Click it to open the list of checks behind the pill; every
-// failing or warning check says what is wrong and what to do. Click again (or press Escape) to close it.
-// It reads the same queries the sidebar badges use, so opening it costs no extra requests.
-export default function SystemStatusCard({ collapsed = false, onExpand }) {
+export default function SystemStatusCard() {
   const counts = useAdminCounts();
   const unread = useQuery({ queryKey: ["admin-unread-messages"], queryFn: () => api.getUnreadMessages(), refetchInterval: 60_000, retry: false });
   const realtime = useRealtimeStatus();
@@ -20,8 +20,11 @@ export default function SystemStatusCard({ collapsed = false, onExpand }) {
   const [now, setNow] = useState(() => Date.now());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [rechecking, setRechecking] = useState(false);
+  const boxRef = useRef(null);
   const toggleRef = useRef(null);
   const panelId = useId();
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(boxRef, open, close);
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 30_000);
@@ -36,7 +39,6 @@ export default function SystemStatusCard({ collapsed = false, onExpand }) {
     };
   }, []);
 
-  // Keep the clock fresh the moment the card opens, so "Updated 4m ago" is not a half minute stale.
   useEffect(() => {
     if (open) setNow(Date.now());
   }, [open]);
@@ -78,45 +80,37 @@ export default function SystemStatusCard({ collapsed = false, onExpand }) {
     }
   };
 
-  // The collapsed sidebar has no room for the list: show just a coloured dot that opens the sidebar.
-  if (collapsed) {
-    return (
-      <button
-        type="button"
-        className={`admin-system-dot admin-system-dot--${status.level}`}
-        aria-label={`System status: ${status.label}. Expand the sidebar for details.`}
-        title={`System status: ${status.label}`}
-        onClick={onExpand}
-      />
-    );
-  }
-
   return (
-    <div className={`admin-system-card ${open ? "is-open" : ""}`} onKeyDown={onKeyDown}>
+    <div ref={boxRef} className={`admin-system-card ${open ? "is-open" : ""}`} onKeyDown={onKeyDown}>
       <button
         ref={toggleRef}
         type="button"
-        className="admin-system-card__toggle"
+        className="admin-health"
         aria-expanded={open}
         aria-controls={panelId}
+        title={`System status: ${status.label}`}
         onClick={() => setOpen((value) => !value)}
       >
-        <span className="admin-system-card__title">
-          System Status
-          <span className="admin-system-card__chevron" aria-hidden="true">{open ? "▾" : "▸"}</span>
+        <span className="admin-health__icon">
+          <FontAwesomeIcon icon={faHeartPulse} fixedWidth />
+          <span className={`admin-health__dot admin-health__dot--${status.level}`} aria-hidden="true" />
         </span>
-        <span className="admin-system-card__content" role="status" aria-live="polite">
-          <span className={`status-pill status-pill--${status.level}`}>{status.label}</span>
-          {status.detail ? <span>{status.detail}</span> : null}
-          <span>{synced ? `Last sync: ${synced}` : "Not synced yet"}</span>
-        </span>
-        <span className="admin-system-card__hint">
-          {open ? "Click to close" : problems > 0 ? `${problems} ${problems === 1 ? "issue" : "issues"}: click for details` : "Click to see what is checked"}
+        <span className="admin-health__text" role="status" aria-live="polite">
+          <span className="admin-health__title">System status</span>
+          <span className="admin-health__meta">
+            <span className={`status-pill status-pill--${status.level}`}>{status.label}</span>
+            {synced ? <span>{synced}</span> : null}
+          </span>
         </span>
       </button>
 
       {open ? (
         <div id={panelId} className="admin-system-checks">
+          <div className="admin-system-checks__head">
+            <span className={`status-pill status-pill--${status.level}`}>{status.label}</span>
+            <span>{status.detail || (problems > 0 ? `${problems} ${problems === 1 ? "issue" : "issues"}` : "All checks passed")}</span>
+            <span className="admin-system-checks__sync">{synced ? `Last sync: ${synced}` : "Not synced yet"}</span>
+          </div>
           <ul className="admin-system-checks__list">
             {checks.map((check) => (
               <li key={check.id} className={`admin-system-check admin-system-check--${check.level}`}>

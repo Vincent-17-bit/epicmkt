@@ -22,7 +22,7 @@ import "./DataTable.css";
 
 const HEAD_HEIGHT = 44;
 const CHECK_WIDTH = 44;
-const ROW_HEIGHT = { comfortable: 60, compact: 44 };
+const ROW_HEIGHT = { comfortable: 48, compact: 38 };
 const PAGE_SIZES = [25, 50, 100];
 const PAGE_JUMP = 10;
 
