@@ -33,15 +33,15 @@ migrations `0024` to `0031` they were renumbered straight to `0035` to `0037` (c
 in `RESERVED` in `scripts/check-migrations.mjs`. Do not add placeholder files for it: a project that already applied
 `0035` or later would report a migration "inserted before the last one" and refuse a plain `supabase db push`.
 
-New migrations take the next free number after `0037`.
+New migrations take the next free number after `0038`.
 
 ### Is every migration in the live database?
 
 Run `supabase/check-applied.sql` in the SQL editor of the live project (it only reads).
 
 - Part 2 lists every function and table the apps call. Any `false` is a missing migration.
-- Part 3 probes migrations `0029` to `0037` by what they changed. Every row must be `true`.
-- Part 1 shows what the CLI recorded. Versions `0001` to `0031` and `0035` to `0037` are expected.
+- Part 3 probes migrations `0029` to `0038` by what they changed. Every row must be `true`.
+- Part 1 shows what the CLI recorded. Versions `0001` to `0031` and `0035` to `0038` are expected.
 
 **Fixing the record.** If Part 1 lists `0024_public_exceptions`, `0025_exception_overnight` or `0026_public_item_videos`,
 the database was migrated before the renumbering. Those rows now stand in for the admin migrations that share the

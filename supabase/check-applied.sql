@@ -5,7 +5,7 @@
 -- Part 1 only works if the project was migrated with the Supabase CLI. Parts 2 and 3 work however the SQL was applied,
 -- because they look at the real objects instead of the bookkeeping table.
 
--- Part 1. What the CLI recorded. Expect versions 0001 .. 0031 and 0035 .. 0037; 0032, 0033 and 0034 never existed.
+-- Part 1. What the CLI recorded. Expect versions 0001 .. 0031 and 0035 .. 0038; 0032, 0033 and 0034 never existed.
 -- Danger sign: a row named 0024_public_exceptions, 0025_exception_overnight or 0026_public_item_videos. Those are the old
 -- names of 0035-0037 and they clash with the admin migrations 0024-0026. See "Fixing the record" in supabase/README.md.
 select version, name
@@ -107,6 +107,8 @@ select probe, ok from (values
   ('0035 public_businesses.exceptions',   exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'public_businesses' and column_name = 'exceptions')),
   ('0035 public_exceptions()',            to_regprocedure('public.public_exceptions(jsonb)') is not null),
   ('0036 overnight exception intervals',  coalesce(pg_get_functiondef(to_regprocedure('public.exception_normalize(date,text,jsonb,text,date)')) not like '%interval_order%', false)),
+  ('0038 Maisha Card accepted as an ID type', coalesce((select pg_get_constraintdef(c.oid) like '%maisha_card%' from pg_constraint c where c.conrelid = 'public.applications'::regclass and c.conname = 'applications_owner_id_type_check'), false)),
+  ('0038 year_established is optional',    exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'applications' and column_name = 'year_established' and is_nullable = 'YES')),
   ('0037 public_items.video_paths',       exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'public_items' and column_name = 'video_paths')),
   ('anon can read public_businesses',     coalesce(has_table_privilege('anon', to_regclass('public.public_businesses'), 'select'), false)),
   ('anon can read public_items',          coalesce(has_table_privilege('anon', to_regclass('public.public_items'), 'select'), false))
