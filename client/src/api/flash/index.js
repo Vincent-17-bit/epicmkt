@@ -6,12 +6,17 @@ const liveAdapter = () => import("./live.js");
 
 const isNotFound = (error) => error?.name === "NotFoundError";
 
-const withFallback = async (primary, fallback) => {
+// With Supabase configured, real (seller-published) data is authoritative: it is asked first, and the bundled demo
+// backend is only a fallback for demo ids/slugs that do not exist live. The demo backend must never answer first, or a
+// real shop whose slug matches a demo shop (slugs come from the name) would show the demo page, not the seller's items.
+// Without Supabase (local dev, tests) only the demo backend is used.
+const withFallback = async (live, demo) => {
+  if (!isLive()) return demo();
   try {
-    return await primary();
+    return await live();
   } catch (error) {
-    if (!isLive() || !isNotFound(error)) throw error;
-    return fallback();
+    if (!isNotFound(error)) throw error;
+    return demo();
   }
 };
 
@@ -25,25 +30,25 @@ export const flash = {
 
 export const getBusiness = (ref, origin) =>
   withFallback(
-    () => backend.getBusiness(ref, origin),
-    async () => (await liveAdapter()).getBusiness(ref, origin)
+    async () => (await liveAdapter()).getBusiness(ref, origin),
+    () => backend.getBusiness(ref, origin)
   );
 
 export const resolveShortcode = (code) =>
   withFallback(
-    () => backend.resolveShortcode(code),
-    async () => (await liveAdapter()).resolveShortcode(code)
+    async () => (await liveAdapter()).resolveShortcode(code),
+    () => backend.resolveShortcode(code)
   );
 
 export const getItemDetail = (itemId, opts) =>
   withFallback(
-    () => backend.getItemDetail(itemId, opts),
-    async () => (await liveAdapter()).getItemDetail(itemId, opts)
+    async () => (await liveAdapter()).getItemDetail(itemId, opts),
+    () => backend.getItemDetail(itemId, opts)
   );
 
 export const getStoreSelective = async (businessId, opts) => {
-  const rows = await backend.getStoreSelective(businessId, opts);
-  if (rows.length || !isLive()) return rows;
-  return (await liveAdapter()).getStoreSelective(businessId, opts);
+  if (!isLive()) return backend.getStoreSelective(businessId, opts);
+  const rows = await (await liveAdapter()).getStoreSelective(businessId, opts);
+  if (rows.length) return rows;
+  return backend.getStoreSelective(businessId, opts);
 };
-
