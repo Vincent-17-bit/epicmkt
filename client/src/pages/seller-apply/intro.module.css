@@ -1,95 +1,217 @@
 .intro {
   display: grid;
   gap: var(--space-4);
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .hero {
   padding: var(--space-5) var(--space-4);
-  border-radius: var(--radius-card);
-  background: var(--primary);
-  color: #111111;
+  border-radius: var(--ap-r-lg);
+  background: linear-gradient(135deg, var(--primary-tint) 0%, var(--surface) 70%);
+  border: 1px solid var(--border);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--text-sm);
+  font-weight: 650;
 }
 
 .hero h1 {
-  margin: 0 0 var(--space-2);
+  max-width: 24ch;
+  margin: 0 0 var(--space-3);
   font-size: var(--text-2xl);
-  line-height: 1.15;
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
 }
 
-.hero p {
-  max-width: 44rem;
+.hero .long {
+  max-width: 62ch;
   margin: 0;
-  font-size: var(--text-md);
+  color: var(--text-muted);
+  line-height: 1.55;
 }
 
 .how {
   display: grid;
   gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
-  grid-template-columns: 1fr 1fr;
 }
 
 .how li {
   display: grid;
   gap: var(--space-1);
   align-content: start;
-  padding: var(--space-3);
-  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--ap-r);
   background: var(--surface);
   box-shadow: var(--shadow-1);
   font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.how li span:last-child {
+  color: var(--text-muted);
 }
 
 .icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: var(--space-1);
+  border-radius: 10px;
   background: var(--primary-tint);
   color: var(--primary-pressed);
 }
 
 .before {
-  padding: var(--space-4);
-  border-radius: var(--radius-card);
+  border-radius: var(--ap-r);
   background: var(--surface);
   box-shadow: var(--shadow-1);
 }
 
-.before h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--text-lg);
+.before summary {
+  display: flex;
+  align-items: center;
+  min-height: 3.25rem;
+  padding: 0 var(--space-4);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.before summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ap-halo);
+  border-radius: var(--ap-r);
 }
 
 .before ul {
   display: grid;
   gap: var(--space-2);
   margin: 0;
-  padding: 0;
+  padding: 0 var(--space-4) var(--space-4);
   list-style: none;
 }
 
 .before li {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  line-height: 1.4;
 }
 
-.before svg {
-  margin-top: 4px;
-  color: var(--primary-pressed);
+.before li svg {
+  margin-top: 0.2em;
+  color: var(--ok-fg);
 }
 
-@media (min-width: 768px) {
-  .how {
-    grid-template-columns: repeat(4, 1fr);
+@media (min-width: 64rem) {
+  .hero {
+    padding: var(--space-6);
+  }
+}
+
+.short {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.long {
+  display: none;
+}
+
+/* Phones: keep the intro to a few lines so the form starts straight away. */
+@media (max-width: 47.99rem) {
+  .intro {
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
   }
 
   .hero {
-    padding: var(--space-6);
+    padding: var(--space-4);
+  }
+
+  .hero h1 {
+    margin-bottom: var(--space-2);
+    font-size: var(--text-xl);
+  }
+
+  .eyebrow {
+    margin-bottom: var(--space-2);
+  }
+
+  .how {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .how li {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    column-gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .how li span:last-child {
+    display: none;
+  }
+
+  .icon {
+    width: 1.9rem;
+    height: 1.9rem;
+    margin: 0;
+  }
+}
+
+@media (min-width: 48rem) {
+  .short {
+    display: none;
+  }
+
+  .long {
+    display: block;
+  }
+}
+
+/* Laptops and up: hero on the left, the steps on the right, so the form is in view straight away. */
+@media (min-width: 64rem) {
+  .intro {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .hero {
+    grid-row: 1 / span 2;
+    padding: var(--space-5) var(--space-6);
+  }
+
+  .hero h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .how {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .how li {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .icon {
+    width: 1.9rem;
+    height: 1.9rem;
   }
 }

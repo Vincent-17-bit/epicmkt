@@ -68,6 +68,19 @@ describe('mock adapter', () => {
       });
     });
 
+    it('accepts a Maisha Card applicant without a year, and asks for both sides of the card', async () => {
+      const p = payload();
+      p.owner = { fullName: 'Jane Wanjiku', idType: 'maisha_card', idNumber: '123456789' };
+      delete p.business.yearEstablished;
+      await expect(submitApplication({ payload: p, files: files(slots), startedAt: started() })).rejects.toMatchObject({
+        message: 'missing_documents',
+        details: { slots: ['owner_id_back'] },
+      });
+      const r = await submitApplication({ payload: p, files: files([...slots, 'owner_id_back']), startedAt: started() });
+      expect(r.referenceNo).toMatch(/^EPM-/);
+      expect(listApplications().at(-1).payload.owner.idType).toBe('maisha_card');
+    });
+
     it('fakes success for a filled honeypot', async () => {
       const r = await submitApplication({ payload: {}, files: [], startedAt: 0, hp: 'bot' });
       expect(r.referenceNo).toMatch(/^EPM-/);

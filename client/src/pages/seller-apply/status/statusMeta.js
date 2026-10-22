@@ -34,15 +34,15 @@ export function timelineSteps(app) {
 }
 
 export const DOC_LABELS = {
-  owner_id_front: "ID front or passport page",
-  owner_id_back: "National ID, back",
+  owner_id_front: "ID, Maisha Card or passport page (front)",
+  owner_id_back: "National ID or Maisha Card, back",
   sbp: "Single Business Permit",
   signboard: "Signboard or shop-front photo",
   br_cert: "Business registration certificate",
   kra_pin_cert: "KRA PIN certificate"
 };
 
-export const ID_TYPE = { national_id: "National ID", passport: "Passport" };
+export const ID_TYPE = { national_id: "National ID", maisha_card: "Maisha Card", passport: "Passport" };
 export const REG_TYPE = { sole_proprietor: "Sole proprietor", partnership: "Partnership", limited_company: "Limited company" };
 
 export function show(value) {

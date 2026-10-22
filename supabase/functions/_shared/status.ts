@@ -58,7 +58,7 @@ export function rowToPayload(a: any) {
       registered: a.registered,
       regType: a.reg_type ?? undefined,
       regNumber: a.reg_number ?? undefined,
-      yearEstablished: a.year_established,
+      yearEstablished: a.year_established ?? undefined,
       kraPin: a.kra_pin ?? undefined,
       sbpNumber: a.sbp_number,
       sbpExpiry: a.sbp_expiry,

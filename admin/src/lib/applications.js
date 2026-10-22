@@ -109,8 +109,8 @@ export function searchFilter(input) {
 
 // The slot keys the applicant form uploads (client/src/shared/validators.js). Category documents are `cat_<key>`.
 const SLOT_LABELS = {
-  owner_id_front: "Owner ID or passport (front)",
-  owner_id_back: "Owner ID (back)",
+  owner_id_front: "Owner ID, Maisha Card or passport (front)",
+  owner_id_back: "Owner ID or Maisha Card (back)",
   sbp: "Single business permit",
   signboard: "Signboard photo",
   br_cert: "Business registration certificate",

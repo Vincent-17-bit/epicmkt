@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     registered: p.business.registered,
     reg_type: p.business.regType ?? null,
     reg_number: p.business.regNumber ?? null,
-    year_established: p.business.yearEstablished,
+    year_established: p.business.yearEstablished ?? null,
     kra_pin: p.business.kraPin ?? null,
     sbp_number: p.business.sbpNumber,
     sbp_expiry: p.business.sbpExpiry,

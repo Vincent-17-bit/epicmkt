@@ -48,7 +48,7 @@ export const applicationSchema = z
     planKey: z.enum(['standard', 'premium']),
     owner: z.object({
       fullName: text(3, 80).refine(noLinks, 'No links').refine(noEmoji, 'No emoji'),
-      idType: z.enum(['national_id', 'passport']),
+      idType: z.enum(['national_id', 'maisha_card', 'passport']),
       idNumber: z.string().transform((v) => v.replace(/\s/g, '').toUpperCase()),
     }),
     phone,
@@ -59,7 +59,7 @@ export const applicationSchema = z
       registered: z.boolean(),
       regType: z.enum(['sole_proprietor', 'partnership', 'limited_company']).optional(),
       regNumber: text(0, 40).optional(),
-      yearEstablished: z.coerce.number().int().min(1900).max(new Date().getFullYear()),
+      yearEstablished: z.coerce.number().int().min(1900).max(new Date().getFullYear()).optional(),
       kraPin: z.string().trim().toUpperCase().optional(),
       sbpNumber: text(3, 40),
       sbpExpiry: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -90,6 +90,8 @@ export const applicationSchema = z
     const fail = (path, message) => ctx.addIssue({ code: z.ZodIssueCode.custom, path, message });
     if (p.owner.idType === 'national_id' && !/^\d{7,8}$/.test(p.owner.idNumber))
       fail(['owner', 'idNumber'], 'National ID must be 7 or 8 digits');
+    if (p.owner.idType === 'maisha_card' && !/^\d{7,9}$/.test(p.owner.idNumber))
+      fail(['owner', 'idNumber'], 'Maisha Card number must be 7 to 9 digits');
     if (p.owner.idType === 'passport' && !/^[A-Z0-9]{6,9}$/.test(p.owner.idNumber))
       fail(['owner', 'idNumber'], 'Passport number must be 6 to 9 letters or digits');
     if (p.business.sbpExpiry < nairobiToday())
@@ -108,7 +110,7 @@ const catDocs = (cat) => cat.extraDocs ?? cat.extra_docs ?? [];
 
 export function requiredSlots(cat, p) {
   const slots = ['owner_id_front', 'sbp', 'signboard'];
-  if (p.ownerIdType === 'national_id') slots.push('owner_id_back');
+  if (p.ownerIdType === 'national_id' || p.ownerIdType === 'maisha_card') slots.push('owner_id_back');
   if (p.registered) slots.push('br_cert', 'kra_pin_cert');
   for (const d of catDocs(cat)) {
     if (d.rule === 'required') slots.push(`cat_${d.key}`);

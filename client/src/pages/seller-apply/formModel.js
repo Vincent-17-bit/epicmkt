@@ -1,14 +1,33 @@
 import { get, set } from "react-hook-form";
 import { applicationSchema, normalizePhone } from "../../shared/validators.js";
+import { idNumberError } from "./idTypes.js";
+import { todayISO } from "./masks.js";
 
 export const STEPS = [
-  { id: "type", title: "Business type", paths: ["categoryId"] },
-  { id: "you", title: "About you", paths: ["owner", "phone", "altPhone", "email"] },
-  { id: "business", title: "About the business", paths: ["business", "templateValues"] },
-  { id: "location", title: "Location and contacts", paths: ["location", "contacts"] },
-  { id: "documents", title: "Documents", paths: [] },
-  { id: "plan", title: "Package", paths: ["planKey"] },
-  { id: "review", title: "Review and declare", paths: ["agreeTerms", "agreePrivacy", "authorised"] }
+  {
+    id: "business",
+    title: "Your business",
+    short: "Business",
+    paths: ["categoryId", "business.name", "business.shortDescription", "templateValues"]
+  },
+  { id: "you", title: "About you", short: "You", paths: ["owner", "phone", "altPhone", "email"] },
+  { id: "place", title: "Where customers find you", short: "Location", paths: ["location", "contacts"] },
+  {
+    id: "papers",
+    title: "Permits and documents",
+    short: "Documents",
+    paths: [
+      "business.registered",
+      "business.regType",
+      "business.regNumber",
+      "business.kraPin",
+      "business.sbpNumber",
+      "business.sbpExpiry",
+      "business.yearEstablished",
+      "conditionalDocs"
+    ]
+  },
+  { id: "send", title: "Package and send", short: "Send", paths: ["planKey", "agreeTerms", "agreePrivacy", "authorised"] }
 ];
 
 export const emptyValues = () => ({
@@ -33,7 +52,7 @@ export const emptyValues = () => ({
   contacts: {
     businessPhones: [""],
     whatsapp: "",
-    whatsappSame: false,
+    whatsappSame: true,
     website: "",
     socials: { facebook: "", instagram: "", x: "", tiktok: "" }
   },
@@ -120,7 +139,7 @@ export const LABELS = {
   categoryId: "Business type",
   planKey: "Package",
   "owner.fullName": "Full names",
-  "owner.idNumber": "ID or passport number",
+  "owner.idNumber": "ID number",
   phone: "Phone number",
   altPhone: "Alternative phone",
   email: "Email address",
@@ -145,7 +164,7 @@ export const LABELS = {
 
 const FORMAT = {
   "owner.fullName": "Enter your full names as on your ID",
-  "owner.idNumber": "Check the ID or passport number",
+  "owner.idNumber": "Check the ID, Maisha Card or passport number",
   "business.name": "Use 3 to 60 characters, with no emoji or links",
   "business.yearEstablished": "Enter a year from 1900 to this year",
   "business.kraPin": "Enter a valid KRA PIN, for example A123456789Z",
@@ -210,6 +229,30 @@ export function phoneErrors(contacts = {}) {
   return out;
 }
 
+const kraOk = (v) => /^[AP]\d{9}[A-Z]$/.test(String(v ?? "").trim().toUpperCase());
+
+/**
+ * The schema runs its cross-field checks only once every single field is valid, so a person would fix three
+ * mistakes and then be told about a fourth. These run on their own so every problem shows at once.
+ * The server still enforces the same rules.
+ */
+export function crossChecks(values) {
+  const out = [];
+  const idMessage = idNumberError(values.owner?.idType, values.owner?.idNumber);
+  if (idMessage) out.push(["owner.idNumber", idMessage]);
+  const b = values.business ?? {};
+  const expiry = String(b.sbpExpiry ?? "");
+  if (expiry && expiry < todayISO()) out.push(["business.sbpExpiry", "Your Single Business Permit has expired"]);
+  if (b.registered === true) {
+    if (!b.regType) out.push(["business.regType", "Choose the registration type"]);
+    if (!String(b.regNumber ?? "").trim()) out.push(["business.regNumber", "Enter the registration number"]);
+    if (!kraOk(b.kraPin)) out.push(["business.kraPin", "Enter a valid KRA PIN, for example A123456789Z"]);
+  } else if (String(b.kraPin ?? "").trim() && !kraOk(b.kraPin)) {
+    out.push(["business.kraPin", "Enter a valid KRA PIN, for example A123456789Z"]);
+  }
+  return out;
+}
+
 export function validateAll(values, cat) {
   const errors = {};
   const add = (path, message) => {
@@ -222,6 +265,7 @@ export function validateAll(values, cat) {
     const path = i.path.join(".");
     if (!isPhonePath(path)) add(path, friendly(i));
   });
+  crossChecks(values).forEach(([path, message]) => add(path, message));
   phoneErrors(values.contacts).forEach(([path, message]) => add(path, message));
   for (const f of requiredTemplateMissing(cat, values.templateValues)) add(`templateValues.${f.key}`, `${f.label} is required`);
   return errors;

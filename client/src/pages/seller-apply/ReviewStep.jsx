@@ -6,11 +6,11 @@ import { formatKesPerMonth, planLabel } from "../../shared/billing.js";
 import { ErrorLine } from "./Field.jsx";
 import LegalDialog from "./LegalDialog.jsx";
 import Turnstile from "./Turnstile.jsx";
+import { idTypeOf } from "./idTypes.js";
 import { documentCards } from "./slots.js";
 import form from "./form.module.css";
 import styles from "./review.module.css";
 
-const ID_LABEL = { national_id: "National ID", passport: "Passport" };
 const REG_LABEL = { sole_proprietor: "Sole proprietor", partnership: "Partnership", limited_company: "Limited company" };
 
 function Section({ title, onEdit, rows }) {
@@ -64,53 +64,55 @@ export default function ReviewStep({ category, docs, legal, read, onRead, goTo, 
   return (
     <div className={styles.wrap}>
       <Section
-        title="Business type"
+        title="Your business"
         onEdit={() => goTo(0)}
-        rows={[["Type", category?.name], ["Package", plan ? `${planLabel(v.planKey)}, ${formatKesPerMonth(plan.price)}` : ""]]}
+        rows={[
+          ["Type", category?.name],
+          ["Business name", v.business?.name],
+          ["Description", v.business?.shortDescription],
+          ...templates.map((f) => [f.label, show(v.templateValues[f.key])])
+        ]}
       />
       <Section
         title="About you"
         onEdit={() => goTo(1)}
         rows={[
           ["Full names", v.owner?.fullName],
-          [ID_LABEL[v.owner?.idType] ?? "ID", v.owner?.idNumber],
+          [idTypeOf(v.owner?.idType).numberLabel, v.owner?.idNumber],
           ["Phone", v.phone],
-          ["Alternative phone", v.altPhone],
+          ["Another phone", v.altPhone],
           ["Email", v.email]
         ]}
       />
       <Section
-        title="About the business"
-        onEdit={() => goTo(2)}
-        rows={[
-          ["Business name", v.business?.name],
-          ["Registered", v.business?.registered === null ? "" : v.business?.registered ? "Registered" : "Not registered"],
-          ["Registration", v.business?.registered ? `${REG_LABEL[v.business?.regType] ?? ""} ${v.business?.regNumber ?? ""}` : ""],
-          ["Year established", v.business?.yearEstablished],
-          ["KRA PIN", v.business?.kraPin],
-          ["Permit number", v.business?.sbpNumber],
-          ["Permit expiry", v.business?.sbpExpiry],
-          ["Description", v.business?.shortDescription],
-          ...templates.map((f) => [f.label, show(v.templateValues[f.key])])
-        ]}
-      />
-      <Section
         title="Location and contacts"
-        onEdit={() => goTo(3)}
+        onEdit={() => goTo(2)}
         rows={[
           ["County", v.location?.county],
           ["Town or area", v.location?.town],
           ["Address", v.location?.address],
-          ["Map pin", v.location?.lat != null ? `${v.location.lat}, ${v.location.lng}` : ""],
+          ["Map pin", v.location?.lat != null ? `${Number(v.location.lat).toFixed(5)}, ${Number(v.location.lng).toFixed(5)}` : ""],
           ["Business phones", (v.contacts?.businessPhones ?? []).filter(Boolean).join(", ")],
           ["WhatsApp", v.contacts?.whatsappSame ? "Same as first business phone" : v.contacts?.whatsapp],
           ["Website", v.contacts?.website]
         ]}
       />
+      <Section
+        title="Registration and permit"
+        onEdit={() => goTo(3)}
+        rows={[
+          ["Registered", v.business?.registered === null ? "" : v.business?.registered ? "Registered" : "Not registered"],
+          ["Registration", v.business?.registered ? `${REG_LABEL[v.business?.regType] ?? ""} ${v.business?.regNumber ?? ""}` : ""],
+          ["KRA PIN", v.business?.kraPin],
+          ["Permit number", v.business?.sbpNumber],
+          ["Permit valid until", v.business?.sbpExpiry],
+          ["Year started", v.business?.yearEstablished]
+        ]}
+      />
       <section className={styles.section}>
         <header>
           <h3>Documents</h3>
-          <button type="button" className={styles.edit} onClick={() => goTo(4)} aria-label="Edit Documents">
+          <button type="button" className={styles.edit} onClick={() => goTo(3)} aria-label="Edit Documents">
             <FontAwesomeIcon icon={faPenToSquare} />
             <span>Edit</span>
           </button>

@@ -2,6 +2,13 @@
   --danger-fg: #b91c1c;
   --danger-bg: #fef2f2;
   --danger-border: #fca5a5;
+  --ok-fg: #15803d;
+  --ok-bg: #ecfdf3;
+  --ap-r: 14px;
+  --ap-r-lg: 20px;
+  --ap-input-h: 3.25rem;
+  --ap-halo: rgb(56 182 255 / 0.32);
+  --ap-halo-danger: rgb(185 28 28 / 0.22);
   height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
@@ -17,6 +24,9 @@
     --danger-fg: #fca5a5;
     --danger-bg: #3b0a0a;
     --danger-border: #b91c1c;
+    --ok-fg: #86efac;
+    --ok-bg: #052e16;
+    --ap-halo-danger: rgb(252 165 165 / 0.3);
   }
 }
 

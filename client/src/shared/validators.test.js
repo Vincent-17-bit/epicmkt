@@ -162,3 +162,42 @@ describe('required slots for real categories', () => {
     expect(water({ kebs_mark: true })).toContain('cat_kebs_mark');
   });
 });
+
+describe('Maisha Card and optional year', () => {
+  it('accepts a Maisha Card number of 7 to 9 digits and rejects the rest', () => {
+    for (const ok of ['1234567', '12345678', '123456789', '123 456 789']) {
+      const a = base();
+      a.owner.idType = 'maisha_card';
+      a.owner.idNumber = ok;
+      expect(applicationSchema.safeParse(a).success, ok).toBe(true);
+    }
+    for (const bad of ['123456', '1234567890', '12345678A', '']) {
+      const a = base();
+      a.owner.idType = 'maisha_card';
+      a.owner.idNumber = bad;
+      expect(paths(applicationSchema.safeParse(a)), bad).toContain('owner.idNumber');
+    }
+  });
+
+  it('keeps National ID at 7 or 8 digits', () => {
+    const a = base();
+    a.owner.idNumber = '123456789';
+    expect(paths(applicationSchema.safeParse(a))).toContain('owner.idNumber');
+  });
+
+  it('needs the back of a Maisha Card like a National ID, but not of a passport', () => {
+    const cat = categories.find((c) => c.id === 'bakery');
+    const need = (ownerIdType) => requiredSlots(cat, { ownerIdType, registered: false, conditionalDocs: {} });
+    expect(need('maisha_card')).toContain('owner_id_back');
+    expect(need('national_id')).toContain('owner_id_back');
+    expect(need('passport')).not.toContain('owner_id_back');
+  });
+
+  it('does not require the year established', () => {
+    const a = base();
+    delete a.business.yearEstablished;
+    expect(applicationSchema.safeParse(a).success).toBe(true);
+    a.business.yearEstablished = 1850;
+    expect(paths(applicationSchema.safeParse(a))).toContain('business.yearEstablished');
+  });
+});

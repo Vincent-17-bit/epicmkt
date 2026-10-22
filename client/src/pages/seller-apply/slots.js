@@ -1,8 +1,8 @@
 import { requiredSlots } from "../../shared/validators.js";
+import { idTypeOf } from "./idTypes.js";
 
 const BASE_WHY = {
   owner_id_front: "To confirm who owns the business.",
-  owner_id_back: "The back of a National ID carries details we need to check.",
   sbp: "Shows the business is licensed by its county.",
   signboard: "Shows the business really operates at this location.",
   br_cert: "Confirms the business is registered.",
@@ -11,7 +11,7 @@ const BASE_WHY = {
 
 export function documentCards(cat, values) {
   if (!cat) return [];
-  const passport = values.owner?.idType === "passport";
+  const id = idTypeOf(values.owner?.idType);
   const registered = values.business?.registered === true;
   const required = new Set(
     requiredSlots(cat, {
@@ -30,8 +30,8 @@ export function documentCards(cat, values) {
     ...extra
   });
   const cards = [
-    card("owner_id_front", passport ? "Passport photo page" : "National ID, front", "You"),
-    ...(passport ? [] : [card("owner_id_back", "National ID, back", "You")]),
+    card("owner_id_front", id.frontLabel, "You"),
+    ...(id.hasBack ? [card("owner_id_back", id.backLabel, "You", { why: id.why })] : []),
     card("sbp", "Single Business Permit", "Business"),
     card("signboard", "Signboard or shop-front photo", "Business"),
     ...(registered

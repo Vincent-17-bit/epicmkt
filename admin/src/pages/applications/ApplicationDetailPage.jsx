@@ -223,7 +223,7 @@ export default function ApplicationDetailPage() {
           </div>
           <dl className="detail__grid">
             <Field label="Owner">{app.ownerName}</Field>
-            <Field label={app.ownerIdType === "passport" ? "Passport number" : "National ID number"}>
+            <Field label={{ passport: "Passport number", maisha_card: "Maisha Card number" }[app.ownerIdType] ?? "National ID number"}>
               {revealed ? app.ownerIdNumber : maskValue(app.ownerIdNumber)}
             </Field>
             <Field label="Phone">{app.phone}</Field>

@@ -6,7 +6,7 @@
 .calm {
   margin: 0;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-card);
+  border-radius: var(--ap-r);
   background: var(--primary-tint);
   color: var(--on-primary-tint);
 }
@@ -19,7 +19,7 @@
 
 .group {
   margin: 0 0 var(--space-3);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
 }
 
 .slots {
@@ -39,7 +39,7 @@
   display: grid;
   gap: var(--space-2);
   padding: var(--space-4);
-  border-radius: var(--radius-card);
+  border-radius: var(--ap-r);
   background: var(--surface);
   box-shadow: var(--shadow-1);
   list-style: none;
@@ -119,7 +119,7 @@
   gap: var(--space-2);
   padding: var(--space-5) var(--space-3);
   border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-card);
+  border-radius: var(--ap-r);
   text-align: center;
   transition: background-color var(--dur) ease, border-color var(--dur) ease;
 }

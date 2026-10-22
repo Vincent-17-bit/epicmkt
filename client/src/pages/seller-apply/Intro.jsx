@@ -1,29 +1,32 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faClipboardCheck, faFileSignature, faMoneyBillTransfer, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faClipboardCheck, faClock, faFileSignature, faMoneyBillTransfer, faStore } from "@fortawesome/free-solid-svg-icons";
 import styles from "./intro.module.css";
 
 const HOW = [
-  { icon: faFileSignature, title: "Apply", text: "Fill in this form and upload your documents." },
-  { icon: faClipboardCheck, title: "Review", text: "We check your details and may ask for corrections." },
-  { icon: faMoneyBillTransfer, title: "Pay", text: "After approval, pay your monthly fee by M-Pesa." },
+  { icon: faFileSignature, title: "Apply", text: "Five short steps, about 5 minutes." },
+  { icon: faClipboardCheck, title: "Review", text: "We check your details and may ask for fixes." },
+  { icon: faMoneyBillTransfer, title: "Pay", text: "After approval, pay the monthly fee by M-Pesa." },
   { icon: faStore, title: "Go live", text: "We send your login and your listing goes live." }
 ];
 
 const BEFORE = [
-  "Your ID or passport",
+  "Your National ID, Maisha Card or passport",
   "Your Single Business Permit",
-  "Your KRA PIN and registration certificate, if registered",
   "A photo of your signboard or shop front",
-  "Your M-Pesa number for payment after approval"
+  "Your KRA PIN and registration certificate, if registered"
 ];
 
 export default function Intro() {
   return (
     <section className={styles.intro} aria-labelledby="intro-title">
       <div className={styles.hero}>
+        <p className={styles.eyebrow}>
+          <FontAwesomeIcon icon={faClock} /> About 5 minutes. Saved as you go.
+        </p>
         <h1 id="intro-title">Put your business in front of local customers</h1>
-        <p>
-          EpicMKT is a free directory of local businesses across Kenya. Customers find you and contact you by call, WhatsApp or directions. You pay a simple monthly listing fee. There are no orders or payments on the site.
+        <p className={styles.short}>Free to apply. You pay only after we approve you.</p>
+        <p className={styles.long}>
+          EpicMKT is a directory of local businesses across Kenya. Customers find you and contact you by call, WhatsApp or directions. You pay a simple monthly listing fee. There are no orders or payments on the site.
         </p>
       </div>
       <ol className={styles.how} aria-label="How it works">
@@ -39,8 +42,8 @@ export default function Intro() {
           </li>
         ))}
       </ol>
-      <div className={styles.before}>
-        <h2>Before you start</h2>
+      <details className={styles.before}>
+        <summary>Have these ready</summary>
         <ul>
           {BEFORE.map((b) => (
             <li key={b}>
@@ -49,7 +52,7 @@ export default function Intro() {
             </li>
           ))}
         </ul>
-      </div>
+      </details>
     </section>
   );
 }

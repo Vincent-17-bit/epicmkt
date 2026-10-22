@@ -16,9 +16,10 @@ import { useDocs } from "./useDocs.js";
 import Intro from "./Intro.jsx";
 import Stepper from "./Stepper.jsx";
 import CategoryPicker from "./CategoryPicker.jsx";
-import { AboutYouStep, BusinessStep } from "./StepsAbout.jsx";
+import BusinessStep from "./StepBusiness.jsx";
+import YouStep from "./StepYou.jsx";
 import LocationStep from "./StepLocation.jsx";
-import DocumentsStep from "./DocumentsStep.jsx";
+import PapersStep from "./StepPapers.jsx";
 import PlanStep from "./PlanStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
 import SuccessScreen from "./SuccessScreen.jsx";
@@ -27,13 +28,11 @@ import PricingEditor from "./PricingEditor.jsx";
 import styles from "./page.module.css";
 
 const LEADS = [
-  "Pick the type that best describes your business. This sets the documents and package options.",
-  "Tell us who you are. We may call or message this number during review.",
-  "Tell us about the business and its permit.",
-  "Pin the business on the map and add the numbers customers can reach.",
-  "Upload clear photos or PDFs of each document.",
-  "Choose a package. You pay only after your application is approved.",
-  "Check everything, then read and accept the terms."
+  "Pick your business type, then name it. Everything is required unless marked optional.",
+  "Tell us who you are. We may call or message this number while we review.",
+  "Show customers where you are and how to reach you.",
+  "Your permit details and clear photos of your documents.",
+  "Choose a package, check your answers and send. You pay only after approval."
 ];
 
 const merge = (base, saved) => ({
@@ -158,13 +157,13 @@ export default function BecomeASeller() {
     const step = STEPS[idx];
     const ok = step.paths.length ? await trigger(step.paths) : true;
     let docsOk = true;
-    if (step.id === "documents") {
+    if (step.id === "papers") {
       setAttempted(true);
       docsOk = missingSlots(cards, docs.files).length === 0 && !Object.values(docs.files).some((f) => f.status === "working");
     }
     if (!ok || !docsOk) {
       const errs = flattenErrors(methods.formState.errors).filter(({ path }) => step.paths.some((p) => path === p || path.startsWith(`${p}.`)));
-      const docErrs = step.id === "documents" ? missingSlots(cards, docs.files).map((c) => ({ path: `slot-${c.key}`, message: `${c.label} is required` })) : [];
+      const docErrs = step.id === "papers" ? missingSlots(cards, docs.files).map((c) => ({ path: `slot-${c.key}`, message: `${c.label} is required` })) : [];
       setSummary([...errs, ...docErrs]);
       focusFirstError();
       return;
@@ -176,8 +175,9 @@ export default function BecomeASeller() {
     const out = [];
     const errors = validateAll(values, category);
     STEPS.forEach((s, i) => {
-      if ((i < 4 || s.id === "plan") && stepHasErrors(errors, s)) out.push(`Complete "${s.title}"`);
+      if (s.id !== "send" && stepHasErrors(errors, s)) out.push(`Complete "${s.title}"`);
     });
+    if (!values.planKey) out.push("Choose a package");
     missingSlots(cards, docs.files).forEach((c) => out.push(`Add document: ${c.label}`));
     if (Object.values(docs.files).some((f) => f.status === "working")) out.push("Wait for files to finish checking");
     if (!read.terms) out.push("Open and read the Seller Terms and Rules to the end");
@@ -221,7 +221,7 @@ export default function BecomeASeller() {
         e.details.issues.forEach((i) => setError(i.path, { type: "server", message: i.message }));
         go(stepOfPath(e.details.issues[0]?.path ?? ""));
       }
-      if (code === "missing_documents") go(4);
+      if (code === "missing_documents") go(3);
     }
   };
 
@@ -239,23 +239,24 @@ export default function BecomeASeller() {
 
   const step = STEPS[idx];
   const content = {
-    type: <CategoryPicker catalog={catalog} />,
-    you: <AboutYouStep />,
-    business: <BusinessStep category={category} />,
-    location: <LocationStep />,
-    documents: <DocumentsStep category={category} docs={docs} showErrors={attempted} />,
-    plan: <PlanStep catalog={catalog} />,
-    review: (
-      <ReviewStep
-        category={category}
-        docs={docs}
-        legal={legal}
-        read={read}
-        onRead={(key) => setRead((r) => (r[key] ? r : { ...r, [key]: true }))}
-        goTo={go}
-        missing={missing}
-        onToken={setToken}
-      />
+    business: <BusinessStep catalog={catalog} category={category} />,
+    you: <YouStep />,
+    place: <LocationStep />,
+    papers: <PapersStep category={category} docs={docs} showErrors={attempted} />,
+    send: (
+      <div className={styles.sendStack}>
+        <PlanStep catalog={catalog} />
+        <ReviewStep
+          category={category}
+          docs={docs}
+          legal={legal}
+          read={read}
+          onRead={(key) => setRead((r) => (r[key] ? r : { ...r, [key]: true }))}
+          goTo={go}
+          missing={missing}
+          onToken={setToken}
+        />
+      </div>
     )
   }[step.id];
 
@@ -273,10 +274,16 @@ export default function BecomeASeller() {
           </Button>
         </div>
       )}
-      <Stepper index={idx} onJump={go} />
-      <form noValidate onSubmit={(e) => e.preventDefault()} onInputCapture={touch} onClickCapture={touch}>
+      <div className={styles.shell}>
+      <aside className={styles.aside}>
+        <Stepper index={idx} onJump={go} />
+      </aside>
+      <form className={styles.formCol} noValidate onSubmit={(e) => e.preventDefault()} onInputCapture={touch} onClickCapture={touch}>
         <FormProvider {...methods}>
           <section className={styles.card} aria-labelledby="step-title">
+            <p className={styles.eyebrow}>
+              Step {idx + 1} of {STEPS.length}
+            </p>
             <h2 id="step-title" ref={title} tabIndex={-1}>
               {step.title}
             </h2>
@@ -331,11 +338,12 @@ export default function BecomeASeller() {
             </Button>
           ) : (
             <Button icon={faPaperPlane} onClick={submit} disabled={missing.length > 0 || submitting}>
-              {submitting ? "Sending" : phase === "failed" ? "Retry" : "Submit application"}
+              {submitting ? "Sending your application" : phase === "failed" ? "Try again" : "Send application"}
             </Button>
           )}
         </div>
       </form>
+      </div>
       <div className={styles.spacer} />
       {import.meta.env.DEV && <PricingEditor category={category} />}
       <LeaveDialog open={blocker.state === "blocked"} onStay={() => blocker.reset?.()} onLeave={() => blocker.proceed?.()} />

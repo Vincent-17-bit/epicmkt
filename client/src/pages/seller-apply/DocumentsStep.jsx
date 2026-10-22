@@ -13,7 +13,6 @@ import {
 import { useFormContext, useWatch } from "react-hook-form";
 import { ErrorLine } from "./Field.jsx";
 import { documentCards } from "./slots.js";
-import { MAX_FILES } from "../../shared/validators.js";
 import { FILE_ERRORS } from "../../shared/fileSecurity.js";
 import form from "./form.module.css";
 import styles from "./documents.module.css";
@@ -123,19 +122,13 @@ export default function DocumentsStep({ category, docs, showErrors }) {
   const { control, setValue } = useFormContext();
   const values = useWatch({ control });
   const cards = documentCards(category, values);
-  const registered = values.business?.registered;
   const count = Object.values(docs.files).filter((f) => f.file).length;
   const groups = [...new Set(cards.map((c) => c.group))];
 
   return (
     <div className={styles.wrap}>
-      {registered === false && (
-        <p className={styles.calm}>
-          <FontAwesomeIcon icon={faCircleInfo} /> Your business is not registered, so only your ID, permit and signboard photo are needed. Your listing will show without the Verified tick until you add registration documents. If you give us everything, we can verify the business.
-        </p>
-      )}
       <p className={styles.count}>
-        {count} of {MAX_FILES} files added. {FILE_ERRORS.blocked_type.split(".")[0]}.
+        {count} of {cards.filter((c) => c.active && c.state === "required").length} required files added. {FILE_ERRORS.blocked_type.split(".")[0]}.
       </p>
       {groups.map((group) => (
         <section key={group} aria-label={group}>

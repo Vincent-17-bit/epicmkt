@@ -10,7 +10,7 @@
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1.5px solid var(--danger-border);
-  border-radius: var(--radius-card);
+  border-radius: var(--ap-r);
   background: var(--danger-bg);
   color: var(--danger-fg);
 }
@@ -27,8 +27,66 @@
 .note {
   margin: 0;
   font-size: var(--text-sm);
+  line-height: 1.5;
   color: var(--text-muted);
 }
+
+/* ---- sections inside a step ---- */
+
+.stack {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.block {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--ap-r-lg);
+  background: var(--surface);
+}
+
+.blockSoft {
+  background: var(--surface-2);
+  border-color: transparent;
+}
+
+.blockHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.blockIcon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 12px;
+  background: var(--primary-tint);
+  color: var(--primary-pressed);
+}
+
+.blockHead h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+}
+
+.blockHead p {
+  margin: 0.15rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ---- category details (template fields) ---- */
 
 .template h3 {
   margin: 0 0 var(--space-3);
@@ -38,16 +96,25 @@
 .priceWrap {
   display: flex;
   align-items: stretch;
-  gap: var(--space-2);
+  gap: 0;
+}
+
+.priceWrap > input {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .prefix {
   display: grid;
   place-items: center;
   padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--surface-3);
+  border: 1.5px solid var(--input-border);
+  border-right: 0;
+  border-radius: var(--ap-r) 0 0 var(--ap-r);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
   font-weight: 700;
+  color: var(--text-muted);
 }
 
 .range {
@@ -56,10 +123,14 @@
   gap: var(--space-2);
 }
 
+.range > span {
+  color: var(--text-muted);
+}
+
 .list,
 .phones {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 .listRow {
@@ -70,32 +141,32 @@
 
 .listRow > input {
   flex: 1;
+  min-width: 0;
 }
 
 .grow {
   flex: 1;
+  min-width: 0;
 }
 
 .iconBtn {
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--tap);
-  height: var(--tap);
+  width: var(--ap-input-h);
+  height: var(--ap-input-h);
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--ap-r);
   background: transparent;
-  color: inherit;
+  color: var(--text-muted);
   cursor: pointer;
-  transition: background-color var(--dur) ease, transform var(--dur) ease;
-}
-
-.iconBtn:active,
-.addBtn:active {
-  transform: scale(0.97);
+  transition: background-color var(--dur) ease, color var(--dur) ease, transform var(--dur) ease;
 }
 
 .addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   justify-self: start;
   min-height: var(--tap);
   padding: 0 var(--space-3);
@@ -109,16 +180,34 @@
   transition: background-color var(--dur) ease, transform var(--dur) ease;
 }
 
+.iconBtn:active,
+.addBtn:active {
+  transform: scale(0.97);
+}
+
 @media (hover: hover) {
-  .iconBtn:hover,
+  .iconBtn:hover {
+    background: var(--danger-bg);
+    color: var(--danger-fg);
+  }
+
   .addBtn:hover {
     background: var(--link-hover-bg);
   }
 }
 
+.iconBtn:focus-visible,
+.addBtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ap-halo);
+}
+
+/* ---- map ---- */
+
 .mapBlock {
   display: grid;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .mapHead {
@@ -129,6 +218,39 @@
   gap: var(--space-3);
 }
 
+.mapHead strong {
+  font-size: var(--text-md);
+}
+
 .mapHead p {
-  margin: var(--space-1) 0 0;
+  margin: 0.2rem 0 0;
+}
+
+.pinState {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.pinState[data-set="true"] {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+
+@media (max-width: 380px) {
+  .block {
+    padding: var(--space-3);
+    border-radius: var(--ap-r);
+  }
+
+  .blockIcon {
+    display: none;
+  }
 }

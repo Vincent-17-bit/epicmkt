@@ -77,7 +77,7 @@ test("a local phone number also matches the stored international form", () => {
 });
 
 test("document slots use the labels of the real upload slots", () => {
-  assert.equal(slotLabel("owner_id_front"), "Owner ID or passport (front)");
+  assert.equal(slotLabel("owner_id_front"), "Owner ID, Maisha Card or passport (front)");
   assert.equal(slotLabel("sbp"), "Single business permit");
   assert.equal(slotLabel("kra_pin_cert"), "KRA PIN certificate");
   assert.equal(slotLabel("cat_ppb_premises_licence"), "Ppb premises licence");

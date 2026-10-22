@@ -165,18 +165,57 @@ describe("page", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
-  it("lists all categories, shows required documents and validates the next step", async () => {
+  it("lists all categories, folds the grid once one is chosen and shows the documents needed", async () => {
     const user = userEvent.setup();
     mountPage();
     const group = await screen.findByRole("radiogroup", { name: "Business type" });
     expect(within(group).getAllByRole("radio")).toHaveLength(32);
     await user.click(within(group).getByRole("radio", { name: "Chemist or pharmacy" }));
     expect(await screen.findByText(/Documents you will need/)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /continue/i }));
-    expect(await screen.findByText("About you", { selector: "h2" })).toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup", { name: "Business type" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /change business type/i })).toBeInTheDocument();
+    expect(await screen.findByText(/Chemist or pharmacy details/)).toBeInTheDocument();
+  });
+
+  it("is five steps, and the first one asks for a business name before moving on", async () => {
+    const user = userEvent.setup();
+    mountPage();
+    expect(await screen.findByText("Step 1 of 5", { selector: "strong" })).toBeInTheDocument();
+    const group = await screen.findByRole("radiogroup", { name: "Business type" });
+    await user.click(within(group).getByRole("radio", { name: "Bakery" }));
     await user.click(screen.getByRole("button", { name: /continue/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/need your attention/);
-    expect(screen.getAllByText("Full names is required").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Business name is required").length).toBeGreaterThan(0);
+    await user.type(screen.getByLabelText(/Business name/), "Mama Njeri Bakery");
+  });
+
+  it("offers National ID, Maisha Card and Passport, and shapes the number box for each", async () => {
+    const user = userEvent.setup();
+    mountPage();
+    const group = await screen.findByRole("radiogroup", { name: "Business type" });
+    await user.click(within(group).getByRole("radio", { name: "Bakery" }));
+    await user.type(screen.getByLabelText(/Business name/), "Mama Njeri Bakery");
+    // bakery has a required product type
+    await user.click(screen.getByRole("checkbox", { name: "Bread" }));
+    await user.click(screen.getByRole("button", { name: /continue/i }));
+    expect(await screen.findByText("About you", { selector: "h2" })).toBeInTheDocument();
+
+    expect(screen.getByRole("radio", { name: "National ID" })).toBeChecked();
+    const number = () => screen.getByRole("textbox", { name: /ID number|Maisha Namba|Passport number/ });
+    await user.type(number(), "12a3 456789");
+    expect(number()).toHaveValue("12345678"); // digits only, 8 at most
+
+    await user.click(screen.getByRole("radio", { name: "Maisha Card" }));
+    expect(number()).toHaveValue("12345678");
+    expect(screen.getByText(/Type the/)).toHaveTextContent(/Maisha Namba/);
+    await user.type(number(), "9");
+    expect(number()).toHaveValue("123456789"); // nine digits are allowed for the Maisha Namba
+
+    await user.click(screen.getByRole("radio", { name: "Passport" }));
+    expect(number()).toHaveValue("123456789"); // digits still fit a passport (up to 9 characters)
+    await user.clear(number());
+    await user.type(number(), "ab-123456");
+    expect(number()).toHaveValue("AB123456"); // capitals, no symbols
   });
 
   it("has no OTP step", async () => {

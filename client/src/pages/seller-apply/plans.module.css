@@ -254,3 +254,17 @@
     display: block;
   }
 }
+
+.compare summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.compare summary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px var(--ap-halo);
+  border-radius: var(--ap-r);
+}

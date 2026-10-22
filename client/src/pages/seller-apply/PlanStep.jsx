@@ -150,8 +150,8 @@ export default function PlanStep({ catalog }) {
       <ErrorLine message={error} />
       <p className={styles.pay}>You pay nothing now. After we approve your application, you pay by M-Pesa and we activate your listing.</p>
 
-      <div className={styles.compare}>
-        <h3>Compare all features</h3>
+      <details className={styles.compare}>
+        <summary>Compare all features</summary>
         <table>
           <thead>
             <tr>
@@ -171,7 +171,7 @@ export default function PlanStep({ catalog }) {
             ))}
           </tbody>
         </table>
-      </div>
+      </details>
     </div>
   );
 }

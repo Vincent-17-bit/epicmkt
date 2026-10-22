@@ -1,9 +1,11 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faClock, faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
 import { STEPS } from "./formModel.js";
 import styles from "./stepper.module.css";
 
+/** Phones: a slim sticky bar. Laptops and up: a numbered list beside the form. */
 export default function Stepper({ index, onJump }) {
+  const left = STEPS.length - index - 1;
   return (
     <nav aria-label="Application progress" className={styles.wrap}>
       <p className={styles.phone}>
@@ -25,6 +27,12 @@ export default function Stepper({ index, onJump }) {
           </li>
         ))}
       </ol>
+      <p className={styles.eta}>
+        <FontAwesomeIcon icon={faClock} /> {left === 0 ? "Last step" : `About ${Math.max(1, left)} min to go`}
+      </p>
+      <p className={styles.saved}>
+        <FontAwesomeIcon icon={faFloppyDisk} /> Saved on this device as you type
+      </p>
     </nav>
   );
 }
