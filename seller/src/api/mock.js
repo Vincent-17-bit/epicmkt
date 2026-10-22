@@ -1,6 +1,6 @@
 import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { EXCEPTION_LIMIT, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
+import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -487,7 +487,7 @@ export const saveItem = async (id, f) => {
 export const bulkItems = async (action, ids, args = {}) => {
   signedIn();
   await wait();
-  if (!["hide", "show", "delete", "move_section", "set_availability", "price_percent", "confirm_prices"].includes(action)) throw new ApiError("invalid_action");
+  if (!BULK_ACTIONS.includes(action)) throw new ApiError("invalid_action");
   if (!Array.isArray(ids) || ids.length === 0) throw new ApiError("no_items");
   if (ids.length > 500) throw new ApiError("too_many_items");
   const targets = bill.items.filter((i) => ids.includes(i.id) && !i.removedByAdmin);
@@ -610,6 +610,20 @@ export const updateFlashSale = async (id, { headline, quantityNote }) => {
   Object.assign(sale, { headline: v.value.headline, quantityNote: v.value.quantityNote });
   emit("flash_sales", "UPDATE", sale);
   return flashView(sale);
+};
+export const extendFlashSale = async (id, endsAt) => {
+  writer();
+  await wait();
+  settleFlash();
+  const sale = bill.flash.find((s) => s.id === id);
+  if (!sale) throw new ApiError("not_found");
+  if (!["scheduled", "live"].includes(sale.status) || Date.parse(sale.endsAt) <= nowMs()) throw new ApiError("flash_closed");
+  const end = Date.parse(endsAt);
+  if (!Number.isFinite(end) || end <= Date.parse(sale.endsAt)) throw new ApiError("invalid_window");
+  if (end - Date.parse(sale.startsAt) > FLASH_MAX_MS) throw new ApiError("duration_too_long");
+  sale.endsAt = new Date(end).toISOString();
+  emit("flash_sales", "UPDATE", sale);
+  return true;
 };
 export const endFlashSale = async (id) => {
   writer();

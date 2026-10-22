@@ -1,4 +1,4 @@
--- Cron schedule for the messaging jobs. Not a migration: pg_cron and pg_net are enabled per project,
+-- Cron schedule for the background jobs (messages, daily lifecycle, proof clean-up). Not a migration: pg_cron and pg_net are enabled per project,
 -- and the secrets below differ between projects. Run it once in the SQL editor of each environment.
 --
 -- Before running:
@@ -46,7 +46,26 @@ select cron.schedule(
   $$
 );
 
+-- proofs-purge: 01:00 UTC = 04:00 Nairobi, off peak. Deletes proof uploads 90 days after their flag was resolved and
+-- uploads that were never finalized (pending for over an hour), from storage and from flag_attachments.
+select cron.schedule(
+  'proofs-purge',
+  '0 1 * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/proofs-purge',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 55000
+  );
+  $$
+);
+
 -- To inspect or remove:
 --   select jobid, jobname, schedule, active from cron.job;
 --   select cron.unschedule('dispatch-messages');
 --   select cron.unschedule('daily-lifecycle');
+--   select cron.unschedule('proofs-purge');
