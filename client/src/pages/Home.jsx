@@ -9,7 +9,6 @@ import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
-import CardGrid from "../components/CardGrid.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
@@ -23,9 +22,11 @@ import styles from "./Home.module.css";
 function CategorySkeleton() {
   return (
     <div className={styles.card} aria-hidden="true">
-      <Skeleton width="48px" height="48px" radius="999px" />
-      <Skeleton width="60%" height="1.1rem" />
-      <Skeleton width="85%" height="0.9rem" />
+      <Skeleton width="36px" height="36px" radius="999px" />
+      <span className={styles.body}>
+        <Skeleton width="70%" height="0.9rem" />
+        <Skeleton width="45%" height="0.75rem" />
+      </span>
     </div>
   );
 }
@@ -139,7 +140,7 @@ export default function Home() {
             <span className={styles.searchText}>Search barbers, chemists, gyms…</span>
             <span className={styles.searchGo}>Search</span>
           </button>
-          <Button as={Link} to="/#categories" variant="dark" size="lg" iconRight={faArrowDown}>
+          <Button as={Link} to="/#categories" variant="dark" size="sm" iconRight={faArrowDown}>
             Browse categories
           </Button>
         </Container>
@@ -172,7 +173,7 @@ export default function Home() {
               </Button>
             </div>
           ) : (
-            <CardGrid aria-busy={isPending}>
+            <ul className={styles.categoryGrid} aria-busy={isPending}>
               {isPending
                 ? Array.from({ length: 10 }, (_, i) => (
                     <li key={i}>
@@ -185,16 +186,18 @@ export default function Home() {
                         <span className={styles.icon}>
                           <FontAwesomeIcon icon={categoryIcon(item.icon)} />
                         </span>
-                        <span className={styles.name}>{item.name}</span>
-                        <span className={styles.blurb}>{item.blurb}</span>
-                        <span className={styles.meta}>
-                          {item.count} {item.count === 1 ? "listing" : "listings"}
-                          <FontAwesomeIcon icon={faArrowRight} className={styles.arrow} />
+                        <span className={styles.body}>
+                          <span className={styles.name}>{item.name}</span>
+                          {item.blurb ? <span className={styles.blurb}>{item.blurb}</span> : null}
+                          <span className={styles.count}>
+                            {item.count} {item.count === 1 ? "listing" : "listings"}
+                          </span>
                         </span>
+                        <FontAwesomeIcon icon={faArrowRight} className={styles.arrow} />
                       </Link>
                     </li>
                   ))}
-            </CardGrid>
+            </ul>
           )}
         </Container>
       </section>
