@@ -16,6 +16,7 @@ import BrowseResults from "../components/BrowseResults.jsx";
 import BusinessRail from "../components/BusinessRail.jsx";
 import RecentlyAdded from "../components/RecentlyAdded.jsx";
 import NearYou from "../components/NearYou.jsx";
+import HomeProducts from "../components/HomeProducts.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
 
@@ -149,6 +150,8 @@ export default function Home() {
       <Container>
         <FlashStrip id="home-flash-title" />
       </Container>
+
+      <HomeProducts />
 
       <section className={styles.section} aria-labelledby="near-title">
         <Container>

@@ -226,6 +226,29 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
+// Newest listed products across all active stores, for the home page. Callers spread them across stores.
+export async function getHomeProducts({ limit = 48 } = {}) {
+  await delay();
+  runSweep();
+  const rows = [];
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    business.services.forEach((svc, index) => {
+      const item = toItem(business, svc, index);
+      if (item.status !== "listed") return;
+      const sale = liveSaleFor(item, business);
+      rows.push({
+        ...item,
+        pricing: buildPricing(item, sale),
+        flash: sale ? flashParts(item, sale) : null,
+        business: { id: business.id, slug: business.slug, name: business.name }
+      });
+    });
+  }
+  rows.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
+  return rows.slice(0, limit);
+}
+
 const HOUR_MS = 3600000;
 const WINDOWS = { "1h": HOUR_MS, "24h": 24 * HOUR_MS };
 

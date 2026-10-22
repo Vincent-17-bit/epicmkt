@@ -43,6 +43,7 @@ beforeEach(() => {
   db().items = [];
   db().categories = [];
   db().sales = [];
+  db().offers = [];
   db().failing = null;
 });
 
@@ -179,5 +180,34 @@ describe("live browse adapter", () => {
     const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));
     expect(bySlug["shop-1"]).toEqual({ flash: 2, offers: 0 });
     expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
+  });
+
+  it("counts live offers, including ones with no end date, and ignores finished ones", async () => {
+    db().businesses = [biz(1), biz(2)];
+    const now = Date.now();
+    db().offers = [
+      { id: "o1", business_id: biz(1).id, ends_at: null },
+      { id: "o2", business_id: biz(1).id, ends_at: new Date(now + 3600000).toISOString() },
+      { id: "o3", business_id: biz(1).id, ends_at: new Date(now - 1000).toISOString() }
+    ];
+    const { items } = await live.searchBusinesses({});
+    const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));
+    expect(bySlug["shop-1"]).toEqual({ flash: 0, offers: 2 });
+    expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
+  });
+
+  it("still lists businesses, without chips, when offers or sales cannot be read", async () => {
+    db().businesses = [biz(1)];
+    const original = fake.current.client.from;
+    fake.current.client.from = (table) => {
+      if (table === "public_offers" || table === "public_flash_sales") throw new Error("view missing");
+      return original(table);
+    };
+    try {
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].promo).toEqual({ flash: 0, offers: 0 });
+    } finally {
+      fake.current.client.from = original;
+    }
   });
 });

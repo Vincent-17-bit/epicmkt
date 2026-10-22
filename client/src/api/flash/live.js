@@ -172,6 +172,37 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
   return shaped.slice(0, limit);
 }
 
+// Newest public products across all live stores, for the home page. Sale pricing is decoration: if the flash
+// sales cannot be read the products still show at their regular price.
+export async function getHomeProducts({ limit = 48 } = {}) {
+  const rows = unwrap(await supabase.from("public_items").select("*").order("created_at", { ascending: false }).limit(limit)) ?? [];
+  if (!rows.length) return [];
+  const businessIds = [...new Set(rows.map((row) => row.business_id))];
+  const businesses = unwrap(await supabase.from("public_businesses").select("id,slug,name").in("id", businessIds)) ?? [];
+  const byId = new Map(businesses.map((b) => [b.id, b]));
+  let live = { now: Date.now(), entries: [] };
+  try {
+    live = await liveEntries();
+  } catch {
+    // keep regular prices
+  }
+  return rows.flatMap((row) => {
+    const business = byId.get(row.business_id);
+    if (!business) return [];
+    const item = itemRow(row, business);
+    const entry = live.entries.find((e) => e.item.id === row.id);
+    const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+    return [
+      {
+        ...item,
+        pricing,
+        flash: entry ? flashParts(entry, live.now) : null,
+        business: { id: business.id, slug: business.slug, name: business.name }
+      }
+    ];
+  });
+}
+
 let categoriesCache = null;
 
 export async function getBusiness(ref, origin = null) {

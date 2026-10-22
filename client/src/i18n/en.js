@@ -144,5 +144,8 @@ export default {
   "item.storeSelective": "Store Selective",
   "item.seeAll": "See all in store",
   "item.scrollLeft": "Scroll left",
-  "item.scrollRight": "Scroll right"
+  "item.scrollRight": "Scroll right",
+  "home.products": "Products",
+  "home.productsFrom": "From",
+  "home.productsLoading": "Loading products"
 };

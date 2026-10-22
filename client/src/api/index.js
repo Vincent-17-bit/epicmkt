@@ -21,7 +21,8 @@ export const logEvent = (name, payload) => backend.logEvent(name, payload);
 export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
-  getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts)
+  getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
+  getHome: (opts) => flashApi.getHomeProducts(opts)
 };
 export const flash = flashApi.flash;
 export const offers = {

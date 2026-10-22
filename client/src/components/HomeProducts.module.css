@@ -1,0 +1,64 @@
+.section {
+  padding-block: clamp(var(--space-4), 3vw, var(--space-5));
+}
+
+.heading {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+/* 2 across on phones, scaling up with the screen. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3) var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cell {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.store {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (hover: hover) {
+  .store:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+@media (min-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-3);
+  }
+}
+
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

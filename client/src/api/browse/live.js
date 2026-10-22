@@ -65,7 +65,7 @@ const buildCategories = (rows) =>
     };
   });
 
-const buildBusiness = (row, categories, fromPriceKes, flashEnds = []) => {
+const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offerEnds = []) => {
   const category = categories.get(row.category_id) ?? null;
   const town = row.town ?? "";
   return {
@@ -94,19 +94,20 @@ const buildBusiness = (row, categories, fromPriceKes, flashEnds = []) => {
     hours: row.hours && typeof row.hours === "object" ? row.hours : {},
     createdAt: row.created_at ?? "",
     flashEnds,
+    offerEnds,
     attributes: {}
   };
 };
 
-// Cards show a "Flash sale" chip, so we need each business's live sale end times.
+// Cards show "Flash sale" and "Offer" chips, so we need each business's live end times.
 // This is decoration: if it cannot be read, the cards still render without the chip.
-const fetchFlashEnds = async () => {
+const fetchEnds = async (table, columns, endOf) => {
   try {
-    const rows = await fetchAll("public_flash_sales", "id,business_id,ends_at");
+    const rows = await fetchAll(table, columns);
     const ends = new Map();
     for (const row of rows) {
-      const at = Date.parse(row.ends_at);
-      if (!row.business_id || !Number.isFinite(at)) continue;
+      const at = endOf(row);
+      if (!row.business_id || Number.isNaN(at)) continue;
       ends.set(row.business_id, [...(ends.get(row.business_id) ?? []), at]);
     }
     return ends;
@@ -115,12 +116,19 @@ const fetchFlashEnds = async () => {
   }
 };
 
+const fetchFlashEnds = () => fetchEnds("public_flash_sales", "id,business_id,ends_at", (row) => Date.parse(row.ends_at));
+
+// An offer with no end date runs until the seller turns it off.
+const fetchOfferEnds = () =>
+  fetchEnds("public_offers", "id,business_id,ends_at", (row) => (row.ends_at ? Date.parse(row.ends_at) : Infinity));
+
 const build = async () => {
-  const [rows, items, categoryRows, flashEnds] = await Promise.all([
+  const [rows, items, categoryRows, flashEnds, offerEnds] = await Promise.all([
     fetchAll("public_businesses", "*"),
     fetchAll("public_items", "id,business_id,price,price_type"),
     fetchCategoryRows(),
-    fetchFlashEnds()
+    fetchFlashEnds(),
+    fetchOfferEnds()
   ]);
   const categoryList = buildCategories(categoryRows);
   const categories = new Map(categoryList.map((c) => [c.id, c]));
@@ -132,7 +140,7 @@ const build = async () => {
     const prior = lowest.get(item.business_id);
     if (prior === undefined || price < prior) lowest.set(item.business_id, price);
   }
-  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null, flashEnds.get(row.id)));
+  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null, flashEnds.get(row.id), offerEnds.get(row.id)));
   return { businesses, categoryList, categories };
 };
 
@@ -162,6 +170,8 @@ const load = () => {
   return promise;
 };
 
+const liveCount = (ends) => ends.filter((at) => at > Date.now()).length;
+
 const toSummary = (b, snap, origin) => {
   const category = snap.categories.get(b.categoryId) ?? null;
   return {
@@ -190,7 +200,7 @@ const toSummary = (b, snap, origin) => {
     lng: b.lng,
     isOpen: openNow(b.hours),
     distanceKm: distanceTo(origin, b),
-    promo: { flash: b.flashEnds.filter((at) => at > Date.now()).length, offers: 0 }
+    promo: { flash: liveCount(b.flashEnds), offers: liveCount(b.offerEnds) }
   };
 };
 
