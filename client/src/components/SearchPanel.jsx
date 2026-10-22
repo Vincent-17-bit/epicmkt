@@ -7,7 +7,6 @@ import {
   faXmark,
   faCircleXmark,
   faClockRotateLeft,
-  faFire,
   faTableCells,
   faStore,
   faScrewdriverWrench
@@ -15,6 +14,7 @@ import {
 import { getSuggestions, getTopSearches, logSearch } from "../api/index.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import Container from "./Container.jsx";
+import Flame from "./Flame.jsx";
 import IconButton from "./IconButton.jsx";
 import Skeleton from "./Skeleton.jsx";
 import styles from "./SearchPanel.module.css";
@@ -26,7 +26,7 @@ const GROUP_LIMIT = 4;
 function Rows({ count }) {
   return Array.from({ length: count }, (_, i) => (
     <li key={i} aria-hidden="true">
-      <Skeleton height="52px" radius="var(--radius-card)" />
+      <Skeleton height="40px" radius="var(--radius-card)" />
     </li>
   ));
 }
@@ -61,7 +61,10 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
     queryKey: ["top-searches"],
     queryFn: () => getTopSearches(10),
     enabled: open,
-    staleTime: 60_000
+    staleTime: 30_000,
+    refetchInterval: open && !active ? 60_000 : false,
+    refetchOnWindowFocus: true,
+    placeholderData: (previous) => previous
   });
 
   const suggestions = useQuery({
@@ -224,7 +227,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                   <h2 id="search-top" className={styles.label}>
                     Top searches
                   </h2>
-                  <ol className={styles.list}>
+                  <ol className={`${styles.list} ${styles.ranked}`}>
                     {top.isPending ? (
                       <Rows count={5} />
                     ) : (
@@ -232,7 +235,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                         <li key={item.term}>
                           <Option icon={index + 1} onClick={() => commit(item.term)}>
                             {item.term}
-                            {index === 0 && <FontAwesomeIcon icon={faFire} className={styles.fire} />}
+                            {item.hot && <Flame className={styles.fire} />}
                           </Option>
                         </li>
                       ))

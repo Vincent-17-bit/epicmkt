@@ -380,3 +380,17 @@ export async function getSimilarBusinesses(ref, limit = 4) {
     .slice(0, limit)
     .map((r) => toSummary(r.b, snap, null));
 }
+
+export async function getTopSearches(limit = 10) {
+  const rows = unwrap(await supabase.rpc("top_searches", { p_limit: limit })) ?? [];
+  return rows.map((row) => ({ term: row.term, count: row.count, hot: Boolean(row.hot) }));
+}
+
+export async function logSearch(term) {
+  try {
+    await supabase.rpc("log_search", { p_term: term });
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
