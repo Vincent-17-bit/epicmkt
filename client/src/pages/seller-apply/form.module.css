@@ -121,33 +121,69 @@ input[type="date"].input {
   min-height: var(--ap-input-h);
 }
 
-/* ---- errors ---- */
+/* ---- errors: sit directly under the box with a small pointer, so it is clear which box they belong to ---- */
 
 .error {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
-  margin: 0;
-  padding: 0.45rem 0.7rem;
+  margin: 0.35rem 0 0;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--danger-border);
   border-radius: 10px;
-  border-left: 3px solid var(--danger-fg);
   background: var(--danger-bg);
   color: var(--danger-fg);
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 650;
   line-height: 1.4;
-  animation: errIn 180ms ease-out;
+  animation: errIn 200ms ease-out;
+}
+
+/* the pointer towards the box above */
+.error::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 1.1rem;
+  width: 10px;
+  height: 10px;
+  border-top: 1px solid var(--danger-border);
+  border-left: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  transform: rotate(45deg);
 }
 
 .error svg {
   flex: none;
-  margin-top: 0.2em;
+  margin-top: 0.15em;
+  font-size: 1.05em;
+}
+
+.field[data-invalid="true"] .label {
+  color: var(--danger-fg);
+}
+
+.field[data-invalid="true"] .input {
+  animation: nudge 260ms ease-out;
 }
 
 @keyframes errIn {
   from {
     opacity: 0;
-    transform: translateY(-3px);
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes nudge {
+  20% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(3px);
+  }
+  80% {
+    transform: translateX(-2px);
   }
 }
 
@@ -424,6 +460,7 @@ input[type="date"].input {
 
 @media (prefers-reduced-motion: reduce) {
   .error,
+  .field[data-invalid="true"] .input,
   .segOption,
   .segTick,
   .choice,

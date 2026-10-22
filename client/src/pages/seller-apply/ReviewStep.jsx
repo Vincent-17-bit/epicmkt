@@ -8,6 +8,7 @@ import LegalDialog from "./LegalDialog.jsx";
 import Turnstile from "./Turnstile.jsx";
 import { idTypeOf } from "./idTypes.js";
 import { documentCards } from "./slots.js";
+import { STEPS } from "./formModel.js";
 import form from "./form.module.css";
 import styles from "./review.module.css";
 
@@ -37,7 +38,7 @@ function Section({ title, onEdit, rows }) {
   );
 }
 
-export default function ReviewStep({ category, docs, legal, read, onRead, goTo, missing, onToken }) {
+export default function ReviewStep({ category, docs, legal, read, onRead, goTo, missing, onToken, token = "", tried = false }) {
   const { register, control, formState } = useFormContext();
   const v = useWatch({ control });
   const [openDoc, setOpenDoc] = useState(null);
@@ -48,7 +49,7 @@ export default function ReviewStep({ category, docs, legal, read, onRead, goTo, 
   const show = (x) => (Array.isArray(x) ? x.join(", ") : typeof x === "boolean" ? (x ? "Yes" : "No") : typeof x === "object" && x ? `${x.from ?? ""} to ${x.to ?? ""}` : String(x));
 
   const legalCheck = (key, name, label, title) => (
-    <div className={styles.legalRow}>
+    <div className={styles.legalRow} data-invalid={tried && (!read[key] || errs[name]) ? "true" : undefined}>
       <label className={form.checkRow}>
         <input type="checkbox" disabled={!read[key]} {...register(name)} />
         <span>I have read and understood the {label}</span>
@@ -57,7 +58,7 @@ export default function ReviewStep({ category, docs, legal, read, onRead, goTo, 
         {read[key] ? `Read ${title} again` : `Open ${title}`}
       </button>
       {!read[key] && <p className={form.hint}>Open it and scroll to the end to enable this box.</p>}
-      <ErrorLine message={errs[name]?.message} />
+      <ErrorLine message={tried && !read[key] ? `Open the ${title} and read it to the end first` : errs[name]?.message} />
     </div>
   );
 
@@ -132,7 +133,7 @@ export default function ReviewStep({ category, docs, legal, read, onRead, goTo, 
         <h3 id="declare-title">Declaration</h3>
         {legalCheck("terms", "agreeTerms", "Seller Terms and Rules", "Seller Terms and Rules")}
         {legalCheck("privacy", "agreePrivacy", "Privacy Notice", "Privacy Notice")}
-        <label className={form.checkRow}>
+        <label className={form.checkRow} data-invalid={errs.authorised ? "true" : undefined}>
           <input type="checkbox" {...register("authorised")} />
           <span>I confirm I am authorised to represent this business and the information and documents are true and may be verified.</span>
         </label>
@@ -140,17 +141,27 @@ export default function ReviewStep({ category, docs, legal, read, onRead, goTo, 
         <div className={styles.turnstile}>
           <Turnstile onToken={onToken} onError={() => onToken("")} />
         </div>
+        {tried && !token && <ErrorLine message="Please complete the security check above, then send again" />}
       </section>
 
       {missing.length > 0 && (
         <div className={styles.missing} role="status">
           <strong>Before you can submit:</strong>
           <ul>
-            {missing.map((m) => (
-              <li key={m}>
-                <FontAwesomeIcon icon={faCircleXmark} /> {m}
-              </li>
-            ))}
+            {missing.map((m) => {
+              const target = STEPS.findIndex((s) => m.includes(`"${s.title}"`));
+              const stepIndex = target >= 0 ? target : m.startsWith("Add document") || m.startsWith("Wait for files") ? 3 : -1;
+              return (
+                <li key={m}>
+                  <FontAwesomeIcon icon={faCircleXmark} /> {m}
+                  {stepIndex >= 0 && (
+                    <button type="button" className={styles.jump} onClick={() => goTo(stepIndex)}>
+                      Fix this
+                    </button>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
