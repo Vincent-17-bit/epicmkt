@@ -1,0 +1,17 @@
+.flame {
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.outer {
+  fill: #e11d1d;
+}
+
+.middle {
+  fill: #ff5a14;
+}
+
+.core {
+  fill: #ffd21f;
+}
