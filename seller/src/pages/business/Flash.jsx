@@ -143,6 +143,7 @@ function SaleRow({ sale, now, onChanged }) {
   const open = phase === "live" || phase === "scheduled";
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  const [extending, setExtending] = useState(false);
   const [headline, setHeadline] = useState(sale.headline ?? "");
   const [note, setNote] = useState(sale.quantityNote ?? "");
   const [error, setError] = useState("");
@@ -156,6 +157,7 @@ function SaleRow({ sale, now, onChanged }) {
       await onChanged();
       setEditing(false);
       setConfirming(false);
+      setExtending(false);
     } catch (err) {
       setError(errorText(err));
     }
@@ -206,10 +208,23 @@ function SaleRow({ sale, now, onChanged }) {
         </div>
       )}
 
+      {extending && (
+        <div className={styles.confirm} role="group" aria-label={`Extend ${sale.itemName} flash sale`}>
+          <p>Add time to this sale. It currently {phase === "scheduled" ? "runs until" : "ends"} {stamp(sale.endsAt)}. A sale can run for 7 days at most.</p>
+          <div className={styles.actions}>
+            {FLASH_QUICK.slice(0, 3).map((q) => (
+              <button key={q.key} type="button" className={ui.btn} disabled={busy} onClick={() => run(() => api.extendFlashSale(sale.id, new Date(Date.parse(sale.endsAt) + q.ms).toISOString()))}>Add {q.label}</button>
+            ))}
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setExtending(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
       {error && <p className={ui.error} role="alert">{error}</p>}
-      {open && !editing && !confirming && (
+      {open && !editing && !confirming && !extending && (
         <div className={styles.actions}>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setEditing(true)} aria-label={`Edit ${sale.itemName} headline and note`}>Edit text</button>
+          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setExtending(true)} aria-label={`Extend ${sale.itemName} flash sale`}>Extend</button>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setConfirming(true)} aria-label={`End ${sale.itemName} flash sale early`}>{phase === "scheduled" ? "Cancel" : "End early"}</button>
         </div>
       )}

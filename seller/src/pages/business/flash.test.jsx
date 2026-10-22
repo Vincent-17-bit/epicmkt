@@ -145,6 +145,38 @@ describe("seller flash sales", () => {
     expect(rows()[0]).toHaveTextContent("Hair dye");
   });
 
+  it("extends a running sale from the Extend control and the countdown grows", async () => {
+    const user = userEvent.setup();
+    await open(() => sale("it-fade"));
+    await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
+    expect(screen.getByRole("group", { name: "Extend Fade cut flash sale" })).toHaveTextContent("7 days at most");
+    await user.click(screen.getByRole("button", { name: "Add 1 hour" }));
+    await waitFor(() => expect(M.state.flash[0].endsAt).toBe("2026-10-17T16:00:00.000Z"));
+    await waitFor(() => expect(screen.getByTestId("flash-timer")).toHaveTextContent("07:00:0"));
+    expect(screen.queryByRole("group", { name: "Extend Fade cut flash sale" })).toBeNull();
+  });
+
+  it("refuses an extension past 7 days with the plan message and keeps the old end time", async () => {
+    const user = userEvent.setup();
+    await open(() => sale("it-fade", { endsAt: "2026-10-24T08:30:00Z" }));
+    await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
+    await user.click(screen.getByRole("button", { name: "Add 1 hour" }));
+    expect(await screen.findByText("A flash sale can run for 7 days at most.")).toBeInTheDocument();
+    expect(M.state.flash[0].endsAt).toBe("2026-10-24T08:30:00.000Z");
+  });
+
+  it("the mock only pushes an open sale later, within 7 days of its start", async () => {
+    await open(() => sale("it-fade"));
+    const id = M.state.flash[0].id;
+    await expect(api.extendFlashSale(id, "2026-10-17T15:00:00Z")).rejects.toMatchObject({ code: "invalid_window" });
+    await expect(api.extendFlashSale(id, "2026-10-17T10:00:00Z")).rejects.toMatchObject({ code: "invalid_window" });
+    await expect(api.extendFlashSale(id, "not a date")).rejects.toMatchObject({ code: "invalid_window" });
+    await expect(api.extendFlashSale(id, "2026-10-25T09:00:00Z")).rejects.toMatchObject({ code: "duration_too_long" });
+    await expect(api.extendFlashSale("nope", "2026-10-17T16:00:00Z")).rejects.toMatchObject({ code: "not_found" });
+    await api.endFlashSale(id);
+    await expect(api.extendFlashSale(id, "2026-10-17T16:00:00Z")).rejects.toMatchObject({ code: "flash_closed" });
+  });
+
   it("the mock enforces one live sale per item and blocks hidden or out of stock items", async () => {
     await open(async () => {
       M.setBusiness({ planKey: "premium" });

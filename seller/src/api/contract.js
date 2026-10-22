@@ -54,5 +54,6 @@ export const SELLER_API = [
   "getFlashQuota",
   "createFlashSale",
   "updateFlashSale",
+  "extendFlashSale",
   "endFlashSale",
 ];
