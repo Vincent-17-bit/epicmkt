@@ -49,7 +49,7 @@ export default function DataTable({
 }) {
   const stored = useMemo(() => readStore(storageKey), [storageKey]);
   const uid = useId();
-  const mobile = useMediaQuery("(max-width: 768px)");
+  const mobile = useMediaQuery("(max-width: 767px)");
   const searchRef = useRef(null);
   const scrollRef = useRef(null);
   const headCheckRef = useRef(null);
