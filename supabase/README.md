@@ -13,12 +13,41 @@ Every variable is listed, with where it goes, in the repository root `.env.examp
 ### 2. Database
 
 ```bash
-supabase db push        # runs migrations 0001 to 0011 in order
+supabase db push        # runs every file in supabase/migrations, in number order
 ```
 
 `0008_admin.sql` is additive. It never re-declares a table that an earlier migration owns; it adds roles, the audit
 columns, the outbound message log columns, three admin-only tables (`message_templates`, `site_config`, `content_pages`),
 role-aware policies and the admin RPCs. It is safe to run again.
+
+### Migration numbers
+
+Supabase records a migration by its numeric prefix, so a number is permanent: never rename, renumber or reuse one after
+it may have been applied anywhere. `npm run check:migrations` (part of `npm run test:seller-backend`) fails on a
+duplicate number, a number out of order, an unexplained gap, a header that names another file, and a reference in this
+file to a migration that does not exist.
+
+Numbers `0032`, `0033` and `0034` have no file, on purpose. Nothing was ever committed under them on any branch. The
+public-exception and item-video migrations were first written as `0024` to `0026`, and when `main` gained the admin
+migrations `0024` to `0031` they were renumbered straight to `0035` to `0037` (commit `45a3b85`). The gap is listed
+in `RESERVED` in `scripts/check-migrations.mjs`. Do not add placeholder files for it: a project that already applied
+`0035` or later would report a migration "inserted before the last one" and refuse a plain `supabase db push`.
+
+New migrations take the next free number after `0037`.
+
+### Is every migration in the live database?
+
+Run `supabase/check-applied.sql` in the SQL editor of the live project (it only reads).
+
+- Part 2 lists every function and table the apps call. Any `false` is a missing migration.
+- Part 3 probes migrations `0029` to `0037` by what they changed. Every row must be `true`.
+- Part 1 shows what the CLI recorded. Versions `0001` to `0031` and `0035` to `0037` are expected.
+
+**Fixing the record.** If Part 1 lists `0024_public_exceptions`, `0025_exception_overnight` or `0026_public_item_videos`,
+the database was migrated before the renumbering. Those rows now stand in for the admin migrations that share the
+numbers `0024` to `0026`, so the CLI will skip them. Run `supabase migration repair --status reverted 0024 0025 0026`,
+then `supabase db push --dry-run` to see what it would apply, then `supabase db push --include-all`. `0035` to `0037`
+only create or replace views and functions, so applying them again changes nothing. Finish by running Part 2 and Part 3.
 
 The schema the admin functions must code against (these are the real columns, not an idealised design):
 
