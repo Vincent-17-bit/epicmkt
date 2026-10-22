@@ -65,7 +65,7 @@ const buildCategories = (rows) =>
     };
   });
 
-const buildBusiness = (row, categories, fromPriceKes) => {
+const buildBusiness = (row, categories, fromPriceKes, flashEnds = []) => {
   const category = categories.get(row.category_id) ?? null;
   const town = row.town ?? "";
   return {
@@ -93,15 +93,34 @@ const buildBusiness = (row, categories, fromPriceKes) => {
     lng: row.lng,
     hours: row.hours && typeof row.hours === "object" ? row.hours : {},
     createdAt: row.created_at ?? "",
+    flashEnds,
     attributes: {}
   };
 };
 
+// Cards show a "Flash sale" chip, so we need each business's live sale end times.
+// This is decoration: if it cannot be read, the cards still render without the chip.
+const fetchFlashEnds = async () => {
+  try {
+    const rows = await fetchAll("public_flash_sales", "id,business_id,ends_at");
+    const ends = new Map();
+    for (const row of rows) {
+      const at = Date.parse(row.ends_at);
+      if (!row.business_id || !Number.isFinite(at)) continue;
+      ends.set(row.business_id, [...(ends.get(row.business_id) ?? []), at]);
+    }
+    return ends;
+  } catch {
+    return new Map();
+  }
+};
+
 const build = async () => {
-  const [rows, items, categoryRows] = await Promise.all([
+  const [rows, items, categoryRows, flashEnds] = await Promise.all([
     fetchAll("public_businesses", "*"),
     fetchAll("public_items", "id,business_id,price,price_type"),
-    fetchCategoryRows()
+    fetchCategoryRows(),
+    fetchFlashEnds()
   ]);
   const categoryList = buildCategories(categoryRows);
   const categories = new Map(categoryList.map((c) => [c.id, c]));
@@ -113,7 +132,7 @@ const build = async () => {
     const prior = lowest.get(item.business_id);
     if (prior === undefined || price < prior) lowest.set(item.business_id, price);
   }
-  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null));
+  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null, flashEnds.get(row.id)));
   return { businesses, categoryList, categories };
 };
 
@@ -171,7 +190,7 @@ const toSummary = (b, snap, origin) => {
     lng: b.lng,
     isOpen: openNow(b.hours),
     distanceKm: distanceTo(origin, b),
-    promo: { flash: 0, offers: 0 }
+    promo: { flash: b.flashEnds.filter((at) => at > Date.now()).length, offers: 0 }
   };
 };
 

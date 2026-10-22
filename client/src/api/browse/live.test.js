@@ -8,6 +8,7 @@ vi.mock("../applications/supabaseClient", async () => {
 });
 
 import * as live from "./live.js";
+import { saleRow } from "../../test/fakeSupabase.js";
 
 const db = () => fake.current.state;
 
@@ -41,6 +42,7 @@ beforeEach(() => {
   db().businesses = [];
   db().items = [];
   db().categories = [];
+  db().sales = [];
   db().failing = null;
 });
 
@@ -163,5 +165,19 @@ describe("live browse adapter", () => {
   it("surfaces database errors instead of showing mock data", async () => {
     db().failing = { message: "boom", code: "500" };
     await expect(live.searchBusinesses({})).rejects.toMatchObject({ name: "BrowseApiError" });
+  });
+
+  it("counts each business's live flash sales so the card shows its chip", async () => {
+    db().businesses = [biz(1), biz(2)];
+    const now = Date.now();
+    db().sales = [
+      saleRow({ id: "s1", business_id: biz(1).id, now }),
+      saleRow({ id: "s2", business_id: biz(1).id, now }),
+      saleRow({ id: "s3", business_id: biz(1).id, now, ends_at: new Date(now - 1000).toISOString() })
+    ];
+    const { items } = await live.searchBusinesses({});
+    const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));
+    expect(bySlug["shop-1"]).toEqual({ flash: 2, offers: 0 });
+    expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
   });
 });
