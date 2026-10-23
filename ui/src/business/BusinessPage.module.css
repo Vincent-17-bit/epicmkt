@@ -192,6 +192,7 @@
 }
 
 .h2 {
+  min-width: 0;
   font-size: var(--text-xl);
   font-weight: 700;
 }
@@ -208,4 +209,12 @@
 .crumbRow {
   max-width: var(--content-width);
   padding-top: 0;
+}
+
+.sectionHead {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }

@@ -6,6 +6,7 @@ import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
 import Button from "./Button.jsx";
 import { FeaturedBadge, VerifiedBadge } from "./Badges.jsx";
+import LazyImage from "./LazyImage.jsx";
 import PromoChip from "./PromoChip.jsx";
 import styles from "./ShopCard.module.css";
 
@@ -50,7 +51,7 @@ export default function ShopCard({
       <div className={styles.top}>
         <Link href={to} className={styles.cover} tabIndex={-1} aria-hidden="true">
           {business.coverUrl ? (
-            <img src={business.coverUrl} alt="" loading="lazy" decoding="async" className={styles.coverImg} />
+            <LazyImage src={business.coverUrl} className={styles.coverImg} frameClassName={styles.coverFrame} width={800} sizes="(min-width: 1024px) 33vw, 100vw" />
           ) : (
             <FontAwesomeIcon icon={icon} />
           )}
@@ -68,7 +69,7 @@ export default function ShopCard({
         <div className={styles.head}>
           <span className={styles.icon}>
             {business.logoUrl ? (
-              <img src={business.logoUrl} alt="" loading="lazy" decoding="async" className={styles.logoImg} />
+              <LazyImage src={business.logoUrl} className={styles.logoImg} frameClassName={styles.logoFrame} width={240} />
             ) : (
               <FontAwesomeIcon icon={icon} />
             )}

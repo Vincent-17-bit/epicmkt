@@ -10,14 +10,19 @@ exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller 
   <span
     class="_media_71452e"
   >
-    <img
-      alt=""
-      class="_img_71452e"
-      decoding="async"
-      draggable="false"
-      loading="lazy"
-      src="https://example.test/a.webp"
-    />
+    <span
+      class="_frame_3e5d1c _fill_3e5d1c "
+      data-state="loading"
+    >
+      <img
+        alt=""
+        class="_img_3e5d1c _img_71452e"
+        decoding="async"
+        draggable="false"
+        loading="lazy"
+        src="https://example.test/a.webp"
+      />
+    </span>
     <span
       class="_chip_71452e"
     >

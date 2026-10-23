@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import LazyImage from "./LazyImage.jsx";
 import Lightbox from "./Lightbox.jsx";
 import styles from "./ProductGallery.module.css";
 
@@ -34,14 +35,7 @@ export default function ProductGallery({ images, name, labels = DEFAULT_LABELS }
             onClick={() => setZoom(index)}
             aria-label={`${labels.zoom} ${index + 1} / ${images.length}`}
           >
-            <img
-              src={image.url}
-              alt=""
-              className={styles.img}
-              decoding="async"
-              loading={index === 0 ? "eager" : "lazy"}
-              draggable="false"
-            />
+            <LazyImage fill src={image.url} className={styles.img} priority={index === 0} width={800} sizes="(min-width: 1024px) 50vw, 100vw" />
           </button>
         ))}
       </div>
@@ -56,7 +50,7 @@ export default function ProductGallery({ images, name, labels = DEFAULT_LABELS }
                 aria-label={`${labels.photo} ${index + 1}`}
                 aria-current={index === active ? "true" : undefined}
               >
-                <img src={image.url} alt="" className={styles.thumbImg} loading="lazy" decoding="async" draggable="false" />
+                <LazyImage fill src={image.url} className={styles.thumbImg} width={240} />
               </button>
             </li>
           ))}

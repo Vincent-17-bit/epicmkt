@@ -59,12 +59,13 @@ const contactRows = [
   site.supportHours && { key: "hours", icon: faClock, label: `Support: ${site.supportHours}` }
 ].filter(Boolean);
 
-const DESKTOP = "(min-width: 48rem)";
+// Below this width the link groups collapse into an accordion.
+const WIDE = "(min-width: 40rem)";
 
 function useDesktop() {
-  const [desktop, setDesktop] = useState(() => window.matchMedia(DESKTOP).matches);
+  const [desktop, setDesktop] = useState(() => window.matchMedia(WIDE).matches);
   useEffect(() => {
-    const query = window.matchMedia(DESKTOP);
+    const query = window.matchMedia(WIDE);
     const sync = () => setDesktop(query.matches);
     query.addEventListener("change", sync);
     return () => query.removeEventListener("change", sync);
@@ -164,16 +165,16 @@ export default function Footer() {
         ))}
       </Container>
 
-      <Container className={styles.bottom}>
-        <p className={styles.note}>EpicMKT lists businesses and does not process orders or payments.</p>
-        <div className={styles.controls}>
-          <ThemeSwitch />
+      <Container>
+        <div className={styles.bottom}>
+          <p className={styles.note}>EpicMKT lists businesses and does not process orders or payments.</p>
+          <ThemeSwitch className={styles.theme} />
+          <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. All rights reserved.</small>
           <button type="button" className={styles.top_btn} onClick={toTop}>
             <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
             Back to top
           </button>
         </div>
-        <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. All rights reserved.</small>
       </Container>
     </footer>
   );

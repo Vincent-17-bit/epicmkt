@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt, faCircleCheck, faQuoteLeft } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance } from "@epicmkt/shared";
+import { LazyImage } from "@epicmkt/ui";
 import { useCardLife } from "../hooks/useCardLife.js";
 import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
 import { discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
@@ -33,7 +34,7 @@ function StoreRow({ business }) {
   return (
     <span className={styles.store}>
       <span className={styles.logo}>
-        {business.logo ? <img src={business.logo} alt="" loading="lazy" decoding="async" className={styles.logoImg} /> : business.name.slice(0, 1)}
+        {business.logo ? <LazyImage src={business.logo} className={styles.logoImg} frameClassName={styles.logoFrame} width={240} /> : business.name.slice(0, 1)}
       </span>
       <span className={styles.storeName}>{business.name}</span>
       {business.verified && <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("flash.verified")} aria-label={t("flash.verified")} />}
@@ -86,7 +87,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       draggable="false"
     >
       <span className={styles.media}>
-        {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
+        <LazyImage fill src={item.imageUrl} className={styles.img} />
         <span className={styles.vignette} aria-hidden="true" />
         <span className={styles.sweep} aria-hidden="true" />
         {compact ? (

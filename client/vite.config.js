@@ -61,6 +61,16 @@ export default defineConfig({
             }
           },
           {
+            // Pictures and videos are cached on the device, so a product seen once is not downloaded again.
+            urlPattern: ({ request, url }) => request.destination === "image" && /\/storage\/v1\/(object|render\/image)\/public\//.test(url.pathname),
+            handler: "CacheFirst",
+            options: {
+              cacheName: "media-images",
+              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          },
+          {
             urlPattern: ({ url }) => url.pathname.includes("/rpc/get_server_time"),
             handler: "NetworkOnly"
           }

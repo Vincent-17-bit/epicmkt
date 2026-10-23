@@ -346,6 +346,7 @@ describe("access and layout", () => {
   it("is in the navigation", async () => {
     await open([]);
     const nav = await screen.findByRole("navigation", { name: "Business" });
+    await userEvent.setup().click(within(nav).getByRole("button", { name: "More" }));
     expect(within(nav).getByRole("link", { name: "Exceptions" })).toHaveAttribute("href", "/business/exceptions");
   });
 
