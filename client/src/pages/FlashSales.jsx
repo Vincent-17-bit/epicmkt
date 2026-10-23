@@ -49,7 +49,7 @@ export default function FlashSales() {
       { replace: true }
     );
 
-  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 5 * 60_000 });
+  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
   const { data: facets } = useQuery({ queryKey: ["flash-facets"], queryFn: flash.facets, staleTime: 30_000, refetchInterval: 60_000 });
 
   const query = useInfiniteQuery({

@@ -33,16 +33,16 @@ export default function HomeProducts() {
   const [shown, setShown] = useState(PAGE_SIZE);
 
   const { data, isPending, isError, refetch } = useQuery({ queryKey: ["all-products"], queryFn: () => items.getAll(), staleTime: 60_000 });
-  const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 5 * 60_000 });
+  const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
 
   const filters = useMemo(() => parseFilters(params), [params]);
   const products = data ?? [];
-  const facets = useMemo(() => facetsOf(products), [products]);
+  const towns = useMemo(() => facetsOf(products).towns, [products]);
   const results = useMemo(() => applyFilters(products, filters), [products, filters]);
   const active = countActive(filters);
 
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
-  const townName = (slug) => facets.towns.find((x) => x.slug === slug)?.name ?? slug;
+  const townName = (slug) => towns.find((x) => x.slug === slug)?.name ?? slug;
   const chips = chipsOf(filters, { categoryName, townName });
 
   const change = (patch) => {
@@ -89,6 +89,12 @@ export default function HomeProducts() {
           </ul>
         )}
 
+        {active > 0 && !isPending && !isError && (
+          <p className={styles.found} role="status" aria-live="polite">
+            {results.length === 0 ? "No products match" : `${results.length} of ${products.length} products`}
+          </p>
+        )}
+
         {isError ? (
           <div className={styles.empty} role="alert">
             <p>{t("home.productsFailed")}</p>
@@ -104,7 +110,7 @@ export default function HomeProducts() {
             {isPending
               ? Array.from({ length: 6 }, (_, i) => <TileSkeleton key={i} />)
               : visible.map((item) => (
-                  <li key={item.id} className={styles.cell}>
+                  <li key={`${item.business?.id ?? item.businessId}:${item.id}`} className={styles.cell}>
                     <ProductTile item={item} />
                   </li>
                 ))}
@@ -131,7 +137,7 @@ export default function HomeProducts() {
         closeAbove="(min-width: 99999px)"
         className={styles.drawer}
       >
-        <ProductFilters filters={filters} facets={facets} categoryName={categoryName} onChange={change} />
+        <ProductFilters filters={filters} products={products} categories={categories.data ?? []} categoryName={categoryName} onChange={change} />
       </FilterSheet>
     </section>
   );

@@ -25,7 +25,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
-    staleTime: 5 * 60_000
+    staleTime: 60_000
   });
 
   const { data: flashFacets } = useQuery({

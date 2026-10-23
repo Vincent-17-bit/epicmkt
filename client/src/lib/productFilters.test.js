@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_FILTERS, SORTS, applyFilters, chipsOf, countActive, facetsOf, parseFilters, writeFilters } from "./productFilters.js";
+import { EMPTY_FILTERS, SORTS, applyFilters, chipsOf, countActive, countsFor, facetsOf, parseFilters, writeFilters } from "./productFilters.js";
 
 let n = 0;
 const p = (over = {}, store = {}) => {
@@ -125,5 +125,24 @@ describe("countActive, facetsOf and chipsOf", () => {
     expect(chips.map((c) => c.label)).toEqual(["KES 100 and up", "Bakery", "On sale"]);
     const cleared = chips.reduce((acc, chip) => chip.clear(acc), filters);
     expect(countActive(cleared)).toBe(0);
+  });
+});
+
+describe("price range and live counts", () => {
+  const a = p({ name: "A", pricing: { regularPrice: 100, salePrice: 100, savings: 0 } }, { categoryId: "x", town: "Maseno" });
+  const b = p({ name: "B", pricing: { regularPrice: 900, salePrice: 700, savings: 200 } }, { categoryId: "y", town: "Kisumu" });
+  const c = p({ name: "C", pricing: { regularPrice: 500, salePrice: 500, savings: 0 } }, { categoryId: "y", town: "Kisumu" });
+
+  it("treats a reversed range as the same range the other way round", () => {
+    expect(ids(applyFilters([a, b, c], f({ min: "800", max: "200" }))).sort()).toEqual(["B", "C"]);
+  });
+
+  it("counts each option against every other filter, but not its own group", () => {
+    const counts = countsFor([a, b, c], f({ categories: ["x"], onSale: true }));
+    expect(counts.categories.get("y")).toBe(1); // category choice is ignored, on-sale still applies
+    expect(counts.categories.get("x")).toBeUndefined();
+    expect(counts.towns.get("kisumu")).toBeUndefined(); // category x + on sale leaves nothing in Kisumu
+    expect(counts.flags.inStock).toBe(0);
+    expect(countsFor([a, b, c], EMPTY_FILTERS).flags.onSale).toBe(1);
   });
 });

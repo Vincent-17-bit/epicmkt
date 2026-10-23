@@ -18,7 +18,7 @@ const product = (n, over = {}) => ({
   availability: "available",
   pricing: { regularPrice: 100, salePrice: 100, savings: 0, discountPercent: 0 },
   flash: null,
-  business: { id: `b${n}`, slug: `shop-${n}`, name: `Shop ${n}`, verified: false, featured: false },
+  business: { id: `b${n}`, slug: `shop-${n}`, name: `Shop ${n}`, verified: false, featured: false, categoryId: "bakery" },
   ...over
 });
 
@@ -111,7 +111,7 @@ describe("HomeProducts filters", () => {
     await screen.findByText("Bread");
     await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
     const dialog = await screen.findByRole("dialog", { hidden: true });
-    await userEvent.click(within(dialog).getByLabelText("On sale"));
+    await userEvent.click(within(dialog).getByLabelText(/^On sale/));
     await waitFor(() => expect(screen.queryByText("Bread")).not.toBeInTheDocument());
     expect(screen.getByText("Cake")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent("1");
@@ -128,11 +128,65 @@ describe("HomeProducts filters", () => {
     expect(await screen.findByText("Bread")).toBeInTheDocument();
   });
 
+  it("keeps the grid right when two stores use the same item id", async () => {
+    vi.mocked(items.getAll).mockResolvedValue([
+      product(1, { id: "s0", name: "Bread" }),
+      product(2, { id: "s0", name: "Cake" }),
+      product(3, { id: "s0", name: "Knife" })
+    ]);
+    view();
+    await screen.findByText("Bread");
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+    const dialog = await screen.findByRole("dialog", { hidden: true });
+    await userEvent.type(within(dialog).getByLabelText("Search products"), "knife");
+    await waitFor(() => expect(screen.queryByText("Bread")).not.toBeInTheDocument());
+    expect(screen.queryByText("Cake")).not.toBeInTheDocument();
+    expect(screen.getByText("Knife")).toBeInTheDocument();
+  });
+
   it("explains when nothing matches", async () => {
     stock();
     view("/?pq=zzzz");
     expect(await screen.findByText("No products match these filters.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(await screen.findByText("Bread")).toBeInTheDocument();
+  });
+
+  it("updates the count in the footer as you type and tick, and says so when nothing matches", async () => {
+    stock();
+    view();
+    await screen.findByText("Bread");
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+    const dialog = await screen.findByRole("dialog", { hidden: true });
+    expect(within(dialog).getByRole("status")).toHaveTextContent("Show 3 products");
+    await userEvent.type(within(dialog).getByLabelText("Search products"), "cak");
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Show 1 product"));
+    await userEvent.type(within(dialog).getByLabelText("Search products"), "zz");
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("No products match"));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Clear search" }));
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Show 3 products"));
+  });
+
+  it("lists every category the admin has, including new ones with no products yet, and filters by them", async () => {
+    stock();
+    view();
+    await screen.findByText("Bread");
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+    const dialog = await screen.findByRole("dialog", { hidden: true });
+    expect(within(dialog).getByLabelText(/^Bakery/)).toBeEnabled();
+    expect(within(dialog).getByLabelText(/^Hardware/)).toBeDisabled();
+    await userEvent.click(within(dialog).getByLabelText(/^Bakery/));
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Show 3 products"));
+  });
+
+  it("sets a price range from a quick range button", async () => {
+    stock();
+    view();
+    await screen.findByText("Bread");
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+    const dialog = await screen.findByRole("dialog", { hidden: true });
+    await userEvent.click(within(dialog).getByRole("button", { name: "1,000 – 5,000" }));
+    await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Show 2 products"));
+    expect(screen.getByRole("button", { name: /Remove filter: KES 1000 to 5000/ })).toBeInTheDocument();
   });
 });

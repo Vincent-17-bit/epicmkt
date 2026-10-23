@@ -190,3 +190,33 @@
     height: 100%;
   }
 }
+
+.found {
+  margin: 0 0 var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Desktop: a lighter scrim so the products visibly change behind the drawer as filters are ticked. */
+@media (min-width: 768px) {
+  .drawer::backdrop {
+    background: rgb(17 17 17 / 0.16);
+  }
+}
+
+/* Small phones: the sheet takes the whole screen so nothing is cramped. */
+@media (max-width: 479px) {
+  .drawer {
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .drawer > div {
+    max-height: none;
+    height: 100%;
+  }
+}

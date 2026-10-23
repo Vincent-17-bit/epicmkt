@@ -85,8 +85,9 @@ const SORTERS = {
 
 export function applyFilters(products, filters) {
   const tokens = normalizeText(filters.q).split(" ").filter(Boolean);
-  const min = filters.min === "" ? null : Number(filters.min);
-  const max = filters.max === "" ? null : Number(filters.max);
+  let min = filters.min === "" ? null : Number(filters.min);
+  let max = filters.max === "" ? null : Number(filters.max);
+  if (min !== null && max !== null && min > max) [min, max] = [max, min];
   const towns = new Set(filters.towns.map(normalizeText));
   const categories = new Set(filters.categories);
 
@@ -156,4 +157,24 @@ export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) 
   const named = { inStock: "In stock", onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo" };
   for (const [name, label] of Object.entries(named)) if (filters[name]) chips.push({ key: name, label, clear: (f) => ({ ...f, [name]: false }) });
   return chips;
+}
+
+// Live option counts: each option shows how many products it would leave, given every OTHER filter in force.
+export function countsFor(products, filters) {
+  const without = (patch) => applyFilters(products, { ...filters, ...patch });
+  const tally = (rows, pick) => {
+    const map = new Map();
+    for (const p of rows) {
+      const key = pick(p);
+      if (key) map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  };
+  const flags = {};
+  for (const name of Object.keys(FLAGS)) flags[name] = without({ [name]: true }).length;
+  return {
+    categories: tally(without({ categories: [] }), (p) => p.business?.categoryId),
+    towns: tally(without({ towns: [] }), (p) => normalizeText(p.business?.town)),
+    flags
+  };
 }

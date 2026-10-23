@@ -74,7 +74,7 @@ export default function Home() {
   const { data, isPending, isError, isSuccess, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
-    staleTime: 5 * 60_000
+    staleTime: 60_000
   });
 
   const category = slug ? data?.find((c) => c.id === slug) : null;

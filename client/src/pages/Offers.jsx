@@ -36,7 +36,7 @@ export default function Offers() {
       { replace: true }
     );
 
-  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 5 * 60_000 });
+  const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
   const { data: facets } = useQuery({ queryKey: ["offer-facets"], queryFn: offers.facets, staleTime: 30_000, refetchInterval: 60_000 });
 
   const query = useInfiniteQuery({

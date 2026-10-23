@@ -33,8 +33,10 @@ export default function FilterSheet({
                 Clear all
               </Button>
             )}
-            <Button variant="dark" className={styles.show} onClick={onClose}>
-              {total == null ? "Show results" : `Show ${total} ${total === 1 ? noun[0] : noun[1]}`}
+            <Button variant="dark" className={styles.show} onClick={onClose} data-empty={total === 0 || undefined}>
+              <span key={total} className={styles.count} role="status" aria-live="polite">
+                {total == null ? "Show results" : total === 0 ? `No ${noun[1]} match` : `Show ${total} ${total === 1 ? noun[0] : noun[1]}`}
+              </span>
             </Button>
           </div>
         </div>
