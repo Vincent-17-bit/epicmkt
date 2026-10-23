@@ -9,6 +9,7 @@ import Container from "./Container.jsx";
 import Button from "./Button.jsx";
 import IconButton from "./IconButton.jsx";
 import Skeleton from "./Skeleton.jsx";
+import LocationControl from "./LocationControl.jsx";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./MenuPanel.module.css";
 
@@ -134,6 +135,8 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
               </Link>
             ))}
           </nav>
+
+          <LocationControl className={styles.areaLocation} />
 
           <ThemeSwitch className={styles.areaTheme} />
         </Container>

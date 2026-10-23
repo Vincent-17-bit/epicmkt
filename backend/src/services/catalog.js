@@ -17,6 +17,7 @@ import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { promoCountsFor, runSweep } from "../promotions.js";
+import { looksLikeCoordinates, scrubPayload } from "../privacy.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
@@ -369,6 +370,7 @@ export async function getTopSearches(limit = 8) {
 }
 
 export async function logSearch(term) {
+  if (looksLikeCoordinates(term)) return { ok: false };
   const clean = normalizeText(term);
   if (clean.length < 2 || clean.length > 60) return { ok: false };
   store.searches.push({ term: clean, count: 1, at: Date.now() });
@@ -377,7 +379,8 @@ export async function logSearch(term) {
 
 export async function logEvent(name, payload = {}) {
   if (typeof name !== "string" || !/^[a-z_]{2,40}$/.test(name)) return { ok: false };
-  store.analytics.push({ name, payload, at: new Date().toISOString() });
+  // The sink strips positions itself, so no call site can leak one by accident.
+  store.analytics.push({ name, payload: scrubPayload(payload), at: new Date().toISOString() });
   if (store.analytics.length > 1000) store.analytics.shift();
   return { ok: true };
 }
