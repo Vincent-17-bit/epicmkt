@@ -1,0 +1,59 @@
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.facts dd {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.count {
+  margin: 0;
+  color: var(--danger-text);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.lead {
+  margin: 0;
+  font-weight: 600;
+}
+
+.ok {
+  margin: 0;
+  color: var(--ok-text);
+  font-weight: 600;
+}
+
+.risks {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 26rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.fit {
+  justify-self: start;
+}
