@@ -2,6 +2,8 @@ export { default as Button } from "./components/Button.jsx";
 export { default as IconButton } from "./components/IconButton.jsx";
 export { default as Container } from "./components/Container.jsx";
 export { default as Img } from "./components/Img.jsx";
+export { default as LazyImage } from "./components/LazyImage.jsx";
+export { setImageTransform } from "./lib/imageUrl.js";
 export { default as Skeleton } from "./components/Skeleton.jsx";
 export { default as Accordion } from "./components/Accordion.jsx";
 export { default as Toaster } from "./components/Toaster.jsx";

@@ -1,4 +1,5 @@
 import { actionProps, isPreview } from "../preview.js";
+import LazyImage from "../components/LazyImage.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import styles from "./Photos.module.css";
 
@@ -11,7 +12,7 @@ export default function Photos({ gallery, mode = "live", onOpen }) {
         {gallery.map((photo, i) => (
           <li key={photo.id}>
             <button type="button" className={styles.thumb} {...act.button(() => onOpen?.(i))} aria-label={`Open photo: ${photo.caption}`}>
-              <img src={photo.url} alt={photo.caption} loading="lazy" decoding="async" className={styles.thumbImg} />
+              <LazyImage src={photo.url} alt={photo.caption} ratio="4 / 3" className={styles.thumbImg} width={480} />
             </button>
           </li>
         ))}

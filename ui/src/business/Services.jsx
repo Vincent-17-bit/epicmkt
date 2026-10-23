@@ -1,5 +1,6 @@
 import { formatKes } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
+import LazyImage from "../components/LazyImage.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import { groupServices } from "./groupServices.js";
 import styles from "./Services.module.css";
@@ -20,7 +21,7 @@ export default function Services({ services, hitSection, mode = "live", onOpenIt
             {group.items.map((svc) => (
               <li key={svc.id} className={styles.service}>
                 <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
-                  {svc.imageUrl && <img src={svc.imageUrl} alt="" loading="lazy" decoding="async" className={styles.serviceImg} />}
+                  <LazyImage src={svc.imageUrl} ratio="4 / 3" className={styles.serviceImg} width={480} />
                   <span className={styles.serviceText}>
                     <span className={styles.h3}>{svc.name}</span>
                     {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}

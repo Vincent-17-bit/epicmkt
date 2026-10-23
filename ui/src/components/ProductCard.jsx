@@ -1,6 +1,7 @@
 import { formatKes } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
+import LazyImage from "./LazyImage.jsx";
 import styles from "./ProductCard.module.css";
 
 const DEFAULT_LABELS = {
@@ -31,7 +32,7 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
   const card = (
     <button type="button" data-card="" className={`${styles.card} ${className}`} aria-haspopup="dialog" data-mode={preview ? "preview" : undefined} {...act}>
       <span className={styles.media}>
-        {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
+        <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <DiscountChip percent={pricing.discountPercent} />}
         {item.flash?.sale && renderFlash?.(styles.flashChip, item.flash.sale)}
       </span>

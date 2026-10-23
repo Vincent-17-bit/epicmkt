@@ -1,4 +1,5 @@
 import { formatKes } from "@epicmkt/shared";
+import LazyImage from "./components/LazyImage.jsx";
 import styles from "./ItemCard.module.css";
 
 const DEFAULT_LABELS = {
@@ -30,7 +31,7 @@ export default function ItemCard({
       aria-haspopup="dialog"
     >
       <span className={styles.media}>
-        {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
+        <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <span className={styles.chip}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flashChip)}
       </span>
