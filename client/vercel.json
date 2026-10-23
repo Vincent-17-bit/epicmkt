@@ -11,6 +11,10 @@
     }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/b/:slug/i/:itemId", "destination": "/api/preview?slug=:slug&item=:itemId" },
+    { "source": "/b/:slug", "destination": "/api/preview?slug=:slug" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/robots.txt", "destination": "/api/robots" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

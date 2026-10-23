@@ -14,6 +14,19 @@ const requireSupabase = () => ({
   }
 });
 
+// Share tags need absolute urls. index.html writes them as __SITE_URL__/..., filled from VITE_SITE_URL at build time.
+// Left unset, the urls stay site-relative: harmless for the app, but set it on the production build for good previews.
+const siteUrlInHtml = () => {
+  let site = "";
+  return {
+    name: "site-url-in-html",
+    configResolved(config) {
+      site = String(config.env.VITE_SITE_URL ?? "").replace(/\/$/, "");
+    },
+    transformIndexHtml: (html) => html.replaceAll("__SITE_URL__", site)
+  };
+};
+
 export default defineConfig({
   test: {
     environment: "jsdom",
@@ -23,6 +36,7 @@ export default defineConfig({
   },
   plugins: [
     requireSupabase(),
+    siteUrlInHtml(),
     react(),
     VitePWA({
       registerType: "prompt",
@@ -48,6 +62,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         navigateFallback: "/index.html",
+        // These are served by the edge handlers in client/api, so a visitor who has the app installed still reaches them.
+        navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {

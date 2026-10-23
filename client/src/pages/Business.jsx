@@ -8,6 +8,7 @@ import { categoryIcon } from "../lib/categoryIcons.js";
 import { expiryText, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { usePageMeta } from "../hooks/usePageMeta.js";
 import { visibleFields } from "@epicmkt/shared";
 import TemplateDetails from "../components/TemplateDetails.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
@@ -45,6 +46,7 @@ export default function Business() {
   });
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
+  usePageMeta(data ? { description: data.tagline || data.description, image: data.coverUrl || data.logoUrl, path: `/b/${data.slug}` } : undefined);
 
   const sectionId = searchParams.get("section");
   const [hit, setHit] = useState(null);
