@@ -43,6 +43,6 @@ export const pageProps = {
   hoursRows: [{ day: "mon", name: "Monday", today: true, text: "8:00 AM to 5:00 PM" }],
   formatExpiry: () => "Ends soon",
   socials: [{ key: "instagram", href: "https://instagram.com/x", label: "Instagram", icon: { prefix: "fas", iconName: "x", icon: [1, 1, [], "f000", "M0 0"] } }],
-  shortUrl: "https://epicmkt.co.ke/s/abc",
+  shortUrl: "https://epicmkt.app/s/abc",
   breadcrumbs: null
 };
