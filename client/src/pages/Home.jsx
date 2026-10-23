@@ -163,6 +163,8 @@ export default function Home() {
 
       <Featured />
 
+      <HomeProducts />
+
       <section id="categories" className={styles.section} aria-labelledby="categories-title">
         <Container>
           <h2 id="categories-title" className={styles.heading}>
@@ -206,9 +208,6 @@ export default function Home() {
         </Container>
       </section>
 
-      <HomeProducts />
-
-
       <section className={styles.section} aria-labelledby="recent-title">
         <Container>
           <RecentlyAdded />
@@ -225,7 +224,7 @@ export default function Home() {
               <h2 id="cta-title" className={styles.ctaTitle}>
                 List your business
               </h2>
-              <p>Get found by customers nearby. Standard from KSh 500 a month, Premium from KSh 1,500.</p>
+              <p>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
             </div>
             <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight}>
               Become a seller

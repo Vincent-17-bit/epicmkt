@@ -4,16 +4,27 @@ import Button from "./Button.jsx";
 import IconButton from "./IconButton.jsx";
 import styles from "./FilterSheet.module.css";
 
-export default function FilterSheet({ open, onClose, total, onClear, canClear, children }) {
+export default function FilterSheet({
+  open,
+  onClose,
+  total,
+  onClear,
+  canClear,
+  children,
+  title = "Filters",
+  noun = ["result", "results"],
+  closeAbove = "(min-width: 1024px)",
+  className = ""
+}) {
   return (
-    <BottomSheet open={open} onClose={onClose} labelledBy="filter-sheet-title" closeAbove="(min-width: 1024px)">
+    <BottomSheet open={open} onClose={onClose} labelledBy="filter-sheet-title" closeAbove={closeAbove} className={className}>
       {open && (
         <div className={styles.inner}>
           <div className={styles.head}>
             <h2 id="filter-sheet-title" className={styles.title}>
-              Filters
+              {title}
             </h2>
-            <IconButton icon={faXmark} label="Close filters" onClick={onClose} />
+            <IconButton icon={faXmark} label={`Close ${title.toLowerCase()}`} onClick={onClose} />
           </div>
           <div className={styles.body}>{children}</div>
           <div className={styles.foot}>
@@ -23,7 +34,7 @@ export default function FilterSheet({ open, onClose, total, onClear, canClear, c
               </Button>
             )}
             <Button variant="dark" className={styles.show} onClick={onClose}>
-              {total == null ? "Show results" : `Show ${total} ${total === 1 ? "result" : "results"}`}
+              {total == null ? "Show results" : `Show ${total} ${total === 1 ? noun[0] : noun[1]}`}
             </Button>
           </div>
         </div>

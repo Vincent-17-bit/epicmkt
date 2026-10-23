@@ -10,7 +10,7 @@ describe("ShopCard compact", () => {
     render(<ShopCard business={{ ...priced, highlights: ["Fades"] }} href="/b/fade-kings" compact />);
     expect(screen.getByRole("heading", { name: "Fade Kings" })).toBeInTheDocument();
     expect(screen.getByText("Barbershops · Maseno")).toBeInTheDocument();
-    expect(screen.getByText(/KSh\s?150/)).toBeInTheDocument();
+    expect(screen.getByText(/KES\s?150/)).toBeInTheDocument();
     expect(screen.getByText("Open")).toBeInTheDocument();
     expect(screen.queryByText("Sharp cuts")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Highlights")).not.toBeInTheDocument();

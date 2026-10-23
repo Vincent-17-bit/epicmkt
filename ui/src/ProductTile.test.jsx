@@ -19,12 +19,12 @@ describe("ProductTile", () => {
     const link = screen.getByRole("link");
     expect(link).toHaveAttribute("href", "/b/mama-pima/i/i1");
     expect(link).toHaveTextContent("Chapati and beans");
-    expect(link).toHaveTextContent(/KSh\s?150/);
+    expect(link).toHaveTextContent(/KES\s?150/);
     expect(link).toHaveTextContent("Mama Pima Kitchen");
     expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
-  it("marks a verified store with a tick and a featured store with the gold mark, each named for screen readers", () => {
+  it("marks a verified store with a tick and a featured store with the star, each named for screen readers", () => {
     render(<ProductTile item={item({ business: { name: "Shop", verified: true, featured: true } })} href="/x" />);
     expect(screen.getByText("Verified store")).toBeInTheDocument();
     expect(screen.getByText(/Featured store/)).toBeInTheDocument();
@@ -43,8 +43,8 @@ describe("ProductTile", () => {
     });
     render(<ProductTile item={onSale} href="/x" renderFlash={(cls) => <span className={cls}>CLOCK</span>} />);
     expect(screen.getByText("-20%")).toBeInTheDocument();
-    expect(screen.getByText(/KSh\s?1,440/)).toBeInTheDocument();
-    expect(screen.getByText(/KSh\s?1,800/)).toBeInTheDocument();
+    expect(screen.getByText(/KES\s?1,440/)).toBeInTheDocument();
+    expect(screen.getByText(/KES\s?1,800/)).toBeInTheDocument();
     expect(screen.getByText("CLOCK")).toBeInTheDocument();
   });
 

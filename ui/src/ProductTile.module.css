@@ -89,22 +89,35 @@
 
 .body {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  align-content: stretch;
+  grid-template-rows: auto auto auto;
+  align-content: space-between;
   gap: clamp(1px, 1.2cqw, 3px);
   min-height: 0;
   padding: var(--pad);
 }
 
-.name {
+.copy {
   display: -webkit-box;
   overflow: hidden;
   font-size: clamp(0.75rem, 7.4cqw, 0.9375rem);
-  font-weight: 650;
-  letter-spacing: -0.01em;
   line-height: 1.18;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.name {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.blurb {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  font-weight: 400;
+}
+
+.blurb::before {
+  content: "\00B7\00A0";
 }
 
 .priceRow {
@@ -185,18 +198,12 @@
   white-space: nowrap;
 }
 
-/* Gold store mark for a featured store: dark glyph on a gold chip, readable on light and dark. */
-.gold {
-  display: inline-grid;
+/* Featured store: a flat amber star (Font Awesome), matte rather than shiny. */
+.star {
+  display: inline-flex;
   flex: none;
-  place-items: center;
-  width: 1.45em;
-  height: 1.45em;
-  border-radius: 5px;
-  background: linear-gradient(145deg, #ffd95a, #e9a60a);
-  box-shadow: 0 0 0 1px rgb(122 82 0 / 0.35);
-  color: #4a2f00;
-  font-size: 0.78em;
+  color: var(--star);
+  font-size: 1em;
 }
 
 .tick {

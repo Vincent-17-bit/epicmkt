@@ -81,7 +81,7 @@ describe("ItemDetail", () => {
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
     expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw the flash sale on Fade and beard: KES 240 (was KES 300) on EpicMKT");
-    expect(screen.getByText("KSh 240")).toBeInTheDocument();
+    expect(screen.getByText("KES 240")).toBeInTheDocument();
   });
 
   it("includes the chosen variant in the message", async () => {

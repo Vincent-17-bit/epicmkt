@@ -50,7 +50,7 @@ describe("shop preview", () => {
     const section = await screen.findByRole("region", { name: "Flash sales at this store" });
     expect(within(section).getByText("Fade cut")).toBeInTheDocument();
     expect(within(section).getByText("-20%")).toBeInTheDocument();
-    expect(within(section).getByText("KSh 400")).toBeInTheDocument();
+    expect(within(section).getByText("KES 400")).toBeInTheDocument();
   });
 
   it("shows no flash section when nothing is running", async () => {

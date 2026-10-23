@@ -75,6 +75,7 @@
   --featured-bg: #111111;
   --featured-text: #ffffff;
   --featured-star: #38b6ff;
+  --star: #d98a00;
   --scrim: rgb(17 17 17 / 0.5);
   --skeleton-base: #e5e7eb;
   --skeleton-shine: #f3f4f6;
@@ -135,6 +136,7 @@
   --featured-bg: #38b6ff;
   --featured-text: #111111;
   --featured-star: #111111;
+  --star: #f0a020;
   --scrim: rgb(0 0 0 / 0.7);
   --skeleton-base: #232323;
   --skeleton-shine: #2e2e2e;

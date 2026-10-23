@@ -173,24 +173,30 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
   return shaped.slice(0, limit);
 }
 
-// Newest public products across all live stores, a page at a time, for the home page. Sale pricing is
-// decoration: if the flash sales cannot be read the products still show at their regular price.
-export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
-  const rows =
-    unwrap(
-      await supabase
-        .from("public_items")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .order("id")
-        .range(offset, offset + limit)
-    ) ?? [];
-  const more = rows.length > limit;
-  const page = rows.slice(0, limit);
-  const nextOffset = more ? offset + limit : null;
-  if (!page.length) return { items: [], nextOffset };
-  const businessIds = [...new Set(page.map((row) => row.business_id))];
-  const businesses = unwrap(await supabase.from("public_businesses").select("id,slug,name,plan_key,verification_level").in("id", businessIds)) ?? [];
+const PAGE = 1000;
+const MAX_PAGES = 20;
+
+const fetchPages = async (table, columns, order) => {
+  const rows = [];
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const from = page * PAGE;
+    let query = supabase.from(table).select(columns);
+    for (const [column, ascending] of order) query = query.order(column, { ascending });
+    const data = unwrap(await query.range(from, from + PAGE - 1)) ?? [];
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+  return rows;
+};
+
+// Every public product of every live store, for the home page. Filtering, sorting and paging happen in the client.
+// Sale pricing is decoration: if the flash sales cannot be read the products still show at their regular price.
+export async function getAllProducts() {
+  const [rows, businesses] = await Promise.all([
+    fetchPages("public_items", "*", [["created_at", false], ["id", true]]),
+    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county", [["id", true]])
+  ]);
+  if (!rows.length) return [];
   const byId = new Map(businesses.map((b) => [b.id, b]));
   let live = { now: Date.now(), entries: [] };
   try {
@@ -198,11 +204,12 @@ export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
   } catch {
     // keep regular prices
   }
-  const items = page.flatMap((row) => {
+  const sales = new Map(live.entries.map((e) => [e.item.id, e]));
+  return rows.flatMap((row) => {
     const business = byId.get(row.business_id);
     if (!business) return [];
     const item = itemRow(row, business);
-    const entry = live.entries.find((e) => e.item.id === row.id);
+    const entry = sales.get(row.id);
     const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
     return [
       {
@@ -214,12 +221,14 @@ export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
           slug: business.slug,
           name: business.name,
           verified: business.verification_level === "verified",
-          featured: PLAN_FEATURES[business.plan_key]?.featured === true
+          featured: PLAN_FEATURES[business.plan_key]?.featured === true,
+          categoryId: business.category_id,
+          town: business.town ?? "",
+          county: business.county ?? ""
         }
       }
     ];
   });
-  return { items, nextOffset };
 }
 
 let categoriesCache = null;
