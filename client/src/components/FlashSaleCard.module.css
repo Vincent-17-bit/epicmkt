@@ -474,3 +474,7 @@
     transform: none;
   }
 }
+
+.logoFrame {
+  height: 100%;
+}

@@ -2,7 +2,26 @@ import { closingInfo, distanceKm, isOpenOn, PLAN_FEATURES, slugify, todayHours }
 
 const SHORT_MAX = 140;
 
-export const mediaUrl = (path) => (path ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
+// Where stored pictures come from. By default that is the Supabase bucket. VITE_MEDIA_HOSTS may list extra mirrors or CDN
+// origins (comma separated; each must serve the bucket's files at <host>/<path>). Each file is then pinned to one host by
+// a hash of its path, so the load is shared across them and a given picture always keeps the same url, which keeps
+// browser and CDN caches warm.
+const MEDIA_HOSTS = String(import.meta.env.VITE_MEDIA_HOSTS ?? "")
+  .split(",")
+  .map((host) => host.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+const pathHash = (text) => {
+  let h = 2166136261;
+  for (let i = 0; i < text.length; i += 1) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
+  return h >>> 0;
+};
+
+export const mediaUrl = (path) => {
+  if (!path) return null;
+  if (MEDIA_HOSTS.length) return `${MEDIA_HOSTS[pathHash(path) % MEDIA_HOSTS.length]}/${path}`;
+  return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
+};
 
 const num = (value) => (value === null || value === undefined ? null : Number(value));
 
