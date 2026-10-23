@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationCrosshairs, faLocationDot } from "@fortawesome/free-solid-svg-icons";
 import { TOWNS } from "@epicmkt/shared";
 import { useGeoStore } from "../stores/geo.js";
+import { showToast } from "../stores/toast.js";
 import Button from "./Button.jsx";
 import styles from "./LocationDialog.module.css";
 
@@ -15,6 +16,7 @@ export default function LocationDialog() {
   const allow = useGeoStore((s) => s.allow);
   const chooseTown = useGeoStore((s) => s.chooseTown);
   const close = useGeoStore((s) => s.close);
+  const reset = useGeoStore((s) => s.reset);
   const blocked = status === "denied" || status === "unsupported";
   const [picking, setPicking] = useState(false);
   const [choice, setChoice] = useState("");
@@ -32,6 +34,11 @@ export default function LocationDialog() {
   useEffect(() => {
     if (open && blocked) setPicking(true);
   }, [open, blocked]);
+
+  const clear = () => {
+    reset();
+    showToast("Location cleared. We are not using it.");
+  };
 
   const submit = (event) => {
     event.preventDefault();
@@ -112,8 +119,14 @@ export default function LocationDialog() {
           </div>
         )}
 
+        {status === "granted" && (
+          <button type="button" className={styles.dismiss} onClick={clear}>
+            Clear my location
+          </button>
+        )}
+
         <button type="button" className={styles.dismiss} onClick={close}>
-          Not now
+          {status === "granted" ? "Keep as is" : "Not now"}
         </button>
       </div>
     </dialog>

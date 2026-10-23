@@ -5,3 +5,4 @@ export { advanceClock, resetClock } from "./clock.js";
 export { runSweep } from "./promotions.js";
 export { NotFoundError, ValidationError } from "./errors.js";
 export { setLatency } from "./latency.js";
+export { COORD_DECIMALS, coarsenCoord, coarsenCoords, looksLikeCoordinates, scrubPayload } from "./privacy.js";
