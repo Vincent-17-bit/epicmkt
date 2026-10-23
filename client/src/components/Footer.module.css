@@ -1,25 +1,31 @@
 .footer {
   --footer-accent: #0a6aa8;
-  margin-top: var(--space-8);
-  padding-block: var(--space-6) calc(var(--space-5) + var(--safe-bottom));
+  margin-top: clamp(var(--space-6), 6vw, var(--space-8));
+  padding-block: var(--space-6) calc(var(--space-4) + var(--safe-bottom));
   background: var(--footer-bg);
   color: var(--text);
 }
 
+/* ---------- Link groups ----------
+   Phones: one column. Brand block first, then each group as a full-width
+   accordion row separated by hairlines, which keeps every tap target wide. */
 .top {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "about about"
-    "contact contact"
-    "quick business"
-    "help legal";
+    "about"
+    "contact"
+    "quick"
+    "business"
+    "help"
+    "legal";
   align-items: start;
-  gap: var(--space-4);
+  gap: 0;
 }
 
 .about {
   grid-area: about;
+  margin-bottom: var(--space-4);
 }
 
 .contact {
@@ -55,15 +61,20 @@
 
 .section {
   min-width: 0;
+  border-top: 1px solid var(--border-strong);
+}
+
+.legal {
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
-  min-height: var(--tap);
+  min-height: 3.25rem;
   padding: 0;
   border: 0;
   background: none;
@@ -76,6 +87,7 @@
 
 .chevron {
   flex: none;
+  color: var(--text-muted);
   transition: transform var(--dur) ease;
 }
 
@@ -99,6 +111,10 @@
 .clip {
   min-height: 0;
   overflow: hidden;
+}
+
+.panelOpen .clip {
+  padding-bottom: var(--space-3);
 }
 
 .socials {
@@ -132,14 +148,10 @@
   text-transform: uppercase;
 }
 
-.contact {
-  min-width: 0;
-}
-
 .rows,
 .links {
   display: grid;
-  gap: var(--space-1);
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -147,15 +159,19 @@
 
 .row {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: var(--space-3);
+  min-height: var(--tap);
+  padding-block: var(--space-2);
   font-size: var(--text-sm);
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .rowIcon {
   flex: none;
   width: 1rem;
+  margin-top: 0.2em;
   color: var(--footer-accent);
 }
 
@@ -171,7 +187,7 @@
 }
 
 .link {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   min-height: var(--tap);
   font-size: var(--text-sm);
@@ -211,25 +227,47 @@
   transform: scale(0.97);
 }
 
+/* ---------- Bottom bar ----------
+   Phones: note, then a full-width theme switch, then copyright and
+   back-to-top sharing one row. */
 .bottom {
   display: grid;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "note note"
+    "theme theme"
+    "copy top";
+  align-items: center;
+  gap: var(--space-3) var(--space-3);
+  margin-top: var(--space-5);
 }
 
 .note {
+  grid-area: note;
+  color: var(--text-muted);
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: 600;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-3);
+.theme {
+  grid-area: theme;
+  display: grid;
+  width: 100%;
+}
+
+.theme button {
+  padding-inline: var(--space-2);
+}
+
+.copy {
+  grid-area: copy;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.4;
 }
 
 .top_btn {
+  grid-area: top;
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -240,21 +278,30 @@
   background: var(--primary);
   color: var(--on-primary);
   font: inherit;
+  font-size: var(--text-sm);
   font-weight: 700;
+  white-space: nowrap;
   transition: transform var(--dur) ease;
 }
 
-.copy {
-  font-size: var(--text-xs);
-}
-
-@media (min-width: 48rem) {
+/* ---------- Tablet: two columns, always expanded ---------- */
+@media (min-width: 40rem) {
   .top {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      "about contact quick help"
-      "about contact business legal";
+      "about contact"
+      "quick business"
+      "help legal";
     gap: var(--space-5) var(--space-6);
+  }
+
+  .about {
+    margin-bottom: 0;
+  }
+
+  .section,
+  .legal {
+    border: 0;
   }
 
   .panel {
@@ -263,16 +310,57 @@
     transition: none;
   }
 
+  .panelOpen .clip {
+    padding-bottom: 0;
+  }
+
   .heading {
     margin-bottom: var(--space-2);
   }
 
-  .controls {
-    align-items: center;
+  .bottom {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "note theme"
+      "copy top";
+    gap: var(--space-4) var(--space-5);
+    margin-top: var(--space-6);
+    padding-top: var(--space-5);
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .theme {
+    display: inline-grid;
+    width: auto;
+  }
+
+  .theme button {
+    padding-inline: var(--space-4);
   }
 
   .top_btn {
-    margin-left: auto;
+    justify-self: end;
+  }
+}
+
+/* ---------- Desktop: four columns ---------- */
+@media (min-width: 64rem) {
+  .top {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "about contact quick help"
+      "about contact business legal";
+  }
+}
+
+@media (min-width: 64rem) and (pointer: fine) {
+  .link {
+    min-height: 2rem;
+  }
+
+  .row {
+    min-height: 2rem;
+    padding-block: var(--space-1);
   }
 }
 
