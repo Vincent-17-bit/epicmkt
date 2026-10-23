@@ -92,6 +92,8 @@
 
 .name {
   display: -webkit-box;
+  overflow-wrap: normal;
+  hyphens: manual;
   overflow: hidden;
   font-size: var(--text-sm);
   font-weight: 700;
@@ -122,6 +124,28 @@
   color: var(--text-muted);
   font-size: 0.75rem;
   transition: transform var(--dur) ease, color var(--dur) ease;
+}
+
+/* Phones: drop the arrow so names get the full width; on very narrow
+   screens stack icon above name so words never split. */
+@media (max-width: 639px) {
+  .card {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .arrow {
+    display: none;
+  }
+}
+
+@media (max-width: 399px) {
+  .card {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    justify-items: start;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
 }
 
 @media (min-width: 640px) {

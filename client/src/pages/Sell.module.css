@@ -166,12 +166,12 @@
 
 .table {
   width: 100%;
-  min-width: 20rem;
+  min-width: 17rem;
   border-collapse: collapse;
 }
 
 .corner {
-  width: 46%;
+  width: 32%;
 }
 
 .plan {
@@ -247,6 +247,25 @@
 
 .cta a {
   width: 100%;
+  min-height: var(--tap);
+  padding-inline: var(--space-2);
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 479px) {
+  .rowLabel {
+    padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
+  }
+
+  .price {
+    font-size: var(--text-lg);
+  }
+
+  .cta {
+    padding: var(--space-3) var(--space-1);
+  }
 }
 
 .fine {
