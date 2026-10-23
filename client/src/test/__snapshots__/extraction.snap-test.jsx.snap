@@ -834,7 +834,7 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
               <p
                 class="qrLink"
               >
-                localhost:3000/s/fk1
+                epicmkt.app/s/fade-kings
               </p>
               <button
                 class="btn secondary sm "
@@ -3030,7 +3030,7 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
               <p
                 class="qrLink"
               >
-                localhost:3000/s/fk1
+                epicmkt.app/s/fade-kings
               </p>
               <button
                 class="btn secondary sm "

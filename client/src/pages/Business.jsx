@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
-import { distanceKm } from "@epicmkt/shared";
+import { distanceKm, shopUrl } from "@epicmkt/shared";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { expiryText, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
@@ -84,7 +84,7 @@ export default function Business() {
   if (isPending) return <BusinessPageSkeleton breadcrumbs={<PageBreadcrumbs />} />;
 
   const icon = categoryIcon(data.category?.icon);
-  const shortUrl = `${window.location.origin}/s/${data.shortcode}`;
+  const shortUrl = shopUrl(data.slug, import.meta.env?.VITE_SITE_URL);
   const origin = live ?? geo.coords;
   const distance = origin ? distanceKm(origin, data) : null;
   const hasDetails = visibleFields(data.category?.fields, data.attributes).some((f) => f.key in (data.attributes ?? {}));
