@@ -384,12 +384,49 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
           aria-labelledby="services"
           class="section"
         >
-          <h2
-            class="h2"
-            id="services"
+          <div
+            class="sectionHead"
           >
-            Services and prices
-          </h2>
+            <h2
+              class="h2"
+              id="services"
+            >
+              Services and prices
+            </h2>
+            <div
+              class="wrap"
+            >
+              <button
+                aria-controls=":r1:-panel"
+                aria-expanded="false"
+                aria-haspopup="true"
+                aria-label="Filter products"
+                class="btn"
+                type="button"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="svg-inline--fa fa-sliders "
+                  data-icon="sliders"
+                  data-prefix="fas"
+                  focusable="false"
+                  role="img"
+                  viewBox="0 0 512 512"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 128a32 32 0 1 1 0-64 32 32 0 1 1 0 64zm73.3-64C253 35.7 224.8 16 192 16s-61 19.7-73.3 48L32 64C14.3 64 0 78.3 0 96s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 128c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 64z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span
+                  class="btnText"
+                >
+                  Filter
+                </span>
+              </button>
+            </div>
+          </div>
           <div
             id="section-cuts"
           >
@@ -409,13 +446,20 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
-                  <img
-                    alt=""
-                    class="serviceImg"
-                    decoding="async"
-                    loading="lazy"
-                    src="/fade.jpg"
-                  />
+                  <span
+                    class="frame  "
+                    data-state="loading"
+                    style="aspect-ratio: 4 / 3;"
+                  >
+                    <img
+                      alt=""
+                      class="img serviceImg"
+                      decoding="async"
+                      draggable="false"
+                      loading="lazy"
+                      src="/fade.jpg"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -440,6 +484,11 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
+                  <span
+                    class="frame  "
+                    data-state="error"
+                    style="aspect-ratio: 4 / 3;"
+                  />
                   <span
                     class="serviceText"
                   >
@@ -470,6 +519,11 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
+                  <span
+                    class="frame  "
+                    data-state="error"
+                    style="aspect-ratio: 4 / 3;"
+                  />
                   <span
                     class="serviceText"
                   >
@@ -508,13 +562,20 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                 class="thumb"
                 type="button"
               >
-                <img
-                  alt="Shopfront"
-                  class="thumbImg"
-                  decoding="async"
-                  loading="lazy"
-                  src="/g1.jpg"
-                />
+                <span
+                  class="frame  "
+                  data-state="loading"
+                  style="aspect-ratio: 4 / 3;"
+                >
+                  <img
+                    alt="Shopfront"
+                    class="img thumbImg"
+                    decoding="async"
+                    draggable="false"
+                    loading="lazy"
+                    src="/g1.jpg"
+                  />
+                </span>
               </button>
             </li>
             <li>
@@ -523,13 +584,20 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                 class="thumb"
                 type="button"
               >
-                <img
-                  alt="Chairs"
-                  class="thumbImg"
-                  decoding="async"
-                  loading="lazy"
-                  src="/g2.jpg"
-                />
+                <span
+                  class="frame  "
+                  data-state="loading"
+                  style="aspect-ratio: 4 / 3;"
+                >
+                  <img
+                    alt="Chairs"
+                    class="img thumbImg"
+                    decoding="async"
+                    draggable="false"
+                    loading="lazy"
+                    src="/g2.jpg"
+                  />
+                </span>
               </button>
             </li>
           </ul>
@@ -1128,14 +1196,19 @@ exports[`extraction snapshots (dark) > ProductCard available 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -1209,14 +1282,19 @@ exports[`extraction snapshots (dark) > ProductCard limited 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -1290,14 +1368,19 @@ exports[`extraction snapshots (dark) > ProductCard unavailable 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -1370,7 +1453,12 @@ exports[`extraction snapshots (dark) > ProductCard without pricing or image 1`] 
     >
       <span
         class="media"
-      />
+      >
+        <span
+          class="frame fill "
+          data-state="error"
+        />
+      </span>
       <span
         class="text"
       >
@@ -1421,42 +1509,58 @@ exports[`extraction snapshots (dark) > ProductGallery 1`] = `
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="eager"
-            src="/a.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              fetchpriority="high"
+              loading="eager"
+              src="/a.jpg"
+            />
+          </span>
         </button>
         <button
           aria-label="Zoom photo 2 / 3"
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="lazy"
-            src="/b.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/b.jpg"
+            />
+          </span>
         </button>
         <button
           aria-label="Zoom photo 3 / 3"
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="lazy"
-            src="/c.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/c.jpg"
+            />
+          </span>
         </button>
       </div>
       <ul
@@ -1469,14 +1573,19 @@ exports[`extraction snapshots (dark) > ProductGallery 1`] = `
             class="thumb current"
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/a.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/a.jpg"
+              />
+            </span>
           </button>
         </li>
         <li>
@@ -1485,14 +1594,19 @@ exports[`extraction snapshots (dark) > ProductGallery 1`] = `
             class="thumb "
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/b.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/b.jpg"
+              />
+            </span>
           </button>
         </li>
         <li>
@@ -1501,14 +1615,19 @@ exports[`extraction snapshots (dark) > ProductGallery 1`] = `
             class="thumb "
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/c.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/c.jpg"
+              />
+            </span>
           </button>
         </li>
       </ul>
@@ -1591,7 +1710,7 @@ exports[`extraction snapshots (dark) > ShopCard 1`] = `
     data-theme="dark"
   >
     <article
-      class="card"
+      class="card "
       style="--hue: 24;"
     >
       <div
@@ -1733,9 +1852,7 @@ exports[`extraction snapshots (dark) > ShopCard 1`] = `
             >
               Barbershops
                · 
-              Maseno
-              , 
-              Kisumu
+              Maseno, Kisumu
             </p>
           </div>
         </div>
@@ -1890,7 +2007,7 @@ exports[`extraction snapshots (dark) > ShopCard without extras 1`] = `
     data-theme="dark"
   >
     <article
-      class="card"
+      class="card "
       style="--hue: 24;"
     >
       <div
@@ -1902,13 +2019,19 @@ exports[`extraction snapshots (dark) > ShopCard without extras 1`] = `
           href="/b/fade-kings"
           tabindex="-1"
         >
-          <img
-            alt=""
-            class="coverImg"
-            decoding="async"
-            loading="lazy"
-            src="/c.jpg"
-          />
+          <span
+            class="frame  coverFrame"
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img coverImg"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/c.jpg"
+            />
+          </span>
         </a>
       </div>
       <div
@@ -1920,13 +2043,19 @@ exports[`extraction snapshots (dark) > ShopCard without extras 1`] = `
           <span
             class="icon"
           >
-            <img
-              alt=""
-              class="logoImg"
-              decoding="async"
-              loading="lazy"
-              src="/l.jpg"
-            />
+            <span
+              class="frame  logoFrame"
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img logoImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/l.jpg"
+              />
+            </span>
           </span>
           <div
             class="titles"
@@ -1946,9 +2075,7 @@ exports[`extraction snapshots (dark) > ShopCard without extras 1`] = `
             >
               Barbershops
                · 
-              Maseno
-              , 
-              Kisumu
+              Maseno, Kisumu
             </p>
           </div>
         </div>
@@ -2453,12 +2580,49 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
           aria-labelledby="services"
           class="section"
         >
-          <h2
-            class="h2"
-            id="services"
+          <div
+            class="sectionHead"
           >
-            Services and prices
-          </h2>
+            <h2
+              class="h2"
+              id="services"
+            >
+              Services and prices
+            </h2>
+            <div
+              class="wrap"
+            >
+              <button
+                aria-controls=":r0:-panel"
+                aria-expanded="false"
+                aria-haspopup="true"
+                aria-label="Filter products"
+                class="btn"
+                type="button"
+              >
+                <svg
+                  aria-hidden="true"
+                  class="svg-inline--fa fa-sliders "
+                  data-icon="sliders"
+                  data-prefix="fas"
+                  focusable="false"
+                  role="img"
+                  viewBox="0 0 512 512"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M0 416c0 17.7 14.3 32 32 32l54.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 448c17.7 0 32-14.3 32-32s-14.3-32-32-32l-246.7 0c-12.3-28.3-40.5-48-73.3-48s-61 19.7-73.3 48L32 384c-17.7 0-32 14.3-32 32zm128 0a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zM320 256a32 32 0 1 1 64 0 32 32 0 1 1 -64 0zm32-80c-32.8 0-61 19.7-73.3 48L32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l246.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48l54.7 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-54.7 0c-12.3-28.3-40.5-48-73.3-48zM192 128a32 32 0 1 1 0-64 32 32 0 1 1 0 64zm73.3-64C253 35.7 224.8 16 192 16s-61 19.7-73.3 48L32 64C14.3 64 0 78.3 0 96s14.3 32 32 32l86.7 0c12.3 28.3 40.5 48 73.3 48s61-19.7 73.3-48L480 128c17.7 0 32-14.3 32-32s-14.3-32-32-32L265.3 64z"
+                    fill="currentColor"
+                  />
+                </svg>
+                <span
+                  class="btnText"
+                >
+                  Filter
+                </span>
+              </button>
+            </div>
+          </div>
           <div
             id="section-cuts"
           >
@@ -2478,13 +2642,20 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
-                  <img
-                    alt=""
-                    class="serviceImg"
-                    decoding="async"
-                    loading="lazy"
-                    src="/fade.jpg"
-                  />
+                  <span
+                    class="frame  "
+                    data-state="loading"
+                    style="aspect-ratio: 4 / 3;"
+                  >
+                    <img
+                      alt=""
+                      class="img serviceImg"
+                      decoding="async"
+                      draggable="false"
+                      loading="lazy"
+                      src="/fade.jpg"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -2509,6 +2680,11 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
+                  <span
+                    class="frame  "
+                    data-state="error"
+                    style="aspect-ratio: 4 / 3;"
+                  />
                   <span
                     class="serviceText"
                   >
@@ -2539,6 +2715,11 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   class="serviceBtn"
                   type="button"
                 >
+                  <span
+                    class="frame  "
+                    data-state="error"
+                    style="aspect-ratio: 4 / 3;"
+                  />
                   <span
                     class="serviceText"
                   >
@@ -2577,13 +2758,20 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                 class="thumb"
                 type="button"
               >
-                <img
-                  alt="Shopfront"
-                  class="thumbImg"
-                  decoding="async"
-                  loading="lazy"
-                  src="/g1.jpg"
-                />
+                <span
+                  class="frame  "
+                  data-state="loading"
+                  style="aspect-ratio: 4 / 3;"
+                >
+                  <img
+                    alt="Shopfront"
+                    class="img thumbImg"
+                    decoding="async"
+                    draggable="false"
+                    loading="lazy"
+                    src="/g1.jpg"
+                  />
+                </span>
               </button>
             </li>
             <li>
@@ -2592,13 +2780,20 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                 class="thumb"
                 type="button"
               >
-                <img
-                  alt="Chairs"
-                  class="thumbImg"
-                  decoding="async"
-                  loading="lazy"
-                  src="/g2.jpg"
-                />
+                <span
+                  class="frame  "
+                  data-state="loading"
+                  style="aspect-ratio: 4 / 3;"
+                >
+                  <img
+                    alt="Chairs"
+                    class="img thumbImg"
+                    decoding="async"
+                    draggable="false"
+                    loading="lazy"
+                    src="/g2.jpg"
+                  />
+                </span>
               </button>
             </li>
           </ul>
@@ -3197,14 +3392,19 @@ exports[`extraction snapshots (light) > ProductCard available 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -3278,14 +3478,19 @@ exports[`extraction snapshots (light) > ProductCard limited 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -3359,14 +3564,19 @@ exports[`extraction snapshots (light) > ProductCard unavailable 1`] = `
       <span
         class="media"
       >
-        <img
-          alt=""
-          class="img"
-          decoding="async"
-          draggable="false"
-          loading="lazy"
-          src="/fade.jpg"
-        />
+        <span
+          class="frame fill "
+          data-state="loading"
+        >
+          <img
+            alt=""
+            class="img img"
+            decoding="async"
+            draggable="false"
+            loading="lazy"
+            src="/fade.jpg"
+          />
+        </span>
         <span
           class="chip"
         >
@@ -3439,7 +3649,12 @@ exports[`extraction snapshots (light) > ProductCard without pricing or image 1`]
     >
       <span
         class="media"
-      />
+      >
+        <span
+          class="frame fill "
+          data-state="error"
+        />
+      </span>
       <span
         class="text"
       >
@@ -3490,42 +3705,58 @@ exports[`extraction snapshots (light) > ProductGallery 1`] = `
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="eager"
-            src="/a.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              fetchpriority="high"
+              loading="eager"
+              src="/a.jpg"
+            />
+          </span>
         </button>
         <button
           aria-label="Zoom photo 2 / 3"
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="lazy"
-            src="/b.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/b.jpg"
+            />
+          </span>
         </button>
         <button
           aria-label="Zoom photo 3 / 3"
           class="slide"
           type="button"
         >
-          <img
-            alt=""
-            class="img"
-            decoding="async"
-            draggable="false"
-            loading="lazy"
-            src="/c.jpg"
-          />
+          <span
+            class="frame fill "
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img img"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/c.jpg"
+            />
+          </span>
         </button>
       </div>
       <ul
@@ -3538,14 +3769,19 @@ exports[`extraction snapshots (light) > ProductGallery 1`] = `
             class="thumb current"
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/a.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/a.jpg"
+              />
+            </span>
           </button>
         </li>
         <li>
@@ -3554,14 +3790,19 @@ exports[`extraction snapshots (light) > ProductGallery 1`] = `
             class="thumb "
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/b.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/b.jpg"
+              />
+            </span>
           </button>
         </li>
         <li>
@@ -3570,14 +3811,19 @@ exports[`extraction snapshots (light) > ProductGallery 1`] = `
             class="thumb "
             type="button"
           >
-            <img
-              alt=""
-              class="thumbImg"
-              decoding="async"
-              draggable="false"
-              loading="lazy"
-              src="/c.jpg"
-            />
+            <span
+              class="frame fill "
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img thumbImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/c.jpg"
+              />
+            </span>
           </button>
         </li>
       </ul>
@@ -3660,7 +3906,7 @@ exports[`extraction snapshots (light) > ShopCard 1`] = `
     data-theme="light"
   >
     <article
-      class="card"
+      class="card "
       style="--hue: 24;"
     >
       <div
@@ -3802,9 +4048,7 @@ exports[`extraction snapshots (light) > ShopCard 1`] = `
             >
               Barbershops
                · 
-              Maseno
-              , 
-              Kisumu
+              Maseno, Kisumu
             </p>
           </div>
         </div>
@@ -3959,7 +4203,7 @@ exports[`extraction snapshots (light) > ShopCard without extras 1`] = `
     data-theme="light"
   >
     <article
-      class="card"
+      class="card "
       style="--hue: 24;"
     >
       <div
@@ -3971,13 +4215,19 @@ exports[`extraction snapshots (light) > ShopCard without extras 1`] = `
           href="/b/fade-kings"
           tabindex="-1"
         >
-          <img
-            alt=""
-            class="coverImg"
-            decoding="async"
-            loading="lazy"
-            src="/c.jpg"
-          />
+          <span
+            class="frame  coverFrame"
+            data-state="loading"
+          >
+            <img
+              alt=""
+              class="img coverImg"
+              decoding="async"
+              draggable="false"
+              loading="lazy"
+              src="/c.jpg"
+            />
+          </span>
         </a>
       </div>
       <div
@@ -3989,13 +4239,19 @@ exports[`extraction snapshots (light) > ShopCard without extras 1`] = `
           <span
             class="icon"
           >
-            <img
-              alt=""
-              class="logoImg"
-              decoding="async"
-              loading="lazy"
-              src="/l.jpg"
-            />
+            <span
+              class="frame  logoFrame"
+              data-state="loading"
+            >
+              <img
+                alt=""
+                class="img logoImg"
+                decoding="async"
+                draggable="false"
+                loading="lazy"
+                src="/l.jpg"
+              />
+            </span>
           </span>
           <div
             class="titles"
@@ -4015,9 +4271,7 @@ exports[`extraction snapshots (light) > ShopCard without extras 1`] = `
             >
               Barbershops
                · 
-              Maseno
-              , 
-              Kisumu
+              Maseno, Kisumu
             </p>
           </div>
         </div>
