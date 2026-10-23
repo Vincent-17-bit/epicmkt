@@ -147,10 +147,15 @@ export default function BecomeASeller() {
     requestAnimationFrame(() => title.current?.focus());
   }, []);
 
+  // Bring the first problem into the middle of the screen, right where its message sits.
   const focusFirstError = () =>
     requestAnimationFrame(() => {
       const bad = document.querySelector('form [aria-invalid="true"]');
-      (bad ?? document.getElementById("error-summary"))?.focus();
+      const note = document.querySelector("form [data-error]");
+      const target = bad ?? note?.closest("[data-invalid]") ?? note;
+      if (!target) return document.getElementById("error-summary")?.focus();
+      target.scrollIntoView?.({ block: "center", behavior: "smooth" });
+      if (bad) bad.focus({ preventScroll: true });
     });
 
   const next = async () => {
@@ -190,8 +195,17 @@ export default function BecomeASeller() {
     return out;
   }, [values, category, cards, docs.files, read, token, legal]);
 
+  const [sendTried, setSendTried] = useState(false);
+
   const submit = async () => {
-    if (missing.length || phase === "submitting") return;
+    if (phase === "submitting") return;
+    if (missing.length || !token) {
+      // Show every problem under its own box, then take the person to the first one.
+      setSendTried(true);
+      await trigger(["planKey", "agreeTerms", "agreePrivacy", "authorised"]);
+      focusFirstError();
+      return;
+    }
     touch();
     setPhase("submitting");
     setSubmitError("");
@@ -255,6 +269,8 @@ export default function BecomeASeller() {
           goTo={go}
           missing={missing}
           onToken={setToken}
+          token={token}
+          tried={sendTried}
         />
       </div>
     )
@@ -337,7 +353,7 @@ export default function BecomeASeller() {
               Continue
             </Button>
           ) : (
-            <Button icon={faPaperPlane} onClick={submit} disabled={missing.length > 0 || submitting}>
+            <Button icon={faPaperPlane} onClick={submit} disabled={submitting}>
               {submitting ? "Sending your application" : phase === "failed" ? "Try again" : "Send application"}
             </Button>
           )}

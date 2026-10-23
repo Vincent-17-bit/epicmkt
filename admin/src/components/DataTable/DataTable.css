@@ -374,7 +374,7 @@
   border: none;
 }
 
-@media (max-width: 48rem) {
+@media (max-width: 47.99rem) {
   .dt {
     padding: 0.75rem;
   }

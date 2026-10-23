@@ -1,12 +1,14 @@
 # Cron runbook: turning the scheduled jobs on
 
-Two jobs keep EpicMKT moving. Without them, queued SMS and email never leave and renewal reminders are never sent,
-and nothing in the app fails loudly. The **Automation** page in the admin shows whether they are running.
+Three jobs keep EpicMKT moving. Without them, queued SMS and email never leave, renewal reminders are never sent and
+old proof uploads are never deleted, and nothing in the app fails loudly. The **Automation** page in the admin shows
+whether the two messaging jobs are running; `proofs-purge` is checked in the SQL editor (see below).
 
 | Job | Runs | What it does |
 | --- | --- | --- |
 | `dispatch-messages` | every minute | Sends queued SMS and email, retries failures, holds promotions during quiet hours |
 | `daily-lifecycle` | 04:00 UTC (07:00 Nairobi) | Queues renewal reminders, moves listings into grace and expiry |
+| `proofs-purge` | 01:00 UTC (04:00 Nairobi) | Deletes proof uploads 90 days after their flag was resolved, and uploads that were never finalized |
 
 The schedule is **not a migration** because it needs secrets that differ per project. Do this once per environment.
 
@@ -18,7 +20,10 @@ The schedule is **not a migration** because it needs secrets that differ per pro
    select vault.create_secret('<the same CRON_SECRET>', 'cron_secret');
    ```
 4. Run `supabase/cron/schedule.sql` in the SQL editor. It is safe to run again.
-5. Open **Admin > Automation**. Both jobs should read Active. Press **Run now** on each and confirm the last run succeeds.
+5. Open **Admin > Automation**. The two messaging jobs should read Active. Press **Run now** on each and confirm the last run succeeds.
+6. `proofs-purge` is not on that page. Check it in the SQL editor: `select jobname, schedule, active from cron.job;` should list
+   all three, and `select status, return_message, start_time from cron.job_run_details d join cron.job j using (jobid) where j.jobname = 'proofs-purge' order by start_time desc limit 5;`
+   should show a succeeded run the morning after.
 
 ## If the page says something is wrong
 

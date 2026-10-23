@@ -61,5 +61,6 @@ export const listFlashSales = (...a) => impl.listFlashSales(...a);
 export const getFlashQuota = (...a) => impl.getFlashQuota(...a);
 export const createFlashSale = (...a) => impl.createFlashSale(...a);
 export const updateFlashSale = (...a) => impl.updateFlashSale(...a);
+export const extendFlashSale = (...a) => impl.extendFlashSale(...a);
 export const endFlashSale = (...a) => impl.endFlashSale(...a);
 export { ApiError } from "./errors.js";

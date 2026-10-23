@@ -14,3 +14,5 @@ export const getSuggestions = async (...args) => (await adapter()).getSuggestion
 export const getFeaturedBusinesses = async (...args) => (await adapter()).getFeaturedBusinesses(...args);
 export const getNearbyBusinesses = async (...args) => (await adapter()).getNearbyBusinesses(...args);
 export const getSimilarBusinesses = async (...args) => (await adapter()).getSimilarBusinesses(...args);
+export const getTopSearches = async (...args) => (await adapter()).getTopSearches(...args);
+export const logSearch = async (...args) => (await adapter()).logSearch(...args);

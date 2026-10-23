@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@epicmkt/ui/reset.css";
 import "@epicmkt/ui/tokens.css";
 import "./styles/admin.css";
+import "./styles/responsive.css";
 import "./styles/login.css";
 import App from "./App.jsx";
 import { ToastProvider } from "./components/Toast.jsx";

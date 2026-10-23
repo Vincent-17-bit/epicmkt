@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { checkProofBatch, checkReply, flashQuota } from "@epicmkt/shared";
+import { checkProofBatch, checkReply, flashQuota, flashTextProblem } from "@epicmkt/shared";
 
 const BUCKET = "message-files";
 
@@ -277,8 +277,18 @@ export const createFlashSale = async ({ itemId, discountType, discountValue, sta
   }).select("*, items(name, price)").single());
   return shape.flashSale(row);
 };
-export const updateFlashSale = async (id, { headline, quantityNote }) =>
-  shape.flashSale(await flashRows(need().from("flash_sales").update({ headline: headline || null, quantity_note: quantityNote || null }).eq("id", id).select("*, items(name, price)").single()));
+export const updateFlashSale = async (id, { headline, quantityNote }) => {
+  // Same text rules as the mock and the database, so a bad headline is refused before the round trip.
+  const bad = flashTextProblem("headline", headline) ?? flashTextProblem("note", quantityNote);
+  if (bad) throw new ApiError(bad);
+  return shape.flashSale(await flashRows(need().from("flash_sales").update({ headline: headline || null, quantity_note: quantityNote || null }).eq("id", id).select("*, items(name, price)").single()));
+};
+// A running or scheduled sale can be pushed later, never earlier, and never past 7 days from its start (checked in the database).
+export const extendFlashSale = async (id, endsAt) => {
+  const { error } = await need().rpc("extend_flash_sale", { p_id: id, p_ends_at: endsAt });
+  if (error) throw flashFail(error);
+  return true;
+};
 export const endFlashSale = async (id) => {
   const { error } = await need().rpc("seller_end_flash_sale", { p_id: id });
   if (error) throw flashFail(error);

@@ -1,12 +1,12 @@
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faBars,
   faBolt,
   faBullhorn,
   faChartLine,
   faClockRotateLeft,
+  faEllipsis,
   faComments,
   faCreditCard,
   faGaugeHigh,
@@ -19,7 +19,9 @@ import {
   faSitemap,
   faStore,
   faSun,
+  faRightFromBracket,
   faUserCheck,
+  faUser,
   faFileSignature,
 } from "@fortawesome/free-solid-svg-icons";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +33,7 @@ import { initialsOf } from "../lib/initials.js";
 import SystemStatusCard from "../components/SystemStatusCard.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
+import useTableLabels from "../hooks/useTableLabels.js";
 import NotificationBell from "../components/NotificationBell.jsx";
 
 const navGroups = [
@@ -65,6 +68,7 @@ const navGroups = [
 ];
 
 const navItems = navGroups.flat();
+const tabPaths = ["/admin", "/admin/applications", "/admin/businesses", "/admin/payments"];
 
 function currentPage(pathname) {
   const match = navItems
@@ -83,8 +87,16 @@ export default function AdminLayout() {
   const badges = { ...navBadges(counts.data), "/admin/messages": unreadMessages.data || 0 };
   useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
-  const [mobileOpen, setMobileOpen] = useState(false);
-  useEffect(() => setMobileOpen(false), [pathname]);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const contentRef = useRef(null);
+  useTableLabels(contentRef);
+  useEffect(() => setMoreOpen(false), [pathname]);
+  useEffect(() => {
+    if (!moreOpen) return undefined;
+    const onKey = (event) => event.key === "Escape" && setMoreOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moreOpen]);
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem("epicmkt-admin-theme");
     if (saved) return saved;
@@ -99,11 +111,17 @@ export default function AdminLayout() {
   const visibleGroups = navGroups
     .map((group) => group.filter((item) => !item.permission || can(item.permission)))
     .filter((group) => group.length > 0);
+  const visibleItems = visibleGroups.flat();
+  const tabItems = visibleItems.filter((item) => tabPaths.includes(item.to));
+  const moreItems = visibleItems.filter((item) => !tabPaths.includes(item.to));
+  const moreActive = moreItems.some((item) => (item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)));
+  const moreBadge = moreItems.reduce((sum, item) => sum + (badges[item.to] || 0), 0);
+  const toggleTheme = () => setTheme((value) => (value === "light" ? "dark" : "light"));
 
   return (
     <div className="admin-app">
       <div className="admin-rail">
-        <aside id="admin-sidebar" className={`admin-sidebar ${mobileOpen ? "is-mobile-open" : ""}`}>
+        <aside id="admin-sidebar" className="admin-sidebar">
           <div className="admin-sidebar__brand">
             <div className="admin-sidebar__logo">E</div>
             <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>
@@ -143,21 +161,9 @@ export default function AdminLayout() {
         </aside>
       </div>
 
-      {mobileOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" onClick={() => setMobileOpen(false)} /> : null}
-
       <div className="admin-main">
         <header className="admin-header">
           <div className="admin-header__left">
-            <button
-              type="button"
-              className="admin-icon-button admin-mobile-only"
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
-              aria-controls="admin-sidebar"
-              onClick={() => setMobileOpen((value) => !value)}
-            >
-              <FontAwesomeIcon icon={faBars} />
-            </button>
             <div className="admin-crumbs">
               <span className="admin-breadcrumb">Overview /</span>
               <h1 className="admin-page-title">{pageTitle}</h1>
@@ -169,9 +175,9 @@ export default function AdminLayout() {
             <NotificationBell />
             <button
               type="button"
-              className="admin-theme-toggle"
+              className="admin-theme-toggle admin-wide-only"
               aria-label="Toggle theme"
-              onClick={() => setTheme((value) => (value === "light" ? "dark" : "light"))}
+              onClick={toggleTheme}
             >
               <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} /> {theme === "light" ? "Dark" : "Light"}
             </button>
@@ -184,17 +190,72 @@ export default function AdminLayout() {
               {initialsOf(displayName)}
             </Link>
             {demo ? null : (
-              <button type="button" className="admin-theme-toggle" onClick={signOut}>
+              <button type="button" className="admin-theme-toggle admin-wide-only" onClick={signOut}>
                 Sign out
               </button>
             )}
           </div>
         </header>
 
-        <main className="admin-content">
+        <main className="admin-content" ref={contentRef}>
           <Outlet />
         </main>
       </div>
+
+      {moreOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" onClick={() => setMoreOpen(false)} /> : null}
+
+      {moreOpen ? (
+        <div className="admin-more" role="dialog" aria-label="More">
+          <div className="admin-more__grid">
+            {moreItems.map((item) => {
+              const text = badgeText(badges[item.to]);
+              return (
+                <NavLink key={item.to} to={item.to} className={({ isActive }) => `admin-more__item ${isActive ? "is-active" : ""}`}>
+                  <FontAwesomeIcon icon={item.icon} fixedWidth />
+                  <span>{item.label}</span>
+                  {text ? <b className="admin-more__badge">{text}</b> : null}
+                </NavLink>
+              );
+            })}
+          </div>
+          <div className="admin-more__foot">
+            <button type="button" className="admin-more__item" onClick={toggleTheme}>
+              <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} fixedWidth />
+              <span>{theme === "light" ? "Dark" : "Light"}</span>
+            </button>
+            <Link to="/admin/account" className="admin-more__item">
+              <FontAwesomeIcon icon={faUser} fixedWidth />
+              <span>Account</span>
+            </Link>
+            {demo ? null : (
+              <button type="button" className="admin-more__item" onClick={signOut}>
+                <FontAwesomeIcon icon={faRightFromBracket} fixedWidth />
+                <span>Sign out</span>
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="admin-tabbar" aria-label="Main">
+        {tabItems.map((item) => {
+          const text = badgeText(badges[item.to]);
+          return (
+            <NavLink key={item.to} to={item.to} end={item.end} title={item.label} className={({ isActive }) => `admin-tab ${isActive ? "is-active" : ""}`}>
+              <FontAwesomeIcon icon={item.icon} fixedWidth />
+              <span>{item.label === "Command Center" ? "Home" : item.label}</span>
+              {text ? <b className="admin-tab__badge">{text}</b> : null}
+            </NavLink>
+          );
+        })}
+        {moreItems.length ? (
+          <button type="button" className={`admin-tab ${moreActive || moreOpen ? "is-active" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}>
+            <FontAwesomeIcon icon={faEllipsis} fixedWidth />
+            <span>More</span>
+            {moreBadge ? <b className="admin-tab__badge">{badgeText(moreBadge)}</b> : null}
+          </button>
+        ) : null}
+      </nav>
     </div>
   );
 }

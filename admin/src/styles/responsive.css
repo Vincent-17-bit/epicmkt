@@ -1,0 +1,492 @@
+@media (max-width: 47.99rem) {
+  .admin-app {
+    flex-direction: column;
+  }
+
+  .admin-rail,
+  .admin-wide-only {
+    display: none;
+  }
+
+  .admin-main {
+    min-height: 0;
+  }
+
+  .admin-header {
+    height: auto;
+    min-height: 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .admin-header__left {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .admin-header__right {
+    display: contents;
+  }
+
+  .admin-crumbs {
+    min-width: 0;
+  }
+
+  .admin-breadcrumb {
+    display: none;
+  }
+
+  .admin-page-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1.1rem;
+  }
+
+  .admin-search {
+    order: 3;
+    flex: 1 1 100%;
+  }
+
+  .admin-global-search {
+    min-width: 0;
+    width: 100%;
+    height: 2.5rem;
+  }
+
+  .admin-search__panel {
+    width: 100%;
+  }
+
+  .admin-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    text-decoration: none;
+  }
+
+  .admin-content {
+    padding: 0.75rem;
+    scrollbar-width: none;
+  }
+
+  .admin-icon-button,
+  .admin-theme-toggle,
+  .primary-button,
+  .secondary-button,
+  .admin-button {
+    min-height: 2.5rem;
+  }
+
+  .admin-button--sm {
+    min-height: 2.25rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  .admin-content > *,
+  .panel,
+  .field,
+  .field input,
+  .field select,
+  .field textarea {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dt {
+    min-width: 0;
+  }
+
+  .dt__search {
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 2.5rem;
+  }
+
+  .dt__search kbd {
+    display: none;
+  }
+
+  .tabs {
+    max-width: 100%;
+    scrollbar-width: none;
+  }
+
+  .tabs__tab {
+    height: 2.5rem;
+  }
+
+  .table-shell {
+    overflow: visible;
+    border: 0;
+  }
+
+  table[data-cards],
+  table[data-cards] tbody {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  table[data-cards] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  table[data-cards] tr {
+    display: grid;
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 0.8rem;
+    background: var(--admin-surface);
+  }
+
+  table[data-cards] td {
+    position: relative;
+    display: block;
+    padding: 0.4rem 0 0.4rem 38%;
+    border: 0;
+    overflow-wrap: anywhere;
+  }
+
+  table[data-cards] td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 34%;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--admin-muted);
+  }
+
+  table[data-cards] td[data-label=""],
+  table[data-cards] td:not([data-label]) {
+    padding-left: 0;
+  }
+
+  table[data-cards] td[data-label=""]::before,
+  table[data-cards] td:not([data-label])::before {
+    content: none;
+  }
+
+  .funnel,
+  .funnel tbody {
+    min-width: 0;
+  }
+
+  .modal-backdrop {
+    align-items: end;
+    padding: 0.5rem;
+  }
+
+  .modal {
+    width: 100%;
+    max-height: calc(100dvh - 1rem);
+    border-radius: 1rem;
+  }
+
+  .modal__footer {
+    flex-wrap: wrap;
+  }
+
+  .modal__footer > * {
+    flex: 1 1 8rem;
+  }
+
+  .admin-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: block;
+    border: 0;
+    background: rgb(0 0 0 / 0.5);
+  }
+
+  .admin-more {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 35;
+    display: block;
+    max-height: 75dvh;
+    overflow: auto;
+    padding: 0.9rem 0.75rem calc(4.75rem + env(safe-area-inset-bottom));
+    border-radius: 1.1rem 1.1rem 0 0;
+    background: var(--admin-surface);
+    box-shadow: var(--admin-shadow);
+    animation: sheet-in 200ms ease;
+  }
+
+  .admin-more__grid,
+  .admin-more__foot {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: 0.5rem;
+  }
+
+  .admin-more__foot {
+    margin-top: 0.75rem;
+  }
+
+  .admin-more__item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 4.25rem;
+    padding: 0.6rem 0.3rem;
+    border: 1px solid var(--admin-border);
+    border-radius: 0.8rem;
+    background: var(--admin-bg);
+    color: var(--admin-text);
+    font-size: 0.74rem;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .admin-more__item svg {
+    font-size: 1.15rem;
+  }
+
+  .admin-more__item.is-active {
+    border-color: var(--admin-primary);
+    background: var(--admin-primary-tint);
+  }
+
+  .admin-more__badge,
+  .admin-tab__badge {
+    position: absolute;
+    top: 0.3rem;
+    right: 0.4rem;
+    min-width: 1.1rem;
+    height: 1.1rem;
+    padding: 0 0.3rem;
+    border-radius: 999px;
+    background: var(--admin-danger);
+    color: var(--admin-danger-ink);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.1rem;
+    text-align: center;
+  }
+
+  .admin-tabbar {
+    position: relative;
+    z-index: 40;
+    flex: none;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 0.25rem;
+    padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
+    background: var(--admin-header);
+    border-top: 1px solid var(--admin-border);
+  }
+
+  .admin-tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 0;
+    min-height: 3.4rem;
+    padding: 0.3rem 0.1rem;
+    border: 0;
+    border-radius: 0.7rem;
+    background: transparent;
+    color: var(--admin-muted);
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .admin-tab svg {
+    font-size: 1.15rem;
+  }
+
+  .admin-tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .admin-tab.is-active {
+    background: var(--admin-primary-tint);
+    color: var(--admin-primary-strong);
+  }
+
+  .admin-tab__badge {
+    top: 0.1rem;
+    right: 50%;
+    margin-right: -1.5rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .hero-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hero-card__actions > * {
+    flex: 1 1 8rem;
+  }
+}
+
+@media (max-width: 30rem) {
+  .admin-header {
+    padding: 0.5rem 0.6rem;
+  }
+
+  .admin-content {
+    padding: 0.6rem;
+  }
+
+  .admin-more__grid,
+  .admin-more__foot {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  table[data-cards] td {
+    padding-left: 40%;
+  }
+}
+
+@media (max-width: 17rem) {
+  html {
+    font-size: 12px;
+  }
+
+  .admin-header {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .admin-content :where(div, section, form, fieldset, label, input, select, textarea, ul, li, a, span, p) {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-content {
+    overflow-wrap: anywhere;
+  }
+
+  .hero-card__actions {
+    flex-direction: column;
+  }
+
+  .admin-content :where(button, .admin-button) {
+    min-width: auto;
+    max-width: none;
+  }
+
+  .compose,
+  .field-group,
+  .setting-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-search,
+  .admin-more__foot .admin-more__item span {
+    display: none;
+  }
+
+  .admin-page-title {
+    font-size: 0.95rem;
+  }
+
+  .admin-avatar {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .admin-content {
+    padding: 0.4rem;
+  }
+
+  .admin-tabbar {
+    gap: 0.1rem;
+    padding: 0.2rem;
+  }
+
+  .admin-tab {
+    min-height: 2.75rem;
+  }
+
+  .admin-tab span {
+    display: none;
+  }
+
+  .admin-tab__badge {
+    top: 0.05rem;
+    right: 0.05rem;
+    margin-right: 0;
+    min-width: 0.9rem;
+    height: 0.9rem;
+    line-height: 0.9rem;
+    font-size: 0.55rem;
+  }
+
+  .admin-more__grid,
+  .admin-more__foot {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-more__item {
+    min-height: 3.5rem;
+    font-size: 0.68rem;
+  }
+
+  .tabs__count {
+    display: none;
+  }
+
+  table[data-cards] td {
+    padding-left: 0;
+  }
+
+  table[data-cards] td::before {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: 0.1rem;
+  }
+
+  .modal-backdrop {
+    padding: 0;
+  }
+
+  .modal {
+    max-height: 100dvh;
+    border-radius: 0.7rem 0.7rem 0 0;
+  }
+
+  .field-group,
+  .toolbar,
+  .row-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@keyframes sheet-in {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}

@@ -348,15 +348,24 @@ export async function getSimilarBusinesses(ref, limit = 4) {
 
 export async function getTopSearches(limit = 8) {
   await delay();
-  const since = Date.now() - TOP_SEARCH_WINDOW_MS;
+  const now = Date.now();
+  const since = now - TOP_SEARCH_WINDOW_MS;
   const totals = new Map();
+  const day = new Map();
+  const recent = new Map();
   for (const event of store.searches) {
-    if (event.at >= since) totals.set(event.term, (totals.get(event.term) ?? 0) + event.count);
+    if (event.at < since) continue;
+    totals.set(event.term, (totals.get(event.term) ?? 0) + event.count);
+    if (event.at >= now - 86400000) day.set(event.term, (day.get(event.term) ?? 0) + event.count);
+    if (event.at >= now - 3 * 3600000) recent.set(event.term, (recent.get(event.term) ?? 0) + event.count);
   }
   return [...totals.entries()]
     .sort((a, b) => b[1] - a[1])
     .slice(0, limit)
-    .map(([term, count]) => ({ term, count }));
+    .map(([term, count]) => {
+      const last3 = recent.get(term) ?? 0;
+      return { term, count, hot: last3 >= 3 && last3 * 4 >= (day.get(term) ?? 0) };
+    });
 }
 
 export async function logSearch(term) {

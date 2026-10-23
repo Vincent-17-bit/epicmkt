@@ -102,6 +102,25 @@ describe("review step", () => {
     privacy: { title: "Privacy Notice", version: "1", key_points: ["b"], body: "three" }
   };
 
+  it("shows nothing red until the person tries to send, then puts each problem under its own box", () => {
+    const { unmount } = mountStep(() => <ReviewStep {...props({ legal })} />);
+    expect(screen.queryByText(/read it to the end first/)).not.toBeInTheDocument();
+    unmount();
+    mountStep(() => <ReviewStep {...props({ legal, tried: true, token: "" })} />);
+    const terms = screen.getByText("Open Seller Terms and Rules").closest("div");
+    expect(within(terms).getByText(/Open the Seller Terms and Rules and read it to the end first/)).toBeInTheDocument();
+    const privacy = screen.getByText("Open Privacy Notice").closest("div");
+    expect(within(privacy).getByText(/Open the Privacy Notice and read it to the end first/)).toBeInTheDocument();
+    expect(screen.getByText(/complete the security check/i)).toBeInTheDocument();
+  });
+
+  it("lets the person jump to the step that still needs work", async () => {
+    const goTo = vi.fn();
+    mountStep(() => <ReviewStep {...props({ legal, goTo })} />);
+    await userEvent.setup().click(screen.getByRole("button", { name: "Fix this" }));
+    expect(goTo).toHaveBeenCalledWith(1);
+  });
+
   it("keeps the legal checkboxes disabled until each document is read", () => {
     mountStep(() => <ReviewStep {...props({ legal })} />);
     expect(screen.getByLabelText(/Seller Terms and Rules/)).toBeDisabled();

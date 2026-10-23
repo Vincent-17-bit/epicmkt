@@ -1,4 +1,4 @@
--- 0039_public_offers.sql
+-- 0040_public_offers.sql
 -- Business cards show an "Offer" chip when a shop has an offer running. Customers (anon) cannot read public.offers
 -- directly (row level security), so this view exposes only the offers that are public right now: the business is live,
 -- the offer is active, inside its start/end window, and not hidden or removed by an admin. Same rules as public_items.

@@ -11,12 +11,12 @@ const seedSearches = [
 const DAY = 86400000;
 const seededAt = Date.now();
 
-const seedSearchEvents = seedSearches.flatMap(([term, total]) => {
+const seedSearchEvents = seedSearches.flatMap(([term, total], rank) => {
   const base = Math.floor(total / 7);
   return Array.from({ length: 7 }, (_, d) => ({
     term,
     count: base + (d === 0 ? total - base * 7 : 0),
-    at: seededAt - Math.round(d * DAY * 0.9)
+    at: seededAt - Math.round(d * DAY * 0.9) - (rank === 0 ? 0 : 4 * 3600000)
   }));
 });
 

@@ -8,7 +8,7 @@ export const fieldId = (name) => `f-${name.replace(/\./g, "-")}`;
 export function ErrorLine({ id, message }) {
   if (!message) return null;
   return (
-    <p id={id} className={styles.error}>
+    <p id={id} className={styles.error} data-error="true">
       <FontAwesomeIcon icon={faCircleExclamation} />
       <span>{message}</span>
     </p>

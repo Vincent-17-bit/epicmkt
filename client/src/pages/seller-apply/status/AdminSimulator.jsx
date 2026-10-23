@@ -46,6 +46,7 @@ export default function AdminSimulator() {
       {open && (
         <div className={styles.body}>
           <button type="button" onClick={run(() => tools.simSeed())}>Load demo data</button>
+          <button type="button" onClick={run(() => tools.simClear())}>Clear demo data</button>
           <label>
             Application
             <select value={ref} onChange={(e) => setRef(e.target.value)}>
