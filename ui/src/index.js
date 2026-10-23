@@ -21,3 +21,4 @@ export { BusinessPageError, BusinessPageSkeleton } from "./business/BusinessStat
 export { groupServices } from "./business/groupServices.js";
 export { isPreview } from "./preview.js";
 export { default as ItemCard } from "./ItemCard.jsx";
+export { default as ProductTile } from "./ProductTile.jsx";

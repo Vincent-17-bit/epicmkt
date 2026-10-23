@@ -1,5 +1,4 @@
 import * as backend from "@epicmkt/backend";
-import { spreadByStore } from "../../lib/spreadByStore.js";
 import { isLive } from "./mode.js";
 
 const adapter = () => (isLive() ? import("./live.js") : import("./mock.js"));
@@ -55,8 +54,6 @@ export const getStoreSelective = async (businessId, opts) => {
 };
 
 // Live data is authoritative: with Supabase configured an empty marketplace shows no products, never demo ones.
-export const getHomeProducts = async ({ limit = 12, perStore = 2 } = {}) => {
-  const pool = limit * 6;
-  const rows = isLive() ? await (await liveAdapter()).getHomeProducts({ limit: pool }) : await backend.getHomeProducts({ limit: pool });
-  return spreadByStore(rows, { limit, perStore });
-};
+// Returns { items, nextOffset }; nextOffset is null on the last page.
+export const getHomeProducts = async ({ limit = 24, offset = 0 } = {}) =>
+  isLive() ? (await liveAdapter()).getHomeProducts({ limit, offset }) : backend.getHomeProducts({ limit, offset });

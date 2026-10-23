@@ -25,6 +25,9 @@ export default {
   "item.availability.available": "Available",
   "item.availability.limited": "Limited",
   "item.availability.unavailable": "Unavailable",
+  "item.availability.limited_stock": "Limited stock",
+  "item.availability.out_of_stock": "Out of stock",
+  "item.availability.by_appointment": "By appointment",
   "item.specs": "Specifications",
   "item.description": "Description",
   "item.included": "What's included",
@@ -146,6 +149,11 @@ export default {
   "item.scrollLeft": "Scroll left",
   "item.scrollRight": "Scroll right",
   "home.products": "Products",
-  "home.productsFrom": "From",
-  "home.productsLoading": "Loading products"
+  "home.productsLoading": "Loading products",
+  "home.productsMore": "Show more products",
+  "home.productsLoadingMore": "Loading…",
+  "home.productsFailed": "We could not load more products.",
+  "home.productsRetry": "Try again",
+  "home.verifiedStore": "Verified store",
+  "home.featuredStore": "Featured store"
 };

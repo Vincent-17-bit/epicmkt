@@ -1,3 +1,4 @@
+import { PLAN_FEATURES } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -172,13 +173,24 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
   return shaped.slice(0, limit);
 }
 
-// Newest public products across all live stores, for the home page. Sale pricing is decoration: if the flash
-// sales cannot be read the products still show at their regular price.
-export async function getHomeProducts({ limit = 48 } = {}) {
-  const rows = unwrap(await supabase.from("public_items").select("*").order("created_at", { ascending: false }).limit(limit)) ?? [];
-  if (!rows.length) return [];
-  const businessIds = [...new Set(rows.map((row) => row.business_id))];
-  const businesses = unwrap(await supabase.from("public_businesses").select("id,slug,name").in("id", businessIds)) ?? [];
+// Newest public products across all live stores, a page at a time, for the home page. Sale pricing is
+// decoration: if the flash sales cannot be read the products still show at their regular price.
+export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
+  const rows =
+    unwrap(
+      await supabase
+        .from("public_items")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(offset, offset + limit)
+    ) ?? [];
+  const more = rows.length > limit;
+  const page = rows.slice(0, limit);
+  const nextOffset = more ? offset + limit : null;
+  if (!page.length) return { items: [], nextOffset };
+  const businessIds = [...new Set(page.map((row) => row.business_id))];
+  const businesses = unwrap(await supabase.from("public_businesses").select("id,slug,name,plan_key,verification_level").in("id", businessIds)) ?? [];
   const byId = new Map(businesses.map((b) => [b.id, b]));
   let live = { now: Date.now(), entries: [] };
   try {
@@ -186,7 +198,7 @@ export async function getHomeProducts({ limit = 48 } = {}) {
   } catch {
     // keep regular prices
   }
-  return rows.flatMap((row) => {
+  const items = page.flatMap((row) => {
     const business = byId.get(row.business_id);
     if (!business) return [];
     const item = itemRow(row, business);
@@ -197,10 +209,17 @@ export async function getHomeProducts({ limit = 48 } = {}) {
         ...item,
         pricing,
         flash: entry ? flashParts(entry, live.now) : null,
-        business: { id: business.id, slug: business.slug, name: business.name }
+        business: {
+          id: business.id,
+          slug: business.slug,
+          name: business.name,
+          verified: business.verification_level === "verified",
+          featured: PLAN_FEATURES[business.plan_key]?.featured === true
+        }
       }
     ];
   });
+  return { items, nextOffset };
 }
 
 let categoriesCache = null;

@@ -8,7 +8,7 @@ import "@epicmkt/ui/reset.css";
 import { ProductCard, ShopCard, BusinessPage } from "@epicmkt/ui";
 ```
 
-Contents: `Button`, `IconButton`, `Container`, `Img`, `Skeleton`, `Accordion`, `Toaster` (props: `toasts`, `onDismiss`), `Modal`, `BottomSheet`, `Lightbox`, `PromoChip`, `FeaturedBadge`, `VerifiedBadge`, `AvailabilityDot`, `DiscountChip`, `ProductCard`, `ProductGallery`, `ShopCard`, `BusinessPage` (composed of `BusinessHero`, `BusinessSection`, `ActionRow`, `Offers`, `Services`, `Photos`, `Details`, `Hours`, `HoursTable`, `Location`, `Follow`, `ShareQr`, `BottomBar`, plus `BusinessPageSkeleton`, `BusinessPageError`).
+Contents: `Button`, `IconButton`, `Container`, `Img`, `Skeleton`, `Accordion`, `Toaster` (props: `toasts`, `onDismiss`), `Modal`, `BottomSheet`, `Lightbox`, `PromoChip`, `FeaturedBadge`, `VerifiedBadge`, `AvailabilityDot`, `DiscountChip`, `ProductCard`, `ProductGallery`, `ProductTile` (a product card for lists across stores: picture two thirds, name, price and store one third, with verified and featured marks; one link, props `item`, `href`, `renderLink`, `labels`, `renderFlash`, `mode`), `ShopCard`, `BusinessPage` (composed of `BusinessHero`, `BusinessSection`, `ActionRow`, `Offers`, `Services`, `Photos`, `Details`, `Hours`, `HoursTable`, `Location`, `Follow`, `ShareQr`, `BottomBar`, plus `BusinessPageSkeleton`, `BusinessPageError`).
 
 ## Contract
 

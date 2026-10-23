@@ -599,3 +599,105 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
+
+/* ---- Page variant: the same content as a page of its own, under the site header ---- */
+.media,
+.content {
+  min-width: 0;
+}
+
+.root[data-variant="page"] {
+  position: static;
+  z-index: auto;
+  display: block;
+}
+
+.root[data-variant="page"] .sheet {
+  display: block;
+  max-width: 68rem;
+  max-height: none;
+  margin: 0 auto;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.root[data-variant="page"] .header {
+  padding-inline: var(--space-4);
+  border-bottom: 0;
+  background: transparent;
+}
+
+.root[data-variant="page"] .body {
+  overflow: visible;
+  padding-inline: var(--space-4);
+}
+
+.root[data-variant="page"] .media,
+.root[data-variant="page"] .content {
+  max-width: 40rem;
+  margin-inline: auto;
+}
+
+.root[data-variant="page"] .media {
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.root[data-variant="page"] .content {
+  margin-top: var(--space-3);
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.root[data-variant="page"] .footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  max-width: 40rem;
+  margin-inline: auto;
+  border: 2px solid var(--border-strong);
+  border-bottom: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+}
+
+@media (min-width: 1024px) {
+  .root[data-variant="page"] .body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-4);
+  }
+
+  .root[data-variant="page"] .media {
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-3));
+    max-width: none;
+    margin: 0;
+  }
+
+  .root[data-variant="page"] .content {
+    max-width: none;
+    margin: 0;
+  }
+
+  .root[data-variant="page"] .footer {
+    max-width: none;
+    border-radius: var(--radius-card);
+    border-bottom: 2px solid var(--border-strong);
+    margin-bottom: var(--space-4);
+  }
+}
+
+/* Loading, missing-item and error states sit centred across the whole page. */
+.root[data-variant="page"] .body > :not(.media):not(.content) {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 40rem;
+  margin-inline: auto;
+}

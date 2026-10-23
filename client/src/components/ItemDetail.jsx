@@ -29,6 +29,7 @@ import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";
 import { kesText } from "../lib/flash.js";
 import { useInView } from "../hooks/useInView.js";
+import { usePageTitle } from "../hooks/usePageTitle.js";
 import OfferStrip from "./OfferStrip.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
@@ -40,7 +41,11 @@ const MAX_TIMEOUT = 2147483647;
 const HOLD_MS = 6000;
 const LEAVE_MS = 260;
 
-export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport }) {
+// `layout="sheet"` is the dialog laid over a store's page. `layout="page"` is the same content as a page of its own
+// (no scrim, no focus trap, no scroll lock): the item's address is /b/<store>/i/<item>.
+export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport, layout = "sheet" }) {
+  const isPage = layout === "page";
+  const Heading = isPage ? "h1" : "h2";
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const onSeeItems = (offer) => navigate(offerTarget(offer, business), { replace: true });
@@ -75,7 +80,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const flashEndsAt = fresh?.flash?.sale.endsAt ?? null;
   const flashUrgency = useUrgency(flashEndsAt);
   const flashOver = Boolean(flashEndsAt) && flashUrgency === "ended";
-  const bannerInView = useInView(bannerRef, bodyRef, current?.flash?.sale.id ?? null);
+  const bannerInView = useInView(bannerRef, isPage ? undefined : bodyRef, current?.flash?.sale.id ?? null);
+
+  usePageTitle(isPage && fresh ? `${fresh.name} | ${business.name}` : undefined);
 
   useEffect(() => {
     if (!flashOver) return undefined;
@@ -125,6 +132,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   }, [hold?.leaving]);
 
   useEffect(() => {
+    if (isPage) return undefined;
     const opener = document.activeElement;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -158,7 +166,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   }, []);
 
   useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = 0;
+    if (!isPage && bodyRef.current) bodyRef.current.scrollTop = 0;
   }, [itemId]);
 
   useEffect(() => {
@@ -198,7 +206,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const onCall = () => logContactEvent({ businessId: business.id, type: "call" });
 
   const share = async () => {
-    const url = `${window.location.origin}/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
+    const path = isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
+    const url = `${window.location.origin}${path}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: current?.name, text: `${current?.name} on EpicMKT`, url });
@@ -225,13 +234,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   );
 
   return (
-    <div className={styles.root}>
-      <div className={styles.scrim} onClick={onClose} aria-hidden="true" />
+    <div className={styles.root} data-variant={layout}>
+      {!isPage && <div className={styles.scrim} onClick={onClose} aria-hidden="true" />}
       <section
         ref={sheetRef}
         className={styles.sheet}
-        role="dialog"
-        aria-modal="true"
+        {...(isPage ? {} : { role: "dialog", "aria-modal": "true" })}
         aria-labelledby={current || gone ? "item-title" : undefined}
         aria-label={current || gone ? undefined : business.name}
         tabIndex={-1}
@@ -253,9 +261,11 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               </li>
             </ol>
           </nav>
-          <button type="button" className={styles.close} onClick={onClose} aria-label={t("item.close")}>
-            <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
-          </button>
+          {!isPage && (
+            <button type="button" className={styles.close} onClick={onClose} aria-label={t("item.close")}>
+              <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+            </button>
+          )}
         </header>
 
         <div ref={bodyRef} className={styles.body}>
@@ -273,9 +283,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
             <>
               <div className={styles.state}>
                 <FontAwesomeIcon icon={faBoxOpen} className={styles.goneIcon} aria-hidden="true" />
-                <h2 id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
+                <Heading id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
                   {t("item.gone")}
-                </h2>
+                </Heading>
                 <p className={styles.description}>{t("item.goneHint")}</p>
                 <Link to={`/b/${business.slug}`} className={`${styles.outline} ${styles.single}`} onClick={onVisit("gone")}>
                   <FontAwesomeIcon icon={faStore} className={styles.icon} aria-hidden="true" />
@@ -312,14 +322,17 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
           {current && (
             <>
               {current.flash && !hold && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
-              <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
-              {current.videos?.length > 0 && (
-                <section className={styles.videos} aria-label={t("video.heading")}>
-                  {current.videos.map((video) => (
-                    <MediaVideo key={`${current.id}-${video.id}`} src={video.url} label={current.name} />
-                  ))}
-                </section>
-              )}
+              <div className={styles.media}>
+                <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
+                {current.videos?.length > 0 && (
+                  <section className={styles.videos} aria-label={t("video.heading")}>
+                    {current.videos.map((video) => (
+                      <MediaVideo key={`${current.id}-${video.id}`} src={video.url} label={current.name} />
+                    ))}
+                  </section>
+                )}
+              </div>
+              <div className={styles.content}>
 
               {current.flash && (
                 <div className={styles.collapse} data-open={hold?.leaving ? "false" : "true"}>
@@ -340,9 +353,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   {shown && shown.savings > 0 && <span className={styles.saleChip}>{t("item.sale")} -{shown.discountPercent}%</span>}
                   {current.section && <span className={styles.tag}>{current.section}</span>}
                 </div>
-                <h2 id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
+                <Heading id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
                   {current.name}
-                </h2>
+                </Heading>
 
                 {shown && !current.flash && (
                   <div className={styles.priceBlock}>
@@ -458,6 +471,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 attributes={business.attributes}
                 onExpand={(panel) => track("spec_expand", { panel })}
               />
+              </div>
             </>
           )}
         </div>

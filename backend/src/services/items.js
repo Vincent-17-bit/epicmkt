@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, distanceKm, isOpenNow } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isOpenNow } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -226,8 +226,8 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
-// Newest listed products across all active stores, for the home page. Callers spread them across stores.
-export async function getHomeProducts({ limit = 48 } = {}) {
+// Newest listed products across all active stores, a page at a time, for the home page.
+export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
   await delay();
   runSweep();
   const rows = [];
@@ -241,12 +241,19 @@ export async function getHomeProducts({ limit = 48 } = {}) {
         ...item,
         pricing: buildPricing(item, sale),
         flash: sale ? flashParts(item, sale) : null,
-        business: { id: business.id, slug: business.slug, name: business.name }
+        business: {
+          id: business.id,
+          slug: business.slug,
+          name: business.name,
+          verified: Boolean(business.verified),
+          featured: PLAN_FEATURES[business.plan]?.featured === true
+        }
       });
     });
   }
-  rows.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0));
-  return rows.slice(0, limit);
+  rows.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || (a.id < b.id ? -1 : 1));
+  const end = offset + limit;
+  return { items: rows.slice(offset, end), nextOffset: end < rows.length ? end : null };
 }
 
 const HOUR_MS = 3600000;

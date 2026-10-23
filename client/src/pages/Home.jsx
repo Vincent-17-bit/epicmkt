@@ -151,7 +151,6 @@ export default function Home() {
         <FlashStrip id="home-flash-title" />
       </Container>
 
-      <HomeProducts />
 
       <section className={styles.section} aria-labelledby="near-title">
         <Container>
@@ -161,6 +160,8 @@ export default function Home() {
           <NearYou />
         </Container>
       </section>
+
+      <Featured />
 
       <section id="categories" className={styles.section} aria-labelledby="categories-title">
         <Container>
@@ -205,7 +206,8 @@ export default function Home() {
         </Container>
       </section>
 
-      <Featured />
+      <HomeProducts />
+
 
       <section className={styles.section} aria-labelledby="recent-title">
         <Container>
