@@ -1,3 +1,5 @@
+import { demoItemId } from "./itemIds.js";
+
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
@@ -7,7 +9,7 @@ const sale = (id, businessId, itemId, startsInMs, endsInMs, discount, extra = {}
   return {
     id,
     businessId,
-    itemId,
+    itemId: demoItemId(businessId, itemId),
     headline: null,
     startsAt: new Date(at + startsInMs).toISOString(),
     endsAt: new Date(at + endsInMs).toISOString(),

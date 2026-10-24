@@ -1,4 +1,5 @@
 import { slugify } from "@epicmkt/shared";
+import { demoItemId } from "./itemIds.js";
 import { attributesById } from "./attributes.js";
 import { offersById } from "./offers.js";
 import { coverArt, logoArt, serviceArt, galleryArt } from "./art.js";
@@ -47,7 +48,7 @@ const make = (i, b) => {
     townSlug: slugify(b.area),
     services: completeServices(b.categoryId, b.services ?? [], i).map((svc, n) => ({
       ...svc,
-      id: svc.id ?? slugify(svc.name),
+      id: demoItemId(id, svc.id ?? slugify(svc.name)),
       imageUrl: svc.imageUrl ?? serviceArt((hue + n * 24) % 360, svc.name)
     }))
   };
