@@ -146,3 +146,19 @@ describe("price range and live counts", () => {
     expect(countsFor([a, b, c], EMPTY_FILTERS).flags.onSale).toBe(1);
   });
 });
+
+describe("open now filter", () => {
+  const mk = (id, isOpen) => ({ id, name: id, createdAt: "2026-01-01", business: { isOpen }, pricing: { salePrice: 1 } });
+
+  it("keeps only products of open shops and counts them", () => {
+    const products = [mk("a", true), mk("b", false)];
+    expect(applyFilters(products, { ...EMPTY_FILTERS, openNow: true }).map((p) => p.id)).toEqual(["a"]);
+    expect(applyFilters(products, EMPTY_FILTERS)).toHaveLength(2);
+    expect(countsFor(products, EMPTY_FILTERS).flags.openNow).toBe(1);
+  });
+
+  it("round-trips through the address", () => {
+    const params = writeFilters(new URLSearchParams(), { ...EMPTY_FILTERS, openNow: true });
+    expect(parseFilters(params).openNow).toBe(true);
+  });
+});

@@ -210,4 +210,26 @@ describe("live browse adapter", () => {
       fake.current.client.from = original;
     }
   });
+
+  describe("seller exceptions", () => {
+    const allWeek = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["00:00", "23:59"]]));
+    const today = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+    const closedToday = { id: "e1", date: today(), kind: "closed", intervals: [], note: "Public holiday" };
+
+    it("a shop closed by an exception is closed in search, featured and the Open now filter, with the reason", async () => {
+      db().businesses = [
+        biz(1, { name: "Shut", plan_key: "premium", hours: allWeek, exceptions: [closedToday] }),
+        biz(2, { name: "Open", plan_key: "premium", hours: allWeek, exceptions: [] })
+      ];
+      const search = await live.searchBusinesses({});
+      const shut = search.items.find((b) => b.name === "Shut");
+      expect(shut.isOpen).toBe(false);
+      expect(shut.statusLine).toMatch(/^Closed today: Public holiday/);
+      const featured = await live.getFeaturedBusinesses({});
+      expect(featured.find((b) => b.name === "Shut").isOpen).toBe(false);
+      expect(featured.find((b) => b.name === "Open").isOpen).toBe(true);
+      const onlyOpen = await live.searchBusinesses({ openNow: true });
+      expect(onlyOpen.items.map((b) => b.name)).toEqual(["Open"]);
+    });
+  });
 });

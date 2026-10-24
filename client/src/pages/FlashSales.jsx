@@ -36,8 +36,9 @@ export default function FlashSales() {
   const endsWithin = WINDOWS.includes(params.get("within") ?? "") ? params.get("within") ?? "" : "";
   const min = params.get("min") ?? "";
   const max = params.get("max") ?? "";
+  const openNow = params.get("open") === "1";
   const sort = SORTS.includes(params.get("sort")) ? params.get("sort") : "ending";
-  const active = Boolean(category || town || endsWithin || min || max);
+  const active = Boolean(category || town || endsWithin || min || max || openNow);
 
   const set = (patch) =>
     setParams(
@@ -53,13 +54,14 @@ export default function FlashSales() {
   const { data: facets } = useQuery({ queryKey: ["flash-facets"], queryFn: flash.facets, staleTime: 30_000, refetchInterval: 60_000 });
 
   const query = useInfiniteQuery({
-    queryKey: ["flash-page", category, town, endsWithin, min, max, sort, coords?.lat ?? null, coords?.lng ?? null],
+    queryKey: ["flash-page", category, town, endsWithin, min, max, openNow, sort, coords?.lat ?? null, coords?.lng ?? null],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       flash.list({
         categoryId: category || null,
         town: town || null,
         endsWithin: endsWithin || null,
+        openNow,
         minPrice: number(min),
         maxPrice: number(max),
         sort,
@@ -140,6 +142,19 @@ export default function FlashSales() {
               </div>
             </fieldset>
             <fieldset className={styles.field}>
+              <legend>{t("flash.filter.shop")}</legend>
+              <div className={styles.segment}>
+                {[
+                  ["", t("flash.filter.any")],
+                  ["1", t("flash.filter.openNow")]
+                ].map(([value, label]) => (
+                  <button key={value} type="button" className={styles.seg} aria-pressed={(openNow ? "1" : "") === value} onClick={() => set({ open: value })}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+            <fieldset className={styles.field}>
               <legend>{t("flash.filter.price")}</legend>
               <div className={styles.range}>
                 <input className={styles.control} type="number" inputMode="numeric" min="0" placeholder={t("flash.filter.min")} aria-label={t("flash.filter.min")} value={min} onChange={(e) => set({ min: e.target.value })} />
@@ -159,7 +174,7 @@ export default function FlashSales() {
           </div>
 
           {active && (
-            <button type="button" className={styles.clear} onClick={() => set({ category: "", town: "", within: "", min: "", max: "" })}>
+            <button type="button" className={styles.clear} onClick={() => set({ category: "", town: "", within: "", min: "", max: "", open: "" })}>
               {t("flash.filter.clear")}
             </button>
           )}

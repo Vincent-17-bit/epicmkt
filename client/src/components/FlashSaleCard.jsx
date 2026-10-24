@@ -39,7 +39,7 @@ function StoreRow({ business }) {
       <span className={styles.storeName}>{business.name}</span>
       {business.verified && <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("flash.verified")} aria-label={t("flash.verified")} />}
       {distance && <span className={styles.distance}>{distance}</span>}
-      <span className={business.isOpen ? styles.open : styles.closed}>
+      <span className={business.isOpen ? styles.open : styles.closed} title={business.statusLine ?? undefined}>
         <span className={styles.dot} aria-hidden="true" />
         {business.isOpen ? t("flash.open") : t("flash.closed")}
       </span>

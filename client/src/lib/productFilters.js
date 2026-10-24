@@ -23,10 +23,11 @@ export const EMPTY_FILTERS = Object.freeze({
   flash: false,
   verified: false,
   featured: false,
-  photo: false
+  photo: false,
+  openNow: false
 });
 
-const FLAGS = { inStock: "pstock", onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto" };
+const FLAGS = { inStock: "pstock", onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto", openNow: "popen" };
 const SOLD_OUT = new Set(["out_of_stock", "unavailable"]);
 const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", ...Object.values(FLAGS)];
 
@@ -110,6 +111,7 @@ export function applyFilters(products, filters) {
     if (filters.flash && !p.flash) return false;
     if (filters.verified && !store.verified) return false;
     if (filters.featured && !store.featured) return false;
+    if (filters.openNow && !store.isOpen) return false;
     if (filters.photo && !p.imageUrl) return false;
     return true;
   });
@@ -154,7 +156,7 @@ export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) 
   }
   for (const id of filters.categories) chips.push({ key: `cat:${id}`, label: categoryName(id), clear: (f) => ({ ...f, categories: f.categories.filter((c) => c !== id) }) });
   for (const slug of filters.towns) chips.push({ key: `town:${slug}`, label: townName(slug), clear: (f) => ({ ...f, towns: f.towns.filter((t) => t !== slug) }) });
-  const named = { inStock: "In stock", onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo" };
+  const named = { inStock: "In stock", onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo", openNow: "Open now" };
   for (const [name, label] of Object.entries(named)) if (filters[name]) chips.push({ key: name, label, clear: (f) => ({ ...f, [name]: false }) });
   return chips;
 }

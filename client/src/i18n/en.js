@@ -93,6 +93,8 @@ export default {
   "flash.filter.any": "Any time",
   "flash.filter.hour": "1 hour",
   "flash.filter.day": "24 hours",
+  "flash.filter.shop": "Shop",
+  "flash.filter.openNow": "Open now",
   "flash.filter.price": "Price (KES)",
   "flash.filter.min": "Min",
   "flash.filter.max": "Max",

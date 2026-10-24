@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isOpenNow } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -75,7 +75,8 @@ const sellerCard = (business, origin) => ({
   lng: business.lng,
   phone: business.phone,
   whatsapp: business.whatsapp,
-  isOpen: isOpenNow(business.hours),
+  isOpen: statusOf(business.hours, business.exceptions).isOpen,
+  statusLine: statusOf(business.hours, business.exceptions).line,
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 
@@ -249,7 +250,9 @@ export async function getAllProducts() {
           featured: PLAN_FEATURES[business.plan]?.featured === true,
           categoryId: business.categoryId,
           town: business.area ?? "",
-          county: business.county ?? ""
+          county: business.county ?? "",
+          isOpen: statusOf(business.hours, business.exceptions).isOpen,
+          statusLine: statusOf(business.hours, business.exceptions).line
         }
       });
     });
@@ -272,6 +275,7 @@ export async function getFlashSales({
   categoryId = null,
   town = null,
   endsWithin = null,
+  openNow = false,
   minPrice = null,
   maxPrice = null,
   sort = "ending",
@@ -290,6 +294,7 @@ export async function getFlashSales({
     if (businessId && business.id !== businessId && business.slug !== businessId) continue;
     if (categoryId && business.categoryId !== categoryId) continue;
     if (town && business.townSlug !== town) continue;
+    if (openNow && !statusOf(business.hours, business.exceptions).isOpen) continue;
     business.services.forEach((svc, index) => {
       if (svc.status === "unlisted") return;
       const item = toItem(business, svc, index);

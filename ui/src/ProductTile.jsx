@@ -8,6 +8,7 @@ const DEFAULT_LABELS = {
   was: "Was",
   verified: "Verified store",
   featured: "Featured store",
+  closed: "Closed",
   availability: (key) =>
     ({
       available: "Available",
@@ -112,6 +113,11 @@ export default function ProductTile({
             </span>
           )}
           <span className={styles.storeName}>{store.name}</span>
+          {store.isOpen === false && (
+            <span className={styles.closed} title={store.statusLine ?? undefined}>
+              {labels.closed ?? DEFAULT_LABELS.closed}
+            </span>
+          )}
           {store.verified && (
             <span className={styles.tick} title={labels.verified}>
               <FontAwesomeIcon icon={faCircleCheck} aria-hidden="true" />
