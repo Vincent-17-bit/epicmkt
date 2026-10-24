@@ -19,19 +19,14 @@ function Prompt({ status, onAsk }) {
         <FontAwesomeIcon icon={faLocationDot} />
       </span>
       <div className={styles.text}>
-        <p className={styles.lead}>{denied ? "Location is turned off" : "See what is closest to you"}</p>
-        <p className={styles.sub}>
-          {denied
-            ? "Choose your town to see businesses near you, or browse by category."
-            : "Share your location or choose your town and we will show businesses around you."}
-        </p>
+        <p className={styles.lead}>{denied ? "Location is off" : "See what is closest to you"}</p>
       </div>
       <Button
         icon={denied ? faLocationDot : faLocationCrosshairs}
         disabled={status === "asking"}
         onClick={onAsk}
       >
-        {status === "asking" ? "Locating…" : denied ? "Choose your town" : "Set my location"}
+        {status === "asking" ? "Locating…" : denied ? "Choose a town" : "Set location"}
       </Button>
     </div>
   );
@@ -41,7 +36,6 @@ export default function NearYou() {
   const status = useGeoStore((s) => s.status);
   const coords = useGeoStore((s) => s.coords);
   const request = useGeoStore((s) => s.request);
-  const town = useGeoStore((s) => s.town);
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["nearby", coords],
@@ -81,7 +75,6 @@ export default function NearYou() {
       <div className={styles.prompt}>
         <div className={styles.text}>
           <p className={styles.lead}>Nothing listed within {RADIUS_KM} km yet</p>
-          <p className={styles.sub}>Browse the categories below to see businesses across Kenya.</p>
         </div>
       </div>
     );
@@ -89,14 +82,6 @@ export default function NearYou() {
 
   return (
     <>
-      {town && (
-        <p className={styles.where}>
-          Showing businesses near {town}.{" "}
-          <button type="button" className={styles.change} onClick={request}>
-            Change
-          </button>
-        </p>
-      )}
       <CardGrid>
         {data.map((business) => (
           <li key={business.id}>

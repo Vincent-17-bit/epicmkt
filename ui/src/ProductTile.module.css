@@ -77,22 +77,35 @@
 
 .body {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) auto auto;
-  align-content: stretch;
+  grid-template-rows: auto auto auto;
+  align-content: space-between;
   gap: clamp(1px, 1.2cqw, 3px);
   min-height: 0;
   padding: var(--pad);
 }
 
-.name {
+.copy {
   display: -webkit-box;
   overflow: hidden;
   font-size: clamp(0.75rem, 7.4cqw, 0.9375rem);
-  font-weight: 650;
-  letter-spacing: -0.01em;
   line-height: 1.18;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.name {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.blurb {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  font-weight: 400;
+}
+
+.blurb::before {
+  content: "\00B7\00A0";
 }
 
 .priceRow {
@@ -220,4 +233,15 @@
   .tile:hover .img {
     transform: none;
   }
+}
+
+.closed {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: clamp(0.625rem, 5cqw, 0.75rem);
+  font-weight: 700;
+  line-height: 1.4;
 }

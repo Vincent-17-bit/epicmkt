@@ -8,8 +8,10 @@ import Notifications from "./pages/business/Notifications.jsx";
 import Questions from "./pages/business/Questions.jsx";
 import Exceptions from "./pages/business/Exceptions.jsx";
 import Flash from "./pages/business/Flash.jsx";
+import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
 import Preview from "./pages/business/Preview.jsx";
+import QrPoster from "./pages/business/QrPoster.jsx";
 
 export default function App() {
   return (
@@ -23,9 +25,11 @@ export default function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="questions" element={<Questions />} />
           <Route path="exceptions" element={<Exceptions />} />
+          <Route path="account" element={<Account />} />
           <Route path="catalog" element={<Catalog />} />
           <Route path="flash" element={<Flash />} />
           <Route path="preview" element={<Preview />} />
+          <Route path="qr" element={<QrPoster />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/business/subscription" replace />} />

@@ -36,6 +36,11 @@
   object-fit: cover;
 }
 
+.coverFrame,
+.logoFrame {
+  height: 100%;
+}
+
 .body {
   display: flex;
   flex: 1;

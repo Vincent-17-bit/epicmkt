@@ -92,6 +92,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .plan[data-current="true"] {

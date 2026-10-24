@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import Picture from "./Picture.jsx";
+import LazyImage from "./LazyImage.jsx";
 import styles from "./StoreThumb.module.css";
 
 /**
@@ -19,13 +19,13 @@ export default function StoreThumb({ coverUrl, logoUrl, className = "" }) {
 
   return (
     <span className={`${styles.thumb} ${className}`} data-kind={showCover ? "cover" : showLogo ? "logo" : "placeholder"}>
-      {showCover && <Picture src={coverUrl} onFail={() => setCoverFailed(true)} />}
+      {showCover && <LazyImage fill src={coverUrl} width={480} onError={() => setCoverFailed(true)} />}
       {showLogo && (
         <span className={styles.logoBox}>
-          <Picture src={logoUrl} onFail={() => setLogoFailed(true)} />
+          <LazyImage fill src={logoUrl} width={240} onError={() => setLogoFailed(true)} />
         </span>
       )}
-      {!showCover && !showLogo && <Picture src={null} />}
+      {!showCover && !showLogo && <LazyImage fill src={null} />}
     </span>
   );
 }

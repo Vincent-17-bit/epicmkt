@@ -277,35 +277,29 @@ describe("home products", () => {
     db.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "standard", verification_level: "unverified" }];
     db.items = [row(1, { image_paths: ["a/1.webp"] }), row(2), row(3, { business_id: "99999999-0000-0000-0000-000000000009" })];
     db.sales = [];
-    const { items, nextOffset } = await live.getHomeProducts({ limit: 10 });
-    expect(items.map((r) => r.name)).toEqual(["Product 1", "Product 2"]);
-    expect(nextOffset).toBeNull();
-    expect(items[0].business).toEqual({ id: SHOP, slug: "shop-a", name: "Shop A", verified: false, featured: false });
-    expect(items[0].pricing).toMatchObject({ regularPrice: 100, salePrice: 100, savings: 0 });
-    expect(items[0].flash).toBeNull();
+    const items = await live.getAllProducts();
+    expect(items.map((r) => r.name).sort()).toEqual(["Product 1", "Product 2"]);
+    const first = items.find((r) => r.name === "Product 1");
+    expect(first.business).toMatchObject({ id: SHOP, slug: "shop-a", name: "Shop A", verified: false, featured: false });
+    expect(first.pricing).toMatchObject({ regularPrice: 100, salePrice: 100, savings: 0 });
+    expect(first.flash).toBeNull();
   });
 
   it("flags verified and featured stores", async () => {
     const db = fake.current.state;
     db.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "premium", verification_level: "verified" }];
     db.items = [row(1)];
-    const { items } = await live.getHomeProducts({ limit: 10 });
+    const items = await live.getAllProducts();
     expect(items[0].business).toMatchObject({ verified: true, featured: true });
   });
 
-  it("pages through every product, and says where the next page starts", async () => {
+  it("returns every product once", async () => {
     const db = fake.current.state;
     db.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "standard", verification_level: "unverified" }];
     db.items = [1, 2, 3, 4, 5].map((n) => row(n));
-    const first = await live.getHomeProducts({ limit: 2, offset: 0 });
-    expect(first.nextOffset).toBe(2);
-    const second = await live.getHomeProducts({ limit: 2, offset: first.nextOffset });
-    expect(second.nextOffset).toBe(4);
-    const third = await live.getHomeProducts({ limit: 2, offset: second.nextOffset });
-    expect(third.nextOffset).toBeNull();
-    const all = [...first.items, ...second.items, ...third.items].map((r) => r.id);
-    expect(all).toHaveLength(5);
-    expect(new Set(all).size).toBe(5);
+    const ids = (await live.getAllProducts()).map((r) => r.id);
+    expect(ids).toHaveLength(5);
+    expect(new Set(ids).size).toBe(5);
   });
 
   it("puts a running flash sale's price on the product", async () => {
@@ -314,7 +308,7 @@ describe("home products", () => {
     db.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "standard", verification_level: "unverified" }];
     db.items = [row(1, { id: itemId, price: "1000", name: "Fade" })];
     db.sales = [saleRow({ business_id: SHOP, item_id: itemId })];
-    const { items } = await live.getHomeProducts({ limit: 10 });
+    const items = await live.getAllProducts();
     expect(items[0].pricing).toMatchObject({ regularPrice: 1000, salePrice: 800 });
     expect(items[0].flash).not.toBeNull();
   });

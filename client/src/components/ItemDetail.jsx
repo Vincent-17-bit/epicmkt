@@ -30,6 +30,7 @@ import { useUrgency } from "../hooks/useCountdown.js";
 import { kesText } from "../lib/flash.js";
 import { useInView } from "../hooks/useInView.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { usePageMeta } from "../hooks/usePageMeta.js";
 import OfferStrip from "./OfferStrip.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
@@ -83,6 +84,11 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const bannerInView = useInView(bannerRef, isPage ? undefined : bodyRef, current?.flash?.sale.id ?? null);
 
   usePageTitle(isPage && fresh ? `${fresh.name} | ${business.name}` : undefined);
+  usePageMeta(
+    isPage && fresh
+      ? { description: fresh.description, image: fresh.images?.[0]?.url ?? business.coverUrl ?? business.logoUrl, path: `/b/${business.slug}/i/${encodeURIComponent(fresh.id)}` }
+      : undefined
+  );
 
   useEffect(() => {
     if (!flashOver) return undefined;
@@ -429,6 +435,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                       {seller.townName}
                       {Number.isFinite(distanceKm) && ` · ${formatDistance(distanceKm)}`}
                     </p>
+                    {!seller.isOpen && seller.statusLine && <p className={styles.sellerMeta}>{seller.statusLine}</p>}
                   </div>
                   <span className={seller.isOpen ? styles.open : styles.closed}>{seller.isOpen ? t("item.open") : t("item.closed")}</span>
                 </div>

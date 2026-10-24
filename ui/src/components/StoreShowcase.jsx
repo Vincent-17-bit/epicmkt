@@ -1,10 +1,8 @@
-import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 import { isPreview } from "../preview.js";
-import BrandMark from "./BrandMark.jsx";
-import Picture from "./Picture.jsx";
+import LazyImage from "./LazyImage.jsx";
 import { OpenStatus, VerifiedMark } from "./Marks.jsx";
 import Skeleton from "./Skeleton.jsx";
 import StoreActions from "./StoreActions.jsx";
@@ -37,15 +35,9 @@ const inertLink = ({ href, children, ...rest }) => (
 const SOLD_OUT = new Set(["out_of_stock", "unavailable"]);
 
 function Avatar({ business }) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => setFailed(false), [business.logoUrl]);
   return (
     <span className={styles.avatar}>
-      {business.logoUrl && !failed ? (
-        <img src={business.logoUrl} alt="" loading="lazy" decoding="async" className={styles.avatarImg} onError={() => setFailed(true)} />
-      ) : (
-        <BrandMark className={styles.avatarMark} />
-      )}
+      <LazyImage fill src={business.logoUrl} width={96} />
     </span>
   );
 }
@@ -90,7 +82,7 @@ export default function StoreShowcase({
 
         <p className={styles.meta}>
           <span className={styles.where}>{where}</span>
-          <OpenStatus isOpen={Boolean(business.isOpen)} labels={text} />
+          <OpenStatus isOpen={Boolean(business.isOpen)} labels={text} title={business.statusLine} />
         </p>
 
         <ul className={styles.grid} data-slots={cells.length} aria-busy={loading || undefined}>
@@ -129,7 +121,7 @@ export default function StoreShowcase({
               <li key={item.id} className={styles.cell} data-span={cell.span}>
                 <Link href={preview ? undefined : itemHref?.(item)} className={`${styles.tile} ${soldOut ? styles.soldOut : ""}`} title={item.name}>
                   <span className={styles.media}>
-                    <Picture src={item.imageUrl} imgClassName={styles.picture} />
+                    <LazyImage fill src={item.imageUrl} width={240} className={styles.picture} />
                     {discount > 0 && <span className={styles.sale}>-{discount}%</span>}
                     {soldOut && <span className={styles.stock}>{text.soldOut}</span>}
                   </span>

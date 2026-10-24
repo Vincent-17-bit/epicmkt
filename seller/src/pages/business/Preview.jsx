@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { closingInfo, flashPrice, isOpenOn } from "@epicmkt/shared";
+import { flashPrice, statusOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
+import ShopQr from "../../components/ShopQr.jsx";
 import { errorText } from "../../lib/errors.js";
 import { hoursRows, socialLinks, statusText } from "../../lib/shopView.js";
 import ui from "../../styles/ui.module.css";
@@ -101,6 +102,8 @@ export default function Preview() {
   const { shop, items, flashSales } = preview.data;
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
+  const openStatus = safe(() => statusOf(hours, exceptions), statusOf({}, []));
+  const openFields = { isOpen: openStatus.isOpen, closesAt: openStatus.closesAt, opensAt: openStatus.opensAt, statusLine: openStatus.line, openStatus };
   const business = {
     id: shop.slug,
     slug: shop.slug,
@@ -129,8 +132,7 @@ export default function Preview() {
     offers: [],
     services: items.map(serviceOf),
     // Same functions and same data as the customer page, so the preview cannot disagree with it.
-    isOpen: safe(() => isOpenOn(hours, exceptions), false),
-    ...safe(() => closingInfo(hours, exceptions), { closesAt: null, opensAt: null }),
+    ...openFields,
   };
 
   return (
@@ -158,7 +160,7 @@ export default function Preview() {
           formatExpiry={() => ""}
           flash={<FlashSection cards={flashCards(flashSales, items)} />}
           socials={socialLinks(shop.socials)}
-          qr={null}
+          qr={<ShopQr slug={shop.slug} planKey={shop.planKey} hasLogo={!!shop.logoPath} label={`QR code linking to ${shop.name}`} />}
           shortUrl={`/s/${shop.slug}`}
           shareNote=""
           breadcrumbs={null}

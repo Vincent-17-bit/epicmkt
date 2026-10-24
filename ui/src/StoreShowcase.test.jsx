@@ -71,7 +71,7 @@ describe("StoreShowcase", () => {
       product(4)
     ]);
     expect(screen.getByText("-20%")).toBeInTheDocument();
-    expect(screen.getByText(/KSh\s?80/)).toBeInTheDocument();
+    expect(screen.getByText(/KES\s?80/)).toBeInTheDocument();
     expect(screen.getByText("Sold out")).toBeInTheDocument();
   });
 
@@ -79,7 +79,8 @@ describe("StoreShowcase", () => {
     const { container } = view(products(4));
     const img = container.querySelector("img[src='/p1.jpg']");
     fireEvent.error(img);
-    expect(container.querySelector("img[src='/p1.jpg']")).toBeNull();
+    // the picture stays out of sight and the EpicMKT placeholder keeps the cell's shape
+    expect(img.closest("[data-state]")).toHaveAttribute("data-state", "error");
   });
 
   it("shows placeholders instead of cells while products load", () => {

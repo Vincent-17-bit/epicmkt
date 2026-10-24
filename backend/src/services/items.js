@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isOpenNow } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -75,7 +75,8 @@ const sellerCard = (business, origin) => ({
   lng: business.lng,
   phone: business.phone,
   whatsapp: business.whatsapp,
-  isOpen: isOpenNow(business.hours),
+  isOpen: statusOf(business.hours, business.exceptions).isOpen,
+  statusLine: statusOf(business.hours, business.exceptions).line,
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 
@@ -226,8 +227,8 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
-// Newest listed products across all active stores, a page at a time, for the home page.
-export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
+// Every listed product of every active store, for the home page. Filtering, sorting and paging happen in the client.
+export async function getAllProducts() {
   await delay();
   runSweep();
   const rows = [];
@@ -246,14 +247,17 @@ export async function getHomeProducts({ limit = 24, offset = 0 } = {}) {
           slug: business.slug,
           name: business.name,
           verified: Boolean(business.verified),
-          featured: PLAN_FEATURES[business.plan]?.featured === true
+          featured: PLAN_FEATURES[business.plan]?.featured === true,
+          categoryId: business.categoryId,
+          town: business.area ?? "",
+          county: business.county ?? "",
+          isOpen: statusOf(business.hours, business.exceptions).isOpen,
+          statusLine: statusOf(business.hours, business.exceptions).line
         }
       });
     });
   }
-  rows.sort((a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || (a.id < b.id ? -1 : 1));
-  const end = offset + limit;
-  return { items: rows.slice(offset, end), nextOffset: end < rows.length ? end : null };
+  return rows;
 }
 
 // A random window of each store's listed products, for the home page's featured cards. The caller picks from it, so a
@@ -294,6 +298,7 @@ export async function getFlashSales({
   categoryId = null,
   town = null,
   endsWithin = null,
+  openNow = false,
   minPrice = null,
   maxPrice = null,
   sort = "ending",
@@ -312,6 +317,7 @@ export async function getFlashSales({
     if (businessId && business.id !== businessId && business.slug !== businessId) continue;
     if (categoryId && business.categoryId !== categoryId) continue;
     if (town && business.townSlug !== town) continue;
+    if (openNow && !statusOf(business.hours, business.exceptions).isOpen) continue;
     business.services.forEach((svc, index) => {
       if (svc.status === "unlisted") return;
       const item = toItem(business, svc, index);

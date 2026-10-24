@@ -45,7 +45,7 @@ export default function BusinessStep({ catalog, category }) {
             hint="One or two lines that tell customers what you do. No links."
           />
         </div>
-        <p className={styles.note}>Your public link will look like epicmkt.co.ke/s/your-shop. We create it when you are approved and it never changes.</p>
+        <p className={styles.note}>Your public link will look like epicmkt.app/s/your-shop. We create it when you are approved and it never changes.</p>
       </section>
 
       {category && (

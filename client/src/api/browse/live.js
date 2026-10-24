@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, cardFacts, distanceKm, isOpenNow, normalizeText, slugify } from "@epicmkt/shared";
+import { PLAN_FEATURES, businessStatus, cardFacts, distanceKm, normalizeText, slugify, statusOf } from "@epicmkt/shared";
 import { NotFoundError } from "@epicmkt/backend";
 import { store } from "@epicmkt/backend/store";
 import { supabase } from "../applications/supabaseClient";
@@ -30,13 +30,7 @@ const fetchAll = async (table, columns) => {
 const fetchCategoryRows = async () =>
   unwrap(await supabase.from("categories").select("id,name,icon,sort,active").eq("active", true).order("sort")) ?? [];
 
-const openNow = (hours) => {
-  try {
-    return Boolean(hours) && isOpenNow(hours);
-  } catch {
-    return false;
-  }
-};
+const isOpenNow = (b) => businessStatus(b.hours, b.exceptions).isOpen;
 
 const originOf = (lat, lng) => (Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null);
 
@@ -92,6 +86,7 @@ const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offerEnds 
     lat: row.lat,
     lng: row.lng,
     hours: row.hours && typeof row.hours === "object" ? row.hours : {},
+    exceptions: Array.isArray(row.exceptions) ? row.exceptions : [],
     createdAt: row.created_at ?? "",
     flashEnds,
     offerEnds,
@@ -174,6 +169,7 @@ const liveCount = (ends) => ends.filter((at) => at > Date.now()).length;
 
 const toSummary = (b, snap, origin) => {
   const category = snap.categories.get(b.categoryId) ?? null;
+  const status = statusOf(b.hours, b.exceptions);
   return {
     id: b.id,
     slug: b.slug,
@@ -198,7 +194,8 @@ const toSummary = (b, snap, origin) => {
     whatsapp: b.whatsapp,
     lat: b.lat,
     lng: b.lng,
-    isOpen: openNow(b.hours),
+    isOpen: status.isOpen,
+    statusLine: status.line,
     distanceKm: distanceTo(origin, b),
     promo: { flash: liveCount(b.flashEnds), offers: liveCount(b.offerEnds) }
   };
@@ -279,7 +276,7 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !onlyOpen || openNow(b.hours))
+    .filter((b) => !onlyOpen || isOpenNow(b))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .map((b) => ({

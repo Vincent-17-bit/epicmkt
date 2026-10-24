@@ -1,14 +1,14 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { formatKes } from "@epicmkt/shared";
 import { isPreview } from "./preview.js";
 import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
-import Picture from "./components/Picture.jsx";
+import LazyImage from "./components/LazyImage.jsx";
 import styles from "./ProductTile.module.css";
 
 const DEFAULT_LABELS = {
   was: "Was",
   verified: "Verified store",
   featured: "Featured store",
+  closed: "Closed",
   availability: (key) =>
     ({
       available: "Available",
@@ -36,7 +36,7 @@ const inertLink = ({ href, children, ...rest }) => (
 
 /**
  * A product card for lists of products from many stores. The picture takes two thirds of the card and the details
- * the last third: name, price and the store it is sold by, with a blue tick for a verified store and a gold mark for
+ * the last third: name, price and the store it is sold by, with a blue tick for a verified store and an amber star for
  * a featured one. The whole card is one link, so the store name is text, not a nested link.
  *
  * `item.business` is `{ name, verified, featured }`. Everything that varies in wording comes in as `labels`.
@@ -57,6 +57,9 @@ export default function ProductTile({
   const onSale = Boolean(pricing && pricing.savings > 0);
   const availability = item.availability ?? "available";
   const soldOut = SOLD_OUT.has(availability);
+  // A short line after the name. It shares the name's two lines, so it fills the space a short name leaves and is cut
+  // with an ellipsis when long: it can never push the price or the store out of the card.
+  const blurb = (item.shortDescription || item.description || item.section || "").replace(/\s+/g, " ").trim();
 
   return (
     <Link
@@ -65,14 +68,17 @@ export default function ProductTile({
       data-mode={preview ? "preview" : undefined}
     >
       <span className={styles.media}>
-        <Picture src={item.imageUrl} imgClassName={styles.img} />
+        <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
         {soldOut && <span className={styles.stock}>{labels.availability(availability)}</span>}
       </span>
 
       <span className={styles.body}>
-        <span className={styles.name}>{item.name}</span>
+        <span className={styles.copy}>
+          <span className={styles.name}>{item.name}</span>
+          {blurb && <span className={styles.blurb}> {blurb}</span>}
+        </span>
         <span className={styles.priceRow}>
           {pricing ? (
             <span className={styles.prices}>
@@ -96,6 +102,11 @@ export default function ProductTile({
         <span className={styles.store}>
           {store.featured && <FeaturedMark label={labels.featured} />}
           <span className={styles.storeName}>{store.name}</span>
+          {store.isOpen === false && (
+            <span className={styles.closed} title={store.statusLine ?? undefined}>
+              {labels.closed ?? DEFAULT_LABELS.closed}
+            </span>
+          )}
           {store.verified && <VerifiedMark label={labels.verified} />}
         </span>
       </span>

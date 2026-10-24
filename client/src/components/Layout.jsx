@@ -14,6 +14,7 @@ import styles from "./Layout.module.css";
 export default function Layout() {
   const { pathname, hash, key } = useLocation();
   const navType = useNavigationType();
+  const { state } = useLocation();
   const current = useRef({ key, pathname });
   current.current = { key, pathname };
   const menuOpen = useUiStore((s) => s.menuOpen);
@@ -32,6 +33,8 @@ export default function Layout() {
   }, []);
 
   useEffect(() => {
+    // Changing a filter rewrites the address in place; the page must stay where the shopper is reading.
+    if (navType === "REPLACE" && state?.keepScroll) return undefined;
     if (hash) {
       document.getElementById(hash.slice(1))?.scrollIntoView();
       return undefined;

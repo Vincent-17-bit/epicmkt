@@ -271,9 +271,9 @@ export const businesses = [
         variants: [{ id: "small", label: "Small", price: 3500 }, { id: "medium", label: "Medium", price: 2500 }, { id: "jumbo", label: "Jumbo", price: 1800 }],
         duration: "4 to 6 hours",
         term: "Lasts 4 to 6 weeks",
-        terms: "A KSh 500 deposit secures your slot. Hair extensions are not included.",
+        terms: "A KES 500 deposit secures your slot. Hair extensions are not included.",
         includes: ["Hair parting and braiding", "Ends sealed"],
-        specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KSh 500" }, { group: "Booking", label: "Cancel", value: "24 hours notice" }]
+        specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KES 500" }, { group: "Booking", label: "Cancel", value: "24 hours notice" }]
       },
       { name: "Cornrows", priceKes: 800, section: "Braids", description: "Straight-back or styled cornrows." },
       { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited" }

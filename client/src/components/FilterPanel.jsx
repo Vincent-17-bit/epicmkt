@@ -61,7 +61,7 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
       </div>
 
       <fieldset className={styles.group}>
-        <legend className={styles.legend}>Price from (KSh)</legend>
+        <legend className={styles.legend}>Price from (KES)</legend>
         <div className={styles.range}>
           <label htmlFor={id("pmin")} className={styles.srOnly}>
             Minimum price

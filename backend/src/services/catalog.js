@@ -3,13 +3,12 @@ import {
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
-  closingInfo,
   cardFacts,
   distanceKm,
   filterableFields,
   matchesFilter,
   searchableText,
-  isOpenNow,
+  statusOf,
   normalizeText,
   todayHours
 } from "@epicmkt/shared";
@@ -17,6 +16,7 @@ import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { promoCountsFor, runSweep } from "../promotions.js";
+import { looksLikeCoordinates, scrubPayload } from "../privacy.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
 
@@ -70,7 +70,8 @@ const toSummary = (b, origin) => ({
   whatsapp: b.whatsapp,
   lat: b.lat,
   lng: b.lng,
-  isOpen: isOpenNow(b.hours),
+  isOpen: statusOf(b.hours, b.exceptions).isOpen,
+  statusLine: statusOf(b.hours, b.exceptions).line,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });
@@ -78,14 +79,18 @@ const toSummary = (b, origin) => ({
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
   const now = Date.now();
+  const open = statusOf(b.hours, b.exceptions);
   return {
     ...rest,
     offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
     services: b.services.filter((svc) => svc.status !== "unlisted"),
-    ...closingInfo(b.hours),
+    closesAt: open.closesAt,
+    opensAt: open.opensAt,
+    openStatus: open,
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
-    isOpen: isOpenNow(b.hours),
+    isOpen: open.isOpen,
+    statusLine: open.line,
     todayHours: todayHours(b.hours),
     distanceKm: origin ? distanceKm(origin, b) : null
   };
@@ -171,7 +176,7 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !openNow || isOpenNow(b.hours))
+    .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .filter((b) => matchesAttrs(b, attrEntries))
@@ -369,6 +374,7 @@ export async function getTopSearches(limit = 8) {
 }
 
 export async function logSearch(term) {
+  if (looksLikeCoordinates(term)) return { ok: false };
   const clean = normalizeText(term);
   if (clean.length < 2 || clean.length > 60) return { ok: false };
   store.searches.push({ term: clean, count: 1, at: Date.now() });
@@ -377,7 +383,8 @@ export async function logSearch(term) {
 
 export async function logEvent(name, payload = {}) {
   if (typeof name !== "string" || !/^[a-z_]{2,40}$/.test(name)) return { ok: false };
-  store.analytics.push({ name, payload, at: new Date().toISOString() });
+  // The sink strips positions itself, so no call site can leak one by accident.
+  store.analytics.push({ name, payload: scrubPayload(payload), at: new Date().toISOString() });
   if (store.analytics.length > 1000) store.analytics.shift();
   return { ok: true };
 }

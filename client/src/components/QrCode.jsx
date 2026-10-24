@@ -1,17 +1,27 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { shopQrSpec } from "@epicmkt/shared";
 import styles from "./QrCode.module.css";
 
-export default function QrCode({ value, label }) {
-  const [svg, setSvg] = useState("");
+// The same code the seller sees on their preview and prints on their poster: same link, same recipe.
+// It redraws whenever the shop's link, plan or logo changes. The image is a PNG data URL, never HTML.
+export default function QrCode({ slug, plan, hasLogo = false, label }) {
+  const [src, setSrc] = useState("");
 
   useEffect(() => {
     let live = true;
-    QRCode.toString(value, { type: "svg", margin: 1, errorCorrectionLevel: "M" }).then((out) => live && setSvg(out));
+    const { text, ecl } = shopQrSpec(slug, { planKey: plan, hasLogo, site: import.meta.env?.VITE_SITE_URL });
+    QRCode.toDataURL(text, { margin: 1, width: 512, errorCorrectionLevel: ecl })
+      .then((url) => live && setSrc(url))
+      .catch(() => live && setSrc(""));
     return () => {
       live = false;
     };
-  }, [value]);
+  }, [slug, plan, hasLogo]);
 
-  return <div className={styles.qr} role="img" aria-label={label} dangerouslySetInnerHTML={{ __html: svg }} />;
+  return (
+    <div className={styles.qr}>
+      {src ? <img src={src} alt={label} width="512" height="512" decoding="async" /> : null}
+    </div>
+  );
 }

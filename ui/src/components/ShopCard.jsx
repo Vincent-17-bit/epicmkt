@@ -6,7 +6,7 @@ import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
 import Button from "./Button.jsx";
 import { FeaturedBadge, VerifiedBadge } from "./Badges.jsx";
-import Picture from "./Picture.jsx";
+import LazyImage from "./LazyImage.jsx";
 import PromoChip from "./PromoChip.jsx";
 import styles from "./ShopCard.module.css";
 
@@ -49,7 +49,7 @@ export default function ShopCard({
     >
       <div className={styles.top}>
         <Link href={to} className={styles.cover} tabIndex={-1} aria-hidden="true">
-          <Picture src={business.coverUrl} imgClassName={styles.coverImg} />
+          <LazyImage src={business.coverUrl} className={styles.coverImg} frameClassName={styles.coverFrame} width={800} sizes="(min-width: 1024px) 33vw, 100vw" />
         </Link>
         <PromoChip promo={business.promo} className={styles.promo} labels={promoLabels} />
         {hasBadges && (
@@ -64,7 +64,7 @@ export default function ShopCard({
         <div className={styles.head}>
           <span className={styles.icon}>
             {business.logoUrl ? (
-              <img src={business.logoUrl} alt="" loading="lazy" decoding="async" className={styles.logoImg} />
+              <LazyImage src={business.logoUrl} className={styles.logoImg} frameClassName={styles.logoFrame} width={240} />
             ) : (
               <FontAwesomeIcon icon={icon} />
             )}
@@ -76,7 +76,7 @@ export default function ShopCard({
               </Link>
             </h3>
             <p className={styles.where}>
-              {business.categoryName} · {business.area}, {business.county}
+              {business.categoryName} · {`${business.area}, ${business.county}`}
             </p>
           </div>
         </div>
@@ -117,6 +117,7 @@ export default function ShopCard({
           </span>
           <span className={business.isOpen ? styles.open : styles.closed}>{business.isOpen ? "Open now" : "Closed"}</span>
         </div>
+        {business.statusLine && <p className={styles.statusLine}>{business.statusLine}</p>}
 
         <div className={styles.actions}>
           <Button as="a" size="sm" icon={faPhone} {...act.link(telLink(business.phone), track("call"))}>

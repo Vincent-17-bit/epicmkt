@@ -47,7 +47,7 @@ export const whatsappLink = (phone, text) =>
 export const directionsLink = (lat, lng) =>
   `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
 
-export const formatKes = (amount) => `KSh ${Number(amount).toLocaleString("en-KE")}`;
+export const formatKes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
 export function distanceKm(a, b) {
   const rad = Math.PI / 180;

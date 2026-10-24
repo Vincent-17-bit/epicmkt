@@ -68,7 +68,7 @@ export default function StoreTile({
           </h3>
           {where && <p className={styles.where}>{where}</p>}
           <p className={styles.facts}>
-            <OpenStatus isOpen={Boolean(business.isOpen)} labels={text} />
+            <OpenStatus isOpen={Boolean(business.isOpen)} labels={text} title={business.statusLine} />
             {hasPrice && (
               <span className={styles.price}>
                 <span className={styles.from}>{text.from} </span>

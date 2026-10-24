@@ -48,7 +48,7 @@ export default function Home() {
   const { data, isPending, isError, isSuccess, refetch } = useQuery({
     queryKey: ["categories"],
     queryFn: getCategories,
-    staleTime: 5 * 60_000
+    staleTime: 60_000
   });
 
   const category = slug ? data?.find((c) => c.id === slug) : null;
@@ -137,6 +137,8 @@ export default function Home() {
 
       <FeaturedStores />
 
+      <HomeProducts />
+
       <section id="categories" className={styles.section} aria-labelledby="categories-title">
         <Container>
           <h2 id="categories-title" className={styles.heading}>
@@ -180,9 +182,6 @@ export default function Home() {
         </Container>
       </section>
 
-      <HomeProducts />
-
-
       <RecentlyAdded />
 
       <section className={styles.section} aria-labelledby="cta-title">
@@ -195,7 +194,7 @@ export default function Home() {
               <h2 id="cta-title" className={styles.ctaTitle}>
                 List your business
               </h2>
-              <p className={styles.ctaCopy}>Get found by customers nearby. Standard from KSh 500 a month, Premium from KSh 1,500.</p>
+              <p className={styles.ctaCopy}>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
             </div>
             <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight} className={styles.ctaButton}>
               Become a seller

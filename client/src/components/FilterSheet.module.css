@@ -37,3 +37,47 @@
 .show {
   flex: 1;
 }
+
+.count {
+  display: inline-block;
+  animation: pop 180ms ease-out;
+}
+
+.show[data-empty] {
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--text);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0.4;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count {
+    animation: none;
+  }
+}
+
+.show {
+  white-space: nowrap;
+}
+
+@media (max-width: 359px) {
+  .foot {
+    gap: var(--space-2);
+    padding-inline: var(--space-3);
+  }
+
+  .show {
+    padding-inline: var(--space-3);
+    font-size: var(--text-sm);
+  }
+}

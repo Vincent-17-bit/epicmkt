@@ -10,7 +10,7 @@ describe("StoreTile", () => {
     render(<StoreTile business={priced} href="/b/fade-kings" />);
     expect(screen.getByRole("heading", { name: /Fade Kings/ })).toBeInTheDocument();
     expect(screen.getByText("Barbershops · Maseno")).toBeInTheDocument();
-    expect(screen.getByText(/KSh\s?150/)).toBeInTheDocument();
+    expect(screen.getByText(/KES\s?150/)).toBeInTheDocument();
     expect(screen.getByText("Open")).toBeInTheDocument();
     expect(screen.queryByText("Sharp cuts")).not.toBeInTheDocument();
     expect(screen.queryByText("4.5")).not.toBeInTheDocument();
@@ -50,8 +50,8 @@ describe("StoreTile", () => {
     const { container } = render(<StoreTile business={fresh} href="/b/new-shop" />);
     expect(screen.getByRole("link", { name: /Brand New Shop/ })).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
-    expect(container.querySelector("svg")).not.toBeNull();
-    expect(screen.queryByText(/KSh/)).not.toBeInTheDocument();
+    expect(container.querySelector("[data-state='error']")).not.toBeNull(); // the EpicMKT placeholder shows
+    expect(screen.queryByText(/KES/)).not.toBeInTheDocument();
     expect(screen.queryByRole("group")).not.toBeInTheDocument();
   });
 
@@ -64,5 +64,6 @@ describe("StoreTile", () => {
     const { container } = render(<StoreTile business={{ ...priced, coverUrl: "/broken.jpg" }} href="/x" />);
     fireEvent.error(container.querySelector("img"));
     expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("[data-state='error']")).not.toBeNull();
   });
 });
