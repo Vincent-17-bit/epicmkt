@@ -1,0 +1,332 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const fake = vi.hoisted(() => ({ current: null }));
+vi.mock("../applications/supabaseClient", async () => {
+  const { createFakeSupabase } = await import("../../test/fakeSupabase.js");
+  fake.current = createFakeSupabase();
+  return { supabase: fake.current.client };
+});
+
+import * as live from "./liveLegacy.js";
+import { saleRow } from "../../test/fakeSupabase.js";
+
+const db = () => fake.current.state;
+
+const biz = (n, over = {}) => ({
+  id: `10000000-0000-0000-0000-00000000000${n}`,
+  slug: `shop-${n}`,
+  name: `Shop ${n}`,
+  category_id: "bakeries",
+  plan_key: "standard",
+  verification_level: "unverified",
+  tagline: "",
+  description: "",
+  phone: "+254700000000",
+  whatsapp: null,
+  county: "Kisumu",
+  town: "Kisumu",
+  lat: -0.1,
+  lng: 34.75,
+  logo_path: null,
+  cover_path: null,
+  tags: [],
+  hours: {},
+  created_at: `2026-0${n}-01T00:00:00Z`,
+  ...over
+});
+
+const item = (n, businessId, price, price_type = "fixed") => ({ id: `item-${n}`, business_id: businessId, price, price_type });
+
+beforeEach(() => {
+  live.invalidateBrowseCache();
+  db().businesses = [];
+  db().items = [];
+  db().categories = [];
+  db().sales = [];
+  db().offers = [];
+  db().failing = null;
+  db().rpc = {};
+  db().calls = [];
+});
+
+describe("live browse adapter", () => {
+  it("lists a live business that the mock never knew about", async () => {
+    db().businesses = [biz(1, { name: "Sunrise Bakery", slug: "sunrise-bakery-777001", plan_key: "premium", verification_level: "verified" })];
+    db().items = [item(1, biz(1).id, "250.00"), item(2, biz(1).id, "120")];
+    const result = await live.searchBusinesses({});
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({ slug: "sunrise-bakery-777001", plan: "premium", verified: true, fromPriceKes: 120, townSlug: "kisumu" });
+  });
+
+  it("returns nothing, not mock data, when the database is empty", async () => {
+    expect((await live.searchBusinesses({})).total).toBe(0);
+    expect(await live.getFeaturedBusinesses({})).toEqual([]);
+  });
+
+  it("searches by name, tag and category with weighting", async () => {
+    db().businesses = [biz(1, { name: "Sunrise Bakery" }), biz(2, { name: "Other", tags: ["bread"] }), biz(3, { name: "Garage", category_id: "mechanics" })];
+    const byName = await live.searchBusinesses({ query: "sunrise" });
+    expect(byName.items.map((b) => b.slug)).toEqual(["shop-1"]);
+    const byTag = await live.searchBusinesses({ query: "bread" });
+    expect(byTag.items.map((b) => b.slug)).toEqual(["shop-2"]);
+    const none = await live.searchBusinesses({ query: "zzz" });
+    expect(none.total).toBe(0);
+  });
+
+  it("filters by category, town, price and verified", async () => {
+    db().businesses = [
+      biz(1, { town: "Maseno", verification_level: "verified" }),
+      biz(2, { category_id: "mechanics" }),
+      biz(3, { town: "Maseno" })
+    ];
+    db().items = [item(1, biz(1).id, 100), item(2, biz(3).id, 900)];
+    expect((await live.searchBusinesses({ categoryId: "mechanics" })).items.map((b) => b.slug)).toEqual(["shop-2"]);
+    expect((await live.searchBusinesses({ town: "maseno" })).total).toBe(2);
+    expect((await live.searchBusinesses({ verifiedOnly: true })).items.map((b) => b.slug)).toEqual(["shop-1"]);
+    expect((await live.searchBusinesses({ maxPrice: 200 })).items.map((b) => b.slug)).toEqual(["shop-1"]);
+  });
+
+  it("ranks premium first on relevance and paginates", async () => {
+    db().businesses = [biz(1), biz(2, { plan_key: "premium" }), biz(3)];
+    const first = await live.searchBusinesses({ pageSize: 2 });
+    expect(first.items[0].slug).toBe("shop-2");
+    expect(first).toMatchObject({ total: 3, totalPages: 2, page: 1 });
+    expect((await live.searchBusinesses({ pageSize: 2, page: 2 })).items).toHaveLength(1);
+  });
+
+  it("sorts newest and by distance", async () => {
+    db().businesses = [biz(1, { lat: -0.5, lng: 34.9 }), biz(2, { lat: -0.1, lng: 34.75 })];
+    expect((await live.searchBusinesses({ sort: "newest" })).items[0].slug).toBe("shop-2");
+    const near = await live.searchBusinesses({ sort: "distance", lat: -0.1, lng: 34.75 });
+    expect(near.items[0]).toMatchObject({ slug: "shop-2" });
+    expect(near.items[0].distanceKm).toBeCloseTo(0, 1);
+  });
+
+  it("featured means premium plan, seed shuffles deterministically", async () => {
+    db().businesses = [biz(1), biz(2, { plan_key: "premium" }), biz(3, { plan_key: "premium" })];
+    const a = await live.getFeaturedBusinesses({ seed: 7 });
+    const b = await live.getFeaturedBusinesses({ seed: 7 });
+    expect(a.map((x) => x.slug).sort()).toEqual(["shop-2", "shop-3"]);
+    expect(a.map((x) => x.slug)).toEqual(b.map((x) => x.slug));
+  });
+
+  it("nearby needs an origin and respects the radius", async () => {
+    db().businesses = [biz(1, { lat: -0.1, lng: 34.75 }), biz(2, { lat: 1.3, lng: 36.8 }), biz(3, { lat: null, lng: null })];
+    expect(await live.getNearbyBusinesses({})).toEqual([]);
+    const near = await live.getNearbyBusinesses({ lat: -0.1, lng: 34.75, radiusKm: 10 });
+    expect(near.map((x) => x.slug)).toEqual(["shop-1"]);
+  });
+
+  it("similar returns same-category businesses and throws for unknown refs", async () => {
+    db().businesses = [biz(1), biz(2), biz(3, { category_id: "mechanics" })];
+    const similar = await live.getSimilarBusinesses("shop-1");
+    expect(similar.map((x) => x.slug)).toEqual(["shop-2"]);
+    await expect(live.getSimilarBusinesses("missing")).rejects.toMatchObject({ name: "NotFoundError" });
+  });
+
+  it("categories merge database rows with local metadata and live counts", async () => {
+    db().categories = [
+      { id: "bakeries", name: "Bakeries", icon: "store", sort: 1, active: true },
+      { id: "brand-new", name: "Brand New", icon: "store", sort: 2, active: true }
+    ];
+    db().businesses = [biz(1), biz(2)];
+    const cats = await live.getCategories();
+    const bakeries = cats.find((c) => c.id === "bakeries");
+    expect(bakeries.count).toBe(2);
+    expect(bakeries.hue).toEqual(expect.any(Number));
+    expect(cats.find((c) => c.id === "brand-new")).toMatchObject({ count: 0, singular: "Brand New" });
+  });
+
+  it("falls back to local category definitions when the table is empty", async () => {
+    const cats = await live.getCategories();
+    expect(cats.length).toBeGreaterThan(0);
+  });
+
+  it("towns and facets are built from live businesses", async () => {
+    db().businesses = [biz(1, { town: "Maseno" }), biz(2, { town: "Kisumu" }), biz(3, { town: null })];
+    db().items = [item(1, biz(1).id, 50), item(2, biz(2).id, 500)];
+    const towns = await live.getTowns();
+    expect(towns.map((t) => t.slug)).toEqual(["kisumu", "maseno"]);
+    const facets = await live.getSearchFacets({});
+    expect(facets.price).toEqual({ min: 50, max: 500 });
+    expect(facets.fields).toEqual([]);
+    expect(await live.getCounties()).toEqual(["Kisumu"]);
+  });
+
+  it("suggests categories, businesses and tags", async () => {
+    db().businesses = [biz(1, { name: "Sunrise Bakery", tags: ["sourdough"] })];
+    const out = await live.getSuggestions("sun");
+    expect(out).toContainEqual({ type: "business", label: "Sunrise Bakery", slug: "shop-1" });
+    expect(await live.getSuggestions("s")).toEqual([]);
+  });
+
+  it("pages through more than 1000 rows", async () => {
+    db().businesses = Array.from({ length: 1200 }, (_, i) => biz(1, { id: `id-${i}`, slug: `s-${i}`, name: `B ${i}` }));
+    expect((await live.searchBusinesses({ pageSize: 1 })).total).toBe(1200);
+  });
+
+  it("surfaces database errors instead of showing mock data", async () => {
+    db().failing = { message: "boom", code: "500" };
+    await expect(live.searchBusinesses({})).rejects.toMatchObject({ name: "BrowseApiError" });
+  });
+
+  it("counts each business's live flash sales so the card shows its chip", async () => {
+    db().businesses = [biz(1), biz(2)];
+    const now = Date.now();
+    db().sales = [
+      saleRow({ id: "s1", business_id: biz(1).id, now }),
+      saleRow({ id: "s2", business_id: biz(1).id, now }),
+      saleRow({ id: "s3", business_id: biz(1).id, now, ends_at: new Date(now - 1000).toISOString() })
+    ];
+    const { items } = await live.searchBusinesses({});
+    const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));
+    expect(bySlug["shop-1"]).toEqual({ flash: 2, offers: 0 });
+    expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
+  });
+
+  it("counts live offers, including ones with no end date, and ignores finished ones", async () => {
+    db().businesses = [biz(1), biz(2)];
+    const now = Date.now();
+    db().offers = [
+      { id: "o1", business_id: biz(1).id, ends_at: null },
+      { id: "o2", business_id: biz(1).id, ends_at: new Date(now + 3600000).toISOString() },
+      { id: "o3", business_id: biz(1).id, ends_at: new Date(now - 1000).toISOString() }
+    ];
+    const { items } = await live.searchBusinesses({});
+    const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));
+    expect(bySlug["shop-1"]).toEqual({ flash: 0, offers: 2 });
+    expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
+  });
+
+  it("still lists businesses, without chips, when offers or sales cannot be read", async () => {
+    db().businesses = [biz(1)];
+    const original = fake.current.client.from;
+    fake.current.client.from = (table) => {
+      if (table === "public_offers" || table === "public_flash_sales") throw new Error("view missing");
+      return original(table);
+    };
+    try {
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].promo).toEqual({ flash: 0, offers: 0 });
+    } finally {
+      fake.current.client.from = original;
+    }
+  });
+
+  describe("seller exceptions", () => {
+    const allWeek = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["00:00", "23:59"]]));
+    const today = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+    const closedToday = { id: "e1", date: today(), kind: "closed", intervals: [], note: "Public holiday" };
+
+    it("a shop closed by an exception is closed in search, featured and the Open now filter, with the reason", async () => {
+      db().businesses = [
+        biz(1, { name: "Shut", plan_key: "premium", hours: allWeek, exceptions: [closedToday] }),
+        biz(2, { name: "Open", plan_key: "premium", hours: allWeek, exceptions: [] })
+      ];
+      const search = await live.searchBusinesses({});
+      const shut = search.items.find((b) => b.name === "Shut");
+      expect(shut.isOpen).toBe(false);
+      expect(shut.statusLine).toMatch(/^Closed today: Public holiday/);
+      const featured = await live.getFeaturedBusinesses({});
+      expect(featured.find((b) => b.name === "Shut").isOpen).toBe(false);
+      expect(featured.find((b) => b.name === "Open").isOpen).toBe(true);
+      const onlyOpen = await live.searchBusinesses({ openNow: true });
+      expect(onlyOpen.items.map((b) => b.name)).toEqual(["Open"]);
+    });
+  });
+
+  describe("database search", () => {
+    const row = (n, over = {}) => ({ ...biz(n), exceptions: [], from_price: null, distance_km: null, is_open: false, ...over });
+    const serve = (name, fn) => {
+      db().rpc[name] = fn;
+    };
+
+    it("sends the filters to the database and maps its rows to cards", async () => {
+      db().categories = [{ id: "bakeries", name: "Bakeries", icon: "bread", sort: 1, active: true }];
+      let seen;
+      serve("search_businesses", (args) => {
+        seen = args;
+        return { total: 1, page: 2, page_size: 100, items: [row(1, { name: "Sunrise", from_price: "120.00", distance_km: 2.5, hours: { mon: ["08:00", "17:00"] } })] };
+      });
+      const result = await live.searchBusinesses({ query: "bread", categoryId: "bakeries", openNow: true, radiusKm: 5, lat: -0.1, lng: 34.75, sort: "distance", page: 2, pageSize: 5000, seed: 7 });
+      expect(seen).toMatchObject({ p_query: "bread", p_category: "bakeries", p_open_now: true, p_radius_km: 5, p_lat: -0.1, p_lng: 34.75, p_sort: "distance", p_page: 2, p_page_size: 100, p_seed: "7" });
+      expect(result).toMatchObject({ total: 1, page: 2, pageSize: 100, totalPages: 1 });
+      expect(result.items[0]).toMatchObject({ name: "Sunrise", fromPriceKes: 120, distanceKm: 2.5, categoryName: "Bakeries" });
+      expect(db().calls).not.toContain("public_businesses");
+    });
+
+    it("reads promo chips only for the businesses on the page", async () => {
+      const first = row(1);
+      db().sales = [saleRow({ business_id: first.id, ends_at: new Date(Date.now() + 3600000).toISOString() })];
+      serve("search_businesses", () => ({ total: 1, items: [first] }));
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].promo.flash).toBe(1);
+    });
+
+    it("shows the closed reason from the seller's exception on every card", async () => {
+      const allWeek = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["00:00", "23:59"]]));
+      const date = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+      serve("search_businesses", () => ({ total: 1, items: [row(1, { hours: allWeek, exceptions: [{ id: "e", date, kind: "closed", intervals: [], note: "Stocktake" }] })] }));
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].isOpen).toBe(false);
+      expect(items[0].statusLine).toMatch(/^Closed today: Stocktake/);
+    });
+
+    it("falls back to the in-browser search when the database function is not installed yet", async () => {
+      db().businesses = [biz(1, { name: "Local Shop" })];
+      const result = await live.searchBusinesses({});
+      expect(result.items.map((b) => b.name)).toEqual(["Local Shop"]);
+    });
+
+    it("does not hide real database errors behind the fallback", async () => {
+      db().businesses = [biz(1)];
+      db().failing = { code: "57014", message: "timeout" };
+      await expect(live.searchBusinesses({})).rejects.toThrow("timeout");
+    });
+
+    it("maps facets and picks the single matching category", async () => {
+      db().categories = [{ id: "bakeries", name: "Bakeries", icon: "bread", sort: 1, active: true }];
+      serve("search_facets", () => ({ towns: [{ slug: "kisumu", name: "Kisumu", county: "Kisumu", count: 3 }], price: { min: 80, max: 300 }, category_ids: ["bakeries"] }));
+      expect(await live.getSearchFacets({ query: "bread" })).toEqual({
+        towns: [{ slug: "kisumu", name: "Kisumu", county: "Kisumu", count: 3 }],
+        price: { min: 80, max: 300 },
+        categoryId: "bakeries",
+        categoryName: "Bakeries",
+        fields: []
+      });
+    });
+
+    it("asks for suggestions only from two characters", async () => {
+      serve("search_suggestions", () => [{ type: "business", label: "Alpha", slug: "alpha" }]);
+      expect(await live.getSuggestions("a")).toEqual([]);
+      expect(db().calls).not.toContain("search_suggestions");
+      expect(await live.getSuggestions("al", 4)).toEqual([{ type: "business", label: "Alpha", slug: "alpha" }]);
+    });
+  });
+
+  describe("in-browser engine", () => {
+    it("sorts suggestions by name inside categories, businesses and terms", async () => {
+      db().categories = [{ id: "bakeries", name: "Barber Bakes", icon: "bread", sort: 1, active: true }];
+      db().businesses = [
+        biz(1, { name: "Zed Barbers", tags: ["barber shop"] }),
+        biz(2, { name: "Alpha Barbers", tags: ["Barber tools", "barber shop"] }),
+        biz(3, { name: "Mid barbershop" })
+      ];
+      const out = await live.getSuggestions("barber", 10);
+      expect(out.map((s) => `${s.type}:${s.label}`)).toEqual([
+        "category:Barber Bakes",
+        "business:Alpha Barbers",
+        "business:Mid barbershop",
+        "business:Zed Barbers",
+        "term:barber shop",
+        "term:Barber tools"
+      ]);
+    });
+
+    it("reads a query to 8 words only", async () => {
+      db().businesses = [biz(1, { name: "Alpha Beta Gamma Delta Epsilon Zeta Eta Theta" })];
+      expect((await live.searchBusinesses({ query: "alpha beta gamma delta epsilon zeta eta theta nonsense" })).total).toBe(1);
+      expect((await live.searchBusinesses({ query: "nonsense alpha beta gamma delta epsilon zeta eta theta" })).total).toBe(0);
+    });
+  });
+});

@@ -27,6 +27,24 @@ const siteUrlInHtml = () => {
   };
 };
 
+// Opens the connection to Supabase (DNS, TCP, TLS) while the page is still parsing, so the first data request and the first
+// pictures do not pay for it. Skipped when no Supabase URL is set (demo and test builds).
+const preconnectSupabase = () => {
+  let origin = "";
+  return {
+    name: "preconnect-supabase",
+    configResolved(config) {
+      try {
+        origin = new URL(String(config.env.VITE_SUPABASE_URL ?? "")).origin;
+      } catch {
+        origin = "";
+      }
+    },
+    transformIndexHtml: (html) =>
+      origin ? html.replace("</title>", `</title>\n    <link rel="preconnect" href="${origin}" crossorigin />\n    <link rel="dns-prefetch" href="${origin}" />`) : html
+  };
+};
+
 export default defineConfig({
   test: {
     environment: "jsdom",
@@ -37,6 +55,7 @@ export default defineConfig({
   plugins: [
     requireSupabase(),
     siteUrlInHtml(),
+    preconnectSupabase(),
     react(),
     VitePWA({
       registerType: "prompt",

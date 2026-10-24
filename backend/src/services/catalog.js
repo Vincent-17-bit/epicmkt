@@ -389,11 +389,11 @@ export async function logEvent(name, payload = {}) {
   return { ok: true };
 }
 
-export async function logContactEvent({ businessId, type }) {
+export async function logContactEvent({ businessId, type, itemId = null }) {
   if (!EVENT_TYPES.includes(type)) return { ok: false };
   const business = store.businesses.find((b) => b.id === businessId);
   if (!business) return { ok: false };
   business.stats[type] += 1;
-  store.events.push({ businessId, type, at: new Date().toISOString() });
+  store.events.push({ businessId, type, itemId, at: new Date().toISOString() });
   return { ok: true };
 }

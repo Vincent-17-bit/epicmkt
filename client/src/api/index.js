@@ -24,7 +24,8 @@ export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
-  getAll: () => flashApi.getAllProducts()
+  getAll: () => flashApi.getAllProducts(),
+  getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts)
 };
 export const flash = flashApi.flash;
 export const offers = {

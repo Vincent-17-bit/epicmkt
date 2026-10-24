@@ -1,0 +1,106 @@
+.bar {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(var(--count, 3), minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.action {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.1;
+  text-decoration: none;
+  transition: background-color var(--dur) ease, transform var(--dur) ease, box-shadow var(--dur) ease;
+}
+
+.primary {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.secondary {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.icon {
+  font-size: 0.95rem;
+}
+
+.label {
+  display: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Room for words: icon over label, a little taller so the label never crowds the icon. */
+@container (min-width: 215px) {
+  .action {
+    min-height: 52px;
+    padding: var(--space-2) 2px;
+  }
+
+  .label {
+    display: block;
+  }
+}
+
+@media (hover: hover) {
+  .action:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .primary:hover {
+    background: var(--primary-hover);
+  }
+
+  .secondary:hover {
+    background: var(--primary-tint);
+  }
+}
+
+.action:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
+
+.primary:active {
+  background: var(--primary-pressed);
+}
+
+.action:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.action[aria-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action {
+    transition: none;
+  }
+
+  .action:hover {
+    transform: none;
+  }
+}

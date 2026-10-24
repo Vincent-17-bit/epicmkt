@@ -260,6 +260,29 @@ export async function getAllProducts() {
   return rows;
 }
 
+// A random window of each store's listed products, for the home page's featured cards. The caller picks from it, so a
+// store with a thousand products costs the same as one with ten. Returns { [businessId]: { items, total } }.
+export async function getStoreShowcase(businessIds = [], { pool = 24, rng = Math.random } = {}) {
+  await delay();
+  runSweep();
+  const out = {};
+  for (const ref of new Set(businessIds)) {
+    const business = store.businesses.find((b) => b.id === ref || b.slug === ref);
+    if (!business || business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    const listed = business.services
+      .map((svc, index) => toItem(business, svc, index))
+      .filter((item) => item.status === "listed")
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+    const start = listed.length > pool ? Math.floor(rng() * (listed.length - pool + 1)) : 0;
+    const items = listed.slice(start, start + pool).map((item) => {
+      const sale = liveSaleFor(item, business);
+      return { ...item, pricing: buildPricing(item, sale), flash: sale ? flashParts(item, sale) : null };
+    });
+    out[business.id] = { items, total: listed.length };
+  }
+  return out;
+}
+
 const HOUR_MS = 3600000;
 const WINDOWS = { "1h": HOUR_MS, "24h": 24 * HOUR_MS };
 
