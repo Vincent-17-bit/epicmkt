@@ -5,6 +5,7 @@ import { useUiStore } from "../stores/ui.js";
 import Container from "./Container.jsx";
 import Logo from "./Logo.jsx";
 import IconButton from "./IconButton.jsx";
+import LocationButton from "./LocationButton.jsx";
 import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import styles from "./Header.module.css";
@@ -139,14 +140,17 @@ export default function Header() {
             <Link to="/" className={styles.brand} aria-label="EpicMKT home">
               <Logo />
             </Link>
-            <IconButton
-              ref={toggleRef}
-              icon={menuOpen ? faXmark : faBars}
-              label={menuOpen ? "Close menu" : "Open menu"}
-              aria-expanded={menuOpen}
-              aria-controls={MENU_ID}
-              onClick={menuOpen ? closeMenu : openMenu}
-            />
+            <div className={styles.tools}>
+              <LocationButton />
+              <IconButton
+                ref={toggleRef}
+                icon={menuOpen ? faXmark : faBars}
+                label={menuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={menuOpen}
+                aria-controls={MENU_ID}
+                onClick={menuOpen ? closeMenu : openMenu}
+              />
+            </div>
           </Container>
         </header>
         <MenuPanel

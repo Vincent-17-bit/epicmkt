@@ -59,29 +59,36 @@ export const useGeoStore = create((set, get) => {
   // answer cannot bring back a location the shopper has just cleared.
   let ticket = 0;
 
+  // A failed device lookup must not throw away a town the shopper already chose: keep it, and only
+  // record that the device cannot be used so the sheet can say so.
+  const failDevice = (status) => {
+    if (get().coords) set({ status: "granted", deviceBlocked: true, explaining: true });
+    else set({ status, deviceBlocked: true, explaining: true });
+  };
+
   const locate = () => {
     if (!("geolocation" in navigator)) {
-      set({ status: "unsupported", explaining: true });
+      failDevice("unsupported");
       return;
     }
     const mine = ++ticket;
-    set({ status: "asking" });
+    set({ status: "asking", deviceBlocked: false });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (mine !== ticket) return;
         // Only an approximate fix (about 1 km) is kept: enough for "how far", too coarse to locate a person.
         const coords = coarsenCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         if (!coords) {
-          set({ status: "denied", explaining: true });
+          failDevice("denied");
           return;
         }
         writeTown(null);
         writeOptOut(false);
-        set({ status: "granted", source: "device", town: null, coords, explaining: false });
+        set({ status: "granted", source: "device", town: null, coords, deviceBlocked: false, explaining: false });
       },
       () => {
         if (mine !== ticket) return;
-        set({ status: "denied", explaining: true });
+        failDevice("denied");
       },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
@@ -92,13 +99,11 @@ export const useGeoStore = create((set, get) => {
     source: saved ? "town" : null,
     town: saved?.name ?? null,
     coords: saved ? { lat: saved.lat, lng: saved.lng } : null,
+    deviceBlocked: false,
     explaining: false,
+    // Opens the location sheet. It never changes the current location by itself.
     request: () => {
       if (get().status === "asking") return;
-      if (!("geolocation" in navigator)) {
-        set({ status: "unsupported", explaining: true });
-        return;
-      }
       set({ explaining: true });
     },
     restore: async () => {
@@ -121,7 +126,7 @@ export const useGeoStore = create((set, get) => {
       ticket += 1;
       writeTown(town.name);
       writeOptOut(false);
-      set({ ...fromTown(town), explaining: false });
+      set({ ...fromTown(town), deviceBlocked: false, explaining: false });
     },
     // Forget the location entirely: stored town, in-memory fix, cached results that used it, and any
     // request still in flight. Back to the same state as a first visit, plus the opt-out flag.
@@ -130,7 +135,7 @@ export const useGeoStore = create((set, get) => {
       writeTown(null);
       writeOptOut(true);
       queryClient.removeQueries({ predicate: (q) => POSITIONAL_QUERIES.has(q.queryKey?.[0]) });
-      set({ status: "idle", source: null, town: null, coords: null, explaining: false });
+      set({ status: "idle", source: null, town: null, coords: null, deviceBlocked: false, explaining: false });
     },
     close: () => set({ explaining: false })
   };
