@@ -5,7 +5,7 @@ import { now } from "../clock.js";
 import { NotFoundError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
-import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, runSweep } from "../promotions.js";
+import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
 
@@ -85,13 +85,16 @@ const flashParts = (item, sale) => ({
   remainingMs: Math.max(0, Date.parse(sale.endsAt) - now())
 });
 
-const offerViews = (item, business) =>
-  liveOffersFor(item, business).map((offer) => ({
-    offer,
-    business: sellerCard(business, null),
-    remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - now()) : null,
-    appliesToLabel: appliesToLabel(offer, business)
-  }));
+const offerView = (offer, business, from = null, at = now()) => ({
+  offer,
+  business: sellerCard(business, from),
+  remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null,
+  appliesToLabel: appliesToLabel(offer, business),
+  products: offerProducts(offer, business),
+  availableNow: offerAvailableNow(offer, at)
+});
+
+const offerViews = (item, business) => liveOffersFor(item, business).map((offer) => offerView(offer, business));
 
 const originOf = (origin) =>
   origin && Number.isFinite(origin.lat) && Number.isFinite(origin.lng) ? origin : null;
@@ -152,9 +155,7 @@ export async function getOffers({ businessId, itemId, categoryId = null, town = 
       if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
       if (categoryId && business.categoryId !== categoryId) continue;
       if (town && business.townSlug !== town) continue;
-      for (const offer of liveStoreOffers(business, at)) {
-        rows.push({ offer, business: sellerCard(business, from), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null, appliesToLabel: appliesToLabel(offer, business) });
-      }
+      for (const offer of liveStoreOffers(business, at)) rows.push(offerView(offer, business, from, at));
     }
     rows.sort(OFFER_SORTS[sort] ?? OFFER_SORTS.ending);
     return { items: rows.slice(offset, offset + limit), total: rows.length, serverNow: new Date(at).toISOString() };
@@ -162,11 +163,7 @@ export async function getOffers({ businessId, itemId, categoryId = null, town = 
   const business = store.businesses.find((b) => b.id === businessId || b.slug === businessId);
   if (!business || business.status !== BUSINESS_STATUS.ACTIVE) return { items: [], total: 0, serverNow: new Date(at).toISOString() };
   const found = itemId ? locate(itemId, business.id) : null;
-  const views = found
-    ? offerViews(found.item, business)
-    : store.offers
-        .filter((offer) => offer.businessId === business.id && offer.status === "active")
-        .map((offer) => ({ offer, business: sellerCard(business, null), remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null, appliesToLabel: appliesToLabel(offer, business) }));
+  const views = found ? offerViews(found.item, business) : liveStoreOffers(business, at).map((offer) => offerView(offer, business, null, at));
   return { items: views.slice(0, limit), total: views.length, serverNow: new Date(at).toISOString() };
 }
 
@@ -208,7 +205,8 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
       return {
         ...item,
         pricing: buildPricing(item, sale),
-        flash: sale ? flashParts(item, sale) : null
+        flash: sale ? flashParts(item, sale) : null,
+        offer: offerChipFor(item, business)
       };
     });
   const rank = (row) => [
@@ -241,6 +239,7 @@ export async function getAllProducts() {
         ...item,
         pricing: buildPricing(item, sale),
         flash: sale ? flashParts(item, sale) : null,
+        offer: offerChipFor(item, business),
         business: {
           id: business.id,
           slug: business.slug,

@@ -23,6 +23,20 @@
   background: var(--surface);
 }
 
+.serviceMedia {
+  position: relative;
+  display: block;
+}
+
+/* Over the picture's top right, so the name and price below do not move. */
+.serviceOffer {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  max-width: 80%;
+  z-index: 1;
+}
+
 .serviceImg {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -85,6 +99,7 @@
 
 .serviceBtn {
   display: grid;
+  text-decoration: none;
   width: 100%;
   padding: 0;
   border: 0;
@@ -102,15 +117,6 @@
 .serviceBtn:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: -2px;
-}
-
-@media (hover: hover) {
-  .serviceBtn:hover .h3 {
-    text-decoration: underline;
-    text-decoration-color: var(--link-underline);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
-  }
 }
 
 .sectionHit {

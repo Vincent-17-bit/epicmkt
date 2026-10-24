@@ -11,6 +11,8 @@ export { default as Modal } from "./components/Modal.jsx";
 export { default as BottomSheet } from "./components/BottomSheet.jsx";
 export { default as Lightbox } from "./components/Lightbox.jsx";
 export { default as PromoChip } from "./components/PromoChip.jsx";
+export { default as OfferChip } from "./components/OfferChip.jsx";
+export { default as Offers } from "./business/Offers.jsx";
 export { FeaturedBadge, VerifiedBadge } from "./components/Badges.jsx";
 export { default as ProductCard, AvailabilityDot, DiscountChip } from "./components/ProductCard.jsx";
 export { default as ProductGallery } from "./components/ProductGallery.jsx";

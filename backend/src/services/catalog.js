@@ -1,5 +1,6 @@
 import {
   PLAN_FEATURES,
+  dealOf,
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
@@ -15,8 +16,9 @@ import {
 } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
+import { now } from "../clock.js";
 import { NotFoundError, ValidationError } from "../errors.js";
-import { promoCountsFor, runSweep } from "../promotions.js";
+import { liveStoreOffers, offerChipFor, offerProducts, promoCountsFor, runSweep } from "../promotions.js";
 import { looksLikeCoordinates, scrubPayload } from "../privacy.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
@@ -78,11 +80,11 @@ const toSummary = (b, origin) => ({
 
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
-  const now = Date.now();
+  const at = now();
   return {
     ...rest,
-    offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
-    services: b.services.filter((svc) => svc.status !== "unlisted"),
+    offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at)),
+    services: b.services.filter((svc) => svc.status !== "unlisted").map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
     ...closingInfo(b.hours),
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],

@@ -10,7 +10,7 @@ export default function ItemCard({ item, onSelect, className = "" }) {
       item={item}
       onSelect={onSelect}
       className={className}
-      labels={{ ...labels, was: t("item.was") }}
+      labels={{ ...labels, was: t("item.was"), offerChip: { offer: t("offer.chip"), more: t("offer.more") } }}
       renderFlash={(chipClass) => <FlashChip endsAt={item.flash.sale.endsAt} className={chipClass} />}
     />
   );

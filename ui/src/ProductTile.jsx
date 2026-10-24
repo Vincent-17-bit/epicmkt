@@ -2,12 +2,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faImage, faStar } from "@fortawesome/free-solid-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 import { isPreview } from "./preview.js";
+import OfferChip from "./components/OfferChip.jsx";
 import styles from "./ProductTile.module.css";
 
 const DEFAULT_LABELS = {
   was: "Was",
   verified: "Verified store",
   featured: "Featured store",
+  offerChip: { offer: "Offer", more: "more" },
   availability: (key) =>
     ({
       available: "Available",
@@ -76,6 +78,7 @@ export default function ProductTile({
         )}
         {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
+        <OfferChip offer={item.offer} className={styles.offer} labels={labels.offerChip} />
         {soldOut && <span className={styles.stock}>{labels.availability(availability)}</span>}
       </span>
 

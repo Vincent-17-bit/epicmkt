@@ -1,8 +1,9 @@
-import { PLAN_FEATURES, cardFacts, distanceKm, isOpenNow, normalizeText, slugify } from "@epicmkt/shared";
+import { PLAN_FEATURES, cardFacts, distanceKm, isOpenNow, normalizeText, offerProductCount, slugify } from "@epicmkt/shared";
 import { NotFoundError } from "@epicmkt/backend";
 import { store } from "@epicmkt/backend/store";
 import { supabase } from "../applications/supabaseClient";
 import { mediaUrl } from "../flash/shape.js";
+import { invalidateOffers, loadOffers } from "../offers/live.js";
 
 const PAGE = 1000;
 const MAX_PAGES = 20;
@@ -65,7 +66,7 @@ const buildCategories = (rows) =>
     };
   });
 
-const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offerEnds = []) => {
+const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offers = []) => {
   const category = categories.get(row.category_id) ?? null;
   const town = row.town ?? "";
   return {
@@ -94,7 +95,7 @@ const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offerEnds 
     hours: row.hours && typeof row.hours === "object" ? row.hours : {},
     createdAt: row.created_at ?? "",
     flashEnds,
-    offerEnds,
+    offers,
     attributes: {}
   };
 };
@@ -118,17 +119,21 @@ const fetchEnds = async (table, columns, endOf) => {
 
 const fetchFlashEnds = () => fetchEnds("public_flash_sales", "id,business_id,ends_at", (row) => Date.parse(row.ends_at));
 
-// An offer with no end date runs until the seller turns it off.
-const fetchOfferEnds = () =>
-  fetchEnds("public_offers", "id,business_id,ends_at", (row) => (row.ends_at ? Date.parse(row.ends_at) : Infinity));
+// The Offer chip on a store card stands for products with a running offer. loadOffers() never throws (offers are
+// decoration), and the count is worked out when a card is made so an offer that has just ended stops counting.
+const fetchOffersByBusiness = async () => {
+  const byBusiness = new Map();
+  for (const offer of await loadOffers()) byBusiness.set(offer.businessId, [...(byBusiness.get(offer.businessId) ?? []), offer]);
+  return byBusiness;
+};
 
 const build = async () => {
-  const [rows, items, categoryRows, flashEnds, offerEnds] = await Promise.all([
+  const [rows, items, categoryRows, flashEnds, offerLists] = await Promise.all([
     fetchAll("public_businesses", "*"),
     fetchAll("public_items", "id,business_id,price,price_type"),
     fetchCategoryRows(),
     fetchFlashEnds(),
-    fetchOfferEnds()
+    fetchOffersByBusiness()
   ]);
   const categoryList = buildCategories(categoryRows);
   const categories = new Map(categoryList.map((c) => [c.id, c]));
@@ -140,7 +145,7 @@ const build = async () => {
     const prior = lowest.get(item.business_id);
     if (prior === undefined || price < prior) lowest.set(item.business_id, price);
   }
-  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null, flashEnds.get(row.id), offerEnds.get(row.id)));
+  const businesses = rows.map((row) => buildBusiness(row, categories, lowest.get(row.id) ?? null, flashEnds.get(row.id), offerLists.get(row.id)));
   return { businesses, categoryList, categories };
 };
 
@@ -149,6 +154,7 @@ let inflight = null;
 let generation = 0;
 
 export function invalidateBrowseCache() {
+  invalidateOffers();
   generation += 1;
   cache = null;
   inflight = null;
@@ -200,7 +206,7 @@ const toSummary = (b, snap, origin) => {
     lng: b.lng,
     isOpen: openNow(b.hours),
     distanceKm: distanceTo(origin, b),
-    promo: { flash: liveCount(b.flashEnds), offers: liveCount(b.offerEnds) }
+    promo: { flash: liveCount(b.flashEnds), offers: offerProductCount(b.offers ?? [], Date.now()) }
   };
 };
 

@@ -1,6 +1,6 @@
 import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
+import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -152,7 +152,7 @@ const FEATURES = {
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { items: [], flash: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 
 function resetBilling() {
@@ -197,6 +197,7 @@ function resetBilling() {
   bill.signals = [];
   bill.views = [];
   bill.flash = [];
+  bill.offers = [];
 }
 resetBilling();
 
@@ -465,7 +466,7 @@ export const getShopPreview = async () => {
     socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: null, coverPath: null, categoryName: "Barbershop",
   };
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
-  return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales });
+  return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
 };
 export const saveItem = async (id, f) => {
   signedIn();
@@ -634,6 +635,45 @@ export const endFlashSale = async (id) => {
   if (!["scheduled", "live"].includes(sale.status)) throw new ApiError("flash_closed");
   closeFlash(sale, "seller");
   return true;
+};
+
+const OFFER_LIMITS = { standard: { activeOffers: 8 }, premium: { activeOffers: null } };
+export const listOffers = async () => { signedIn(); await wait(); return copy(bill.offers).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); };
+export const getOfferQuota = async () => { signedIn(); await wait(); return offerQuota(bill.offers, OFFER_LIMITS[bill.business.planKey], nowMs()); };
+export const saveOffer = async (id, f) => {
+  writer();
+  await wait();
+  const old = id ? bill.offers.find((o) => o.id === id) : null;
+  if (id && !old) throw new ApiError("offer_not_found");
+  const v = validateOffer(f, { items: bill.items.filter((i) => !i.hiddenByAdmin && !i.removedByAdmin), nowMs: nowMs(), existing: old });
+  if (!v.ok) throw new ApiError(v.error, v.field);
+  const others = bill.offers.filter((o) => o.id !== id);
+  const wouldRun = offerPhase({ ...v.value, active: true }, nowMs()) !== "ended";
+  if (wouldRun && !offerQuota(others, OFFER_LIMITS[bill.business.planKey], nowMs()).canCreate) throw new ApiError("limit_reached", "limit_reached:offers");
+  const at = clockNow().toISOString();
+  const row = { ...(old ?? { id: `of-${++bill.seq}`, active: true, status: "active", createdAt: at }), ...v.value, updatedAt: at };
+  if (!old) bill.offers.push(row);
+  else Object.assign(old, row);
+  return copy(row);
+};
+export const setOfferActive = async (id, active) => {
+  writer();
+  await wait();
+  const o = bill.offers.find((x) => x.id === id);
+  if (!o) throw new ApiError("offer_not_found");
+  o.active = !!active;
+  o.status = active ? "active" : "paused";
+  return true;
+};
+export const endOffer = async (id) => {
+  writer();
+  await wait();
+  const o = bill.offers.find((x) => x.id === id);
+  if (!o) throw new ApiError("offer_not_found");
+  if (o.startsAt && Date.parse(o.startsAt) > nowMs()) { bill.offers = bill.offers.filter((x) => x.id !== id); return "removed"; }
+  o.endsAt = clockNow().toISOString();
+  o.status = "ended";
+  return "ended";
 };
 
 const todayNairobi = () => nairobiDay(clockNow());

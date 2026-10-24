@@ -1,6 +1,5 @@
 import { slugify } from "@epicmkt/shared";
 import { attributesById } from "./attributes.js";
-import { offersById } from "./offers.js";
 import { coverArt, logoArt, serviceArt, galleryArt } from "./art.js";
 import { completeServices } from "./catalogItems.js";
 
@@ -37,7 +36,6 @@ const make = (i, b) => {
     email: null,
     socials: {},
     attributes: attributesById[id] ?? {},
-    offers: offersById[id] ?? [],
     stats: seedStats(i),
     createdAt: new Date(Date.UTC(2025, i % 12, 1 + (i % 27))).toISOString(),
     planExpiresAt: new Date(Date.UTC(2026, 9 + (i % 3), 1 + (i % 27))).toISOString(),

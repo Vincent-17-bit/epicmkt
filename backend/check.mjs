@@ -77,9 +77,15 @@ assert.equal(biz.sellerId, undefined);
 await assert.rejects(() => getBusiness("old-lake-chemist"), { name: "NotFoundError" });
 
 assert.ok(biz.coverUrl && biz.logoUrl && biz.services.every((svc) => svc.imageUrl) && biz.gallery.every((g) => g.url));
-assert.equal(biz.offers.length, 2);
-assert.ok(biz.offers.every((o) => Date.parse(o.expiresAt) > Date.now()));
+// Offers on the store page are the live product offers: Fade Kings has two running now (a third is scheduled).
+assert.deepEqual(biz.offers.map((o) => o.id).sort(), ["p_001", "p_002"]);
+assert.ok(biz.offers.every((o) => o.products.length > 0 && o.label && o.headline));
 assert.equal((await getBusiness("b_021")).offers.length, 0);
+// Only the products that are in an offer carry the chip.
+assert.equal(biz.services.find((s) => s.id === "haircut").offer.extra, 1);
+assert.equal(biz.services.find((s) => s.id === "fade-and-beard").offer.label, "Student deal");
+assert.equal(biz.services.find((s) => s.id === "kids-cut").offer, null);
+assert.equal(biz.services.find((s) => s.id === "hair-dye").offer, null, "a scheduled offer shows nothing yet");
 assert.ok(biz.closesAt || biz.opensAt);
 assert.equal((await resolveShortcode(biz.shortcode)).slug, biz.slug);
 await assert.rejects(() => resolveShortcode("nope"), { name: "NotFoundError" });
@@ -119,7 +125,7 @@ assert.equal((await searchBusinesses({ query: "phone" })).total, 1);
 console.log("all checks passed");
 
 {
-  const { getItemDetail, getStoreSelective, getFlashForItem, advanceClock, resetClock, runSweep } = await import("./src/index.js");
+  const { getItemDetail, getStoreSelective, getFlashForItem, getAllProducts, advanceClock, resetClock, runSweep } = await import("./src/index.js");
   const { store } = await import("./src/store.js");
 
   const live = await getItemDetail("fade-and-beard", { businessId: "b_001" });
@@ -160,12 +166,35 @@ console.log("all checks passed");
   const { getOffers } = await import("./src/index.js");
   const forFade = await getItemDetail("fade-and-beard", { businessId: "b_001" });
   assert.deepEqual(forFade.offers.map((o) => o.offer.id), ["p_001"]);
-  assert.equal(forFade.offers[0].appliesToLabel, "Whole store");
+  assert.equal(forFade.offers[0].appliesToLabel, "Haircut + Fade and beard");
+  assert.deepEqual(forFade.offers[0].products.map((p) => p.id), ["haircut", "fade-and-beard"]);
   assert.ok(forFade.offers[0].remainingMs > 0);
   assert.deepEqual((await getItemDetail("haircut", { businessId: "b_001" })).offers.map((o) => o.offer.id).sort(), ["p_001", "p_002"]);
-  assert.deepEqual((await getItemDetail("hair-dye", { businessId: "b_001" })).offers.map((o) => o.offer.id), ["p_001"]);
-  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_002" })).offers, []);
+  // An offer belongs to its products only: the store has other products with none.
+  assert.deepEqual((await getItemDetail("hair-dye", { businessId: "b_001" })).offers, []);
+  assert.deepEqual((await getItemDetail("kids-cut", { businessId: "b_001" })).offers, []);
+  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_002" })).offers, [], "a paused offer shows nothing");
   assert.equal((await getOffers({ businessId: "b_001" })).items.length, 2);
+  const water = await getItemDetail("20l-refill", { businessId: "b_004" });
+  assert.equal(water.offer, undefined);
+  assert.equal(water.offers[0].offer.kind, "buy_x_get_y");
+  // A bundle sits on its main and its companion, and nowhere else.
+  const bundleOn = async (id) => (await getItemDetail(id, { businessId: "b_005" })).offers.map((o) => o.offer.id);
+  assert.deepEqual(await bundleOn("20l-refill"), ["p_012"]);
+  assert.deepEqual(await bundleOn("5l-refill"), ["p_012"]);
+  const rows = await getAllProducts();
+  const chipOf = (businessId, id) => rows.find((r) => r.businessId === businessId && r.id === id).offer;
+  assert.equal(chipOf("b_001", "haircut").label, "Student deal", "the offer that ends first is the one named");
+  assert.equal(chipOf("b_001", "haircut").extra, 1);
+  assert.equal(chipOf("b_001", "kids-cut"), null);
+  assert.equal(chipOf("b_001", "hair-dye"), null);
+  assert.equal(chipOf("b_004", "20l-refill").label, "Buy 10 Get 1 Free");
+  assert.equal(chipOf("b_004", "10l-refill"), null);
+  const { searchBusinesses: find } = await import("./src/index.js");
+  const cardOf = async (query, id) => (await find({ query, limit: 50 })).items.find((b) => b.id === id);
+  assert.equal((await cardOf("barber", "b_001")).promo.offers, 2, "haircut and fade-and-beard: two products, not three offers");
+  assert.equal((await cardOf("barber", "b_002")).promo.offers, 0, "its only offer is paused");
+  assert.equal((await cardOf("water", "b_005")).promo.offers, 2, "the bundle's main and companion");
   const allOffers = await getOffers({ limit: 50 });
   assert.equal(allOffers.total, allOffers.items.length);
   assert.ok(allOffers.items.every((v) => v.business.slug && v.offer.status !== "paused"));
@@ -173,7 +202,7 @@ console.log("all checks passed");
   const { getOfferFacets } = await import("./src/index.js");
   assert.equal((await getOfferFacets()).total, allOffers.total);
   assert.ok((await getOffers({ town: "no-such-town" })).total === 0);
-  assert.equal((await getItemDetail("box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Braids");
+  assert.equal((await getItemDetail("box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Box braids + Cornrows");
 
   advanceClock(6 * 3600000);
   assert.equal((await getFlashForItem("10l-refill", "b_004")).sale.id, "f_004");

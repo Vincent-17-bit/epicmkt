@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -15,15 +15,16 @@ import {
   faStore,
   faXmark
 } from "@fortawesome/free-solid-svg-icons";
-import { formatDistance, formatKes, telLink, whatsappLink } from "@epicmkt/shared";
+import { formatDistance, formatKes, offerLabel, telLink, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, defaultVariantId, offerTarget } from "../lib/itemView.js";
+import { chatMessage, defaultVariantId } from "../lib/itemView.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
 import MediaVideo from "./MediaVideo.jsx";
+import { OfferChip } from "@epicmkt/ui";
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -47,9 +48,7 @@ const LEAVE_MS = 260;
 export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport, layout = "sheet" }) {
   const isPage = layout === "page";
   const Heading = isPage ? "h1" : "h2";
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const onSeeItems = (offer) => navigate(offerTarget(offer, business), { replace: true });
   const sheetRef = useRef(null);
   const bodyRef = useRef(null);
   const titleRef = useRef(null);
@@ -358,6 +357,13 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 <div className={styles.badges}>
                   {shown && shown.savings > 0 && <span className={styles.saleChip}>{t("item.sale")} -{shown.discountPercent}%</span>}
                   {current.section && <span className={styles.tag}>{current.section}</span>}
+                  {current.offers.length > 0 && (
+                    <OfferChip
+                      offer={{ label: offerLabel(current.offers[0].offer), extra: current.offers.length - 1 }}
+                      className={styles.offerBadge}
+                      labels={{ offer: t("offer.chip"), more: t("offer.more") }}
+                    />
+                  )}
                 </div>
                 <Heading id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
                   {current.name}
@@ -390,7 +396,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   </div>
                 )}
 
-                <OfferStrip key={current.id} offers={current.offers} onSeeItems={onSeeItems} />
+                <OfferStrip key={current.id} offers={current.offers} item={current} price={shown?.salePrice ?? null} onOpenProduct={onSelect} />
 
                 {variants.length > 0 && (
                   <div role="radiogroup" aria-label={t("item.options")} className={styles.variants}>

@@ -1,7 +1,7 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faBolt, faCalendarXmark, faChevronDown, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTriangleExclamation, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faChevronDown, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faTriangleExclamation, faUser } from "@fortawesome/free-solid-svg-icons";
 import * as api from "../api/index.js";
 import { getTheme, setTheme } from "../lib/theme.js";
 import { useRealtime } from "../lib/useRealtime.js";
@@ -81,7 +81,7 @@ export default function Layout() {
     return () => window.removeEventListener("keydown", onKey);
   }, [more]);
   const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname);
-  const moreActive = /^\/business\/(exceptions|flash|qr|account)/.test(pathname);
+  const moreActive = /^\/business\/(exceptions|flash|offers|qr|account)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -121,6 +121,7 @@ export default function Layout() {
             <div id="more-links" className={styles.secondary} data-open={more}>
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
+              <Item to="/business/offers" icon={faTag}>Offers</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
               <Item to="/business/account" icon={faUser}>Account</Item>
             </div>

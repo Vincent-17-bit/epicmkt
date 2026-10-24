@@ -56,4 +56,9 @@ export const SELLER_API = [
   "updateFlashSale",
   "extendFlashSale",
   "endFlashSale",
+  "listOffers",
+  "getOfferQuota",
+  "saveOffer",
+  "setOfferActive",
+  "endOffer",
 ];

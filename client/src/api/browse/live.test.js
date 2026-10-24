@@ -182,13 +182,17 @@ describe("live browse adapter", () => {
     expect(bySlug["shop-2"]).toEqual({ flash: 0, offers: 0 });
   });
 
-  it("counts live offers, including ones with no end date, and ignores finished ones", async () => {
+  it("counts products with a running offer, not offers, so the card chip matches what the store shows", async () => {
     db().businesses = [biz(1), biz(2)];
     const now = Date.now();
+    const row = (id, business, items, ends_at = null) => ({
+      id, business_id: business, kind: "percent_off", config: { percent: 10 }, conditions: {}, title: id, created_at: new Date(now - 1000).toISOString(),
+      starts_at: new Date(now - 3600000).toISOString(), ends_at, items: items.map((item_id) => ({ item_id, role: "main" }))
+    });
     db().offers = [
-      { id: "o1", business_id: biz(1).id, ends_at: null },
-      { id: "o2", business_id: biz(1).id, ends_at: new Date(now + 3600000).toISOString() },
-      { id: "o3", business_id: biz(1).id, ends_at: new Date(now - 1000).toISOString() }
+      row("o1", biz(1).id, ["i1", "i2"]),
+      row("o2", biz(1).id, ["i2"], new Date(now + 3600000).toISOString()),
+      row("o3", biz(1).id, ["i3"], new Date(now - 1000).toISOString())
     ];
     const { items } = await live.searchBusinesses({});
     const bySlug = Object.fromEntries(items.map((b) => [b.slug, b.promo]));

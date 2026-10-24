@@ -4,6 +4,7 @@ import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
 import { businessOf, cardOfBusiness, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
+import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOUR_MS = 3600000;
@@ -135,12 +136,13 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const { now, entries } = await liveEntries();
   const entry = entries.find((e) => e.item.id === itemId);
   const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+  const card = cardOfBusiness(business, origin);
   return {
     ...item,
-    business: cardOfBusiness(business, origin),
+    business: card,
     pricing,
     flash: entry ? flashParts(entry, now) : null,
-    offers: []
+    offers: await viewsForItem(item.id, business.id, card)
   };
 }
 
@@ -148,7 +150,7 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
   const business = await findBusiness(ref);
   if (!business) return [];
   const rows = unwrap(await supabase.from("public_items").select("*").eq("business_id", business.id).order("sort").order("created_at", { ascending: false })) ?? [];
-  const { now, entries } = await liveEntries();
+  const [{ now, entries }, chips] = await Promise.all([liveEntries(), chipsByItem(business.id)]);
   const current = rows.find((row) => row.id === excludeItemId);
   const shaped = rows
     .filter((row) => row.id !== excludeItemId)
@@ -156,7 +158,7 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
       const item = itemRow(row, business);
       const entry = entries.find((e) => e.item.id === row.id);
       const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
-      return { ...item, pricing, flash: entry ? flashParts(entry, now) : null };
+      return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
   const rank = (row) => [
     row.availability === "unavailable" ? 1 : 0,
@@ -205,6 +207,7 @@ export async function getAllProducts() {
     // keep regular prices
   }
   const sales = new Map(live.entries.map((e) => [e.item.id, e]));
+  const chips = await chipsByItem();
   return rows.flatMap((row) => {
     const business = byId.get(row.business_id);
     if (!business) return [];
@@ -216,6 +219,7 @@ export async function getAllProducts() {
         ...item,
         pricing,
         flash: entry ? flashParts(entry, live.now) : null,
+        offer: chips.get(row.id) ?? null,
         business: {
           id: business.id,
           slug: business.slug,
@@ -237,15 +241,18 @@ export async function getBusiness(ref, origin = null) {
   const row = await findBusiness(ref);
   if (!row) throw new NotFoundError("Business not found");
   categoriesCache ??= getCategories();
-  const [categories, items] = await Promise.all([
+  const [categories, items, chips, deals] = await Promise.all([
     categoriesCache,
-    supabase.from("public_items").select("*").eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap)
+    supabase.from("public_items").select("*").eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap),
+    chipsByItem(row.id),
+    dealsForStore(row.id)
   ]);
-  return businessOf(row, {
+  const business = businessOf(row, {
     category: categories.find((c) => c.id === row.category_id) ?? null,
-    services: (items ?? []).map(serviceOf),
+    services: (items ?? []).map((item) => ({ ...serviceOf(item), offer: chips.get(item.id) ?? null })),
     origin
   });
+  return { ...business, offers: deals };
 }
 
 export async function resolveShortcode(code) {
