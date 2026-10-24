@@ -72,7 +72,10 @@ export default function Layout() {
     qc.invalidateQueries({ queryKey: ["messages"] });
     ack();
   });
-  useRealtime(["businesses"], () => qc.invalidateQueries({ queryKey: ["subscription"] }));
+  useRealtime(["businesses"], () => {
+    qc.invalidateQueries({ queryKey: ["subscription"] });
+    qc.invalidateQueries({ queryKey: ["shop-preview"] });
+  });
   useEffect(() => { setMore(false); }, [pathname]);
   useEffect(() => {
     if (!more) return undefined;

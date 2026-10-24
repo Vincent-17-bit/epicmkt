@@ -16,7 +16,7 @@ const SITE = import.meta.env?.VITE_SITE_URL;
 const PREVIEW_PX = 760;
 
 export default function QrPoster() {
-  const shopQuery = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
+  const shopQuery = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false, refetchOnMount: "always" });
   const shop = shopQuery.data?.shop;
   const [size, setSize] = useState("a4");
   const [drawing, setDrawing] = useState(true);

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shopUrl, shopQrUrl, shopDisplayUrl, whatsappShareUrl, isValidSlug, siteBase } from "./shopLink.js";
+import { shopQrSpec, shopUrl, shopQrUrl, shopDisplayUrl, whatsappShareUrl, isValidSlug, siteBase } from "./shopLink.js";
 
 test("link is <site>/s/<slug> and the QR adds only the source tag", () => {
   assert.equal(shopUrl("mama-oliech-bakery"), "https://epicmkt.app/s/mama-oliech-bakery");
@@ -33,4 +33,14 @@ test("WhatsApp share is a wa.me link carrying the public link only", () => {
   const text = decodeURIComponent(url.slice("https://wa.me/?text=".length));
   assert.ok(text.includes("https://epicmkt.app/s/shop-a"));
   assert.ok(!text.includes("src=qr"));
+});
+
+test("one recipe for every screen: same business, same code; category, town or plan changes never alter the link", () => {
+  const a = shopQrSpec("shop-a", { planKey: "standard", hasLogo: true });
+  assert.deepEqual(a, shopQrSpec("shop-a", { planKey: "standard", hasLogo: true }));
+  assert.equal(a.text, "https://epicmkt.app/s/shop-a?src=qr");
+  assert.equal(a.ecl, "M");
+  assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: true }).ecl, "H");
+  assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: false }).ecl, "M");
+  assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: true }).text, a.text);
 });

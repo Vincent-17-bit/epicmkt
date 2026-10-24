@@ -6,6 +6,7 @@ import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
 import { closingInfo, flashPrice, isOpenOn } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
+import ShopQr from "../../components/ShopQr.jsx";
 import { errorText } from "../../lib/errors.js";
 import { hoursRows, socialLinks, statusText } from "../../lib/shopView.js";
 import ui from "../../styles/ui.module.css";
@@ -158,7 +159,7 @@ export default function Preview() {
           formatExpiry={() => ""}
           flash={<FlashSection cards={flashCards(flashSales, items)} />}
           socials={socialLinks(shop.socials)}
-          qr={null}
+          qr={<ShopQr slug={shop.slug} planKey={shop.planKey} hasLogo={!!shop.logoPath} label={`QR code linking to ${shop.name}`} />}
           shortUrl={`/s/${shop.slug}`}
           shareNote=""
           breadcrumbs={null}

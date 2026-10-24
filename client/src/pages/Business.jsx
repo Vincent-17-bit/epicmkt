@@ -46,7 +46,9 @@ export default function Business() {
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["business", slug],
     queryFn: () => getBusiness(slug),
-    retry: false
+    retry: false,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
   });
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
@@ -129,7 +131,7 @@ export default function Business() {
       detailsTitle={`${data.category?.singular} details`}
       flash={<FlashStrip id="business-flash-title" businessId={data.id} heat={false} />}
       socials={socialLinks(data.socials)}
-      qr={<QrCode value={shortUrl} label={`QR code linking to ${data.name}`} />}
+      qr={<QrCode slug={data.slug} plan={data.plan} hasLogo={!!data.logoUrl} label={`QR code linking to ${data.name}`} />}
       shortUrl={shortUrl}
       hitSection={hit}
       shareNote={shareNote}
