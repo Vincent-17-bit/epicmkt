@@ -225,71 +225,10 @@
   padding-bottom: calc(4.5rem + var(--safe-bottom));
 }
 
-.strike,
 .suspended {
   width: calc(100% - 2 * var(--space-4));
   max-width: 64rem;
   margin: var(--space-4) auto 0;
-}
-
-.strike {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border: 1px solid var(--danger-border);
-  border-radius: var(--radius-card);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-}
-
-.strikeIcon {
-  margin-top: 0.2rem;
-  font-size: 1.25rem;
-}
-
-.strikeBody {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.strikeBody h2 {
-  font-size: var(--text-md);
-}
-
-.lead {
-  font-weight: 600;
-}
-
-.risk summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap);
-  font-weight: 600;
-  cursor: pointer;
-  list-style: none;
-}
-
-.risk summary::-webkit-details-marker {
-  display: none;
-}
-
-.risk[open] summary svg {
-  transform: rotate(180deg);
-}
-
-.risk summary:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
-.risk ul {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0;
-  padding-left: 1.25rem;
 }
 
 @media (max-width: 19.99rem) {
@@ -433,7 +372,6 @@
     padding-bottom: var(--safe-bottom);
   }
 
-  .strike,
   .suspended {
     margin-top: var(--space-5);
   }

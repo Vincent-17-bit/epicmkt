@@ -41,3 +41,39 @@
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
+
+/* One-off exceptions: a coloured edge and a tag say "this is not the usual week" without shouting. */
+.hours tr[data-changed] th,
+.hours tr[data-changed] td {
+  background: var(--primary-tint);
+  vertical-align: top;
+}
+
+.hours tr[data-changed] th:first-child {
+  box-shadow: inset 4px 0 0 var(--primary);
+}
+
+.hours tr[data-closed] th:first-child {
+  box-shadow: inset 4px 0 0 var(--border-strong);
+}
+
+.hours tr[data-closed] td {
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
+.tag {
+  display: block;
+  width: fit-content;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.note {
+  font-style: italic;
+}

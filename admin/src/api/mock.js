@@ -166,9 +166,9 @@ let mockNotifications = [
   { id: "mn-2", at: new Date(Date.now() - 25 * 60_000).toISOString(), kind: "payment_submitted", business_name: "Lakeside Provisions", data: { kind: "renewal" }, read: false },
   { id: "mn-3", at: new Date(Date.now() - 3 * 3600_000).toISOString(), kind: "change_request", business_name: "Fade Kings", data: { field: "phone" }, read: true },
 ];
-export async function getNotifications() {
+export async function getNotifications({ unreadOnly = false } = {}) {
   await latency(60);
-  return mockNotifications.map((n) => ({ ...n }));
+  return mockNotifications.filter((n) => !unreadOnly || !n.read).map((n) => ({ ...n }));
 }
 export async function getUnreadNotificationCount() {
   return mockNotifications.filter((n) => !n.read).length;
