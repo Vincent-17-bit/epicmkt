@@ -284,9 +284,8 @@
       "search cats"
       "seller cats"
       "links cats"
-      "location cats"
       "theme cats";
-    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-rows: auto auto auto 1fr;
     column-gap: var(--space-7);
     align-items: start;
     padding-block: var(--space-6);
@@ -306,10 +305,6 @@
 
   .areaLinks {
     grid-area: links;
-  }
-
-  .areaLocation {
-    grid-area: location;
   }
 
   .areaTheme {

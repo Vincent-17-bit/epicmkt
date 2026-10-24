@@ -46,12 +46,6 @@
   line-height: 1.25;
 }
 
-.sub {
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  line-height: 1.35;
-}
-
 @media (min-width: 640px) {
   .prompt {
     grid-template-columns: auto minmax(0, 1fr) auto;
@@ -67,23 +61,4 @@
     grid-column: auto;
     justify-self: end;
   }
-}
-
-.where {
-  margin-bottom: var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.change {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--link);
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
 }
