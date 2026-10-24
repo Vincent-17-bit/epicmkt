@@ -353,7 +353,7 @@ describe("access and layout", () => {
   it("stacks on phones and keeps the Undo bar above the safe area", () => {
     const css = readFileSync(join(process.cwd(), "src/pages/business/exceptions.module.css"), "utf8");
     const small = css.slice(css.indexOf("@media (max-width: 40rem)"));
-    expect(small).toMatch(/\.row\s*{[^}]*grid-template-columns:\s*1fr/);
+    expect(small).toMatch(/\.row\s*{[^}]*grid-template-columns:\s*auto minmax\(0, 1fr\)/);
     expect(small).toMatch(/\.interval\s*{[^}]*grid-template-columns:\s*1fr 1fr/);
     expect(css).toMatch(/\.toasts\s*{[^}]*safe-bottom/);
     expect(css).toContain("overflow-wrap: anywhere");

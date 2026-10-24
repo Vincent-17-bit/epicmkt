@@ -73,9 +73,10 @@ describe("conversations with EpicMKT staff", () => {
 });
 
 describe("strikes and suspension", () => {
-  it("a seller with strikes sees the count on every page", async () => {
+  it("a seller with strikes sees no strike banner at the top of any page", async () => {
     await signedInApp("/business/subscription", () => { M.state.business.strikes = 2; });
-    expect(await screen.findByTestId("strike-banner")).toHaveTextContent("You have 2 strikes");
+    await screen.findByTestId("shop-name");
+    expect(screen.queryByTestId("strike-banner")).toBeNull();
   });
 
   it("a suspended seller sees the reason and can read and answer, but nothing else", async () => {

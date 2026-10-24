@@ -510,14 +510,14 @@ export async function globalSearch(query) {
 
 // ---- Notifications: what sellers and applicants did, from admin_notifications (migration 0004_core.sql) ----------
 
-export async function getNotifications({ limit = 20 } = {}) {
-  const { data } = check(
-    await client()
-      .from("admin_notifications")
-      .select("id, kind, data, read_at, created_at, business:businesses(name)")
-      .order("created_at", { ascending: false })
-      .limit(limit),
-  );
+export async function getNotifications({ limit = 20, unreadOnly = false } = {}) {
+  let query = client()
+    .from("admin_notifications")
+    .select("id, kind, data, read_at, created_at, business:businesses(name)")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (unreadOnly) query = query.is("read_at", null);
+  const { data } = check(await query);
   return (data ?? []).map((row) => ({
     id: row.id,
     at: row.created_at,

@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBell, faCheckDouble } from "@fortawesome/free-solid-svg-icons";
@@ -23,21 +23,48 @@ export default function NotificationBell() {
   const buttonRef = useRef(null);
 
   const count = useQuery({ queryKey: COUNT_KEY, queryFn: () => api.getUnreadNotificationCount(), refetchInterval: 60_000, retry: false });
-  const list = useQuery({ queryKey: LIST_KEY, queryFn: () => api.getNotifications(), enabled: open, refetchInterval: open ? 30_000 : false, retry: false });
+  // Only unread notes are listed. A note that has been opened is read, so it leaves the bell.
+  const list = useQuery({ queryKey: LIST_KEY, queryFn: () => api.getNotifications({ limit: 50, unreadOnly: true }), refetchInterval: open ? 30_000 : 60_000, retry: false });
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss(boxRef, open, close);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
-  const mark = useMutation({ mutationFn: (ids) => api.markNotificationsRead(ids), onSuccess: refresh });
+  // Optimistic: the note disappears and the badge drops at once; if saving fails, both come back.
+  const mark = useMutation({
+    mutationFn: (ids) => api.markNotificationsRead(ids),
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-notifications"] });
+      const previousList = queryClient.getQueryData(LIST_KEY);
+      const previousCount = queryClient.getQueryData(COUNT_KEY);
+      const all = !Array.isArray(ids);
+      const removed = (previousList ?? []).filter((row) => all || ids.includes(row.id)).length;
+      queryClient.setQueryData(LIST_KEY, (rows) => (rows ?? []).filter((row) => !all && !ids.includes(row.id)));
+      queryClient.setQueryData(COUNT_KEY, (n) => (all ? 0 : Math.max(0, (n ?? 0) - removed)));
+      return { previousList, previousCount };
+    },
+    onError: (_error, _ids, context) => {
+      queryClient.setQueryData(LIST_KEY, context?.previousList);
+      queryClient.setQueryData(COUNT_KEY, context?.previousCount);
+    },
+    onSettled: refresh,
+  });
 
   const unread = count.data ?? 0;
   const badge = badgeText(unread);
   const rows = list.data ?? [];
 
+  // Opening the screen a note is about also reads it, however the admin got there.
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const seen = (list.data ?? []).filter((row) => describeActivity(row).to === pathname).map((row) => row.id);
+    if (seen.length > 0) mark.mutate(seen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, list.data]);
+
   const openRow = (row) => {
     const { to } = describeActivity(row);
-    if (!row.read) mark.mutate([row.id]);
+    mark.mutate([row.id]);
     setOpen(false);
     if (to) navigate(to);
   };
@@ -74,7 +101,7 @@ export default function NotificationBell() {
           ) : list.isLoading ? (
             <div className="admin-bell__empty">Loading…</div>
           ) : rows.length === 0 ? (
-            <div className="admin-bell__empty">You are all caught up. New activity from sellers and applicants shows here.</div>
+            <div className="admin-bell__empty">You are all caught up. Notes you open are cleared from here. New activity from sellers and applicants shows up as it happens.</div>
           ) : (
             <ul className="admin-bell__list">
               {rows.map((row) => {

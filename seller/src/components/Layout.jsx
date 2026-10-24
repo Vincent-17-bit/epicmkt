@@ -1,11 +1,10 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBell, faBolt, faCalendarXmark, faChevronDown, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTriangleExclamation, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faUser } from "@fortawesome/free-solid-svg-icons";
 import * as api from "../api/index.js";
 import { getTheme, setTheme } from "../lib/theme.js";
 import { useRealtime } from "../lib/useRealtime.js";
-import { STRIKE_LEAD, STRIKE_RISKS } from "../lib/strikes.js";
 import { useEffect, useState } from "react";
 import ui from "../styles/ui.module.css";
 import styles from "./Layout.module.css";
@@ -35,23 +34,6 @@ export function Bell({ count }) {
         </span>
       )}
     </NavLink>
-  );
-}
-
-export function StrikeNotice({ strikes }) {
-  return (
-    <section className={styles.strike} role="status" data-testid="strike-banner">
-      <FontAwesomeIcon icon={faTriangleExclamation} className={styles.strikeIcon} aria-hidden="true" />
-      <div className={styles.strikeBody}>
-        <h2>{strikes === 1 ? "You have 1 strike" : `You have ${strikes} strikes`}</h2>
-        <p>EpicMKT gives a strike when something on your listing breaks the rules. <Link className={ui.link} to="/business/notifications">See why in Notifications</Link>.</p>
-        <p className={styles.lead}>{STRIKE_LEAD}</p>
-        <details className={styles.risk}>
-          <summary>What a suspension means<FontAwesomeIcon icon={faChevronDown} aria-hidden="true" /></summary>
-          <ul>{STRIKE_RISKS.map((t) => <li key={t}>{t}</li>)}</ul>
-        </details>
-      </div>
-    </section>
   );
 }
 
@@ -148,7 +130,6 @@ export default function Layout() {
             <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can read your notifications and answer EpicMKT under Questions.</p>
           </div>
         )}
-        {!suspended && (business?.strikes ?? 0) > 0 && <StrikeNotice strikes={business.strikes} />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
     </div>
