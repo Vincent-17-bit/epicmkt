@@ -29,3 +29,11 @@ export const whatsappShareUrl = (slug, name, site) => {
   const text = `${name ? `${name} on EpicMKT. ` : ""}See our prices and location: ${shopUrl(slug, site)}`;
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 };
+
+// The one recipe for a shop's QR code, used by the customer page, the seller preview and the printed poster,
+// so the same business always gets the same code. Only the link and the error-correction level matter:
+// Premium shops with a logo get level H (room for the logo in the middle); everyone else gets M.
+export const shopQrSpec = (slug, { planKey, hasLogo = false, site } = {}) => ({
+  text: shopQrUrl(slug, site),
+  ecl: planKey === "premium" && hasLogo ? "H" : "M",
+});

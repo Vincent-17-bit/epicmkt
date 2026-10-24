@@ -39,6 +39,7 @@ export default function Subscription() {
     qc.invalidateQueries({ queryKey: ["payments"] });
     qc.invalidateQueries({ queryKey: ["instructions"] });
     qc.invalidateQueries({ queryKey: ["changes"] });
+    qc.invalidateQueries({ queryKey: ["shop-preview"] });
   });
 
   // A payment that appears after the page opened is a payment that just arrived (automatic, or confirmed by an admin).
