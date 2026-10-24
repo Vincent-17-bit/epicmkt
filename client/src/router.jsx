@@ -11,6 +11,7 @@ import Terms from "./pages/Terms.jsx";
 import Cookies from "./pages/Cookies.jsx";
 import FlashSales from "./pages/FlashSales.jsx";
 import Offers from "./pages/Offers.jsx";
+import Featured from "./pages/Featured.jsx";
 import Business from "./pages/Business.jsx";
 import ItemPage from "./pages/ItemPage.jsx";
 import ShortLink from "./pages/ShortLink.jsx";
@@ -41,6 +42,7 @@ export const router = createBrowserRouter([
           { path: "search", element: <Home /> },
           { path: "flash", element: <FlashSales /> },
           { path: "offers", element: <Offers /> },
+          { path: "featured", element: <Featured /> },
           { path: "b/:slug", element: <Business /> },
           { path: "b/:slug/i/:itemId", element: <ItemPage /> },
           { path: "s/:shortcode", element: <ShortLink /> },

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt, faCircleCheck, faQuoteLeft } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance } from "@epicmkt/shared";
+import { Picture } from "@epicmkt/ui";
 import { useCardLife } from "../hooks/useCardLife.js";
 import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
 import { discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
@@ -86,7 +87,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       draggable="false"
     >
       <span className={styles.media}>
-        {item.imageUrl && <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />}
+        <Picture src={item.imageUrl} imgClassName={styles.img} />
         <span className={styles.vignette} aria-hidden="true" />
         <span className={styles.sweep} aria-hidden="true" />
         {compact ? (

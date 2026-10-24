@@ -12,11 +12,10 @@ const renderLink = ({ href, children, ...rest }) => (
 
 const onContact = (business, type) => logContactEvent({ businessId: business.id, type });
 
-export default function BusinessCard({ business, compact = false }) {
+export default function BusinessCard({ business }) {
   return (
     <ShopCard
       business={business}
-      compact={compact}
       href={`/b/${business.slug}`}
       renderLink={renderLink}
       icon={categoryIcon(business.categoryIcon)}

@@ -57,3 +57,7 @@ export const getStoreSelective = async (businessId, opts) => {
 // Returns { items, nextOffset }; nextOffset is null on the last page.
 export const getHomeProducts = async ({ limit = 24, offset = 0 } = {}) =>
   isLive() ? (await liveAdapter()).getHomeProducts({ limit, offset }) : backend.getHomeProducts({ limit, offset });
+
+// A random window of each store's products for the featured cards: { [businessId]: { items, total } }.
+export const getShowcaseProducts = async (businessIds, opts) =>
+  isLive() ? (await liveAdapter()).getShowcaseProducts(businessIds, opts) : backend.getStoreShowcase(businessIds, opts);
