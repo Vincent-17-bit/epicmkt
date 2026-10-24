@@ -1,4 +1,4 @@
-import { normalizeText } from "@epicmkt/shared";
+import { normalizeText } from "@epicmkt/shared/utils";
 
 // Everything a shopper can do to narrow or reorder the home page products. Pure functions over the product list, so
 // the same rules apply to demo and live data and are easy to test. The state lives in the page address (?psort=...).
@@ -95,7 +95,8 @@ export function applyFilters(products, filters) {
   const kept = products.filter((p) => {
     const store = p.business ?? {};
     if (tokens.length) {
-      const hay = normalizeText(`${p.name} ${p.description ?? ""} ${p.section ?? ""} ${store.name ?? ""} ${store.town ?? ""}`);
+      // The server precomputes this once per snapshot (p.hay); the browser fallback computes it per call.
+      const hay = p.hay ?? normalizeText(`${p.name} ${p.description ?? ""} ${p.section ?? ""} ${store.name ?? ""} ${store.town ?? ""}`);
       if (!tokens.every((t) => hay.includes(t))) return false;
     }
     if (min !== null || max !== null) {
