@@ -13,7 +13,7 @@ const snapshotPayload = () => ({
 
 let fetchMock;
 const call = async (qs) => {
-  const { default: handler } = await import("./browse.js");
+  const { default: handler } = await import("../browse.js");
   return handler(new Request(`https://example.test/api/browse?${qs}`));
 };
 
@@ -77,7 +77,7 @@ describe("/api/browse", () => {
   });
 
   it("only accepts reads", async () => {
-    const { default: handler } = await import("./browse.js");
+    const { default: handler } = await import("../browse.js");
     expect((await handler(new Request("https://example.test/api/browse?op=search", { method: "POST" }))).status).toBe(405);
   });
 

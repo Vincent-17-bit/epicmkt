@@ -6,10 +6,10 @@
 //   - liveLegacy.js (the browser) uses it only as the fallback when that endpoint is unreachable.
 //
 // It must stay free of browser, Node and Supabase imports so it runs anywhere.
-import { PLAN_FEATURES } from "@epicmkt/shared/constants";
-import { distanceKm, normalizeText, slugify } from "@epicmkt/shared/utils";
-import { cardFacts } from "@epicmkt/shared/template";
-import { businessStatus, statusOf } from "@epicmkt/shared/openState";
+import { PLAN_FEATURES } from "../../../../shared/src/constants.js";
+import { distanceKm, normalizeText, slugify } from "../../../../shared/src/utils.js";
+import { cardFacts } from "../../../../shared/src/template.js";
+import { businessStatus, statusOf } from "../../../../shared/src/openState.js";
 
 export const PRICED = new Set(["fixed", "from", "range"]);
 
@@ -165,7 +165,10 @@ export const toSummary = (b, snap, origin, now = Date.now()) => {
   };
 };
 
-const tokensOf = (query) => normalizeText(query).split(" ").filter(Boolean);
+const MAX_QUERY_WORDS = 8;
+const MAX_QUERY_CHARS = 200;
+const tokensOf = (query) => normalizeText(String(query ?? "").slice(0, MAX_QUERY_CHARS)).split(" ").filter(Boolean).slice(0, MAX_QUERY_WORDS);
+const byName = (a, b) => a.localeCompare(b, "en", { sensitivity: "base" }) || (a < b ? -1 : a > b ? 1 : 0);
 
 const scoreBusiness = (b, tokens) => {
   if (!tokens.length) return 0;
@@ -300,11 +303,18 @@ export function getSuggestions(snap, prefix, limit = 6) {
       out.push(item);
     }
   };
-  snap.categoryList.filter((c) => normalizeText(c.name).includes(q)).forEach((c) => push({ type: "category", label: c.name, categoryId: c.id }));
-  snap.businesses.filter((b) => b.nameKey.includes(q)).forEach((b) => push({ type: "business", label: b.name, slug: b.slug }));
+  [...snap.categoryList]
+    .filter((c) => normalizeText(c.name).includes(q))
+    .sort((a, b) => byName(a.name, b.name))
+    .forEach((c) => push({ type: "category", label: c.name, categoryId: c.id }));
+  snap.businesses
+    .filter((b) => b.nameKey.includes(q))
+    .sort((a, b) => byName(a.name, b.name))
+    .forEach((b) => push({ type: "business", label: b.name, slug: b.slug }));
   snap.businesses
     .flatMap((b) => b.tags)
     .filter((t) => normalizeText(t).includes(q))
+    .sort(byName)
     .forEach((t) => push({ type: "term", label: t }));
   return out.slice(0, limit);
 }

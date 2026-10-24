@@ -1,4 +1,4 @@
-import { normalizeText } from "@epicmkt/shared/utils";
+import { normalizeText } from "../../../shared/src/utils.js";
 
 // Everything a shopper can do to narrow or reorder the home page products. Pure functions over the product list, so
 // the same rules apply to demo and live data and are easy to test. The state lives in the page address (?psort=...).

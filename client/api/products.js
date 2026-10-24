@@ -16,9 +16,9 @@
 //
 // Only data the anon key can already read leaves here. No service-role key is used.
 
-import { PLAN_FEATURES } from "@epicmkt/shared/constants";
-import { normalizeText } from "@epicmkt/shared/utils";
-import { statusOf } from "@epicmkt/shared/openState";
+import { PLAN_FEATURES } from "../../shared/src/constants.js";
+import { normalizeText } from "../../shared/src/utils.js";
+import { statusOf } from "../../shared/src/openState.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
