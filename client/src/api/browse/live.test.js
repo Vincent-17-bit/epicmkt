@@ -45,6 +45,8 @@ beforeEach(() => {
   db().sales = [];
   db().offers = [];
   db().failing = null;
+  db().rpc = {};
+  db().calls = [];
 });
 
 describe("live browse adapter", () => {
@@ -230,6 +232,75 @@ describe("live browse adapter", () => {
       expect(featured.find((b) => b.name === "Open").isOpen).toBe(true);
       const onlyOpen = await live.searchBusinesses({ openNow: true });
       expect(onlyOpen.items.map((b) => b.name)).toEqual(["Open"]);
+    });
+  });
+
+  describe("database search", () => {
+    const row = (n, over = {}) => ({ ...biz(n), exceptions: [], from_price: null, distance_km: null, is_open: false, ...over });
+    const serve = (name, fn) => {
+      db().rpc[name] = fn;
+    };
+
+    it("sends the filters to the database and maps its rows to cards", async () => {
+      db().categories = [{ id: "bakeries", name: "Bakeries", icon: "bread", sort: 1, active: true }];
+      let seen;
+      serve("search_businesses", (args) => {
+        seen = args;
+        return { total: 1, page: 2, page_size: 100, items: [row(1, { name: "Sunrise", from_price: "120.00", distance_km: 2.5, hours: { mon: ["08:00", "17:00"] } })] };
+      });
+      const result = await live.searchBusinesses({ query: "bread", categoryId: "bakeries", openNow: true, radiusKm: 5, lat: -0.1, lng: 34.75, sort: "distance", page: 2, pageSize: 5000, seed: 7 });
+      expect(seen).toMatchObject({ p_query: "bread", p_category: "bakeries", p_open_now: true, p_radius_km: 5, p_lat: -0.1, p_lng: 34.75, p_sort: "distance", p_page: 2, p_page_size: 100, p_seed: "7" });
+      expect(result).toMatchObject({ total: 1, page: 2, pageSize: 100, totalPages: 1 });
+      expect(result.items[0]).toMatchObject({ name: "Sunrise", fromPriceKes: 120, distanceKm: 2.5, categoryName: "Bakeries" });
+      expect(db().calls).not.toContain("public_businesses");
+    });
+
+    it("reads promo chips only for the businesses on the page", async () => {
+      const first = row(1);
+      db().sales = [saleRow({ business_id: first.id, ends_at: new Date(Date.now() + 3600000).toISOString() })];
+      serve("search_businesses", () => ({ total: 1, items: [first] }));
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].promo.flash).toBe(1);
+    });
+
+    it("shows the closed reason from the seller's exception on every card", async () => {
+      const allWeek = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["00:00", "23:59"]]));
+      const date = new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);
+      serve("search_businesses", () => ({ total: 1, items: [row(1, { hours: allWeek, exceptions: [{ id: "e", date, kind: "closed", intervals: [], note: "Stocktake" }] })] }));
+      const { items } = await live.searchBusinesses({});
+      expect(items[0].isOpen).toBe(false);
+      expect(items[0].statusLine).toMatch(/^Closed today: Stocktake/);
+    });
+
+    it("falls back to the in-browser search when the database function is not installed yet", async () => {
+      db().businesses = [biz(1, { name: "Local Shop" })];
+      const result = await live.searchBusinesses({});
+      expect(result.items.map((b) => b.name)).toEqual(["Local Shop"]);
+    });
+
+    it("does not hide real database errors behind the fallback", async () => {
+      db().businesses = [biz(1)];
+      db().failing = { code: "57014", message: "timeout" };
+      await expect(live.searchBusinesses({})).rejects.toThrow("timeout");
+    });
+
+    it("maps facets and picks the single matching category", async () => {
+      db().categories = [{ id: "bakeries", name: "Bakeries", icon: "bread", sort: 1, active: true }];
+      serve("search_facets", () => ({ towns: [{ slug: "kisumu", name: "Kisumu", county: "Kisumu", count: 3 }], price: { min: 80, max: 300 }, category_ids: ["bakeries"] }));
+      expect(await live.getSearchFacets({ query: "bread" })).toEqual({
+        towns: [{ slug: "kisumu", name: "Kisumu", county: "Kisumu", count: 3 }],
+        price: { min: 80, max: 300 },
+        categoryId: "bakeries",
+        categoryName: "Bakeries",
+        fields: []
+      });
+    });
+
+    it("asks for suggestions only from two characters", async () => {
+      serve("search_suggestions", () => [{ type: "business", label: "Alpha", slug: "alpha" }]);
+      expect(await live.getSuggestions("a")).toEqual([]);
+      expect(db().calls).not.toContain("search_suggestions");
+      expect(await live.getSuggestions("al", 4)).toEqual([{ type: "business", label: "Alpha", slug: "alpha" }]);
     });
   });
 });

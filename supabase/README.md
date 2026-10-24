@@ -33,6 +33,14 @@ The schema the admin functions must code against (these are the real columns, no
 | Grace | Fixed at one day everywhere (`listing_state()`, `shared/src/billing.js`, `_shared/dates.ts`). It is not a setting. |
 | Seller export | `seller-export-data` lists the columns it returns from `messages` and `audit_log`, so staff-only data never leaves in a seller's export. |
 
+### Search
+
+`0041_search_postgis.sql` enables PostGIS and `unaccent` and adds `search_businesses`, `search_facets` and `search_suggestions`.
+PostGIS must be available on the Supabase project (the migration runs `create extension postgis`). Search reads at most 8 words
+per query and returns at most 100 results per page. Open now uses `hours_open()`, the SQL twin of `isOpenOn` in
+`shared/src/utils.js` (exceptions and overnight hours included); `supabase/tests/search.test.mjs` keeps the two equal.
+Until the migration is applied, the client falls back to filtering in the browser.
+
 ### 3. First admin
 
 Create the user in Supabase Auth, then make them the owner:

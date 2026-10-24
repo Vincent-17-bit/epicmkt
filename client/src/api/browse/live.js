@@ -248,7 +248,7 @@ export async function getCounties() {
   return [...new Set(businesses.map((b) => b.county).filter(Boolean))].sort();
 }
 
-export async function searchBusinesses({
+async function searchLocal({
   query = "",
   categoryId = null,
   county = null,
@@ -323,7 +323,7 @@ export async function searchBusinesses({
   return { items, total, page: current, pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)) };
 }
 
-export async function getSearchFacets({ query = "", categoryId = null } = {}) {
+async function facetsLocal({ query = "", categoryId = null } = {}) {
   const snap = await load();
   const tokens = normalizeText(query).split(" ").filter(Boolean);
   const matched = snap.businesses
@@ -343,7 +343,7 @@ export async function getSearchFacets({ query = "", categoryId = null } = {}) {
   };
 }
 
-export async function getSuggestions(prefix, limit = 6) {
+async function suggestionsLocal(prefix, limit = 6) {
   const q = normalizeText(prefix);
   if (q.length < 2) return [];
   const snap = await load();
@@ -368,6 +368,112 @@ export async function getSuggestions(prefix, limit = 6) {
     .forEach((t) => push({ type: "term", label: t }));
   return out.slice(0, limit);
 }
+
+const MAX_PAGE_SIZE = 100;
+
+const isMissingRpc = (error) => error?.code === "PGRST202" || error?.code === "42883";
+
+const withRpcFallback = async (remote, local) => {
+  try {
+    return await remote();
+  } catch (error) {
+    if (!isMissingRpc(error)) throw error;
+    return local();
+  }
+};
+
+let categoryCache = null;
+
+const loadCategories = async () => {
+  if (categoryCache && Date.now() - categoryCache.at < TTL_MS) return categoryCache.value;
+  const list = buildCategories(await fetchCategoryRows());
+  const value = { list, byId: new Map(list.map((c) => [c.id, c])) };
+  categoryCache = { at: Date.now(), value };
+  return value;
+};
+
+const fetchEndsFor = async (table, ids, endOf) => {
+  if (!ids.length) return new Map();
+  try {
+    const rows = unwrap(await supabase.from(table).select("id,business_id,ends_at").in("business_id", ids)) ?? [];
+    const ends = new Map();
+    for (const row of rows) {
+      const at = endOf(row);
+      if (!row.business_id || Number.isNaN(at)) continue;
+      ends.set(row.business_id, [...(ends.get(row.business_id) ?? []), at]);
+    }
+    return ends;
+  } catch {
+    return new Map();
+  }
+};
+
+const searchArgs = (params) => ({
+  p_query: params.query ?? "",
+  p_category: params.categoryId ?? null,
+  p_county: params.county ?? null,
+  p_town: params.town ?? null,
+  p_open_now: Boolean(params.openNow),
+  p_verified: Boolean(params.verifiedOnly),
+  p_featured: Boolean(params.featuredOnly),
+  p_lat: Number.isFinite(params.lat) ? params.lat : null,
+  p_lng: Number.isFinite(params.lng) ? params.lng : null,
+  p_radius_km: params.radiusKm ?? null,
+  p_min_price: params.minPrice ?? null,
+  p_max_price: params.maxPrice ?? null,
+  p_sort: params.sort ?? "relevance",
+  p_seed: String(params.seed ?? 0),
+  p_page: Math.max(1, params.page ?? 1),
+  p_page_size: Math.min(MAX_PAGE_SIZE, Math.max(1, params.pageSize ?? 12))
+});
+
+async function searchRemote(params) {
+  const result = unwrap(await supabase.rpc("search_businesses", searchArgs(params))) ?? { total: 0, items: [] };
+  const rows = result.items ?? [];
+  const ids = rows.map((row) => row.id);
+  const [categories, flashEnds, offerEnds] = await Promise.all([
+    loadCategories(),
+    fetchEndsFor("public_flash_sales", ids, (row) => Date.parse(row.ends_at)),
+    fetchEndsFor("public_offers", ids, (row) => (row.ends_at ? Date.parse(row.ends_at) : Infinity))
+  ]);
+  const snap = { categories: categories.byId };
+  const items = rows.map((row) => {
+    const business = buildBusiness(row, categories.byId, row.from_price == null ? null : Number(row.from_price), flashEnds.get(row.id), offerEnds.get(row.id));
+    return { ...toSummary(business, snap, null), distanceKm: row.distance_km ?? null };
+  });
+  const size = result.page_size ?? Math.min(MAX_PAGE_SIZE, Math.max(1, params.pageSize ?? 12));
+  const total = Number(result.total ?? 0);
+  return { items, total, page: result.page ?? Math.max(1, params.page ?? 1), pageSize: size, totalPages: Math.max(1, Math.ceil(total / size)) };
+}
+
+export async function searchBusinesses(params = {}) {
+  if (params.minRating > 0) return searchLocal(params);
+  return withRpcFallback(() => searchRemote(params), () => searchLocal(params));
+}
+
+async function facetsRemote({ query = "", categoryId = null } = {}) {
+  const data = unwrap(await supabase.rpc("search_facets", { p_query: query, p_category: categoryId })) ?? {};
+  const categories = await loadCategories();
+  const matched = data.category_ids ?? [];
+  const scopedId = categoryId ?? (matched.length === 1 ? matched[0] : null);
+  const category = scopedId ? categories.byId.get(scopedId) ?? null : null;
+  return {
+    towns: data.towns ?? [],
+    price: data.price ? { min: Number(data.price.min), max: Number(data.price.max) } : null,
+    categoryId: scopedId,
+    categoryName: category?.name ?? null,
+    fields: []
+  };
+}
+
+export const getSearchFacets = (params = {}) => withRpcFallback(() => facetsRemote(params), () => facetsLocal(params));
+
+async function suggestionsRemote(prefix, limit) {
+  if (normalizeText(prefix).length < 2) return [];
+  return unwrap(await supabase.rpc("search_suggestions", { p_prefix: prefix, p_limit: limit })) ?? [];
+}
+
+export const getSuggestions = (prefix, limit = 6) => withRpcFallback(() => suggestionsRemote(prefix, limit), () => suggestionsLocal(prefix, limit));
 
 export async function getFeaturedBusinesses({ categoryId = null, limit = 6, lat, lng, seed = null } = {}) {
   const snap = await load();

@@ -16,7 +16,7 @@ export const sellerExportData = (d: Deps) => wrap(async (req) => {
 
   const { data: business } = await d.db.from("businesses").select("*").eq("id", ctx.business.id).maybeSingle();
   if (!business) return json({ error: "forbidden" }, 403);
-  const { user_id: _u, application_id: _a, ...profile } = business;
+  const { user_id: _u, application_id: _a, geo: _g, ...profile } = business;
 
   const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), business: profile };
   for (const [t, columns, filter] of TABLES) {

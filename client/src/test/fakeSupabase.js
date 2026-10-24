@@ -42,7 +42,7 @@ export const saleRow = (over = {}) => {
 };
 
 export function createFakeSupabase() {
-  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false };
+  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false, rpc: {} };
 
   const clock = () => state.serverNow ?? Date.now();
 
@@ -111,8 +111,13 @@ export function createFakeSupabase() {
     removeChannel: () => {
       state.handlers.clear();
     },
-    rpc: async (name) => {
+    rpc: async (name, args) => {
       state.calls.push(name);
+      if (name.startsWith("search_")) {
+        if (state.failing) return { data: null, error: state.failing };
+        const handler = state.rpc[name];
+        return handler ? { data: handler(args), error: null } : { data: null, error: { code: "PGRST202", message: "function not found" } };
+      }
       if (state.failing || state.offline) return { data: null, error: state.failing ?? { message: "offline" } };
       return { data: iso(clock()), error: null };
     }
