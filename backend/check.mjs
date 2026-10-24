@@ -38,6 +38,26 @@ assert.ok(maseno.total >= 1 && maseno.items.every((b) => b.townSlug === "maseno"
 assert.ok(seeded.every((b) => new Set(b.services.map((svc) => svc.id)).size === b.services.length));
 assert.equal((await logEvent("breadcrumb_click", { level: 1, target: "/" })).ok, true);
 assert.equal((await logEvent("Bad Name")).ok, false);
+
+// Location privacy: no position may reach the analytics log or the search log, however a call site shapes it.
+{
+  const { store } = await import("./src/store.js");
+  const { scrubPayload, coarsenCoords, looksLikeCoordinates } = await import("./src/index.js");
+  await logEvent("item_view", { itemId: "i1", lat: -0.0917, lng: 34.768, origin: { lat: 1.2, lng: 3.4 }, nested: { coords: [1.2345, 2.3456], keep: "x" }, note: "-0.09171, 34.76801" });
+  const logged = store.analytics.at(-1).payload;
+  assert.deepEqual(logged, { itemId: "i1", nested: { keep: "x" } });
+  assert.deepEqual(scrubPayload(null), {});
+  assert.deepEqual(scrubPayload([1, 2]), {});
+  assert.deepEqual(scrubPayload({ businessId: "b_001", count: 3, ok: true }), { businessId: "b_001", count: 3, ok: true });
+  assert.deepEqual(coarsenCoords({ lat: -0.091734, lng: 34.768123 }), { lat: -0.09, lng: 34.77 });
+  assert.equal(coarsenCoords({ lat: "x", lng: 1 }), null);
+  assert.equal(coarsenCoords(null), null);
+  assert.equal(looksLikeCoordinates("-0.0917, 34.7680"), true);
+  assert.equal(looksLikeCoordinates("route 66 and 5.5 miles"), false);
+  const searches = store.searches.length;
+  assert.equal((await logSearch("-0.0917, 34.7680")).ok, false);
+  assert.equal(store.searches.length, searches);
+}
 assert.ok(Object.keys(validateAttributes(templates.find((c) => c.id === "bakery").fields, { notice: 3 })).includes("products"));
 
 const barbers = await searchBusinesses({ query: "barber" });

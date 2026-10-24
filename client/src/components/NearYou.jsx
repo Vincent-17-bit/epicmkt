@@ -42,6 +42,7 @@ export default function NearYou() {
   const coords = useGeoStore((s) => s.coords);
   const request = useGeoStore((s) => s.request);
   const town = useGeoStore((s) => s.town);
+  const source = useGeoStore((s) => s.source);
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["nearby", coords],
@@ -89,9 +90,9 @@ export default function NearYou() {
 
   return (
     <>
-      {town && (
+      {(town || source === "device") && (
         <p className={styles.where}>
-          Showing businesses near {town}.{" "}
+          {town ? `Showing businesses near ${town}.` : "Showing businesses near your approximate location."}{" "}
           <button type="button" className={styles.change} onClick={request}>
             Change
           </button>

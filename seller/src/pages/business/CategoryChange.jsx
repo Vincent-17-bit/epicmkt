@@ -37,6 +37,7 @@ export default function CategoryChange({ business, payments, onPay }) {
       await api.requestChange("category_id", target);
       setTarget("");
       await qc.invalidateQueries({ queryKey: ["changes"] });
+      qc.invalidateQueries({ queryKey: ["shop-preview"] });
     } catch (e) {
       setError(errorText(e));
     } finally {
@@ -48,6 +49,7 @@ export default function CategoryChange({ business, payments, onPay }) {
     try {
       await api.cancelChange(pending.id);
       await qc.invalidateQueries({ queryKey: ["changes"] });
+      qc.invalidateQueries({ queryKey: ["shop-preview"] });
     } catch (e) {
       setError(errorText(e));
     } finally {

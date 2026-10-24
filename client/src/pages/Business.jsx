@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
-import { distanceKm } from "@epicmkt/shared";
+import { distanceKm, shopUrl } from "@epicmkt/shared";
+import { coarsenCoords } from "@epicmkt/backend";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { expiryText, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
@@ -30,9 +31,12 @@ export default function Business() {
   const [live, setLive] = useState(null);
 
   useEffect(() => {
-    if (geo.status !== "granted" || geo.source !== "device") return undefined;
+    if (geo.status !== "granted" || geo.source !== "device") {
+      setLive(null);
+      return undefined;
+    }
     const id = navigator.geolocation.watchPosition(
-      (pos) => setLive({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (pos) => setLive(coarsenCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude })),
       () => {},
       { enableHighAccuracy: false, maximumAge: 30000 }
     );
@@ -42,7 +46,9 @@ export default function Business() {
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["business", slug],
     queryFn: () => getBusiness(slug),
-    retry: false
+    retry: false,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true
   });
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
@@ -86,7 +92,7 @@ export default function Business() {
   if (isPending) return <BusinessPageSkeleton breadcrumbs={<PageBreadcrumbs />} />;
 
   const icon = categoryIcon(data.category?.icon);
-  const shortUrl = `${window.location.origin}/s/${data.shortcode}`;
+  const shortUrl = shopUrl(data.slug, import.meta.env?.VITE_SITE_URL);
   const origin = live ?? geo.coords;
   const distance = origin ? distanceKm(origin, data) : null;
   const hasDetails = visibleFields(data.category?.fields, data.attributes).some((f) => f.key in (data.attributes ?? {}));
@@ -125,7 +131,7 @@ export default function Business() {
       detailsTitle={`${data.category?.singular} details`}
       flash={<FlashStrip id="business-flash-title" businessId={data.id} heat={false} />}
       socials={socialLinks(data.socials)}
-      qr={<QrCode value={shortUrl} label={`QR code linking to ${data.name}`} />}
+      qr={<QrCode slug={data.slug} plan={data.plan} hasLogo={!!data.logoUrl} label={`QR code linking to ${data.name}`} />}
       shortUrl={shortUrl}
       hitSection={hit}
       shareNote={shareNote}
