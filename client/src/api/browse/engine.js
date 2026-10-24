@@ -6,10 +6,10 @@
 //   - liveLegacy.js (the browser) uses it only as the fallback when that endpoint is unreachable.
 //
 // It must stay free of browser, Node and Supabase imports so it runs anywhere.
-import { PLAN_FEATURES } from "@epicmkt/shared/constants";
-import { distanceKm, normalizeText, slugify } from "@epicmkt/shared/utils";
-import { cardFacts } from "@epicmkt/shared/template";
-import { businessStatus, statusOf } from "@epicmkt/shared/openState";
+import { PLAN_FEATURES } from "../../../../shared/src/constants.js";
+import { distanceKm, normalizeText, slugify } from "../../../../shared/src/utils.js";
+import { cardFacts } from "../../../../shared/src/template.js";
+import { businessStatus, statusOf } from "../../../../shared/src/openState.js";
 
 export const PRICED = new Set(["fixed", "from", "range"]);
 

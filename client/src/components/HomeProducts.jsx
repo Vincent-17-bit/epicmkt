@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSliders, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { getCategories, items } from "../api/index.js";
 import { t } from "../i18n/index.js";
-import { EMPTY_FILTERS, applyFilters, chipsOf, countActive, facetsOf, parseFilters, writeFilters } from "../lib/productFilters.js";
+import { EMPTY_FILTERS, chipsOf, countActive, parseFilters, writeFilters } from "../lib/productFilters.js";
+import { PAGE_SIZE } from "../lib/productQuery.js";
+import { countsFromJson } from "../lib/productQuery.js";
 import Button from "./Button.jsx";
 import Container from "./Container.jsx";
 import Skeleton from "./Skeleton.jsx";
@@ -15,7 +17,7 @@ import ProductFilters from "./ProductFilters.jsx";
 import styles from "./HomeProducts.module.css";
 
 // A multiple of 2, 3, 4 and 6 so every row of the grid is full at every screen width.
-export const PAGE_SIZE = 24;
+export { PAGE_SIZE };
 
 function TileSkeleton() {
   return (
@@ -30,15 +32,37 @@ function TileSkeleton() {
 export default function HomeProducts() {
   const [params, setParams] = useSearchParams();
   const [open, setOpen] = useState(false);
-  const [shown, setShown] = useState(PAGE_SIZE);
-
-  const { data, isPending, isError, refetch } = useQuery({ queryKey: ["all-products"], queryFn: () => items.getAll(), staleTime: 60_000 });
-  const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
 
   const filters = useMemo(() => parseFilters(params), [params]);
-  const products = data ?? [];
-  const towns = useMemo(() => facetsOf(products).towns, [products]);
-  const results = useMemo(() => applyFilters(products, filters), [products, filters]);
+  const serialized = writeFilters(new URLSearchParams(), filters).toString();
+
+  // The server answers one page at a time (and the CDN caches each answer). While a new filter is loading, the grid keeps
+  // showing the previous products instead of flashing back to skeletons.
+  const pages = useInfiniteQuery({
+    queryKey: ["products-page", serialized],
+    queryFn: ({ pageParam }) => items.getPage(filters, { page: pageParam, pageSize: PAGE_SIZE }),
+    initialPageParam: 1,
+    getNextPageParam: (last) => (last.hasMore ? last.page + 1 : undefined),
+    placeholderData: keepPreviousData,
+    staleTime: 60_000
+  });
+  const { data, isPending, isError, refetch, isPlaceholderData, hasNextPage, fetchNextPage, isFetchingNextPage } = pages;
+  const facets = useQuery({ queryKey: ["products-facets"], queryFn: () => items.getFacets(), staleTime: 5 * 60_000 });
+  const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
+  // Live option counts are only needed while the filter sheet is open.
+  const counts = useQuery({
+    queryKey: ["products-counts", serialized],
+    queryFn: () => items.getCounts(filters),
+    enabled: open,
+    placeholderData: keepPreviousData,
+    staleTime: 60_000
+  });
+
+  const last = data?.pages[data.pages.length - 1];
+  const visible = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
+  const total = last?.total ?? 0;
+  const catalogTotal = last?.catalogTotal ?? 0;
+  const towns = facets.data?.towns ?? [];
   const active = countActive(filters);
 
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
@@ -50,12 +74,7 @@ export default function HomeProducts() {
   };
   const clear = () => change({ ...EMPTY_FILTERS, sort: filters.sort });
 
-  const serialized = writeFilters(new URLSearchParams(), filters).toString();
-  useEffect(() => setShown(PAGE_SIZE), [serialized]);
-
-  if (!isPending && !isError && products.length === 0) return null;
-
-  const visible = results.slice(0, shown);
+  if (!isPending && !isError && catalogTotal === 0) return null;
 
   return (
     <section className={styles.section} aria-labelledby="home-products-title">
@@ -91,7 +110,7 @@ export default function HomeProducts() {
 
         {active > 0 && !isPending && !isError && (
           <p className={styles.found} role="status" aria-live="polite">
-            {results.length === 0 ? "No products match" : `${results.length} of ${products.length} products`}
+            {total === 0 ? "No products match" : `${total} of ${catalogTotal} products`}
           </p>
         )}
 
@@ -100,13 +119,13 @@ export default function HomeProducts() {
             <p>{t("home.productsFailed")}</p>
             <Button variant="secondary" onClick={() => refetch()}>{t("home.productsRetry")}</Button>
           </div>
-        ) : !isPending && results.length === 0 ? (
+        ) : !isPending && total === 0 ? (
           <div className={styles.empty}>
             <p>No products match these filters.</p>
             <Button variant="secondary" onClick={clear}>Clear filters</Button>
           </div>
         ) : (
-          <ul className={styles.grid} aria-busy={isPending} aria-label={isPending ? t("home.productsLoading") : undefined}>
+          <ul className={styles.grid} aria-busy={isPending || isPlaceholderData} aria-label={isPending ? t("home.productsLoading") : undefined}>
             {isPending
               ? Array.from({ length: 6 }, (_, i) => <TileSkeleton key={i} />)
               : visible.map((item) => (
@@ -117,9 +136,9 @@ export default function HomeProducts() {
           </ul>
         )}
 
-        {results.length > shown && (
+        {hasNextPage && !isPlaceholderData && (
           <div className={styles.more}>
-            <Button variant="secondary" onClick={() => setShown((n) => n + PAGE_SIZE)}>
+            <Button variant="secondary" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
               {t("home.productsMore")}
             </Button>
           </div>
@@ -129,7 +148,7 @@ export default function HomeProducts() {
       <FilterSheet
         open={open}
         onClose={() => setOpen(false)}
-        total={results.length}
+        total={total}
         canClear={active > 0}
         onClear={clear}
         title="Filter products"
@@ -137,7 +156,7 @@ export default function HomeProducts() {
         closeAbove="(min-width: 99999px)"
         className={styles.drawer}
       >
-        <ProductFilters filters={filters} products={products} categories={categories.data ?? []} categoryName={categoryName} onChange={change} />
+        <ProductFilters filters={filters} facets={facets.data} counts={counts.data ? countsFromJson(counts.data) : null} categories={categories.data ?? []} categoryName={categoryName} onChange={change} />
       </FilterSheet>
     </section>
   );
