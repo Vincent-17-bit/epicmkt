@@ -140,6 +140,7 @@ const FLAG_ROWS = [
   ["photo", "With a photo"]
 ];
 const STORE_ROWS = [
+  ["openNow", "Open now"],
   ["verified", "Verified stores"],
   ["featured", "Featured stores"]
 ];
@@ -217,7 +218,7 @@ export default function ProductFilters({ filters, products, categories = [], cat
         </div>
       </Section>
 
-      <Section title="Store" open={filters.verified || filters.featured}>
+      <Section title="Store" open={filters.openNow || filters.verified || filters.featured}>
         <div className={styles.list}>
           {STORE_ROWS.map(([key, label]) => (
             <Check key={key} checked={filters[key]} count={counts.flags[key]} disabled={counts.flags[key] === 0 && !filters[key]} onChange={(v) => onChange({ [key]: v })}>

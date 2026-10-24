@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, isValidPhoneKE, isOpenNow, validateAttributes } from "@epicmkt/shared";
+import { PLAN_FEATURES, isValidPhoneKE, statusOf, validateAttributes } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
@@ -22,7 +22,7 @@ export async function getSellerBusiness(sellerId) {
   return {
     ...business,
     planFeatures: PLAN_FEATURES[business.plan],
-    isOpen: isOpenNow(business.hours)
+    isOpen: statusOf(business.hours, business.exceptions).isOpen
   };
 }
 

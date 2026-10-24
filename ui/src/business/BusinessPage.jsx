@@ -10,6 +10,7 @@ import { FeaturedBadge, VerifiedBadge } from "../components/Badges.jsx";
 import BottomBar from "./BottomBar.jsx";
 import BusinessHero from "./BusinessHero.jsx";
 import ActionRow from "./ActionRow.jsx";
+import ClosedBanner from "./ClosedBanner.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
 import Follow from "./Follow.jsx";
@@ -86,6 +87,8 @@ export default function BusinessPage({
             {reviewsText}
           </span>
         </div>
+
+        <ClosedBanner status={business.openStatus} />
 
         <p className={styles.description}>{business.description}</p>
 

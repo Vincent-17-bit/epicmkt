@@ -3,7 +3,7 @@ import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { businessOf, cardOfBusiness, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
+import { businessOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const HOUR_MS = 3600000;
@@ -56,6 +56,7 @@ export async function list({
   categoryId = null,
   town = null,
   endsWithin = null,
+  openNow = false,
   minPrice = null,
   maxPrice = null,
   sort = "ending",
@@ -69,6 +70,7 @@ export async function list({
     if (businessId && entry.business.id !== businessId && entry.business.slug !== businessId) return false;
     if (categoryId && entry.business.categoryId !== categoryId) return false;
     if (town && entry.business.townSlug !== town) return false;
+    if (openNow && !entry.business.isOpen) return false;
     if (window && endMs(entry) - now > window) return false;
     if (Number.isFinite(minPrice) && entry.pricing.salePrice < minPrice) return false;
     if (Number.isFinite(maxPrice) && entry.pricing.salePrice > maxPrice) return false;
@@ -194,7 +196,7 @@ const fetchPages = async (table, columns, order) => {
 export async function getAllProducts() {
   const [rows, businesses] = await Promise.all([
     fetchPages("public_items", "*", [["created_at", false], ["id", true]]),
-    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county", [["id", true]])
+    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions", [["id", true]])
   ]);
   if (!rows.length) return [];
   const byId = new Map(businesses.map((b) => [b.id, b]));
@@ -224,7 +226,8 @@ export async function getAllProducts() {
           featured: PLAN_FEATURES[business.plan_key]?.featured === true,
           categoryId: business.category_id,
           town: business.town ?? "",
-          county: business.county ?? ""
+          county: business.county ?? "",
+          ...statusCard(business.hours, business.exceptions)
         }
       }
     ];

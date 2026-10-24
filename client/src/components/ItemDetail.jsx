@@ -435,6 +435,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                       {seller.townName}
                       {Number.isFinite(distanceKm) && ` · ${formatDistance(distanceKm)}`}
                     </p>
+                    {!seller.isOpen && seller.statusLine && <p className={styles.sellerMeta}>{seller.statusLine}</p>}
                   </div>
                   <span className={seller.isOpen ? styles.open : styles.closed}>{seller.isOpen ? t("item.open") : t("item.closed")}</span>
                 </div>

@@ -107,7 +107,7 @@ export default function ShopCard({
                   {formatKes(business.fromPriceKes)}
                 </span>
               )}
-              <span className={`${styles.status} ${business.isOpen ? styles.statusOpen : styles.statusClosed}`}>
+              <span className={`${styles.status} ${business.isOpen ? styles.statusOpen : styles.statusClosed}`} title={business.statusLine ?? undefined}>
                 <span className={styles.dot} aria-hidden="true" />
                 {business.isOpen ? "Open" : "Closed"}
               </span>
@@ -165,6 +165,7 @@ export default function ShopCard({
               </span>
               <span className={business.isOpen ? styles.open : styles.closed}>{business.isOpen ? "Open now" : "Closed"}</span>
             </div>
+            {business.statusLine && <p className={styles.statusLine}>{business.statusLine}</p>}
 
             <div className={styles.actions}>
               <Button as="a" size="sm" icon={faPhone} {...act.link(telLink(business.phone), track("call"))}>

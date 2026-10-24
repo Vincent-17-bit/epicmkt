@@ -1,0 +1,32 @@
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.banner[data-open] {
+  border-left-color: var(--primary);
+}
+
+.icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--text-muted);
+}
+
+.title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.detail {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}

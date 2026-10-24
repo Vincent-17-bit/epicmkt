@@ -3,13 +3,12 @@ import {
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
-  closingInfo,
   cardFacts,
   distanceKm,
   filterableFields,
   matchesFilter,
   searchableText,
-  isOpenNow,
+  statusOf,
   normalizeText,
   todayHours
 } from "@epicmkt/shared";
@@ -71,7 +70,8 @@ const toSummary = (b, origin) => ({
   whatsapp: b.whatsapp,
   lat: b.lat,
   lng: b.lng,
-  isOpen: isOpenNow(b.hours),
+  isOpen: statusOf(b.hours, b.exceptions).isOpen,
+  statusLine: statusOf(b.hours, b.exceptions).line,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });
@@ -79,14 +79,18 @@ const toSummary = (b, origin) => ({
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
   const now = Date.now();
+  const open = statusOf(b.hours, b.exceptions);
   return {
     ...rest,
     offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
     services: b.services.filter((svc) => svc.status !== "unlisted"),
-    ...closingInfo(b.hours),
+    closesAt: open.closesAt,
+    opensAt: open.opensAt,
+    openStatus: open,
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
-    isOpen: isOpenNow(b.hours),
+    isOpen: open.isOpen,
+    statusLine: open.line,
     todayHours: todayHours(b.hours),
     distanceKm: origin ? distanceKm(origin, b) : null
   };
@@ -172,7 +176,7 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !openNow || isOpenNow(b.hours))
+    .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .filter((b) => matchesAttrs(b, attrEntries))
