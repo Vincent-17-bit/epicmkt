@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe("RecentlyAdded", () => {
-  it("asks for the newest businesses and renders them as compact cards with see-all links", async () => {
+  it("asks for the newest businesses and renders them as tiles with See more links", async () => {
     vi.mocked(searchBusinesses).mockResolvedValue({ items: [shop(1), shop(2), shop(3)], total: 27 });
     view();
 
@@ -57,11 +57,12 @@ describe("RecentlyAdded", () => {
     expect(await screen.findByRole("heading", { name: "Shop 1" })).toBeInTheDocument();
     expect(searchBusinesses).toHaveBeenCalledWith({ sort: "newest", pageSize: 12 });
 
-    const seeAll = screen.getAllByRole("link", { name: /See all/ });
+    const seeAll = screen.getAllByRole("link", { name: /See more/ });
     expect(seeAll).toHaveLength(2);
     seeAll.forEach((link) => expect(link).toHaveAttribute("href", SEE_ALL_PATH));
     expect(screen.getByText("27 businesses")).toBeInTheDocument();
     expect(screen.queryByText("Tagline")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /^Call Shop/ })).toHaveLength(3);
   });
 
   it("pages by whole visible cards with the arrow buttons and disables the start arrow at the start", async () => {

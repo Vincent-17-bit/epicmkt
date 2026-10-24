@@ -1,7 +1,7 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faImage, faStar } from "@fortawesome/free-solid-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 import { isPreview } from "./preview.js";
+import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
+import LazyImage from "./components/LazyImage.jsx";
 import styles from "./ProductTile.module.css";
 
 const DEFAULT_LABELS = {
@@ -68,13 +68,7 @@ export default function ProductTile({
       data-mode={preview ? "preview" : undefined}
     >
       <span className={styles.media}>
-        {item.imageUrl ? (
-          <img src={item.imageUrl} alt="" loading="lazy" decoding="async" className={styles.img} draggable="false" />
-        ) : (
-          <span className={styles.noImage} aria-hidden="true">
-            <FontAwesomeIcon icon={faImage} />
-          </span>
-        )}
+        <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
         {soldOut && <span className={styles.stock}>{labels.availability(availability)}</span>}
@@ -106,24 +100,14 @@ export default function ProductTile({
           )}
         </span>
         <span className={styles.store}>
-          {store.featured && (
-            <span className={styles.star} title={labels.featured}>
-              <FontAwesomeIcon icon={faStar} aria-hidden="true" />
-              <span className={styles.sr}>{labels.featured}. </span>
-            </span>
-          )}
+          {store.featured && <FeaturedMark label={labels.featured} />}
           <span className={styles.storeName}>{store.name}</span>
           {store.isOpen === false && (
             <span className={styles.closed} title={store.statusLine ?? undefined}>
               {labels.closed ?? DEFAULT_LABELS.closed}
             </span>
           )}
-          {store.verified && (
-            <span className={styles.tick} title={labels.verified}>
-              <FontAwesomeIcon icon={faCircleCheck} aria-hidden="true" />
-              <span className={styles.sr}>{labels.verified}</span>
-            </span>
-          )}
+          {store.verified && <VerifiedMark label={labels.verified} />}
         </span>
       </span>
     </Link>

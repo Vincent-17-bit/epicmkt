@@ -2,11 +2,12 @@ export const SITE_URL = (import.meta.env?.VITE_SITE_URL || (typeof window !== "u
 
 export const SEARCH_QUERY_MAX = 24;
 
-export const CASE_INSENSITIVE_PATHS = ["/flash", "/offers"];
+export const CASE_INSENSITIVE_PATHS = ["/flash", "/offers", "/featured"];
 
 export const STATIC_TRAILS = {
   "/flash": [{ key: "breadcrumbs.flashSales" }],
   "/offers": [{ key: "breadcrumbs.offers" }],
+  "/featured": [{ key: "breadcrumbs.featured" }],
   "/sell": [{ key: "breadcrumb.sell" }],
   "/sell/register": [{ key: "breadcrumb.sell", to: "/sell" }, { key: "breadcrumb.register" }],
   "/about": [{ key: "breadcrumb.about" }],

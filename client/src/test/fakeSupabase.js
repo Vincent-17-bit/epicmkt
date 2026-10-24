@@ -59,15 +59,20 @@ export function createFakeSupabase() {
     const filters = [];
     const inFilters = [];
     let window = null;
+    let wantCount = false;
     const run = () => {
       state.calls.push(table);
       if (state.failing) return { data: null, error: state.failing };
       let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])));
+      const total = data.length;
       if (window) data = data.slice(window[0], window[1] + 1);
-      return { data, error: null };
+      return { data, error: null, count: wantCount ? total : null };
     };
     const query = {
-      select: () => query,
+      select: (_columns, options) => {
+        wantCount = options?.count === "exact";
+        return query;
+      },
       order: () => query,
       limit: () => query,
       range: (from, to) => {

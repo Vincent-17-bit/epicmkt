@@ -1,0 +1,199 @@
+/*
+ * Two thirds picture, one third details, then the contact strip. The top part has a fixed shape (its width sets its
+ * height) so the split holds on every screen and every card in a row is the same height. Type scales with the
+ * card's own width (cqw) so the details always fit their third. The name link stretches over the whole top part to
+ * make it one tap target; the contact buttons sit outside it, so nothing is a link inside a link.
+ */
+.tile {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--text);
+  transition: transform var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease;
+}
+
+/* The measuring box. A container cannot use its own width for units, so the padding is set on its children. */
+.inner {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.inner > * {
+  --pad: clamp(7px, 4.6cqw, 11px);
+}
+
+.top {
+  position: relative;
+  display: grid;
+  flex: none;
+  grid-template-rows: 2fr 1fr;
+  width: 100%;
+  aspect-ratio: 1 / 1.5;
+  min-height: 0;
+}
+
+.media {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.promo {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  font-size: 0.6875rem;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(1px, 1.2cqw, 3px);
+  min-width: 0;
+  min-height: 0;
+  padding: 0 var(--pad);
+  overflow: hidden;
+}
+
+.name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  font-size: clamp(0.8125rem, 7.6cqw, 0.9375rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.nameLink {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 2px;
+  white-space: nowrap;
+}
+
+/* The whole top part is the link. */
+.nameLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.where {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.facts {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
+  min-width: 0;
+  font-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
+  line-height: 1.25;
+}
+
+.price {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.from {
+  display: none;
+  font-weight: 600;
+}
+
+/* In a narrow tile the name matters more than the gold chip, so the chip waits for room. */
+.featuredMark {
+  display: none;
+}
+
+@container (min-width: 170px) {
+  .featuredMark {
+    display: inline-grid;
+  }
+}
+
+.actions {
+  margin: var(--pad);
+  margin-top: auto;
+}
+
+@container (min-width: 170px) {
+  .from {
+    display: inline;
+  }
+}
+
+/* With room, a long name may use two lines instead of being cut short. */
+@container (min-width: 190px) {
+  .name {
+    align-items: flex-start;
+  }
+
+  .nameLink {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (hover: hover) {
+  .tile:hover {
+    transform: translateY(-2px);
+    border-color: var(--text);
+    box-shadow: var(--shadow-md);
+  }
+
+  .tile:hover .nameLink {
+    text-decoration: underline;
+    text-decoration-color: var(--link-underline);
+  }
+}
+
+.tile:has(.nameLink:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.nameLink:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile {
+    transition: none;
+  }
+
+  .tile:hover {
+    transform: none;
+  }
+}

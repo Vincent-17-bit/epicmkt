@@ -14,6 +14,7 @@
 }
 
 .cover {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -50,7 +51,7 @@
 
 .head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: var(--space-3);
 }
 
@@ -59,11 +60,10 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
-  margin-top: -28px;
+  width: 48px;
+  height: 48px;
   overflow: hidden;
-  border: 3px solid var(--surface);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--on-primary);
@@ -194,205 +194,4 @@
   position: absolute;
   bottom: var(--space-3);
   left: var(--space-3);
-}
-
-/* Compact variant: dense card for carousels. Sizes itself from its own width via container queries. */
-.compact {
-  container-type: inline-size;
-  border-width: 1.5px;
-}
-
-.compact .cover {
-  aspect-ratio: auto;
-  height: 68px;
-  font-size: 1.5rem;
-}
-
-.compact .badges {
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  gap: 4px;
-}
-
-.compact .badges > * {
-  min-height: 20px;
-  padding: 0 6px;
-  font-size: 0.6875rem;
-}
-
-.compact .promo {
-  bottom: 6px;
-  left: 6px;
-  padding: 2px 6px;
-  font-size: 0.6875rem;
-}
-
-.compact .body {
-  gap: 6px;
-  padding: 8px 8px 8px;
-}
-
-.compact .head {
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-}
-
-.compact .icon {
-  width: 36px;
-  height: 36px;
-  margin-top: -26px;
-  border-width: 2px;
-  font-size: 1rem;
-}
-
-.compact .titles {
-  width: 100%;
-}
-
-.compact .name {
-  display: -webkit-box;
-  min-height: 2.5em;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  line-height: 1.25;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
-.compact .where {
-  overflow: hidden;
-  font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.compactMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 2px 8px;
-  margin-top: auto;
-  font-size: var(--text-xs);
-  font-weight: 700;
-}
-
-.compactPrice {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.fromWord {
-  display: none;
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  white-space: nowrap;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: currentColor;
-}
-
-.statusOpen {
-  color: #15803d;
-}
-
-.statusClosed {
-  color: var(--text-muted);
-}
-
-:global([data-theme="dark"]) .statusOpen {
-  color: #4ade80;
-}
-
-.compactActions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.compact .compactActions > a {
-  min-width: 0;
-  min-height: 40px;
-  padding: 0;
-  border-width: 1.5px;
-  font-size: var(--text-xs);
-}
-
-.actionLabel {
-  display: none;
-}
-
-@container (min-width: 170px) {
-  .fromWord {
-    display: inline;
-  }
-
-  .compact .cover {
-    height: 76px;
-  }
-
-  .compact .compactActions {
-    grid-template-columns: 2fr 1fr 1fr;
-  }
-
-  .compact .compactActions > a:first-child {
-    gap: 6px;
-  }
-
-  .compact .compactActions > a:first-child .actionLabel {
-    display: inline;
-  }
-}
-
-@container (min-width: 200px) {
-  .compact .cover {
-    height: 80px;
-  }
-
-  .compact .body {
-    gap: 8px;
-    padding: 10px;
-  }
-
-  .compact .head {
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 10px;
-  }
-
-  .compact .icon {
-    width: 42px;
-    height: 42px;
-    margin-top: -24px;
-    font-size: 1.125rem;
-  }
-
-  .compact .titles {
-    width: auto;
-    min-width: 0;
-  }
-
-  .compact .name {
-    min-height: 0;
-    font-size: var(--text-md);
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
-  }
-}
-
-.statusLine {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
 }

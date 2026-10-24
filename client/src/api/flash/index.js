@@ -55,3 +55,7 @@ export const getStoreSelective = async (businessId, opts) => {
 
 // Live data is authoritative: with Supabase configured an empty marketplace shows no products, never demo ones.
 export const getAllProducts = async () => (isLive() ? (await liveAdapter()).getAllProducts() : backend.getAllProducts());
+
+// A random window of each store's products for the featured cards: { [businessId]: { items, total } }.
+export const getShowcaseProducts = async (businessIds, opts) =>
+  isLive() ? (await liveAdapter()).getShowcaseProducts(businessIds, opts) : backend.getStoreShowcase(businessIds, opts);

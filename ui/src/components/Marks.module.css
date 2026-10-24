@@ -1,0 +1,48 @@
+/* Featured store: a flat amber star (Font Awesome), matte rather than shiny. */
+.star {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  color: var(--star);
+  font-size: 1em;
+}
+
+.tick {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  color: var(--verified);
+  font-size: 1.1em;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: currentColor;
+}
+
+.open {
+  color: var(--status-ok);
+}
+
+.closed {
+  color: var(--text-muted);
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

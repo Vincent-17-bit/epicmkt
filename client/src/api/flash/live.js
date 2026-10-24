@@ -234,6 +234,59 @@ export async function getAllProducts() {
   });
 }
 
+const SHOWCASE_COLUMNS = "id,business_id,name,price,price_type,unit,section,availability,image_paths,created_at";
+
+// One store's products as a random window, never the whole catalogue: ask for the first window and the total, and
+// only when the store has more than a window's worth ask again from a random start. Ordering by id (random uuids)
+// makes any window a fair sample, so a store with a thousand products costs at most two small requests.
+const showcaseWindow = async (businessId, pool, rng) => {
+  const read = async (from) =>
+    await supabase
+      .from("public_items")
+      .select(SHOWCASE_COLUMNS, { count: "exact" })
+      .eq("business_id", businessId)
+      .order("id")
+      .range(from, from + pool - 1);
+  const first = await read(0);
+  const total = first.count ?? first.data?.length ?? 0;
+  unwrap(first);
+  if (total <= pool) return { rows: first.data ?? [], total };
+  const start = Math.floor(rng() * (total - pool + 1));
+  if (start === 0) return { rows: first.data ?? [], total };
+  return { rows: unwrap(await read(start)) ?? [], total };
+};
+
+export async function getShowcaseProducts(businessIds = [], { pool = 24, rng = Math.random } = {}) {
+  const ids = [...new Set(businessIds)].filter(Boolean);
+  if (!ids.length) return {};
+  const businesses = unwrap(await supabase.from("public_businesses").select("id,slug").in("id", ids)) ?? [];
+  const slugOf = new Map(businesses.map((b) => [b.id, b.slug]));
+  let live = { now: Date.now(), entries: [] };
+  try {
+    live = await liveEntries();
+  } catch {
+    // keep regular prices
+  }
+  const sales = new Map(live.entries.map((entry) => [entry.item.id, entry]));
+  const windows = await Promise.all(
+    ids.filter((id) => slugOf.has(id)).map(async (id) => [id, await showcaseWindow(id, pool, rng)])
+  );
+  return Object.fromEntries(
+    windows.map(([id, { rows, total }]) => [
+      id,
+      {
+        total,
+        items: rows.map((row) => {
+          const item = itemRow(row, { slug: slugOf.get(id) });
+          const entry = sales.get(row.id);
+          const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+          return { ...item, pricing, flash: entry ? flashParts(entry, live.now) : null };
+        })
+      }
+    ])
+  );
+}
+
 let categoriesCache = null;
 
 export async function getBusiness(ref, origin = null) {
