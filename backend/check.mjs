@@ -116,13 +116,20 @@ await setBusinessStatus("b_023", "active");
 assert.equal((await listBusinesses({ status: "pending" })).total, 0);
 assert.equal((await searchBusinesses({ query: "phone" })).total, 1);
 
+{
+  // Demo product ids are globally unique, like live database ids: the same product name in
+  // two shops must never share an id, so a lookup without a shop can't land in the wrong one.
+  const every = seeded.flatMap((b) => b.services.map((svc) => svc.id));
+  assert.equal(new Set(every).size, every.length, "demo product ids must be globally unique");
+  assert.ok(every.every((id) => /^b_\d+-/.test(id)), "demo product ids carry their shop id");
+}
 console.log("all checks passed");
 
 {
   const { getItemDetail, getStoreSelective, getFlashForItem, advanceClock, resetClock, runSweep } = await import("./src/index.js");
   const { store } = await import("./src/store.js");
 
-  const live = await getItemDetail("fade-and-beard", { businessId: "b_001" });
+  const live = await getItemDetail("b_001-fade-and-beard", { businessId: "b_001" });
   assert.equal(live.flash.sale.id, "f_001");
   assert.equal(live.pricing.regularPrice, 300);
   assert.equal(live.pricing.salePrice, 240);
@@ -131,40 +138,40 @@ console.log("all checks passed");
   assert.ok(live.flash.remainingMs > 0);
   assert.equal(live.business.slug, "fade-kings-barbershop");
 
-  const plain = await getItemDetail("haircut", { businessId: "b_001" });
+  const plain = await getItemDetail("b_001-haircut", { businessId: "b_001" });
   assert.equal(plain.flash, null);
   assert.equal(plain.pricing.salePrice, plain.pricing.regularPrice);
   assert.equal(plain.pricing.savings, 0);
 
-  const braids = await getItemDetail("box-braids", { businessId: "b_017" });
+  const braids = await getItemDetail("b_017-box-braids", { businessId: "b_017" });
   const medium = braids.pricing.variants.find((v) => v.id === "medium");
   const small = braids.pricing.variants.find((v) => v.id === "small");
   assert.equal(medium.salePrice, 2000);
   assert.equal(small.salePrice, 3150);
   assert.ok(braids.pricing.variants.every((v) => v.salePrice <= v.regularPrice));
 
-  assert.equal(await getFlashForItem("10l-refill", "b_004"), null);
-  await assert.rejects(() => getItemDetail("nope", { businessId: "b_001" }), { name: "NotFoundError" });
+  assert.equal(await getFlashForItem("b_004-10l-refill", "b_004"), null);
+  await assert.rejects(() => getItemDetail("b_001-nope", { businessId: "b_001" }), { name: "NotFoundError" });
 
-  const selective = await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 12 });
-  assert.ok(selective.every((i) => i.id !== "haircut"));
+  const selective = await getStoreSelective("b_001", { excludeItemId: "b_001-haircut", limit: 12 });
+  assert.ok(selective.every((i) => i.id !== "b_001-haircut"));
   assert.equal(selective.length, 9);
-  assert.equal(selective[0].id, "fade-and-beard");
+  assert.equal(selective[0].id, "b_001-fade-and-beard");
   const sameSection = selective.filter((i) => i.section === "Cuts").length;
   assert.ok(selective.slice(0, sameSection).every((i) => i.section === "Cuts"));
-  const sectionLast = (await getStoreSelective("b_017", { excludeItemId: "wig-install" })).map((i) => i.id);
+  const sectionLast = (await getStoreSelective("b_017", { excludeItemId: "b_017-wig-install" })).map((i) => i.id);
   assert.equal(sectionLast.length, 9);
-  assert.equal((await getStoreSelective("b_001", { excludeItemId: "haircut", limit: 1 })).length, 1);
+  assert.equal((await getStoreSelective("b_001", { excludeItemId: "b_001-haircut", limit: 1 })).length, 1);
   assert.deepEqual(await getStoreSelective("missing"), []);
 
   const { getOffers } = await import("./src/index.js");
-  const forFade = await getItemDetail("fade-and-beard", { businessId: "b_001" });
+  const forFade = await getItemDetail("b_001-fade-and-beard", { businessId: "b_001" });
   assert.deepEqual(forFade.offers.map((o) => o.offer.id), ["p_001"]);
   assert.equal(forFade.offers[0].appliesToLabel, "Whole store");
   assert.ok(forFade.offers[0].remainingMs > 0);
-  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_001" })).offers.map((o) => o.offer.id).sort(), ["p_001", "p_002"]);
-  assert.deepEqual((await getItemDetail("hair-dye", { businessId: "b_001" })).offers.map((o) => o.offer.id), ["p_001"]);
-  assert.deepEqual((await getItemDetail("haircut", { businessId: "b_002" })).offers, []);
+  assert.deepEqual((await getItemDetail("b_001-haircut", { businessId: "b_001" })).offers.map((o) => o.offer.id).sort(), ["p_001", "p_002"]);
+  assert.deepEqual((await getItemDetail("b_001-hair-dye", { businessId: "b_001" })).offers.map((o) => o.offer.id), ["p_001"]);
+  assert.deepEqual((await getItemDetail("b_002-haircut", { businessId: "b_002" })).offers, []);
   assert.equal((await getOffers({ businessId: "b_001" })).items.length, 2);
   const allOffers = await getOffers({ limit: 50 });
   assert.equal(allOffers.total, allOffers.items.length);
@@ -173,26 +180,26 @@ console.log("all checks passed");
   const { getOfferFacets } = await import("./src/index.js");
   assert.equal((await getOfferFacets()).total, allOffers.total);
   assert.ok((await getOffers({ town: "no-such-town" })).total === 0);
-  assert.equal((await getItemDetail("box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Braids");
+  assert.equal((await getItemDetail("b_017-box-braids", { businessId: "b_017" })).offers[0].appliesToLabel, "Braids");
 
   advanceClock(6 * 3600000);
-  assert.equal((await getFlashForItem("10l-refill", "b_004")).sale.id, "f_004");
+  assert.equal((await getFlashForItem("b_004-10l-refill", "b_004")).sale.id, "f_004");
   advanceClock(8 * 3600000);
   runSweep();
   assert.equal(store.flashSales.find((s) => s.id === "f_003").status, "ended");
-  const unlisted = store.businesses.find((b) => b.id === "b_010").services.find((s) => s.id === "dairy-meal-70kg");
+  const unlisted = store.businesses.find((b) => b.id === "b_010").services.find((s) => s.id === "b_010-dairy-meal-70kg");
   assert.equal(unlisted.status, "unlisted");
   assert.equal(unlisted.unlistReason, "flash_ended");
   assert.equal(store.notifications.at(-1).type, "flash_sale_ended");
-  await assert.rejects(() => getItemDetail("dairy-meal-70kg", { businessId: "b_010" }), { name: "NotFoundError" });
-  assert.ok(!(await getBusiness("b_010")).services.some((s) => s.id === "dairy-meal-70kg"));
+  await assert.rejects(() => getItemDetail("b_010-dairy-meal-70kg", { businessId: "b_010" }), { name: "NotFoundError" });
+  assert.ok(!(await getBusiness("b_010")).services.some((s) => s.id === "b_010-dairy-meal-70kg"));
   advanceClock(30 * 3600000);
-  assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).flash, null);
-  assert.equal((await getItemDetail("fade-and-beard", { businessId: "b_001" })).pricing.salePrice, 300);
+  assert.equal((await getItemDetail("b_001-fade-and-beard", { businessId: "b_001" })).flash, null);
+  assert.equal((await getItemDetail("b_001-fade-and-beard", { businessId: "b_001" })).pricing.salePrice, 300);
   advanceClock(6 * 86400000);
   runSweep();
   assert.equal(store.offers.find((o) => o.id === "p_001").status, "expired");
-  assert.deepEqual((await getItemDetail("fade-and-beard", { businessId: "b_001" })).offers, []);
+  assert.deepEqual((await getItemDetail("b_001-fade-and-beard", { businessId: "b_001" })).offers, []);
   assert.equal(store.offers.find((o) => o.id === "p_010").status, "active");
   resetClock();
 }
