@@ -6,8 +6,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { items } from "../api/index.js";
 import HomeProducts from "./HomeProducts.jsx";
 import { itemPagePath } from "./ProductTile.jsx";
+import { countsSummary, facetsSummary, pageOf } from "../lib/productQuery.js";
 
-vi.mock("../api/index.js", () => ({ items: { getAll: vi.fn() }, getCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "hardware", name: "Hardware" }]), logContactEvent: vi.fn() }));
+vi.mock("../api/index.js", () => ({ items: { getPage: vi.fn(), getFacets: vi.fn(), getCounts: vi.fn() }, getCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "hardware", name: "Hardware" }]), logContactEvent: vi.fn() }));
 
 const product = (n, over = {}) => ({
   id: `item-${n}`,
@@ -41,13 +42,22 @@ const view = (initial = "/") => {
   );
 };
 
+// The server answers pages, facets and counts with the same pure functions the endpoint runs; the tests give the fake
+// server a product list and let it answer the way the endpoint would.
+const serve = (list) => {
+  vi.mocked(items.getPage).mockImplementation(async (filters, opts) => pageOf(list, filters, opts));
+  vi.mocked(items.getFacets).mockImplementation(async () => facetsSummary(list));
+  vi.mocked(items.getCounts).mockImplementation(async (filters) => countsSummary(list, filters));
+};
+
 beforeEach(() => {
-  vi.mocked(items.getAll).mockReset();
+  for (const fn of [items.getPage, items.getFacets, items.getCounts]) vi.mocked(fn).mockReset();
+  serve([]);
 });
 
 describe("HomeProducts", () => {
   it("shows each product as one card with its price and its store inside it", async () => {
-    vi.mocked(items.getAll).mockResolvedValue([
+    serve([
       product(1, { business: { id: "b1", slug: "shop-1", name: "Shop 1", verified: true, featured: true } }),
       product(2)
     ]);
@@ -62,14 +72,14 @@ describe("HomeProducts", () => {
   });
 
   it("opens a product on its own page, not a sheet", async () => {
-    vi.mocked(items.getAll).mockResolvedValue([product(1)]);
+    serve([product(1)]);
     view();
     await userEvent.click(await screen.findByRole("link", { name: /Product 1/ }));
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/b/shop-1/i/item-1"));
   });
 
   it("lists every product, 24 at a time", async () => {
-    vi.mocked(items.getAll).mockResolvedValue(Array.from({ length: 30 }, (_, i) => product(i + 1, { createdAt: `2026-01-${String(30 - i).padStart(2, "0")}T00:00:00Z` })));
+    serve(Array.from({ length: 30 }, (_, i) => product(i + 1, { createdAt: `2026-01-${String(30 - i).padStart(2, "0")}T00:00:00Z` })));
     view();
     await screen.findByText("Product 1");
     expect(screen.getAllByRole("link")).toHaveLength(24);
@@ -79,14 +89,14 @@ describe("HomeProducts", () => {
   });
 
   it("renders nothing when there are no products", async () => {
-    vi.mocked(items.getAll).mockResolvedValue([]);
+    serve([]);
     const { container } = view();
-    await waitFor(() => expect(items.getAll).toHaveBeenCalled());
+    await waitFor(() => expect(items.getPage).toHaveBeenCalled());
     await waitFor(() => expect(container).toBeEmptyDOMElement());
   });
 
   it("says so and offers a retry when products cannot be loaded", async () => {
-    vi.mocked(items.getAll).mockRejectedValue(new Error("boom"));
+    vi.mocked(items.getPage).mockRejectedValue(new Error("boom"));
     view();
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
@@ -99,7 +109,7 @@ describe("HomeProducts", () => {
 
 describe("HomeProducts filters", () => {
   const stock = () =>
-    vi.mocked(items.getAll).mockResolvedValue([
+    serve([
       product(1, { name: "Bread", pricing: { regularPrice: 65, salePrice: 65, savings: 0, discountPercent: 0 } }),
       product(2, { name: "Cake", pricing: { regularPrice: 1800, salePrice: 1440, savings: 360, discountPercent: 20 } }),
       product(3, { name: "Knife", pricing: { regularPrice: 1470, salePrice: 1470, savings: 0, discountPercent: 0 } })
@@ -129,7 +139,7 @@ describe("HomeProducts filters", () => {
   });
 
   it("keeps the grid right when two stores use the same item id", async () => {
-    vi.mocked(items.getAll).mockResolvedValue([
+    serve([
       product(1, { id: "s0", name: "Bread" }),
       product(2, { id: "s0", name: "Cake" }),
       product(3, { id: "s0", name: "Knife" })

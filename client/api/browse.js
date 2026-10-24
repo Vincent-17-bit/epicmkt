@@ -77,7 +77,9 @@ async function build() {
   let parts;
   try {
     parts = await fromRpc();
-  } catch {
+  } catch (error) {
+    // Visible in the Vercel function logs: if this appears often, the anon role's statement timeout is too short for the snapshot.
+    console.warn(`[browse] browse_snapshot failed (${error?.message ?? error}); paging the public views instead`);
     parts = await fromViews();
   }
   // Media is returned as raw storage paths. The browser turns them into URLs, because it owns the media-host sharding.
@@ -102,7 +104,10 @@ async function snapshot() {
   try {
     return await state.inflight;
   } catch (error) {
-    if (state.snap && Date.now() - state.at < STALE_MS) return state.snap;
+    if (state.snap && Date.now() - state.at < STALE_MS) {
+      console.warn(`[browse] refresh failed, serving the snapshot from ${Math.round((Date.now() - state.at) / 1000)} s ago`);
+      return state.snap;
+    }
     throw error;
   }
 }
@@ -153,6 +158,7 @@ export default async function handler(req) {
     return reply(answer(snap, parsed.op, parsed.params), 200, OK_CACHE);
   } catch (error) {
     if (error?.name === "NotFoundError") return reply({ error: "not_found", message: error.message }, 404, "public, s-maxage=30");
+    console.error(`[browse] unavailable: ${error?.message ?? error}`);
     return reply({ error: "unavailable" }, 502, "no-store");
   }
 }
