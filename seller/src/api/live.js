@@ -28,15 +28,15 @@ const rpc = async (name, args) => {
 
 // `identifier` is the seller's Seller ID, or their verified sign-in email.
 export const login = async (identifier, password) => {
-  const { session } = await fn("seller-login", { identifier, password });
+  const { session } = await fn("seller-login", { identifier, sellerId: identifier, password });
   const { error } = await need().auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
   if (error) throw new ApiError("session_failed");
   return { expiresAt: session.expires_at };
 };
 export const logout = async () => { await need().auth.signOut(); };
 // `channel` is where the code goes: "sms" (Africa's Talking, to the phone on the listing) or "email" (the verified sign-in email).
-export const forgotRequest = ({ identifier, channel = "sms" }) => fn("seller-forgot-request", { identifier, channel });
-export const forgotVerify = ({ identifier, code, newPassword }) => fn("seller-forgot-verify", { identifier, code, newPassword });
+export const forgotRequest = ({ identifier, channel = "sms" }) => fn("seller-forgot-request", { identifier, sellerId: identifier, channel });
+export const forgotVerify = ({ identifier, code, newPassword }) => fn("seller-forgot-verify", { identifier, sellerId: identifier, code, newPassword });
 // A code to confirm a password change ("change_password", by `channel`), or to prove a new email is theirs ("verify_email", sent to `email`).
 export const requestOtp = ({ purpose = "change_password", channel = "sms", email } = {}) =>
   fn("seller-otp-request", purpose === "verify_email" ? { purpose, email } : { purpose, channel });
