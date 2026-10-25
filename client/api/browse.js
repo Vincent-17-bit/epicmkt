@@ -38,13 +38,13 @@ const toEndsMap = (object) => {
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
-  const data = await cached("browse:snapshot:v1", FRESH_MS / 1000, () => rpc("browse_snapshot"));
+  const { data, at } = await cached("browse:snapshot:v1", { freshMs: FRESH_MS, staleMs: STALE_MS }, () => rpc("browse_snapshot"));
   const lowest = new Map();
   for (const [businessId, price] of Object.entries(data.prices ?? {})) {
     const n = Number(price);
     if (Number.isFinite(n)) lowest.set(businessId, n);
   }
-  return { rows: data.businesses ?? [], lowest, flashEnds: toEndsMap(data.flash), offerEnds: toEndsMap(data.offers), categoryRows: data.categories ?? [] };
+  return { at, rows: data.businesses ?? [], lowest, flashEnds: toEndsMap(data.flash), offerEnds: toEndsMap(data.offers), categoryRows: data.categories ?? [] };
 }
 
 // Fallback when the function is not installed yet or is slow: page the public views, but with narrow columns.
@@ -84,7 +84,7 @@ async function build() {
     parts = await fromViews();
   }
   // Media is returned as raw storage paths. The browser turns them into URLs, because it owns the media-host sharding.
-  return engine.buildSnapshot({ ...parts, localCategories, mediaUrl: (path) => path ?? null });
+  return Object.assign(engine.buildSnapshot({ ...parts, localCategories, mediaUrl: (path) => path ?? null }), { at: parts.at ?? Date.now() });
 }
 
 // Module state lives as long as this instance does. A cold start pays for one build; everything after is memory.
@@ -96,7 +96,7 @@ async function snapshot() {
   state.inflight ??= build()
     .then((snap) => {
       state.snap = snap;
-      state.at = Date.now();
+      state.at = snap.at;
       return snap;
     })
     .finally(() => {

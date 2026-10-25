@@ -45,11 +45,31 @@ browser ──GET /api/products?op=page&...──▶ CDN ──(miss)──▶ e
 * The browser keeps the previous grid on screen while a new filter loads, and "Show more" fetches the next page only.
 * Fallback: if the endpoint is unreachable the browser loads the full list (old path) and answers with the same functions.
 
+## Shared copy in Redis (Upstash)
+`client/api/_lib/redis.js`, used by both endpoints around their snapshot RPC. It is optional and can only make the site faster, never wronger.
+```
+instance memory ──(older than 30/60 s)──▶ Redis copy ──(older than 30/60 s)──▶ ONE rpc ──▶ Supabase, then written back to Redis
+```
+* **Same freshness as before.** The copy stores when the data was read from Supabase, and each instance counts its freshness from that
+  moment, not from when it fetched the copy. Data is therefore never older than one window (30 s browse, 60 s products), exactly as without Redis.
+* **Flash sales.** Products still re-check, once a minute against the clock, whether each sale is running, so a sale that ends disappears
+  on time even from an older copy. A sale that starts, or a price a seller edits, appears within one window.
+* **Never a single point of failure.** Redis missing, slow (2 s read limit), over quota or down: the endpoint reads Supabase as it did
+  before. If Supabase fails and the Redis copy is under 10 min (browse) or 15 min (products) old, that copy is served; older is an error, as before.
+* **Compressed.** The copy is gzip + base64 (about 6 MB of products becomes well under 1.5 MB), which keeps Upstash bandwidth and the
+  10 MB request limit out of the way. The key expires after the stale limit.
+* **Cost.** A refresh is one `GET`, plus one `SET` when the copy is stale. Free plan: 500K commands, 250 MB, 10 GB bandwidth per month.
+  The Upstash pricing page does not say whether commands past 500K are blocked or billed; in either case the endpoints fall back to Supabase.
+* **Check it works.** Upstash dashboard > Data Browser shows `browse:snapshot:v1` and `products:snapshot:v1`; the commands graph moves.
+  Vercel logs show `[redis] ... failed` warnings only when something is wrong.
+
 ## Deploy order
 1. Apply `supabase/migrations/0042_browse_snapshot.sql`, then `0043_products_snapshot.sql`.
    (`0042` was `0041_browse_snapshot.sql`; it clashed with `0041_product_ids.sql`, and the Supabase CLI refuses two files with one version.
    The function is `create or replace`, so applying it again under the new number is harmless.)
 2. Deploy the client. The Vercel functions need `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (or `SUPABASE_URL` / `SUPABASE_ANON_KEY`).
+   Optional: `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` turn on the shared Redis copy (see "Shared copy in Redis").
+   Redeploy after adding them; Vercel applies environment variables only to new deployments.
 3. Check the Vercel function logs for `/api/browse` and `/api/products`:
    * `[products] snapshot built via rpc: N products, M stores, X ms` is the healthy line (one per instance per minute at most).
    * `snapshot failed (...); paging the public views instead` means the RPC hit the anon role's statement timeout (or is missing).
@@ -58,7 +78,7 @@ browser ──GET /api/products?op=page&...──▶ CDN ──(miss)──▶ e
    * `refresh failed, serving the snapshot from N s ago` means stale-if-error is covering a database blip.
 
 ## Known limits and next steps
-* Each Vercel instance builds its own snapshot, so a cold start pays one database call. The CDN absorbs most traffic. If cold starts
-  matter, Redis (e.g. Upstash) can hold one shared copy behind both endpoints.
+* Without Redis each Vercel instance builds its own snapshot, so a cold start pays one database call. With Redis (below) one copy is
+  shared, but a seller's change still shows up only when the copy expires (30 s browse, 60 s products); nothing clears it early.
 * Past about 10,000 public products the snapshot is capped to the newest 10,000. That is the point to move paging and filters into SQL.
 * Main JS chunk is still ~208 KB gzipped; audit it for what Home does not need on first paint.

@@ -50,10 +50,10 @@ const pricing = (regular, sale, priceType, unit) => ({
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
-  const data = await cached("products:snapshot:v1", FRESH_MS / 1000, () =>
+  const { data, at } = await cached("products:snapshot:v1", { freshMs: FRESH_MS, staleMs: STALE_MS }, () =>
     rpc("products_snapshot", { p_limit: MAX_ITEMS }, { timeoutMs: 12_000 })
   );
-  return { items: data.items ?? [], businesses: data.businesses ?? [], truncated: data.truncated === true };
+  return { at, items: data.items ?? [], businesses: data.businesses ?? [], truncated: data.truncated === true };
 }
 
 // Fallback when the function is not installed yet or is slow: page the public views, with narrow columns.
@@ -206,7 +206,7 @@ async function build() {
     via = "views";
     parts = await fromViews();
   }
-  const snap = buildSnapshot(parts);
+  const snap = Object.assign(buildSnapshot(parts), { at: parts.at ?? Date.now() });
   if (snap.truncated) console.warn(`[products] catalogue larger than ${MAX_ITEMS} items; newest ${MAX_ITEMS} are served`);
   console.log(`[products] snapshot built via ${via}: ${snap.products.length} products, ${snap.stores.length} stores, ${Date.now() - started} ms`);
   return snap;
@@ -221,7 +221,7 @@ async function snapshot() {
   state.inflight ??= build()
     .then((snap) => {
       state.snap = snap;
-      state.at = Date.now();
+      state.at = snap.at;
       return snap;
     })
     .finally(() => {
