@@ -1,6 +1,8 @@
-import { GENERIC_AUTH, hashIp, json, passwordSchema, rateLimited, rateOk, readJson, sellerEmail, sellerIdSchema, wrap, z, type Deps } from "../_shared/seller.ts";
+import { findSeller, GENERIC_AUTH, hashIp, identifierSchema, json, passwordSchema, rateLimited, rateOk, readJson, sellerEmail, wrap, z, type Deps } from "../_shared/seller.ts";
 
-const Body = z.object({ sellerId: sellerIdSchema, password: passwordSchema });
+// `identifier` is a Seller ID or the seller's verified sign-in email. `sellerId` is the older field name and still works.
+const Body = z.object({ identifier: identifierSchema.optional(), sellerId: identifierSchema.optional(), password: passwordSchema })
+  .refine((v) => !!(v.identifier ?? v.sellerId));
 
 const failure = (locked: number) =>
   locked > 0
@@ -10,16 +12,20 @@ const failure = (locked: number) =>
 export const sellerLogin = (d: Deps) => wrap(async (req) => {
   const parsed = Body.safeParse(await readJson(req));
   if (!parsed.success) return json({ error: "bad_request" }, 400);
-  const sid = parsed.data.sellerId.toUpperCase();
-  const key = `sid:${sid.toLowerCase()}`;
+  const raw = (parsed.data.identifier ?? parsed.data.sellerId)!.trim();
   const ipHash = await hashIp(req, d.salt);
   if (!(await rateOk(d.db, `login:ip:${ipHash}`, 60, 3600))) return rateLimited();
+
+  // A Seller ID and the seller's email are two ways to the same account, so they share one lockout counter:
+  // switching between them gives an attacker no extra guesses. A miss is counted against what was typed.
+  const business = await findSeller(d.db, raw);
+  const known = !!business;
+  const key = `sid:${(business?.seller_id ?? raw).toLowerCase()}`;
 
   const locked = (await d.db.rpc("auth_lock_remaining", { p_key: key })).data as number;
   if (locked > 0) return failure(locked);
 
-  const { data: business } = await d.db.from("businesses").select("id, status").eq("seller_id", sid).maybeSingle();
-  const known = !!business && business.status !== "deleted";
+  const sid = business?.seller_id ?? raw.toUpperCase();
   const { data, error } = await d.anon.auth.signInWithPassword({
     email: sellerEmail(known ? sid : `none-${sid}`),
     password: parsed.data.password,

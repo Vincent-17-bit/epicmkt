@@ -36,6 +36,9 @@ verify_jwt = false
 [functions.seller-change-password]
 verify_jwt = false
 
+[functions.seller-set-email]
+verify_jwt = false
+
 [functions.seller-media-finalize]
 verify_jwt = false
 

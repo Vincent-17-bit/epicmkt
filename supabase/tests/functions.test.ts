@@ -4,6 +4,7 @@ import { sellerForgotRequest } from "../functions/seller-forgot-request/handler.
 import { sellerForgotVerify } from "../functions/seller-forgot-verify/handler.ts";
 import { sellerOtpRequest } from "../functions/seller-otp-request/handler.ts";
 import { sellerChangePassword } from "../functions/seller-change-password/handler.ts";
+import { sellerSetEmail } from "../functions/seller-set-email/handler.ts";
 import { sellerMediaFinalize } from "../functions/seller-media-finalize/handler.ts";
 import { sellerExportData } from "../functions/seller-export-data/handler.ts";
 import { realDeps, type Deps } from "../functions/_shared/seller.ts";
@@ -36,7 +37,10 @@ type World = {
   removed: string[];
   files: Map<string, Uint8Array>;
   sms: { to: string; message: string }[];
+  emails: { to: string; subject: string; html: string }[];
   issuedCodes: string[];
+  lastIssue: any;
+  updateError: any;
 };
 
 function world(): World {
@@ -44,7 +48,7 @@ function world(): World {
     tables: { businesses: [{ ...BIZ }], items: [{ id: "i1", business_id: "b1" }, { id: "i2", business_id: "other" }], item_media: [], login_events: [], audit_log: [], faqs: [{ id: "f1", business_id: "b1" }], user_id: [] } as any,
     rpcCalls: [], rpcResults: {}, counters: new Map(), failures: new Map(),
     users: new Map([[TOKEN, { id: "u1" }]]), passwordUpdates: [], signIns: [], validPassword: "Correct-Horse9",
-    removed: [], files: new Map(), sms: [], issuedCodes: [],
+    removed: [], files: new Map(), sms: [], emails: [], issuedCodes: [], lastIssue: null, updateError: null,
   };
 }
 
@@ -52,14 +56,23 @@ function deps(w: World): Deps {
   const query = (t: string) => {
     const eqs: [string, unknown][] = [];
     const nes: [string, unknown][] = [];
+    let patch: Record<string, unknown> | null = null;
     const rows = () => (w.tables[t] ?? []).filter((r) => eqs.every(([c, v]) => r[c] === v) && nes.every(([c, v]) => r[c] !== v));
     const api: any = {
       select: () => api, limit: () => api,
+      update: (p: Record<string, unknown>) => ((patch = p), api),
       eq: (c: string, v: unknown) => (eqs.push([c, v]), api),
       neq: (c: string, v: unknown) => (nes.push([c, v]), api),
       maybeSingle: () => Promise.resolve({ data: rows()[0] ?? null, error: null }),
       insert: (row: any) => ((w.tables[t] ??= []).push(row), Promise.resolve({ error: null })),
-      then: (res: any, rej: any) => Promise.resolve({ data: rows(), error: null }).then(res, rej),
+      then: (res: any, rej: any) => {
+        if (patch) {
+          if (w.updateError) return Promise.resolve({ error: w.updateError }).then(res, rej);
+          for (const r of rows()) Object.assign(r, patch);
+          return Promise.resolve({ error: null }).then(res, rej);
+        }
+        return Promise.resolve({ data: rows(), error: null }).then(res, rej);
+      },
     };
     return api;
   };
@@ -86,9 +99,10 @@ function deps(w: World): Deps {
         return Promise.resolve({ data: null, error: null });
       case "seller_otp_issue":
         w.issuedCodes.push(args.p_code);
+        w.lastIssue = args;
         return Promise.resolve({ data: { ok: true }, error: null });
       case "seller_otp_verify":
-        return Promise.resolve({ data: { ok: args.p_code === "123456" }, error: null });
+        return Promise.resolve({ data: { ok: args.p_code === "123456", channel: w.lastIssue?.p_channel ?? "sms", target: w.lastIssue?.p_target ?? null }, error: null });
       default:
         return Promise.resolve({ data: null, error: null });
     }
@@ -117,7 +131,11 @@ function deps(w: World): Deps {
       },
     },
   };
-  return { db, anon, salt: "salt", code: () => "123456", sms: (to, message) => (w.sms.push({ to, message }), Promise.resolve(true)) };
+  return {
+    db, anon, salt: "salt", code: () => "123456",
+    sms: (to, message) => (w.sms.push({ to, message }), Promise.resolve(true)),
+    email: (to, subject, html) => (w.emails.push({ to, subject, html }), Promise.resolve(true)),
+  };
 }
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
@@ -201,6 +219,8 @@ Deno.test("forgot-verify: resets the password and signs out every session", asyn
   const revoke = w.rpcCalls.find((c) => c.name === "revoke_user_sessions")!;
   assertEquals(revoke.args, { p_user: "u1", p_keep: null });
   assertEquals(w.tables.audit_log[0].action, "password_reset");
+  assertEquals(w.tables.businesses[0].must_change_password, false);
+  assert(typeof w.tables.businesses[0].password_changed_at === "string");
   assert(!JSON.stringify(w.tables.audit_log).includes("Brand-New-Pass1"));
   assert(!JSON.stringify(w.tables.audit_log).includes("123456"));
 });
@@ -236,7 +256,7 @@ Deno.test("otp-request and change-password need a seller JWT", async () => {
   assertEquals((await sellerOtpRequest(deps(noBiz))(authed({ purpose: "change_password" }))).status, 403);
   const ok = await read(await req(authed({ purpose: "change_password" })));
   assertEquals(ok.status, 200);
-  assertEquals(ok.body, { ok: true, sentTo: "+2547*****678" });
+  assertEquals(ok.body, { ok: true, channel: "sms", sentTo: "+2547*****678" });
   assertEquals(w.sms.length, 1);
   assertEquals((await sellerChangePassword(deps(w))(post({ code: "123456", newPassword: "Brand-New-Pass1" }))).status, 401);
 });
@@ -264,6 +284,175 @@ Deno.test("change-password: keeps only the current session", async () => {
   assertEquals(w.passwordUpdates, [{ id: "u1", password: "Brand-New-Pass1" }]);
   assertEquals(w.rpcCalls.find((c) => c.name === "revoke_user_sessions")!.args, { p_user: "u1", p_keep: "sess-1" });
   assertEquals(w.tables.audit_log[0].action, "password_changed");
+  assertEquals(w.tables.businesses[0].must_change_password, false);
+  assert(typeof w.tables.businesses[0].password_changed_at === "string");
+  assertEquals(w.emails.length, 0); // no verified email yet, so no notice
+});
+
+// ---------------------------------------------------------------------------
+// Sign in with a verified email, codes by SMS or email, and setting the email
+// ---------------------------------------------------------------------------
+const verifiedWorld = () => {
+  const w = world();
+  Object.assign(w.tables.businesses[0], { login_email: "jane@example.com", login_email_verified_at: "2026-10-01T00:00:00Z", must_change_password: true });
+  return w;
+};
+
+Deno.test("login: a verified email signs in as the same seller, an unverified or unknown one does not", async () => {
+  const w = verifiedWorld();
+  const ok = await read(await sellerLogin(deps(w))(post({ identifier: "Jane@Example.com", password: w.validPassword })));
+  assertEquals(ok.status, 200);
+  assertEquals(w.signIns[0].email, "es100001@sellers.epicmkt.app");
+  const byId = await read(await sellerLogin(deps(w))(post({ identifier: "es100001", password: w.validPassword })));
+  assertEquals(byId.status, 200);
+
+  const u = verifiedWorld();
+  u.tables.businesses[0].login_email_verified_at = null;
+  const unverified = await read(await sellerLogin(deps(u))(post({ identifier: "jane@example.com", password: u.validPassword })));
+  const unknown = await read(await sellerLogin(deps(u))(post({ identifier: "nobody@example.com", password: u.validPassword })));
+  assertEquals(unverified.status, 401);
+  assertEquals(unverified, unknown);
+  assert(u.signIns.every((x) => x.email.startsWith("none-")));
+});
+
+Deno.test("login: a Seller ID and its email share one lockout", async () => {
+  const w = verifiedWorld();
+  const h = sellerLogin(deps(w));
+  for (let i = 0; i < 3; i++) await h(post({ identifier: "ES100001", password: "wrong-pass-1A" }));
+  for (let i = 0; i < 2; i++) await h(post({ identifier: "jane@example.com", password: "wrong-pass-1A" }));
+  const locked = await read(await h(post({ identifier: "jane@example.com", password: w.validPassword })));
+  assertEquals(locked.status, 429);
+  assertEquals(locked.body.error, "locked");
+  assertEquals((await read(await h(post({ identifier: "ES100001", password: w.validPassword })))).status, 429);
+});
+
+Deno.test("forgot-request: SMS by default, email only to a verified address, same answer every time", async () => {
+  const w = verifiedWorld();
+  const h = sellerForgotRequest(deps(w));
+  const bySms = await read(await h(post({ identifier: "ES100001" })));
+  assertEquals(w.sms.length, 1);
+  assertEquals(w.emails.length, 0);
+  assertEquals(w.lastIssue.p_channel, "sms");
+
+  const byEmail = await read(await h(post({ identifier: "jane@example.com", channel: "email" })));
+  assertEquals(w.emails.length, 1);
+  assertEquals(w.emails[0].to, "jane@example.com");
+  assertStringIncludes(w.emails[0].html, "123456");
+  assertEquals(w.lastIssue.p_channel, "email");
+  assertEquals(bySms.body, byEmail.body);
+
+  const u = world(); // no email on file: the email channel sends nothing and asks for no code
+  const none = await read(await sellerForgotRequest(deps(u))(post({ identifier: "ES100001", channel: "email" })));
+  assertEquals(none.status, 200);
+  assertEquals(none.body, bySms.body);
+  assertEquals(u.emails.length, 0);
+  assertEquals(u.sms.length, 0);
+  assertEquals(u.issuedCodes.length, 0);
+});
+
+Deno.test("forgot-verify: works with the email, saves the new state, records the channel", async () => {
+  const w = verifiedWorld();
+  w.lastIssue = { p_channel: "email" };
+  const ok = await read(await sellerForgotVerify(deps(w))(post({ identifier: "jane@example.com", code: "123456", newPassword: "Brand-New-Pass1" })));
+  assertEquals(ok.status, 200);
+  assertEquals(w.passwordUpdates, [{ id: "u1", password: "Brand-New-Pass1" }]);
+  assertEquals(w.tables.businesses[0].must_change_password, false);
+  assertEquals(w.tables.audit_log[0].data, { channel: "email" });
+});
+
+Deno.test("otp-request: change_password by email needs a verified email and masks the address", async () => {
+  const w = world();
+  const noEmail = await read(await sellerOtpRequest(deps(w))(authed({ purpose: "change_password", channel: "email" })));
+  assertEquals(noEmail.status, 409);
+  assertEquals(noEmail.body.error, "email_not_verified");
+  assertEquals(w.issuedCodes.length, 0);
+
+  const v = verifiedWorld();
+  const ok = await read(await sellerOtpRequest(deps(v))(authed({ purpose: "change_password", channel: "email" })));
+  assertEquals(ok.body, { ok: true, channel: "email", sentTo: "j*******@example.com" });
+  assertEquals(v.emails.map((m) => m.to), ["jane@example.com"]);
+  assertEquals(v.sms.length, 0);
+
+  const failing = verifiedWorld();
+  const d = deps(failing);
+  d.email = () => Promise.resolve(false);
+  assertEquals((await sellerOtpRequest(d)(authed({ purpose: "change_password", channel: "email" }))).status, 502);
+});
+
+Deno.test("otp-request: verify_email sends to the new address, refuses one another seller has", async () => {
+  const w = world();
+  const ok = await read(await sellerOtpRequest(deps(w))(authed({ purpose: "verify_email", email: "New.Person@Example.com" })));
+  assertEquals(ok.status, 200);
+  assertEquals(ok.body.channel, "email");
+  assertEquals(w.emails[0].to, "new.person@example.com");
+  assertEquals(w.lastIssue.p_purpose, "verify_email");
+  assertEquals(w.lastIssue.p_target, "new.person@example.com");
+  assertEquals(w.sms.length, 0);
+
+  const t = world();
+  t.tables.businesses.push({ id: "b2", seller_id: "ES200002", phone: "+254700000002", status: "live", user_id: "u2", login_email: "taken@example.com" });
+  const taken = await read(await sellerOtpRequest(deps(t))(authed({ purpose: "verify_email", email: "taken@example.com" })));
+  assertEquals(taken.status, 409);
+  assertEquals(taken.body.error, "email_in_use");
+  assertEquals(t.emails.length, 0);
+
+  assertEquals((await sellerOtpRequest(deps(world()))(authed({ purpose: "verify_email", email: "not-an-email" }))).status, 400);
+  assertEquals((await sellerOtpRequest(deps(world()))(post({ purpose: "verify_email", email: "a@b.co" }))).status, 401);
+});
+
+Deno.test("set-email: needs the code AND the current password, and saves the address the code was sent to", async () => {
+  const w = world();
+  await sellerOtpRequest(deps(w))(authed({ purpose: "verify_email", email: "jane@example.com" }));
+  const h = sellerSetEmail(deps(w));
+
+  assertEquals((await h(post({ code: "123456", currentPassword: w.validPassword }))).status, 401); // no session
+  const wrongPw = await read(await h(authed({ code: "123456", currentPassword: "Wrong-Pass-1" })));
+  assertEquals(wrongPw.status, 401);
+  assertEquals(wrongPw.body.error, "invalid_password");
+  assertEquals(w.rpcCalls.filter((c) => c.name === "seller_otp_verify").length, 0); // the code is not spent on a bad password
+  assertEquals(w.tables.businesses[0].login_email, undefined);
+
+  const wrongCode = await read(await h(authed({ code: "000000", currentPassword: w.validPassword })));
+  assertEquals(wrongCode.status, 400);
+  assertEquals(w.tables.businesses[0].login_email, undefined);
+
+  const ok = await read(await h(authed({ code: "123456", currentPassword: w.validPassword })));
+  assertEquals(ok.status, 200);
+  assertEquals(ok.body, { ok: true, loginEmail: "jane@example.com" });
+  assertEquals(w.tables.businesses[0].login_email, "jane@example.com");
+  assert(typeof w.tables.businesses[0].login_email_verified_at === "string");
+  assertEquals(w.tables.audit_log[0].action, "login_email_set");
+  assert(!JSON.stringify(w.tables.audit_log).includes("jane@example.com"));
+});
+
+Deno.test("set-email: repeated wrong passwords lock the account, a taken address is a 409, the old address is told", async () => {
+  const w = world();
+  const h = sellerSetEmail(deps(w));
+  for (let i = 0; i < 5; i++) await h(authed({ code: "123456", currentPassword: "Wrong-Pass-1" }));
+  const locked = await read(await h(authed({ code: "123456", currentPassword: w.validPassword })));
+  assertEquals(locked.status, 429);
+
+  const dup = world();
+  await sellerOtpRequest(deps(dup))(authed({ purpose: "verify_email", email: "new@example.com" }));
+  dup.updateError = { code: "23505", message: "duplicate key value violates unique constraint" };
+  assertEquals((await read(await sellerSetEmail(deps(dup))(authed({ code: "123456", currentPassword: dup.validPassword })))).body.error, "email_in_use");
+
+  const change = verifiedWorld();
+  await sellerOtpRequest(deps(change))(authed({ purpose: "verify_email", email: "new@example.com" }));
+  change.emails.length = 0;
+  const ok = await read(await sellerSetEmail(deps(change))(authed({ code: "123456", currentPassword: change.validPassword })));
+  assertEquals(ok.status, 200);
+  assertEquals(change.tables.businesses[0].login_email, "new@example.com");
+  assertEquals(change.emails.map((m) => m.to), ["jane@example.com"]);
+  assert(!change.emails[0].html.includes("new@example.com")); // only a masked form
+});
+
+Deno.test("change-password: tells a verified email address that the password changed", async () => {
+  const w = verifiedWorld();
+  const ok = await read(await sellerChangePassword(deps(w))(authed({ code: "123456", newPassword: "Brand-New-Pass1" })));
+  assertEquals(ok.status, 200);
+  assertEquals(w.emails.map((m) => m.to), ["jane@example.com"]);
+  assertEquals(w.tables.businesses[0].must_change_password, false);
 });
 
 const png = (width: number, height: number) => {
@@ -372,6 +561,7 @@ Deno.test("real deps: development uses 123456 and sends no SMS, production sends
     const dev = realDeps();
     assertEquals(dev.code(), "123456");
     assertEquals(await dev.sms("+254712345678", "Your EpicMKT code is 123456."), true);
+    assertEquals(await dev.email("jane@example.com", "Your EpicMKT code", "<p>123456</p>"), true);
     assertEquals(sent.length, 0);
     set("APP_ENV", "production");
     const prod = realDeps();
