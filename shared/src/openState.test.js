@@ -99,3 +99,18 @@ test("describeStatus for an open shop gives the closing line", () => {
   assert.equal(text.closes, "Closes 6:00 PM");
   assert.equal(text.line, null);
 });
+
+test("hours traits: all day, Sundays and open late", async () => {
+  const { isOpenAllDay, isOpenLate, opensOn } = await import("./openState.js");
+  const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+  const every = (slot) => Object.fromEntries(days.map((d) => [d, slot]));
+  assert.equal(isOpenAllDay(every(["00:00", "23:59"])), true);
+  assert.equal(isOpenAllDay(every(["09:00", "09:00"])), true);
+  assert.equal(isOpenAllDay({ ...every(["00:00", "23:59"]), sun: null }), false);
+  assert.equal(isOpenAllDay({}), false);
+  assert.equal(opensOn(weekly, "sun"), false);
+  assert.equal(opensOn(weekly, "sat"), true);
+  assert.equal(isOpenLate(every(["10:00", "22:00"]), [], at("2026-10-20", "08:00")), true);
+  assert.equal(isOpenLate(every(["08:00", "18:00"]), [], at("2026-10-20", "08:00")), false);
+  assert.equal(isOpenLate(every(["10:00", "22:00"]), [closed("2026-10-20")], at("2026-10-20", "08:00")), false);
+});
