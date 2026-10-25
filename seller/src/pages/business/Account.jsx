@@ -6,6 +6,7 @@ import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
 import { PASSWORD_HINT, isEmail, signInSetup } from "../../lib/signIn.js";
 import { STRIKE_LEAD, STRIKE_RISKS } from "../../lib/strikes.js";
+import ShopPhotos from "../../components/shopPhotos/ShopPhotos.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./account.module.css";
 
@@ -258,6 +259,8 @@ export default function Account() {
         <h1>Account</h1>
         <p className={ui.muted}>{b.name}</p>
       </div>
+
+      <ShopPhotos business={b} />
 
       <section className={ui.card} aria-labelledby="shop-title">
         <h2 id="shop-title">Your shop</h2>

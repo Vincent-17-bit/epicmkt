@@ -6,12 +6,24 @@ import * as api from "../api/index.js";
 import { getTheme, setTheme } from "../lib/theme.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
+import { mediaUrl } from "../api/shape.js";
+import { initialsOf } from "../lib/initials.js";
 import ui from "../styles/ui.module.css";
 import styles from "./Layout.module.css";
 
 export const BELL_KEY = ["unread"];
 
-const initialsOf = (name) => (name ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "E";
+// The round mark in the header: the shop's logo, or its initials until it has one (or if the file cannot load).
+function ShopMark({ name, logoPath }) {
+  const src = mediaUrl(logoPath);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => { setFailed(false); }, [src]);
+  return (
+    <span className={styles.mark} aria-hidden="true">
+      {src && !failed ? <img src={src} alt="" className={styles.markImg} onError={() => setFailed(true)} /> : initialsOf(name)}
+    </span>
+  );
+}
 
 function Item({ to, icon, children }) {
   return (
@@ -94,7 +106,7 @@ export default function Layout() {
     <div className={styles.shell}>
       <header className={styles.header}>
         <Link to={suspended ? "/business/notifications" : "/business/subscription"} className={styles.brand}>
-          <span className={styles.mark} aria-hidden="true">{initialsOf(business?.name)}</span>
+          <ShopMark name={business?.name} logoPath={business?.logoPath} />
           <span className={styles.brandText}>
             <strong className={styles.shop} data-testid="shop-name">{business?.name ?? "Your shop"}</strong>
             <span className={styles.app}>EpicMKT Seller</span>

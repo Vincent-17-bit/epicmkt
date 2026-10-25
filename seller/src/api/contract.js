@@ -21,6 +21,8 @@ export const SELLER_API = [
   "uploadItemPhoto",
   "getShopPreview",
   "removeItemPhoto",
+  "uploadShopImage",
+  "removeShopImage",
   "exportData",
   "getSubscription",
   "getPaymentInstructions",

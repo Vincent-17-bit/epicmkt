@@ -85,6 +85,38 @@ export const removeItemPhoto = async (path) => {
   await rows(need().from("item_media").delete().eq("path", path));
   await need().storage.from(MEDIA_BUCKET).remove([path]);
 };
+// The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).
+// Each upload gets a new file name, so a changed picture is never served from a cache that still holds the old one, and
+// the old file is deleted once the profile points at the new one. The path starts with the business id, which is what the
+// bucket policy and seller_update_profile both require.
+const SHOP_KINDS = ["logo", "cover"];
+export const uploadShopImage = async (kind, blob) => {
+  if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
+  const ext = PHOTO_EXT[blob?.type];
+  if (!ext) throw new ApiError("unsupported_type");
+  const business = await rows(need().from("businesses").select("id, logo_path, cover_path").maybeSingle());
+  if (!business) throw new ApiError("not_a_seller");
+  const path = `${business.id}/profile/${kind}-${crypto.randomUUID()}.${ext}`;
+  const { error } = await need().storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
+  if (error) throw new ApiError("file_not_uploaded");
+  try {
+    await updateProfile({ [`${kind}_path`]: path });
+  } catch (e) {
+    await need().storage.from(MEDIA_BUCKET).remove([path]).catch(() => {});
+    throw e;
+  }
+  const old = business[`${kind}_path`];
+  if (old && old !== path) await need().storage.from(MEDIA_BUCKET).remove([old]).catch(() => {});
+  return { path };
+};
+export const removeShopImage = async (kind) => {
+  if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
+  const business = await rows(need().from("businesses").select("id, logo_path, cover_path").maybeSingle());
+  if (!business) throw new ApiError("not_a_seller");
+  const old = business[`${kind}_path`];
+  await updateProfile({ [`${kind}_path`]: null });
+  if (old) await need().storage.from(MEDIA_BUCKET).remove([old]).catch(() => {});
+};
 export const exportData = () => fn("seller-export-data", {});
 
 export const getSubscription = async () => {

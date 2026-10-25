@@ -18,11 +18,17 @@
   border-bottom: 2px solid var(--border-strong);
 }
 
+/* The cover is stored as a 3:1 crop (see seller/src/lib/imageCrop.js), so the banner keeps that shape. It used to be a free
+   height, which on a wide screen cut a photo down to a thin strip. On very wide screens it stops growing and centres. */
 .cover {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: clamp(10rem, 32vw, 18rem);
+  width: 100%;
+  max-width: 72rem;
+  min-height: 9rem;
+  margin-inline: auto;
+  aspect-ratio: 3 / 1;
   overflow: hidden;
   background: hsl(var(--hue) 70% 86%);
   color: hsl(var(--hue) 55% 30%);
