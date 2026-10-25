@@ -15,6 +15,7 @@
 import { categories as localCategories } from "../src/data/categories.js";
 import * as engine from "../src/api/browse/engine.js";
 import { parseRequest } from "./_lib/browseParams.js";
+import { cached } from "./_lib/redis.js";
 import { configured, rest, restAll, rpc } from "./_lib/supabase.js";
 
 export const config = { runtime: "edge" };
@@ -37,7 +38,7 @@ const toEndsMap = (object) => {
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
-  const data = await rpc("browse_snapshot");
+  const data = await cached("browse:snapshot:v1", FRESH_MS / 1000, () => rpc("browse_snapshot"));
   const lowest = new Map();
   for (const [businessId, price] of Object.entries(data.prices ?? {})) {
     const n = Number(price);

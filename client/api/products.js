@@ -22,6 +22,7 @@ import { statusOf } from "../../shared/src/openState.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
+import { cached } from "./_lib/redis.js";
 import { configured, restAll, rpc } from "./_lib/supabase.js";
 
 export const config = { runtime: "edge" };
@@ -49,7 +50,9 @@ const pricing = (regular, sale, priceType, unit) => ({
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
-  const data = await rpc("products_snapshot", { p_limit: MAX_ITEMS }, { timeoutMs: 12_000 });
+  const data = await cached("products:snapshot:v1", FRESH_MS / 1000, () =>
+    rpc("products_snapshot", { p_limit: MAX_ITEMS }, { timeoutMs: 12_000 })
+  );
   return { items: data.items ?? [], businesses: data.businesses ?? [], truncated: data.truncated === true };
 }
 
