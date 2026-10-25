@@ -7,8 +7,6 @@ export const PRODUCT_POOL = 24;
 export const FEATURED_COUNT = 8;
 export const FEATURED_POOL = 24;
 
-const SOLD_OUT = new Set(["out_of_stock", "unavailable"]);
-
 /**
  * The one key a product is tracked by. Live products have a unique id of their own (a database uuid), which is the
  * key. Demo products are named after themselves, so the same id can repeat across stores; pairing it with its store
@@ -36,8 +34,8 @@ export function pickFresh(pool, { count, lastSeen = () => 0, tier = () => 0, idO
     .map((row) => row.entry);
 }
 
-/** Products that have a picture and are in stock come first; sold-out ones only when nothing better is left. */
-export const productTier = (item) => (item.imageUrl ? (SOLD_OUT.has(item.availability) ? 1 : 0) : 2);
+/** Products that have a picture come first; ones without only when nothing better is left. (Sold-out products are never listed.) */
+export const productTier = (item) => (item.imageUrl ? 0 : 2);
 
 export const pickProducts = (pool, { seen, count = SHOWCASE_PRODUCTS, rng } = {}) =>
   pickFresh(pool, { count, rng, idOf: productKey, tier: productTier, lastSeen: (key) => seen?.lastSeen("p", key) ?? 0 });

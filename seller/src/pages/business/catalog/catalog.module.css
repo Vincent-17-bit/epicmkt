@@ -952,3 +952,43 @@
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
+
+/* The Out of stock section: apart from the live items, quieter, never mixed in with them. */
+.gone {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 2px dashed var(--border-strong);
+}
+
+.gone h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.goneCount {
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--surface-3);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.7;
+}
+
+.stockBox {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+}
+
+.checkRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}

@@ -54,9 +54,36 @@ describe("ProductTile", () => {
     expect(screen.queryByText("CLOCK")).not.toBeInTheDocument();
   });
 
-  it("labels a sold-out product instead of showing an availability dot", () => {
-    render(<ProductTile item={item({ availability: "out_of_stock" })} href="/x" />);
-    expect(screen.getByText("Out of stock")).toBeInTheDocument();
+  it("shows nothing about availability when the product is available", () => {
+    const { container } = render(<ProductTile item={item()} href="/x" />);
+    expect(container.querySelector("[data-stock-tag]")).toBeNull();
+    expect(screen.queryByText(/stock|available|left/i)).not.toBeInTheDocument();
+  });
+
+  it("shows nothing extra for a by-appointment product either", () => {
+    const { container } = render(<ProductTile item={item({ availability: "by_appointment" })} href="/x" />);
+    expect(container.querySelector("[data-stock-tag]")).toBeNull();
+  });
+
+  it("tags a product that is running low, with the number when the seller shares it", () => {
+    const { rerender } = render(<ProductTile item={item({ availability: "limited_stock" })} href="/x" />);
+    expect(screen.getByText("Low stock")).toBeInTheDocument();
+    rerender(<ProductTile item={item({ availability: "limited_stock", stockLeft: 3 })} href="/x" />);
+    expect(screen.getByText("Only 3 left")).toBeInTheDocument();
+    expect(screen.queryByText("Low stock")).not.toBeInTheDocument();
+  });
+
+  it("takes the tag's words from the caller", () => {
+    render(<ProductTile item={item({ availability: "limited_stock", stockLeft: 2 })} href="/x" labels={{ lowStock: "Imebaki kidogo", onlyLeft: "Zimebaki {n}" }} />);
+    expect(screen.getByText("Zimebaki 2")).toBeInTheDocument();
+  });
+
+  it("draws nothing for a sold-out product, however it got here", () => {
+    for (const availability of ["out_of_stock", "unavailable"]) {
+      const { container, unmount } = render(<ProductTile item={item({ availability })} href="/x" />);
+      expect(container).toBeEmptyDOMElement();
+      unmount();
+    }
   });
 
   it("copes with a missing picture and a missing price", () => {
@@ -76,7 +103,7 @@ describe("ProductTile", () => {
         item={item({ business: { name: "Duka", verified: true } })}
         href="/p"
         renderLink={renderLink}
-        labels={{ was: "Ilikuwa", verified: "Imethibitishwa", featured: "Maarufu", availability: () => "Ipo" }}
+        labels={{ was: "Ilikuwa", verified: "Imethibitishwa", featured: "Maarufu" }}
       />
     );
     expect(screen.getByRole("link")).toHaveAttribute("data-router", "yes");

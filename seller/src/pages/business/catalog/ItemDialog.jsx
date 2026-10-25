@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ITEM_PRICE_TYPES, emptyItemForm, formFromItem, validateItemForm, inspectMedia, DB_AVAILABILITY, AVAILABILITY_OPTIONS } from "@epicmkt/shared";
+import { ITEM_PRICE_TYPES, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import Modal from "./Modal.jsx";
@@ -8,7 +8,7 @@ import ui from "../../../styles/ui.module.css";
 import styles from "./catalog.module.css";
 
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
-const AVAIL = AVAILABILITY_OPTIONS.filter((o) => DB_AVAILABILITY.includes(o.key));
+const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
 
 const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 
@@ -32,6 +32,10 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   useEffect(() => () => queuedRef.current.forEach((q) => URL.revokeObjectURL(q.url)), []);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const priced = ["fixed", "from", "range"].includes(form.priceType);
+  const toggle = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
+  const countOk = /^\d{1,6}$/.test(String(form.stockCount).trim());
+  const lowOk = /^\d{1,4}$/.test(String(form.lowStockThreshold).trim());
+  const resulting = countOk && lowOk ? statusFromCount(Number(form.stockCount), Number(form.lowStockThreshold)) : null;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -132,11 +136,35 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
         {form.priceType === "range" && field("priceMax", "Highest price (KES)", <input className={ui.input} inputMode="decimal" value={form.priceMax} onChange={set("priceMax")} aria-invalid={Boolean(errors.priceMax)} />)}
         {priced && field("salePrice", "Sale price (KES, optional)", <input className={ui.input} inputMode="decimal" value={form.salePrice} onChange={set("salePrice")} aria-invalid={Boolean(errors.salePrice)} />)}
         {field("unit", "Unit (optional, such as per cut)", <input className={ui.input} value={form.unit} onChange={set("unit")} maxLength={30} />)}
-        {field("availability", "Availability", (
+        {!form.trackStock && field("availability", "Availability", (
           <select className={ui.input} value={form.availability} onChange={set("availability")}>
-            {AVAIL.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            {STATUS_CHOICES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
           </select>
         ))}
+        {!form.trackStock && form.availability === "out_of_stock" && <p className={styles.hint}>Customers cannot see out of stock items. You can list it again any time with Back in stock.</p>}
+        <fieldset className={styles.stockBox}>
+          <legend className={ui.label}>Stock</legend>
+          <label className={styles.checkRow}>
+            <input type="checkbox" checked={form.trackStock} onChange={toggle("trackStock")} />
+            <span>Count my stock</span>
+          </label>
+          <p className={styles.hint}>
+            {form.trackStock
+              ? "Type how many you have. The item hides itself when you reach 0 and shows a Low stock tag when it is running low."
+              : "Optional. Turn this on if you sell things you can count, like cakes or bottles. Services can skip it."}
+          </p>
+          {form.trackStock && (
+            <>
+              {field("stockCount", "How many do you have now?", <input className={ui.input} inputMode="numeric" value={form.stockCount} onChange={set("stockCount")} aria-invalid={Boolean(errors.stockCount)} maxLength={6} />)}
+              {field("lowStockThreshold", "Tell customers it is low when this many or fewer are left", <input className={ui.input} inputMode="numeric" value={form.lowStockThreshold} onChange={set("lowStockThreshold")} aria-invalid={Boolean(errors.lowStockThreshold)} maxLength={4} />)}
+              <label className={styles.checkRow}>
+                <input type="checkbox" checked={form.showStockCount} onChange={toggle("showStockCount")} />
+                <span>When it is running low, show customers how many are left (for example Only 3 left)</span>
+              </label>
+              {resulting && <p className={styles.hint} data-testid="stock-result">Right now: {COUNTED_TEXT[resulting]}.</p>}
+            </>
+          )}
+        </fieldset>
         <fieldset className={styles.photos}>
           <legend className={ui.label}>Photos</legend>
           {tiles.length > 0 && (

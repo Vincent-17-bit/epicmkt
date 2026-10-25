@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, statusOf } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -42,11 +42,13 @@ const toItem = (business, svc, index) => {
     regularPrice: Number.isFinite(svc.priceKes) ? svc.priceKes : null,
     priceType: svc.priceType ?? "fixed",
     unit: svc.unit ?? null,
-    status: svc.status ?? "listed",
-    unlistReason: svc.unlistReason ?? null,
+    // Out of stock is not listed to customers, whatever else the item says.
+    status: !isListed(svc) ? "unlisted" : (svc.status ?? "listed"),
+    unlistReason: !isListed(svc) ? "out_of_stock" : (svc.unlistReason ?? null),
     kind: svc.kind ?? defaultKind(business.categoryId),
     section: svc.section ?? null,
     availability: svc.availability ?? "available",
+    stockLeft: Number.isInteger(svc.stockLeft) && svc.stockLeft > 0 ? svc.stockLeft : null,
     variants: svc.variants ?? [],
     specs: (svc.specs ?? []).slice(0, MAX_SPECS),
     createdAt: new Date(Date.parse(business.createdAt) + index * 60000).toISOString()
@@ -211,7 +213,6 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
       };
     });
   const rank = (row) => [
-    row.availability === "unavailable" ? 1 : 0,
     current?.section && row.section === current.section ? 0 : 1,
     row.flash ? 0 : 1,
     -Date.parse(row.createdAt)

@@ -1,3 +1,5 @@
+import { isSoldOut } from "../availability.js";
+
 export const DAY_MS = 86400000;
 export const DEFAULT_STALE_DAYS = 90;
 
@@ -145,6 +147,8 @@ export const onSale = (item) => isNumber(item.salePrice) && isNumber(item.price)
 
 export const availabilityKeys = (item, now) => {
   const set = new Set([item.availability]);
+  // The older word means the same thing, so one filter and one count cover both.
+  if (isSoldOut(item.availability)) set.add("out_of_stock");
   if (hasSeason(item)) set.add("seasonal");
   if (isComingSoon(item, now)) set.add("coming_soon");
   return set;
@@ -180,6 +184,7 @@ export const enrichItems = (items, signals = [], { now = Date.now(), staleDays =
       ...item,
       visibility: visibilityOf(item),
       removed: Boolean(item.removedByAdmin),
+      soldOut: isSoldOut(item.availability),
       openFlags,
       reports,
       flags,
@@ -265,7 +270,7 @@ export const computeStats = (items) => {
     total: items.length,
     available: count((i) => i.availability === "available"),
     limited_stock: count((i) => i.availability === "limited_stock"),
-    out_of_stock: count((i) => i.availability === "out_of_stock"),
+    out_of_stock: count((i) => i.availKeys.has("out_of_stock")),
     seasonal: count((i) => i.availKeys.has("seasonal")),
     by_appointment: count((i) => i.availability === "by_appointment"),
     coming_soon: count((i) => i.availKeys.has("coming_soon")),
@@ -284,7 +289,7 @@ export const statsFromRpc = (s = {}) => ({
   total: s.total ?? 0,
   available: s.available ?? 0,
   limited_stock: s.limited_stock ?? 0,
-  out_of_stock: s.out_of_stock ?? 0,
+  out_of_stock: (s.out_of_stock ?? 0) + (s.unavailable ?? 0),
   seasonal: s.seasonal ?? 0,
   by_appointment: s.by_appointment ?? 0,
   coming_soon: s.coming_soon ?? 0,
@@ -303,10 +308,12 @@ export const showingSummary = (items, { shopLive = true } = {}) => {
   const hiddenByMe = items.filter((i) => i.visibility === "hidden_me").length;
   const hiddenByAdmin = items.filter((i) => i.visibility === "hidden_admin").length;
   const drafts = items.filter((i) => i.visibility === "draft").length;
-  const eligible = items.filter((i) => i.visibility === "showing").length;
+  const eligible = items.filter((i) => i.visibility === "showing" && !i.soldOut).length;
+  const soldOut = items.filter((i) => i.visibility === "showing" && i.soldOut).length;
   const showing = shopLive ? eligible : 0;
   const reasons = [];
   if (!shopLive && eligible > 0) reasons.push({ key: "shop_not_live", count: eligible, label: `${eligible} not showing because your shop is not live` });
+  if (soldOut) reasons.push({ key: "out_of_stock", count: soldOut, label: `${soldOut} out of stock` });
   if (hiddenByMe) reasons.push({ key: "hidden_me", count: hiddenByMe, label: `${hiddenByMe} hidden by you` });
   if (hiddenByAdmin) reasons.push({ key: "hidden_admin", count: hiddenByAdmin, label: `${hiddenByAdmin} hidden by admin` });
   if (drafts) reasons.push({ key: "draft", count: drafts, label: `${drafts} ${drafts === 1 ? "draft" : "drafts"}` });

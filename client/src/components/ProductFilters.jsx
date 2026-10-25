@@ -134,7 +134,6 @@ function PriceRange({ filters, bounds, onChange }) {
 }
 
 const FLAG_ROWS = [
-  ["inStock", "In stock"],
   ["onSale", "On sale"],
   ["flash", "Flash sale"],
   ["photo", "With a photo"]

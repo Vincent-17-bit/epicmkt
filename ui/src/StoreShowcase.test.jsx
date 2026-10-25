@@ -63,7 +63,7 @@ describe("StoreShowcase", () => {
     expect(screen.getByText("Products coming soon")).toBeInTheDocument();
   });
 
-  it("shows the sale percentage and prices, and labels a sold-out product", () => {
+  it("shows the sale percentage and prices, and leaves a sold-out product out", () => {
     view([
       product(1, { pricing: { salePrice: 80, regularPrice: 100, savings: 20, discountPercent: 20 } }),
       product(2, { availability: "out_of_stock" }),
@@ -72,7 +72,8 @@ describe("StoreShowcase", () => {
     ]);
     expect(screen.getByText("-20%")).toBeInTheDocument();
     expect(screen.getByText(/KES\s?80/)).toBeInTheDocument();
-    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    expect(screen.queryByText("Sold out")).not.toBeInTheDocument();
+    expect(screen.queryByText("Product 2")).not.toBeInTheDocument();
   });
 
   it("swaps a broken product picture for a placeholder", () => {

@@ -1,6 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronRight } from "@fortawesome/free-solid-svg-icons";
-import { formatKes } from "@epicmkt/shared";
+import { formatKes, listedOnly } from "@epicmkt/shared";
 import { isPreview } from "../preview.js";
 import LazyImage from "./LazyImage.jsx";
 import { OpenStatus, VerifiedMark } from "./Marks.jsx";
@@ -16,8 +16,7 @@ const DEFAULT_LABELS = {
   open: "Open",
   closed: "Closed",
   featured: "Featured store",
-  verified: "Verified store",
-  soldOut: "Sold out"
+  verified: "Verified store"
 };
 
 const plainLink = ({ href, children, ...rest }) => (
@@ -31,8 +30,6 @@ const inertLink = ({ href, children, ...rest }) => (
     {children}
   </a>
 );
-
-const SOLD_OUT = new Set(["out_of_stock", "unavailable"]);
 
 function Avatar({ business }) {
   return (
@@ -66,7 +63,7 @@ export default function StoreShowcase({
   const to = preview ? undefined : href;
   const text = { ...DEFAULT_LABELS, ...labels };
   const where = [business.categoryName, business.area].filter(Boolean).join(" · ");
-  const cells = loading ? [] : planShowcase(products);
+  const cells = loading ? [] : planShowcase(listedOnly(products));
 
   return (
     <article className={`${styles.card} ${className}`} data-mode={preview ? "preview" : undefined}>
@@ -114,16 +111,14 @@ export default function StoreShowcase({
               );
             }
             const { item } = cell;
-            const soldOut = SOLD_OUT.has(item.availability);
             const price = item.pricing?.salePrice;
             const discount = item.pricing?.discountPercent;
             return (
               <li key={item.id} className={styles.cell} data-span={cell.span}>
-                <Link href={preview ? undefined : itemHref?.(item)} className={`${styles.tile} ${soldOut ? styles.soldOut : ""}`} title={item.name}>
+                <Link href={preview ? undefined : itemHref?.(item)} className={styles.tile} title={item.name}>
                   <span className={styles.media}>
                     <LazyImage fill src={item.imageUrl} width={240} className={styles.picture} />
                     {discount > 0 && <span className={styles.sale}>-{discount}%</span>}
-                    {soldOut && <span className={styles.stock}>{text.soldOut}</span>}
                   </span>
                   <span className={styles.label}>
                     <span className={styles.itemName}>{item.name}</span>
