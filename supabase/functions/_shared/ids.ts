@@ -1,5 +1,6 @@
 // Random identifiers from an alphabet without look-alike characters (no 0/O, 1/I).
 // Uses crypto.getRandomValues with rejection sampling, so every character is equally likely.
+import { nairobiDay } from "./dates.ts";
 import { passwordProblems } from "./synced/password.js";
 
 /** 32 characters: A-Z without I and O, digits 2-9. The same alphabet as public.generate_reference_no(). */
@@ -40,7 +41,7 @@ export const REFERENCE_RE = /^EPM-\d{4}-[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/;
 
 /** Application reference, e.g. EPM-2026-K7M3QX. The year is the EAT year, like the database default. */
 export function generateReferenceNo(now: Date = new Date(), bytes?: RandomBytes): string {
-  const year = new Date(now.getTime() + 3 * 3_600_000).getUTCFullYear();
+  const year = nairobiDay(now).slice(0, 4);
   return `EPM-${year}-${randomId(6, SAFE_ALPHABET, bytes)}`;
 }
 

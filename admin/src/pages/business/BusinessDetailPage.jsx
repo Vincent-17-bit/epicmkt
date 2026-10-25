@@ -10,7 +10,7 @@ import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { DETAIL_BULK_ACTIONS, bulkPermission, canToggleVisibility, friendlyError, pickTab, stateInput, visibleTabs } from "../../lib/businessDetail.js";
 import { deriveState } from "../../lib/status.js";
-import { formatDate } from "../../lib/time.js";
+import { formatBusinessDate, formatDate } from "../../lib/time.js";
 import BulkDialog from "../businesses/BulkDialog.jsx";
 import { BULK, summarize } from "../businesses/bulk.js";
 import { ActivityTab, FlagsTab, ItemsTab, NotesTab, OverviewTab, PaymentsTab } from "./BusinessTabs.jsx";
@@ -118,7 +118,7 @@ export default function BusinessDetailPage() {
             {b.strikes ? <span className="chip chip--danger">{b.strikes} strike{b.strikes === 1 ? "" : "s"}</span> : null}
           </div>
           <p className="muted">
-            {b.seller_id} · {b.town ?? "—"}{b.paid_until ? ` · paid until ${formatDate(b.paid_until)}` : " · no payment confirmed yet"}
+            {b.seller_id} · {b.town ?? "—"}{b.paid_until ? ` · paid until ${formatBusinessDate(b.paid_until)}` : " · no payment confirmed yet"}
           </p>
         </div>
         <div className="biz-actions">

@@ -14,11 +14,11 @@ function reasonFor(hours, exceptions, now, opensAt) {
   return { kind: "outside_hours", note: null };
 }
 
-export function businessStatus(hours, exceptions, date) {
+export function businessStatus(hours, exceptions, date, timeZone) {
   const weekly = hours && typeof hours === "object" ? hours : {};
   const list = Array.isArray(exceptions) ? exceptions : [];
-  const now = nairobiNow(date);
-  const { closesAt, opensAt } = closingInfo(weekly, list, date);
+  const now = nairobiNow(date, timeZone);
+  const { closesAt, opensAt } = closingInfo(weekly, list, date, timeZone);
   const isOpen = closesAt !== null;
   const special = exceptionFor(list, now.date)?.kind === "special";
   const reason = isOpen ? (special ? reasonFor(weekly, list, now, opensAt) : null) : reasonFor(weekly, list, now, opensAt);
@@ -41,8 +41,8 @@ const reopenText = (opensAt, today) => {
   return `Reopens ${when} at ${formatClock(opensAt.time)}`;
 };
 
-export function describeStatus(status, date) {
-  const today = nairobiNow(date).date;
+export function describeStatus(status, date, timeZone) {
+  const today = nairobiNow(date, timeZone).date;
   const reasonLine = reasonText(status.reason);
   if (status.isOpen) {
     return { headline: "Open now", closes: status.closesAt ? `Closes ${formatClock(status.closesAt)}` : null, reasonText: reasonLine, reopens: null, line: reasonLine };
@@ -51,7 +51,7 @@ export function describeStatus(status, date) {
   return { headline: "Closed", closes: null, reasonText: reasonLine, reopens, line: [reasonLine, reopens].filter(Boolean).join(" · ") || null };
 }
 
-export const statusOf = (hours, exceptions, date) => {
-  const status = businessStatus(hours, exceptions, date);
-  return { ...status, ...describeStatus(status, date) };
+export const statusOf = (hours, exceptions, date, timeZone) => {
+  const status = businessStatus(hours, exceptions, date, timeZone);
+  return { ...status, ...describeStatus(status, date, timeZone) };
 };

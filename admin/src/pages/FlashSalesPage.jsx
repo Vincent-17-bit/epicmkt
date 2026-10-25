@@ -6,10 +6,11 @@ import ConfirmDialog from "../components/ConfirmDialog.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { describeError } from "../lib/systemStatus.js";
+import { stamp } from "../lib/time.js";
 
 const STATUSES = [["", "All"], ["live", "Live"], ["scheduled", "Scheduled"], ["ended", "Ended"]];
 const REASONS = { time: "Ended on time", seller: "Ended by seller", admin: "Stopped by admin", item_removed: "Item removed", subscription: "Listing not active" };
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+
 
 export default function FlashSalesPage() {
   const { can, why } = usePermissions();

@@ -3,23 +3,24 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const from = join(root, "shared", "src", "seller");
+const src = join(root, "shared", "src");
 const to = join(root, "supabase", "functions", "_shared", "synced");
-const files = ["password.js", "media.js"];
+// [path under shared/src, name under supabase/functions/_shared/synced]
+const files = [["seller/password.js", "password.js"], ["seller/media.js", "media.js"], ["time.js", "time.js"]];
 const check = process.argv.includes("--check");
 
 mkdirSync(to, { recursive: true });
 let drift = 0;
-for (const f of files) {
-  const src = join(from, f);
+for (const [rel, f] of files) {
+  const from = join(src, rel);
   const dst = join(to, f);
   if (check) {
-    if (!existsSync(dst) || readFileSync(src, "utf8") !== readFileSync(dst, "utf8")) {
+    if (!existsSync(dst) || readFileSync(from, "utf8") !== readFileSync(dst, "utf8")) {
       drift += 1;
       console.error(`out of sync: ${f}`);
     }
   } else {
-    copyFileSync(src, dst);
+    copyFileSync(from, dst);
     console.log(`synced ${f}`);
   }
 }

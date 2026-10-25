@@ -1,4 +1,5 @@
 import { z } from "npm:zod@3";
+import { nairobiDay } from "./dates.ts";
 
 export const MAX_FILES = 14;
 export const SLOT_LIMITS = { image: 10 * 1024 * 1024, pdf: 8 * 1024 * 1024 };
@@ -15,7 +16,7 @@ export const MIME_BY_KIND: Record<string, string> = {
 export const clean = (s: string) => s.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 const noLinks = (s: string) => !/(https?:\/\/|www\.)/i.test(s);
 const noEmoji = (s: string) => !/\p{Extended_Pictographic}/u.test(s);
-export const nairobiToday = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+export const nairobiToday = () => nairobiDay(new Date());
 
 export function normalizePhone(raw: string): string | null {
   const s = String(raw ?? "").replace(/[\s\-().]/g, '');

@@ -1,3 +1,5 @@
+import { businessDay, zonedParts, zoneLabel } from './time.js';
+
 export const PLAN_KEYS = ['standard', 'premium'];
 
 export const PLAN_LABELS = { standard: 'Standard', premium: 'Premium' };
@@ -48,7 +50,11 @@ export function summarizePlan(category, planKey) {
 
 export const DAY_MS = 86_400_000;
 const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
-const nairobiDay = (d) => new Date(new Date(d).getTime() + 3 * 3_600_000).toISOString().slice(0, 10);
+const nairobiDay = (d) => {
+  const day = businessDay(d);
+  if (!day) throw new RangeError(`Not an instant: ${String(d)}`);
+  return day;
+};
 const toDay = (v) => (isDay(v) ? v : nairobiDay(v));
 const fromDay = (day) => new Date(`${day}T00:00:00Z`);
 const diffDays = (a, b) => Math.round((fromDay(a) - fromDay(b)) / DAY_MS);
@@ -93,10 +99,16 @@ export function formatDay(value) {
   return `${d} ${MONTHS[m - 1]} ${y}`;
 }
 
+/**
+ * A payment or message time, drawn in the VIEWER's zone: "28 Feb 2026, 10:05 EAT" for someone in Nairobi,
+ * "28 Feb 2026, 02:05 GMT-5" for someone in New York. (formatDay above is different: it names a business calendar day.)
+ */
 export function formatDateTime(value) {
   if (!value) return '';
-  const t = new Date(new Date(value).getTime() + 3 * 3_600_000).toISOString();
-  return `${formatDay(value)}, ${t.slice(11, 16)} EAT`;
+  const p = zonedParts(value);
+  if (!p) throw new RangeError(`Not an instant: ${String(value)}`);
+  const two = (n) => String(n).padStart(2, '0');
+  return `${p.day} ${MONTHS[p.month - 1]} ${p.year}, ${two(p.hour)}:${two(p.minute)} ${zoneLabel(value)}`;
 }
 
 export const MPESA_CODE_RE = /^[A-Z0-9]{10}$/;

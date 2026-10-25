@@ -1,3 +1,4 @@
+import { businessDay } from "@epicmkt/shared";
 import { normalizePhone } from "../../shared/validators.js";
 
 /** While typing: let digits, plus, spaces and brackets through, nothing else. */
@@ -17,4 +18,5 @@ export function phoneDisplay(raw) {
 /** KRA PIN: letters and digits, capitals, 11 characters. */
 export const pinMask = (raw) => String(raw ?? "").replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 11);
 
-export const todayISO = () => new Date(Date.now() + 3 * 3600_000).toISOString().slice(0, 10);
+/** Today as a calendar day in the business zone (Nairobi), "YYYY-MM-DD". */
+export const todayISO = () => businessDay(new Date());

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, validateFlashSale } from "@epicmkt/shared";
+import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { serverNow } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
@@ -10,9 +10,11 @@ import ui from "../../styles/ui.module.css";
 import styles from "./flash.module.css";
 
 const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
-const toLocalInput = (ms) => new Date(ms + 3 * 3600000).toISOString().slice(0, 16);
-const fromLocalInput = (value) => (value ? new Date(`${value}:00+03:00`).toISOString() : "");
+// Times are stored and sent as UTC. A seller types and reads them in their own time zone, so a sale set for 09:00 starts
+// at 09:00 wherever they are, and daylight saving is handled by the zone rules, not by us.
+const stamp = (iso) => `${formatDateTime(iso)} ${zoneLabel(iso)}`;
+const toLocalInput = (ms) => utcToLocalInput(ms, getUserTimeZone());
+const fromLocalInput = (value) => localInputToUtcIso(value, getUserTimeZone());
 const pad = (n) => String(n).padStart(2, "0");
 
 export function remainingText(ms) {
@@ -96,12 +98,12 @@ function SaleForm({ items, quota, onDone, onCancel }) {
         <div className={styles.pair}>
           {schedule && (
             <div className={ui.field}>
-              <label className={ui.label} htmlFor="fs-start">Starts (Nairobi time)</label>
+              <label className={ui.label} htmlFor="fs-start">{`Starts (your time, ${zoneLabel(serverNow())})`}</label>
               <input id="fs-start" className={ui.input} type="datetime-local" value={start} min={toLocalInput(serverNow())} onChange={(e) => setStart(e.target.value)} />
             </div>
           )}
           <div className={ui.field}>
-            <label className={ui.label} htmlFor="fs-end">Ends (Nairobi time)</label>
+            <label className={ui.label} htmlFor="fs-end">{`Ends (your time, ${zoneLabel(serverNow())})`}</label>
             <input id="fs-end" className={ui.input} type="datetime-local" value={end} min={toLocalInput(startMs)} max={toLocalInput(startMs + FLASH_MAX_MS)} onChange={(e) => setEnd(e.target.value)} />
           </div>
         </div>

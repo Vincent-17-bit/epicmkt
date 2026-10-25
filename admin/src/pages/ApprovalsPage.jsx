@@ -10,10 +10,11 @@ import Pager from "../components/Pager.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { changeCost, changeFieldLabel, changeValue } from "../lib/moderation.js";
+import { stampDay } from "../lib/time.js";
 
 const PAGE_SIZE = 25;
 const STATUSES = [["pending", "Waiting"], ["approved", "Approved"], ["rejected", "Rejected"], ["all", "All"]];
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short" }).format(new Date(iso));
+const stamp = stampDay;
 
 function ApproveDialog({ row, busy, error, onConfirm, onCancel }) {
   const cost = changeCost(row);

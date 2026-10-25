@@ -96,3 +96,39 @@ test("analytics windows are clamped and daily series are complete", async () => 
   assert.equal(r.revenue_by_day.length, 7);
   assert.equal(r.revenue_by_day.reduce((s, d) => s + Number(d.kes), 0), 1800);
 });
+
+// ---- time zone independence -----------------------------------------------------------------------------------------
+// PostgREST lets a client choose the session zone ("Prefer: timezone=..."). The day series must not care. A 365 day window
+// always spans 8 March, when Havana skips 00:00 to 01:00; unpinned, generate_series(date, date, interval) then drops the
+// last day, which is today.
+const withZone = (zone, days) => tx(c, asAdmin, async (k) => {
+  await k.query(`select set_config('TimeZone', $1, true)`, [zone]);
+  return (await sql(k, `select admin_analytics($1) as r`, [days]))[0].r;
+}, { commit: true });
+
+const ZONES = ["UTC", "America/Havana", "America/New_York", "America/Sao_Paulo", "America/St_Johns", "Europe/London",
+  "Asia/Kathmandu", "Australia/Lord_Howe", "Pacific/Chatham", "Pacific/Apia", "Pacific/Kiritimati", "Pacific/Pago_Pago"];
+
+test("analytics returns the same complete day series whatever the session zone", async () => {
+  for (const days of [7, 30, 365]) {
+    const base = await withZone("UTC", days);
+    assert.equal(base.revenue_by_day.length, days);
+    assert.equal(base.revenue_by_day.at(-1).day, base.to, "the last day is today in Nairobi");
+    for (const zone of ZONES) {
+      const r = await withZone(zone, days);
+      assert.deepEqual(r.revenue_by_day, base.revenue_by_day, `${zone} ${days}d revenue_by_day`);
+      assert.deepEqual(r, base, `${zone} ${days}d whole result`);
+    }
+  }
+});
+
+test("control: without the pin the same query loses today in a midnight DST zone (so the pin is what protects us)", async () => {
+  await sql(c, `alter function public.admin_analytics(integer) reset timezone`);
+  try {
+    const r = await withZone("America/Havana", 365);
+    assert.ok(r.revenue_by_day.length < 365, `expected the unpinned series to drop a day, got ${r.revenue_by_day.length}`);
+  } finally {
+    await sql(c, `alter function public.admin_analytics(integer) set timezone to 'UTC'`);
+  }
+  assert.equal((await withZone("America/Havana", 365)).revenue_by_day.length, 365);
+});

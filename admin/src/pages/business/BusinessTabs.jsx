@@ -7,7 +7,7 @@ import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { auditLabel, friendlyError, kes } from "../../lib/businessDetail.js";
-import { daysLeft, formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
+import { daysLeft, formatBusinessDate, formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
 
 const PAYMENT_STATUS = { confirmed: "Confirmed", submitted: "Submitted", awaiting_confirmation: "Awaiting confirmation", needs_assignment: "Needs assignment", rejected: "Rejected", ignored: "Ignored" };
 const label = (map, key) => map[key] ?? String(key ?? "").replace(/_/g, " ");
@@ -93,7 +93,7 @@ export function OverviewTab({ detail }) {
           <dl className="biz-fields">
             <Field name="Plan">{b.plan_key ? `${b.plan_key[0].toUpperCase()}${b.plan_key.slice(1)}` : ""}</Field>
             <Field name="Monthly price">{b.monthly_price ? kes(b.monthly_price) : ""}</Field>
-            <Field name="Paid until">{b.paid_until ? `${formatDate(b.paid_until)} (${left < 0 ? `${-left} day${left === -1 ? "" : "s"} ago` : `${left} day${left === 1 ? "" : "s"} left`})` : ""}</Field>
+            <Field name="Paid until">{b.paid_until ? `${formatBusinessDate(b.paid_until)} (${left < 0 ? `${-left} day${left === -1 ? "" : "s"} ago` : `${left} day${left === 1 ? "" : "s"} left`})` : ""}</Field>
             <Field name="Grace period">
               {`${graceNow} day${graceNow === 1 ? "" : "s"} (${overridden ? "set for this business" : "default"})`}
               {can("businesses.extend") && !b.deleted_at ? (
@@ -165,7 +165,7 @@ export function PaymentsTab({ id }) {
                   <td>{label({}, p.kind)}</td>
                   <td>{p.mpesa_code ? <Link to={`/admin/payments?q=${encodeURIComponent(p.mpesa_code)}`}>{p.mpesa_code}</Link> : "—"}</td>
                   <td>{p.receipt_no ?? "—"}</td>
-                  <td>{p.period_end ? formatDate(p.period_end) : "—"}</td>
+                  <td>{p.period_end ? formatBusinessDate(p.period_end) : "—"}</td>
                 </tr>
               ))}
             </tbody>

@@ -1,4 +1,5 @@
 import { json, readJson, wrap, z } from "../_shared/seller.ts";
+import { addDays, nairobiMidnight } from "../_shared/dates.ts";
 import { corsHeaders } from "../_shared/http.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { isResponse, limitAdmin, requireRole, toCsv, type AdminRole, type OutboundDeps } from "../_shared/outbound.ts";
@@ -41,8 +42,6 @@ const Body = z.object({
   to: day.optional(),   // inclusive
 }).refine((v) => !v.from || !v.to || v.from <= v.to, "from_after_to");
 
-const nairobiStart = (s: string) => new Date(`${s}T00:00:00+03:00`);
-
 export const adminExport = (d: OutboundDeps) => wrap(async (req) => {
   const parsed = Body.safeParse(await readJson(req));
   if (!parsed.success) return json({ error: "bad_request", issues: parsed.error.issues.map((i) => i.message) }, 422);
@@ -54,8 +53,9 @@ export const adminExport = (d: OutboundDeps) => wrap(async (req) => {
   const limited = await limitAdmin(d, actor, "export");
   if (limited) return limited;
 
-  const gte = b.from ? nairobiStart(b.from).toISOString() : null;
-  const lt = b.to ? new Date(nairobiStart(b.to).getTime() + 86_400_000).toISOString() : null;
+  const gte = b.from ? nairobiMidnight(b.from) : null;
+  // The day AFTER `to` begins, exclusive: right on a 23 or 25 hour day too, unlike adding 24 hours.
+  const lt = b.to ? nairobiMidnight(addDays(b.to, 1)) : null;
 
   const rows: Record<string, unknown>[] = [];
   for (let start = 0; rows.length <= MAX_ROWS; start += PAGE) {

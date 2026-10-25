@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import LoadError from "../components/LoadError.jsx";
 import { daysLeftLabel, groupRadar, revenueAtRisk, whatsappLink } from "../lib/moderation.js";
+import { businessDayShort, stampDay } from "../lib/time.js";
 
 const WINDOWS = [[7, "7 days"], [14, "14 days"], [30, "30 days"], [60, "60 days"]];
 const kes = (v) => `KES ${Number(v).toLocaleString("en-KE")}`;
-const day = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short" }).format(new Date(iso));
+const day = stampDay;
 
 export default function ExpiryRadarPage() {
   const [days, setDays] = useState(30);
@@ -51,7 +52,7 @@ export default function ExpiryRadarPage() {
                             <tr key={row.id}>
                               <td><Link to={`/admin/businesses/${row.id}`}>{row.name}</Link></td>
                               <td>{row.plan_key} · {kes(row.monthly_price)}</td>
-                              <td>{day(row.paid_until)}</td>
+                              <td>{businessDayShort(row.paid_until)}</td>
                               <td>{daysLeftLabel(row)}</td>
                               <td>{row.last_reminder_at ? day(row.last_reminder_at) : "None sent"}</td>
                               <td>{row.payment_waiting ? <span className="status-pill status-pill--healthy">Waiting to confirm</span> : "–"}</td>

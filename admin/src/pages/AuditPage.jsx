@@ -6,9 +6,10 @@ import Button from "../components/Button.jsx";
 import LoadError from "../components/LoadError.jsx";
 import Pager from "../components/Pager.jsx";
 import { actionLabel, diffRows } from "../lib/audit.js";
+import { stamp } from "../lib/time.js";
 
 const PAGE_SIZE = 30;
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+
 const blank = { search: "", action: "", actor: "", from: "", to: "" };
 
 export default function AuditPage() {

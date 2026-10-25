@@ -1,11 +1,12 @@
-// Calendar helpers in Africa/Nairobi (EAT, UTC+3, no daylight saving).
+// Calendar helpers in the business zone, Africa/Nairobi (EAT). The zone maths comes from synced/time.js, the same file the
+// browser uses (shared/src/time.js), so there is one implementation of zones and daylight saving.
 // Pure and dependency free so the edge functions, scripts/seed.ts and the tests share one implementation.
 // They mirror public.nairobi_day / add_calendar_month / listing_state (migration 0006) and
 // shared/src/billing.js; supabase/tests/parity.test.mjs proves the three agree.
 
-export type Day = string; // "YYYY-MM-DD", a calendar day in EAT
+import { BUSINESS_TIME_ZONE, startOfDayUtcIso, zonedDay } from "./synced/time.js";
 
-export const EAT_OFFSET_MS = 3 * 3_600_000;
+export type Day = string; // "YYYY-MM-DD", a calendar day in the business zone
 /** The default grace after the paid-until day. A business can have its own; the database holds the setting. */
 export const GRACE_DAYS = 1;
 
@@ -38,13 +39,13 @@ export function nairobiDay(input: Date | string | number): Day {
   }
   const t = input instanceof Date ? input.getTime() : new Date(input).getTime();
   if (!Number.isFinite(t)) throw new RangeError("invalid date");
-  return new Date(t + EAT_OFFSET_MS).toISOString().slice(0, 10);
+  return zonedDay(t, BUSINESS_TIME_ZONE) as Day;
 }
 
 /** The instant a day starts in EAT, as a UTC ISO string. The value stored in businesses.paid_until. */
 export function nairobiMidnight(day: Day): string {
   parts(nairobiDay(day));
-  return new Date(`${day}T00:00:00+03:00`).toISOString();
+  return startOfDayUtcIso(day, BUSINESS_TIME_ZONE);
 }
 
 export function addDays(input: Date | string | number, n: number): Day {

@@ -1,3 +1,4 @@
+import { getUserTimeZone, parseInstant, zoneLabel } from "@epicmkt/shared";
 import { t } from "../i18n/index.js";
 
 const SECOND = 1000;
@@ -77,16 +78,19 @@ export function fuseShare(startsAt, endsAt, now) {
   return Math.min(1, Math.max(0, (end - now) / span));
 }
 
+/** "Sun 8 Nov, 6:00 PM EAT": when a sale ends, in the VIEWER's time zone, with the zone named (GMT-5 for New York). */
 export function formatEndsAt(endsAt) {
+  const date = parseInstant(endsAt);
+  if (!date) return "";
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Africa/Nairobi",
+    timeZone: getUserTimeZone(),
     weekday: "short",
     day: "numeric",
     month: "short",
     hour: "numeric",
     minute: "2-digit",
     hour12: true
-  }).formatToParts(new Date(endsAt));
+  }).formatToParts(date);
   const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} EAT`;
+  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} ${zoneLabel(date)}`;
 }

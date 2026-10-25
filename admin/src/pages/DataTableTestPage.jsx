@@ -1,7 +1,7 @@
 import { api } from "../api/index.js";
 import DataTable from "../components/DataTable/index.js";
 import HealthRing from "../components/HealthRing.jsx";
-import { compactCountdown, daysLeft, formatDate, formatDateTime } from "../lib/time.js";
+import { compactCountdown, daysLeft, formatBusinessDate, formatDate, formatDateTime } from "../lib/time.js";
 
 const columns = [
   {
@@ -41,7 +41,7 @@ const columns = [
     sortKey: true,
     render: (row) => (
       <div className="dt__stack">
-        <strong>{formatDate(row.paidUntil)}</strong>
+        <strong>{formatBusinessDate(row.paidUntil)}</strong>
         <span>{compactCountdown(daysLeft(row.paidUntil))}</span>
       </div>
     ),

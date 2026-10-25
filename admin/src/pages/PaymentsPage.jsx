@@ -4,6 +4,7 @@ import { matchesText } from "../lib/globalSearch.js";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { api } from "../api/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { stampLong } from "../lib/time.js";
 
 // Payments arrive by themselves: Safaricom tells the pay-callback function, which records the M-Pesa code, the amount
 // and the account the payer typed. Nobody types a code here. Three things can need a person:
@@ -32,7 +33,7 @@ const NOTE = {
 
 const kes = (n) => `KES ${Number(n ?? 0).toLocaleString("en-KE")}`;
 const when = (iso) =>
-  iso ? new Date(iso).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Nairobi" }) : "";
+  iso ? stampLong(iso) : "";
 const COLS = 8;
 
 function AssignPanel({ row, onClose, onDone }) {

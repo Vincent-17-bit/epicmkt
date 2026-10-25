@@ -1,4 +1,5 @@
 // Pure helpers for the Audit viewer and Analytics: readable actions, before/after diffs and chart geometry.
+import { businessDay } from "@epicmkt/shared";
 
 const ACTIONS = {
   "payment.confirm": "Confirmed a payment", "payment.reject": "Rejected a payment", "payment.assign": "Assigned a payment",
@@ -34,7 +35,7 @@ export function diffRows(before, after) {
 }
 
 /** yyyy-mm-dd for an input type=date, in Nairobi time. */
-export const nairobiDay = (date = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Nairobi" }).format(date);
+export const nairobiDay = (date = new Date()) => businessDay(date);
 
 // ---- Charts ------------------------------------------------------------------------------------------------------
 
