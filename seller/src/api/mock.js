@@ -191,6 +191,24 @@ export const removeItemPhoto = async (path) => {
   item.imagePaths = item.imagePaths.filter((p) => p !== path);
   item.imageCount = item.imagePaths.length;
 };
+const SHOP_KINDS = ["logo", "cover"];
+export const uploadShopImage = async (kind, blob) => {
+  signedIn();
+  await wait();
+  if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
+  if (![ "image/jpeg", "image/png", "image/webp" ].includes(blob?.type)) throw new ApiError("unsupported_type");
+  const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(blob) : `mock/${kind}-${++bill.seq}.webp`;
+  bill.business[`${kind}Path`] = path;
+  state.business[`${kind}_path`] = path;
+  return { path };
+};
+export const removeShopImage = async (kind) => {
+  signedIn();
+  await wait();
+  if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
+  bill.business[`${kind}Path`] = null;
+  state.business[`${kind}_path`] = null;
+};
 export const exportData = async () => { signedIn(); await wait(); return { business: { ...state.business } }; };
 
 // ---------------------------------------------------------------------------
@@ -519,7 +537,7 @@ export const getShopPreview = async () => {
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",
     planKey: bill.business.planKey, status: bill.business.status, live: cat.shop.live, verified: bill.business.verificationLevel === "verified",
     county: "Kisumu", town: "Maseno", address: "Main Street", lat: -0.09, lng: 34.6, phone: "0712345678", whatsapp: "0712345678",
-    socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: null, coverPath: null, categoryName: "Barbershop",
+    socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: bill.business.logoPath ?? null, coverPath: bill.business.coverPath ?? null, categoryName: "Barbershop",
   };
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });

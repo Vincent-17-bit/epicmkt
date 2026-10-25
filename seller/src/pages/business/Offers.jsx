@@ -128,7 +128,7 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
     setError("");
     const input = toInput(form);
     const check = validateOffer(input, { items, nowMs: serverNow(), existing: id ? { id } : null });
-    if (!check.ok) return setError(errorText({ code: check.error }));
+    if (!check.ok) return setError(errorText({ code: check.error === "invalid_kind" ? "invalid_offer_kind" : check.error }));
     setBusy(true);
     try {
       await api.saveOffer(id ?? null, input);

@@ -8,6 +8,7 @@ export const business = (b) => b && ({
   // Sign-in details. loginEmail is only ever set after the seller entered a code sent to it.
   loginEmail: b.login_email ?? null, loginEmailVerified: !!b.login_email && !!b.login_email_verified_at,
   mustChangePassword: !!b.must_change_password, passwordChangedAt: b.password_changed_at ?? null,
+  logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null,
 });
 
 export const payment = (p) => ({
