@@ -1,4 +1,4 @@
-import { shopDisplayUrl, shopQrUrl } from "@epicmkt/shared";
+import { shopDisplayUrl, shopQrSpec } from "@epicmkt/shared";
 
 // Print-ready QR posters drawn straight onto a canvas. Everything is laid out on a 1000-unit-wide sheet
 // (A4 and A5 share the same 1 : 1.414 shape) and scaled to the pixel size asked for, so the live preview,
@@ -23,11 +23,11 @@ const font = (weight, px) => `${weight} ${Math.round(px)}px ${FONT}`;
 let qrLib;
 const loadQr = () => (qrLib ??= import("qrcode").then((m) => m.default ?? m));
 
-// The matrix for the public link. Premium posters carry a logo in the middle, so they use the highest error correction.
-export async function buildMatrix(slug, { withLogo = false } = {}) {
+// The matrix for the public link, from the same recipe the customer page uses.
+export async function buildMatrix(slug, { planKey, hasLogo = false } = {}) {
   const QR = await loadQr();
-  const text = shopQrUrl(slug, import.meta.env?.VITE_SITE_URL);
-  const { modules } = QR.create(text, { errorCorrectionLevel: withLogo ? "H" : "M" });
+  const { text, ecl } = shopQrSpec(slug, { planKey, hasLogo, site: import.meta.env?.VITE_SITE_URL });
+  const { modules } = QR.create(text, { errorCorrectionLevel: ecl });
   return { text, size: modules.size, dark: (r, c) => modules.get(r, c) === 1 || modules.get(r, c) === true };
 }
 
@@ -362,7 +362,7 @@ export const posterStyle = (planKey) => (planKey === "premium" ? "branded" : "pl
 // Draws the whole poster onto `canvas` at the pixel width asked for.
 export async function renderPoster(canvas, { name, slug, planKey, logoUrl = null, widthPx }) {
   const style = posterStyle(planKey);
-  const [matrix, logo] = await Promise.all([buildMatrix(slug, { withLogo: style === "branded" && !!logoUrl }), style === "branded" ? loadImage(logoUrl) : null]);
+  const [matrix, logo] = await Promise.all([buildMatrix(slug, { planKey, hasLogo: !!logoUrl }), style === "branded" ? loadImage(logoUrl) : null]);
   // If the logo failed to load, the code was built for it anyway (higher correction), which is still a valid code.
   const scale = widthPx / SHEET.w;
   canvas.width = Math.round(SHEET.w * scale);

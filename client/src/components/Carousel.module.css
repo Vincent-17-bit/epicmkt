@@ -1,0 +1,263 @@
+.wrap {
+  /* Cards across at once; the fraction is the peek of the next card. The gaps are how many gutters are visible. */
+  --cols: 2.25;
+  --gaps: 2;
+  --gap: 10px;
+  /* The page container's side padding, so the row can run to the screen edge on phones and still line up. */
+  --bleed: var(--space-4);
+  min-width: 0;
+}
+
+.wrap[data-variant="showcase"] {
+  --cols: 1.12;
+  --gaps: 1;
+  --gap: 12px;
+}
+
+@media (min-width: 560px) {
+  .wrap {
+    --cols: 3.25;
+    --gaps: 3;
+    --gap: 12px;
+  }
+
+  .wrap[data-variant="showcase"] {
+    --cols: 2.2;
+    --gaps: 2;
+    --gap: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .wrap {
+    --bleed: var(--space-5);
+  }
+}
+
+@media (min-width: 900px) {
+  .wrap {
+    --cols: 4;
+    --gaps: 3;
+    --gap: 14px;
+  }
+
+  .wrap[data-variant="showcase"] {
+    --cols: 3;
+    --gaps: 2;
+    --gap: 16px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .wrap {
+    --cols: 5;
+    --gaps: 4;
+    --gap: 16px;
+  }
+
+  .wrap[data-variant="showcase"] {
+    --cols: 4;
+    --gaps: 3;
+    --gap: 16px;
+  }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.titles {
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sub {
+  display: none;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.seeMore {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 2px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  transition: background-color var(--dur) ease;
+}
+
+.seeMore svg {
+  display: none;
+  transition: transform var(--dur) ease;
+}
+
+.arrows {
+  display: none;
+  gap: var(--space-2);
+}
+
+.arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  transition: background-color var(--dur) ease, opacity var(--dur) ease, transform var(--dur) ease;
+}
+
+.arrow:disabled {
+  border-color: var(--border-strong);
+  color: var(--text-muted);
+  opacity: 0.55;
+  cursor: default;
+}
+
+.arrow:not(:disabled):active {
+  background: var(--primary);
+  transform: scale(0.95);
+}
+
+.arrow:focus-visible,
+.seeMore:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .seeMore:hover {
+    background: var(--primary-tint);
+  }
+
+  .seeMore:hover svg {
+    transform: translateX(3px);
+  }
+
+  .arrow:not(:disabled):hover {
+    background: var(--primary-tint);
+  }
+}
+
+/* Arrows only where a finger is not the way to scroll; phones swipe. */
+@media (min-width: 640px) {
+  .arrows {
+    display: flex;
+  }
+
+  .sub {
+    display: block;
+  }
+
+  .seeMore {
+    padding: 0 var(--space-4);
+    border-color: var(--text);
+    background: var(--surface);
+    text-decoration: none;
+  }
+
+  .seeMore svg {
+    display: inline-block;
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+}
+
+.track {
+  /* A containing block for anything positioned inside a card, so it can never widen the page. */
+  position: relative;
+  display: flex;
+  gap: var(--gap);
+  margin: 0;
+  margin-inline: calc(-1 * var(--bleed));
+  padding: var(--space-1) var(--bleed) var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  list-style: none;
+  scroll-padding-inline: var(--bleed);
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.track::-webkit-scrollbar {
+  display: none;
+}
+
+/* On wide screens the row stops at the content edge and fades where more is hidden. */
+@media (min-width: 900px) {
+  .track {
+    margin-inline: 0;
+    padding-inline: 0;
+    scroll-padding-inline: 0;
+  }
+
+  .track[data-end="false"] {
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-6)), transparent);
+  }
+
+  .track[data-start="false"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-6));
+    mask-image: linear-gradient(90deg, transparent, #000 var(--space-6));
+  }
+
+  .track[data-start="false"][data-end="false"] {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
+  }
+}
+
+.dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+  user-select: none;
+}
+
+.slide {
+  flex: 0 0 calc((100% - var(--gaps) * var(--gap)) / var(--cols));
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow,
+  .seeMore svg {
+    transition: none;
+  }
+}

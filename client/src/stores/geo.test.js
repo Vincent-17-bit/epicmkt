@@ -48,6 +48,26 @@ describe("geo store privacy", () => {
   });
 });
 
+describe("geo store failed device lookup", () => {
+  it("keeps a chosen town when the browser refuses", async () => {
+    const calls = stubGeolocation();
+    const store = await loadStore();
+    store.getState().chooseTown("Maseno");
+    store.getState().allow();
+    calls[0].fail();
+    expect(store.getState()).toMatchObject({ status: "granted", source: "town", town: "Maseno", deviceBlocked: true });
+    expect(store.getState().explaining).toBe(true);
+  });
+
+  it("opening the sheet never changes the current location", async () => {
+    stubGeolocation();
+    const store = await loadStore();
+    store.getState().chooseTown("Maseno");
+    store.getState().request();
+    expect(store.getState()).toMatchObject({ status: "granted", town: "Maseno", explaining: true });
+  });
+});
+
 describe("geo store reset", () => {
   it("clears a chosen town, in memory and on disk", async () => {
     stubGeolocation();

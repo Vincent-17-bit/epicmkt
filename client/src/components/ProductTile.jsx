@@ -13,6 +13,7 @@ const labels = {
   was: null,
   verified: null,
   featured: null,
+  closed: null,
   availability: (key) => t(`item.availability.${key}`)
 };
 
@@ -25,7 +26,7 @@ export default function ProductTile({ item }) {
       item={item}
       href={itemPagePath(item)}
       renderLink={renderLink}
-      labels={{ ...labels, was: t("item.was"), verified: t("home.verifiedStore"), featured: t("home.featuredStore"), offerChip: { offer: t("offer.chip"), more: t("offer.more") } }}
+      labels={{ ...labels, was: t("item.was"), verified: t("home.verifiedStore"), featured: t("home.featuredStore"), closed: t("item.closed"), offerChip: { offer: t("offer.chip"), more: t("offer.more") } }}
       renderFlash={(chipClass) => <FlashChip endsAt={item.flash.sale.endsAt} className={chipClass} />}
     />
   );

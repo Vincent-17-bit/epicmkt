@@ -42,7 +42,7 @@ export const saleRow = (over = {}) => {
 };
 
 export function createFakeSupabase() {
-  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false };
+  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false, rpc: {} };
 
   const clock = () => state.serverNow ?? Date.now();
 
@@ -59,15 +59,20 @@ export function createFakeSupabase() {
     const filters = [];
     const inFilters = [];
     let window = null;
+    let wantCount = false;
     const run = () => {
       state.calls.push(table);
       if (state.failing) return { data: null, error: state.failing };
       let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])));
+      const total = data.length;
       if (window) data = data.slice(window[0], window[1] + 1);
-      return { data, error: null };
+      return { data, error: null, count: wantCount ? total : null };
     };
     const query = {
-      select: () => query,
+      select: (_columns, options) => {
+        wantCount = options?.count === "exact";
+        return query;
+      },
       order: () => query,
       limit: () => query,
       range: (from, to) => {
@@ -111,8 +116,13 @@ export function createFakeSupabase() {
     removeChannel: () => {
       state.handlers.clear();
     },
-    rpc: async (name) => {
+    rpc: async (name, args) => {
       state.calls.push(name);
+      if (name.startsWith("search_")) {
+        if (state.failing) return { data: null, error: state.failing };
+        const handler = state.rpc[name];
+        return handler ? { data: handler(args), error: null } : { data: null, error: { code: "PGRST202", message: "function not found" } };
+      }
       if (state.failing || state.offline) return { data: null, error: state.failing ?? { message: "offline" } };
       return { data: iso(clock()), error: null };
     }

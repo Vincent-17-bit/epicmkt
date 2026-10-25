@@ -1,4 +1,4 @@
-import { closingInfo, distanceKm, isOpenOn, PLAN_FEATURES, slugify, todayHours } from "@epicmkt/shared";
+import { distanceKm, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -32,12 +32,17 @@ const shorten = (text) => {
 };
 
 // Exceptions (closed days, special hours) override the weekly hours for their date. A missing list means none.
-const openNow = (hours, exceptions) => {
+const statusFor = (hours, exceptions) => {
   try {
-    return Boolean(hours) && isOpenOn(hours, exceptions);
+    return statusOf(hours, exceptions);
   } catch {
-    return false;
+    return statusOf({}, []);
   }
+};
+
+export const statusCard = (hours, exceptions) => {
+  const { isOpen, line } = statusFor(hours, exceptions);
+  return { isOpen, statusLine: line };
 };
 
 const exceptionsOf = (value) => (Array.isArray(value) ? value : []);
@@ -104,7 +109,7 @@ export const cardOfFlash = (row, origin) => ({
   lng: row.business_lng,
   phone: row.business_phone,
   whatsapp: row.business_whatsapp,
-  isOpen: openNow(row.business_hours, row.business_exceptions),
+  ...statusCard(row.business_hours, row.business_exceptions),
   distanceKm: distanceFrom(origin, row.business_lat, row.business_lng)
 });
 
@@ -121,7 +126,7 @@ export const cardOfBusiness = (row, origin) => ({
   lng: row.lng,
   phone: row.phone,
   whatsapp: row.whatsapp,
-  isOpen: openNow(row.hours, row.exceptions),
+  ...statusCard(row.hours, row.exceptions),
   distanceKm: distanceFrom(origin, row.lat, row.lng)
 });
 
@@ -178,13 +183,12 @@ export const flashParts = (entry, now) => ({
 export const businessOf = (row, { category, services, origin = null }) => {
   const hours = row.hours && typeof row.hours === "object" ? row.hours : {};
   const exceptions = exceptionsOf(row.exceptions);
-  let closing = { closesAt: null, opensAt: null };
+  const status = statusFor(hours, exceptions);
   let today = null;
   try {
-    closing = closingInfo(hours, exceptions);
     today = todayHours(hours);
   } catch {
-    closing = { closesAt: null, opensAt: null };
+    today = null;
   }
   return {
     id: row.id,
@@ -220,9 +224,12 @@ export const businessOf = (row, { category, services, origin = null }) => {
     attributes: {},
     services,
     createdAt: row.created_at,
-    ...closing,
+    closesAt: status.closesAt,
+    opensAt: status.opensAt,
+    openStatus: status,
     planFeatures: PLAN_FEATURES[row.plan_key] ?? PLAN_FEATURES.standard,
-    isOpen: openNow(hours, exceptions),
+    isOpen: status.isOpen,
+    statusLine: status.line,
     todayHours: today,
     distanceKm: distanceFrom(origin, row.lat, row.lng)
   };

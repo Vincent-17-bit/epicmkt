@@ -4,13 +4,12 @@ import {
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
-  closingInfo,
   cardFacts,
   distanceKm,
   filterableFields,
   matchesFilter,
   searchableText,
-  isOpenNow,
+  statusOf,
   normalizeText,
   todayHours
 } from "@epicmkt/shared";
@@ -73,7 +72,8 @@ const toSummary = (b, origin) => ({
   whatsapp: b.whatsapp,
   lat: b.lat,
   lng: b.lng,
-  isOpen: isOpenNow(b.hours),
+  isOpen: statusOf(b.hours, b.exceptions).isOpen,
+  statusLine: statusOf(b.hours, b.exceptions).line,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });
@@ -81,14 +81,18 @@ const toSummary = (b, origin) => ({
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
   const at = now();
+  const open = statusOf(b.hours, b.exceptions);
   return {
     ...rest,
     offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at)),
     services: b.services.filter((svc) => svc.status !== "unlisted").map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
-    ...closingInfo(b.hours),
+    closesAt: open.closesAt,
+    opensAt: open.opensAt,
+    openStatus: open,
     category: categoryOf(b.categoryId),
     planFeatures: PLAN_FEATURES[b.plan],
-    isOpen: isOpenNow(b.hours),
+    isOpen: open.isOpen,
+    statusLine: open.line,
     todayHours: todayHours(b.hours),
     distanceKm: origin ? distanceKm(origin, b) : null
   };
@@ -174,7 +178,7 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !openNow || isOpenNow(b.hours))
+    .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .filter((b) => matchesAttrs(b, attrEntries))
@@ -387,11 +391,11 @@ export async function logEvent(name, payload = {}) {
   return { ok: true };
 }
 
-export async function logContactEvent({ businessId, type }) {
+export async function logContactEvent({ businessId, type, itemId = null }) {
   if (!EVENT_TYPES.includes(type)) return { ok: false };
   const business = store.businesses.find((b) => b.id === businessId);
   if (!business) return { ok: false };
   business.stats[type] += 1;
-  store.events.push({ businessId, type, at: new Date().toISOString() });
+  store.events.push({ businessId, type, itemId, at: new Date().toISOString() });
   return { ok: true };
 }

@@ -1,4 +1,4 @@
--- 0041_product_offers.sql
+-- 0044_product_offers.sql
 -- Offers belong to PRODUCTS. A store card shows an Offer chip because at least one of its products has a running offer;
 -- a product card, the store page's product list and the product page show the offer only on the products that are in it.
 -- The offer never changes a product's price: items.price (and any flash sale price) stays the truth, the deal is

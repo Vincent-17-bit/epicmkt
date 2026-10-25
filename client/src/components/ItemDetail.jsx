@@ -204,11 +204,11 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
   const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
   const onChat = (placement) => () => {
-    logContactEvent({ businessId: business.id, type: "whatsapp" });
+    logContactEvent({ businessId: business.id, itemId, type: "whatsapp" });
     track("chat_seller_click", { placement, variantId: variant?.id ?? null, flash: Boolean(current?.flash) });
   };
   const onVisit = (placement) => () => track("visit_store_click", { placement });
-  const onCall = () => logContactEvent({ businessId: business.id, type: "call" });
+  const onCall = () => logContactEvent({ businessId: business.id, itemId, type: "call" });
 
   const share = async () => {
     const path = isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
@@ -441,6 +441,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                       {seller.townName}
                       {Number.isFinite(distanceKm) && ` · ${formatDistance(distanceKm)}`}
                     </p>
+                    {!seller.isOpen && seller.statusLine && <p className={styles.sellerMeta}>{seller.statusLine}</p>}
                   </div>
                   <span className={seller.isOpen ? styles.open : styles.closed}>{seller.isOpen ? t("item.open") : t("item.closed")}</span>
                 </div>

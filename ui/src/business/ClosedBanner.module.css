@@ -1,0 +1,45 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.banner[data-open] {
+  border-left-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.banner[data-open] .badge {
+  color: var(--primary-pressed);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.detail {
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

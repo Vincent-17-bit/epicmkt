@@ -1,23 +1,21 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faChevronLeft, faChevronRight, faRotateRight } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { searchBusinesses } from "../api/index.js";
-import BusinessCard from "./BusinessCard.jsx";
+import { t } from "../i18n/index.js";
 import Button from "./Button.jsx";
+import Carousel from "./Carousel.jsx";
+import HomeSection from "./HomeSection.jsx";
 import Skeleton from "./Skeleton.jsx";
+import StoreTileCard from "./StoreTileCard.jsx";
 import styles from "./RecentlyAdded.module.css";
 
 export const RECENT_LIMIT = 12;
 export const SEE_ALL_PATH = "/search?sort=newest";
 
-const EDGE_SLACK = 2;
-
+/** Home page: the newest businesses as compact tiles in a scrolling row, with See more going to the full list. */
 export default function RecentlyAdded() {
-  const trackRef = useRef(null);
-  const [edge, setEdge] = useState({ start: true, end: true });
-
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["recently-added", RECENT_LIMIT],
     queryFn: () => searchBusinesses({ sort: "newest", pageSize: RECENT_LIMIT }),
@@ -27,101 +25,47 @@ export default function RecentlyAdded() {
   const items = data?.items ?? [];
   const total = data?.total ?? items.length;
 
-  const measure = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
-    const max = track.scrollWidth - track.clientWidth;
-    setEdge({ start: track.scrollLeft <= EDGE_SLACK, end: track.scrollLeft >= max - EDGE_SLACK });
-  }, []);
-
-  useEffect(() => {
-    measure();
-    const track = trackRef.current;
-    if (!track || typeof ResizeObserver === "undefined") return undefined;
-    const observer = new ResizeObserver(measure);
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, [measure, items.length]);
-
-  const page = (dir) => () => {
-    const track = trackRef.current;
-    const first = track?.firstElementChild;
-    if (!track || !first) return;
-    const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
-    const step = first.getBoundingClientRect().width + gap;
-    const whole = Math.max(1, Math.floor((track.clientWidth + gap) / step));
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    track.scrollBy({ left: dir * whole * step, behavior: reduce ? "auto" : "smooth" });
-  };
-
   if (!isPending && !isError && items.length === 0) return null;
 
-  return (
-    <div className={styles.wrap}>
-      <div className={styles.head}>
-        <div className={styles.titles}>
-          <h2 id="recent-title" className={styles.title}>
-            Recently added
-          </h2>
-          <p className={styles.sub}>The newest businesses on EpicMKT</p>
-        </div>
-        <div className={styles.controls}>
-          <Link to={SEE_ALL_PATH} className={styles.seeAll}>
-            See all
-            <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-          </Link>
-          <div className={styles.arrows}>
-            <button type="button" className={styles.arrow} onClick={page(-1)} disabled={edge.start} aria-label="Show previous businesses">
-              <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" />
-            </button>
-            <button type="button" className={styles.arrow} onClick={page(1)} disabled={edge.end} aria-label="Show next businesses">
-              <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {isError ? (
+  if (isError) {
+    return (
+      <HomeSection>
         <div className={styles.error} role="alert">
-          <p>We could not load recently added businesses.</p>
-          <Button icon={faRotateRight} onClick={() => refetch()}>
-            Try again
-          </Button>
+          <p>{t("home.recentFailed")}</p>
+          <Button onClick={() => refetch()}>{t("home.retry")}</Button>
         </div>
-      ) : (
-        <ul
-          ref={trackRef}
-          className={styles.track}
-          onScroll={measure}
-          aria-busy={isPending}
-          aria-labelledby="recent-title"
-        >
-          {isPending
-            ? Array.from({ length: 6 }, (_, i) => (
-                <li key={i} className={styles.slide} aria-hidden="true">
-                  <Skeleton height="15.5rem" radius="var(--radius-card)" />
-                </li>
-              ))
-            : items.map((business) => (
-                <li key={business.id} className={styles.slide}>
-                  <BusinessCard business={business} compact />
-                </li>
-              ))}
-          {!isPending && (
-            <li className={styles.slide}>
-              <Link to={SEE_ALL_PATH} className={styles.tile}>
-                <span className={styles.tileIcon}>
-                  <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-                </span>
-                <span className={styles.tileTitle}>See all</span>
-                <span className={styles.tileMeta}>
-                  {total} {total === 1 ? "business" : "businesses"}
-                </span>
-              </Link>
-            </li>
-          )}
-        </ul>
-      )}
-    </div>
+      </HomeSection>
+    );
+  }
+
+  return (
+    <HomeSection labelledBy="recent-title">
+    <Carousel
+      id="recent"
+      variant="tile"
+      title={t("home.recent")}
+      subtitle={t("home.recentSub")}
+      seeMoreTo={SEE_ALL_PATH}
+      seeMoreLabel={t("home.seeMore")}
+      prevLabel={t("home.recentPrev")}
+      nextLabel={t("home.recentNext")}
+      busy={isPending}
+    >
+      {isPending
+        ? Array.from({ length: 6 }, (_, i) => <Skeleton key={i} height="21rem" radius="var(--radius-card)" />)
+        : [
+            ...items.map((business) => <StoreTileCard key={business.id} business={business} />),
+            <Link key="more" to={SEE_ALL_PATH} className={styles.more}>
+              <span className={styles.moreIcon}>
+                <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+              </span>
+              <span className={styles.moreTitle}>{t("home.seeMore")}</span>
+              <span className={styles.moreMeta}>
+                {total} {total === 1 ? "business" : "businesses"}
+              </span>
+            </Link>
+          ]}
+    </Carousel>
+    </HomeSection>
   );
 }

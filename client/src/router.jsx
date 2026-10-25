@@ -1,20 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
-import About from "./pages/About.jsx";
-import Contact from "./pages/Contact.jsx";
-import Faq from "./pages/Faq.jsx";
-import Sell from "./pages/Sell.jsx";
-import SellRegister from "./pages/SellRegister.jsx";
-import Privacy from "./pages/Privacy.jsx";
-import Terms from "./pages/Terms.jsx";
-import Cookies from "./pages/Cookies.jsx";
-import FlashSales from "./pages/FlashSales.jsx";
-import Offers from "./pages/Offers.jsx";
-import Business from "./pages/Business.jsx";
-import ItemPage from "./pages/ItemPage.jsx";
-import ShortLink from "./pages/ShortLink.jsx";
-import OfflinePage from "./pages/OfflinePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
 import { trackResults } from "./lib/resultsMemory.js";
@@ -39,20 +25,21 @@ export const router = createBrowserRouter([
           { index: true, element: <Home /> },
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
-          { path: "flash", element: <FlashSales /> },
-          { path: "offers", element: <Offers /> },
-          { path: "b/:slug", element: <Business /> },
-          { path: "b/:slug/i/:itemId", element: <ItemPage /> },
-          { path: "s/:shortcode", element: <ShortLink /> },
-          { path: "about", element: <About /> },
-          { path: "contact", element: <Contact /> },
-          { path: "faq", element: <Faq /> },
-          { path: "sell", element: <Sell /> },
-          { path: "sell/register", element: <SellRegister /> },
-          { path: "privacy", element: <Privacy /> },
-          { path: "terms", element: <Terms /> },
-          { path: "cookies", element: <Cookies /> },
-          { path: "offline", element: <OfflinePage /> },
+          { path: "flash", lazy: async () => ({ Component: (await import("./pages/FlashSales.jsx")).default }) },
+          { path: "offers", lazy: async () => ({ Component: (await import("./pages/Offers.jsx")).default }) },
+          { path: "featured", lazy: async () => ({ Component: (await import("./pages/Featured.jsx")).default }) },
+          { path: "b/:slug", lazy: async () => ({ Component: (await import("./pages/Business.jsx")).default }) },
+          { path: "b/:slug/i/:itemId", lazy: async () => ({ Component: (await import("./pages/ItemPage.jsx")).default }) },
+          { path: "s/:shortcode", lazy: async () => ({ Component: (await import("./pages/ShortLink.jsx")).default }) },
+          { path: "about", lazy: async () => ({ Component: (await import("./pages/About.jsx")).default }) },
+          { path: "contact", lazy: async () => ({ Component: (await import("./pages/Contact.jsx")).default }) },
+          { path: "faq", lazy: async () => ({ Component: (await import("./pages/Faq.jsx")).default }) },
+          { path: "sell", lazy: async () => ({ Component: (await import("./pages/Sell.jsx")).default }) },
+          { path: "sell/register", lazy: async () => ({ Component: (await import("./pages/SellRegister.jsx")).default }) },
+          { path: "privacy", lazy: async () => ({ Component: (await import("./pages/Privacy.jsx")).default }) },
+          { path: "terms", lazy: async () => ({ Component: (await import("./pages/Terms.jsx")).default }) },
+          { path: "cookies", lazy: async () => ({ Component: (await import("./pages/Cookies.jsx")).default }) },
+          { path: "offline", lazy: async () => ({ Component: (await import("./pages/OfflinePage.jsx")).default }) },
           ...(import.meta.env.DEV
             ? [{ path: "styleguide", lazy: async () => ({ Component: (await import("./pages/Styleguide.jsx")).default }) }]
             : []),

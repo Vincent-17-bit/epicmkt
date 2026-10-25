@@ -14,7 +14,7 @@ describe("shop preview", () => {
     for (const name of ["Fade cut", "Beard trim", "Hair dye", "Styling gel", "Wedding package"]) expect(within(page).getByText(name)).toBeInTheDocument();
     expect(within(page).queryByText("Old special")).toBeNull();
     expect(within(page).getByText("Opening hours")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Preview. This is how customers see your shop.");
+    expect(screen.getByText(/^Preview\. This is how customers see your shop/)).toHaveTextContent("Preview. This is how customers see your shop.");
     expect(screen.queryByTestId("preview-not-live")).toBeNull();
   });
 

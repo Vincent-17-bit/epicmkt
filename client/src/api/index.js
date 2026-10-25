@@ -3,6 +3,7 @@ import { looksLikeCoordinates, scrubPayload } from "@epicmkt/backend";
 import * as flashApi from "./flash/index.js";
 import * as browse from "./browse/index.js";
 import * as offersApi from "./offers/index.js";
+import * as products from "./products/index.js";
 
 export const getCategories = () => browse.getCategories();
 export const getCounties = () => browse.getCounties();
@@ -25,7 +26,12 @@ export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
-  getAll: () => flashApi.getAllProducts()
+  getAll: () => flashApi.getAllProducts(),
+  // The home grid asks the server for one page at a time, plus the filter options and live option counts.
+  getPage: (filters, opts) => products.getPage(filters, opts),
+  getFacets: () => products.getFacets(),
+  getCounts: (filters) => products.getCounts(filters),
+  getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts)
 };
 export const flash = flashApi.flash;
 export const offers = {

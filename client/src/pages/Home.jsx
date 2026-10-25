@@ -2,9 +2,8 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
-import { getCategories, getFeaturedBusinesses } from "../api/index.js";
+import { getCategories } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { rotationSeed } from "../lib/rotation.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
@@ -13,7 +12,7 @@ import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
 import BrowseResults from "../components/BrowseResults.jsx";
-import BusinessRail from "../components/BusinessRail.jsx";
+import FeaturedStores from "../components/FeaturedStores.jsx";
 import RecentlyAdded from "../components/RecentlyAdded.jsx";
 import NearYou from "../components/NearYou.jsx";
 import HomeProducts from "../components/HomeProducts.jsx";
@@ -32,31 +31,6 @@ function CategorySkeleton() {
   );
 }
 
-
-function Featured() {
-  const { data, isPending } = useQuery({
-    queryKey: ["featured", rotationSeed()],
-    queryFn: () => getFeaturedBusinesses({ limit: 8, seed: rotationSeed() }),
-    staleTime: 60_000
-  });
-
-  if (!isPending && !data?.length) return null;
-
-  return (
-    <section className={styles.section} aria-labelledby="featured-title">
-      <Container>
-        <h2 id="featured-title" className={styles.heading}>
-          Featured businesses
-        </h2>
-        {isPending ? (
-          <Skeleton height="15rem" radius="var(--radius-card)" />
-        ) : (
-          <BusinessRail items={data} label="Featured businesses" />
-        )}
-      </Container>
-    </section>
-  );
-}
 
 export default function Home() {
   const { slug } = useParams();
@@ -161,7 +135,7 @@ export default function Home() {
         </Container>
       </section>
 
-      <Featured />
+      <FeaturedStores />
 
       <HomeProducts />
 
@@ -208,11 +182,7 @@ export default function Home() {
         </Container>
       </section>
 
-      <section className={styles.section} aria-labelledby="recent-title">
-        <Container>
-          <RecentlyAdded />
-        </Container>
-      </section>
+      <RecentlyAdded />
 
       <section className={styles.section} aria-labelledby="cta-title">
         <Container>
@@ -224,9 +194,9 @@ export default function Home() {
               <h2 id="cta-title" className={styles.ctaTitle}>
                 List your business
               </h2>
-              <p>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
+              <p className={styles.ctaCopy}>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
             </div>
-            <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight}>
+            <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight} className={styles.ctaButton}>
               Become a seller
             </Button>
           </div>

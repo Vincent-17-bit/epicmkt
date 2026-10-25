@@ -11,19 +11,15 @@ describe("shop name", () => {
 });
 
 describe("strike notice", () => {
-  it("says what strikes can cost, once for one strike", async () => {
+  it("is not shown as a banner at the top of the page", async () => {
     await signedInApp("/business/subscription", () => { M.state.business.strikes = 1; });
-    const banner = await screen.findByTestId("strike-banner");
-    expect(banner).toHaveTextContent("You have 1 strike");
-    expect(within(banner).getByText("What a suspension means")).toBeInTheDocument();
-    expect(banner).toHaveTextContent("suspended");
-    expect(within(banner).getByRole("link", { name: "See why in Notifications" })).toHaveAttribute("href", "/business/notifications");
-  });
-
-  it("does not show when there are no strikes", async () => {
-    await signedInApp("/business/subscription");
     await screen.findByTestId("shop-name");
     expect(screen.queryByTestId("strike-banner")).toBeNull();
+  });
+
+  it("the Account page still says what strikes can cost", async () => {
+    await signedInApp("/business/account", () => { M.state.business.strikes = 1; });
+    expect(await screen.findByTestId("acc-strikes")).toHaveTextContent("You have 1 strike");
   });
 });
 

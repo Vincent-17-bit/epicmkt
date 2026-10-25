@@ -1,7 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { EMPTY_FILTERS, SORTS, countsFor, facetsOf } from "../lib/productFilters.js";
+import { SORTS } from "../lib/productFilters.js";
 import styles from "./ProductFilters.module.css";
 
 const toggle = (list, value) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -140,27 +140,32 @@ const FLAG_ROWS = [
   ["photo", "With a photo"]
 ];
 const STORE_ROWS = [
+  ["openNow", "Open now"],
   ["verified", "Verified stores"],
   ["featured", "Featured stores"]
 ];
 
 // Every way to narrow or reorder the products. Each change applies at once and every option shows how many products
 // it would leave, so the shopper never ticks a box that empties the list without seeing it coming.
-export default function ProductFilters({ filters, products, categories = [], categoryName, onChange }) {
-  const bounds = useMemo(() => facetsOf(products).price, [products]);
-  const counts = useMemo(() => countsFor(products, filters), [products, filters]);
-  const towns = useMemo(() => facetsOf(products).towns, [products]);
+export default function ProductFilters({ filters, facets, counts: liveCounts, categories = [], categoryName, onChange }) {
+  const bounds = facets?.price ?? null;
+  const towns = useMemo(() => facets?.towns ?? [], [facets]);
 
-  // Rows keep a fixed order (most products first, judged over the whole list) so they do not jump about as the
-  // shopper ticks; only the numbers beside them change.
-  const totals = useMemo(() => countsFor(products, EMPTY_FILTERS), [products]);
+  // Rows keep a fixed order (most products first, judged over the whole catalogue) so they do not jump about as the
+  // shopper ticks; only the numbers beside them change. The totals come with the facets, the live counts from the server.
+  const totals = useMemo(
+    () => ({ categories: new Map((facets?.categories ?? []).map((c) => [c.id, c.count])), towns: new Map(towns.map((t) => [t.slug, t.count])) }),
+    [facets, towns]
+  );
+  // Until the live counts arrive the options show the catalogue totals, and the one-off product toggles show no number.
+  const counts = liveCounts ?? { categories: totals.categories, towns: totals.towns, flags: {} };
 
   const categoryRows = useMemo(() => {
-    const known = categories.length ? categories : [...new Set(products.map((p) => p.business?.categoryId).filter(Boolean))].map((id) => ({ id, name: categoryName(id) }));
+    const known = categories.length ? categories : (facets?.categories ?? []).map((c) => ({ id: c.id, name: categoryName(c.id) }));
     return known
       .map((c, i) => ({ id: c.id, name: c.name, count: counts.categories.get(c.id) ?? 0, i }))
       .sort((a, b) => (totals.categories.get(b.id) ?? 0) - (totals.categories.get(a.id) ?? 0) || a.i - b.i);
-  }, [categories, products, counts, totals, categoryName]);
+  }, [categories, facets, counts, totals, categoryName]);
   const townRows = useMemo(
     () => towns.map((t) => ({ id: t.slug, name: t.name, count: counts.towns.get(t.slug) ?? 0 })).sort((a, b) => (totals.towns.get(b.id) ?? 0) - (totals.towns.get(a.id) ?? 0) || a.name.localeCompare(b.name)),
     [towns, counts, totals]
@@ -217,7 +222,7 @@ export default function ProductFilters({ filters, products, categories = [], cat
         </div>
       </Section>
 
-      <Section title="Store" open={filters.verified || filters.featured}>
+      <Section title="Store" open={filters.openNow || filters.verified || filters.featured}>
         <div className={styles.list}>
           {STORE_ROWS.map(([key, label]) => (
             <Check key={key} checked={filters[key]} count={counts.flags[key]} disabled={counts.flags[key] === 0 && !filters[key]} onChange={(v) => onChange({ [key]: v })}>

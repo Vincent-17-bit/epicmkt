@@ -1,3 +1,5 @@
+import { demoItemId } from "./itemIds.js";
+
 const DAY = 86400000;
 const HOUR = 3600000;
 
@@ -6,7 +8,7 @@ const HOUR = 3600000;
 const offer = (id, businessId, kind, config, items, extra = {}) => {
   const at = Date.now();
   const { startsInDays = -1, endsInDays = 14, endsInHours = null, withIds = [], ...rest } = extra;
-  return {
+  const made = {
     id,
     businessId,
     title: null,
@@ -26,6 +28,8 @@ const offer = (id, businessId, kind, config, items, extra = {}) => {
     updatedAt: new Date(at - 7 * DAY).toISOString(),
     ...rest
   };
+  made.items = made.items.map((e) => ({ ...e, itemId: demoItemId(businessId, e.itemId) }));
+  return made;
 };
 
 export const seedOffers = () => [

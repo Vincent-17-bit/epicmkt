@@ -1,0 +1,56 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  max-width: 10rem;
+  padding: 0 var(--space-3);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.btn[data-set="true"] {
+  background: var(--primary-tint);
+}
+
+.icon {
+  flex: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* On the narrowest phones the pin alone is the button; the full name stays in its accessible label. */
+@media (max-width: 359px) {
+  .btn {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .label {
+    display: none;
+  }
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--primary-tint);
+    transform: translateY(-2px);
+  }
+}
+
+.btn:active {
+  background: var(--primary);
+  transform: scale(0.97);
+}

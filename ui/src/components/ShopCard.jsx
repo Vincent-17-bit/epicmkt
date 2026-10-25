@@ -31,8 +31,7 @@ export default function ShopCard({
   promoLabels,
   mode = "live",
   overlay,
-  quickActions,
-  compact = false
+  quickActions
 }) {
   const preview = isPreview(mode);
   const act = actionProps(preview);
@@ -44,17 +43,13 @@ export default function ShopCard({
 
   const card = (
     <article
-      className={`${styles.card} ${compact ? styles.compact : ""}`}
+      className={styles.card}
       style={{ "--hue": business.hue ?? 210 }}
       data-mode={preview ? "preview" : undefined}
     >
       <div className={styles.top}>
         <Link href={to} className={styles.cover} tabIndex={-1} aria-hidden="true">
-          {business.coverUrl ? (
-            <LazyImage src={business.coverUrl} className={styles.coverImg} frameClassName={styles.coverFrame} width={800} sizes="(min-width: 1024px) 33vw, 100vw" />
-          ) : (
-            <FontAwesomeIcon icon={icon} />
-          )}
+          <LazyImage src={business.coverUrl} className={styles.coverImg} frameClassName={styles.coverFrame} width={800} sizes="(min-width: 1024px) 33vw, 100vw" />
         </Link>
         <PromoChip promo={business.promo} className={styles.promo} labels={promoLabels} />
         {hasBadges && (
@@ -81,14 +76,14 @@ export default function ShopCard({
               </Link>
             </h3>
             <p className={styles.where}>
-              {business.categoryName} · {compact ? business.area : `${business.area}, ${business.county}`}
+              {business.categoryName} · {`${business.area}, ${business.county}`}
             </p>
           </div>
         </div>
 
-        {!compact && <p className={styles.tagline}>{business.tagline}</p>}
+        <p className={styles.tagline}>{business.tagline}</p>
 
-        {!compact && business.highlights?.length > 0 && (
+        {business.highlights?.length > 0 && (
           <ul className={styles.highlights} aria-label="Highlights">
             {business.highlights.map((item) => (
               <li key={item} className={styles.highlight}>
@@ -98,99 +93,55 @@ export default function ShopCard({
           </ul>
         )}
 
-        {compact ? (
-          <>
-            <div className={styles.compactMeta}>
-              {business.fromPriceKes != null && (
-                <span className={styles.compactPrice}>
-                  <span className={styles.fromWord}>From </span>
-                  {formatKes(business.fromPriceKes)}
-                </span>
-              )}
-              <span className={`${styles.status} ${business.isOpen ? styles.statusOpen : styles.statusClosed}`}>
-                <span className={styles.dot} aria-hidden="true" />
-                {business.isOpen ? "Open" : "Closed"}
-              </span>
-            </div>
-
-            <div className={styles.compactActions}>
-              <Button as="a" size="sm" icon={faPhone} aria-label={`Call ${business.name}`} {...act.link(telLink(business.phone), track("call"))}>
-                <span className={styles.actionLabel}>Call</span>
-              </Button>
-              <Button
-                as="a"
-                size="sm"
-                variant="secondary"
-                icon={faWhatsapp}
-                aria-label={`WhatsApp ${business.name}`}
-                {...act.link(whatsappLink(business.whatsapp, `Hi ${business.name}, I found you on EpicMKT.`), track("whatsapp"), external)}
-              >
-                <span className={styles.actionLabel}>WhatsApp</span>
-              </Button>
-              <Button
-                as="a"
-                size="sm"
-                variant="secondary"
-                icon={faLocationArrow}
-                aria-label={`Directions to ${business.name}`}
-                {...act.link(directionsLink(business.lat, business.lng), track("directions"), external)}
-              >
-                <span className={styles.actionLabel}>Directions</span>
-              </Button>
-            </div>
-          </>
-        ) : (
-          <>
-            {(business.fromPriceKes != null || business.distanceKm != null) && (
-              <p className={styles.facts}>
-                {[
-                  business.fromPriceKes != null && `From ${formatKes(business.fromPriceKes)}`,
-                  business.distanceKm != null && `${formatDistance(business.distanceKm)} away`
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            )}
-
-            <div className={styles.meta}>
-              <span className={styles.rating}>
-                <FontAwesomeIcon icon={faStar} />
-                {business.reviewCount > 0 ? (
-                  <>
-                    {business.rating.toFixed(1)} <span className={styles.count}>({business.reviewCount})</span>
-                  </>
-                ) : (
-                  "New"
-                )}
-              </span>
-              <span className={business.isOpen ? styles.open : styles.closed}>{business.isOpen ? "Open now" : "Closed"}</span>
-            </div>
-
-            <div className={styles.actions}>
-              <Button as="a" size="sm" icon={faPhone} {...act.link(telLink(business.phone), track("call"))}>
-                Call
-              </Button>
-              <Button
-                as="a"
-                size="sm"
-                variant="secondary"
-                icon={faWhatsapp}
-                {...act.link(whatsappLink(business.whatsapp, `Hi ${business.name}, I found you on EpicMKT.`), track("whatsapp"), external)}
-              >
-                WhatsApp
-              </Button>
-              <Button
-                as="a"
-                size="sm"
-                variant="secondary"
-                icon={faLocationArrow}
-                {...act.link(directionsLink(business.lat, business.lng), track("directions"), external)}
-              >
-                Directions
-              </Button>
-            </div>
-          </>
+        {(business.fromPriceKes != null || business.distanceKm != null) && (
+          <p className={styles.facts}>
+            {[
+              business.fromPriceKes != null && `From ${formatKes(business.fromPriceKes)}`,
+              business.distanceKm != null && `${formatDistance(business.distanceKm)} away`
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         )}
+
+        <div className={styles.meta}>
+          <span className={styles.rating}>
+            <FontAwesomeIcon icon={faStar} />
+            {business.reviewCount > 0 ? (
+              <>
+                {business.rating.toFixed(1)} <span className={styles.count}>({business.reviewCount})</span>
+              </>
+            ) : (
+              "New"
+            )}
+          </span>
+          <span className={business.isOpen ? styles.open : styles.closed}>{business.isOpen ? "Open now" : "Closed"}</span>
+        </div>
+        {business.statusLine && <p className={styles.statusLine}>{business.statusLine}</p>}
+
+        <div className={styles.actions}>
+          <Button as="a" size="sm" icon={faPhone} {...act.link(telLink(business.phone), track("call"))}>
+            Call
+          </Button>
+          <Button
+            as="a"
+            size="sm"
+            variant="secondary"
+            icon={faWhatsapp}
+            {...act.link(whatsappLink(business.whatsapp, `Hi ${business.name}, I found you on EpicMKT.`), track("whatsapp"), external)}
+          >
+            WhatsApp
+          </Button>
+          <Button
+            as="a"
+            size="sm"
+            variant="secondary"
+            icon={faLocationArrow}
+            {...act.link(directionsLink(business.lat, business.lng), track("directions"), external)}
+          >
+            Directions
+          </Button>
+        </div>
       </div>
     </article>
   );

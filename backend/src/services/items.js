@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isOpenNow } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -75,7 +75,8 @@ const sellerCard = (business, origin) => ({
   lng: business.lng,
   phone: business.phone,
   whatsapp: business.whatsapp,
-  isOpen: isOpenNow(business.hours),
+  isOpen: statusOf(business.hours, business.exceptions).isOpen,
+  statusLine: statusOf(business.hours, business.exceptions).line,
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 
@@ -248,12 +249,37 @@ export async function getAllProducts() {
           featured: PLAN_FEATURES[business.plan]?.featured === true,
           categoryId: business.categoryId,
           town: business.area ?? "",
-          county: business.county ?? ""
+          county: business.county ?? "",
+          isOpen: statusOf(business.hours, business.exceptions).isOpen,
+          statusLine: statusOf(business.hours, business.exceptions).line
         }
       });
     });
   }
   return rows;
+}
+
+// A random window of each store's listed products, for the home page's featured cards. The caller picks from it, so a
+// store with a thousand products costs the same as one with ten. Returns { [businessId]: { items, total } }.
+export async function getStoreShowcase(businessIds = [], { pool = 24, rng = Math.random } = {}) {
+  await delay();
+  runSweep();
+  const out = {};
+  for (const ref of new Set(businessIds)) {
+    const business = store.businesses.find((b) => b.id === ref || b.slug === ref);
+    if (!business || business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    const listed = business.services
+      .map((svc, index) => toItem(business, svc, index))
+      .filter((item) => item.status === "listed")
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+    const start = listed.length > pool ? Math.floor(rng() * (listed.length - pool + 1)) : 0;
+    const items = listed.slice(start, start + pool).map((item) => {
+      const sale = liveSaleFor(item, business);
+      return { ...item, pricing: buildPricing(item, sale), flash: sale ? flashParts(item, sale) : null };
+    });
+    out[business.id] = { items, total: listed.length };
+  }
+  return out;
 }
 
 const HOUR_MS = 3600000;
@@ -271,6 +297,7 @@ export async function getFlashSales({
   categoryId = null,
   town = null,
   endsWithin = null,
+  openNow = false,
   minPrice = null,
   maxPrice = null,
   sort = "ending",
@@ -289,6 +316,7 @@ export async function getFlashSales({
     if (businessId && business.id !== businessId && business.slug !== businessId) continue;
     if (categoryId && business.categoryId !== categoryId) continue;
     if (town && business.townSlug !== town) continue;
+    if (openNow && !statusOf(business.hours, business.exceptions).isOpen) continue;
     business.services.forEach((svc, index) => {
       if (svc.status === "unlisted") return;
       const item = toItem(business, svc, index);

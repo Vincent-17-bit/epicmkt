@@ -41,3 +41,24 @@ describe("poster helpers", () => {
     expect(posterFileName("shop-a", "a5", "pdf")).toBe("epicmkt-qr-shop-a-a5.pdf");
   });
 });
+
+describe("one code per business, on every screen", () => {
+  it("poster, seller preview and customer page build identical modules; only the plan's logo room changes the pattern", async () => {
+    const { default: QR } = await import("qrcode");
+    const { shopQrSpec } = await import("@epicmkt/shared");
+    const bitsOf = (m) => Array.from({ length: m.size }, (_, r) => Array.from({ length: m.size }, (_, c) => (m.dark(r, c) ? 1 : 0)).join("")).join("");
+    const clientBits = (spec) => {
+      const { modules } = QR.create(spec.text, { errorCorrectionLevel: spec.ecl });
+      return bitsOf({ size: modules.size, dark: (r, c) => modules.get(r, c) });
+    };
+    for (const planKey of ["standard", "premium"]) {
+      for (const hasLogo of [true, false]) {
+        const poster = await buildMatrix("shop-a", { planKey, hasLogo });
+        expect(bitsOf(poster)).toBe(clientBits(shopQrSpec("shop-a", { planKey, hasLogo })));
+      }
+    }
+    const std = await buildMatrix("shop-a", { planKey: "standard", hasLogo: true });
+    const prem = await buildMatrix("shop-a", { planKey: "premium", hasLogo: true });
+    expect(std.text).toBe(prem.text);
+  });
+});
