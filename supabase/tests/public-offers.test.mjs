@@ -5,11 +5,14 @@ import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids } from "./
 let c;
 const anon = { role: "anon" };
 const PAID = "now() + interval '30 days'";
+const ITEM = "20000000-0000-0000-0000-0000000000b1";
 
 before(async () => {
   c = await connect(await createDatabase({ database: "epicmkt_test_public_offers" }));
   await seedFixtures(c);
   await sql(c, `update businesses set paid_until = ${PAID}`);
+  // Offers are on products: customers only see an offer that is on at least one product they can see.
+  await sql(c, `insert into items (id, business_id, name, price) values ('${ITEM}', '${ids.bizB}', 'Juice', 100)`);
 });
 after(async () => { await c.end(); });
 beforeEach(async () => {
@@ -18,9 +21,10 @@ beforeEach(async () => {
 });
 
 const offer = async (biz, title, extra = {}) => {
-  const cols = { business_id: biz, title, ...extra };
+  const cols = { business_id: biz, title, kind: "percent_off", config: { percent: 10 }, ...extra };
   const keys = Object.keys(cols);
-  const rows = await sql(c, `insert into offers (${keys.join(", ")}) values (${keys.map((_, i) => `$${i + 1}`).join(", ")}) returning id`, Object.values(cols));
+  const rows = await sql(c, `insert into offers (${keys.join(", ")}) values (${keys.map((_, i) => `$${i + 1}`).join(", ")}) returning id`, Object.values(cols).map((v) => (v && typeof v === "object" && !(v instanceof Date) ? JSON.stringify(v) : v)));
+  await sql(c, `insert into offer_items (offer_id, item_id, business_id) values ($1, '${ITEM}', $2)`, [rows[0].id, biz]);
   return rows[0].id;
 };
 const visible = async (biz) =>

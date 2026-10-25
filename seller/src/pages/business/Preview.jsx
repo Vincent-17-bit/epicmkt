@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { flashPrice, statusOf } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, offersByItem, statusOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
@@ -28,7 +28,8 @@ const safe = (fn, fallback) => {
 
 const endsText = (iso) => `Ends ${new Date(iso).toLocaleString("en-KE", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "Africa/Nairobi" })}`;
 
-const serviceOf = (item) => ({
+const serviceOf = (item, chips) => ({
+  offer: chips.get(item.id) ?? null,
   id: item.id,
   name: item.name,
   description: item.description ?? "",
@@ -99,7 +100,12 @@ export default function Preview() {
     );
   }
 
-  const { shop, items, flashSales } = preview.data;
+  const { shop, items, flashSales, offers = [] } = preview.data;
+  const nowMs = Date.now();
+  const chips = new Map([...offersByItem(offers)].map(([id, list]) => [id, chipOf(list, nowMs)]).filter(([, c]) => c).map(([id, c]) => [id, { label: c.label, extra: c.extra }]));
+  const deals = offers
+    .map((o) => dealOf(o, o.items.map((e) => ({ e, item: items.find((i) => i.id === e.itemId) })).filter((x) => x.item).map(({ e, item }) => ({ id: item.id, name: item.name, imageUrl: mediaUrl(item.imagePaths?.[0]), price: item.price, role: e.role })), nowMs))
+    .filter((d) => d.products.length > 0);
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
   const openStatus = safe(() => statusOf(hours, exceptions), statusOf({}, []));
@@ -129,8 +135,8 @@ export default function Preview() {
     coverUrl: mediaUrl(shop.coverPath),
     logoUrl: mediaUrl(shop.logoPath),
     gallery: [],
-    offers: [],
-    services: items.map(serviceOf),
+    offers: deals,
+    services: items.map((i) => serviceOf(i, chips)),
     // Same functions and same data as the customer page, so the preview cannot disagree with it.
     ...openFields,
   };
@@ -157,7 +163,7 @@ export default function Preview() {
           distanceKm={null}
           locate={{ label: "Show distance from me" }}
           hoursRows={hoursRows(hours, exceptions)}
-          formatExpiry={() => ""}
+          offerLabels={{ title: "Offers", code: "Code", copy: "Copy code", copied: "Copied", endsIn: "Ends in", noEnd: "No end date", onlyNow: "Not available at this hour", openProduct: "Open" }}
           flash={<FlashSection cards={flashCards(flashSales, items)} />}
           socials={socialLinks(shop.socials)}
           qr={<ShopQr slug={shop.slug} planKey={shop.planKey} hasLogo={!!shop.logoPath} label={`QR code linking to ${shop.name}`} />}

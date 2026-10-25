@@ -85,6 +85,20 @@ const MESSAGES = {
   cover_too_small: "Cover photos need to be at least 600 pixels wide. Pick a larger photo.",
   logo_too_small: "Logos need to be at least 200 by 200 pixels. Pick a larger photo.",
   invalid_kind: "We could not tell which picture to change. Refresh and try again.",
+  invalid_offer_kind: "Choose a type of offer.",
+  invalid_config: "Check the numbers for this offer. Each one needs a valid value.",
+  invalid_conditions: "Check the days, hours and minimum spend.",
+  no_items: "Pick at least one product for this offer.",
+  too_many_items: "An offer can cover up to 12 products.",
+  bundle_needs_two: "A bundle needs a main product and at least one product bought with it.",
+  ends_in_past: "Choose an end time in the future.",
+  invalid_title: "Keep the offer name between 3 and 80 characters.",
+  invalid_chip_text: "Keep the tag text between 2 and 22 characters.",
+  invalid_description: "Keep the description under 200 characters.",
+  invalid_terms: "Keep the terms under 280 characters.",
+  invalid_code: "A code is 3 to 16 letters or numbers, with no spaces.",
+  deal_not_cheaper: "That deal costs more than buying normally. Lower the price.",
+  offer_not_found: "We could not find that offer.",
   photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };
@@ -92,6 +106,7 @@ const MESSAGES = {
 const LIMITS = {
   items: "You have reached the number of items your plan allows. Delete one or upgrade your plan.",
   flash_concurrent: "You have reached the number of flash sales you can run at the same time on your plan.",
+  offers: "You have reached the number of offers your plan allows at once. End one or upgrade your plan.",
   flash_per_month: "You have used all the flash sales your plan allows this month.",
 };
 export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => {

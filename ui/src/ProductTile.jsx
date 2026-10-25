@@ -1,5 +1,6 @@
 import { formatKes } from "@epicmkt/shared";
 import { isPreview } from "./preview.js";
+import OfferChip from "./components/OfferChip.jsx";
 import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
 import LazyImage from "./components/LazyImage.jsx";
 import styles from "./ProductTile.module.css";
@@ -8,6 +9,7 @@ const DEFAULT_LABELS = {
   was: "Was",
   verified: "Verified store",
   featured: "Featured store",
+  offerChip: { offer: "Offer", more: "more" },
   closed: "Closed",
   availability: (key) =>
     ({
@@ -71,6 +73,7 @@ export default function ProductTile({
         <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
+        <OfferChip offer={item.offer} className={styles.offer} labels={labels.offerChip} />
         {soldOut && <span className={styles.stock}>{labels.availability(availability)}</span>}
       </span>
 

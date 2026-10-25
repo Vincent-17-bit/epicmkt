@@ -338,44 +338,134 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
             Offers
           </h2>
           <ul
-            class="offers"
+            class="deals"
           >
             <li
-              class="offer"
+              class="deal"
+              data-kind="percent_off"
             >
-              <svg
+              <div
                 aria-hidden="true"
-                class="svg-inline--fa fa-tag offerIcon"
-                data-icon="tag"
-                data-prefix="fas"
-                focusable="false"
-                role="img"
-                viewBox="0 0 448 512"
-                xmlns="http://www.w3.org/2000/svg"
+                class="stub"
               >
-                <path
-                  d="M0 80L0 229.5c0 17 6.7 33.3 18.7 45.3l176 176c25 25 65.5 25 90.5 0L418.7 317.3c25-25 25-65.5 0-90.5l-176-176c-12-12-28.3-18.7-45.3-18.7L48 32C21.5 32 0 53.5 0 80zm112 32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
-                  fill="currentColor"
-                />
-              </svg>
-              <div>
+                <span
+                  class="stubText"
+                >
+                  10% off
+                </span>
+              </div>
+              <div
+                class="body"
+              >
                 <h3
-                  class="h3"
+                  class="title"
                 >
                   Student discount
                 </h3>
-                <p>
-                  10% off with ID
+                <p
+                  class="headline"
+                >
+                  <span
+                    class="sr"
+                  >
+                    10% off
+                    . 
+                  </span>
+                  10% off
                 </p>
                 <p
-                  class="offerMeta"
+                  class="description"
                 >
-                  Valid until 1 Jan
-                   · Code 
-                  <strong>
-                    STUDENT
-                  </strong>
+                  10% off with ID
                 </p>
+                <ul
+                  aria-label="Student discount"
+                  class="products"
+                >
+                  <li
+                    class="productItem"
+                  >
+                    <button
+                      aria-haspopup="dialog"
+                      aria-label="Open Haircut"
+                      class="product"
+                      type="button"
+                    >
+                      <span
+                        class="thumb"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          class="svg-inline--fa fa-image "
+                          data-icon="image"
+                          data-prefix="fas"
+                          focusable="false"
+                          role="img"
+                          viewBox="0 0 512 512"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M0 96C0 60.7 28.7 32 64 32l384 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM323.8 202.5c-4.5-6.6-11.9-10.5-19.8-10.5s-15.4 3.9-19.8 10.5l-87 127.6L170.7 297c-4.6-5.7-11.5-9-18.7-9s-14.2 3.3-18.7 9l-64 80c-5.8 7.2-6.9 17.1-2.9 25.4s12.4 13.6 21.6 13.6l96 0 32 0 208 0c8.9 0 17.1-4.9 21.2-12.8s3.6-17.4-1.4-24.7l-120-176zM112 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </span>
+                      <span
+                        class="productText"
+                      >
+                        <span
+                          class="productName"
+                        >
+                          Haircut
+                        </span>
+                        <span
+                          class="productPrice"
+                        >
+                          KES 500
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+                <div
+                  class="foot"
+                >
+                  <button
+                    aria-label="Copy code STUDENT"
+                    class="code"
+                    type="button"
+                  >
+                    <span
+                      class="codeLabel"
+                    >
+                      Code
+                    </span>
+                    <strong
+                      class="codeValue"
+                    >
+                      STUDENT
+                    </strong>
+                    <svg
+                      aria-hidden="true"
+                      class="svg-inline--fa fa-copy "
+                      data-icon="copy"
+                      data-prefix="fas"
+                      focusable="false"
+                      role="img"
+                      viewBox="0 0 448 512"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M208 0L332.1 0c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9L448 336c0 26.5-21.5 48-48 48l-192 0c-26.5 0-48-21.5-48-48l0-288c0-26.5 21.5-48 48-48zM48 128l80 0 0 64-64 0 0 256 192 0 0-32 64 0 0 48c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 176c0-26.5 21.5-48 48-48z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <span
+                      class="live"
+                      role="status"
+                    />
+                  </button>
+                </div>
               </div>
             </li>
           </ul>
@@ -447,18 +537,22 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="loading"
-                    style="aspect-ratio: 4 / 3;"
+                    class="serviceMedia"
                   >
-                    <img
-                      alt=""
-                      class="img serviceImg"
-                      decoding="async"
-                      draggable="false"
-                      loading="lazy"
-                      src="/fade.jpg"
-                    />
+                    <span
+                      class="frame  "
+                      data-state="loading"
+                      style="aspect-ratio: 4 / 3;"
+                    >
+                      <img
+                        alt=""
+                        class="img serviceImg"
+                        decoding="async"
+                        draggable="false"
+                        loading="lazy"
+                        src="/fade.jpg"
+                      />
+                    </span>
                   </span>
                   <span
                     class="serviceText"
@@ -485,10 +579,14 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="error"
-                    style="aspect-ratio: 4 / 3;"
-                  />
+                    class="serviceMedia"
+                  >
+                    <span
+                      class="frame  "
+                      data-state="error"
+                      style="aspect-ratio: 4 / 3;"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -520,10 +618,14 @@ exports[`extraction snapshots (dark) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="error"
-                    style="aspect-ratio: 4 / 3;"
-                  />
+                    class="serviceMedia"
+                  >
+                    <span
+                      class="frame  "
+                      data-state="error"
+                      style="aspect-ratio: 4 / 3;"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -1728,29 +1830,64 @@ exports[`extraction snapshots (dark) > ShopCard 1`] = `
           />
         </a>
         <span
-          class="chip flash promo"
+          class="group promo"
         >
-          <svg
-            aria-hidden="true"
-            class="svg-inline--fa fa-bolt "
-            data-icon="bolt"
-            data-prefix="fas"
-            focusable="false"
-            role="img"
-            viewBox="0 0 448 512"
-            xmlns="http://www.w3.org/2000/svg"
+          <span
+            class="chip flash"
           >
-            <path
-              d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288l111.5 0L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7l-111.5 0L349.4 44.6z"
-              fill="currentColor"
-            />
-          </svg>
-          <span>
-            Flash sale
+            <svg
+              aria-hidden="true"
+              class="svg-inline--fa fa-bolt "
+              data-icon="bolt"
+              data-prefix="fas"
+              focusable="false"
+              role="img"
+              viewBox="0 0 448 512"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288l111.5 0L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7l-111.5 0L349.4 44.6z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>
+              Flash sale
+            </span>
           </span>
-          <span>
-            +
-            2
+          <span
+            class="chip offer"
+          >
+            <svg
+              aria-hidden="true"
+              class="svg-inline--fa fa-tag "
+              data-icon="tag"
+              data-prefix="fas"
+              focusable="false"
+              role="img"
+              viewBox="0 0 448 512"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M0 80L0 229.5c0 17 6.7 33.3 18.7 45.3l176 176c25 25 65.5 25 90.5 0L418.7 317.3c25-25 25-65.5 0-90.5l-176-176c-12-12-28.3-18.7-45.3-18.7L48 32C21.5 32 0 53.5 0 80zm112 32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>
+              Offer
+            </span>
+            <span
+              aria-hidden="true"
+              class="count"
+            >
+              2
+            </span>
+            <span
+              class="sr"
+            >
+              2
+               
+              products on offer
+            </span>
           </span>
         </span>
         <div
@@ -2523,44 +2660,134 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
             Offers
           </h2>
           <ul
-            class="offers"
+            class="deals"
           >
             <li
-              class="offer"
+              class="deal"
+              data-kind="percent_off"
             >
-              <svg
+              <div
                 aria-hidden="true"
-                class="svg-inline--fa fa-tag offerIcon"
-                data-icon="tag"
-                data-prefix="fas"
-                focusable="false"
-                role="img"
-                viewBox="0 0 448 512"
-                xmlns="http://www.w3.org/2000/svg"
+                class="stub"
               >
-                <path
-                  d="M0 80L0 229.5c0 17 6.7 33.3 18.7 45.3l176 176c25 25 65.5 25 90.5 0L418.7 317.3c25-25 25-65.5 0-90.5l-176-176c-12-12-28.3-18.7-45.3-18.7L48 32C21.5 32 0 53.5 0 80zm112 32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
-                  fill="currentColor"
-                />
-              </svg>
-              <div>
+                <span
+                  class="stubText"
+                >
+                  10% off
+                </span>
+              </div>
+              <div
+                class="body"
+              >
                 <h3
-                  class="h3"
+                  class="title"
                 >
                   Student discount
                 </h3>
-                <p>
-                  10% off with ID
+                <p
+                  class="headline"
+                >
+                  <span
+                    class="sr"
+                  >
+                    10% off
+                    . 
+                  </span>
+                  10% off
                 </p>
                 <p
-                  class="offerMeta"
+                  class="description"
                 >
-                  Valid until 1 Jan
-                   · Code 
-                  <strong>
-                    STUDENT
-                  </strong>
+                  10% off with ID
                 </p>
+                <ul
+                  aria-label="Student discount"
+                  class="products"
+                >
+                  <li
+                    class="productItem"
+                  >
+                    <button
+                      aria-haspopup="dialog"
+                      aria-label="Open Haircut"
+                      class="product"
+                      type="button"
+                    >
+                      <span
+                        class="thumb"
+                      >
+                        <svg
+                          aria-hidden="true"
+                          class="svg-inline--fa fa-image "
+                          data-icon="image"
+                          data-prefix="fas"
+                          focusable="false"
+                          role="img"
+                          viewBox="0 0 512 512"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M0 96C0 60.7 28.7 32 64 32l384 0c35.3 0 64 28.7 64 64l0 320c0 35.3-28.7 64-64 64L64 480c-35.3 0-64-28.7-64-64L0 96zM323.8 202.5c-4.5-6.6-11.9-10.5-19.8-10.5s-15.4 3.9-19.8 10.5l-87 127.6L170.7 297c-4.6-5.7-11.5-9-18.7-9s-14.2 3.3-18.7 9l-64 80c-5.8 7.2-6.9 17.1-2.9 25.4s12.4 13.6 21.6 13.6l96 0 32 0 208 0c8.9 0 17.1-4.9 21.2-12.8s3.6-17.4-1.4-24.7l-120-176zM112 192a48 48 0 1 0 0-96 48 48 0 1 0 0 96z"
+                            fill="currentColor"
+                          />
+                        </svg>
+                      </span>
+                      <span
+                        class="productText"
+                      >
+                        <span
+                          class="productName"
+                        >
+                          Haircut
+                        </span>
+                        <span
+                          class="productPrice"
+                        >
+                          KES 500
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                </ul>
+                <div
+                  class="foot"
+                >
+                  <button
+                    aria-label="Copy code STUDENT"
+                    class="code"
+                    type="button"
+                  >
+                    <span
+                      class="codeLabel"
+                    >
+                      Code
+                    </span>
+                    <strong
+                      class="codeValue"
+                    >
+                      STUDENT
+                    </strong>
+                    <svg
+                      aria-hidden="true"
+                      class="svg-inline--fa fa-copy "
+                      data-icon="copy"
+                      data-prefix="fas"
+                      focusable="false"
+                      role="img"
+                      viewBox="0 0 448 512"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M208 0L332.1 0c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9L448 336c0 26.5-21.5 48-48 48l-192 0c-26.5 0-48-21.5-48-48l0-288c0-26.5 21.5-48 48-48zM48 128l80 0 0 64-64 0 0 256 192 0 0-32 64 0 0 48c0 26.5-21.5 48-48 48L48 512c-26.5 0-48-21.5-48-48L0 176c0-26.5 21.5-48 48-48z"
+                        fill="currentColor"
+                      />
+                    </svg>
+                    <span
+                      class="live"
+                      role="status"
+                    />
+                  </button>
+                </div>
               </div>
             </li>
           </ul>
@@ -2632,18 +2859,22 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="loading"
-                    style="aspect-ratio: 4 / 3;"
+                    class="serviceMedia"
                   >
-                    <img
-                      alt=""
-                      class="img serviceImg"
-                      decoding="async"
-                      draggable="false"
-                      loading="lazy"
-                      src="/fade.jpg"
-                    />
+                    <span
+                      class="frame  "
+                      data-state="loading"
+                      style="aspect-ratio: 4 / 3;"
+                    >
+                      <img
+                        alt=""
+                        class="img serviceImg"
+                        decoding="async"
+                        draggable="false"
+                        loading="lazy"
+                        src="/fade.jpg"
+                      />
+                    </span>
                   </span>
                   <span
                     class="serviceText"
@@ -2670,10 +2901,14 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="error"
-                    style="aspect-ratio: 4 / 3;"
-                  />
+                    class="serviceMedia"
+                  >
+                    <span
+                      class="frame  "
+                      data-state="error"
+                      style="aspect-ratio: 4 / 3;"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -2705,10 +2940,14 @@ exports[`extraction snapshots (light) > BusinessPage 1`] = `
                   type="button"
                 >
                   <span
-                    class="frame  "
-                    data-state="error"
-                    style="aspect-ratio: 4 / 3;"
-                  />
+                    class="serviceMedia"
+                  >
+                    <span
+                      class="frame  "
+                      data-state="error"
+                      style="aspect-ratio: 4 / 3;"
+                    />
+                  </span>
                   <span
                     class="serviceText"
                   >
@@ -3913,29 +4152,64 @@ exports[`extraction snapshots (light) > ShopCard 1`] = `
           />
         </a>
         <span
-          class="chip flash promo"
+          class="group promo"
         >
-          <svg
-            aria-hidden="true"
-            class="svg-inline--fa fa-bolt "
-            data-icon="bolt"
-            data-prefix="fas"
-            focusable="false"
-            role="img"
-            viewBox="0 0 448 512"
-            xmlns="http://www.w3.org/2000/svg"
+          <span
+            class="chip flash"
           >
-            <path
-              d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288l111.5 0L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7l-111.5 0L349.4 44.6z"
-              fill="currentColor"
-            />
-          </svg>
-          <span>
-            Flash sale
+            <svg
+              aria-hidden="true"
+              class="svg-inline--fa fa-bolt "
+              data-icon="bolt"
+              data-prefix="fas"
+              focusable="false"
+              role="img"
+              viewBox="0 0 448 512"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288l111.5 0L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7l-111.5 0L349.4 44.6z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>
+              Flash sale
+            </span>
           </span>
-          <span>
-            +
-            2
+          <span
+            class="chip offer"
+          >
+            <svg
+              aria-hidden="true"
+              class="svg-inline--fa fa-tag "
+              data-icon="tag"
+              data-prefix="fas"
+              focusable="false"
+              role="img"
+              viewBox="0 0 448 512"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M0 80L0 229.5c0 17 6.7 33.3 18.7 45.3l176 176c25 25 65.5 25 90.5 0L418.7 317.3c25-25 25-65.5 0-90.5l-176-176c-12-12-28.3-18.7-45.3-18.7L48 32C21.5 32 0 53.5 0 80zm112 32a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"
+                fill="currentColor"
+              />
+            </svg>
+            <span>
+              Offer
+            </span>
+            <span
+              aria-hidden="true"
+              class="count"
+            >
+              2
+            </span>
+            <span
+              class="sr"
+            >
+              2
+               
+              products on offer
+            </span>
           </span>
         </span>
         <div

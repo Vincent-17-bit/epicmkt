@@ -61,6 +61,13 @@ export const flashSale = (s) => ({
   quantityNote: s.quantity_note ?? null, afterEnd: s.after_end, status: s.status, endedAt: s.ended_at ?? null, endedReason: s.ended_reason ?? null, createdAt: s.created_at,
 });
 
+export const offer = (o) => ({
+  id: o.id, kind: o.kind ?? null, config: o.config ?? {}, conditions: o.conditions ?? {}, title: o.title ?? null, description: o.description ?? null,
+  chipText: o.chip_text ?? o.chipText ?? null, code: o.code ?? null, terms: o.terms ?? null, active: o.active !== false,
+  startsAt: o.starts_at ?? o.startsAt ?? null, endsAt: o.ends_at ?? o.endsAt ?? null, status: o.status ?? "active", createdAt: o.created_at ?? o.createdAt ?? null,
+  items: (o.offer_items ?? o.items ?? []).map((e) => ({ itemId: e.item_id ?? e.itemId, role: e.role ?? "main" })),
+});
+
 const num = (v) => (v === null || v === undefined ? null : Number(v));
 export const mediaUrl = (path) => (path?.startsWith("blob:") ? path : path && import.meta.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
 
@@ -78,7 +85,7 @@ export const catalogItem = (i) => ({
 
 const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;
 
-export const preview = (b, { categoryName, catalog: c, flashSales, nowMs }) => ({
+export const preview = (b, { categoryName, catalog: c, flashSales, offers = [], nowMs }) => ({
   shop: {
     slug: b.slug, name: b.name, tagline: b.tagline ?? "", description: b.description ?? "", planKey: b.plan_key, status: b.status,
     live: c.shop.live, verified: b.verification_level === "verified", county: b.county ?? "", town: b.town ?? "", address: b.address ?? "",
@@ -89,6 +96,7 @@ export const preview = (b, { categoryName, catalog: c, flashSales, nowMs }) => (
   },
   items: c.items.filter(customerSees).sort((x, y) => x.sort - y.sort || Date.parse(y.createdAt) - Date.parse(x.createdAt)),
   flashSales: flashSales.filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs && Date.parse(s.endsAt) > nowMs),
+  offers,
 });
 
 export const catalog = (r) => ({

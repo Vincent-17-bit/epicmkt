@@ -1,5 +1,6 @@
 import { formatKes } from "@epicmkt/shared";
 import LazyImage from "./components/LazyImage.jsx";
+import OfferChip from "./components/OfferChip.jsx";
 import styles from "./ItemCard.module.css";
 
 const DEFAULT_LABELS = {
@@ -34,6 +35,7 @@ export default function ItemCard({
         <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <span className={styles.chip}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flashChip)}
+        <OfferChip offer={item.offer} className={styles.offerChip} labels={labels.offerChip} />
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>

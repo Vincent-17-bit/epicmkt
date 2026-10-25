@@ -1,33 +1,300 @@
-.h3 {
-  font-size: var(--text-md);
-  font-weight: 700;
-}
-
-.offers {
+.deals {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.offer {
-  display: flex;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--border-strong);
+/* A ticket: an amber stub with the deal in a few words, a perforated edge, then the small print. Colours come from the
+   offer tokens, which exist for light and dark, so the ticket reads the same in every theme. */
+.deal {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(4.75rem, 26%) minmax(0, 1fr);
+  overflow: hidden;
+  border: 2px solid var(--offer-border);
   border-radius: var(--radius-card);
-  background: var(--surface);
+  background: var(--offer-body-bg);
+  color: var(--offer-body-text);
+  text-decoration: none;
 }
 
-.offerIcon {
-  flex: none;
-  margin-top: var(--space-1);
-  color: var(--verified);
+.stub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3) var(--space-2);
+  background: var(--offer-stub-gradient);
+  color: var(--offer-stub-text);
+  text-align: center;
 }
 
-.offerMeta {
+/* The perforation: a dashed seam with a notch top and bottom. */
+.stub::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  border-right: 2px dashed var(--offer-border);
+}
+
+.stubText {
+  font-size: clamp(0.875rem, 0.8rem + 0.5vw, 1.0625rem);
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.body {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+}
+
+.title {
+  font-size: var(--text-md);
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.headline {
+  font-weight: 700;
+}
+
+.description {
   color: var(--text-muted);
   font-size: var(--text-sm);
+}
+
+.products {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.productItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+}
+
+.plus {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.product {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px var(--space-3) 3px 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  transition: border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.product:active {
+  transform: scale(0.97);
+}
+
+.product:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .product:hover {
+    border-color: var(--text);
+  }
+}
+
+.thumb {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  overflow: hidden;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-muted);
+}
+
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.productText {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.productName {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productPrice {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
+}
+
+.moreProducts {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.conditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.condition {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--offer-border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.pause {
+  border-style: dashed;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.code {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 2px dashed var(--offer-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.code:disabled {
+  cursor: default;
+}
+
+.code:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.codeLabel {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.codeValue {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.ends {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--offer-validity-bg);
+  color: var(--offer-validity-text);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.urgent {
+  background: var(--offer-validity-urgent-bg);
+  color: var(--offer-validity-urgent-text);
+}
+
+.terms {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.sr,
+.live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 26rem) {
+  .deal {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stub {
+    justify-content: flex-start;
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .stub::after {
+    top: auto;
+    right: 0;
+    bottom: -1px;
+    left: 0;
+    border-right: 0;
+    border-bottom: 2px dashed var(--offer-border);
+  }
+}
+
+@media (forced-colors: active) {
+  .stub {
+    border-bottom: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
 }

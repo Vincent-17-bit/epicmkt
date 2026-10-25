@@ -1,0 +1,65 @@
+/* One tag for every theme: the amber offer gradient with near-black text (contrast above 9:1 in light and dark),
+   a thin edge so it holds against a pale photo and a dark one, and no pointer events so a tap goes to the card. */
+.offerTag {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  pointer-events: none;
+  text-decoration: none;
+}
+
+.visual {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0.18em 0.6em 0.18em 0.5em;
+  border-radius: var(--radius-pill);
+  background: var(--offer-stub-gradient);
+  box-shadow: 0 0 0 1px rgb(17 17 17 / 0.28), 0 2px 6px rgb(17 17 17 / 0.28);
+  color: var(--offer-stub-text);
+  font-size: var(--offer-chip-size, var(--text-xs));
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.icon {
+  flex: none;
+  font-size: 0.85em;
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.more {
+  flex: none;
+  padding: 0 0.4em;
+  border-radius: var(--radius-pill);
+  background: rgb(17 17 17 / 0.16);
+  font-variant-numeric: tabular-nums;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (forced-colors: active) {
+  .visual {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+}

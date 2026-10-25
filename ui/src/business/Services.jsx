@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { formatKes } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import LazyImage from "../components/LazyImage.jsx";
+import OfferChip from "../components/OfferChip.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import { groupServices } from "./groupServices.js";
 import ServiceFilter from "./ServiceFilter.jsx";
@@ -46,7 +47,10 @@ export default function Services({ services, hitSection, mode = "live", onOpenIt
             {group.items.map((svc) => (
               <li key={svc.id} className={styles.service}>
                 <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
-                  <LazyImage src={svc.imageUrl} ratio="4 / 3" className={styles.serviceImg} width={480} />
+                  <span className={styles.serviceMedia}>
+                    <LazyImage src={svc.imageUrl} ratio="4 / 3" className={styles.serviceImg} width={480} />
+                    <OfferChip offer={svc.offer} className={styles.serviceOffer} />
+                  </span>
                   <span className={styles.serviceText}>
                     <span className={styles.h3}>{svc.name}</span>
                     {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}

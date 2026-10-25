@@ -30,7 +30,7 @@ export default function BusinessPage({
   fromTown,
   locate,
   hoursRows,
-  formatExpiry,
+  offerLabels,
   details,
   detailsTitle,
   flash,
@@ -136,7 +136,7 @@ export default function BusinessPage({
         />
 
         {business.offers.length > 0 && (
-          <Offers offers={business.offers} formatExpiry={formatExpiry} />
+          <Offers offers={business.offers} mode={mode} onOpenItem={onOpenItem} labels={offerLabels} />
         )}
 
         {flash}

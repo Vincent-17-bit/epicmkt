@@ -701,3 +701,8 @@
   max-width: 40rem;
   margin-inline: auto;
 }
+
+/* The offer tag in the product's badge row: same tag as on the cards, in the flow rather than over a picture. */
+.offerBadge {
+  --offer-chip-size: var(--text-xs);
+}
