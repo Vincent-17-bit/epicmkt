@@ -105,7 +105,7 @@ export default function Preview() {
   const chips = new Map([...offersByItem(offers)].map(([id, list]) => [id, chipOf(list, nowMs)]).filter(([, c]) => c).map(([id, c]) => [id, { label: c.label, extra: c.extra }]));
   const deals = offers
     .map((o) => dealOf(o, o.items.map((e) => ({ e, item: items.find((i) => i.id === e.itemId) })).filter((x) => x.item).map(({ e, item }) => ({ id: item.id, name: item.name, imageUrl: mediaUrl(item.imagePaths?.[0]), price: item.price, role: e.role })), nowMs))
-    .filter((d) => d.products.length > 0);
+    .filter((d) => d.scope === "store" || d.products.length > 0);
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
   const openStatus = safe(() => statusOf(hours, exceptions), statusOf({}, []));

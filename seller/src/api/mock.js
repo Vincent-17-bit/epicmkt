@@ -750,6 +750,14 @@ export const endOffer = async (id) => {
   return "ended";
 };
 
+export const deleteOffer = async (id) => {
+  writer();
+  await wait();
+  if (!bill.offers.some((x) => x.id === id)) throw new ApiError("offer_not_found");
+  bill.offers = bill.offers.filter((x) => x.id !== id);
+  return true;
+};
+
 const todayNairobi = () => nairobiDay(clockNow());
 const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
 export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };

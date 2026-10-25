@@ -312,7 +312,7 @@ test("the views expose only customer-safe columns", async () => {
   await rejects(c, anon, `select hidden_by_admin from public_offers`, [], /column "hidden_by_admin" does not exist/);
   await rejects(c, anon, `select business_id, updated_at from public_offer_items`, [], /column "updated_at" does not exist/);
   const cols = Object.keys((await tx(c, anon, (k) => sql(k, `select * from public_offers limit 1`)))[0]);
-  assert.deepEqual(cols, ["id", "business_id", "title", "description", "starts_at", "ends_at", "created_at", "kind", "config", "conditions", "chip_text", "code", "terms", "items"]);
+  assert.deepEqual(cols, ["id", "business_id", "title", "description", "starts_at", "ends_at", "created_at", "kind", "config", "conditions", "chip_text", "code", "terms", "items", "scope"]);
 });
 
 test("a saved offer passes the same checks in the shared engine", async () => {
@@ -326,4 +326,102 @@ test("a saved offer passes the same checks in the shared engine", async () => {
   assert.deepEqual(row.conditions, js.value.conditions);
   assert.equal(row.title, js.value.title);
   assert.equal(row.code, "PACK3");
+});
+
+// ---- Shop (store) offers and deleting -------------------------------------------------------------------------------
+
+const shop = (extra = {}) => ({ scope: "store", kind: "percent_off", config: { percent: 10 }, title: "Welcome offer", ...extra });
+const mine = (who, text, args = []) => tx(c, who, (k) => sql(k, text, args), { commit: true });
+
+test("a shop offer needs no products, is public on its own and belongs to no product", async () => {
+  const id = await save(asA, null, shop(), []);
+  const row = (await mine(asA, `select scope, kind from offers where id = $1`, [id]))[0];
+  assert.deepEqual(row, { scope: "store", kind: "percent_off" });
+  assert.equal((await mine(asA, `select count(*)::int as n from offer_items where offer_id = $1`, [id]))[0].n, 0);
+  const pub = await publicOffers(ids.bizA);
+  assert.deepEqual(pub.map((r) => [r.id, r.items]), [[id, []]]);
+});
+
+test("a shop offer ignores any products it is sent and keeps them out of offer_items", async () => {
+  const id = await save(asA, null, shop(), one(juiceA));
+  assert.equal((await mine(asA, `select count(*)::int as n from offer_items where offer_id = $1`, [id]))[0].n, 0);
+  await rejects(c, asA, `insert into offer_items (offer_id, item_id, business_id) values ($1, $2, $3)`, [id, juiceA, ids.bizA], /offer_item_mismatch/);
+});
+
+test("a shop offer only allows percent off, amount off and a free perk, with no quantity", async () => {
+  for (const kind of ["buy_x_get_y", "multi_buy", "bundle", "volume"]) {
+    await saveFails(asA, null, shop({ kind, config: OFFER_KINDS[kind].defaults }), [], /invalid_kind/);
+  }
+  await saveFails(asA, null, shop({ kind: "free_gift", config: { gift: "Free delivery", minQty: 3 } }), [], /invalid_config/);
+  await saveFails(asA, null, shop({ config: { percent: 100 } }), [], /invalid_config/);
+  const ok = await save(asA, null, shop({ kind: "free_gift", config: { gift: "Free delivery" }, conditions: { minSpend: 1000 } }), []);
+  assert.ok(ok);
+});
+
+test("a shop offer matches what the shared engine accepts and says", async () => {
+  const input = { scope: "store", kind: "amount_off", config: { amount: 200 }, conditions: { minSpend: 2000, daysOfWeek: ["sat", "sun"] }, chipText: "Weekend deal" };
+  const js = validateOffer(input, { items: [] });
+  assert.equal(js.ok, true);
+  const id = await save(asA, null, { scope: js.value.scope, kind: js.value.kind, config: js.value.config, conditions: js.value.conditions, title: js.value.title, chip_text: js.value.chipText }, []);
+  const row = (await mine(asA, `select config, conditions, chip_text from offers where id = $1`, [id]))[0];
+  assert.deepEqual(row.config, js.value.config);
+  assert.deepEqual(row.conditions, js.value.conditions);
+  assert.equal(offerLabel({ ...js.value, chipText: null }), "KES 200 off");
+});
+
+test("a shop offer keeps its scope: it cannot become a product offer, and a product offer cannot become a shop offer", async () => {
+  const shopId = await save(asA, null, shop(), []);
+  await saveFails(asA, shopId, pct(10), one(juiceA), /scope_locked/);
+  const productId = await save(asA, null, pct(), one(juiceA));
+  await saveFails(asA, productId, shop(), [], /scope_locked/);
+  await save(asA, shopId, shop({ config: { percent: 25 } }), []);
+  assert.equal((await mine(asA, `select (config ->> 'percent')::int as p from offers where id = $1`, [shopId]))[0].p, 25);
+});
+
+test("a shop offer counts toward the plan limit like any other offer", async () => {
+  const before = (await sql(c, `select standard from global_limits where id = 1`))[0].standard;
+  await sql(c, `update global_limits set standard = jsonb_set(standard, '{activeOffers}', '1') where id = 1`);
+  try {
+    await save(asA, null, shop(), []);
+    await saveFails(asA, null, pct(), one(juiceA), /limit_reached/);
+    await saveFails(asA, null, shop({ title: "Second" }), [], /limit_reached/);
+  } finally {
+    await sql(c, `update global_limits set standard = $1::jsonb where id = 1`, [JSON.stringify(before)]);
+  }
+});
+
+test("a seller deletes any of their offers: running, paused, ended and shop offers", async () => {
+  const running = await save(asA, null, pct(10, { title: "Running" }), one(juiceA));
+  const paused = await save(asA, null, pct(20, { title: "Paused" }), one(juiceA));
+  await mine(asA, `select seller_set_offer_active($1, false)`, [paused]);
+  const ended = await save(asA, null, shop({ title: "Ended" }), []);
+  await mine(asA, `select seller_end_offer($1)`, [ended]);
+  const store = await save(asA, null, shop({ title: "Shop wide" }), []);
+  for (const id of [running, paused, ended, store]) {
+    assert.equal((await mine(asA, `select seller_delete_offer($1) as ok`, [id]))[0].ok, true);
+  }
+  assert.equal((await mine(asA, `select count(*)::int as n from offers`))[0].n, 0);
+  assert.equal((await mine(asA, `select count(*)::int as n from offer_items`))[0].n, 0);
+  assert.deepEqual(await publicIds(ids.bizA), []);
+});
+
+test("a seller cannot delete another store's offer, or one that does not exist", async () => {
+  const other = await save(asB, null, pct(10, { title: "Theirs" }), one(juiceB));
+  await rejects(c, asA, `select seller_delete_offer($1)`, [other], /offer_not_found/);
+  await rejects(c, asA, `select seller_delete_offer($1)`, ["00000000-0000-0000-0000-00000000dead"], /offer_not_found/);
+  await rejects(c, anon, `select seller_delete_offer($1)`, [other], /permission denied|not_a_seller/);
+  assert.equal((await sql(c, `select count(*)::int as n from offers where id = $1`, [other]))[0].n, 1);
+});
+
+test("an offer made before products existed shows to its seller, stays hidden from customers and can be converted or deleted", async () => {
+  const old = (await sql(c, `insert into offers (business_id, title, description, active, scope) values ($1, 'Special offer', 'Valid on weekday mornings.', true, 'store') returning id`, [ids.bizA]))[0].id;
+  assert.deepEqual(await publicIds(ids.bizA), []);
+  assert.deepEqual((await mine(asA, `select id, kind, scope from offers`)).map((r) => [r.id, r.kind, r.scope]), [[old, null, "store"]]);
+  await save(asA, old, shop({ title: "Weekday mornings", conditions: { hours: { from: "06:00", to: "11:00" } } }), []);
+  assert.deepEqual(await publicIds(ids.bizA), [old]);
+  const legacy = (await sql(c, `insert into offers (business_id, title, active) values ($1, 'Old promo', true) returning id`, [ids.bizA]))[0].id;
+  await save(asA, legacy, pct(15, { title: "Now on juice" }), one(juiceA));
+  assert.equal((await mine(asA, `select scope from offers where id = $1`, [legacy]))[0].scope, "product");
+  await mine(asA, `select seller_delete_offer($1)`, [legacy]);
+  assert.deepEqual(await publicIds(ids.bizA), [old]);
 });

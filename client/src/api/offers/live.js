@@ -3,7 +3,7 @@ import { supabase } from "../applications/supabaseClient";
 import { cardOfBusiness, mediaUrl } from "../flash/shape.js";
 import { isSynced, serverNow } from "../../lib/clock.js";
 
-// Product offers from the public_offers view. Customers read nothing else: the view already hides anything that is
+// Shop and product offers from the public_offers view. Customers read nothing else: the view already hides anything that is
 // switched off, outside its window, hidden by an admin, or on no product they can see.
 const PAGE = 1000;
 const MAX_PAGES = 10;
@@ -18,6 +18,7 @@ const unwrap = ({ data, error }) => {
 export const offerOf = (row) => ({
   id: row.id,
   businessId: row.business_id,
+  scope: row.scope === "store" ? "store" : "product",
   title: row.title,
   description: row.description ?? null,
   kind: row.kind,
@@ -120,13 +121,13 @@ const productsFor = async (ids) => {
 
 const productsOfOffer = (offer, byId) => offer.items.map((entry) => (byId.has(entry.itemId) ? productOf(byId.get(entry.itemId), entry.role) : null)).filter(Boolean);
 
-const label = (products) => (products.length === 0 ? "" : products.length <= 2 ? products.map((p) => p.name).join(" + ") : `${products[0].name} + ${products.length - 1} more`);
+const label = (products, scope = "product") => (scope === "store" ? "Whole shop" : products.length === 0 ? "" : products.length <= 2 ? products.map((p) => p.name).join(" + ") : `${products[0].name} + ${products.length - 1} more`);
 
 const viewOf = (offer, products, business, at) => ({
   offer,
   business,
   remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null,
-  appliesToLabel: label(products),
+  appliesToLabel: label(products, offer.scope),
   products,
   availableNow: offerAvailableNow(offer, at)
 });
@@ -174,7 +175,7 @@ export async function list({ businessId = null, itemId = null, categoryId = null
   if (town) rows = rows.filter((o) => cards.get(o.businessId).townSlug === town);
   const page = rows.slice();
   const byId = await productsFor([...new Set(page.flatMap((o) => o.items.map((e) => e.itemId)))]);
-  const views = page.map((offer) => viewOf(offer, productsOfOffer(offer, byId), cards.get(offer.businessId), at)).filter((view) => view.products.length > 0);
+  const views = page.map((offer) => viewOf(offer, productsOfOffer(offer, byId), cards.get(offer.businessId), at)).filter((view) => view.offer.scope === "store" || view.products.length > 0);
   views.sort(SORTS[sort] ?? SORTS.ending);
   return { items: views.slice(offset, offset + limit), total: views.length, serverNow: new Date(at).toISOString() };
 }

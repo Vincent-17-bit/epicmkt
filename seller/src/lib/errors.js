@@ -99,6 +99,7 @@ const MESSAGES = {
   invalid_code: "A code is 3 to 16 letters or numbers, with no spaces.",
   deal_not_cheaper: "That deal costs more than buying normally. Lower the price.",
   offer_not_found: "We could not find that offer.",
+  scope_locked: "A product offer cannot become a shop offer. Delete it and make a new one.",
   photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };

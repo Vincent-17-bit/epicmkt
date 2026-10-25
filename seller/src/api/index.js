@@ -71,4 +71,5 @@ export const getOfferQuota = (...a) => impl.getOfferQuota(...a);
 export const saveOffer = (...a) => impl.saveOffer(...a);
 export const setOfferActive = (...a) => impl.setOfferActive(...a);
 export const endOffer = (...a) => impl.endOffer(...a);
+export const deleteOffer = (...a) => impl.deleteOffer(...a);
 export { ApiError } from "./errors.js";

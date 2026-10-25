@@ -1,4 +1,4 @@
-import { nairobiNow, upcomingExceptions } from "@epicmkt/shared";
+import { nairobiNow, offerPhase, upcomingExceptions } from "@epicmkt/shared";
 
 // Database rows (snake_case) to the shapes the pages use (camelCase). Live and mock return the same shapes.
 export const business = (b) => b && ({
@@ -62,7 +62,7 @@ export const flashSale = (s) => ({
 });
 
 export const offer = (o) => ({
-  id: o.id, kind: o.kind ?? null, config: o.config ?? {}, conditions: o.conditions ?? {}, title: o.title ?? null, description: o.description ?? null,
+  id: o.id, scope: o.scope === "store" ? "store" : "product", kind: o.kind ?? null, config: o.config ?? {}, conditions: o.conditions ?? {}, title: o.title ?? null, description: o.description ?? null,
   chipText: o.chip_text ?? o.chipText ?? null, code: o.code ?? null, terms: o.terms ?? null, active: o.active !== false,
   startsAt: o.starts_at ?? o.startsAt ?? null, endsAt: o.ends_at ?? o.endsAt ?? null, status: o.status ?? "active", createdAt: o.created_at ?? o.createdAt ?? null,
   items: (o.offer_items ?? o.items ?? []).map((e) => ({ itemId: e.item_id ?? e.itemId, role: e.role ?? "main" })),
@@ -96,7 +96,7 @@ export const preview = (b, { categoryName, catalog: c, flashSales, offers = [], 
   },
   items: c.items.filter(customerSees).sort((x, y) => x.sort - y.sort || Date.parse(y.createdAt) - Date.parse(x.createdAt)),
   flashSales: flashSales.filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs && Date.parse(s.endsAt) > nowMs),
-  offers,
+  offers: offers.filter((o) => o.kind && offerPhase(o, nowMs) === "live"),
 });
 
 export const catalog = (r) => ({

@@ -99,6 +99,19 @@ describe("live offers", () => {
     expect(facets.categories.map((c) => c.id).sort()).toEqual(["bakeries", "mechanics"]);
   });
 
+  it("treats a shop offer as its own kind: no products, on the store page, the offers page and the shop chip", async () => {
+    db().items = [product("a", "Bread", "65")];
+    db().offers = [offer("s1", B1, "free_gift", { gift: "Free delivery" }, [], { scope: "store", title: "Delivery perk", conditions: { minSpend: 1000 } })];
+    const [deal] = await live.dealsForStore(B1);
+    expect(deal).toMatchObject({ id: "s1", scope: "store", label: "Free delivery", headline: "Free delivery with your order", products: [] });
+    expect(deal.conditions).toEqual(["Spend KES 1,000 or more"]);
+    expect((await live.chipsByItem(B1)).size).toBe(0);
+    expect(await live.viewsForItem("a", B1, { id: B1 })).toEqual([]);
+    const page = await live.list({});
+    expect(page.items.map((v) => [v.offer.id, v.appliesToLabel])).toEqual([["s1", "Whole shop"]]);
+    expect((await live.facets()).total).toBe(1);
+  });
+
   it("shows nothing, not an error, when offers cannot be read", async () => {
     db().failing = { message: "view missing" };
     expect(await live.loadOffers()).toEqual([]);

@@ -1,7 +1,9 @@
-// Product offers ("deals"): one engine for every place an offer is created, stored, shown or checked.
+// Offers ("deals"): one engine for every place an offer is created, stored, shown or checked.
 //
-// An offer belongs to one or more PRODUCTS, never to a whole store. A store card shows an Offer chip because at least one
-// of its products has a running offer; a product card shows the chip only when that product is in the offer. The offer
+// There are two kinds of offer, told apart by `scope`. A PRODUCT offer belongs to one or more products: a product card shows
+// the chip only when that product is in the offer. A STORE offer belongs to the whole shop (welcome offer, free delivery
+// over a set spend, weekend special): it has no products, its own settings, and shows on the store page and the store card.
+// A store card shows an Offer chip because the shop has a running store offer or at least one product has one. The offer
 // never rewrites the product's price: the listed price (and any flash sale price) stays the truth on the card, and the
 // deal is explained next to it. The database function offer_config_valid() enforces the same shapes as validateOffer();
 // a database test keeps the two equal.
@@ -15,6 +17,7 @@ export const OFFER_TERMS_MAX = 280;
 export const OFFER_DESCRIPTION_MAX = 200;
 export const OFFER_GIFT = [2, 48];
 export const OFFER_CODE = /^[A-Z0-9]{3,16}$/;
+export const OFFER_SCOPES = ["product", "store"];
 
 const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 const TIME = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
@@ -157,8 +160,45 @@ export const OFFER_KINDS = {
   }
 };
 
+// Store offers: what the whole shop gives on an order. Fewer kinds, and no product settings (no quantities, bundles or tiers).
+export const STORE_OFFER_KINDS = {
+  percent_off: {
+    name: "Percent off the whole order",
+    blurb: "Take a percentage off everything the customer orders.",
+    fields: [{ key: "percent", label: "Percent off", type: "number", min: 1, max: 99, suffix: "%", placeholder: "10" }],
+    defaults: { percent: 10 },
+    check: (c) => (pct(int(c.percent)) ? { percent: int(c.percent) } : null),
+    label: (c) => `${c.percent}% off`,
+    headline: (c) => `${c.percent}% off your whole order`
+  },
+  amount_off: {
+    name: "Amount off the whole order",
+    blurb: "Take a fixed amount off the order. Pair it with a minimum spend.",
+    fields: [{ key: "amount", label: "Amount off", type: "number", min: 1, prefix: "KES", placeholder: "200" }],
+    defaults: { amount: 100 },
+    check: (c) => (num(c.amount) > 0 && num(c.amount) <= 10_000_000 ? { amount: Math.round(num(c.amount) * 100) / 100 } : null),
+    label: (c) => `${money(c.amount)} off`,
+    headline: (c) => `${money(c.amount)} off your order`
+  },
+  free_gift: {
+    name: "Free perk with the order",
+    blurb: "Free delivery, a free gift or a free extra with every qualifying order.",
+    fields: [{ key: "gift", label: "What they get", type: "text", placeholder: "Free delivery" }],
+    defaults: { gift: "Free delivery" },
+    check: (c) => {
+      const gift = cleanText(c.gift, OFFER_GIFT);
+      return gift.ok && gift.value ? { gift: gift.value } : null;
+    },
+    label: (c) => (/^free\b/i.test(c.gift) ? clip(c.gift, 22) : clip(`Free ${c.gift}`, 22)),
+    headline: (c) => (/^free\b/i.test(c.gift) ? c.gift : `Free ${c.gift}`) + " with your order"
+  }
+};
+
 export const OFFER_KIND_KEYS = Object.keys(OFFER_KINDS);
-const kindOf = (offer) => OFFER_KINDS[offer?.kind] ?? null;
+export const STORE_OFFER_KIND_KEYS = Object.keys(STORE_OFFER_KINDS);
+export const offerScope = (offer) => (offer?.scope === "store" ? "store" : "product");
+export const kindsFor = (scope) => (scope === "store" ? STORE_OFFER_KINDS : OFFER_KINDS);
+const kindOf = (offer) => kindsFor(offerScope(offer))[offer?.kind] ?? null;
 
 // ---- Conditions --------------------------------------------------------------------------------------------------
 
@@ -222,7 +262,8 @@ const roleOf = (entry) => (entry?.role === "with" ? "with" : "main");
  * Returns { ok: true, value } with everything trimmed and normalised, or { ok: false, error, field? }.
  */
 export function validateOffer(input, { items = [], nowMs = Date.now(), existing = null } = {}) {
-  const kind = OFFER_KINDS[input?.kind];
+  const scope = offerScope(input);
+  const kind = kindsFor(scope)[input?.kind];
   if (!kind) return { ok: false, error: "invalid_kind", field: "kind" };
 
   const config = kind.check(input.config ?? {});
@@ -233,19 +274,21 @@ export function validateOffer(input, { items = [], nowMs = Date.now(), existing 
 
   const byId = new Map(items.map((i) => [i.id, i]));
   const picked = [];
-  for (const entry of input.items ?? (input.itemIds ?? []).map((itemId) => ({ itemId, role: "main" }))) {
-    const itemId = entry.itemId ?? entry.id;
-    if (!byId.has(itemId)) return { ok: false, error: "item_not_found", field: "items" };
-    if (!picked.some((p) => p.itemId === itemId)) picked.push({ itemId, role: roleOf(entry) });
-  }
-  if (picked.length === 0) return { ok: false, error: "no_items", field: "items" };
-  if (picked.length > OFFER_MAX_ITEMS) return { ok: false, error: "too_many_items", field: "items" };
-  if (input.kind === "bundle") {
-    const mains = picked.filter((p) => p.role === "main").length;
-    const withs = picked.length - mains;
-    if (mains < 1 || withs < 1) return { ok: false, error: "bundle_needs_two", field: "items" };
-  } else {
-    for (const p of picked) p.role = "main";
+  if (scope === "product") {
+    for (const entry of input.items ?? (input.itemIds ?? []).map((itemId) => ({ itemId, role: "main" }))) {
+      const itemId = entry.itemId ?? entry.id;
+      if (!byId.has(itemId)) return { ok: false, error: "item_not_found", field: "items" };
+      if (!picked.some((p) => p.itemId === itemId)) picked.push({ itemId, role: roleOf(entry) });
+    }
+    if (picked.length === 0) return { ok: false, error: "no_items", field: "items" };
+    if (picked.length > OFFER_MAX_ITEMS) return { ok: false, error: "too_many_items", field: "items" };
+    if (input.kind === "bundle") {
+      const mains = picked.filter((p) => p.role === "main").length;
+      const withs = picked.length - mains;
+      if (mains < 1 || withs < 1) return { ok: false, error: "bundle_needs_two", field: "items" };
+    } else {
+      for (const p of picked) p.role = "main";
+    }
   }
 
   const start = input.startsAt ? Date.parse(input.startsAt) : nowMs;
@@ -269,6 +312,7 @@ export function validateOffer(input, { items = [], nowMs = Date.now(), existing 
   if (code && !OFFER_CODE.test(code)) return { ok: false, error: "invalid_code", field: "code" };
 
   const offer = {
+    scope,
     kind: input.kind,
     config,
     conditions,
@@ -283,7 +327,7 @@ export function validateOffer(input, { items = [], nowMs = Date.now(), existing 
   offer.title = title.value ?? clip(offerHeadline(offer), OFFER_TITLE[1]);
 
   // A deal that costs the customer more than buying normally is a mistake, so refuse it when the prices are known.
-  const worse = dealProblem(offer, picked.map((p) => ({ ...byId.get(p.itemId), role: p.role })));
+  const worse = scope === "product" ? dealProblem(offer, picked.map((p) => ({ ...byId.get(p.itemId), role: p.role }))) : null;
   if (worse) return { ok: false, error: worse, field: "config" };
   return { ok: true, value: offer };
 }
@@ -338,6 +382,14 @@ const unitWord = (n) => (n === 1 ? "one" : String(n));
 export function offerSteps(offer, { products = [] } = {}) {
   const c = offer?.config ?? {};
   const steps = [];
+  if (offerScope(offer) === "store") {
+    steps.push("Order from this shop.");
+    if (offer?.kind === "percent_off") steps.push(`Get ${c.percent}% off your whole order.`);
+    else if (offer?.kind === "amount_off") steps.push(`Get ${money(c.amount)} off your order.`);
+    else if (offer?.kind === "free_gift") steps.push(`${/^free\b/i.test(c.gift) ? c.gift : `Free ${c.gift}`} is included.`);
+    steps.push(offer?.code ? `Tell the seller the code ${offer.code}.` : "Mention this offer when you chat with the seller.");
+    return steps;
+  }
   if (offer?.kind === "buy_x_get_y") {
     steps.push(`Add ${unitWord(c.buy)} to your order.`);
     steps.push(c.discountPercent === 100 ? `Get ${unitWord(c.get)} more free.` : `Get ${unitWord(c.get)} more at ${c.discountPercent}% off.`);
@@ -499,6 +551,7 @@ export function offerClaimMessage(offer, itemName) {
 export function dealOf(offer, products = [], nowMs = Date.now()) {
   return {
     id: offer.id,
+    scope: offerScope(offer),
     kind: offer.kind,
     config: offer.config,
     title: offer.title ?? offerHeadline(offer),
@@ -538,4 +591,13 @@ export const OFFER_RECIPES = [
   { key: "clearance", title: "Clearance", blurb: "Clear what is not moving.", example: "30% off while stock lasts", icon: "tags", kind: "percent_off", config: { percent: 30 }, chipText: "Clearance" }
 ];
 
-export const offerRecipe = (key) => OFFER_RECIPES.find((r) => r.key === key) ?? null;
+export const STORE_OFFER_RECIPES = [
+  { key: "store_welcome", title: "Welcome offer", blurb: "Win a first order.", example: "10% off a customer's first order", kind: "percent_off", config: { percent: 10 }, conditions: { newCustomersOnly: true }, chipText: "Welcome offer" },
+  { key: "store_free_delivery", title: "Free delivery over a set spend", blurb: "Lift the size of each order.", example: "Free delivery on orders over KES 1,000", kind: "free_gift", config: { gift: "Free delivery" }, conditions: { minSpend: 1000 } },
+  { key: "store_spend_save", title: "Spend more, save more", blurb: "A reward for bigger orders.", example: "KES 200 off orders over KES 2,000", kind: "amount_off", config: { amount: 200 }, conditions: { minSpend: 2000 } },
+  { key: "store_weekend", title: "Weekend special", blurb: "Bring people in when you want them.", example: "10% off everything on Saturday and Sunday", kind: "percent_off", config: { percent: 10 }, conditions: { daysOfWeek: ["sat", "sun"] }, chipText: "Weekend deal" },
+  { key: "store_happy_hour", title: "Happy hour", blurb: "Fill your quiet hours.", example: "15% off everything from 4pm to 6pm", kind: "percent_off", config: { percent: 15 }, conditions: { hours: { from: "16:00", to: "18:00" } }, chipText: "Happy hour" }
+];
+
+export const recipesFor = (scope) => (scope === "store" ? STORE_OFFER_RECIPES : OFFER_RECIPES);
+export const offerRecipe = (key) => [...OFFER_RECIPES, ...STORE_OFFER_RECIPES].find((r) => r.key === key) ?? null;

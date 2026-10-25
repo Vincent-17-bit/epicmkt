@@ -335,19 +335,20 @@ export const endFlashSale = async (id) => {
 };
 
 const OFFER_FIELDS = (f) => ({
-  kind: f.kind, config: f.config ?? {}, conditions: f.conditions ?? {}, title: f.title || null, description: f.description || null,
+  scope: f.scope === "store" ? "store" : "product", kind: f.kind, config: f.config ?? {}, conditions: f.conditions ?? {}, title: f.title || null, description: f.description || null,
   chip_text: f.chipText || null, code: f.code || null, terms: f.terms || null, starts_at: f.startsAt || null, ends_at: f.endsAt || null,
 });
 export const listOffers = async () =>
-  (await flashRows(need().from("offers").select("*, offer_items(item_id, role, sort)").not("kind", "is", null).order("created_at", { ascending: false }).limit(200))).map(shape.offer);
+  (await flashRows(need().from("offers").select("*, offer_items(item_id, role, sort)").order("created_at", { ascending: false }).limit(200))).map(shape.offer);
 export const getOfferQuota = async () => {
   const [sub, offers] = await Promise.all([getSubscription(), listOffers()]);
   return offerQuota(offers, sub.limits[sub.business.planKey], Date.now());
 };
 export const saveOffer = async (id, f) => {
-  const newId = await rpc("seller_save_offer", { p_id: id ?? null, p_fields: OFFER_FIELDS(f), p_items: (f.items ?? []).map((e) => ({ item_id: e.itemId, role: e.role ?? "main" })) });
+  const newId = await rpc("seller_save_offer", { p_id: id ?? null, p_fields: OFFER_FIELDS(f), p_items: f.scope === "store" ? [] : (f.items ?? []).map((e) => ({ item_id: e.itemId, role: e.role ?? "main" })) });
   const rows = await listOffers();
   return rows.find((o) => o.id === (newId ?? id)) ?? null;
 };
 export const setOfferActive = (id, active) => rpc("seller_set_offer_active", { p_id: id, p_active: !!active });
 export const endOffer = (id) => rpc("seller_end_offer", { p_id: id });
+export const deleteOffer = (id) => rpc("seller_delete_offer", { p_id: id });

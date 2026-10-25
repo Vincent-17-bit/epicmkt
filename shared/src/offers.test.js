@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  OFFER_KIND_KEYS, OFFER_KINDS, OFFER_MAX_ITEMS, OFFER_RECIPES, chipOf, conditionsText, liveOffers, offerAvailableNow, offerClaimMessage,
+  OFFER_KIND_KEYS, OFFER_KINDS, OFFER_MAX_ITEMS, OFFER_RECIPES, STORE_OFFER_KIND_KEYS, STORE_OFFER_RECIPES, chipOf, conditionsText, liveOffers, offerAvailableNow, offerClaimMessage,
   offerHeadline, offerLabel, offerPhase, offerProductCount, offerQuota, offerRecipe, offerRemainingMs, offerSavings, offerSteps, offersByItem, validateOffer
 } from "./offers.js";
 import * as everything from "./index.js";
@@ -307,4 +307,58 @@ test("recipes that need a decision are incomplete until it is made", () => {
 
 test("the index exports the offer engine without clashing with other names", () => {
   for (const name of ["validateOffer", "offerLabel", "chipOf", "offerProductCount", "OFFER_RECIPES", "offerPhase"]) assert.equal(typeof everything[name], name.startsWith("OFFER") ? "object" : "function", name);
+});
+
+const store = (patch = {}) => ({ scope: "store", kind: "percent_off", config: { percent: 10 }, ...patch });
+const runStore = (patch) => validateOffer(store(patch), { items, nowMs: NOW });
+
+test("a store offer needs no products and has its own kinds", () => {
+  const r = runStore({});
+  assert.equal(r.ok, true);
+  assert.equal(r.value.scope, "store");
+  assert.deepEqual(r.value.items, []);
+  assert.equal(offerHeadline(r.value), "10% off your whole order");
+  assert.deepEqual(STORE_OFFER_KIND_KEYS, ["percent_off", "amount_off", "free_gift"]);
+  for (const kind of ["buy_x_get_y", "multi_buy", "bundle", "volume"]) assert.equal(runStore({ kind, config: OFFER_KINDS[kind].defaults }).error, "invalid_kind", kind);
+});
+
+test("a store offer ignores products and product-only settings", () => {
+  const r = runStore({ items: [{ itemId: "nope" }], kind: "free_gift", config: { gift: "delivery", minQty: 5 } });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value.items, []);
+  assert.deepEqual(r.value.config, { gift: "delivery" });
+  assert.equal(offerLabel(r.value), "Free delivery");
+});
+
+test("a store offer keeps its conditions and rejects bad ones", () => {
+  const r = runStore({ kind: "amount_off", config: { amount: 200 }, conditions: { minSpend: 2000, daysOfWeek: ["sat", "sun"] } });
+  assert.equal(r.ok, true);
+  assert.deepEqual(conditionsText(r.value), ["Weekends", "Spend KES 2,000 or more"]);
+  assert.equal(runStore({ conditions: { hours: { from: "10:00", to: "10:00" } } }).error, "invalid_conditions");
+  assert.equal(runStore({ config: { percent: 100 } }).error, "invalid_config");
+});
+
+test("a product offer is still the default scope", () => {
+  assert.equal(run({}).value.scope, "product");
+  assert.equal(run({ items: [] , itemIds: [] }).error, "no_items");
+});
+
+test("store offers never count as products and read as order steps", () => {
+  const live = { ...runStore({}).value, id: "s1", active: true };
+  assert.equal(offerProductCount([live], NOW), 0);
+  assert.equal(offersByItem([live]).size, 0);
+  assert.equal(offerSteps(live)[0], "Order from this shop.");
+  assert.equal(chipOf([live], NOW).label, "10% off");
+});
+
+test("every store recipe is a valid store offer", () => {
+  const keys = new Set();
+  for (const r of STORE_OFFER_RECIPES) {
+    assert.ok(!keys.has(r.key));
+    keys.add(r.key);
+    assert.ok(r.title && r.blurb && r.example, r.key);
+    const out = runStore({ kind: r.kind, config: r.config, conditions: r.conditions, chipText: r.chipText });
+    assert.equal(out.ok, true, `${r.key}: ${out.error}`);
+  }
+  assert.equal(offerRecipe("store_welcome").kind, "percent_off");
 });

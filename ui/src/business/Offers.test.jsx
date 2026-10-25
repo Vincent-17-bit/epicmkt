@@ -85,4 +85,12 @@ describe("store page offers", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open Bread 400g" }));
     expect(onOpenItem).not.toHaveBeenCalled();
   });
+
+  it("prints a shop offer with no products and says it covers the whole shop", () => {
+    render(<Offers offers={[deal({ id: "s1", scope: "store", title: "Weekend special", label: "10% off", headline: "10% off your whole order", products: [], conditions: ["Weekends"] })]} />);
+    expect(screen.getByRole("heading", { name: "Weekend special" })).toBeInTheDocument();
+    expect(screen.getByText("Whole shop")).toBeInTheDocument();
+    expect(screen.getByText("Weekends")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Open/ })).toBeNull();
+  });
 });

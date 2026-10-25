@@ -15,7 +15,8 @@ const DEFAULT_LABELS = {
   endsIn: "Ends in",
   noEnd: "No end date",
   onlyNow: "Not running at this hour",
-  openProduct: "Open"
+  openProduct: "Open",
+  wholeShop: "Whole shop"
 };
 
 export function expiryText(ms, endsIn = DEFAULT_LABELS.endsIn) {
@@ -95,8 +96,9 @@ function Deal({ deal, labels, mode, onOpenItem }) {
           </ul>
         )}
 
-        {(deal.conditions.length > 0 || !deal.availableNow) && (
+        {(deal.scope === "store" || deal.conditions.length > 0 || !deal.availableNow) && (
           <ul className={styles.conditions} aria-label="Conditions">
+            {deal.scope === "store" && <li className={styles.condition}>{labels.wholeShop}</li>}
             {deal.conditions.map((text) => (
               <li key={text} className={styles.condition}>{text}</li>
             ))}
@@ -115,7 +117,7 @@ function Deal({ deal, labels, mode, onOpenItem }) {
 }
 
 /**
- * The store page's offers. Each deal is a ticket naming the offer and the products it is on; tapping a product opens it.
+ * The store page's offers. Each deal is a ticket naming the offer and the products it is on (a shop offer is on the whole shop and lists none); tapping a product opens it.
  * `offers` are deals: { id, kind, title, label, headline, description, code, terms, remainingMs, conditions[], availableNow, products[] }.
  */
 export default function Offers({ offers, mode = "live", onOpenItem, labels: given }) {

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OfferChip, Offers as OfferTickets } from "@epicmkt/ui";
 import {
-  OFFER_DAYS, OFFER_DAY_NAMES, OFFER_KINDS, OFFER_RECIPES, conditionsText, dealOf, offerHeadline, offerLabel, offerPhase, offerQuota, validateOffer,
+  OFFER_DAYS, OFFER_DAY_NAMES, conditionsText, dealOf, kindsFor, offerHeadline, offerLabel, offerPhase, offerQuota, offerScope, recipesFor, validateOffer,
 } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
@@ -20,27 +20,31 @@ const fromLocalInput = (value) => (value ? new Date(`${value}:00+03:00`).toISOSt
 const LABELS = { title: "Offers", code: "Code", copy: "Copy code", copied: "Copied", endsIn: "Ends in", noEnd: "No end date", onlyNow: "Not available at this hour", openProduct: "Open" };
 const PHASE = { live: "Live", scheduled: "Scheduled", paused: "Paused", ended: "Ended" };
 
-const emptyForm = () => ({ kind: "percent_off", config: { ...OFFER_KINDS.percent_off.defaults }, conditions: {}, items: [], title: "", description: "", chipText: "", code: "", terms: "", start: "", end: "", minSpend: "", hoursOn: false, from: "16:00", to: "18:00" });
+const emptyForm = (scope = "product") => ({ scope, kind: "percent_off", config: { ...kindsFor(scope).percent_off.defaults }, conditions: {}, items: [], title: "", description: "", chipText: "", code: "", terms: "", start: "", end: "", minSpend: "", hoursOn: false, from: "16:00", to: "18:00" });
 
-const fromRecipe = (r) => ({
-  ...emptyForm(), kind: r.kind, config: { ...(OFFER_KINDS[r.kind].defaults), ...r.config }, conditions: { ...(r.conditions ?? {}) },
+const fromRecipe = (r, scope) => ({
+  ...emptyForm(scope), kind: r.kind, config: { ...(kindsFor(scope)[r.kind].defaults), ...r.config }, conditions: { ...(r.conditions ?? {}) },
   chipText: r.chipText ?? "", code: r.code ?? "", terms: r.terms ?? "", hoursOn: Boolean(r.conditions?.hours),
   from: r.conditions?.hours?.from ?? "16:00", to: r.conditions?.hours?.to ?? "18:00", recipe: r.key,
 });
 
-const fromOffer = (o) => ({
-  kind: o.kind, config: { ...o.config }, conditions: { ...o.conditions }, items: o.items.map((e) => ({ ...e })), title: o.title ?? "", description: o.description ?? "",
-  chipText: o.chipText ?? "", code: o.code ?? "", terms: o.terms ?? "", start: o.startsAt && Date.parse(o.startsAt) > serverNow() ? toLocalInput(Date.parse(o.startsAt)) : "",
-  end: o.endsAt ? toLocalInput(Date.parse(o.endsAt)) : "", minSpend: o.conditions?.minSpend ?? "", hoursOn: Boolean(o.conditions?.hours),
-  from: o.conditions?.hours?.from ?? "16:00", to: o.conditions?.hours?.to ?? "18:00",
-});
+const fromOffer = (o) => {
+  const scope = offerScope(o);
+  const known = Boolean(kindsFor(scope)[o.kind]);
+  return {
+    scope, legacy: !o.kind, kind: known ? o.kind : "percent_off", config: known ? { ...o.config } : { ...kindsFor(scope).percent_off.defaults }, conditions: { ...o.conditions }, items: o.items.map((e) => ({ ...e })), title: o.title ?? "", description: o.description ?? "",
+    chipText: o.chipText ?? "", code: o.code ?? "", terms: o.terms ?? "", start: o.startsAt && Date.parse(o.startsAt) > serverNow() ? toLocalInput(Date.parse(o.startsAt)) : "",
+    end: o.endsAt ? toLocalInput(Date.parse(o.endsAt)) : "", minSpend: o.conditions?.minSpend ?? "", hoursOn: Boolean(o.conditions?.hours),
+    from: o.conditions?.hours?.from ?? "16:00", to: o.conditions?.hours?.to ?? "18:00",
+  };
+};
 
 const toInput = (f) => {
   const conditions = { ...f.conditions };
   if (f.hoursOn) conditions.hours = { from: f.from, to: f.to }; else delete conditions.hours;
   if (f.minSpend !== "" && f.minSpend !== null) conditions.minSpend = Number(f.minSpend); else delete conditions.minSpend;
   return {
-    kind: f.kind, config: f.config, conditions, items: f.items, title: f.title, description: f.description, chipText: f.chipText, code: f.code, terms: f.terms,
+    scope: f.scope, kind: f.kind, config: f.config, conditions, items: f.scope === "store" ? [] : f.items, title: f.title, description: f.description, chipText: f.chipText, code: f.code, terms: f.terms,
     startsAt: f.start ? fromLocalInput(f.start) : null, endsAt: f.end ? fromLocalInput(f.end) : null,
   };
 };
@@ -87,7 +91,7 @@ function Field({ field, config, set }) {
 function Preview({ form, items, now }) {
   const picked = form.items.map((e) => ({ ...e, item: items.find((i) => i.id === e.itemId) })).filter((e) => e.item);
   const check = validateOffer({ ...toInput(form), startsAt: null }, { items, nowMs: now });
-  const draft = check.ok ? { ...check.value, id: "draft" } : { kind: form.kind, config: form.config, conditions: toInput(form).conditions, chipText: form.chipText, code: form.code, terms: form.terms, description: form.description, title: form.title, items: form.items, id: "draft" };
+  const draft = check.ok ? { ...check.value, id: "draft" } : { scope: form.scope, kind: form.kind, config: form.config, conditions: toInput(form).conditions, chipText: form.chipText, code: form.code, terms: form.terms, description: form.description, title: form.title, items: form.items, id: "draft" };
   let label = "";
   let deal = null;
   try {
@@ -99,8 +103,8 @@ function Preview({ form, items, now }) {
   if (!label || /undefined|NaN/.test(label)) return <p className={ui.muted}>Fill in the details to see how customers will see this offer.</p>;
   return (
     <div className={styles.preview} data-testid="offer-preview">
-      <div className={styles.chipDemo}><span className={styles.chipHost}><OfferChip offer={{ label, extra: 0 }} className={styles.chipPos} /></span><span className={ui.muted}>How the tag looks on a product</span></div>
-      {deal && picked.length > 0 && <OfferTickets offers={[deal]} mode="preview" labels={LABELS} />}
+      <div className={styles.chipDemo}><span className={styles.chipHost}><OfferChip offer={{ label, extra: 0 }} className={styles.chipPos} /></span><span className={ui.muted}>{form.scope === "store" ? "How the tag looks on your shop card" : "How the tag looks on a product"}</span></div>
+      {deal && (form.scope === "store" || picked.length > 0) && <OfferTickets offers={[deal]} mode="preview" labels={LABELS} />}
     </div>
   );
 }
@@ -110,10 +114,13 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
   const [q, setQ] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const kind = OFFER_KINDS[form.kind];
+  const store = form.scope === "store";
+  const kinds = kindsFor(form.scope);
+  const kind = kinds[form.kind];
   const setConfig = (key, value) => setForm((f) => ({ ...f, config: { ...f.config, [key]: value } }));
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
-  const setKind = (k) => setForm((f) => ({ ...f, kind: k, config: { ...OFFER_KINDS[k].defaults }, items: k === "bundle" ? f.items : f.items.map((e) => ({ ...e, role: "main" })) }));
+  const setKind = (k) => setForm((f) => ({ ...f, kind: k, config: { ...kinds[k].defaults }, items: k === "bundle" ? f.items : f.items.map((e) => ({ ...e, role: "main" })) }));
+  const setScope = (scope) => setForm((f) => ({ ...emptyForm(scope), legacy: f.legacy, title: f.title, description: f.description, code: f.code, terms: f.terms, start: f.start, end: f.end, conditions: f.conditions, minSpend: f.minSpend, hoursOn: f.hoursOn, from: f.from, to: f.to }));
   const toggleItem = (itemId) => setForm((f) => ({ ...f, items: f.items.some((e) => e.itemId === itemId) ? f.items.filter((e) => e.itemId !== itemId) : [...f.items, { itemId, role: "main" }] }));
   const setRole = (itemId, role) => setForm((f) => ({ ...f, items: f.items.map((e) => (e.itemId === itemId ? { ...e, role } : e)) }));
   const toggleDay = (d) => setForm((f) => {
@@ -141,14 +148,25 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
 
   return (
     <form className={ui.card} onSubmit={submit} noValidate aria-labelledby="offer-form-title">
-      <h2 id="offer-form-title">{id ? "Edit offer" : "New offer"}</h2>
+      <h2 id="offer-form-title">{id ? (store ? "Edit shop offer" : "Edit product offer") : (store ? "New shop offer" : "New product offer")}</h2>
+      <p className={ui.muted}>{store ? "A shop offer applies to everything your shop sells. Customers see it on your shop page and your shop card." : "A product offer belongs to the products you pick. Customers see it on those products only."}</p>
+
+      {form.legacy && (
+        <fieldset className={styles.fieldset}>
+          <legend>This offer applies to</legend>
+          <div className={styles.kinds}>
+            <label className={styles.radio}><input type="radio" name="of-scope" checked={store} onChange={() => setScope("store")} />My whole shop</label>
+            <label className={styles.radio}><input type="radio" name="of-scope" checked={!store} onChange={() => setScope("product")} />Products I pick</label>
+          </div>
+        </fieldset>
+      )}
 
       <fieldset className={styles.fieldset}>
         <legend>Start from a ready-made offer</legend>
         <div className={styles.recipes} role="group" aria-label="Offer ideas">
-          {OFFER_RECIPES.map((r) => (
+          {recipesFor(form.scope).map((r) => (
             <button key={r.key} type="button" className={`${styles.recipe} ${form.recipe === r.key ? styles.recipeOn : ""}`} aria-pressed={form.recipe === r.key}
-              onClick={() => setForm((f) => ({ ...fromRecipe(r), items: f.items }))}>
+              onClick={() => setForm((f) => ({ ...fromRecipe(r, f.scope), legacy: f.legacy, items: f.items }))}>
               <strong>{r.title}</strong>
               <span>{r.example}</span>
             </button>
@@ -159,7 +177,7 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
       <fieldset className={styles.fieldset}>
         <legend>Type of offer</legend>
         <div className={styles.kinds}>
-          {Object.entries(OFFER_KINDS).map(([k, v]) => (
+          {Object.entries(kinds).map(([k, v]) => (
             <label key={k} className={styles.radio}><input type="radio" name="of-kind" checked={form.kind === k} onChange={() => setKind(k)} />{v.name}</label>
           ))}
         </div>
@@ -167,28 +185,30 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
         <div className={styles.pair}>{kind.fields.map((f) => <Field key={f.key} field={f} config={form.config} set={setConfig} />)}</div>
       </fieldset>
 
-      <fieldset className={styles.fieldset}>
-        <legend>Products in this offer</legend>
-        <p className={ui.muted}>{form.kind === "bundle" ? "Pick the main product and what it is bought with. Only these products show the offer tag." : "Only the products you pick show the offer tag."}</p>
-        <input className={ui.input} type="search" placeholder="Search your products" aria-label="Search your products" value={q} onChange={(e) => setQ(e.target.value)} />
-        <ul className={styles.picker}>
-          {shown.map((i) => {
-            const entry = form.items.find((e) => e.itemId === i.id);
-            return (
-              <li key={i.id} className={styles.pick}>
-                <label className={styles.radio}><input type="checkbox" checked={Boolean(entry)} onChange={() => toggleItem(i.id)} />{i.name}<span className={ui.muted}>{i.price > 0 ? kes(i.price) : ""}</span></label>
-                {entry && form.kind === "bundle" && (
-                  <select className={ui.input} aria-label={`Role of ${i.name}`} value={entry.role} onChange={(e) => setRole(i.id, e.target.value)}>
-                    <option value="main">Main product</option>
-                    <option value="with">Bought with it</option>
-                  </select>
-                )}
-              </li>
-            );
-          })}
-          {shown.length === 0 && <li className={ui.muted}>No products found.</li>}
-        </ul>
-      </fieldset>
+      {!store && (
+        <fieldset className={styles.fieldset}>
+          <legend>Products in this offer</legend>
+          <p className={ui.muted}>{form.kind === "bundle" ? "Pick the main product and what it is bought with. Only these products show the offer tag." : "Only the products you pick show the offer tag."}</p>
+          <input className={ui.input} type="search" placeholder="Search your products" aria-label="Search your products" value={q} onChange={(e) => setQ(e.target.value)} />
+          <ul className={styles.picker}>
+            {shown.map((i) => {
+              const entry = form.items.find((e) => e.itemId === i.id);
+              return (
+                <li key={i.id} className={styles.pick}>
+                  <label className={styles.radio}><input type="checkbox" checked={Boolean(entry)} onChange={() => toggleItem(i.id)} />{i.name}<span className={ui.muted}>{i.price > 0 ? kes(i.price) : ""}</span></label>
+                  {entry && form.kind === "bundle" && (
+                    <select className={ui.input} aria-label={`Role of ${i.name}`} value={entry.role} onChange={(e) => setRole(i.id, e.target.value)}>
+                      <option value="main">Main product</option>
+                      <option value="with">Bought with it</option>
+                    </select>
+                  )}
+                </li>
+              );
+            })}
+            {shown.length === 0 && <li className={ui.muted}>No products found.</li>}
+          </ul>
+        </fieldset>
+      )}
 
       <fieldset className={styles.fieldset}>
         <legend>When</legend>
@@ -215,7 +235,7 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
         )}
         <label className={styles.radio}><input type="checkbox" checked={Boolean(form.conditions.newCustomersOnly)} onChange={(e) => setForm((f) => ({ ...f, conditions: { ...f.conditions, newCustomersOnly: e.target.checked || undefined } }))} />New customers only</label>
         <div className={ui.field}>
-          <label className={ui.label} htmlFor="of-min">Minimum spend, KES (optional)</label>
+          <label className={ui.label} htmlFor="of-min">{store ? "Minimum order, KES (optional)" : "Minimum spend, KES (optional)"}</label>
           <input id="of-min" className={ui.input} type="number" inputMode="numeric" min="1" value={form.minSpend} onChange={(e) => setField("minSpend", e.target.value)} />
         </div>
       </fieldset>
@@ -245,7 +265,10 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
 function OfferRow({ offer, items, now, onEdit, onChanged }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const phase = offerPhase(offer, now);
+  const store = offerScope(offer) === "store";
+  const legacy = !offer.kind;
   const names = offer.items.map((e) => items.find((i) => i.id === e.itemId)?.name).filter(Boolean);
   const run = async (fn) => {
     setBusy(true);
@@ -259,24 +282,41 @@ function OfferRow({ offer, items, now, onEdit, onChanged }) {
     setBusy(false);
   };
   const open = phase !== "ended";
+  const remove = () => run(async () => {
+    await api.deleteOffer(offer.id);
+    setConfirming(false);
+  });
   return (
     <li className={styles.row} data-testid="offer-row">
       <div className={styles.rowHead}>
         <strong>{offer.title ?? offerHeadline(offer)}</strong>
-        <span className={`${ui.pill} ${phase === "live" ? ui.tone_ok : ""}`}>{PHASE[phase]}</span>
+        <span className={`${ui.pill} ${phase === "live" && !legacy ? ui.tone_ok : ""}`}>{legacy ? "Needs update" : PHASE[phase]}</span>
       </div>
-      <p className={styles.rowLine}><OfferChip offer={{ label: offerLabel(offer), extra: 0 }} className={styles.inlineChip} /> {names.join(", ") || "Product removed"}</p>
+      <p className={styles.rowLine}><OfferChip offer={{ label: offerLabel(offer), extra: 0 }} className={styles.inlineChip} /> {legacy ? "Not shown to customers yet" : store ? "Whole shop" : names.join(", ") || "Product removed"}</p>
+      {legacy && <p className={ui.muted}>Made before shop and product offers. Edit it, choose a type and save so customers can see it, or delete it.</p>}
       <p className={ui.muted}>
         {offer.startsAt && Date.parse(offer.startsAt) > now ? `Starts ${stamp(offer.startsAt)}. ` : ""}{offer.endsAt ? `Ends ${stamp(offer.endsAt)}.` : "No end date."}
         {conditionsText(offer) ? ` ${conditionsText(offer)}` : ""}
       </p>
-      {open && (
-        <div className={styles.rowActions}>
-          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => onEdit(offer)}>Edit</button>
-          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => run(() => api.setOfferActive(offer.id, phase === "paused"))}>{phase === "paused" ? "Resume" : "Pause"}</button>
-          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => run(() => api.endOffer(offer.id))}>{phase === "scheduled" ? "Cancel offer" : "End now"}</button>
-        </div>
-      )}
+      <div className={styles.rowActions}>
+        {confirming ? (
+          <>
+            <button type="button" className={ui.btn} disabled={busy} onClick={remove}>Delete for good</button>
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => setConfirming(false)}>Keep it</button>
+          </>
+        ) : (
+          <>
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => onEdit(offer)}>Edit</button>
+            {open && !legacy && (
+              <>
+                <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => run(() => api.setOfferActive(offer.id, phase === "paused"))}>{phase === "paused" ? "Resume" : "Pause"}</button>
+                <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => run(() => api.endOffer(offer.id))}>{phase === "scheduled" ? "Cancel offer" : "End now"}</button>
+              </>
+            )}
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => setConfirming(true)}>Delete</button>
+          </>
+        )}
+      </div>
       {error && <p className={ui.error} role="alert">{error}</p>}
     </li>
   );
@@ -297,6 +337,7 @@ export default function Offers() {
   const choices = useMemo(() => (items.data ?? []).filter((i) => !i.hiddenByAdmin), [items.data]);
   const current = list.filter((o) => phaseOpen(o, now));
   const past = list.filter((o) => !phaseOpen(o, now));
+  const startNew = (scope) => setEditing({ form: emptyForm(scope) });
   const q = quota.data ?? offerQuota(list, null, now);
 
   return (
@@ -306,11 +347,14 @@ export default function Offers() {
           <h1>Offers</h1>
           <p className={styles.quota} data-testid="offer-quota">Active now: {q.used} of {q.limit ?? "unlimited"}</p>
         </div>
-        <button type="button" className={ui.btn} onClick={() => setEditing({ form: emptyForm() })} disabled={Boolean(editing) || !q.canCreate || choices.length === 0}>New offer</button>
+        <div className={styles.rowActions}>
+          <button type="button" className={ui.btn} onClick={() => startNew("store")} disabled={Boolean(editing) || !q.canCreate}>New shop offer</button>
+          <button type="button" className={ui.btn} onClick={() => startNew("product")} disabled={Boolean(editing) || !q.canCreate || choices.length === 0}>New product offer</button>
+        </div>
       </div>
-      <p className={ui.muted}>An offer belongs to the products you pick. Customers see the tag on those products only, and your shop shows an Offer tag while any of them has one running.</p>
+      <p className={ui.muted}>A shop offer covers your whole shop, like free delivery over a set spend. A product offer belongs to the products you pick and shows its tag on those products only. Your shop card shows an Offer tag while either kind is running.</p>
       {!q.canCreate && <p className={ui.error} role="status">Your plan limit is reached. End an offer or upgrade to add another.</p>}
-      {choices.length === 0 && !items.isLoading && <p className={ui.muted}>Add a product first, then you can put an offer on it.</p>}
+      {choices.length === 0 && !items.isLoading && <p className={ui.muted}>Add a product first to make a product offer. Shop offers need no products.</p>}
 
       {editing && (
         <OfferForm key={editing.id ?? "new"} initial={editing.form} id={editing.id} items={choices} quota={q} now={now} onCancel={() => setEditing(null)} onDone={async () => { setEditing(null); await refresh(); }} />
@@ -324,13 +368,13 @@ export default function Offers() {
         <>
           <section aria-labelledby="of-current">
             <h2 id="of-current">Running, scheduled and paused</h2>
-            {current.length === 0 ? <p className={ui.muted} data-testid="empty">No offers yet. Pick a ready-made one to start in a few taps.</p> : (
+            {current.length === 0 ? <p className={ui.muted} data-testid="empty">No offers yet. Start a shop offer or a product offer from a ready-made idea.</p> : (
               <ul className={styles.list}>{current.map((o) => <OfferRow key={o.id} offer={o} items={choices} now={now} onChanged={refresh} onEdit={(x) => setEditing({ id: x.id, form: fromOffer(x) })} />)}</ul>
             )}
           </section>
           <section aria-labelledby="of-past">
             <h2 id="of-past">History</h2>
-            {past.length === 0 ? <p className={ui.muted}>Ended offers show here.</p> : <ul className={styles.list}>{past.map((o) => <OfferRow key={o.id} offer={o} items={choices} now={now} onChanged={refresh} onEdit={() => {}} />)}</ul>}
+            {past.length === 0 ? <p className={ui.muted}>Ended offers show here.</p> : <ul className={styles.list}>{past.map((o) => <OfferRow key={o.id} offer={o} items={choices} now={now} onChanged={refresh} onEdit={(x) => setEditing({ id: x.id, form: fromOffer(x) })} />)}</ul>}
           </section>
         </>
       )}
