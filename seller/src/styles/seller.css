@@ -15,6 +15,10 @@
   --info-border: #8fd0f7;
   --tick-green: #15803d;
   --tick-blue: #0369a1;
+  --media-bg: #111111;
+  --media-scrim: rgb(0 0 0 / 0.55);
+  --media-label-bg: rgb(0 0 0 / 0.6);
+  --on-media: #ffffff;
 }
 
 [data-theme="dark"] {
@@ -32,6 +36,10 @@
   --info-border: #1f5f87;
   --tick-green: #4ade80;
   --tick-blue: #38bdf8;
+  --media-bg: #111111;
+  --media-scrim: rgb(0 0 0 / 0.55);
+  --media-label-bg: rgb(0 0 0 / 0.6);
+  --on-media: #ffffff;
 }
 
 html,

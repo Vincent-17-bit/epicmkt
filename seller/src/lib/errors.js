@@ -77,6 +77,10 @@ const MESSAGES = {
   too_small: "Each image must be at least 200 pixels on both sides.",
   too_big_dimensions: "That image is larger than 8000 pixels. Use a smaller one.",
   unreadable: "We could not read that image. Try another one.",
+  photo_too_large: "That photo is over 30 MB. Pick a smaller one.",
+  cover_too_small: "Cover photos need to be at least 600 pixels wide. Pick a larger photo.",
+  logo_too_small: "Logos need to be at least 200 by 200 pixels. Pick a larger photo.",
+  invalid_kind: "We could not tell which picture to change. Refresh and try again.",
   photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };

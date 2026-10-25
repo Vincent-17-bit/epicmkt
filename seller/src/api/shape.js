@@ -5,6 +5,7 @@ export const business = (b) => b && ({
   id: b.id, sellerId: b.seller_id, name: b.name, status: b.status, planKey: b.plan_key, categoryId: b.category_id,
   paidUntil: b.paid_until ?? null, verificationLevel: b.verification_level, announcement: b.announcement ?? null,
   creditKes: Number(b.credit_kes ?? 0), strikes: b.strikes ?? 0, statusReason: b.status_reason ?? null,
+  logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null,
 });
 
 export const payment = (p) => ({
