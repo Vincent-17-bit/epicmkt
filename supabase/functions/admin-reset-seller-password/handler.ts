@@ -18,7 +18,7 @@ export const adminResetSellerPassword = (d: AdminDeps) =>
     const password = d.password();
     const upd = await d.db.auth.admin.updateUserById(biz.user_id, { password, user_metadata: { must_change_password: true } });
     if (upd.error) throw new Error("auth_update_failed");
-    await must(d.db.from("businesses").update({ must_change_password: true }).eq("id", businessId));
+    await must(d.db.from("businesses").update({ must_change_password: true, password_changed_at: null }).eq("id", businessId));
     await audit(c, {
       action: "business.password_reset", targetType: "business", targetId: businessId, businessId,
       after: { sellerId: biz.seller_id, mustChangePassword: true }, reason,

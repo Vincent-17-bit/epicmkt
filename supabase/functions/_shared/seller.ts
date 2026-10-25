@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
-import { clientIp, corsHeaders, isProduction, json, sendSms, sha256Hex } from "./http.ts";
+import { clientIp, corsHeaders, escapeHtml, isProduction, json, sendSms, sha256Hex } from "./http.ts";
+import { deliverEmail } from "./providers.ts";
 
 export { corsHeaders, json, z };
 
@@ -9,6 +10,7 @@ export type Deps = {
   db: Db;
   anon: Db;
   sms: (to: string, message: string) => Promise<boolean>;
+  email: (to: string, subject: string, html: string) => Promise<boolean>;
   code: () => string;
   salt: string;
   cronSecret?: string;
@@ -21,6 +23,13 @@ export const GENERIC_CODE = "That code is not valid or has expired.";
 export const OTP_MINUTES = 10;
 
 export const sellerIdSchema = z.string().trim().min(3).max(40).regex(/^[A-Za-z0-9-]+$/);
+export const emailSchema = z.string().trim().toLowerCase().max(254).email();
+// Where a code goes. "sms" is Africa's Talking to the phone number on the listing; "email" is the seller's verified email.
+export const channelSchema = z.enum(["sms", "email"]);
+// What a seller types on the sign-in and forgot-password screens: a Seller ID or an email address.
+export const identifierSchema = z.string().trim().min(3).max(254).refine(
+  (v) => (v.includes("@") ? emailSchema.safeParse(v).success : sellerIdSchema.safeParse(v).success),
+);
 export const codeSchema = z.string().trim().regex(/^[0-9]{6}$/);
 export const passwordSchema = z.string().min(1).max(200);
 
@@ -32,6 +41,7 @@ export function realDeps(): Deps {
     db: createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, opts),
     anon: createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, opts),
     sms: prod ? sendSms : async () => true,
+    email: prod ? async (to, subject, html) => (await deliverEmail(to, subject, html)).ok : async () => true,
     code: () => (prod ? String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0") : "123456"),
     salt: Deno.env.get("IP_HASH_SALT") ?? "",
     cronSecret: Deno.env.get("CRON_SECRET") ?? undefined,
@@ -78,7 +88,10 @@ export function sessionIdOf(jwt: string): string | null {
 export type SellerCtx = {
   userId: string;
   sessionId: string | null;
-  business: { id: string; seller_id: string; phone: string; name: string; status: string };
+  business: {
+    id: string; seller_id: string; phone: string; name: string; status: string;
+    login_email: string | null; login_email_verified_at: string | null; must_change_password: boolean | null;
+  };
 };
 
 export async function authenticate(req: Request, db: Db): Promise<SellerCtx | Response> {
@@ -88,7 +101,7 @@ export async function authenticate(req: Request, db: Db): Promise<SellerCtx | Re
   const { data, error } = await db.auth.getUser(jwt);
   if (error || !data?.user?.id) return json({ error: "unauthorized" }, 401);
   const { data: business } = await db.from("businesses")
-    .select("id, seller_id, phone, name, status")
+    .select("id, seller_id, phone, name, status, login_email, login_email_verified_at, must_change_password")
     .eq("user_id", data.user.id).neq("status", "deleted").maybeSingle();
   if (!business) return json({ error: "forbidden" }, 403);
   return { userId: data.user.id, sessionId: sessionIdOf(jwt), business };
@@ -96,7 +109,40 @@ export async function authenticate(req: Request, db: Db): Promise<SellerCtx | Re
 
 export const maskPhone = (phone: string) => phone.replace(/^(\+254\d)\d{5}(\d{3})$/, "$1*****$2");
 
+// "jane.doe@example.com" -> "j*******@example.com"
+export const maskEmail = (email: string) => email.replace(/^([^@])[^@]*(@.+)$/, (_m, a: string, rest: string) => `${a}*******${rest}`);
+
 export const otpMessage = (code: string) => `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`;
+
+export const otpEmail = (code: string) => ({
+  subject: "Your EpicMKT code",
+  html: `<p>Your EpicMKT code is <b style="font-size:1.25em;letter-spacing:.1em">${escapeHtml(code)}</b>.</p><p>It expires in ${OTP_MINUTES} minutes. If you did not ask for it, you can ignore this email and nobody can use your account.</p>`,
+});
+
+// Sends a code to the chosen place. The email channel needs an address; "sms" uses the phone on the listing.
+export async function sendOtp(d: Deps, channel: "sms" | "email", to: { phone: string; email?: string | null }, code: string): Promise<boolean> {
+  if (channel === "email") {
+    if (!to.email) return false;
+    const m = otpEmail(code);
+    return d.email(to.email, m.subject, m.html);
+  }
+  return d.sms(to.phone, otpMessage(code));
+}
+
+export type LoginBusiness = { id: string; seller_id: string; phone: string; status: string; user_id: string | null; login_email: string | null; login_email_verified_at: string | null };
+
+// Finds a seller by Seller ID or by verified sign-in email. Null when there is no such live seller, so callers can answer
+// the same way for every miss and never reveal which IDs or emails exist.
+export async function findSeller(db: Db, identifier: string): Promise<LoginBusiness | null> {
+  const id = identifier.trim();
+  const q = db.from("businesses").select("id, seller_id, phone, status, user_id, login_email, login_email_verified_at");
+  const { data } = id.includes("@")
+    ? await q.eq("login_email", id.toLowerCase()).maybeSingle()
+    : await q.eq("seller_id", id.toUpperCase()).maybeSingle();
+  if (!data || data.status === "deleted") return null;
+  if (id.includes("@") && !data.login_email_verified_at) return null;
+  return data;
+}
 
 export const auditInsert = (db: Db, row: { business_id: string; actor_id: string; action: string; entity?: string; entity_id?: string; data?: unknown }) =>
   db.from("audit_log").insert({ actor_role: "seller", entity: "business", entity_id: row.business_id, data: {}, ...row });

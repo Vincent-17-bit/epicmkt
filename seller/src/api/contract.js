@@ -5,6 +5,7 @@ export const SELLER_API = [
   "forgotVerify",
   "requestOtp",
   "changePassword",
+  "setLoginEmail",
   "updateProfile",
   "requestChange",
   "cancelChange",

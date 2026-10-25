@@ -11,6 +11,7 @@ const LOCK_MS = 15 * 60 * 1000;
 
 const state = {
   password: DEMO.password,
+  otp: null, // what the last code was for: { purpose, channel, target }
   signedIn: false,
   failures: new Map(),
   changes: [],
@@ -22,6 +23,7 @@ const wait = () => new Promise((r) => setTimeout(r, 120));
 
 export const resetMock = () => {
   state.password = DEMO.password;
+  state.otp = null;
   state.signedIn = false;
   state.failures.clear();
   state.changes = [];
@@ -39,12 +41,26 @@ const writer = () => {
   if (bill.business?.status === "suspended") throw new ApiError("account_suspended");
 };
 
-export const login = async (sellerId, password) => {
+// The seller's own email works as a sign-in name once they have verified it.
+const sellerIdFor = (identifier) => {
+  const id = String(identifier ?? "").trim();
+  if (id.includes("@")) {
+    const b = bill.business;
+    return b?.loginEmailVerified && b.loginEmail === id.toLowerCase() ? DEMO.sellerId : null;
+  }
+  return id.toUpperCase() === DEMO.sellerId ? DEMO.sellerId : null;
+};
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const maskEmail = (e) => e.replace(/^([^@])[^@]*(@.+)$/, "$1*******$2");
+
+export const login = async (identifier, password) => {
   await wait();
-  const key = String(sellerId).trim().toLowerCase();
+  const typed = String(identifier).trim().toLowerCase();
+  const sid = sellerIdFor(identifier);
+  const key = sid ? sid.toLowerCase() : typed;
   const f = state.failures.get(key) ?? { n: 0, until: 0 };
   if (f.until > Date.now()) throw new ApiError("locked", "Seller ID or password is incorrect.", { retryAfter: Math.ceil((f.until - Date.now()) / 1000) });
-  if (key === DEMO.sellerId.toLowerCase() && password === state.password) {
+  if (sid && password === state.password) {
     state.failures.delete(key);
     state.signedIn = true;
     return { expiresAt: Math.floor(Date.now() / 1000) + 3600 };
@@ -56,16 +72,44 @@ export const login = async (sellerId, password) => {
   throw new ApiError("invalid_credentials", "Seller ID or password is incorrect.");
 };
 export const logout = async () => { state.signedIn = false; };
-export const forgotRequest = async () => { await wait(); return { ok: true }; };
-export const forgotVerify = async ({ sellerId, code, newPassword }) => {
+const FORGOT_MESSAGE = "If we found an account, we have sent a code. Email codes only work once you have added and verified your email in Account.";
+export const forgotRequest = async ({ identifier, channel = "sms" } = {}) => {
   await wait();
-  const problems = passwordProblems(newPassword, { sellerId, phone: DEMO.phone });
+  const b = bill.business;
+  const emailOk = channel !== "email" || b?.loginEmailVerified;
+  state.otp = sellerIdFor(identifier) && emailOk ? { purpose: "forgot_password", channel, target: null } : null;
+  return { ok: true, message: FORGOT_MESSAGE };
+};
+export const forgotVerify = async ({ identifier, code, newPassword }) => {
+  await wait();
+  const sid = sellerIdFor(identifier);
+  const problems = passwordProblems(newPassword, { sellerId: sid ?? String(identifier).toUpperCase(), phone: DEMO.phone });
   if (problems.length) throw new ApiError("weak_password", undefined, { problems });
-  if (String(sellerId).toUpperCase() !== DEMO.sellerId || code !== OTP) throw new ApiError("invalid_code", "That code is not valid or has expired.");
+  if (!sid || code !== OTP) throw new ApiError("invalid_code", "That code is not valid or has expired.");
   state.password = newPassword;
+  bill.business.mustChangePassword = false;
+  bill.business.passwordChangedAt = new Date().toISOString();
   return { ok: true };
 };
-export const requestOtp = async () => { signedIn(); await wait(); return { ok: true, sentTo: "+2547*****678" }; };
+export const requestOtp = async ({ purpose = "change_password", channel = "sms", email } = {}) => {
+  signedIn();
+  await wait();
+  const b = bill.business;
+  if (purpose === "verify_email") {
+    const address = String(email ?? "").trim().toLowerCase();
+    if (!EMAIL.test(address)) throw new ApiError("bad_request");
+    if (address === "taken@example.com") throw new ApiError("email_in_use");
+    state.otp = { purpose, channel: "email", target: address };
+    return { ok: true, channel: "email", sentTo: maskEmail(address) };
+  }
+  if (channel === "email") {
+    if (!b.loginEmailVerified) throw new ApiError("email_not_verified");
+    state.otp = { purpose, channel: "email", target: null };
+    return { ok: true, channel: "email", sentTo: maskEmail(b.loginEmail) };
+  }
+  state.otp = { purpose, channel: "sms", target: null };
+  return { ok: true, channel: "sms", sentTo: "+2547*****678" };
+};
 export const changePassword = async ({ code, newPassword }) => {
   signedIn();
   await wait();
@@ -73,7 +117,19 @@ export const changePassword = async ({ code, newPassword }) => {
   if (problems.length) throw new ApiError("weak_password", undefined, { problems });
   if (code !== OTP) throw new ApiError("invalid_code", "That code is not valid or has expired.");
   state.password = newPassword;
+  bill.business.mustChangePassword = false;
+  bill.business.passwordChangedAt = new Date().toISOString();
   return { ok: true };
+};
+export const setLoginEmail = async ({ code, currentPassword }) => {
+  signedIn();
+  await wait();
+  if (currentPassword !== state.password) throw new ApiError("invalid_password");
+  if (code !== OTP || state.otp?.purpose !== "verify_email") throw new ApiError("invalid_code", "That code is not valid or has expired.");
+  bill.business.loginEmail = state.otp.target;
+  bill.business.loginEmailVerified = true;
+  state.otp = null;
+  return { ok: true, loginEmail: bill.business.loginEmail };
 };
 export const updateProfile = async (patch) => {
   writer();
@@ -164,7 +220,7 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];
