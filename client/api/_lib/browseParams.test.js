@@ -47,3 +47,12 @@ describe("canonical query", () => {
     expect(canonicalQuery("search", { query: "a&b=c" })).toContain("query=a%26b%3Dc");
   });
 });
+
+describe("extra filter flags", () => {
+  it("reads every new flag and defaults them to off", () => {
+    const { params } = parseRequest(new URLSearchParams("op=search&closedNow=1&open24=1&openLate=true&openSunday=1&flashSale=1&hasOffers=1&hasWhatsapp=1&newlyListed=1"));
+    expect(params).toMatchObject({ closedNow: true, open24: true, openLate: true, openSunday: true, flashSale: true, hasOffers: true, hasWhatsapp: true, newlyListed: true });
+    const off = parseRequest(new URLSearchParams("op=search")).params;
+    expect(off).toMatchObject({ closedNow: false, open24: false, hasWhatsapp: false, newlyListed: false });
+  });
+});

@@ -6,7 +6,10 @@ import {
   cardFacts,
   distanceKm,
   filterableFields,
+  isOpenAllDay,
+  isOpenLate,
   matchesFilter,
+  opensOn,
   searchableText,
   statusOf,
   normalizeText,
@@ -152,8 +155,16 @@ export async function searchBusinesses({
   county = null,
   town = null,
   openNow = false,
+  closedNow = false,
+  open24 = false,
+  openLate = false,
+  openSunday = false,
   verifiedOnly = false,
   featuredOnly = false,
+  flashSale = false,
+  hasOffers = false,
+  hasWhatsapp = false,
+  newlyListed = false,
   radiusKm = null,
   minPrice = null,
   maxPrice = null,
@@ -177,8 +188,16 @@ export async function searchBusinesses({
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
     .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
+    .filter((b) => !closedNow || !statusOf(b.hours, b.exceptions).isOpen)
+    .filter((b) => !open24 || isOpenAllDay(b.hours))
+    .filter((b) => !openSunday || opensOn(b.hours, "sun"))
+    .filter((b) => !openLate || isOpenLate(b.hours, b.exceptions))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
+    .filter((b) => !flashSale || promoCountsFor(b).flash > 0)
+    .filter((b) => !hasOffers || promoCountsFor(b).offers > 0)
+    .filter((b) => !hasWhatsapp || Boolean(b.whatsapp))
+    .filter((b) => !newlyListed || Date.parse(b.createdAt) >= Date.now() - 30 * 86400000)
     .filter((b) => matchesAttrs(b, attrEntries))
     .map((b) => ({
       b,

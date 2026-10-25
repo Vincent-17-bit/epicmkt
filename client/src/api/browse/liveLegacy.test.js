@@ -213,6 +213,48 @@ describe("live browse adapter", () => {
     }
   });
 
+  describe("extra filters", () => {
+    const days = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+    const everyDay = (slot) => Object.fromEntries(days.map((d) => [d, slot]));
+    const names = async (params) => (await live.searchBusinesses(params)).items.map((b) => b.name).sort();
+
+    beforeEach(() => {
+      db().businesses = [
+        biz(1, { name: "Round", hours: everyDay(["00:00", "23:59"]), whatsapp: "+254711000000" }),
+        biz(2, { name: "Night", hours: everyDay(["10:00", "23:00"]) }),
+        biz(3, { name: "Day", hours: { ...everyDay(["09:00", "17:00"]), sun: null } }),
+        biz(4, { name: "Fresh", hours: {}, created_at: new Date().toISOString() })
+      ];
+    });
+
+    it("splits shops into open and closed right now", async () => {
+      const open = await names({ openNow: true });
+      const closed = await names({ closedNow: true });
+      expect([...open, ...closed].sort()).toEqual(["Day", "Fresh", "Night", "Round"]);
+      expect(open).not.toContain("Fresh");
+      expect(closed).toContain("Fresh");
+    });
+
+    it("filters by hours traits", async () => {
+      expect(await names({ open24: true })).toEqual(["Round"]);
+      expect(await names({ openLate: true })).toEqual(["Night", "Round"]);
+      expect(await names({ openSunday: true })).toEqual(["Night", "Round"]);
+    });
+
+    it("filters by contact and listing age", async () => {
+      expect(await names({ hasWhatsapp: true })).toEqual(["Round"]);
+      expect(await names({ newlyListed: true })).toEqual(["Fresh"]);
+    });
+
+    it("filters by live flash sales and offers", async () => {
+      const soon = new Date(Date.now() + 3600000).toISOString();
+      db().sales = [saleRow({ business_id: biz(2).id, ends_at: soon })];
+      db().offers = [{ id: "o1", business_id: biz(3).id, ends_at: null }];
+      expect(await names({ flashSale: true })).toEqual(["Night"]);
+      expect(await names({ hasOffers: true })).toEqual(["Day"]);
+    });
+  });
+
   describe("seller exceptions", () => {
     const allWeek = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["00:00", "23:59"]]));
     const today = () => new Date(Date.now() + 3 * 3600000).toISOString().slice(0, 10);

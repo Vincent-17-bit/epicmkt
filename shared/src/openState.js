@@ -1,4 +1,5 @@
-import { closingInfo, exceptionFor, formatClock, intervalsOn, nairobiNow } from "./utils.js";
+import { DAYS, closingInfo, exceptionFor, formatClock, intervalsOn, isOpenOn, nairobiNow } from "./utils.js";
+import { TIMEZONE_OFFSET_HOURS } from "./constants.js";
 import { addDays } from "./seller/exceptions.js";
 
 const DAY_NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -55,3 +56,27 @@ export const statusOf = (hours, exceptions, date) => {
   const status = businessStatus(hours, exceptions, date);
   return { ...status, ...describeStatus(status, date) };
 };
+
+const LATE_HOUR = 21;
+
+const minutesOf = (time) => {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+};
+
+const slotOf = (hours, day) => {
+  const slot = hours?.[day];
+  return Array.isArray(slot) && slot.length === 2 && typeof slot[0] === "string" && typeof slot[1] === "string" ? slot : null;
+};
+
+const spansDay = (slot) => slot !== null && (slot[0] === slot[1] || minutesOf(slot[1]) - minutesOf(slot[0]) >= 1439);
+
+export const isOpenAllDay = (hours) => DAYS.every((day) => spansDay(slotOf(hours, day)));
+
+export const opensOn = (hours, day) => slotOf(hours, day) !== null;
+
+export function isOpenLate(hours, exceptions, date = new Date()) {
+  const { date: today } = nairobiNow(date);
+  const evening = new Date(Date.parse(`${today}T00:00:00Z`) + (LATE_HOUR - TIMEZONE_OFFSET_HOURS) * 3600000);
+  return isOpenOn(hours, exceptions, evening);
+}

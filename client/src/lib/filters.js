@@ -10,6 +10,27 @@ export const SORT_OPTIONS = [
 
 export const RADII = [1, 2, 5, 10, 25, 50];
 
+export const STATUS_OPTIONS = [
+  { value: "", label: "Any time" },
+  { value: "open", label: "Open now" },
+  { value: "closed", label: "Closed now" }
+];
+
+const statusParam = (status) => (status === "open" ? "1" : status === "closed" ? "0" : "");
+const statusFromParam = (value) => (value === "1" ? "open" : value === "0" ? "closed" : "");
+
+export const TOGGLES = [
+  { key: "open24", group: "hours", param: "h24", api: "open24", label: "Open 24 hours" },
+  { key: "openLate", group: "hours", param: "late", api: "openLate", label: "Open late (past 9 PM)" },
+  { key: "openSunday", group: "hours", param: "sun", api: "openSunday", label: "Open on Sundays" },
+  { key: "flash", group: "deals", param: "flash", api: "flashSale", label: "Flash sale live" },
+  { key: "offers", group: "deals", param: "offers", api: "hasOffers", label: "Has offers" },
+  { key: "verified", group: "business", param: "verified", api: "verifiedOnly", label: "Verified only" },
+  { key: "featured", group: "business", param: "featured", api: "featuredOnly", label: "Featured only" },
+  { key: "whatsapp", group: "business", param: "wa", api: "hasWhatsapp", label: "On WhatsApp" },
+  { key: "isNew", group: "business", param: "new", api: "newlyListed", label: "New this month" }
+];
+
 const ATTR_PREFIX = "f.";
 
 export function readFilters(params) {
@@ -20,9 +41,8 @@ export function readFilters(params) {
   const sort = params.get("sort");
   return {
     sort: SORT_OPTIONS.some((o) => o.value === sort) ? sort : "relevance",
-    openNow: params.get("open") === "1",
-    verified: params.get("verified") === "1",
-    featured: params.get("featured") === "1",
+    status: statusFromParam(params.get("open")),
+    ...Object.fromEntries(TOGGLES.map((t) => [t.key, params.get(t.param) === "1"])),
     radius: RADII.includes(Number(params.get("radius"))) ? Number(params.get("radius")) : 0,
     minPrice: params.get("pmin") ?? "",
     maxPrice: params.get("pmax") ?? "",
@@ -36,9 +56,8 @@ const setOrDelete = (next, key, value) => (value ? next.set(key, String(value)) 
 export function applyFilters(params, patch) {
   const next = new URLSearchParams(params);
   if ("sort" in patch) setOrDelete(next, "sort", patch.sort === "relevance" ? "" : patch.sort);
-  if ("openNow" in patch) setOrDelete(next, "open", patch.openNow ? "1" : "");
-  if ("verified" in patch) setOrDelete(next, "verified", patch.verified ? "1" : "");
-  if ("featured" in patch) setOrDelete(next, "featured", patch.featured ? "1" : "");
+  if ("status" in patch) setOrDelete(next, "open", statusParam(patch.status));
+  for (const t of TOGGLES) if (t.key in patch) setOrDelete(next, t.param, patch[t.key] ? "1" : "");
   if ("radius" in patch) setOrDelete(next, "radius", patch.radius || "");
   if ("minPrice" in patch) setOrDelete(next, "pmin", patch.minPrice);
   if ("maxPrice" in patch) setOrDelete(next, "pmax", patch.maxPrice);
@@ -63,9 +82,9 @@ export function toApiFilters(filters, coords, seed) {
   for (const [key, value] of Object.entries(filters.attrs)) attrs[key] = value;
   return {
     sort: filters.sort,
-    openNow: filters.openNow,
-    verifiedOnly: filters.verified,
-    featuredOnly: filters.featured,
+    openNow: filters.status === "open",
+    closedNow: filters.status === "closed",
+    ...Object.fromEntries(TOGGLES.map((t) => [t.api, filters[t.key]])),
     radiusKm: filters.radius || null,
     minPrice: filters.minPrice === "" ? null : Number(filters.minPrice),
     maxPrice: filters.maxPrice === "" ? null : Number(filters.maxPrice),
@@ -78,9 +97,9 @@ export function toApiFilters(filters, coords, seed) {
 
 export function buildChips(filters, facets) {
   const chips = [];
-  if (filters.openNow) chips.push({ id: "open", label: "Open now", patch: { openNow: false } });
-  if (filters.verified) chips.push({ id: "verified", label: "Verified only", patch: { verified: false } });
-  if (filters.featured) chips.push({ id: "featured", label: "Featured only", patch: { featured: false } });
+  const status = STATUS_OPTIONS.find((o) => o.value && o.value === filters.status);
+  if (status) chips.push({ id: "status", label: status.label, patch: { status: "" } });
+  for (const t of TOGGLES) if (filters[t.key]) chips.push({ id: t.param, label: t.label, patch: { [t.key]: false } });
   if (filters.radius) chips.push({ id: "radius", label: `Within ${filters.radius} km`, patch: { radius: 0 } });
   if (filters.minPrice !== "" || filters.maxPrice !== "") {
     const label =

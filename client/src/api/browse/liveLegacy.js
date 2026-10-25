@@ -206,8 +206,12 @@ async function suggestionsRemote(prefix, limit) {
   return unwrap(await supabase.rpc("search_suggestions", { p_prefix: prefix, p_limit: limit })) ?? [];
 }
 
+const LOCAL_ONLY = ["closedNow", "open24", "openLate", "openSunday", "flashSale", "hasOffers", "hasWhatsapp", "newlyListed"];
+
+const needsLocal = (params) => params.minRating > 0 || LOCAL_ONLY.some((key) => params[key]);
+
 export const searchBusinesses = (params = {}) =>
-  params.minRating > 0 ? searchLocal(params) : viaDatabase(() => searchRemote(params), () => searchLocal(params));
+  needsLocal(params) ? searchLocal(params) : viaDatabase(() => searchRemote(params), () => searchLocal(params));
 export const getSearchFacets = (params = {}) => viaDatabase(() => facetsRemote(params), () => facetsLocal(params));
 export const getSuggestions = (prefix, limit = 6) => viaDatabase(() => suggestionsRemote(prefix, limit), () => suggestionsLocal(prefix, limit));
 export const getFeaturedBusinesses = async (params) => engine.getFeaturedBusinesses(await load(), params);
