@@ -1,0 +1,106 @@
+server {
+    include /etc/nginx/snippets/listen.conf;
+    include /etc/nginx/snippets/tls.conf;
+    include /etc/nginx/snippets/guard.conf;
+    server_name ${APP_DOMAIN};
+    set $up_host ${CLIENT_UPSTREAM};
+
+    location ^~ /assets/ {
+        limit_req zone=rl_static burst=300 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache static;
+        proxy_cache_valid 200 365d;
+        proxy_pass https://vercel_client;
+    }
+
+    location ~* ^/[^/]+\.(?:png|svg|ico|webp|jpg|jpeg|webmanifest)$ {
+        limit_req zone=rl_static burst=300 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_hide_header Cache-Control;
+        add_header Cache-Control "public, max-age=86400" always;
+        proxy_cache static;
+        proxy_cache_valid 200 1d;
+        proxy_pass https://vercel_client;
+    }
+
+    location = /api/browse {
+        limit_req zone=rl_api burst=60 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache api;
+        proxy_cache_valid 200 30s;
+        proxy_pass https://vercel_client;
+    }
+
+    location = /api/products {
+        limit_req zone=rl_api burst=60 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache api;
+        proxy_cache_valid 200 60s;
+        proxy_pass https://vercel_client;
+    }
+
+    location ^~ /api/ {
+        limit_req zone=rl_api burst=30 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_pass https://vercel_client;
+    }
+
+    location = /sitemap.xml {
+        limit_req zone=rl_api burst=10 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache pages;
+        proxy_cache_valid 200 1h;
+        proxy_pass https://vercel_client;
+    }
+
+    location = /robots.txt {
+        limit_req zone=rl_api burst=10 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache pages;
+        proxy_cache_valid 200 1d;
+        proxy_pass https://vercel_client;
+    }
+
+    location ^~ /b/ {
+        limit_req zone=rl_page burst=80 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache pages;
+        proxy_cache_valid 200 60s;
+        proxy_cache_valid 404 30s;
+        proxy_pass https://vercel_client;
+    }
+
+    location = /index.html {
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache pages;
+        proxy_cache_valid 200 5s;
+        proxy_pass https://vercel_client;
+    }
+
+    location / {
+        limit_req zone=rl_page burst=80 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers.conf;
+        proxy_cache pages;
+        proxy_cache_valid 200 5s;
+        proxy_pass https://vercel_client;
+    }
+}

@@ -1,0 +1,31 @@
+server {
+    include /etc/nginx/snippets/listen.conf;
+    include /etc/nginx/snippets/tls.conf;
+    include /etc/nginx/snippets/guard.conf;
+    include /etc/nginx/allow/admin.conf;
+    server_name ${ADMIN_DOMAIN};
+    set $up_host ${ADMIN_UPSTREAM};
+
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location ^~ /assets/ {
+        limit_req zone=rl_static burst=100 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers-private.conf;
+        proxy_cache static;
+        proxy_cache_valid 200 365d;
+        proxy_pass https://vercel_admin;
+    }
+
+    location / {
+        limit_conn cn_ip 30;
+        limit_req zone=rl_admin burst=20 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/headers-private.conf;
+        proxy_pass https://vercel_admin;
+    }
+}

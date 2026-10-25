@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${APP_DOMAIN} www.${APP_DOMAIN} ${SELLER_DOMAIN} ${ADMIN_DOMAIN} ${MEDIA_DOMAIN};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    include /etc/nginx/snippets/listen.conf;
+    include /etc/nginx/snippets/tls.conf;
+    server_name www.${APP_DOMAIN};
+    return 301 https://${APP_DOMAIN}$request_uri;
+}

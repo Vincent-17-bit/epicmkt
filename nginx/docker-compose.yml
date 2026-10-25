@@ -1,0 +1,43 @@
+services:
+  nginx:
+    image: nginx:stable
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file: .env
+    environment:
+      NGINX_ENVSUBST_FILTER: ^(APP|SELLER|ADMIN|MEDIA|CLIENT|SUPABASE)_
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./limits.conf:/etc/nginx/limits.conf:ro
+      - ./snippets:/etc/nginx/snippets:ro
+      - ./allow:/etc/nginx/allow:ro
+      - ./templates:/etc/nginx/templates:ro
+      - ./reload.sh:/docker-entrypoint.d/90-reload.sh:ro
+      - cache:/var/cache/nginx
+      - certs:/etc/letsencrypt:ro
+      - acme:/var/www/certbot
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: "5"
+
+  certbot:
+    image: certbot/certbot
+    restart: unless-stopped
+    volumes:
+      - certs:/etc/letsencrypt
+      - acme:/var/www/certbot
+    entrypoint: /bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'
+
+volumes:
+  cache:
+  certs:
+  acme:
