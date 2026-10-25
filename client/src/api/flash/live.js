@@ -1,4 +1,4 @@
-import { PLAN_FEATURES } from "@epicmkt/shared";
+import { PLAN_FEATURES, isListed } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -123,6 +123,7 @@ const itemRow = (row, business) =>
     unit: row.unit,
     section: row.section,
     availability: row.availability,
+    stockLeft: row.stock_left ?? null,
     imagePaths: row.image_paths,
     videoPaths: row.video_paths,
     createdAt: row.created_at
@@ -155,7 +156,8 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
   const [{ now, entries }, chips] = await Promise.all([liveEntries(), chipsByItem(business.id)]);
   const current = rows.find((row) => row.id === excludeItemId);
   const shaped = rows
-    .filter((row) => row.id !== excludeItemId)
+    // The view already leaves sold-out items out; this keeps an older database (before migration 0046) from showing one.
+    .filter((row) => row.id !== excludeItemId && isListed(row))
     .map((row) => {
       const item = itemRow(row, business);
       const entry = entries.find((e) => e.item.id === row.id);
@@ -163,7 +165,6 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
       return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
   const rank = (row) => [
-    row.availability === "unavailable" ? 1 : 0,
     current?.section && row.section === current.section ? 0 : 1,
     row.flash ? 0 : 1,
     -Date.parse(row.createdAt)
@@ -212,7 +213,7 @@ export async function getAllProducts() {
   const chips = await chipsByItem();
   return rows.flatMap((row) => {
     const business = byId.get(row.business_id);
-    if (!business) return [];
+    if (!business || !isListed(row)) return [];
     const item = itemRow(row, business);
     const entry = sales.get(row.id);
     const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
@@ -280,7 +281,7 @@ export async function getShowcaseProducts(businessIds = [], { pool = 24, rng = M
       id,
       {
         total,
-        items: rows.map((row) => {
+        items: rows.filter(isListed).map((row) => {
           const item = itemRow(row, { slug: slugOf.get(id) });
           const entry = sales.get(row.id);
           const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
@@ -305,7 +306,7 @@ export async function getBusiness(ref, origin = null) {
   ]);
   const business = businessOf(row, {
     category: categories.find((c) => c.id === row.category_id) ?? null,
-    services: (items ?? []).map((item) => ({ ...serviceOf(item), offer: chips.get(item.id) ?? null })),
+    services: (items ?? []).filter(isListed).map((item) => ({ ...serviceOf(item), offer: chips.get(item.id) ?? null })),
     origin
   });
   return { ...business, offers: deals };

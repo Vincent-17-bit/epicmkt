@@ -134,6 +134,23 @@ describe("/api/products", () => {
     expect(body.items[0]).toMatchObject({ name: "Loaf", imagePath: "b1/a.webp" });
   });
 
+  it("does not list a sold-out product, even when an older database still sends one", async () => {
+    payload.items.push(item(8, { name: "Gone loaf", availability: "out_of_stock" }), item(9, { name: "Old word loaf", availability: "unavailable" }));
+    const body = await (await call("op=page")).json();
+    const names = body.items.map((i) => i.name);
+    expect(names).toContain("Fresh bread");
+    expect(names).not.toContain("Gone loaf");
+    expect(names).not.toContain("Old word loaf");
+  });
+
+  it("carries how many are left only for a product running low", async () => {
+    payload.items.push(item(6, { name: "Last loaves", availability: "limited_stock", stock_left: 2 }), item(7, { name: "Plenty loaves", stock_left: null }));
+    const body = await (await call("op=page")).json();
+    const by = Object.fromEntries(body.items.map((i) => [i.name, i]));
+    expect(by["Last loaves"]).toMatchObject({ availability: "limited_stock", stockLeft: 2 });
+    expect(by["Plenty loaves"].stockLeft).toBeNull();
+  });
+
   it("keeps serving the last good snapshot when a refresh fails, and says so honestly when there is none", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-03-01T10:00:00Z"));

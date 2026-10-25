@@ -1,7 +1,7 @@
 const AVAILABILITY_LABELS = {
   available: "Available",
-  limited: "Limited",
-  limited_stock: "Limited",
+  limited: "Low stock",
+  limited_stock: "Low stock",
   by_appointment: "By appointment",
   unavailable: "Unavailable",
   out_of_stock: "Unavailable"

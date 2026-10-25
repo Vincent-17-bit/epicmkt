@@ -27,6 +27,8 @@ export default function ListingCard({ item, selected, handlers, canMove, isFirst
       onToggle={handlers.toggle}
       onConfirm={handlers.confirm}
       onMove={handlers.move}
+      onSoldOut={handlers.soldOut}
+      onRestock={handlers.restock}
     />
   );
   return (
@@ -44,9 +46,9 @@ export default function ListingCard({ item, selected, handlers, canMove, isFirst
         onSelect={() => handlers.select(item.id)}
         overlay={overlay}
         quickActions={quickActions}
-        dimmed={item.visibility !== "showing"}
+        dimmed={item.visibility !== "showing" || item.soldOut}
         selected={selected}
-        labels={{ was: "Was", availability: (k) => ({ available: "Available", limited: "Limited", unavailable: "Unavailable" })[k] }}
+        labels={{ was: "Was", lowStock: "Low stock", onlyLeft: "Only {n} left" }}
       />
     </li>
   );

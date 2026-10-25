@@ -18,7 +18,6 @@ export const EMPTY_FILTERS = Object.freeze({
   max: "",
   categories: [],
   towns: [],
-  inStock: false,
   onSale: false,
   flash: false,
   verified: false,
@@ -27,9 +26,10 @@ export const EMPTY_FILTERS = Object.freeze({
   openNow: false
 });
 
-const FLAGS = { inStock: "pstock", onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto", openNow: "popen" };
-const SOLD_OUT = new Set(["out_of_stock", "unavailable"]);
-const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", ...Object.values(FLAGS)];
+const FLAGS = { onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto", openNow: "popen" };
+// "pstock" was the old In stock toggle. Sold-out products are no longer listed at all, so it is gone; it stays in this list
+// only so an old link's leftover parameter is dropped the next time the filters are written.
+const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", "pstock", ...Object.values(FLAGS)];
 
 const list = (value) => (value ? value.split(",").map((v) => v.trim()).filter(Boolean) : []);
 const amount = (value) => (/^\d{1,9}$/.test(value ?? "") ? value : "");
@@ -107,7 +107,6 @@ export function applyFilters(products, filters) {
     }
     if (categories.size && !categories.has(store.categoryId)) return false;
     if (towns.size && !towns.has(normalizeText(store.town))) return false;
-    if (filters.inStock && SOLD_OUT.has(p.availability)) return false;
     if (filters.onSale && !(p.pricing?.savings > 0)) return false;
     if (filters.flash && !p.flash) return false;
     if (filters.verified && !store.verified) return false;
@@ -157,7 +156,7 @@ export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) 
   }
   for (const id of filters.categories) chips.push({ key: `cat:${id}`, label: categoryName(id), clear: (f) => ({ ...f, categories: f.categories.filter((c) => c !== id) }) });
   for (const slug of filters.towns) chips.push({ key: `town:${slug}`, label: townName(slug), clear: (f) => ({ ...f, towns: f.towns.filter((t) => t !== slug) }) });
-  const named = { inStock: "In stock", onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo", openNow: "Open now" };
+  const named = { onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo", openNow: "Open now" };
   for (const [name, label] of Object.entries(named)) if (filters[name]) chips.push({ key: name, label, clear: (f) => ({ ...f, [name]: false }) });
   return chips;
 }

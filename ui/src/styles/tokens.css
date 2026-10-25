@@ -78,6 +78,8 @@
   --status-ok: #15803d;
   --status-ok-dot: #16a34a;
   --status-warn: #f97316;
+  --status-warn-bg: #ffedd5;
+  --status-warn-text: #9a3412;
   --status-bad: #dc2626;
   --star: #d98a00;
   --scrim: rgb(17 17 17 / 0.5);
@@ -143,6 +145,8 @@
   --status-ok: #4ade80;
   --status-ok-dot: #22c55e;
   --status-warn: #fb923c;
+  --status-warn-bg: #3a2210;
+  --status-warn-text: #fdba74;
   --status-bad: #f87171;
   --star: #f0a020;
   --scrim: rgb(0 0 0 / 0.7);

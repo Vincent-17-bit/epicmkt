@@ -153,11 +153,12 @@ test("chips remove one filter and clear keeps the sort", () => {
 
 test("N of M showing and the reasons", () => {
   const live = showingSummary(E, { shopLive: true });
-  assert.equal(live.text, "6 of 10 items are showing to customers");
-  assert.deepEqual(live.reasons.map((r) => [r.key, r.count]), [["hidden_me", 1], ["hidden_admin", 2], ["draft", 1]]);
+  // The out of stock item is not shown to customers, so it is not counted as showing.
+  assert.equal(live.text, "5 of 10 items are showing to customers");
+  assert.deepEqual(live.reasons.map((r) => [r.key, r.count]), [["out_of_stock", 1], ["hidden_me", 1], ["hidden_admin", 2], ["draft", 1]]);
   const off = showingSummary(E, { shopLive: false });
   assert.equal(off.showing, 0);
-  assert.deepEqual(off.reasons[0], { key: "shop_not_live", count: 6, label: "6 not showing because your shop is not live" });
+  assert.deepEqual(off.reasons[0], { key: "shop_not_live", count: 5, label: "5 not showing because your shop is not live" });
   assert.equal(showingSummary(E.slice(0, 1), { shopLive: true }).text, "1 of 1 item is showing to customers");
 });
 
@@ -185,4 +186,13 @@ test("150 items filter and sort quickly", () => {
   const ms = performance.now() - start;
   assert.ok(out.length > 0);
   assert.ok(ms < 150, `took ${ms}ms`);
+});
+
+test("the older 'unavailable' value counts and filters as out of stock", () => {
+  const items = enrichItems([item(1, { availability: "unavailable" }), item(2, { availability: "out_of_stock" }), item(3, { availability: "available" })], [], { now: NOW });
+  assert.equal(items[0].soldOut, true);
+  assert.equal(items[2].soldOut, false);
+  assert.deepEqual(runCatalogQuery(items, { ...DEFAULT_QUERY, avail: ["out_of_stock"] }, NOW).map((i) => i.id).sort(), ["1", "2"]);
+  assert.equal(computeStats(items).out_of_stock, 2);
+  assert.equal(statsFromRpc({ out_of_stock: 2, unavailable: 3 }).out_of_stock, 5);
 });

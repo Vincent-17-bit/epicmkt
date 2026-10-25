@@ -280,6 +280,7 @@ export const getCatalog = async () => shape.catalog(await rpc("seller_catalog_it
 const itemRow = (f) => ({
   name: f.name, description: f.description || null, section: f.section || null, price_type: f.priceType, price: f.price, price_max: f.priceMax ?? null,
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
+  track_stock: Boolean(f.trackStock), stock_count: f.trackStock ? f.stockCount : null, low_stock_threshold: f.lowStockThreshold ?? 3, show_stock_count: Boolean(f.showStockCount),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([
@@ -295,6 +296,8 @@ export const getShopPreview = async () => {
 };
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
+// 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
+export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
 export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
 export const importItems = (rows) => rpc("seller_import_items", { p_rows: rows });

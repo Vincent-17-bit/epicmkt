@@ -24,7 +24,9 @@ import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
 import MediaVideo from "./MediaVideo.jsx";
-import { OfferChip } from "@epicmkt/ui";
+import { OfferChip, StockTag } from "@epicmkt/ui";
+
+const stockLabels = () => ({ lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft") });
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -416,10 +418,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   </div>
                 )}
 
-                <p className={styles.availability}>
-                  <span className={`${styles.dot} ${styles[current.availability]}`} aria-hidden="true" />
-                  {t(`item.availability.${current.availability}`)}
-                </p>
+                {/* Available says nothing. Running low gets the amber tag; by appointment is worth knowing before a visit. */}
+                {current.availability === "limited_stock" && <StockTag item={current} labels={stockLabels()} className={styles.stockTag} />}
+                {current.availability === "by_appointment" && <p className={styles.availability}>{t("item.availability.by_appointment")}</p>}
 
                 {current.shortDescription && <p className={styles.description}>{current.shortDescription}</p>}
               </div>

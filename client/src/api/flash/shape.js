@@ -64,7 +64,7 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   variants: []
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, price, priceType, unit, section, availability, imagePaths, videoPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
   return {
@@ -90,6 +90,8 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, price,
     kind: "product",
     section: section ?? null,
     availability: availability ?? "available",
+    // How many are left, only when the seller counts stock, it is running low, and they chose to say so.
+    stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
     variants: [],
     specs: [],
     createdAt
@@ -245,5 +247,6 @@ export const serviceOf = (row) => ({
   section: row.section ?? null,
   status: "listed",
   availability: row.availability,
+  stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
   imageUrl: mediaUrl(row.image_paths?.[0])
 });

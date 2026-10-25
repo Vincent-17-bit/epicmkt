@@ -30,6 +30,44 @@ exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller 
       20
       %
     </span>
+    <span
+      class="_tag_cfb398 _onPicture_cfb398 _stockTag_71452e"
+      data-stock-tag=""
+    >
+      <svg
+        aria-hidden="true"
+        class="_icon_cfb398"
+        focusable="false"
+        height="12"
+        viewBox="0 0 16 16"
+        width="12"
+      >
+        <path
+          d="M2.5 5.2 8 2.5l5.5 2.7v5.6L8 13.5l-5.5-2.7z"
+          fill="none"
+          stroke="currentColor"
+          stroke-linejoin="round"
+          stroke-width="1.5"
+        />
+        <path
+          d="M8 6v2.6"
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="1.5"
+        />
+        <circle
+          cx="8"
+          cy="10.6"
+          fill="currentColor"
+          r=".9"
+        />
+      </svg>
+      <span
+        class="_text_cfb398"
+      >
+        Low stock
+      </span>
+    </span>
   </span>
   <span
     class="_text_71452e"
@@ -61,19 +99,6 @@ exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller 
           </span>
           KES 500
         </s>
-      </span>
-      <span
-        class="_avail_71452e"
-      >
-        <span
-          aria-hidden="true"
-          class="_dot_71452e _limited_71452e"
-        />
-        <span
-          class="_sr_71452e"
-        >
-          Limited
-        </span>
       </span>
     </span>
   </span>

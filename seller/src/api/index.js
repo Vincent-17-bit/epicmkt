@@ -55,6 +55,7 @@ export const listItems = (...a) => impl.listItems(...a);
 export const getCatalog = (...a) => impl.getCatalog(...a);
 export const saveItem = (...a) => impl.saveItem(...a);
 export const bulkItems = (...a) => impl.bulkItems(...a);
+export const itemStock = (...a) => impl.itemStock(...a);
 export const reorderItems = (...a) => impl.reorderItems(...a);
 export const duplicateItem = (...a) => impl.duplicateItem(...a);
 export const importItems = (...a) => impl.importItems(...a);

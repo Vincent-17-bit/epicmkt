@@ -30,11 +30,11 @@ export function Signals({ item }) {
 export function Chips({ item }) {
   return (
     <span className={styles.chips}>
-      <span className={`${styles.chip} ${styles[`avail_${item.availability}`] ?? ""}`}>{optionLabel(AVAILABILITY_OPTIONS, item.availability)}</span>
+      <span className={`${styles.chip} ${styles[`avail_${item.soldOut ? "out_of_stock" : item.availability}`] ?? ""}`}>{item.soldOut ? "Out of stock" : optionLabel(AVAILABILITY_OPTIONS, item.availability)}</span>
       {item.availKeys.has("seasonal") && <span className={styles.chip}>Seasonal</span>}
       {item.availKeys.has("coming_soon") && <span className={styles.chip}>Coming soon</span>}
       {item.flags.stalePrice && <span className={`${styles.chip} ${styles.warn}`}>Price may be out of date</span>}
-      {item.flags.lowStock && <span className={`${styles.chip} ${styles.warn}`}>Low stock: {item.stockCount} left</span>}
+      {item.flags.lowStock && <span className={`${styles.chip} ${styles.warn}`}>{item.stockCount} left</span>}
     </span>
   );
 }
@@ -96,7 +96,7 @@ function Menu({ label, children }) {
   );
 }
 
-export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggle, onConfirm, onMove, canMove, isFirst, isLast, busy }) {
+export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggle, onConfirm, onMove, onSoldOut, onRestock, canMove, isFirst, isLast, busy }) {
   const locked = item.removed;
   const adminHidden = item.visibility === "hidden_admin";
   const priced = ["fixed", "from", "range"].includes(item.priceType) && typeof item.price === "number";
@@ -108,10 +108,14 @@ export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggl
         <span aria-hidden="true">Select</span>
       </label>
       <span className={styles.actionsEnd}>
-        <button type="button" className={`${styles.mini} ${styles.primaryBtn}`} onClick={() => onEdit(item)} disabled={locked || busy}>Edit<span className={styles.sr}> {item.name}</span></button>
+        {item.soldOut && (
+          <button type="button" className={`${styles.mini} ${styles.primaryBtn}`} onClick={() => onRestock(item)} disabled={locked || busy}>Back in stock<span className={styles.sr}>: {item.name}</span></button>
+        )}
+        <button type="button" className={`${styles.mini} ${item.soldOut ? "" : styles.primaryBtn}`} onClick={() => onEdit(item)} disabled={locked || busy}>Edit<span className={styles.sr}> {item.name}</span></button>
         <Menu label={`More actions for ${item.name}`}>
           {(close) => (
             <>
+              {!item.soldOut && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onSoldOut(item); }} disabled={locked || busy}>Mark out of stock</button>}
               <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onDuplicate(item); }} disabled={locked || busy}>Duplicate</button>
               <button
                 type="button"

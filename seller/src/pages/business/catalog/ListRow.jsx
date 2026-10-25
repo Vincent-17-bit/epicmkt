@@ -7,7 +7,7 @@ export default function ListRow({ item, selected, handlers, canMove, isFirst, is
   const src = mediaUrl(item.imagePaths?.[0]);
   return (
     <li
-      className={`${styles.row} ${item.visibility !== "showing" ? styles.rowDim : ""} ${selected ? styles.rowSelected : ""}`}
+      className={`${styles.row} ${item.visibility !== "showing" || item.soldOut ? styles.rowDim : ""} ${selected ? styles.rowSelected : ""}`}
       data-testid="listing"
       data-id={item.id}
       draggable={drag.enabled}
@@ -39,6 +39,8 @@ export default function ListRow({ item, selected, handlers, canMove, isFirst, is
         onToggle={handlers.toggle}
         onConfirm={handlers.confirm}
         onMove={handlers.move}
+      onSoldOut={handlers.soldOut}
+      onRestock={handlers.restock}
       />
     </li>
   );
