@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatDateTime } from "@epicmkt/shared/billing";
 import { receiptOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
@@ -8,6 +8,7 @@ import { BELL_KEY } from "../../components/Layout.jsx";
 import { AttachmentList } from "../../components/MessageParts.jsx";
 import Ticks from "../../components/Ticks.jsx";
 import { errorText } from "../../lib/errors.js";
+import useMarkRead from "../../lib/useMarkRead.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./notifications.module.css";
@@ -37,7 +38,7 @@ export default function Notifications() {
     qc.invalidateQueries({ queryKey: BELL_KEY });
   };
   useRealtime(["messages"], refresh);
-  const mark = useMutation({ mutationFn: (ids) => api.markRead(ids), onSuccess: refresh });
+  const mark = useMarkRead();
 
   const items = list.data ?? [];
   return (
@@ -66,7 +67,7 @@ export default function Notifications() {
       ) : (
         <ul className={styles.list} aria-label="Notifications">
           {items.map((m) => (
-            <li key={m.id} className={styles.item} data-unread={!m.readAt} data-testid="notification" data-kind={m.kind}>
+            <li key={m.id} className={styles.item} data-unread={!m.readAt} data-testid="notification" data-kind={m.kind} onClick={() => { if (!m.readAt) mark.mutate([m.id]); }}>
               <div className={styles.meta}>
                 <span className={`${ui.pill} ${ui.tone_info}`}>{KIND_LABEL[m.kind] ?? m.kind}</span>
                 <time dateTime={m.createdAt}>{formatDateTime(m.createdAt)}</time>
@@ -80,7 +81,7 @@ export default function Notifications() {
                 {m.sender === "admin" && m.needsReply && <Link className={ui.link} to={`/business/questions#thread-${m.threadId}`}>Reply to EpicMKT</Link>}
                 {m.kind === "question" && <Link className={ui.link} to="/business/questions">Answer this question</Link>}
                 {["payment", "reminder", "grace", "expiry"].includes(m.kind) && <Link className={ui.link} to="/business/subscription">Open subscription</Link>}
-                {!m.readAt && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={mark.isPending} onClick={() => mark.mutate([m.id])} aria-label={`Mark "${m.subject}" as read`}>Mark read</button>}
+                {!m.readAt && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={mark.isPending} onClick={(e) => { e.stopPropagation(); mark.mutate([m.id]); }} aria-label={`Mark "${m.subject}" as read`}>Mark read</button>}
               </div>
             </li>
           ))}

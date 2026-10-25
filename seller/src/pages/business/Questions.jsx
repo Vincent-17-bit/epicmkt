@@ -8,6 +8,7 @@ import { MessageBubble, ReplyBox } from "../../components/MessageParts.jsx";
 import { BELL_KEY } from "../../components/Layout.jsx";
 import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
+import useMarkRead from "../../lib/useMarkRead.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./questions.module.css";
@@ -123,12 +124,13 @@ export default function Questions() {
     qc.invalidateQueries({ queryKey: BELL_KEY });
   };
   useRealtime(["flags", "flag_attachments", "messages", "message_attachments"], refresh);
+  const mark = useMarkRead();
 
   // Opening a conversation is what turns staff's ticks blue.
   const unreadIds = threads.flatMap((t) => t.messages.filter((m) => m.sender !== "seller" && !m.readAt).map((m) => m.id));
   const unreadKey = unreadIds.join(",");
   useEffect(() => {
-    if (unreadIds.length) api.markRead(unreadIds).then(refresh).catch(() => {});
+    if (unreadIds.length) mark.mutate(unreadIds);
   }, [unreadKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

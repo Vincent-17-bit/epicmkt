@@ -86,7 +86,7 @@ export function ReplyBox({ id, onSend, label = "Your reply" }) {
   };
 
   return (
-    <form onSubmit={send} noValidate className={ui.field}>
+    <form onSubmit={send} noValidate className={`${ui.field} ${styles.reply}`}>
       <label className={ui.label} htmlFor={`msg-${id}`}>{label}</label>
       <textarea id={`msg-${id}`} className={ui.input} value={text} rows={3} maxLength={2000} onChange={(e) => setText(e.target.value)} aria-invalid={error ? true : undefined} />
       <div>

@@ -22,13 +22,24 @@ describe("notifications", () => {
     await screen.findAllByTestId("notification");
     await user.click(screen.getByRole("button", { name: /Mark "Wrong price reported" as read/ }));
     await waitFor(() => expect(bell()).toHaveTextContent("1"));
-    expect(M.state.messages.find((m) => m.id === "m2").readAt).toBeTruthy();
+    await waitFor(() => expect(M.state.messages.find((m) => m.id === "m2").readAt).toBeTruthy());
     expect(M.state.messages.find((m) => m.id === "m1").readAt).toBeNull();
     await user.click(screen.getByRole("button", { name: "Mark all read" }));
     await waitFor(() => expect(bell()).toBeNull());
     expect(screen.getByTestId("unread-summary")).toHaveTextContent("all caught up");
     expect(screen.getByRole("button", { name: "Mark all read" })).toBeDisabled();
-    expect(M.state.messages.every((m) => m.readAt)).toBe(true);
+    await waitFor(() => expect(M.state.messages.every((m) => m.readAt)).toBe(true));
+  });
+
+  it("opening a notification marks it read and updates the bell by itself", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/notifications");
+    const items = await screen.findAllByTestId("notification");
+    await waitFor(() => expect(bell()).toHaveTextContent("2"));
+    await user.click(items.find((i) => i.textContent.includes("Wrong price reported")));
+    await waitFor(() => expect(bell()).toHaveTextContent("1"));
+    await waitFor(() => expect(M.state.messages.find((m) => m.id === "m2").readAt).toBeTruthy());
+    expect(screen.getByTestId("unread-summary")).toHaveTextContent("1 unread");
   });
 
   it("filters by type", async () => {
