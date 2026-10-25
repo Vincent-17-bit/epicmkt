@@ -57,3 +57,53 @@
 .fit {
   justify-self: start;
 }
+
+.notice {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--info-border);
+  border-radius: var(--radius-card);
+  background: var(--info-bg);
+  color: var(--info-text);
+}
+
+.notice p {
+  margin: 0;
+}
+
+.steps {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.steps li[data-done="true"] {
+  color: var(--ok-text);
+  font-weight: 600;
+}
+
+.choice {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.radio {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.radio[data-disabled="true"] {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.radio input {
+  margin-top: 0.25rem;
+}

@@ -63,7 +63,7 @@ All admin writes go through edge functions (which check the JWT, the `admins` ro
 - `mock` (the default outside production): nothing is sent, the call succeeds with a `mock-...` provider id and an estimated cost, so the message log and dashboards work in development.
 - `live` (the default when `APP_ENV=production`): Africa's Talking (`AT_API_KEY`, `AT_USERNAME`, optional `AT_SENDER`; `AT_USERNAME=sandbox` uses the sandbox) and Resend (`RESEND_API_KEY`, `MAIL_FROM`). A missing secret is reported as `sms_not_configured` / `email_not_configured`, never as a fake success.
 
-The fixed development OTP `123456` (no SMS) is used only when `APP_ENV` is not `production` AND messaging is in `mock` mode. Production, or any environment with `MESSAGING_MODE=live`, issues a random code and sends it by SMS. Before switching it on, make sure `RESEND_API_KEY` and `MAIL_FROM` are set; the `SUPABASE_*` secrets are provided by Supabase. A failed OTP SMS is logged as `otp_sms_failed` with the provider error.
+The fixed development OTP `123456` (no SMS) is used only when `APP_ENV` is not `production` AND messaging is in `mock` mode. Production, or any environment with `MESSAGING_MODE=live`, issues a random code and sends it by SMS. Before switching it on, make sure `RESEND_API_KEY` and `MAIL_FROM` are set; the `SUPABASE_*` secrets are provided by Supabase. A failed OTP SMS is logged as `otp_sms_failed` with the provider error. Codes can also go by email (the seller's verified sign-in email), so `RESEND_API_KEY` and `MAIL_FROM` must be set for that option; see `docs/seller-sign-in.md`.
 
 The admin web app runs on built-in mock data while `VITE_SUPABASE_URL` is empty.
 

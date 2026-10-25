@@ -5,6 +5,9 @@ export const business = (b) => b && ({
   id: b.id, sellerId: b.seller_id, name: b.name, status: b.status, planKey: b.plan_key, categoryId: b.category_id,
   paidUntil: b.paid_until ?? null, verificationLevel: b.verification_level, announcement: b.announcement ?? null,
   creditKes: Number(b.credit_kes ?? 0), strikes: b.strikes ?? 0, statusReason: b.status_reason ?? null,
+  // Sign-in details. loginEmail is only ever set after the seller entered a code sent to it.
+  loginEmail: b.login_email ?? null, loginEmailVerified: !!b.login_email && !!b.login_email_verified_at,
+  mustChangePassword: !!b.must_change_password, passwordChangedAt: b.password_changed_at ?? null,
 });
 
 export const payment = (p) => ({

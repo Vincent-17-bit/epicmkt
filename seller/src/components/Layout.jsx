@@ -55,6 +55,17 @@ export function StrikeNotice({ strikes }) {
   );
 }
 
+// Shown while a seller is still on the temporary password we sent. Not a status role, so it never competes with page messages.
+export function SetupNotice() {
+  return (
+    <section className={`${ui.banner} ${ui.tone_info}`} aria-label="Finish setting up your sign-in" data-testid="setup-banner">
+      <h2>Finish setting up your sign-in</h2>
+      <p>You are using the temporary password we sent you. Add your email and choose your own password so you can sign in with them.</p>
+      <Link className={ui.link} to="/business/account">Go to Account</Link>
+    </section>
+  );
+}
+
 export default function Layout() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -149,6 +160,7 @@ export default function Layout() {
           </div>
         )}
         {!suspended && (business?.strikes ?? 0) > 0 && <StrikeNotice strikes={business.strikes} />}
+        {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
     </div>

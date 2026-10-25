@@ -96,7 +96,7 @@ export async function activateApplication(d: AdminDeps, o: Activation) {
   await queueMessages(d, [{ channel: "sms", to: a.phone }, { channel: "email", to: a.email }].map((m) => ({
     application_id: a.id, business_id: created!.businessId, channel: m.channel, kind: "general", template_key: "welcome", to_address: m.to,
     subject: m.channel === "email" ? "Welcome to EpicMKT" : null,
-    body: `Welcome to EpicMKT, ${a.business_name}! Your business page is live until ${formatDay(paidUntil)}. Log in with your Seller ID to add your items.`,
+    body: `Welcome to EpicMKT, ${a.business_name}! Your business page is live until ${formatDay(paidUntil)}. Log in with your Seller ID to add your items. Then add your email and choose your own password under Account.`,
     status: "queued", transactional: true, scheduled_at: now, created_by: actorId,
     dedupe_key: `welcome:${created!.businessId}:${m.channel}`,
   })));

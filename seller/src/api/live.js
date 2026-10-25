@@ -26,17 +26,23 @@ const rpc = async (name, args) => {
   return data;
 };
 
-export const login = async (sellerId, password) => {
-  const { session } = await fn("seller-login", { sellerId, password });
+// `identifier` is the seller's Seller ID, or their verified sign-in email.
+export const login = async (identifier, password) => {
+  const { session } = await fn("seller-login", { identifier, password });
   const { error } = await need().auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
   if (error) throw new ApiError("session_failed");
   return { expiresAt: session.expires_at };
 };
 export const logout = async () => { await need().auth.signOut(); };
-export const forgotRequest = (sellerId) => fn("seller-forgot-request", { sellerId });
-export const forgotVerify = ({ sellerId, code, newPassword }) => fn("seller-forgot-verify", { sellerId, code, newPassword });
-export const requestOtp = () => fn("seller-otp-request", { purpose: "change_password" });
+// `channel` is where the code goes: "sms" (Africa's Talking, to the phone on the listing) or "email" (the verified sign-in email).
+export const forgotRequest = ({ identifier, channel = "sms" }) => fn("seller-forgot-request", { identifier, channel });
+export const forgotVerify = ({ identifier, code, newPassword }) => fn("seller-forgot-verify", { identifier, code, newPassword });
+// A code to confirm a password change ("change_password", by `channel`), or to prove a new email is theirs ("verify_email", sent to `email`).
+export const requestOtp = ({ purpose = "change_password", channel = "sms", email } = {}) =>
+  fn("seller-otp-request", purpose === "verify_email" ? { purpose, email } : { purpose, channel });
 export const changePassword = ({ code, newPassword }) => fn("seller-change-password", { code, newPassword });
+// Saves the email the last "verify_email" code was sent to. Needs that code and the seller's current password.
+export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });

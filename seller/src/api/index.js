@@ -12,6 +12,7 @@ export const forgotRequest = (...a) => impl.forgotRequest(...a);
 export const forgotVerify = (...a) => impl.forgotVerify(...a);
 export const requestOtp = (...a) => impl.requestOtp(...a);
 export const changePassword = (...a) => impl.changePassword(...a);
+export const setLoginEmail = (...a) => impl.setLoginEmail(...a);
 export const updateProfile = (...a) => impl.updateProfile(...a);
 export const requestChange = (...a) => impl.requestChange(...a);
 export const cancelChange = (...a) => impl.cancelChange(...a);
