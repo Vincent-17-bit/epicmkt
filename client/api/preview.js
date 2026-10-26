@@ -27,7 +27,7 @@ export default async function handler(req) {
   const itemId = (url.searchParams.get("item") ?? "").trim();
 
   // /index.html is a real file, and Vercel serves files before rewrites, so this is the built shell and not this function.
-  const shellRes = await fetch(new URL("/index.html", origin)).catch(() => null);
+  const shellRes = await fetch(new URL("/index.html", url.origin)).catch(() => null);
   if (!shellRes?.ok) return new Response("Temporarily unavailable", { status: 502, headers: { "Cache-Control": "no-store" } });
   const shell = await shellRes.text();
 
