@@ -1,5 +1,6 @@
 // Wrapper around public.hit_rate_limit(p_key, p_max, p_window_seconds), a fixed window counter.
 import { HttpError } from "./errors.ts";
+import { isDbDown } from "./http.ts";
 
 // deno-lint-ignore no-explicit-any
 type Db = any;
@@ -18,6 +19,7 @@ function check(key: string, max: number, windowSeconds: number) {
 export async function hitRateLimit(db: Db, key: string, max: number, windowSeconds: number): Promise<boolean> {
   check(key, max, windowSeconds);
   const r = await db.rpc("hit_rate_limit", { p_key: key, p_max: max, p_window_seconds: windowSeconds });
+  if (r.error && isDbDown(r.error)) throw new HttpError(503, "unavailable", { retryAfter: 30 });
   if (r.error || typeof r.data !== "boolean") throw new HttpError(500, "server_error");
   return r.data;
 }

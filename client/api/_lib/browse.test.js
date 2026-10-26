@@ -93,7 +93,7 @@ describe("/api/browse", () => {
 
     vi.resetModules();
     const none = await call("op=search");
-    expect(none.status).toBe(502);
+    expect(none.status).toBe(503);
     expect(none.headers.get("Cache-Control")).toBe("no-store");
   });
 });

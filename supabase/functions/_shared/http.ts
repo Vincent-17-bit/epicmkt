@@ -1,3 +1,4 @@
+import { isHttpError } from "./errors.ts";
 import { deliverEmail, deliverSms, isProduction } from "./providers.ts";
 
 export const corsHeaders = () => ({
@@ -7,11 +8,36 @@ export const corsHeaders = () => ({
   "Vary": "Origin",
 });
 
-export const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
+export const json = (body: unknown, status = 200) => {
+  const retry = (body as { retryAfter?: unknown } | null)?.retryAfter;
+  return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders(), "Content-Type": "application/json", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" },
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      ...(status === 503 && typeof retry === "number" ? { "Retry-After": String(retry) } : {}),
+    },
   });
+};
+
+const DOWN_TEXT = /fetch failed|network|timed? ?out|econnrefused|econnreset|enotfound|connection (refused|reset|terminated)|upstream/i;
+
+export function isDbDown(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const x = e as { status?: unknown; code?: unknown; message?: unknown; name?: unknown; cause?: unknown };
+  if (x.status === 502 || x.status === 503 || x.status === 504) return true;
+  if (typeof x.code === "string" && /^(08|57P0|53300)/.test(x.code)) return true;
+  if (x.name === "AbortError" || x.name === "TimeoutError") return true;
+  if (typeof x.message === "string" && DOWN_TEXT.test(x.message)) return true;
+  return x.cause ? isDbDown(x.cause) : false;
+}
+
+export const unavailable = (retryAfter = 30) => json({ error: "unavailable", retryAfter }, 503);
+
+export const serverError = (e: unknown) =>
+  isDbDown(e) || (isHttpError(e) && e.status === 503) ? unavailable() : json({ error: "server_error" }, 500);
 
 export async function sha256Hex(s: string): Promise<string> {
   const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));

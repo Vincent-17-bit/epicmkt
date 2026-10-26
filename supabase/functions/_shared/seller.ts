@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
-import { clientIp, corsHeaders, escapeHtml, isProduction, json, sendSms, sha256Hex } from "./http.ts";
+import { clientIp, corsHeaders, escapeHtml, isDbDown, isProduction, json, sendSms, serverError, sha256Hex } from "./http.ts";
+import { HttpError } from "./errors.ts";
 import { deliverEmail } from "./providers.ts";
 import { cloudinaryConfigFromEnv, makeCloudinary, type CloudinaryClient } from "./cloudinary.ts";
 
@@ -57,8 +58,8 @@ export const wrap = (fn: (req: Request) => Promise<Response>) => async (req: Req
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
   try {
     return await fn(req);
-  } catch (_) {
-    return json({ error: "server_error" }, 500);
+  } catch (e) {
+    return serverError(e);
   }
 };
 
@@ -74,6 +75,7 @@ export const hashIp = (req: Request, salt: string) => sha256Hex(salt + clientIp(
 
 export async function rateOk(db: Db, key: string, max: number, seconds: number): Promise<boolean> {
   const r = await db.rpc("hit_rate_limit", { p_key: key, p_max: max, p_window_seconds: seconds });
+  if (r.error && isDbDown(r.error)) throw new HttpError(503, "unavailable", { retryAfter: 30 });
   return r.data === true;
 }
 

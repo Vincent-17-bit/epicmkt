@@ -1,7 +1,7 @@
 // Admin request scaffolding: auth (JWT -> admins row -> role), JSON parsing, rate limit and error mapping.
 // Browser code never sees the service role key; every admin write goes through a function built on this.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { corsHeaders, json } from "./http.ts";
+import { corsHeaders, isDbDown, json, serverError } from "./http.ts";
 import { HttpError, isHttpError } from "./errors.ts";
 import { ADMIN_ROLES, type AdminRole, isAdminRole, roleAllowed } from "./roles.ts";
 import { adminRateKey, enforceRateLimit } from "./ratelimit.ts";
@@ -43,6 +43,7 @@ export async function requireAdmin(req: Request, db: DbClient, allowed?: readonl
     .select("user_id, role")
     .eq("user_id", data.user.id)
     .maybeSingle();
+  if (adminErr && isDbDown(adminErr)) throw new HttpError(503, "unavailable", { retryAfter: 30 });
   if (adminErr) throw new HttpError(500, "server_error");
   const admin = row as { user_id: string; role: unknown } | null;
   if (!admin || !isAdminRole(admin.role)) throw new HttpError(403, "forbidden");
@@ -92,7 +93,7 @@ export function adminHandler(opts: AdminHandlerOptions, fn: (call: AdminCall) =>
     } catch (e) {
       if (isHttpError(e)) return json({ error: e.code, ...e.extra }, e.status);
       console.error(`[${opts.name}]`, e instanceof Error ? e.message : "unknown error");
-      return json({ error: "server_error" }, 500);
+      return serverError(e);
     }
   };
 }
