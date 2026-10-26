@@ -213,3 +213,21 @@ describe("pictures stored in Cloudinary", () => {
   });
 });
 
+describe("noindex pages and crawler files", () => {
+  it("replaces the shell's robots tag instead of adding a second one", () => {
+    const shell = '<html><head><title>x</title><meta name="robots" content="index, follow" /></head></html>';
+    const page = injectHead(shell, notFoundMeta({ origin }));
+    expect(page.match(/<meta name="robots"/g)).toHaveLength(1);
+    expect(page).toContain('content="noindex"');
+  });
+  it("keeps the shell's robots tag on an indexable page", () => {
+    const shell = '<html><head><title>x</title><meta name="robots" content="index, follow" /></head></html>';
+    const page = injectHead(shell, { title: "t", description: "d", canonical: `${origin}/b/x`, image: `${origin}/i.png`, imageAlt: "x", type: "website", jsonLd: null, noindex: false });
+    expect(page).toContain('content="index, follow"');
+  });
+  it("blocks private and transient pages in robots.txt and lists the featured page in the sitemap", () => {
+    const txt = robotsTxt(origin);
+    for (const path of ["/search", "/s/", "/offline", "/sell/register"]) expect(txt).toContain(`Disallow: ${path}`);
+    expect(buildSitemap({ origin, businesses: [], items: [] })).toContain(`${origin}/featured`);
+  });
+});

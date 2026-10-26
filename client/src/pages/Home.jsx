@@ -5,6 +5,8 @@ import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass, f
 import { getCategories } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { usePageMeta } from "../hooks/usePageMeta.js";
+import { useNoindex } from "../hooks/useRouteSeo.js";
 import Container from "../components/Container.jsx";
 import Button from "../components/Button.jsx";
 import Skeleton from "../components/Skeleton.jsx";
@@ -55,6 +57,9 @@ export default function Home() {
   const missing = Boolean(slug) && isSuccess && !category;
 
   usePageTitle(missing ? "Page not found" : category ? category.name : query ? `Search: ${query}` : isSearch ? (isNewest ? "Recently added" : "All businesses") : undefined);
+
+  usePageMeta(category ? { description: `Browse ${category.name} listings across Kenya on EpicMKT. Call, WhatsApp or get directions in one tap.`, path: `/c/${category.id}` } : undefined);
+  useNoindex(missing);
 
   if (missing) return <NotFound />;
 

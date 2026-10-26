@@ -3,9 +3,11 @@ import { faMagnifyingGlass, faHouse } from "@fortawesome/free-solid-svg-icons";
 import StatusPage from "../components/StatusPage.jsx";
 import Button from "../components/Button.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { useNoindex } from "../hooks/useRouteSeo.js";
 
 export default function NotFound() {
   usePageTitle("Page not found");
+  useNoindex();
   return (
     <StatusPage
       icon={faMagnifyingGlass}

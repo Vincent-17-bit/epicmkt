@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { savedScroll, saveScroll } from "../lib/resultsMemory.js";
 import { useUiStore } from "../stores/ui.js";
 import { useGeoStore } from "../stores/geo.js";
+import { useRouteSeo } from "../hooks/useRouteSeo.js";
 import LocationDialog from "./LocationDialog.jsx";
 import Toaster from "./Toaster.jsx";
 import Header from "./Header.jsx";
@@ -21,6 +22,8 @@ export default function Layout() {
   const searchOpen = useUiStore((s) => s.searchOpen);
   const layered = menuOpen || searchOpen;
   const behind = layered ? { inert: "", "aria-hidden": true } : {};
+
+  useRouteSeo();
 
   useEffect(() => {
     useGeoStore.getState().restore();

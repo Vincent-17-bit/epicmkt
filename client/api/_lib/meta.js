@@ -158,6 +158,8 @@ export function injectHead(html, meta) {
     .replace(/<meta\s+name="description"[^>]*>/i, `<meta name="description" content="${esc(meta.description)}" />`);
   // Drop any share tags the shell already carries so crawlers never see two of them.
   out = out.replace(/<link\s+rel="canonical"[^>]*>/gi, "").replace(/<meta\s+(?:property="og:|name="twitter:)[^>]*>/gi, "");
+  // A noindex page must not also carry the shell's "index, follow", or crawlers see two answers.
+  if (meta.noindex) out = out.replace(/<meta\s+name="robots"[^>]*>/gi, "");
   return out.replace(/<\/head>/i, `    ${headTags(meta)}\n  </head>`);
 }
 
@@ -165,7 +167,7 @@ const XML = (value) => esc(value);
 
 export const SITEMAP_LIMIT = 50000;
 
-export const STATIC_PATHS = ["/", "/flash", "/offers", "/sell", "/become-a-seller", "/about", "/contact", "/faq", "/privacy", "/terms", "/cookies"];
+export const STATIC_PATHS = ["/", "/flash", "/offers", "/featured", "/sell", "/become-a-seller", "/about", "/contact", "/faq", "/privacy", "/terms", "/cookies"];
 
 const day = (value) => {
   const time = Date.parse(value ?? "");
@@ -187,4 +189,4 @@ export function buildSitemap({ origin, businesses, items, categoryIds = [] }) {
 }
 
 export const robotsTxt = (origin) =>
-  `User-agent: *\nAllow: /\nDisallow: /seller/\nDisallow: /admin/\nDisallow: /search\n\nSitemap: ${origin}/sitemap.xml\n`;
+  `User-agent: *\nAllow: /\nDisallow: /seller/\nDisallow: /admin/\nDisallow: /search\nDisallow: /s/\nDisallow: /offline\nDisallow: /sell/register\nDisallow: /become-a-seller/status\n\nSitemap: ${origin}/sitemap.xml\n`;

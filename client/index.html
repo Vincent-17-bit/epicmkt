@@ -20,21 +20,52 @@
         for (var i = 0; i < metas.length; i++) metas[i].setAttribute("content", dark ? "#111111" : "#FFFFFF");
       })();
     </script>
+    <title>EpicMKT: Find local businesses in Kenya</title>
     <meta name="description" content="Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions." />
+    <meta name="keywords" content="__KEYWORDS__" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="author" content="EpicMKT" />
+    <meta name="application-name" content="EpicMKT" />
+    <meta name="apple-mobile-web-app-title" content="EpicMKT" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="geo.region" content="KE" />
+    <meta name="geo.placename" content="Kenya" />
+    <!--SEO_VERIFY-->
+    <!-- No canonical or og:url here on purpose: one fixed value would tell search engines every page is the homepage.
+         The app sets them for each page (client/src/hooks/useRouteSeo.js); the server does it for store and item pages. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="__SITE_URL__/sitemap.xml" />
     <meta property="og:site_name" content="EpicMKT" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="EpicMKT: Find local businesses in Kenya" />
     <meta property="og:description" content="Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions." />
-    <meta property="og:image" content="__SITE_URL__/icon-512.png" />
+    <meta property="og:image" content="__SITE_URL__/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="EpicMKT: find local businesses in Kenya" />
     <meta property="og:locale" content="en_KE" />
-    <meta name="twitter:card" content="summary" />
-    <title>EpicMKT: Find local businesses in Kenya</title>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="EpicMKT: Find local businesses in Kenya" />
+    <meta name="twitter:description" content="Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions." />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.png" />
+    <meta name="twitter:image:alt" content="EpicMKT: find local businesses in Kenya" />
+    <!--SEO_JSONLD-->
   </head>
   <body>
     <div id="root"></div>
-    <noscript>EpicMKT needs JavaScript to run.</noscript>
+    <noscript>
+      <h1>EpicMKT: Find local businesses in Kenya</h1>
+      <p>
+        EpicMKT is a directory of local businesses in Kenya. Find barbershops, water refill points, chemists, agrovets, gyms and more
+        near you, then call, message on WhatsApp or get directions. EpicMKT needs JavaScript to run.
+      </p>
+      <p><a href="/about">About EpicMKT</a> · <a href="/faq">FAQ</a> · <a href="/sell">List your business</a> · <a href="/contact">Contact</a></p>
+    </noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

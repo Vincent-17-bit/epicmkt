@@ -30,7 +30,13 @@ export async function restAll(path, { page = 1000, max = 50000 } = {}) {
   return rows;
 }
 
-export const siteOrigin = (req) => String(env("VITE_SITE_URL") || new URL(req.url).origin).replace(/\/$/, "");
+// The address search engines should treat as the site's own: VITE_SITE_URL, else the production domain Vercel reports (it becomes
+// your own domain once you add one to the project), else whatever host this request came in on.
+const withScheme = (value) => (/^https?:\/\//i.test(value) ? value : `https://${value}`);
+export const siteOrigin = (req) => {
+  const set = String(env("VITE_SITE_URL") || "").trim() || String(env("VERCEL_PROJECT_PRODUCTION_URL") || "").trim();
+  return (set ? withScheme(set) : new URL(req.url).origin).replace(/\/+$/, "");
+};
 
 // Calls a Postgres function (RPC) with the anon key. One round trip instead of paging through whole tables.
 export async function rpc(name, args = {}, { timeoutMs = 8000 } = {}) {

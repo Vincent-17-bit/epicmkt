@@ -5,10 +5,12 @@ import { faCircleQuestion, faClipboardCheck } from "@fortawesome/free-solid-svg-
 import Logo from "../../components/Logo.jsx";
 import Skeleton from "../../components/Skeleton.jsx";
 import { useBrowserTheme } from "./useBrowserTheme.js";
+import { useRouteSeo } from "../../hooks/useRouteSeo.js";
 import styles from "./layout.module.css";
 
 export default function PublicSellerLayout() {
   useBrowserTheme();
+  useRouteSeo();
   return (
     <div className={styles.root} id="seller-scroll">
       <header className={styles.header}>
