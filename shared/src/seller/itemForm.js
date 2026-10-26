@@ -10,6 +10,33 @@ const money = (raw) => {
   return value > 9999999999.99 ? { error: true } : { value };
 };
 
+export const SPEC_LIMITS = { rows: 20, label: 40, value: 120 };
+
+const cleanSpecs = (raw) => {
+  const specs = [];
+  const errors = {};
+  const seen = new Set();
+  (Array.isArray(raw) ? raw : []).forEach((row, index) => {
+    const label = String(row?.label ?? "").trim();
+    const value = String(row?.value ?? "").trim();
+    if (!label && !value) return;
+    const rowErrors = {};
+    if (!label) rowErrors.label = "Add a label.";
+    else if (label.length > SPEC_LIMITS.label) rowErrors.label = `Use ${SPEC_LIMITS.label} characters or fewer.`;
+    if (!value) rowErrors.value = "Add a value.";
+    else if (value.length > SPEC_LIMITS.value) rowErrors.value = `Use ${SPEC_LIMITS.value} characters or fewer.`;
+    if (Object.keys(rowErrors).length) {
+      errors[index] = rowErrors;
+      return;
+    }
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    specs.push({ label, value });
+  });
+  return { specs, errors };
+};
+
 export const validateItemForm = (f) => {
   const errors = {};
   const name = String(f.name ?? "").trim();
@@ -58,11 +85,14 @@ export const validateItemForm = (f) => {
       else saleValue = sale.value;
     }
   }
+  const cleaned = cleanSpecs(f.specs);
+  if (Object.keys(cleaned.errors).length) errors.specs = cleaned.errors;
+  if (cleaned.specs.length > SPEC_LIMITS.rows) errors.specsCount = `Use ${SPEC_LIMITS.rows} rows or fewer.`;
   if (Object.keys(errors).length) return { ok: false, errors };
-  return { ok: true, value: { name, description, section, unit, priceType: f.priceType, price: priceValue, priceMax: maxValue, salePrice: saleValue, availability: f.availability, trackStock, stockCount, lowStockThreshold, showStockCount: trackStock && Boolean(f.showStockCount) } };
+  return { ok: true, value: { name, description, section, unit, priceType: f.priceType, price: priceValue, priceMax: maxValue, salePrice: saleValue, availability: f.availability, trackStock, stockCount, lowStockThreshold, showStockCount: trackStock && Boolean(f.showStockCount), ...(Array.isArray(f.specs) && { specs: cleaned.specs }) } };
 };
 
-export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false });
+export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false, specs: [] });
 
 export const formFromItem = (i) => ({
   name: i.name, description: i.description ?? "", section: i.section ?? "", unit: i.unit ?? "", priceType: i.priceType,
@@ -71,4 +101,5 @@ export const formFromItem = (i) => ({
   availability: STATUS_CHOICES.some((c) => c.key === statusForForm(i.availability)) ? statusForForm(i.availability) : "available",
   trackStock: Boolean(i.trackStock), stockCount: i.stockCount === null || i.stockCount === undefined ? "" : String(i.stockCount),
   lowStockThreshold: String(i.lowStockThreshold ?? 3), showStockCount: Boolean(i.showStockCount),
+  specs: (Array.isArray(i.specs) ? i.specs : []).map((s) => ({ label: s?.label ?? "", value: s?.value ?? "" })),
 });

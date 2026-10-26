@@ -257,7 +257,7 @@ function resetBilling() {
   const mk = (n, id, name, price, priceType, availability, visible, extra = {}) => ({
     id, name, price, priceType, availability, visible, hiddenByAdmin: false,
     description: "", section: null, priceMax: null, unit: null, salePrice: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false,
-    availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [],
+    availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [], specs: [],
     priceConfirmedAt: ISO(now - 5 * DAY), createdAt: ISO(now - (60 - n) * DAY), updatedAt: ISO(now - (30 - n) * DAY), imageCount: 1, imagePaths: [`demo/${id}.webp`], hasVideo: false, ...extra,
   });
   bill.items = [
@@ -546,7 +546,7 @@ export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount) };
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount), ...(Array.isArray(f.specs) && { specs: copy(f.specs) }) };
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
@@ -556,7 +556,7 @@ export const saveItem = async (id, f) => {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, specs: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };
@@ -654,7 +654,7 @@ export const importItems = async (rows) => {
     id: `it-imp-${++bill.seq}`, name: r.name, price: r.price ?? null, priceMax: r.price_max ?? null, priceType: r.price_type, unit: r.unit ?? null, salePrice: null,
     availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
     section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),
-    tags: r.tags ?? [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
+    tags: r.tags ?? [], badge: null, variants: [], specs: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
   }));
   bill.items.push(...made);
   return { created: made.length };

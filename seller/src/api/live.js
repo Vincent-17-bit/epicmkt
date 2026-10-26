@@ -322,6 +322,7 @@ const itemRow = (f) => ({
   name: f.name, description: f.description || null, section: f.section || null, price_type: f.priceType, price: f.price, price_max: f.priceMax ?? null,
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
   track_stock: Boolean(f.trackStock), stock_count: f.trackStock ? f.stockCount : null, low_stock_threshold: f.lowStockThreshold ?? 3, show_stock_count: Boolean(f.showStockCount),
+  ...(Array.isArray(f.specs) && { specs: f.specs }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([

@@ -83,7 +83,7 @@ export const catalogItem = (i) => ({
   adminHideReason: i.admin_hide_reason ?? i.admin_reason ?? null, tags: i.tags ?? [], badge: i.badge ?? null, variants: i.variants ?? [],
   priceConfirmedAt: i.price_confirmed_at ?? null, createdAt: i.created_at, updatedAt: i.updated_at,
   imagePaths: i.image_paths ?? [], imageCount: (i.image_paths ?? []).length, hasVideo: !!i.has_video,
-  inFlashSale: !!i.in_flash_sale,
+  inFlashSale: !!i.in_flash_sale, specs: Array.isArray(i.specs) ? i.specs : [],
 });
 
 const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;

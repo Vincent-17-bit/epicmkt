@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { SELLER_API } from "./contract.js";
 import * as mock from "./mock.js";
+import * as shape from "./shape.js";
 
 const exportsOf = (file) => [...readFileSync(new URL(file, import.meta.url), "utf8").matchAll(/export const (\w+)/g)].map((m) => m[1]);
 
@@ -31,4 +32,31 @@ test("the mock enforces lockout, password rules and the allow-list", async () =>
   await assert.rejects(mock.requestChange("town", "Nairobi"), { code: "change_already_pending" });
   assert.equal(await mock.pauseListing(true), "paused");
   await assert.rejects(mock.pauseListing(true), { code: "invalid_status" });
+});
+
+test("specs: the mock stores and returns them, and items without specs are unchanged", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
+  assert.deepEqual((await find("it-fade")).specs, []);
+  const item = await find("it-fade");
+  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  await mock.saveItem("it-fade", { ...form, specs: [{ label: "Brand", value: "Nike" }] });
+  assert.deepEqual((await find("it-fade")).specs, [{ label: "Brand", value: "Nike" }]);
+  await mock.saveItem("it-fade", form);
+  assert.deepEqual((await find("it-fade")).specs, [{ label: "Brand", value: "Nike" }]);
+  await mock.saveItem("it-fade", { ...form, specs: [] });
+  assert.deepEqual((await find("it-fade")).specs, []);
+  const id = await mock.saveItem(null, { ...form, specs: [{ label: "Size", value: "42" }] });
+  assert.deepEqual((await find(id)).specs, [{ label: "Size", value: "42" }]);
+  const copyId = await mock.duplicateItem(id);
+  assert.deepEqual((await find(copyId)).specs, [{ label: "Size", value: "42" }]);
+  const bare = await mock.saveItem(null, form);
+  assert.deepEqual((await find(bare)).specs, []);
+});
+
+test("specs: the live shape returns them the same way the mock does", () => {
+  const row = { id: "i1", name: "A", price_type: "fixed", availability: "available", created_at: "2026-01-01" };
+  assert.deepEqual(shape.catalogItem(row).specs, []);
+  assert.deepEqual(shape.catalogItem({ ...row, specs: [{ label: "Size", value: "42" }] }).specs, [{ label: "Size", value: "42" }]);
 });

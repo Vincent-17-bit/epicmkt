@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateItemForm, emptyItemForm, formFromItem } from "./itemForm.js";
+import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS } from "./itemForm.js";
 
 const base = { ...emptyItemForm(), name: "Fade cut", price: "500" };
 
@@ -56,4 +56,51 @@ test("'unavailable' is not offered; the form shows it as out of stock", () => {
   assert.equal(validateItemForm({ ...base, availability: "unavailable" }).ok, false);
   const f = formFromItem({ name: "Old", priceType: "fixed", price: 1, availability: "unavailable", trackStock: true, stockCount: 0, lowStockThreshold: 4, showStockCount: true });
   assert.deepEqual([f.availability, f.trackStock, f.stockCount, f.lowStockThreshold, f.showStockCount], ["out_of_stock", true, "0", "4", true]);
+});
+
+const specs = (rows) => validateItemForm({ ...base, specs: rows });
+
+test("specs: trimmed, blank rows dropped, order kept", () => {
+  const r = specs([{ label: "  Brand ", value: " Nike " }, { label: "", value: "  " }, { label: "Size", value: "42" }]);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value.specs, [{ label: "Brand", value: "Nike" }, { label: "Size", value: "42" }]);
+  assert.deepEqual(specs([]).value.specs, []);
+});
+
+test("specs: duplicate labels are dropped case-insensitively, first kept", () => {
+  const r = specs([{ label: "Colour", value: "Red" }, { label: "size", value: "M" }, { label: " COLOUR ", value: "Blue" }, { label: "Size", value: "L" }]);
+  assert.deepEqual(r.value.specs, [{ label: "Colour", value: "Red" }, { label: "size", value: "M" }]);
+});
+
+test("specs: a one-sided row is an error on that row index", () => {
+  const r = specs([{ label: "Brand", value: "Nike" }, { label: "Size", value: "" }, { label: "", value: "42" }, { label: "", value: "" }]);
+  assert.equal(r.ok, false);
+  assert.deepEqual(Object.keys(r.errors.specs), ["1", "2"]);
+  assert.ok(r.errors.specs[1].value);
+  assert.equal(r.errors.specs[1].label, undefined);
+  assert.ok(r.errors.specs[2].label);
+  assert.equal(r.errors.specs[2].value, undefined);
+});
+
+test("specs: label, value and row limits", () => {
+  assert.equal(specs([{ label: "l".repeat(SPEC_LIMITS.label), value: "v".repeat(SPEC_LIMITS.value) }]).ok, true);
+  const long = specs([{ label: "a", value: "b" }, { label: "l".repeat(SPEC_LIMITS.label + 1), value: "v".repeat(SPEC_LIMITS.value + 1) }]);
+  assert.deepEqual(Object.keys(long.errors.specs), ["1"]);
+  assert.ok(long.errors.specs[1].label);
+  assert.ok(long.errors.specs[1].value);
+  const rows = (n) => Array.from({ length: n }, (_, i) => ({ label: `L${i}`, value: "v" }));
+  assert.equal(specs(rows(SPEC_LIMITS.rows)).ok, true);
+  assert.ok(specs(rows(SPEC_LIMITS.rows + 1)).errors.specsCount);
+  const dupes = [...rows(SPEC_LIMITS.rows), { label: "l0", value: "x" }];
+  assert.equal(specs(dupes).ok, true);
+});
+
+test("specs are optional: none given, none returned, and the form round-trips", () => {
+  const { specs: omitted, ...noSpecs } = base;
+  assert.equal("specs" in validateItemForm(noSpecs).value, false);
+  assert.deepEqual(emptyItemForm().specs, []);
+  const plain = formFromItem({ name: "A cut", priceType: "fixed", price: 300, availability: "available" });
+  assert.deepEqual(plain.specs, []);
+  const f = formFromItem({ name: "Shoe", priceType: "fixed", price: 300, availability: "available", specs: [{ label: "Size", value: "42" }] });
+  assert.deepEqual(validateItemForm(f).value.specs, [{ label: "Size", value: "42" }]);
 });
