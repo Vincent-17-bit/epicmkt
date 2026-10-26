@@ -183,7 +183,7 @@
   color: inherit;
   font-weight: 600;
   text-decoration: none;
-  transition: background-color var(--dur) ease;
+  transition: background-color var(--dur) ease, color var(--dur) ease, transform var(--dur) ease;
 }
 
 .link {
@@ -197,10 +197,8 @@
 .link:focus-visible {
   background: var(--primary-tint);
   color: var(--footer-accent);
-  text-decoration: underline;
-  text-decoration-color: var(--footer-accent);
-  text-decoration-thickness: 2px;
-  text-underline-offset: 4px;
+  outline: 2px solid var(--footer-accent);
+  outline-offset: -2px;
 }
 
 @media (hover: hover) {
@@ -208,10 +206,7 @@
   .link:hover {
     background: var(--primary-tint);
     color: var(--footer-accent);
-    text-decoration: underline;
-    text-decoration-color: var(--footer-accent);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
+    transform: translateX(2px);
   }
 
   .social:hover {
