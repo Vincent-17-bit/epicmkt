@@ -1,15 +1,18 @@
 import { useMemo, useState } from "react";
-import { formatKes } from "@epicmkt/shared";
+import { formatKes, listedOnly } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import LazyImage from "../components/LazyImage.jsx";
 import OfferChip from "../components/OfferChip.jsx";
+import StockTag from "../components/StockTag.jsx";
 import BusinessSection from "./BusinessSection.jsx";
 import { groupServices } from "./groupServices.js";
 import ServiceFilter from "./ServiceFilter.jsx";
 import { EMPTY_FILTERS, applyServiceFilters, buildFacets, countActive } from "./serviceFilters.js";
 import styles from "./Services.module.css";
 
-export default function Services({ services, hitSection, mode = "live", onOpenItem }) {
+export default function Services({ services: all, hitSection, mode = "live", onOpenItem, labels }) {
+  // Out of stock items are not listed to customers. The database already leaves them out; this keeps one from showing.
+  const services = useMemo(() => listedOnly(all), [all]);
   const preview = isPreview(mode);
   const act = actionProps(preview);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -50,6 +53,7 @@ export default function Services({ services, hitSection, mode = "live", onOpenIt
                   <span className={styles.serviceMedia}>
                     <LazyImage src={svc.imageUrl} ratio="4 / 3" className={styles.serviceImg} width={480} />
                     <OfferChip offer={svc.offer} className={styles.serviceOffer} />
+                    <StockTag item={svc} labels={labels} className={styles.stockTag} onPicture />
                   </span>
                   <span className={styles.serviceText}>
                     <span className={styles.h3}>{svc.name}</span>

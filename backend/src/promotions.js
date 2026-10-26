@@ -1,6 +1,9 @@
-import { BUSINESS_STATUS, chipOf, liveOffers, offerAvailableNow, offerPhase, offerProductCount, offersByItem } from "@epicmkt/shared";
+import { isListed, BUSINESS_STATUS, chipOf, liveOffers, offerAvailableNow, offerPhase, offerProductCount, offersByItem } from "@epicmkt/shared";
 import { store } from "./store.js";
 import { now } from "./clock.js";
+
+// A product customers can be shown: not taken down by its seller and not out of stock.
+const isPublicSvc = (svc) => svc.status !== "unlisted" && isListed(svc);
 
 const salePriceFor = (discount, regular) => {
   const raw =
@@ -67,7 +70,7 @@ export function liveOffersFor(item, business, at = now()) {
 
 // Offers that are showing now anywhere in a store, on products customers can see.
 export function liveStoreOffers(business, at = now()) {
-  const listed = new Set(business.services.filter((svc) => svc.status !== "unlisted").map((svc) => svc.id));
+  const listed = new Set(business.services.filter((svc) => isPublicSvc(svc)).map((svc) => svc.id));
   return liveOffers(businessOffers(business), at).filter((offer) => offer.items.some((entry) => listed.has(entry.itemId)));
 }
 
@@ -80,7 +83,7 @@ export function offerChipFor(item, business, at = now()) {
 // The store card's Offer chip counts products that have an offer, not offers.
 export function promoCountsFor(business, at = now()) {
   if (!business) return { flash: 0, offers: 0 };
-  const items = business.services.filter((svc) => svc.status !== "unlisted");
+  const items = business.services.filter((svc) => isPublicSvc(svc));
   const flash = items.filter((svc) => liveSaleFor({ id: svc.id, status: svc.status ?? "listed" }, business, at)).length;
   const listed = new Set(items.map((svc) => svc.id));
   const offers = offerProductCount(
@@ -95,7 +98,7 @@ export const offerProducts = (offer, business) =>
   offer.items
     .map((entry) => {
       const svc = business.services.find((x) => x.id === entry.itemId);
-      return svc && svc.status !== "unlisted"
+      return svc && isPublicSvc(svc)
         ? { id: svc.id, name: svc.name, imageUrl: svc.imageUrl ?? null, price: Number.isFinite(svc.priceKes) ? svc.priceKes : null, role: entry.role }
         : null;
     })

@@ -9,7 +9,7 @@ import * as api from "../../../api/index.js";
 import { M, signedInApp, setTime } from "../../../test/utils.jsx";
 import { cardItemOf } from "./cardItem.js";
 
-const LABELS = { was: "Was", availability: (k) => ({ available: "Available", limited: "Limited", unavailable: "Unavailable" })[k] };
+const LABELS = { was: "Was", lowStock: "Low stock", onlyLeft: "Only {n} left" };
 const realMatchMedia = window.matchMedia;
 
 const media = (desktop) => {
@@ -21,6 +21,8 @@ const names = () => screen.queryAllByTestId("listing").map((li) => li.querySelec
 const ids = () => screen.queryAllByTestId("listing").map((li) => li.dataset.id);
 const count = () => screen.getByTestId("result-count").textContent;
 const ready = async () => screen.findByTestId("listing-grid");
+const gone = () => within(screen.getByTestId("out-of-stock-grid")).queryAllByTestId("listing").map((li) => li.dataset.id);
+const live = () => within(screen.getByTestId("listing-grid")).queryAllByTestId("listing").map((li) => li.dataset.id);
 const card = (id) => screen.getAllByTestId("listing").find((li) => li.dataset.id === id);
 const tile = (key) => screen.getByTestId(`tile-${key}`);
 const go = async (user, get) => {
@@ -67,7 +69,8 @@ describe("listing cards and summary", () => {
     const seller = first.querySelector("[data-card]");
     const bare = render(<ItemCard item={cardItemOf(M.state.items[0])} labels={LABELS} />).container.querySelector("[data-card]");
     expect(seller.outerHTML).toBe(bare.outerHTML);
-    expect(within(first).getAllByText("Available")).toHaveLength(2);
+    // Available is the normal state, so the card says it once (the seller's own chip) and the customer card says nothing.
+    expect(within(first).getAllByText("Available")).toHaveLength(1);
     expect(within(first).getByRole("button", { name: /^Edit/ })).toBeInTheDocument();
     const menu = await openMenu(userEvent.setup(), "it-fade");
     for (const label of ["Duplicate", "Hide", "Confirm price", "View as customer"]) {
@@ -79,7 +82,8 @@ describe("listing cards and summary", () => {
     await open();
     await ready();
     const strip = screen.getByTestId("showing-summary");
-    expect(strip).toHaveTextContent("5 of 6 items are showing to customers");
+    expect(strip).toHaveTextContent("4 of 6 items are showing to customers");
+    expect(strip).toHaveTextContent("1 out of stock");
     expect(strip).toHaveTextContent("1 hidden by you");
   });
 
@@ -106,7 +110,7 @@ describe("listing cards and summary", () => {
     const user = userEvent.setup();
     expect(within(await openMenu(user, "it-fade")).getByRole("menuitem", { name: /^Hide/ })).toBeDisabled();
     expect(within(card("it-beard")).getByRole("button", { name: /^Edit/ })).toBeDisabled();
-    expect(screen.getByTestId("showing-summary")).toHaveTextContent("2 of 6 items are showing to customers");
+    expect(screen.getByTestId("showing-summary")).toHaveTextContent("1 of 6 items are showing to customers");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("2 hidden by admin");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("1 draft");
   });
@@ -116,7 +120,7 @@ describe("listing cards and summary", () => {
     await ready();
     expect(screen.getByTestId("shop-not-live")).toHaveTextContent("Your shop is not live");
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("0 of 6 items are showing to customers");
-    expect(screen.getByTestId("showing-summary")).toHaveTextContent("5 not showing because your shop is not live");
+    expect(screen.getByTestId("showing-summary")).toHaveTextContent("4 not showing because your shop is not live");
   });
 
   it("opens the shop preview from View as customer", async () => {
@@ -212,11 +216,13 @@ describe("tracker, search, filters and sort", () => {
     fireEvent.change(sort, { target: { value: "name_desc" } });
     await waitFor(() => expect(ids()[0]).toBe("it-quote"));
     fireEvent.change(sort, { target: { value: "price_desc" } });
-    await waitFor(() => expect(ids().slice(0, 3)).toEqual(["it-dye", "it-fade", "it-gel"]));
+    await waitFor(() => expect(live().slice(0, 3)).toEqual(["it-dye", "it-fade", "it-beard"]));
+    // The out of stock item (it-gel) is in its own section whatever the sort.
+    expect(gone()).toEqual(["it-gel"]);
     fireEvent.change(sort, { target: { value: "avail_out_first" } });
-    await waitFor(() => expect(ids()[0]).toBe("it-gel"));
+    await waitFor(() => expect(gone()).toEqual(["it-gel"]));
     fireEvent.change(sort, { target: { value: "stale_first" } });
-    await waitFor(() => expect(ids()[0]).toBe("it-gel"));
+    await waitFor(() => expect(gone()).toEqual(["it-gel"]));
   });
 
   it("restores filters, search and sort from the URL", async () => {
@@ -667,5 +673,117 @@ describe("empty states", () => {
     expect(empty).toHaveTextContent("No items match");
     await user.click(within(empty).getByRole("button", { name: "Clear filters" }));
     await waitFor(() => expect(screen.getAllByTestId("listing")).toHaveLength(6));
+  });
+});
+
+describe("out of stock", () => {
+  it("keeps out of stock items together in their own section, away from the live items", async () => {
+    await open();
+    await ready();
+    expect(live()).not.toContain("it-gel");
+    expect(gone()).toEqual(["it-gel"]);
+    const section = screen.getByTestId("out-of-stock-section");
+    expect(within(section).getByRole("heading", { name: /Out of stock/ })).toBeInTheDocument();
+    expect(within(section).getByText(/Customers cannot see these/)).toBeInTheDocument();
+    expect(within(within(section).getByTestId("listing")).getByRole("button", { name: /^Back in stock/ })).toBeInTheDocument();
+  });
+
+  it("has no out of stock section when nothing is out of stock", async () => {
+    await open("/business/catalog", async () => { M.state.items.find((i) => i.id === "it-gel").availability = "available"; M.state.items.find((i) => i.id === "it-gel").stockCount = 5; });
+    await ready();
+    expect(screen.queryByTestId("out-of-stock-section")).toBeNull();
+  });
+
+  it("marks an item out of stock from its menu, and brings it back with one tap", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    const menu = await openMenu(user, "it-fade");
+    await user.click(within(menu).getByRole("menuitem", { name: "Mark out of stock" }));
+    await waitFor(() => expect(gone()).toContain("it-fade"));
+    expect(M.state.items.find((i) => i.id === "it-fade").availability).toBe("out_of_stock");
+    expect(live()).not.toContain("it-fade");
+    expect(await screen.findByText(/Fade cut is out of stock/)).toBeInTheDocument();
+
+    await user.click(within(card("it-fade")).getByRole("button", { name: /^Back in stock/ }));
+    await waitFor(() => expect(live()).toContain("it-fade"));
+    expect(M.state.items.find((i) => i.id === "it-fade").availability).toBe("available");
+  });
+
+  it("does not offer Mark out of stock on an item that already is", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    const menu = await openMenu(user, "it-gel");
+    expect(within(menu).queryByRole("menuitem", { name: "Mark out of stock" })).toBeNull();
+  });
+
+  it("asks how many you have for an item whose stock is counted, and will not accept 0", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(within(card("it-gel")).getByRole("button", { name: /^Back in stock/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Back in stock" });
+    const apply = within(dialog).getByRole("button", { name: "List it again" });
+    expect(apply).toBeDisabled();
+    await user.type(within(dialog).getByLabelText("Stock count"), "0");
+    expect(apply).toBeDisabled();
+    await user.clear(within(dialog).getByLabelText("Stock count"));
+    await user.type(within(dialog).getByLabelText("Stock count"), "12");
+    await user.click(apply);
+    await waitFor(() => expect(live()).toContain("it-gel"));
+    expect(M.state.items.find((i) => i.id === "it-gel")).toMatchObject({ stockCount: 12, availability: "available" });
+  });
+
+  it("lists an item as low stock when the count is at or under the warning level", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(within(card("it-gel")).getByRole("button", { name: /^Back in stock/ }));
+    const dialog = await screen.findByRole("dialog", { name: "Back in stock" });
+    await user.type(within(dialog).getByLabelText("Stock count"), "2");
+    await user.click(within(dialog).getByRole("button", { name: "List it again" }));
+    await waitFor(() => expect(M.state.items.find((i) => i.id === "it-gel").availability).toBe("limited_stock"));
+    await waitFor(() => expect(live()).toContain("it-gel"));
+    expect(within(card("it-gel")).getByText("Low stock")).toBeInTheDocument();
+  });
+});
+
+describe("stock fields in the item form", () => {
+  const openForm = async (user) => {
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    return screen.findByRole("dialog", { name: "Add item" });
+  };
+
+  it("offers Available, Low stock, Out of stock and By appointment, and not Unavailable", async () => {
+    const dialog = await openForm(userEvent.setup());
+    const labels = [...within(dialog).getByLabelText("Availability").options].map((o) => o.textContent);
+    expect(labels).toEqual(["Available", "Low stock", "Out of stock", "By appointment"]);
+  });
+
+  it("saves a counted item, and the count decides its status", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    await user.type(within(dialog).getByLabelText("Name"), "Fresh cake");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "900");
+    await user.click(within(dialog).getByLabelText("Count my stock"));
+    expect(within(dialog).queryByLabelText("Availability")).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(await within(dialog).findByText(/Enter how many you have/)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("How many do you have now?"), "2");
+    expect(within(dialog).getByTestId("stock-result")).toHaveTextContent("Low stock");
+    await user.click(within(dialog).getByLabelText(/show customers how many are left/));
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Fresh cake", trackStock: true, stockCount: 2, showStockCount: true, availability: "limited_stock" }));
+  });
+
+  it("shows Out of stock for a count of 0 before saving", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    await user.click(within(dialog).getByLabelText("Count my stock"));
+    await user.type(within(dialog).getByLabelText("How many do you have now?"), "0");
+    expect(within(dialog).getByTestId("stock-result")).toHaveTextContent("Out of stock");
   });
 });

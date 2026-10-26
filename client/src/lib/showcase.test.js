@@ -38,19 +38,14 @@ describe("pickFresh", () => {
 });
 
 describe("pickProducts", () => {
-  it("prefers products with a picture that are in stock, even when others were never shown", () => {
-    const pool = [
-      product("sold", { availability: "out_of_stock" }),
-      product("bare", { imageUrl: null }),
-      product("ok1"),
-      product("ok2")
-    ];
+  it("prefers products with a picture, even when a bare one was never shown", () => {
+    const pool = [product("bare", { imageUrl: null }), product("ok1"), product("ok2"), product("ok3")];
     const seen = memory();
-    seen.mark("p", ["ok1", "ok2"]);
+    seen.mark("p", ["ok1", "ok2", "ok3"]);
     const out = pickProducts(pool, { seen, count: 3 }).map((p) => p.id);
-    expect(out.slice(0, 2).sort()).toEqual(["ok1", "ok2"]);
-    expect(out[2]).toBe("sold");
-    expect(productTier(pool[1])).toBe(2);
+    expect(out.sort()).toEqual(["ok1", "ok2", "ok3"]);
+    expect(productTier(pool[0])).toBe(2);
+    expect(productTier(pool[1])).toBe(0);
   });
 
   it("rotates: what was shown last time gives way to what was not", () => {

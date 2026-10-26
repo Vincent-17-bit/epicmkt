@@ -1,11 +1,13 @@
 import { formatKes } from "@epicmkt/shared";
 import LazyImage from "./components/LazyImage.jsx";
 import OfferChip from "./components/OfferChip.jsx";
+import StockTag from "./components/StockTag.jsx";
 import styles from "./ItemCard.module.css";
 
 const DEFAULT_LABELS = {
   was: "Was",
-  availability: (key) => ({ available: "Available", limited: "Limited", unavailable: "Unavailable" })[key] ?? key,
+  lowStock: "Low stock",
+  onlyLeft: "Only {n} left",
 };
 
 export default function ItemCard({
@@ -21,7 +23,6 @@ export default function ItemCard({
 }) {
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
-  const availability = item.availability ?? "available";
 
   const face = (
     <button
@@ -36,6 +37,7 @@ export default function ItemCard({
         {onSale && <span className={styles.chip}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flashChip)}
         <OfferChip offer={item.offer} className={styles.offerChip} labels={labels.offerChip} />
+        <StockTag item={item} labels={labels} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>
@@ -53,10 +55,6 @@ export default function ItemCard({
           ) : (
             <span />
           )}
-          <span className={styles.avail}>
-            <span className={`${styles.dot} ${styles[availability]}`} aria-hidden="true" />
-            <span className={styles.sr}>{labels.availability(availability)}</span>
-          </span>
         </span>
       </span>
     </button>

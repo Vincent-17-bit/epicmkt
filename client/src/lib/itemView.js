@@ -109,7 +109,9 @@ export function offerExpiry(remainingMs) {
 
 const AVAILABILITY = {
   available: "https://schema.org/InStock",
-  limited: "https://schema.org/LimitedAvailability",
+  by_appointment: "https://schema.org/InStock",
+  limited_stock: "https://schema.org/LimitedAvailability",
+  out_of_stock: "https://schema.org/OutOfStock",
   unavailable: "https://schema.org/OutOfStock"
 };
 

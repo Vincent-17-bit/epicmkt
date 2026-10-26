@@ -3,7 +3,7 @@ import { EMPTY_FILTERS, applyServiceFilters, buildFacets, countActive } from "./
 
 const svc = [
   { id: "a", name: "Cut", priceKes: 150, section: "Cuts" },
-  { id: "b", name: "Beard", priceKes: 100, section: "Shaves", availability: "limited" },
+  { id: "b", name: "Beard", priceKes: 100, section: "Shaves", availability: "limited_stock" },
   { id: "c", name: "Dye", priceKes: 200, section: "Treatments", availability: "out_of_stock" },
   { id: "d", name: "Ask", section: "Cuts" }
 ];
@@ -30,6 +30,6 @@ describe("service filters", () => {
     const f = buildFacets(svc);
     expect(f.sections).toEqual(["Cuts", "Shaves", "Treatments"]);
     expect(f.price).toEqual({ min: 100, max: 200 });
-    expect(f.availability).toEqual(["Available", "Limited", "Unavailable"]);
+    expect(f.availability).toEqual(["Available", "Low stock", "Unavailable"]);
   });
 });

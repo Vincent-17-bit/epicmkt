@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { chipOf, dealOf, flashPrice, offersByItem, statusOf } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, isListed, offersByItem, statusOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
@@ -39,6 +39,7 @@ const serviceOf = (item, chips) => ({
   section: item.section,
   status: "listed",
   availability: item.availability,
+  stockLeft: item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null,
   imageUrl: mediaUrl(item.imagePaths?.[0]),
 });
 
@@ -46,7 +47,7 @@ const flashCards = (flashSales, items) =>
   flashSales
     .map((sale) => {
       const item = items.find((i) => i.id === sale.itemId);
-      if (!item || !Number.isFinite(item.price)) return null;
+      if (!item || !isListed(item) || !Number.isFinite(item.price)) return null;
       const salePrice = flashPrice(sale.discountType, sale.discountValue, item.price);
       const savings = item.price - salePrice;
       return {
@@ -55,7 +56,8 @@ const flashCards = (flashSales, items) =>
           id: item.id,
           name: item.name,
           imageUrl: mediaUrl(item.imagePaths?.[0]),
-          availability: item.availability === "limited_stock" ? "limited" : item.availability === "available" ? "available" : "unavailable",
+          availability: item.availability,
+          stockLeft: item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null,
           pricing: { regularPrice: item.price, salePrice, savings, discountPercent: item.price > 0 ? Math.round((savings / item.price) * 100) : 0 },
         },
       };
@@ -136,7 +138,8 @@ export default function Preview() {
     logoUrl: mediaUrl(shop.logoPath),
     gallery: [],
     offers: deals,
-    services: items.map((i) => serviceOf(i, chips)),
+    // Exactly what customers get: sold-out items are not listed.
+    services: items.filter(isListed).map((i) => serviceOf(i, chips)),
     // Same functions and same data as the customer page, so the preview cannot disagree with it.
     ...openFields,
   };

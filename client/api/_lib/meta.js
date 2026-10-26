@@ -82,7 +82,7 @@ export function buildMeta({ origin, supabaseUrl, cloudName = "", business, item 
               url: canonical,
               priceCurrency: "KES",
               price: Number(item.price),
-              availability: item.availability === "unavailable" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+              availability: ["unavailable", "out_of_stock"].includes(item.availability) ? "https://schema.org/OutOfStock" : item.availability === "limited_stock" ? "https://schema.org/LimitedAvailability" : "https://schema.org/InStock",
               seller
             }
           }

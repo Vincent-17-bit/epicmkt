@@ -124,3 +124,8 @@
   outline-offset: var(--space-2);
   border-radius: var(--radius-card);
 }
+
+/* Shown on the picture only when the item is running low. */
+.stockTag {
+  --stock-size: 0.75rem;
+}

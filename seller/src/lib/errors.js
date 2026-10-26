@@ -34,6 +34,8 @@ const MESSAGES = {
   intervals_overlap: "Intervals cannot overlap or touch. Merge them into one. An interval that runs past midnight fills the rest of its day, so nothing else can start later that day.",
   invalid_note: "Keep the note between 2 and 80 characters of plain text.",
   limit_reached: "You have reached the limit of 60 upcoming exceptions. Delete one you no longer need, then try again.",
+  invalid_stock: "Check the stock numbers. Use whole numbers such as 12.",
+  stock_count_required: "Enter how many you have now.",
   invalid_discount: "Enter a valid discount: 1 to 99 percent, or an amount above 0.",
   discount_too_large: "That discount would make the price zero. Use a smaller discount.",
   sale_price_not_lower: "The sale price must be lower than the regular price.",

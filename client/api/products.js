@@ -19,6 +19,7 @@
 import { PLAN_FEATURES } from "../../shared/src/constants.js";
 import { normalizeText } from "../../shared/src/utils.js";
 import { statusOf } from "../../shared/src/openState.js";
+import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
@@ -119,6 +120,8 @@ function buildSnapshot({ items, businesses, truncated }) {
   const products = [];
   const flashing = [];
   for (const row of items) {
+    // The view already leaves sold-out items out; this keeps an older database (before migration 0046) from listing one.
+    if (!isListed(row)) continue;
     const store = stores.get(row.business_id);
     if (!store) continue;
     const price = row.price === null || row.price === undefined ? NaN : Number(row.price);
@@ -132,6 +135,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       shortDescription: shorten(description),
       section: row.section ?? null,
       availability: row.availability ?? "available",
+      stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
       imagePath: row.image_path ?? null,
       imageUrl: row.image_path ?? null,
       priceType: row.price_type ?? "fixed",
