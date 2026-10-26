@@ -1,4 +1,4 @@
-import { TIMEZONE_OFFSET_HOURS } from "./constants.js";
+import { BUSINESS_TIME_ZONE, zonedParts } from "./time.js";
 import { addDays } from "./seller/exceptions.js";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -69,22 +69,28 @@ const toMinutes = (time) => {
   return h * 60 + m;
 };
 
-export function nairobiNow(date = new Date()) {
-  const shifted = new Date(date.getTime() + TIMEZONE_OFFSET_HOURS * 3600000);
+/**
+ * The wall clock at the business, as { day, minutes, date }. Read in BUSINESS_TIME_ZONE (Nairobi) unless another IANA
+ * zone is passed, so a shop's hours mean the same thing to every viewer and follow that zone's daylight saving.
+ */
+export function nairobiNow(date = new Date(), timeZone = BUSINESS_TIME_ZONE) {
+  const p = zonedParts(date, timeZone);
+  if (!p) throw new RangeError("nairobiNow needs a valid date");
   return {
-    day: DAYS[shifted.getUTCDay()],
-    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
-    // The Nairobi calendar date, "YYYY-MM-DD". Exceptions are keyed by this.
-    date: shifted.toISOString().slice(0, 10)
+    day: DAYS[p.weekday],
+    minutes: p.hour * 60 + p.minute,
+    // The business calendar date, "YYYY-MM-DD". Exceptions are keyed by this.
+    date: `${String(p.year).padStart(4, "0")}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`
   };
 }
+export const businessNow = nairobiNow;
 
-export function todayHours(hours, date) {
-  return hours[nairobiNow(date).day] ?? null;
+export function todayHours(hours, date, timeZone) {
+  return hours[nairobiNow(date, timeZone).day] ?? null;
 }
 
-export function isOpenNow(hours, date) {
-  const { day, minutes } = nairobiNow(date);
+export function isOpenNow(hours, date, timeZone) {
+  const { day, minutes } = nairobiNow(date, timeZone);
   const slot = hours[day];
   if (!slot) return false;
   const start = toMinutes(slot[0]);
@@ -141,8 +147,8 @@ function windowsOn(hours, exceptions, dateStr) {
 }
 
 /** Is the business open at this moment (default now)? Exceptions override the weekly hours for that Nairobi date. */
-export function isOpenOn(hours, exceptions, date) {
-  const now = nairobiNow(date);
+export function isOpenOn(hours, exceptions, date, timeZone) {
+  const now = nairobiNow(date, timeZone);
   return windowsOn(hours, exceptions, now.date).some((w) => now.minutes >= w.start && now.minutes < w.end);
 }
 
@@ -151,12 +157,12 @@ export function isOpenOn(hours, exceptions, date) {
  * Open now: closesAt is set. Closed: opensAt is the next opening today or in the next 7 days, exceptions included.
  * (Old calls closingInfo(hours, date) still work.)
  */
-export function closingInfo(hours, exceptions, date) {
+export function closingInfo(hours, exceptions, date, timeZone) {
   if (exceptions instanceof Date) {
     date = exceptions;
     exceptions = null;
   }
-  const now = nairobiNow(date);
+  const now = nairobiNow(date, timeZone);
   const today = windowsOn(hours, exceptions, now.date);
   const current = today.find((w) => now.minutes >= w.start && now.minutes < w.end);
   if (current) return { closesAt: current.closes, opensAt: null };
@@ -174,8 +180,8 @@ export function closingInfo(hours, exceptions, date) {
  * The next 7 Nairobi dates starting today, each with the weekday, its exception (or null) and the intervals that
  * apply. Every weekday appears exactly once, so a hours table can show Mon to Sun with the exception for that date.
  */
-export function weekSchedule(hours, exceptions, date) {
-  const first = nairobiNow(date).date;
+export function weekSchedule(hours, exceptions, date, timeZone) {
+  const first = nairobiNow(date, timeZone).date;
   return Array.from({ length: 7 }, (_, i) => {
     const day = addDays(first, i);
     return { day: weekdayOf(day), date: day, today: i === 0, exception: exceptionFor(exceptions, day), intervals: intervalsOn(hours, exceptions, day) };
@@ -198,8 +204,8 @@ export const formatClock = (time) => {
  * { day, name, date, dateLabel, today, text, changed, note }: `changed` is true when an exception replaces the weekly
  * hours for that date, `dateLabel` is that date as "20 Oct", and `note` is the exception's note (plain text) or null.
  */
-export function hoursRowsFor(hours, exceptions, date) {
-  return weekSchedule(hours, exceptions, date)
+export function hoursRowsFor(hours, exceptions, date, timeZone) {
+  return weekSchedule(hours, exceptions, date, timeZone)
     .map((d) => ({
       day: d.day,
       name: DAY_LABELS[d.day],

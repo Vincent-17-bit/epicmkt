@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { formatDay, nairobiDay } from "./dates.ts";
 import { escapeHtml, json } from "./http.ts";
 import { requireAdmin } from "./admin.ts";
 import { isHttpError } from "./errors.ts";
@@ -119,11 +120,8 @@ export function renderTemplate(tpl: string, vars: Record<string, string>): { tex
   return { text, missing: [...missing] };
 }
 
-export const fmtDay = (iso: string | null | undefined): string =>
-  iso
-    ? new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "2-digit", month: "short", year: "numeric" })
-      .format(new Date(iso)).replace(/,/g, "")
-    : "";
+/** A business day for message text ("25 Oct 2026"). It is a Nairobi calendar day, the same for every recipient. */
+export const fmtDay = (iso: string | null | undefined): string => (iso ? formatDay(nairobiDay(iso)) : "");
 
 export const chunk = <T>(items: T[], size: number): T[][] => {
   const out: T[][] = [];

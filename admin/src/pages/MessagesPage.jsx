@@ -10,9 +10,10 @@ import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";
 import Ticks from "../components/Ticks.jsx";
 import { useToast } from "../components/Toast.jsx";
+import { stamp, stampClock } from "../lib/time.js";
 
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
-const clock = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
+
+const clock = stampClock;
 const TYPE = { "application/pdf": "PDF", "image/jpeg": "JPG", "image/png": "PNG", "image/webp": "WebP" };
 const size = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 const initials = (name = "") => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";

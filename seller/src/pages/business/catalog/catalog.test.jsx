@@ -329,7 +329,8 @@ describe("view modes and layout", () => {
     await waitFor(() => expect(count()).toMatch(/^3[78] of 150/));
     expect(performance.now() - before).toBeLessThan(1500);
     expect(performance.now() - start).toBeLessThan(15000);
-  });
+    // The body allows itself 15 s, so the test's own timeout must be longer than that (vitest's default is 5 s).
+  }, 30000);
 });
 
 describe("phone filter sheet", () => {

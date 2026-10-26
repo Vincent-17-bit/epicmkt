@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PASSWORD_MESSAGES, passwordProblems } from "@epicmkt/shared";
+import { PASSWORD_MESSAGES, formatDate, passwordProblems } from "@epicmkt/shared";
 import { planLabel } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
@@ -11,7 +11,6 @@ import ui from "../../styles/ui.module.css";
 import styles from "./account.module.css";
 
 const STATUS_LABEL = { pending: "Pending", live: "Live", paused: "Paused (unlisted)", suspended: "Suspended", expired: "Expired", deleted: "Deleted" };
-const DAY = new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", year: "numeric" });
 
 // Used by both cards. Refreshes the seller's saved details so every screen sees the change.
 function useSaved() {
@@ -42,7 +41,7 @@ function SignInSummary({ business }) {
         <div>
           <dt>Password</dt>
           <dd data-testid="signin-password">
-            {business.mustChangePassword ? "Temporary, change it" : business.passwordChangedAt ? `Changed ${DAY.format(new Date(business.passwordChangedAt))}` : "Set by you"}
+            {business.mustChangePassword ? "Temporary, change it" : business.passwordChangedAt ? `Changed ${formatDate(business.passwordChangedAt)}` : "Set by you"}
           </dd>
         </div>
       </dl>

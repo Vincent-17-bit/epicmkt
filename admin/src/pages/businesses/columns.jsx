@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faMinus, faStar } from "@fortawesome/free-solid-svg-icons";
 import HealthRing from "../../components/HealthRing.jsx";
 import StatusChip, { FlagChip, STATE_META } from "../../components/StatusChip.jsx";
-import { compactCountdown, daysLeft, formatDate, formatDateTime } from "../../lib/time.js";
+import { compactCountdown, daysLeft, formatBusinessDate, formatDate, formatDateTime } from "../../lib/time.js";
 import { deriveState } from "../../lib/status.js";
 
 const yesNo = (value) => (value ? "Yes" : "No");
@@ -80,7 +80,7 @@ export const columns = [
     sortKey: true,
     render: (row) => (
       <div className="dt__stack">
-        <strong>{formatDate(row.paidUntil)}</strong>
+        <strong>{formatBusinessDate(row.paidUntil)}</strong>
         <span>{compactCountdown(daysLeft(row.paidUntil))}</span>
       </div>
     ),

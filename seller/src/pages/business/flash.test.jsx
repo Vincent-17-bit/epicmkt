@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import * as api from "../../api/index.js";
 import { M, signedInApp, setTime } from "../../test/utils.jsx";
 import { setServerOffset } from "../../lib/clock.js";
+import { setUserTimeZone } from "@epicmkt/shared";
 
 const NOW = "2026-10-17T09:00:00.000Z";
 const open = (prepare) => signedInApp("/business/flash", async () => { setTime(NOW); setServerOffset(0); await prepare?.(); });
@@ -187,5 +188,51 @@ describe("seller flash sales", () => {
     await expect(sale("it-old")).rejects.toMatchObject({ code: "item_unavailable" });
     await expect(sale("it-quote")).rejects.toMatchObject({ code: "item_not_discountable" });
     await expect(sale("nope")).rejects.toMatchObject({ code: "item_not_found" });
+  });
+});
+
+describe("flash sale times follow the seller's own time zone", () => {
+  // The seller types a wall clock time; what is stored and sent is the UTC instant that wall clock means for them.
+  const schedule = async (zone, start, end) => {
+    const user = userEvent.setup();
+    await open(() => setUserTimeZone(zone));
+    setUserTimeZone(zone);
+    await newSale(user);
+    choose("it-beard");
+    fill("50");
+    await user.click(screen.getByLabelText("Schedule"));
+    fireEvent.change(screen.getByLabelText(/Starts/), { target: { value: start } });
+    fireEvent.change(screen.getByLabelText(/Ends/), { target: { value: end } });
+    await user.click(screen.getByRole("button", { name: "Start flash sale" }));
+    await waitFor(() => expect(M.state.flash).toHaveLength(1));
+    return M.state.flash[0];
+  };
+
+  it("stores 10:00 to 14:00 in New York (EDT, UTC-4) as the right UTC instants", async () => {
+    const sale = await schedule("America/New_York", "2026-10-18T10:00", "2026-10-18T14:00");
+    expect(sale.startsAt).toBe("2026-10-18T14:00:00.000Z");
+    expect(sale.endsAt).toBe("2026-10-18T18:00:00.000Z");
+  });
+
+  it("stores the same wall clock in Nairobi as a different instant (UTC+3)", async () => {
+    const sale = await schedule("Africa/Nairobi", "2026-10-18T10:00", "2026-10-18T14:00");
+    expect(sale.startsAt).toBe("2026-10-18T07:00:00.000Z");
+    expect(sale.endsAt).toBe("2026-10-18T11:00:00.000Z");
+  });
+
+  it("handles a half hour zone (Kathmandu, UTC+5:45)", async () => {
+    const sale = await schedule("Asia/Kathmandu", "2026-10-18T10:00", "2026-10-18T14:00");
+    expect(sale.startsAt).toBe("2026-10-18T04:15:00.000Z");
+  });
+
+  it("labels the fields with the seller's own zone, not Nairobi's", async () => {
+    const user = userEvent.setup();
+    await open(() => setUserTimeZone("America/New_York"));
+    setUserTimeZone("America/New_York");
+    await newSale(user);
+    await user.click(screen.getByLabelText("Schedule"));
+    expect(screen.getByLabelText(/^Starts/)).toBeInTheDocument();
+    expect(screen.getByText(/Starts \(your time, GMT-4\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Nairobi/)).toBeNull();
   });
 });

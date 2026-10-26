@@ -1,5 +1,5 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { DAYS, hoursRowsFor, nairobiNow } from "@epicmkt/shared";
+import { DAYS, formatInstant, hoursRowsFor, nairobiNow } from "@epicmkt/shared";
 
 export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -49,7 +49,7 @@ export function expiryText(iso) {
   const days = Math.ceil((Date.parse(iso) - Date.now()) / 86400000);
   if (days <= 1) return "Ends today";
   if (days <= 7) return `Ends in ${days} days`;
-  return `Valid until ${new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", timeZone: "Africa/Nairobi" })}`;
+  return `Valid until ${formatInstant(iso, { locale: "en-KE", day: "numeric", month: "short" })}`;
 }
 
 export { DAYS };

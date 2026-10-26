@@ -8,6 +8,7 @@
     "./billing": "./src/billing.js",
     "./utils": "./src/utils.js",
     "./openState": "./src/openState.js",
+    "./time": "./src/time.js",
     "./constants": "./src/constants.js",
     "./template": "./src/template.js"
   }

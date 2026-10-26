@@ -6,7 +6,12 @@ import { M, signedInApp, setTime } from "../../test/utils.jsx";
 const open = (prepare) => signedInApp("/business/preview", prepare);
 
 describe("shop preview", () => {
+  // Tue 20 Oct 2026, 09:30 in Nairobi, when the demo shop is open. Without a frozen clock this test only passed during
+  // opening hours, because a "closed" banner is a second role="status" element.
+  afterEach(() => vi.useRealTimers());
+
   it("shows the shop the way customers see it, with only the items customers can see", async () => {
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T06:30:00Z") });
     await open();
     const page = await screen.findByTestId("shop-preview");
     expect(within(page).getByRole("heading", { level: 1, name: "Demo Shop" })).toBeInTheDocument();

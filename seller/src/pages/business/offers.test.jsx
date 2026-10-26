@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import * as api from "../../api/index.js";
 import { signedInApp, setTime } from "../../test/utils.jsx";
 import { setServerOffset } from "../../lib/clock.js";
+import { setUserTimeZone } from "@epicmkt/shared";
 
 const NOW = "2026-10-17T09:00:00.000Z";
 const open = (prepare) => signedInApp("/business/offers", async () => { setTime(NOW); setServerOffset(0); await prepare?.(); });
@@ -105,5 +106,42 @@ describe("seller offers", () => {
     await user.click(screen.getByRole("button", { name: "Keep it" }));
     expect(rows()).toHaveLength(1);
     expect(await api.listOffers()).toHaveLength(1);
+  });
+
+  describe("times follow the seller's own time zone", () => {
+    // Same rule as the flash sale form: the seller types a wall clock time, and the UTC instant it means for them is stored.
+    const schedule = async (zone, start, end) => {
+      const user = userEvent.setup();
+      await open(() => setUserTimeZone(zone));
+      setUserTimeZone(zone);
+      await user.click(await screen.findByRole("button", { name: "New shop offer" }));
+      await user.click(screen.getByRole("button", { name: /Welcome offer/ }));
+      fireEvent.change(screen.getByLabelText(/^Starts/), { target: { value: start } });
+      fireEvent.change(screen.getByLabelText(/^Ends/), { target: { value: end } });
+      await user.click(screen.getByRole("button", { name: "Start offer" }));
+      await waitFor(() => expect(rows()).toHaveLength(1));
+      return (await api.listOffers())[0];
+    };
+
+    it("stores 18:00 to 20:00 in New York (EDT, UTC-4) as the right UTC instants", async () => {
+      const offer = await schedule("America/New_York", "2026-10-20T18:00", "2026-10-20T20:00");
+      expect(offer.startsAt).toBe("2026-10-20T22:00:00.000Z");
+      expect(offer.endsAt).toBe("2026-10-21T00:00:00.000Z");
+    });
+
+    it("stores the same wall clock in Nairobi (UTC+3) as a different instant", async () => {
+      const offer = await schedule("Africa/Nairobi", "2026-10-20T18:00", "2026-10-20T20:00");
+      expect(offer.startsAt).toBe("2026-10-20T15:00:00.000Z");
+      expect(offer.endsAt).toBe("2026-10-20T17:00:00.000Z");
+    });
+
+    it("labels the start field with the seller's zone, not Nairobi's", async () => {
+      const user = userEvent.setup();
+      await open(() => setUserTimeZone("America/New_York"));
+      setUserTimeZone("America/New_York");
+      await user.click(await screen.findByRole("button", { name: "New shop offer" }));
+      expect(screen.getByText(/Starts \(your time, GMT-4, blank is now\)/)).toBeInTheDocument();
+      expect(screen.queryByText(/Nairobi time/)).toBeNull();
+    });
   });
 });

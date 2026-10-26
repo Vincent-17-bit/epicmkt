@@ -68,4 +68,5 @@ export const TOWNS = [
   { name: "Voi", county: "Taita Taveta", lat: -3.3961, lng: 38.5561 }
 ];
 
+/** @deprecated A fixed offset is wrong for any zone with daylight saving. Use BUSINESS_TIME_ZONE from time.js. */
 export const TIMEZONE_OFFSET_HOURS = 3;

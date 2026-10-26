@@ -10,7 +10,7 @@ import {
   ACTION_LABELS, availableActions, canReview, describeError, eventLabel, flagPathLabel, formatBytes, formatKes, maskValue,
   slotLabel, statusMeta,
 } from "../../lib/applications.js";
-import { formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
+import { formatBusinessDate, formatDateTime, timeAgo } from "../../lib/time.js";
 import ApplicationStatus from "./ApplicationStatus.jsx";
 import DecisionDialog from "./DecisionDialog.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
@@ -209,7 +209,7 @@ export default function ApplicationDetailPage() {
             <Field label="Registration number">{app.regNumber}</Field>
             <Field label="KRA PIN">{app.kraPin ? (revealed ? app.kraPin : maskValue(app.kraPin)) : null}</Field>
             <Field label="Permit number">{app.sbpNumber}</Field>
-            <Field label="Permit expires">{formatDate(app.sbpExpiry)}</Field>
+            <Field label="Permit expires">{formatBusinessDate(app.sbpExpiry)}</Field>
             <Field label="Description">{app.shortDescription}</Field>
           </dl>
         </section>

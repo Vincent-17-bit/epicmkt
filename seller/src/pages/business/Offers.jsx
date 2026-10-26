@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OfferChip, Offers as OfferTickets } from "@epicmkt/ui";
 import {
-  OFFER_DAYS, OFFER_DAY_NAMES, conditionsText, dealOf, kindsFor, offerHeadline, offerLabel, offerPhase, offerQuota, offerScope, recipesFor, validateOffer,
+  OFFER_DAYS, OFFER_DAY_NAMES, conditionsText, dealOf, formatDateTime, getUserTimeZone, kindsFor, localInputToUtcIso, offerHeadline, offerLabel, offerPhase, offerQuota, offerScope, recipesFor, utcToLocalInput, validateOffer, zoneLabel,
 } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
@@ -14,9 +14,10 @@ import ui from "../../styles/ui.module.css";
 import styles from "./offers.module.css";
 
 const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true }).format(new Date(iso));
-const toLocalInput = (ms) => new Date(ms + 3 * 3600000).toISOString().slice(0, 16);
-const fromLocalInput = (value) => (value ? new Date(`${value}:00+03:00`).toISOString() : "");
+// Stored and sent as UTC. The seller types and reads times in their own time zone (same as the flash sale form).
+const stamp = (iso) => `${formatDateTime(iso)} ${zoneLabel(iso)}`;
+const toLocalInput = (ms) => utcToLocalInput(ms, getUserTimeZone());
+const fromLocalInput = (value) => localInputToUtcIso(value, getUserTimeZone());
 const LABELS = { title: "Offers", code: "Code", copy: "Copy code", copied: "Copied", endsIn: "Ends in", noEnd: "No end date", onlyNow: "Not available at this hour", openProduct: "Open" };
 const PHASE = { live: "Live", scheduled: "Scheduled", paused: "Paused", ended: "Ended" };
 
@@ -214,7 +215,7 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
         <legend>When</legend>
         <div className={styles.pair}>
           <div className={ui.field}>
-            <label className={ui.label} htmlFor="of-start">Starts (Nairobi time, blank is now)</label>
+            <label className={ui.label} htmlFor="of-start">{`Starts (your time, ${zoneLabel(now)}, blank is now)`}</label>
             <input id="of-start" className={ui.input} type="datetime-local" value={form.start} min={toLocalInput(now)} onChange={(e) => setField("start", e.target.value)} />
           </div>
           <div className={ui.field}>

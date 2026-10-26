@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setUserTimeZone } from "@epicmkt/shared";
 import { clockText, describeMs, discountBadge, endsInLabel, formatEndsAt, fuseShare, spokenDuration, urgencyLabel, urgencyOf } from "./flash.js";
 
 const MIN = 60000;
@@ -71,7 +72,34 @@ describe("fuseShare", () => {
 });
 
 describe("formatEndsAt", () => {
-  it("renders Nairobi time", () => {
-    expect(formatEndsAt("2026-11-08T15:00:00.000Z")).toBe("Sun 8 Nov, 6:00 PM EAT");
+  const SALE_END = "2026-11-08T15:00:00.000Z";
+  afterEach(() => setUserTimeZone(null));
+
+  it("shows a viewer in Nairobi their own time, named EAT", () => {
+    setUserTimeZone("Africa/Nairobi");
+    expect(formatEndsAt(SALE_END)).toBe("Sun 8 Nov, 6:00 PM EAT");
+  });
+
+  it("shows the same sale in each viewer's own zone, never Nairobi's", () => {
+    setUserTimeZone("America/New_York");
+    expect(formatEndsAt(SALE_END)).toBe("Sun 8 Nov, 10:00 AM GMT-5");
+    setUserTimeZone("America/Los_Angeles");
+    expect(formatEndsAt(SALE_END)).toBe("Sun 8 Nov, 7:00 AM GMT-8");
+    setUserTimeZone("Asia/Kathmandu");
+    expect(formatEndsAt(SALE_END)).toBe("Sun 8 Nov, 8:45 PM GMT+5:45");
+    setUserTimeZone("Pacific/Kiritimati");
+    expect(formatEndsAt(SALE_END)).toBe("Mon 9 Nov, 5:00 AM GMT+14");
+  });
+
+  it("follows daylight saving: the same clock time in UTC reads an hour apart in winter and summer", () => {
+    setUserTimeZone("Europe/London");
+    expect(formatEndsAt("2026-01-10T18:00:00.000Z")).toBe("Sat 10 Jan, 6:00 PM GMT");
+    expect(formatEndsAt("2026-07-10T18:00:00.000Z")).toBe("Fri 10 Jul, 7:00 PM GMT+1");
+  });
+
+  it("is blank for a missing or malformed end, never 'Invalid Date' or a crash", () => {
+    expect(formatEndsAt(undefined)).toBe("");
+    expect(formatEndsAt("soon")).toBe("");
+    expect(formatEndsAt("2026-11-08T15:00:00")).toBe("");
   });
 });

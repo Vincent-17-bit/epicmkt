@@ -7,9 +7,10 @@ import Modal from "../../components/Modal.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { BADGES, groupPlans, planImpact, planProblems } from "../../lib/catalogue.js";
+import { stampDayYear } from "../../lib/time.js";
 
 const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
-const day = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
+const day = stampDayYear;
 
 function EditDialog({ row, onClose }) {
   const queryClient = useQueryClient();

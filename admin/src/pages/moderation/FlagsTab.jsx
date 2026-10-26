@@ -8,10 +8,11 @@ import Pager from "../../components/Pager.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { dueLabel } from "../../lib/moderation.js";
+import { stampDay } from "../../lib/time.js";
 
 const PAGE_SIZE = 25;
 const STATUSES = [["open", "Open"], ["replied", "Seller replied"], ["resolved", "Resolved"], ["all", "All"]];
-const stamp = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short" }).format(new Date(iso));
+const stamp = stampDay;
 
 export default function FlagsTab() {
   const { can, why } = usePermissions();

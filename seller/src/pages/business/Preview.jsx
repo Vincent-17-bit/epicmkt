@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { chipOf, dealOf, flashPrice, isListed, offersByItem, statusOf } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, formatInstant, isListed, offersByItem, statusOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
@@ -26,7 +26,7 @@ const safe = (fn, fallback) => {
   }
 };
 
-const endsText = (iso) => `Ends ${new Date(iso).toLocaleString("en-KE", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "Africa/Nairobi" })}`;
+const endsText = (iso) => `Ends ${formatInstant(iso, { locale: "en-KE", weekday: "short", hour: "numeric", minute: "2-digit" })}`;
 
 const serviceOf = (item, chips) => ({
   offer: chips.get(item.id) ?? null,

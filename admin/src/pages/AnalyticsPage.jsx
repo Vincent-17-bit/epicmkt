@@ -3,9 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import LoadError from "../components/LoadError.jsx";
 import { barGeometry, funnelRows, kes, percent } from "../lib/audit.js";
+import { calendarDayShort } from "../lib/time.js";
 
 const WINDOWS = [[7, "7 days"], [30, "30 days"], [90, "90 days"], [365, "12 months"]];
-const day = (iso) => new Intl.DateTimeFormat("en-GB", { timeZone: "Africa/Nairobi", day: "numeric", month: "short" }).format(new Date(`${iso}T12:00:00+03:00`));
+const day = calendarDayShort;
 
 function BarChart({ rows, valueKey, label, format = (v) => v }) {
   const { bars, max } = barGeometry(rows.map((r) => Number(r[valueKey])), { width: 600, height: 120 });
