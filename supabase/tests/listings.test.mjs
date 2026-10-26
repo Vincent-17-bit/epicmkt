@@ -421,6 +421,9 @@ test("the save function drops empty highlight titles instead of refusing them", 
     highlights: [{ title: null, text: "One" }, { title: "  ", text: "Two" }, { title: "", text: "Three" }, { title: "Kept", text: "Four" }, { text: "Five" }],
   });
   assert.deepEqual((await row(id)).highlights, [{ text: "One" }, { text: "Two" }, { text: "Three" }, { title: "Kept", text: "Four" }, { text: "Five" }]);
+  await save(asA, { ...detailFields, specs: [{ label: "Weight", value: "2 kg" }, { group: null, label: "Colour", value: "Red" }, spec(3, { group: "Measurements" })] }, id);
+  assert.deepEqual((await row(id)).specs.map((s) => s.group), ["Features & Specs", "Features & Specs", "Measurements"]);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: [spec(1, { group: "Elsewhere" })] })], /invalid_details/);
   await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, highlights: [{ title: 5, text: "Bad" }] })], /invalid_details/);
   await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, highlights: [{ title: null }] })], /invalid_details/);
 });

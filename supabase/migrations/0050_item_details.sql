@@ -229,6 +229,13 @@ begin
   v_pack := case when f ? 'pack_size' then nullif(btrim(coalesce(f ->> 'pack_size', '')), '') else v_old_item.pack_size end;
   v_hl := case when f ? 'highlights' then coalesce(nullif(f -> 'highlights', 'null'::jsonb), '[]'::jsonb) else coalesce(v_old_item.highlights, '[]'::jsonb) end;
   v_specs := case when f ? 'specs' then coalesce(nullif(f -> 'specs', 'null'::jsonb), '[]'::jsonb) else coalesce(v_old_item.specs, '[]'::jsonb) end;
+  if f ? 'specs' then
+    select coalesce(jsonb_agg(
+      case when jsonb_typeof(x.e) = 'object' and (not x.e ? 'group' or jsonb_typeof(x.e -> 'group') = 'null')
+        then x.e || jsonb_build_object('group', 'Features & Specs') else x.e end
+      order by x.n), '[]'::jsonb) into v_specs
+      from jsonb_array_elements(v_specs) with ordinality as x(e, n);
+  end if;
   if f ? 'highlights' then
     select coalesce(jsonb_agg(
       case when jsonb_typeof(x.e) = 'object' and (jsonb_typeof(x.e -> 'title') = 'null' or btrim(coalesce(x.e ->> 'title', 'x')) = '') then x.e - 'title' else x.e end
