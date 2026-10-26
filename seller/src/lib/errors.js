@@ -100,6 +100,9 @@ const MESSAGES = {
   deal_not_cheaper: "That deal costs more than buying normally. Lower the price.",
   offer_not_found: "We could not find that offer.",
   scope_locked: "A product offer cannot become a shop offer. Delete it and make a new one.",
+  media_not_configured: "Picture uploads are not switched on yet. Please contact EpicMKT support.",
+  upload_not_found: "That upload expired. Please try the photo again.",
+  file_not_uploaded: "The photo did not upload. Check your connection and try again.",
   photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };

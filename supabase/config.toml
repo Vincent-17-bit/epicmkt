@@ -42,6 +42,12 @@ verify_jwt = false
 [functions.seller-media-finalize]
 verify_jwt = false
 
+[functions.seller-media-sign]
+verify_jwt = false
+
+[functions.media-gc]
+verify_jwt = false
+
 [functions.seller-export-data]
 verify_jwt = false
 

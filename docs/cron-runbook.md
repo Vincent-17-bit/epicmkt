@@ -1,6 +1,6 @@
 # Cron runbook: turning the scheduled jobs on
 
-Three jobs keep EpicMKT moving. Without them, queued SMS and email never leave, renewal reminders are never sent and
+Four jobs keep EpicMKT moving. Without them, queued SMS and email never leave, renewal reminders are never sent and
 old proof uploads are never deleted, and nothing in the app fails loudly. The **Automation** page in the admin shows
 whether the two messaging jobs are running; `proofs-purge` is checked in the SQL editor (see below).
 
@@ -9,6 +9,7 @@ whether the two messaging jobs are running; `proofs-purge` is checked in the SQL
 | `dispatch-messages` | every minute | Sends queued SMS and email, retries failures, holds promotions during quiet hours |
 | `daily-lifecycle` | 04:00 UTC (07:00 Nairobi) | Queues renewal reminders, moves listings into grace and expiry |
 | `proofs-purge` | 01:00 UTC (04:00 Nairobi) | Deletes proof uploads 90 days after their flag was resolved, and uploads that were never finalized |
+| `media-gc` | every 10 minutes | Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos, deleted shops) and settles unfinished uploads. See `docs/cloudinary-images.md` |
 
 The schedule is **not a migration** because it needs secrets that differ per project. Do this once per environment.
 

@@ -1,7 +1,8 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { checkProofBatch, checkReply, flashQuota, flashTextProblem, offerQuota } from "@epicmkt/shared";
+import { checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota } from "@epicmkt/shared";
+import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
 
@@ -63,51 +64,82 @@ export const pauseListing = (pause) => rpc("seller_pause_listing", { p_pause: pa
 export const requestDeletion = (name) => rpc("seller_request_deletion", { p_name: name });
 export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_stale_days: staleDays });
 export const itemSignals = async () => (await rpc("seller_item_signals")).map(shape.signal);
-export const finalizeMedia = ({ itemId, path }) => fn("seller-media-finalize", { itemId, path });
+// Pictures live in Cloudinary, not Supabase. An upload is three steps, and the browser never holds the Cloudinary secret:
+//   1. seller-media-sign   the server picks the id (under this shop's own prefix), records it, and signs ONE upload for it.
+//   2. the browser posts the file straight to Cloudinary with that signature. Cloudinary scales it to a 4K master (up or down) on arrival.
+//   3. seller-media-finalize  the browser reports Cloudinary's signed answer; the server checks the signature and attaches the picture.
+// Videos and pictures stored before the move stay in the Supabase bucket (their paths end in a file extension).
+export const finalizeMedia = ({ itemId, path, cloudinary }) => fn("seller-media-finalize", { itemId, path, cloudinary });
 const MEDIA_BUCKET = "seller-media";
 const PHOTO_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
-export const uploadItemPhoto = async (itemId, file) => {
-  const ext = PHOTO_EXT[file.type];
-  if (!ext) throw new ApiError("unsupported_type");
-  const business = await rows(need().from("businesses").select("id").maybeSingle());
-  if (!business) throw new ApiError("not_a_seller");
-  const path = `${business.id}/${itemId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await need().storage.from(MEDIA_BUCKET).upload(path, file, { contentType: file.type });
-  if (error) throw new ApiError("file_not_uploaded");
+
+const signUpload = (body) => fn("seller-media-sign", body);
+
+// Cloudinary's answer, reduced to what the server needs to check and record.
+const hostedFacts = (r) => ({ version: r.version, signature: r.signature, width: r.width, height: r.height, bytes: r.bytes, format: r.format === "jpeg" ? "jpg" : r.format });
+
+const sendToCloudinary = async ({ uploadUrl, fields, publicId }, file) => {
+  const form = new FormData();
+  for (const [k, v] of Object.entries(fields)) form.append(k, v);
+  form.append("file", file); // Cloudinary wants the file last
+  let res;
   try {
-    await finalizeMedia({ itemId, path });
-  } catch (e) {
-    throw e.code === "limit_reached" ? new ApiError("photo_limit") : e;
+    res = await fetch(uploadUrl, { method: "POST", body: form });
+  } catch {
+    throw new ApiError("file_not_uploaded");
   }
-  return { path };
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data?.public_id || data.public_id !== publicId) {
+    throw new ApiError(/too large/i.test(data?.error?.message ?? "") ? "too_large" : "file_not_uploaded", data?.error?.message);
+  }
+  return data;
 };
+
+const asPhotoLimit = (e) => (e?.code === "limit_reached" ? new ApiError("photo_limit") : e);
+
+export const uploadItemPhoto = async (itemId, file) => {
+  if (!PHOTO_EXT[file?.type]) throw new ApiError("unsupported_type");
+  const body = await shrinkIfHuge(file);
+  let signed;
+  try {
+    signed = await signUpload({ purpose: "item_photo", itemId });
+  } catch (e) {
+    throw asPhotoLimit(e);
+  }
+  const hosted = await sendToCloudinary(signed, body);
+  try {
+    await finalizeMedia({ itemId, path: signed.publicId, cloudinary: hostedFacts(hosted) });
+  } catch (e) {
+    throw asPhotoLimit(e);
+  }
+  return { path: signed.publicId };
+};
+
+// Deleting the row is enough for a Cloudinary picture: a database trigger queues the file and the media-gc job deletes it.
+// Older pictures are still files in the Supabase bucket and are removed from there as before.
 export const removeItemPhoto = async (path) => {
   await rows(need().from("item_media").delete().eq("path", path));
-  await need().storage.from(MEDIA_BUCKET).remove([path]);
+  if (!isCloudinaryId(path)) await need().storage.from(MEDIA_BUCKET).remove([path]);
 };
+
 // The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).
-// Each upload gets a new file name, so a changed picture is never served from a cache that still holds the old one, and
-// the old file is deleted once the profile points at the new one. The path starts with the business id, which is what the
-// bucket policy and seller_update_profile both require.
+// Every upload gets a new id, so a changed picture is never served from a cache that still holds the old one. When the profile
+// points at the new picture the old one is queued for deletion by the database (or removed from the bucket if it is an older one).
 const SHOP_KINDS = ["logo", "cover"];
+const dropLegacy = (old) => (old && !isCloudinaryId(old) ? need().storage.from(MEDIA_BUCKET).remove([old]).catch(() => {}) : undefined);
 export const uploadShopImage = async (kind, blob) => {
   if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
-  const ext = PHOTO_EXT[blob?.type];
-  if (!ext) throw new ApiError("unsupported_type");
+  if (!PHOTO_EXT[blob?.type]) throw new ApiError("unsupported_type");
   const business = await rows(need().from("businesses").select("id, logo_path, cover_path").maybeSingle());
   if (!business) throw new ApiError("not_a_seller");
-  const path = `${business.id}/profile/${kind}-${crypto.randomUUID()}.${ext}`;
-  const { error } = await need().storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: blob.type, cacheControl: "31536000" });
-  if (error) throw new ApiError("file_not_uploaded");
-  try {
-    await updateProfile({ [`${kind}_path`]: path });
-  } catch (e) {
-    await need().storage.from(MEDIA_BUCKET).remove([path]).catch(() => {});
-    throw e;
-  }
+  const signed = await signUpload({ purpose: kind });
+  const hosted = await sendToCloudinary(signed, blob);
+  await finalizeMedia({ path: signed.publicId, cloudinary: hostedFacts(hosted) });
+  // If this fails the upload is simply never attached; the hourly sweep queues it for deletion.
+  await updateProfile({ [`${kind}_path`]: signed.publicId });
   const old = business[`${kind}_path`];
-  if (old && old !== path) await need().storage.from(MEDIA_BUCKET).remove([old]).catch(() => {});
-  return { path };
+  if (old && old !== signed.publicId) await dropLegacy(old);
+  return { path: signed.publicId };
 };
 export const removeShopImage = async (kind) => {
   if (!SHOP_KINDS.includes(kind)) throw new ApiError("invalid_kind");
@@ -115,7 +147,7 @@ export const removeShopImage = async (kind) => {
   if (!business) throw new ApiError("not_a_seller");
   const old = business[`${kind}_path`];
   await updateProfile({ [`${kind}_path`]: null });
-  if (old) await need().storage.from(MEDIA_BUCKET).remove([old]).catch(() => {});
+  await dropLegacy(old);
 };
 export const exportData = () => fn("seller-export-data", {});
 

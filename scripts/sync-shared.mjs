@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const from = join(root, "shared", "src", "seller");
 const to = join(root, "supabase", "functions", "_shared", "synced");
-const files = ["password.js", "media.js"];
+const files = ["password.js", "media.js", "images.js", "cloudinarySign.js"];
 const check = process.argv.includes("--check");
 
 mkdirSync(to, { recursive: true });
