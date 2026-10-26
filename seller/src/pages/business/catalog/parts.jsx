@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEllipsis, faFlag } from "@fortawesome/free-solid-svg-icons";
 import { optionLabel, AVAILABILITY_OPTIONS } from "@epicmkt/shared";
@@ -45,15 +45,66 @@ export function Ribbon({ item }) {
   return <span className={`${styles.ribbon} ${r.tone === "danger" ? styles.ribbonDanger : ""}`} data-testid={`ribbon-${item.id}`}>{r.text}</span>;
 }
 
+const GAP = 4;
+const EDGE = 8;
+
+// Place the menu against the viewport (not its card) so it is never clipped:
+// below the trigger when it fits, otherwise above, otherwise on the roomier
+// side with its own scroll. Horizontally it is clamped inside the screen.
+function placeMenu(triggerEl, menuEl) {
+  const t = triggerEl.getBoundingClientRect();
+  const vv = window.visualViewport;
+  const vw = vv?.width ?? window.innerWidth;
+  const vh = vv?.height ?? window.innerHeight;
+  const offX = vv?.offsetLeft ?? 0;
+  const offY = vv?.offsetTop ?? 0;
+
+  const width = Math.min(menuEl.offsetWidth, vw - EDGE * 2);
+  const natural = menuEl.scrollHeight;
+  const below = vh - (t.bottom - offY) - GAP - EDGE;
+  const above = (t.top - offY) - GAP - EDGE;
+
+  const openDown = natural <= below || below >= above;
+  const room = openDown ? below : above;
+  const height = Math.min(natural, Math.max(room, 0));
+
+  const top = openDown ? t.bottom + GAP : t.top - GAP - height;
+  const left = Math.min(Math.max(t.right - width, offX + EDGE), offX + vw - EDGE - width);
+
+  return { top, left, maxHeight: Math.max(room, 0) };
+}
+
 function Menu({ label, children }) {
   const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState(null);
   const root = useRef(null);
   const trigger = useRef(null);
+  const panel = useRef(null);
   const close = () => setOpen(false);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPos(null);
+      return undefined;
+    }
+    const update = () => {
+      if (trigger.current && panel.current) setPos(placeMenu(trigger.current, panel.current));
+    };
+    update();
+    const onScroll = (e) => { if (!panel.current?.contains(e.target)) setOpen(false); };
+    window.addEventListener("resize", update);
+    window.visualViewport?.addEventListener("resize", update);
+    document.addEventListener("scroll", onScroll, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+      document.removeEventListener("scroll", onScroll, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return undefined;
-    root.current?.querySelector('[role="menuitem"]:not(:disabled)')?.focus();
+    root.current?.querySelector('[role="menuitem"]:not(:disabled)')?.focus({ preventScroll: true });
     const down = (e) => { if (!root.current?.contains(e.target)) setOpen(false); };
     const key = (e) => {
       if (e.key === "Escape") {
@@ -91,7 +142,17 @@ function Menu({ label, children }) {
       >
         <FontAwesomeIcon icon={faEllipsis} />
       </button>
-      {open && <span className={styles.menu} role="menu" onKeyDown={step}>{children(close)}</span>}
+      {open && (
+        <span
+          ref={panel}
+          className={styles.menu}
+          role="menu"
+          onKeyDown={step}
+          style={pos ? { top: pos.top, left: pos.left, maxHeight: pos.maxHeight } : { visibility: "hidden" }}
+        >
+          {children(close)}
+        </span>
+      )}
     </span>
   );
 }

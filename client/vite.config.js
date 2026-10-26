@@ -29,19 +29,27 @@ const siteUrlInHtml = () => {
 
 // Opens the connection to Supabase (DNS, TCP, TLS) while the page is still parsing, so the first data request and the first
 // pictures do not pay for it. Skipped when no Supabase URL is set (demo and test builds).
-const preconnectSupabase = () => {
-  let origin = "";
+const preconnectOrigins = () => {
+  let origins = [];
   return {
-    name: "preconnect-supabase",
+    name: "preconnect-media",
     configResolved(config) {
-      try {
-        origin = new URL(String(config.env.VITE_SUPABASE_URL ?? "")).origin;
-      } catch {
-        origin = "";
-      }
+      const origin = (value) => {
+        try {
+          return new URL(String(value ?? "")).origin;
+        } catch {
+          return "";
+        }
+      };
+      // Supabase carries the data; Cloudinary's CDN carries every picture, so its connection is opened early too.
+      const cloud = String(config.env.VITE_CLOUDINARY_CLOUD_NAME ?? "").trim();
+      // <img> tags load without CORS, so the picture host is preconnected without `crossorigin` (a different pool would go unused).
+      origins = [{ href: origin(config.env.VITE_SUPABASE_URL), cors: true }, { href: cloud ? "https://res.cloudinary.com" : "", cors: false }].filter((o) => o.href);
     },
     transformIndexHtml: (html) =>
-      origin ? html.replace("</title>", `</title>\n    <link rel="preconnect" href="${origin}" crossorigin />\n    <link rel="dns-prefetch" href="${origin}" />`) : html
+      origins.length
+        ? html.replace("</title>", `</title>\n    ${origins.map((o) => `<link rel="preconnect" href="${o.href}"${o.cors ? " crossorigin" : ""} />\n    <link rel="dns-prefetch" href="${o.href}" />`).join("\n    ")}`)
+        : html
   };
 };
 
@@ -55,7 +63,7 @@ export default defineConfig({
   plugins: [
     requireSupabase(),
     siteUrlInHtml(),
-    preconnectSupabase(),
+    preconnectOrigins(),
     react(),
     VitePWA({
       registerType: "prompt",
@@ -97,11 +105,12 @@ export default defineConfig({
           },
           {
             // Pictures and videos are cached on the device, so a product seen once is not downloaded again.
-            urlPattern: ({ request, url }) => request.destination === "image" && /\/storage\/v1\/(object|render\/image)\/public\//.test(url.pathname),
+            urlPattern: ({ request, url }) =>
+              request.destination === "image" && (url.hostname === "res.cloudinary.com" || /\/storage\/v1\/(object|render\/image)\/public\//.test(url.pathname)),
             handler: "CacheFirst",
             options: {
               cacheName: "media-images",
-              expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true },
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30, purgeOnQuotaError: true },
               cacheableResponse: { statuses: [0, 200] }
             }
           },

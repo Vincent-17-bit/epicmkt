@@ -16,7 +16,7 @@ Why the middle row is different: "paid until 25 Oct" means the *Nairobi* day. Co
 
 Every instant leaves the API as ISO 8601 in UTC, for example `2026-10-25T04:51:00.000Z`. Postgres serialises `timestamptz` as `2026-10-25T04:51:00+00:00`, which is the same instant. Both parse. A timestamp **without** an offset (`2026-10-25T04:51:00`) is rejected on purpose: the browser would read it in the device zone, so it would mean a different moment for every user.
 
-Migration `0047_utc_timezone.sql` sets the database zone to UTC and pins the two functions that read the session zone (`admin_analytics`, `log_search`), because PostgREST lets a client send `Prefer: timezone=...`. Every other conversion from an instant to a day names `'Africa/Nairobi'` explicitly.
+Migration `0048_utc_timezone.sql` sets the database zone to UTC and pins the two functions that read the session zone (`admin_analytics`, `log_search`), because PostgREST lets a client send `Prefer: timezone=...`. Every other conversion from an instant to a day names `'Africa/Nairobi'` explicitly.
 
 ## Using it (`@epicmkt/shared`, file `shared/src/time.js`)
 

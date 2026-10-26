@@ -190,3 +190,26 @@ describe("robotsTxt", () => {
     expect(txt).toContain("Disallow: /admin/");
   });
 });
+
+describe("pictures stored in Cloudinary", () => {
+  const cloudName = "demo";
+  const photo = `${BID}/20000000-0000-0000-0000-0000000000c1/30000000-0000-0000-0000-0000000000d1`;
+  const shop = { ...business, cover_path: `${BID}/profile/cover-30000000-0000-0000-0000-0000000000d2`, logo_path: `${BID}/profile/logo-30000000-0000-0000-0000-0000000000d3` };
+
+  it("uses a 1200 px Cloudinary url for the link preview image", () => {
+    const meta = buildMeta({ origin, supabaseUrl, cloudName, business: shop, item: { ...item, image_paths: [photo] } });
+    expect(meta.image).toBe(`https://res.cloudinary.com/demo/image/upload/f_auto,q_auto:good,c_limit,w_1200/${photo}`);
+    expect(meta.jsonLd.image).toEqual([meta.image]);
+  });
+
+  it("uses the shop cover, then the logo, for a store page", () => {
+    expect(buildMeta({ origin, supabaseUrl, cloudName, business: shop }).image).toContain(`/${shop.cover_path}`);
+    expect(buildMeta({ origin, supabaseUrl, cloudName, business: { ...shop, cover_path: null } }).image).toContain(`/${shop.logo_path}`);
+  });
+
+  it("still serves older pictures from Supabase, and falls back to the icon when a Cloudinary picture has no cloud configured", () => {
+    expect(buildMeta({ origin, supabaseUrl, cloudName, business }).image).toBe(`${supabaseUrl}/storage/v1/object/public/seller-media/${BID}/cover.webp`);
+    expect(buildMeta({ origin, supabaseUrl, business: shop }).image).toBe(`${origin}/icon-512.png`);
+  });
+});
+

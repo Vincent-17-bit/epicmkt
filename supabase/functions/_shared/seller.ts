@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { clientIp, corsHeaders, escapeHtml, isProduction, json, sendSms, sha256Hex } from "./http.ts";
 import { deliverEmail } from "./providers.ts";
+import { cloudinaryConfigFromEnv, makeCloudinary, type CloudinaryClient } from "./cloudinary.ts";
 
 export { corsHeaders, json, z };
 
@@ -14,6 +15,8 @@ export type Deps = {
   code: () => string;
   salt: string;
   cronSecret?: string;
+  // Picture storage. Null when the CLOUDINARY_* secrets are not set; the media functions then answer media_not_configured.
+  cloudinary?: CloudinaryClient | null;
 };
 
 export const SELLER_EMAIL_DOMAIN = "sellers.epicmkt.app";
@@ -45,6 +48,7 @@ export function realDeps(): Deps {
     code: () => (prod ? String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, "0") : "123456"),
     salt: Deno.env.get("IP_HASH_SALT") ?? "",
     cronSecret: Deno.env.get("CRON_SECRET") ?? undefined,
+    cloudinary: (() => { const cfg = cloudinaryConfigFromEnv((n) => Deno.env.get(n)); return cfg ? makeCloudinary(cfg) : null; })(),
   };
 }
 

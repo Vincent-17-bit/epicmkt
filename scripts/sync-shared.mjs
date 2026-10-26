@@ -6,7 +6,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = join(root, "shared", "src");
 const to = join(root, "supabase", "functions", "_shared", "synced");
 // [path under shared/src, name under supabase/functions/_shared/synced]
-const files = [["seller/password.js", "password.js"], ["seller/media.js", "media.js"], ["time.js", "time.js"]];
+const files = [
+  ["seller/password.js", "password.js"], ["seller/media.js", "media.js"], ["seller/images.js", "images.js"],
+  ["seller/cloudinarySign.js", "cloudinarySign.js"], ["time.js", "time.js"]
+];
 const check = process.argv.includes("--check");
 
 mkdirSync(to, { recursive: true });

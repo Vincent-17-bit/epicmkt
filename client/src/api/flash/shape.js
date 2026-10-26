@@ -1,11 +1,14 @@
-import { distanceKm, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { distanceKm, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
-// Where stored pictures come from. By default that is the Supabase bucket. VITE_MEDIA_HOSTS may list extra mirrors or CDN
-// origins (comma separated; each must serve the bucket's files at <host>/<path>). Each file is then pinned to one host by
-// a hash of its path, so the load is shared across them and a given picture always keeps the same url, which keeps
-// browser and CDN caches warm.
+// Where stored pictures come from. New pictures live in Cloudinary: a stored value with no file extension is a Cloudinary public id
+// and becomes https://res.cloudinary.com/<VITE_CLOUDINARY_CLOUD_NAME>/image/upload/<transform>/<id> (see shared/src/seller/images.js).
+// Pictures stored before the move still come from the Supabase bucket until scripts/migrate-images-to-cloudinary.mjs moves them;
+// for those, VITE_MEDIA_HOSTS may list extra mirrors or CDN origins (comma separated; each must serve the bucket's files at
+// <host>/<path>). Each file is then pinned to one host by a hash of its path, so a given picture always keeps the same url,
+// which keeps browser and CDN caches warm.
+const CLOUD_NAME = String(import.meta.env.VITE_CLOUDINARY_CLOUD_NAME ?? "").trim();
 const MEDIA_HOSTS = String(import.meta.env.VITE_MEDIA_HOSTS ?? "")
   .split(",")
   .map((host) => host.trim().replace(/\/$/, ""))
@@ -19,6 +22,7 @@ const pathHash = (text) => {
 
 export const mediaUrl = (path) => {
   if (!path) return null;
+  if (isCloudinaryId(path)) return imageUrl(path, { cloudName: CLOUD_NAME });
   if (MEDIA_HOSTS.length) return `${MEDIA_HOSTS[pathHash(path) % MEDIA_HOSTS.length]}/${path}`;
   return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
 };

@@ -1,6 +1,8 @@
 // Pure helpers for link previews and the sitemap. No network, no framework: the edge handlers in ../preview.js and
 // ../sitemap.js do the fetching and call these. Kept apart so they can be unit tested.
 
+import { imageUrl } from "../../../shared/src/seller/images.js";
+
 export const BRAND = "EpicMKT";
 export const DEFAULT_DESCRIPTION =
   "Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions.";
@@ -28,9 +30,13 @@ export function clip(text, max = 160) {
 
 export const kes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
-export function mediaUrl(supabaseUrl, path) {
-  if (!path || !supabaseUrl) return null;
-  return `${String(supabaseUrl).replace(/\/$/, "")}/storage/v1/object/public/seller-media/${path}`;
+// Link previews (WhatsApp, Facebook, Google) show a picture of roughly this width, so ask Cloudinary for exactly that instead of the 4K master.
+const PREVIEW_WIDTH = 1200;
+
+// A stored picture as an absolute url: Cloudinary for new pictures, the Supabase bucket for older ones (see shared/src/seller/images.js).
+export function mediaUrl(supabaseUrl, path, cloudName) {
+  if (!path) return null;
+  return imageUrl(path, { cloudName, supabaseUrl, width: PREVIEW_WIDTH });
 }
 
 const absolute = (origin, url) => (!url ? null : /^https?:\/\//i.test(url) ? url : `${origin}${url.startsWith("/") ? "" : "/"}${url}`);
@@ -48,14 +54,14 @@ export function priceLine(item) {
 const where = (business) => [business.town, business.county].filter(Boolean).join(", ");
 
 // One object describing everything the head needs. `business` and `item` are rows of public_businesses / public_items.
-export function buildMeta({ origin, supabaseUrl, business, item = null, categoryName = "" }) {
+export function buildMeta({ origin, supabaseUrl, cloudName = "", business, item = null, categoryName = "" }) {
   const home = `${origin}/`;
   const fallbackImage = `${origin}/icon-512.png`;
   const place = where(business);
 
   if (item) {
     const canonical = `${origin}/b/${business.slug}/i/${encodeURIComponent(item.id)}`;
-    const image = mediaUrl(supabaseUrl, item.image_paths?.[0]) ?? mediaUrl(supabaseUrl, business.cover_path) ?? mediaUrl(supabaseUrl, business.logo_path) ?? fallbackImage;
+    const image = mediaUrl(supabaseUrl, item.image_paths?.[0], cloudName) ?? mediaUrl(supabaseUrl, business.cover_path, cloudName) ?? mediaUrl(supabaseUrl, business.logo_path, cloudName) ?? fallbackImage;
     const price = priceLine(item);
     const lead = [price, item.description ? clip(item.description, 110) : ""].filter(Boolean).join(". ");
     const tail = `${business.name}${place ? ` in ${place}` : ""}`;
@@ -67,7 +73,7 @@ export function buildMeta({ origin, supabaseUrl, business, item = null, category
       name: item.name,
       url: canonical,
       ...(item.description ? { description: clip(item.description, 500) } : {}),
-      ...(item.image_paths?.length ? { image: item.image_paths.map((p) => mediaUrl(supabaseUrl, p)).filter(Boolean) } : {}),
+      ...(item.image_paths?.length ? { image: item.image_paths.map((p) => mediaUrl(supabaseUrl, p, cloudName)).filter(Boolean) } : {}),
       brand: { "@type": "Brand", name: business.name },
       ...(item.price !== null && item.price !== undefined && ["fixed", "from"].includes(item.price_type) && Number.isFinite(Number(item.price))
         ? {
@@ -86,7 +92,7 @@ export function buildMeta({ origin, supabaseUrl, business, item = null, category
   }
 
   const canonical = `${origin}/b/${business.slug}`;
-  const image = mediaUrl(supabaseUrl, business.cover_path) ?? mediaUrl(supabaseUrl, business.logo_path) ?? fallbackImage;
+  const image = mediaUrl(supabaseUrl, business.cover_path, cloudName) ?? mediaUrl(supabaseUrl, business.logo_path, cloudName) ?? fallbackImage;
   const about = business.tagline || business.description;
   const description = about
     ? clip(about, 200)

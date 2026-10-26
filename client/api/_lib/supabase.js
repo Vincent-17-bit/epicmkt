@@ -4,6 +4,8 @@
 const env = (name) => (typeof process !== "undefined" ? process.env?.[name] : undefined);
 
 export const supabaseUrl = () => String(env("SUPABASE_URL") || env("VITE_SUPABASE_URL") || "").replace(/\/$/, "");
+// The Cloudinary cloud pictures are served from. Public by design (it is in every picture url); no key or secret is ever read here.
+export const cloudinaryCloud = () => String(env("CLOUDINARY_CLOUD_NAME") || env("VITE_CLOUDINARY_CLOUD_NAME") || "").trim();
 const anonKey = () => env("SUPABASE_ANON_KEY") || env("VITE_SUPABASE_ANON_KEY") || "";
 
 export const configured = () => Boolean(supabaseUrl() && anonKey());

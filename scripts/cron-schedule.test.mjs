@@ -16,7 +16,7 @@ const cronFunctions = readdirSync(join(root, "functions"), { withFileTypes: true
   .filter((name) => ["handler.ts", "index.ts"].some((f) => existsSync(join(root, "functions", name, f)) && readFileSync(join(root, "functions", name, f), "utf8").includes("x-cron-secret")));
 
 test("the cron-driven functions are the ones this test knows about", () => {
-  assert.deepEqual(cronFunctions.sort(), ["daily-lifecycle", "dispatch-messages", "proofs-purge"]);
+  assert.deepEqual(cronFunctions.sort(), ["daily-lifecycle", "dispatch-messages", "media-gc", "proofs-purge"]);
 });
 
 for (const name of cronFunctions) {

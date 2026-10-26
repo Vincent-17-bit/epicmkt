@@ -614,12 +614,14 @@
 }
 
 .menu {
-  position: absolute;
-  top: calc(100% + var(--space-1));
-  right: 0;
+  /* Fixed to the viewport so card overflow can't clip it; parts.jsx sets top/left/maxHeight. */
+  position: fixed;
   z-index: var(--z-menu);
   display: grid;
   min-width: 11rem;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--space-1);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);
