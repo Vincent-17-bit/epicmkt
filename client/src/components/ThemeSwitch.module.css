@@ -49,7 +49,7 @@
   transform: scale(0.97);
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5rem) {
   .group {
     max-width: 22rem;
   }

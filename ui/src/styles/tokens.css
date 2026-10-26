@@ -34,7 +34,18 @@
   --z-header: 40;
   --z-search-scrim: 50;
   --z-search: 60;
-  --z-toast: 70;
+  --z-prompt: 70;
+  --z-sheet: 80;
+  --z-lightbox: 90;
+  --z-toast: 100;
+
+  /* Horizontal scroll-edge fades (alpha masks; #000 is opacity, not a colour). */
+  --mask-fade-start: linear-gradient(90deg, transparent, #000 var(--space-5));
+  --mask-fade-end: linear-gradient(90deg, #000 calc(100% - var(--space-5)), transparent);
+  --mask-fade-both: linear-gradient(90deg, transparent, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent);
+  --mask-fade-lg-start: linear-gradient(90deg, transparent, #000 var(--space-6));
+  --mask-fade-lg-end: linear-gradient(90deg, #000 calc(100% - var(--space-6)), transparent);
+  --mask-fade-lg-both: linear-gradient(90deg, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
 
   --dur: 180ms;
   --tap: 44px;

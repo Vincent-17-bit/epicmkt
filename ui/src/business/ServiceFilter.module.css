@@ -43,7 +43,7 @@
 }
 
 /* Phones: icon-only button keeps the heading on one line. */
-@media (max-width: 359px) {
+@media (max-width: 22.4375rem) {
   .btnText {
     position: absolute;
     width: 1px;

@@ -343,7 +343,7 @@
 }
 
 .card:not([data-size="compact"]) .cta {
-  min-height: 36px;
+  min-height: var(--tap);
   margin-bottom: var(--space-2);
 }
 
@@ -381,7 +381,7 @@
   gap: var(--space-3);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .card[data-size="hero"] {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     grid-template-rows: auto auto 1fr auto;

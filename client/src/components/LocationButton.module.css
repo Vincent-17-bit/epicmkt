@@ -32,7 +32,7 @@
 }
 
 /* On the narrowest phones the pin alone is the button; the full name stays in its accessible label. */
-@media (max-width: 359px) {
+@media (max-width: 22.4375rem) {
   .btn {
     justify-content: center;
     padding: 0;

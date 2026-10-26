@@ -87,7 +87,7 @@
 }
 
 .howSummary {
-  min-height: 2rem;
+  min-height: var(--tap);
   padding: var(--space-1) 0;
   cursor: pointer;
   font-weight: 700;

@@ -70,7 +70,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 359px) {
+@media (max-width: 22.4375rem) {
   .foot {
     gap: var(--space-2);
     padding-inline: var(--space-3);

@@ -1,7 +1,7 @@
 .root {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: var(--z-sheet);
   display: grid;
   align-items: end;
   justify-items: center;
@@ -507,7 +507,7 @@
   white-space: nowrap;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   .root {
     align-items: center;
   }
@@ -657,7 +657,7 @@
   border-radius: var(--radius-card) var(--radius-card) 0 0;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .root[data-variant="page"] .body {
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);

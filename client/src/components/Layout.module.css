@@ -23,7 +23,7 @@
 
 .main:focus-visible {
   outline: none;
-  box-shadow: none !important;
+  --focus-shadow: none;
 }
 
 .skip {

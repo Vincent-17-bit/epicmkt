@@ -137,7 +137,7 @@
   transform: scale(0.97);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .layout {
     grid-template-columns: 17rem minmax(0, 1fr);
     align-items: start;

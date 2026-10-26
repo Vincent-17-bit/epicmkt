@@ -14,7 +14,7 @@
   --gap: 12px;
 }
 
-@media (min-width: 560px) {
+@media (min-width: 35rem) {
   .wrap {
     --cols: 3.25;
     --gaps: 3;
@@ -28,13 +28,13 @@
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   .wrap {
     --bleed: var(--space-5);
   }
 }
 
-@media (min-width: 900px) {
+@media (min-width: 56.25rem) {
   .wrap {
     --cols: 4;
     --gaps: 3;
@@ -48,7 +48,7 @@
   }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 75rem) {
   .wrap {
     --cols: 5;
     --gaps: 4;
@@ -173,7 +173,7 @@
 }
 
 /* Arrows only where a finger is not the way to scroll; phones swipe. */
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
   .arrows {
     display: flex;
   }
@@ -220,7 +220,7 @@
 }
 
 /* On wide screens the row stops at the content edge and fades where more is hidden. */
-@media (min-width: 900px) {
+@media (min-width: 56.25rem) {
   .track {
     margin-inline: 0;
     padding-inline: 0;
@@ -228,18 +228,18 @@
   }
 
   .track[data-end="false"] {
-    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-6)), transparent);
-    mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: var(--mask-fade-lg-end);
+    mask-image: var(--mask-fade-lg-end);
   }
 
   .track[data-start="false"] {
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-6));
-    mask-image: linear-gradient(90deg, transparent, #000 var(--space-6));
+    -webkit-mask-image: var(--mask-fade-lg-start);
+    mask-image: var(--mask-fade-lg-start);
   }
 
   .track[data-start="false"][data-end="false"] {
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 var(--space-6), #000 calc(100% - var(--space-6)), transparent);
+    -webkit-mask-image: var(--mask-fade-lg-both);
+    mask-image: var(--mask-fade-lg-both);
   }
 }
 

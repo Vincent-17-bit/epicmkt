@@ -57,8 +57,8 @@
 .scrim {
   position: fixed;
   inset: 0;
-  /* Above the item sheet (z-index 80 in ItemDetail.module.css), which is where videos are opened from. */
-  z-index: 90;
+  /* Above the item sheet (--z-sheet), which is where videos are opened from. */
+  z-index: var(--z-lightbox);
   display: grid;
   place-items: center;
   padding: var(--space-4);
@@ -78,6 +78,7 @@
   display: block;
   width: 100%;
   max-height: 70vh;
+  max-height: 70dvh;
   border-radius: var(--radius-card);
   background: #000;
 }

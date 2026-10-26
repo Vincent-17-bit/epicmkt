@@ -48,7 +48,7 @@
 
 .panel:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-lg) !important;
+  --focus-shadow: var(--shadow-lg);
 }
 
 .inner {
@@ -115,7 +115,7 @@
 
 .input:focus-visible {
   outline: none;
-  box-shadow: none !important;
+  --focus-shadow: none;
 }
 
 .submit {
@@ -236,7 +236,7 @@
 
 .clearAll {
   min-width: 4.5rem;
-  min-height: 32px;
+  min-height: var(--tap);
   padding: 0;
   border: 0;
   border-radius: var(--radius-pill);

@@ -50,7 +50,7 @@
 }
 
 /* Room for words: icon over label, a little taller so the label never crowds the icon. */
-@container (min-width: 215px) {
+@container (min-width: 13.4375rem) {
   .action {
     min-height: 52px;
     padding: var(--space-2) 2px;

@@ -45,8 +45,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: var(--tap);
+  height: var(--tap);
   border: 0;
   border-radius: var(--radius-pill);
   background: none;
@@ -376,7 +376,7 @@
 }
 
 .preset {
-  min-height: 36px;
+  min-height: var(--tap);
   padding: 0 var(--space-3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
@@ -434,7 +434,7 @@
   outline-offset: 1px;
 }
 
-@media (max-width: 359px) {
+@media (max-width: 22.4375rem) {
   .sort {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);

@@ -134,7 +134,7 @@
   display: none;
 }
 
-@container (min-width: 170px) {
+@container (min-width: 10.625rem) {
   .featuredMark {
     display: inline-grid;
   }
@@ -145,14 +145,14 @@
   margin-top: auto;
 }
 
-@container (min-width: 170px) {
+@container (min-width: 10.625rem) {
   .from {
     display: inline;
   }
 }
 
 /* With room, a long name may use two lines instead of being cut short. */
-@container (min-width: 190px) {
+@container (min-width: 11.875rem) {
   .name {
     align-items: flex-start;
   }

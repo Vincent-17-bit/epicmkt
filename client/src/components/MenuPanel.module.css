@@ -46,7 +46,7 @@
 
 .panel:focus-visible {
   outline: none;
-  box-shadow: var(--shadow-lg) !important;
+  --focus-shadow: var(--shadow-lg);
 }
 
 .inner {
@@ -105,7 +105,7 @@
 
 .input:focus-visible {
   outline: none;
-  box-shadow: none !important;
+  --focus-shadow: none;
 }
 
 .submit {
@@ -128,7 +128,7 @@
   gap: var(--space-2);
 }
 
-@media (min-width: 420px) and (max-width: 1023px) {
+@media (min-width: 26.25rem) and (max-width: 63.9375rem) {
   .sellerStack {
     grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   }
@@ -180,7 +180,7 @@
   list-style: none;
 }
 
-@media (min-width: 600px) {
+@media (min-width: 37.5rem) {
   .cats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-2);
@@ -232,7 +232,7 @@
   overflow-wrap: break-word;
 }
 
-@media (max-width: 359px) {
+@media (max-width: 22.4375rem) {
   .cat {
     gap: 6px;
     padding-inline: 6px;
@@ -246,7 +246,7 @@
   }
 }
 
-@media (min-width: 400px) {
+@media (min-width: 25rem) {
   .cat {
     gap: 10px;
     padding-inline: 10px;
@@ -336,7 +336,7 @@
   transform: scale(0.97);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .inner {
     grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
     grid-template-areas:
@@ -386,7 +386,7 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 80rem) {
   .cats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

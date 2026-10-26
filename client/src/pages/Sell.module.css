@@ -12,7 +12,7 @@
   margin-inline: 0;
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 80rem) {
   .heroInner {
     margin-inline: auto;
     padding-right: 0;
@@ -254,7 +254,7 @@
   white-space: normal;
 }
 
-@media (max-width: 479px) {
+@media (max-width: 29.9375rem) {
   .rowLabel {
     padding: var(--space-3) var(--space-2) var(--space-3) var(--space-3);
   }

@@ -174,7 +174,7 @@
   color: var(--primary-pressed);
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
   .timeline {
     grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   }
@@ -225,7 +225,7 @@
   font-weight: 600;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 40rem) {
   .row {
     grid-template-columns: 14rem 1fr;
     gap: var(--space-3);

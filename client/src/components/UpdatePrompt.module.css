@@ -1,7 +1,7 @@
 .prompt {
   position: fixed;
-  inset: auto max(var(--space-4), var(--safe-right)) calc(var(--space-4) + var(--safe-bottom)) max(var(--space-4), var(--safe-left));
-  z-index: var(--z-toast);
+  inset: calc(var(--header-h) + var(--space-2)) max(var(--space-4), var(--safe-right)) auto max(var(--space-4), var(--safe-left));
+  z-index: var(--z-prompt);
   display: flex;
   flex-wrap: wrap;
   align-items: center;

@@ -6,6 +6,7 @@
 
 .map {
   height: min(60vh, 380px);
+  height: min(60dvh, 380px);
   min-height: 260px;
   width: 100%;
   z-index: 0;

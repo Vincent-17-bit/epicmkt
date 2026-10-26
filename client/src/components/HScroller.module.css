@@ -22,18 +22,18 @@
 }
 
 .row[data-left="true"] {
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-5));
-  mask-image: linear-gradient(90deg, transparent, #000 var(--space-5));
+  -webkit-mask-image: var(--mask-fade-start);
+  mask-image: var(--mask-fade-start);
 }
 
 .row[data-right="true"] {
-  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-5)), transparent);
-  mask-image: linear-gradient(90deg, #000 calc(100% - var(--space-5)), transparent);
+  -webkit-mask-image: var(--mask-fade-end);
+  mask-image: var(--mask-fade-end);
 }
 
 .row[data-left="true"][data-right="true"] {
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 var(--space-5), #000 calc(100% - var(--space-5)), transparent);
+  -webkit-mask-image: var(--mask-fade-both);
+  mask-image: var(--mask-fade-both);
 }
 
 .dragging {
@@ -48,7 +48,7 @@
   scroll-snap-align: start;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 64rem) {
   .cell[data-wide="true"] {
     flex-basis: calc(var(--cell) * 2 + 12px);
   }
@@ -85,7 +85,7 @@
   pointer-events: none;
 }
 
-@media (hover: hover) and (min-width: 768px) {
+@media (hover: hover) and (min-width: 48rem) {
   .nav {
     display: inline-flex;
   }

@@ -196,7 +196,7 @@
   transition: background-color var(--dur) ease, color var(--dur) ease, transform var(--dur) ease;
 }
 
-@media (max-width: 767.98px) {
+@media (max-width: 47.9988rem) {
   .homeText {
     position: absolute;
     width: 1px;
@@ -216,13 +216,13 @@
   }
 }
 
-@media (max-width: 360px) {
+@media (max-width: 22.5rem) {
   .current {
     max-width: 18ch;
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 48rem) {
   .trail {
     flex: 1 1 0;
   }

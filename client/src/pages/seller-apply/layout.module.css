@@ -97,7 +97,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 30rem) {
   .long {
     display: none;
   }
