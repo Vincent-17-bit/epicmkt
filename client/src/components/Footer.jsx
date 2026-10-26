@@ -110,7 +110,7 @@ export default function Footer() {
     <footer className={styles.footer} data-theme="light">
       <Container className={styles.top}>
         <div className={`${styles.brand} ${styles.about}`}>
-          <Logo />
+          <Logo tagline="Everything local. One tap away." />
           <p className={styles.aboutText}>
             EpicMKT is a directory of local businesses across Kenya. Find what you need nearby, then call, WhatsApp or get directions in one tap.
           </p>

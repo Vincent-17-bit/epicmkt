@@ -2,6 +2,7 @@
 // Kept as plain functions so they can be unit tested (seo.test.js).
 
 export const SITE_NAME = "EpicMKT";
+export const SITE_SLOGAN = "Everything local. One tap away.";
 export const SITE_ALT_NAMES = ["Epic MKT", "EpicMKT Kenya", "EpicMKT App"];
 export const SITE_DESCRIPTION =
   "Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions.";
@@ -80,6 +81,7 @@ export function buildSiteJsonLd({ site, socials = [], email = "", phone = "" }) 
         url: `${site}/`,
         logo: { "@type": "ImageObject", url: `${site}/icon-512.png`, width: 512, height: 512 },
         image: `${site}/og-image.png`,
+        slogan: SITE_SLOGAN,
         description: SITE_DESCRIPTION,
         areaServed: { "@type": "Country", name: "Kenya" },
         ...(sameAs.length ? { sameAs } : {}),
