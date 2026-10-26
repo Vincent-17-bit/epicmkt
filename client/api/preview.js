@@ -10,7 +10,7 @@
 
 import { categories } from "../src/data/categories.js";
 import { buildMeta, injectHead, isUuid, notFoundMeta } from "./_lib/meta.js";
-import { configured, rest, siteOrigin, supabaseUrl } from "./_lib/supabase.js";
+import { cloudinaryCloud, configured, rest, siteOrigin, supabaseUrl } from "./_lib/supabase.js";
 
 export const config = { runtime: "edge" };
 
@@ -43,7 +43,7 @@ export default async function handler(req) {
       // A removed or unknown item still gets the store's own preview, as the app itself shows the store in that case.
     }
     const categoryName = categories.find((c) => c.id === business.category_id)?.name ?? "";
-    const page = injectHead(shell, buildMeta({ origin, supabaseUrl: supabaseUrl(), business, item, categoryName }));
+    const page = injectHead(shell, buildMeta({ origin, supabaseUrl: supabaseUrl(), cloudName: cloudinaryCloud(), business, item, categoryName }));
     return html(page, 200, "public, s-maxage=300, stale-while-revalidate=86400");
   } catch {
     return html(shell, 200, "no-store");

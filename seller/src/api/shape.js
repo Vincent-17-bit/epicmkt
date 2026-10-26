@@ -1,4 +1,4 @@
-import { nairobiNow, offerPhase, upcomingExceptions } from "@epicmkt/shared";
+import { imageUrl, nairobiNow, offerPhase, upcomingExceptions } from "@epicmkt/shared";
 
 // Database rows (snake_case) to the shapes the pages use (camelCase). Live and mock return the same shapes.
 export const business = (b) => b && ({
@@ -69,7 +69,10 @@ export const offer = (o) => ({
 });
 
 const num = (v) => (v === null || v === undefined ? null : Number(v));
-export const mediaUrl = (path) => (path?.startsWith("blob:") ? path : path && import.meta.env?.VITE_SUPABASE_URL ? `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}` : null);
+// A stored picture becomes a url: Cloudinary for new pictures (a value with no file extension), the Supabase bucket for older ones,
+// and blob: urls pass straight through (the demo mode and the cropper preview use them).
+export const mediaUrl = (path) =>
+  imageUrl(path, { cloudName: import.meta.env?.VITE_CLOUDINARY_CLOUD_NAME, supabaseUrl: import.meta.env?.VITE_SUPABASE_URL });
 
 export const catalogItem = (i) => ({
   id: i.id, name: i.name, description: i.description ?? "", section: i.section ?? null,
