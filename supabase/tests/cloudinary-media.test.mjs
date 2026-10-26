@@ -169,3 +169,23 @@ test("sellers, anonymous visitors and even admins cannot touch the media tables 
     await rejects(c, who, `select media_sweep_orphans()`, [], /permission denied/);
   }
 });
+
+test("a seller's own purge claims only that business's queued files, never a file something still uses", async () => {
+  await reset();
+  const itA = await item(ids.bizA);
+  const itB = await item(ids.bizB);
+  const mine = `${ids.bizA}/${itA}/${uuid()}`;
+  const used = `${ids.bizA}/${itA}/${uuid()}`;
+  const theirs = `${ids.bizB}/${itB}/${uuid()}`;
+  await svc(`select media_gc_enqueue($1::text[], 'test')`, [[mine, used, theirs]]);
+  await sql(c, `insert into item_media (item_id, business_id, kind, path, mime) values ($1, $2, 'image', $3, 'image/jpeg')`, [itA, ids.bizA, used]);
+  const claimed = (await svc(`select public_id from media_gc_claim_for_business($1, 20)`, [ids.bizA])).map((r) => r.public_id);
+  assert.deepEqual(claimed, [mine]);
+  assert.deepEqual(await svc(`select public_id from media_gc_claim_for_business($1, 20)`, [ids.bizA]), [], "leased, not handed out twice");
+  assert.deepEqual((await sql(c, `select public_id from media_gc order by public_id`)).map((r) => r.public_id), [mine, theirs].sort(), "the used file left the queue; the other business's file is untouched");
+});
+
+test("the per-business claim is service-only", async () => {
+  await rejects(c, asA, `select media_gc_claim_for_business($1, 5)`, [ids.bizA], /permission denied/);
+  await rejects(c, { role: "anon" }, `select media_gc_claim_for_business($1, 5)`, [ids.bizA], /permission denied/);
+});

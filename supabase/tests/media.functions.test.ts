@@ -2,6 +2,7 @@ import nodeAssert from "node:assert/strict";
 import { sellerMediaSign } from "../functions/seller-media-sign/handler.ts";
 import { sellerMediaFinalize } from "../functions/seller-media-finalize/handler.ts";
 import { mediaGc } from "../functions/media-gc/handler.ts";
+import { sellerMediaPurge } from "../functions/seller-media-purge/handler.ts";
 import { cloudinaryConfigFromEnv, makeCloudinary, type CloudinaryClient } from "../functions/_shared/cloudinary.ts";
 import { signParams } from "../functions/_shared/synced/cloudinarySign.js";
 import type { Deps } from "../functions/_shared/seller.ts";
@@ -266,4 +267,29 @@ Deno.test("media-gc: an empty queue is a quick no-op, and a database error is a 
   assertEquals(s.destroyed, []);
   s.rpcs["media_gc_claim"] = () => ({ data: null, error: { message: "down" } });
   assertEquals((await mediaGc(s.deps)(post({}, { "x-cron-secret": "cron" }))).status, 500);
+});
+
+// ---- seller-media-purge -----------------------------------------------------------------------------------------------
+
+Deno.test("media-purge: a seller deletes their own queued files right away, and only their own", async () => {
+  const s = setup();
+  s.rpcs["media_gc_claim_for_business"] = () => ({ data: [{ public_id: `${BIZ}/a` }, { public_id: `${BIZ}/bad` }], error: null });
+  const h = sellerMediaPurge(s.deps);
+  assertEquals((await h(post({}))).status, 401);
+  const r = await read(await h(authed({})));
+  assertEquals(r, { status: 200, body: { deleted: 1, failed: 1 } });
+  assertEquals(s.rpcCalls.find((c) => c.name === "media_gc_claim_for_business")!.args, { p_business: BIZ, p_limit: 20 });
+  assertEquals(s.destroyed, [[`${BIZ}/a`, `${BIZ}/bad`]]);
+  assertEquals(s.rpcCalls.find((c) => c.name === "media_gc_done")!.args, { p_ids: [`${BIZ}/a`] });
+  assertEquals(s.rpcCalls.find((c) => c.name === "media_gc_fail")!.args, { p_ids: [`${BIZ}/bad`], p_error: "boom" });
+});
+
+Deno.test("media-purge: nothing queued is a quick no-op; no Cloudinary or a database error are clean failures", async () => {
+  const s = setup();
+  s.rpcs["media_gc_claim_for_business"] = () => ({ data: [], error: null });
+  assertEquals((await read(await sellerMediaPurge(s.deps)(authed({})))).body, { deleted: 0, failed: 0 });
+  assertEquals(s.destroyed, []);
+  assertEquals((await sellerMediaPurge(setup({ cloud: false }).deps)(authed({}))).status, 503);
+  s.rpcs["media_gc_claim_for_business"] = () => ({ data: null, error: { message: "down" } });
+  assertEquals((await sellerMediaPurge(s.deps)(authed({}))).status, 500);
 });

@@ -48,6 +48,9 @@ verify_jwt = false
 [functions.media-gc]
 verify_jwt = false
 
+[functions.seller-media-purge]
+verify_jwt = false
+
 [functions.seller-export-data]
 verify_jwt = false
 

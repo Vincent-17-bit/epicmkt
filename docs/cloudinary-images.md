@@ -19,7 +19,7 @@ message attachments stay in Supabase Storage (they are private or not pictures).
 4. **Browser + Vercel**: set `VITE_CLOUDINARY_CLOUD_NAME=<cloud_name>` in `client/.env`, `seller/.env` and in the Vercel projects
    (the cloud name is public; it is in every picture URL). Redeploy: Vercel applies variables only to new deployments.
 5. **Database**: apply `supabase/migrations/0047_cloudinary_media.sql`.
-6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize media-gc`.
+6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize seller-media-purge media-gc`.
 7. **Cron**: run the `media-gc` block of `supabase/cron/schedule.sql` once (it is safe to re-run the whole file).
 8. **Move existing pictures** (optional, any time; old ones keep working from Supabase until then):
    ```
@@ -42,6 +42,8 @@ seller browser ──3 done──▶ seller-media-finalize ──▶ checks Clou
 * The browser never holds the API secret. Each signature covers one id chosen by the server under the shop's own
   `<businessId>/` prefix, jpg/png/webp only, no overwriting, valid one hour.
 * Photos over 9 MB are redrawn once in the browser before sending (Cloudinary's free plan refuses over 10 MB).
+* When a seller removes a photo, the seller site immediately calls `seller-media-purge`, which deletes that seller's queued files from
+  Cloudinary within a second or two (it only ever touches the caller's own files). The cron job below is the safety net.
 * Nothing is deleted by the browser. Removing a photo, replacing a logo or deleting a shop fires a database trigger that
   queues the Cloudinary file in `media_gc`, in the same transaction; the `media-gc` job (every 10 min) deletes it, retrying
   with a growing pause if Cloudinary is down. Uploads that were never finished are queued by the same job after an hour.
@@ -77,3 +79,19 @@ page plus CDN-cached image files, with no database or storage call per picture.
   a few KB to tens of KB. In the Cloudinary Media Library the original should be 3840 px on its long side.
 * Remove that photo: within ~10 minutes the asset disappears from Cloudinary (or run the `media-gc` function by hand with the cron secret).
 * `select count(*) from media_gc;` should hover near zero; rows with `last_error` set show a failing delete.
+
+## If removed photos stay in Cloudinary
+
+Run these in the Supabase SQL editor.
+
+```sql
+select count(*), min(queued_at) from media_gc;                 -- files waiting to be deleted
+select public_id, attempts, last_error from media_gc order by queued_at limit 10;
+select name from vault.decrypted_secrets;                      -- must list project_url and cron_secret
+select status_code, content from net._http_response order by created desc limit 5;   -- 200 = media-gc ran
+select jobname, active from cron.job where jobname = 'media-gc';
+```
+* Queue empty but the file is still in Cloudinary: the file was not one of ours (for example a sample photo) or was removed by hand.
+* `last_error` set: Cloudinary refused the delete; the message says why (usually a wrong API key/secret in the `CLOUDINARY_URL` secret).
+* Queue growing, `attempts` 0, responses 401: the `CRON_SECRET` function secret and the `cron_secret` Vault value differ. Make them identical.
+* No `project_url` or `cron_secret` in Vault: create them (see `docs/cron-runbook.md`). Until then `seller-media-purge` still deletes removed photos on its own.

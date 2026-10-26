@@ -1,4 +1,5 @@
 import { json, wrap, type Deps } from "../_shared/seller.ts";
+import { settleDeletes } from "../_shared/mediaGc.ts";
 
 // Run every few minutes (pg_cron + pg_net, see supabase/cron/schedule.sql) with the x-cron-secret header.
 // 1. Settles uploads that were signed but never attached (the seller closed the tab mid-upload).
@@ -17,8 +18,6 @@ export const mediaGc = (d: Deps) => wrap(async (req) => {
   const ids: string[] = (claimed.data ?? []).map((r: { public_id: string }) => r.public_id);
   if (!ids.length) return json({ swept: swept.data ?? 0, deleted: 0, failed: 0 });
 
-  const result = await d.cloudinary.destroy(ids);
-  if (result.deleted.length) await d.db.rpc("media_gc_done", { p_ids: result.deleted });
-  if (result.failed.length) await d.db.rpc("media_gc_fail", { p_ids: result.failed.map((f) => f.id), p_error: result.failed[0].reason });
-  return json({ swept: swept.data ?? 0, deleted: result.deleted.length, failed: result.failed.length });
+  const done = await settleDeletes(d, ids);
+  return json({ swept: swept.data ?? 0, ...done });
 });

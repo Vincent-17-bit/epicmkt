@@ -95,6 +95,10 @@ const sendToCloudinary = async ({ uploadUrl, fields, publicId }, file) => {
   return data;
 };
 
+// Asks the server to delete this seller's queued Cloudinary files now. Best effort: the database has already queued them, and the
+// media-gc cron job deletes anything this call misses, so a failure here is never shown to the seller.
+const purgeRemoved = () => fn("seller-media-purge", {}).catch(() => {});
+
 const asPhotoLimit = (e) => (e?.code === "limit_reached" ? new ApiError("photo_limit") : e);
 
 export const uploadItemPhoto = async (itemId, file) => {
@@ -119,7 +123,8 @@ export const uploadItemPhoto = async (itemId, file) => {
 // Older pictures are still files in the Supabase bucket and are removed from there as before.
 export const removeItemPhoto = async (path) => {
   await rows(need().from("item_media").delete().eq("path", path));
-  if (!isCloudinaryId(path)) await need().storage.from(MEDIA_BUCKET).remove([path]);
+  if (isCloudinaryId(path)) await purgeRemoved();
+  else await need().storage.from(MEDIA_BUCKET).remove([path]);
 };
 
 // The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).
@@ -138,7 +143,10 @@ export const uploadShopImage = async (kind, blob) => {
   // If this fails the upload is simply never attached; the hourly sweep queues it for deletion.
   await updateProfile({ [`${kind}_path`]: signed.publicId });
   const old = business[`${kind}_path`];
-  if (old && old !== signed.publicId) await dropLegacy(old);
+  if (old && old !== signed.publicId) {
+    await dropLegacy(old);
+    await purgeRemoved();
+  }
   return { path: signed.publicId };
 };
 export const removeShopImage = async (kind) => {
@@ -148,6 +156,7 @@ export const removeShopImage = async (kind) => {
   const old = business[`${kind}_path`];
   await updateProfile({ [`${kind}_path`]: null });
   await dropLegacy(old);
+  await purgeRemoved();
 };
 export const exportData = () => fn("seller-export-data", {});
 
