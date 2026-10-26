@@ -292,32 +292,47 @@
 }
 
 .links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--space-1);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .small {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  min-height: 40px;
-  padding: 0 var(--space-3);
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 var(--space-2);
+  border: 2px solid var(--border);
   border-radius: var(--radius-pill);
+  background: var(--surface-2);
   font-size: var(--text-sm);
-  font-weight: 600;
-  transition: background-color var(--dur) ease, transform var(--dur) ease;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease,
+    box-shadow var(--dur) ease;
+}
+
+.small:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 @media (hover: hover) {
   .small:hover {
+    border-color: var(--text);
     background: var(--primary-tint);
-    text-decoration-thickness: 2px;
+    box-shadow: var(--shadow-md);
+    text-decoration: none;
     transform: translateY(-2px);
   }
 }
 
 .small:active {
   background: var(--primary);
+  border-color: var(--text);
+  box-shadow: none;
   transform: scale(0.97);
 }
 
