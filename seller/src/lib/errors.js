@@ -71,6 +71,7 @@ const MESSAGES = {
   invalid_price: "Check the price. Use numbers only, and keep the sale price below the regular price.",
   invalid_name: "Use 2 to 120 characters for the name.",
   invalid_text: "One of the text fields is too long.",
+  invalid_details: "Check the item details: brand, short description, highlights, specs, what's included, terms and pack size are over their limits or incomplete.",
   invalid_availability: "Choose an availability.",
   account_suspended: "Your account is suspended, so you cannot do this.",
   message_not_found: "We could not find that message.",

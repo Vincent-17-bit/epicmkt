@@ -284,3 +284,243 @@ test("customers get an item's video paths in the seller's order, apart from the 
   assert.deepEqual(by["Photo only"].video_paths, []);
   assert.equal(by["Draft reel"], undefined, "a draft item, and so its video, stays private");
 });
+
+const json = JSON.stringify;
+const spec = (n, extra = {}) => ({ group: "Features & Specs", label: `Label ${n}`, value: `Value ${n}`, ...extra });
+const specList = (n) => Array.from({ length: n }, (_, i) => spec(i));
+const detailFields = { name: "Detail item", price_type: "fixed", price: "1200", availability: "available" };
+const save = (who, fields, id = null) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, json(fields)]).then((r) => r[0].id);
+
+test("item details with a bad shape or length cannot be stored", async () => {
+  await sql(c, `delete from items`);
+  const longer = (n) => "x".repeat(n);
+  const bad = [
+    [{ highlights: json({}) }, /items_highlights_shape/],
+    [{ highlights: "null" }, /items_highlights_shape/],
+    [{ highlights: json(Array.from({ length: 9 }, () => ({ text: "Fast" }))) }, /items_highlights_shape/],
+    [{ highlights: json([{ title: "Only a title" }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ text: "   " }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ text: 5 }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ text: longer(201) }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ title: longer(41), text: "Fast" }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ title: null, text: "Fast" }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ text: "Fast", url: "x" }]) }, /items_highlights_shape/],
+    [{ highlights: json(["Fast"]) }, /items_highlights_shape/],
+    [{ highlights: json([null]) }, /items_highlights_shape/],
+    [{ specs: json({}) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { group: "Elsewhere" })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { group: "measurements" })]) }, /items_specs_shape/],
+    [{ specs: json([{ label: "Weight", value: "2 kg" }]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { label: longer(41) })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { value: longer(121) })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { label: " " })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { extra: "x" })]) }, /items_specs_shape/],
+    [{ specs: json(specList(21)) }, /items_specs_shape/],
+    [{ includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, /items_includes_shape/],
+    [{ includes: [longer(81)] }, /items_includes_shape/],
+    [{ includes: ["Cable", " "] }, /items_includes_shape/],
+    [{ includes: ["Cable", null] }, /items_includes_shape/],
+    [{ includes: "{{a},{b}}" }, /items_includes_shape/],
+    [{ brand: longer(61) }, /items_brand_len/],
+    [{ short_description: longer(141) }, /items_short_description_len/],
+    [{ terms: longer(501) }, /items_terms_len/],
+    [{ pack_size: longer(41) }, /items_pack_size_len/],
+  ];
+  for (const [extra, pattern] of bad) await assert.rejects(item(ids.bizA, "Bad shape", extra), pattern, Object.keys(extra)[0]);
+  assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 0);
+});
+
+test("item details at their limits are stored as given", async () => {
+  await sql(c, `delete from items`);
+  const longer = (n) => "x".repeat(n);
+  const groups = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
+  const id = await item(ids.bizA, "At the limit", {
+    brand: longer(60),
+    short_description: longer(140),
+    terms: longer(500),
+    pack_size: longer(40),
+    highlights: json(Array.from({ length: 8 }, () => ({ title: longer(40), text: longer(200) }))),
+    specs: json(Array.from({ length: 20 }, (_, i) => ({ group: groups[i % 5], label: longer(40), value: longer(120) }))),
+    includes: Array.from({ length: 10 }, () => longer(80)),
+  });
+  const r = await row(id);
+  assert.equal(r.brand.length, 60);
+  assert.equal(r.highlights.length, 8);
+  assert.equal(r.specs.length, 20);
+  assert.deepEqual([...new Set(r.specs.map((s) => s.group))].sort(), [...groups].sort());
+  assert.equal(r.includes.length, 10);
+  const titleless = await item(ids.bizA, "Titleless", { highlights: json([{ text: "Just text" }]) });
+  assert.deepEqual((await row(titleless)).highlights, [{ text: "Just text" }]);
+});
+
+test("the 21st spec is refused by the save function and the table", async () => {
+  await sql(c, `delete from items`);
+  const id = await save(asA, { ...detailFields, specs: specList(20) });
+  assert.equal((await row(id)).specs.length, 20);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(21) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(21) })], /invalid_details/);
+  assert.equal((await row(id)).specs.length, 20);
+  assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
+  await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(21))]), /items_specs_shape/);
+});
+
+test("the save function writes, keeps and clears the details and rejects bad ones", async () => {
+  await sql(c, `delete from items`);
+  const id = await save(asA, {
+    ...detailFields,
+    brand: "  Acme ",
+    short_description: "Light and quick",
+    highlights: [{ title: "Speed", text: "Fast charging" }, { text: "Two year warranty" }],
+    specs: [spec(1), spec(2, { group: "Measurements" })],
+    includes: ["Charger", " Cable "],
+    terms: "Returns within 7 days",
+    pack_size: "Box of 2",
+  });
+  let r = await row(id);
+  assert.equal(r.brand, "Acme");
+  assert.deepEqual(r.highlights, [{ title: "Speed", text: "Fast charging" }, { text: "Two year warranty" }]);
+  assert.deepEqual(r.includes, ["Charger", "Cable"]);
+  assert.equal(r.pack_size, "Box of 2");
+
+  await save(asA, { ...detailFields, name: "Renamed" }, id);
+  r = await row(id);
+  assert.equal(r.name, "Renamed");
+  assert.equal(r.brand, "Acme");
+  assert.equal(r.specs.length, 2);
+  assert.deepEqual(r.includes, ["Charger", "Cable"]);
+  assert.equal(r.terms, "Returns within 7 days");
+
+  await save(asA, { ...detailFields, brand: "", short_description: null, highlights: null, specs: [], includes: null, terms: " ", pack_size: null }, id);
+  r = await row(id);
+  assert.deepEqual([r.brand, r.short_description, r.terms, r.pack_size], [null, null, null, null]);
+  assert.deepEqual([r.highlights, r.specs, r.includes], [[], [], []]);
+
+  for (const bad of [
+    { brand: "x".repeat(61) },
+    { short_description: "x".repeat(141) },
+    { terms: "x".repeat(501) },
+    { pack_size: "x".repeat(41) },
+    { brand: { a: 1 } },
+    { highlights: [{ text: "x".repeat(201) }] },
+    { highlights: "not a list" },
+    { specs: [spec(1, { group: "Elsewhere" })] },
+    { includes: [1, 2] },
+    { includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) },
+    { includes: ["ok", " "] },
+  ]) {
+    await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, ...bad })], /invalid_details/);
+    await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, ...bad })], /invalid_details/);
+  }
+  assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
+});
+
+test("the save function drops empty highlight titles instead of refusing them", async () => {
+  await sql(c, `delete from items`);
+  const id = await save(asA, {
+    ...detailFields,
+    highlights: [{ title: null, text: "One" }, { title: "  ", text: "Two" }, { title: "", text: "Three" }, { title: "Kept", text: "Four" }, { text: "Five" }],
+  });
+  assert.deepEqual((await row(id)).highlights, [{ text: "One" }, { text: "Two" }, { text: "Three" }, { title: "Kept", text: "Four" }, { text: "Five" }]);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, highlights: [{ title: 5, text: "Bad" }] })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, highlights: [{ title: null }] })], /invalid_details/);
+});
+
+test("changes to the details are written to the item history", async () => {
+  await sql(c, `delete from items`);
+  const id = await save(asA, detailFields);
+  const history = () => sql(c, `select field, old_value, new_value, actor_role from item_history where item_id = $1 order by id`, [id]);
+  assert.deepEqual(await history(), []);
+  await save(asA, {
+    ...detailFields,
+    brand: "Acme",
+    short_description: "Light",
+    highlights: [{ text: "Fast" }],
+    specs: [spec(1)],
+    includes: ["Charger"],
+    terms: "Seven days",
+    pack_size: "Single",
+  }, id);
+  const by = Object.fromEntries((await history()).map((h) => [h.field, h]));
+  assert.deepEqual(Object.keys(by).sort(), ["brand", "highlights", "includes", "pack_size", "short_description", "specs", "terms"]);
+  assert.equal(by.brand.old_value, null);
+  assert.equal(by.brand.new_value, "Acme");
+  assert.equal(by.brand.actor_role, "seller");
+  assert.deepEqual(JSON.parse(by.highlights.old_value), []);
+  assert.deepEqual(JSON.parse(by.highlights.new_value), [{ text: "Fast" }]);
+  assert.deepEqual(JSON.parse(by.includes.new_value), ["Charger"]);
+  const before = (await history()).length;
+  await save(asA, { ...detailFields, brand: "Acme", highlights: [{ text: "Fast" }] }, id);
+  assert.equal((await history()).length, before);
+  await save(asA, { ...detailFields, brand: "Acme Two" }, id);
+  const last = (await history()).at(-1);
+  assert.deepEqual([last.field, last.old_value, last.new_value], ["brand", "Acme", "Acme Two"]);
+});
+
+test("the store product count only counts items customers can see", async () => {
+  await sql(c, `delete from items`);
+  const counts = () => tx(c, { role: "anon" }, (k) => sql(k, `select slug, product_count from public_businesses order by slug`)).then((r) => Object.fromEntries(r.map((x) => [x.slug, x.product_count])));
+  assert.deepEqual(await counts(), { "shop-a": 0, "shop-b": 0 });
+  await item(ids.bizA, "Shown");
+  await item(ids.bizA, "Low", { availability: "limited_stock" });
+  await item(ids.bizA, "By appointment", { availability: "by_appointment" });
+  await item(ids.bizA, "Hidden", { visible: false });
+  await item(ids.bizA, "Draft", { draft: true });
+  await item(ids.bizA, "Hidden draft", { draft: true, visible: false });
+  await item(ids.bizA, "Admin hidden", { hidden_by_admin: true, admin_hide_reason: "x" });
+  await item(ids.bizA, "Admin removed", { removed_by_admin: true });
+  await item(ids.bizA, "Sold out", { availability: "out_of_stock" });
+  await item(ids.bizA, "Unavailable", { availability: "unavailable" });
+  await item(ids.bizB, "Other shop");
+  assert.deepEqual(await counts(), { "shop-a": 3, "shop-b": 1 });
+  const viaView = await tx(c, { role: "anon" }, (k) => sql(k, `select b.slug, (select count(*)::int from public_items i where i.business_id = b.id) as n, b.product_count from public_businesses b`));
+  assert.ok(viaView.every((x) => x.n === x.product_count));
+  await sql(c, `update businesses set status = 'suspended' where id = $1`, [ids.bizB]);
+  assert.deepEqual(await counts(), { "shop-a": 3 });
+  await sql(c, `update businesses set status = 'live' where id = $1`, [ids.bizB]);
+});
+
+test("duplicating an item copies the details", async () => {
+  await sql(c, `delete from items`);
+  const a = await item(ids.bizA, "With details", {
+    brand: "Acme",
+    short_description: "Light and quick",
+    highlights: json([{ title: "Speed", text: "Fast" }, { text: "Warranty" }]),
+    specs: json([spec(1), spec(2, { group: "Item details" })]),
+    includes: ["Charger", "Cable"],
+    terms: "Seven days",
+    pack_size: "Box of 2",
+  });
+  const copy = await row((await as(asA, `select seller_duplicate_item($1) as id`, [a]))[0].id);
+  const src = await row(a);
+  for (const f of ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size"]) assert.deepEqual(copy[f], src[f], f);
+  assert.equal(copy.draft, true);
+  const plain = await item(ids.bizA, "Without details");
+  const plainCopy = await row((await as(asA, `select seller_duplicate_item($1) as id`, [plain]))[0].id);
+  assert.deepEqual([plainCopy.brand, plainCopy.short_description, plainCopy.terms, plainCopy.pack_size], [null, null, null, null]);
+  assert.deepEqual([plainCopy.highlights, plainCopy.specs, plainCopy.includes], [[], [], []]);
+});
+
+test("items and stores without details select exactly as before", async () => {
+  await sql(c, `delete from items`);
+  const id = await item(ids.bizA, "Old style", { price: 80 });
+  const r = await row(id);
+  assert.deepEqual([r.brand, r.short_description, r.terms, r.pack_size], [null, null, null, null]);
+  assert.deepEqual([r.highlights, r.specs, r.includes], [[], [], []]);
+  const pub = (await tx(c, { role: "anon" }, (k) => sql(k, `select * from public_items where id = $1`, [id])))[0];
+  assert.equal(pub.name, "Old style");
+  assert.equal(Number(pub.price), 80);
+  assert.deepEqual([pub.highlights, pub.specs, pub.includes], [[], [], []]);
+  assert.equal(pub.brand, null);
+  const cols = (view) => sql(c, `select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position`, [view]).then((x) => x.map((y) => y.column_name));
+  const items = await cols("public_items");
+  assert.deepEqual(items.slice(0, 15), ["id", "business_id", "name", "description", "section", "price", "price_max", "price_type", "unit", "availability", "sort", "created_at", "image_paths", "video_paths", "stock_left"]);
+  assert.deepEqual(items.slice(15), ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size"]);
+  const stores = await cols("public_businesses");
+  assert.deepEqual(stores.slice(-2), ["exceptions", "product_count"]);
+  const grants = await sql(c, `select grantee from information_schema.role_table_grants where table_schema = 'public' and table_name in ('public_items', 'public_businesses') and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated', 'service_role')`);
+  assert.equal(grants.length, 6);
+  const barrier = await sql(c, `select relname from pg_class where relname in ('public_items', 'public_businesses') and 'security_barrier=true' = any (reloptions) order by relname`);
+  assert.deepEqual(barrier.map((x) => x.relname), ["public_businesses", "public_items"]);
+  const catalog = (await as(asA, `select seller_catalog_items() as r`))[0].r;
+  assert.deepEqual(catalog.items.map((i) => i.highlights), [[]]);
+});
