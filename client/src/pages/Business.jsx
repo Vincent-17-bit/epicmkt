@@ -86,9 +86,9 @@ export default function Business() {
       );
   };
 
-  if (isError && error?.name === "NotFoundError") return <NotFound />;
+  if (isError && !data && error?.name === "NotFoundError") return <NotFound />;
 
-  if (isError) return <BusinessPageError onRetry={() => refetch()} />;
+  if (isError && !data) return <BusinessPageError onRetry={() => refetch()} />;
 
   if (isPending) return <BusinessPageSkeleton breadcrumbs={<PageBreadcrumbs />} />;
 

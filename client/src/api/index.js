@@ -16,12 +16,21 @@ export const getNearbyBusinesses = (params) => browse.getNearbyBusinesses(params
 export const getSimilarBusinesses = (ref, limit) => browse.getSimilarBusinesses(ref, limit);
 export const getTopSearches = (limit) => browse.getTopSearches(limit);
 // Search terms and event payloads are the only things the app logs. Neither may carry a position, whichever adapter is live.
-export const logSearch = (term) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : browse.logSearch(term));
-export const logContactEvent = (event) => backend.logContactEvent(event);
+export const logSearch = (term) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : quiet(() => browse.logSearch(term)));
+// Analytics must never surface an error to the visitor, so these swallow failures (sync throws and rejected promises alike).
+const quiet = (fn) => {
+  try {
+    const out = fn();
+    return out && typeof out.catch === "function" ? out.catch(() => ({ ok: false })) : out;
+  } catch {
+    return { ok: false };
+  }
+};
+export const logContactEvent = (event) => quiet(() => backend.logContactEvent(event));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => browse.getTowns();
-export const logEvent = (name, payload) => backend.logEvent(name, scrubPayload(payload));
+export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, scrubPayload(payload)));
 export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),

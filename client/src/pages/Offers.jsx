@@ -126,7 +126,7 @@ export default function Offers() {
                 </li>
               ))}
             </ul>
-          ) : query.isError ? (
+          ) : query.isError && entries.length === 0 ? (
             <div className={styles.message} role="alert">
               <p>{t("offers.loadFailed")}</p>
               <button type="button" className={styles.action} onClick={() => query.refetch()}>
@@ -151,8 +151,9 @@ export default function Offers() {
               </ul>
               {query.hasNextPage && (
                 <div className={styles.more}>
+                  {query.isFetchNextPageError && <p role="alert">{t("offers.loadFailed")}</p>}
                   <button type="button" className={styles.action} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                    {query.isFetchingNextPage ? t("flash.loading") : t("flash.loadMore")}
+                    {query.isFetchingNextPage ? t("flash.loading") : query.isFetchNextPageError ? t("flash.retry") : t("flash.loadMore")}
                   </button>
                 </div>
               )}

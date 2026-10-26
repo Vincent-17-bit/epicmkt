@@ -221,8 +221,9 @@ export default function FlashSales() {
               </CardGrid>
               {query.hasNextPage && (
                 <div className={styles.more}>
+                  {query.isFetchNextPageError && <p role="alert">{t("flash.loadFailed")}</p>}
                   <button type="button" className={styles.action} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                    {query.isFetchingNextPage ? t("flash.loading") : t("flash.loadMore")}
+                    {query.isFetchingNextPage ? t("flash.loading") : query.isFetchNextPageError ? t("flash.retry") : t("flash.loadMore")}
                   </button>
                 </div>
               )}

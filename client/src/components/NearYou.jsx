@@ -40,7 +40,7 @@ export default function NearYou() {
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["nearby", coords],
     queryFn: () => getNearbyBusinesses({ ...coords, radiusKm: RADIUS_KM, limit: 4 }),
-    enabled: status === "granted"
+    enabled: status === "granted" && Boolean(coords)
   });
 
   if (status !== "granted") return <Prompt status={status} onAsk={request} />;
