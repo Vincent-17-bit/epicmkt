@@ -111,6 +111,8 @@ const findBusiness = async (ref) => {
   return unwrap(await supabase.from("public_businesses").select("*").eq(columnFor(ref), ref).maybeSingle());
 };
 
+const CARD_COLUMNS = "id,business_id,name,description,price,price_type,unit,section,availability,stock_left,image_paths,video_paths,sort,created_at";
+
 const itemRow = (row, business) =>
   itemOf({
     id: row.id,
@@ -118,6 +120,13 @@ const itemRow = (row, business) =>
     businessSlug: business.slug,
     name: row.name,
     description: row.description,
+    shortDescription: row.short_description,
+    brand: row.brand,
+    highlights: row.highlights,
+    specs: row.specs,
+    includes: row.includes,
+    terms: row.terms,
+    packSize: row.pack_size,
     price: row.price === null ? NaN : Number(row.price),
     priceType: row.price_type,
     unit: row.unit,
@@ -152,7 +161,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
 export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {}) {
   const business = await findBusiness(ref);
   if (!business) return [];
-  const rows = unwrap(await supabase.from("public_items").select("*").eq("business_id", business.id).order("sort").order("created_at", { ascending: false })) ?? [];
+  const rows = unwrap(await supabase.from("public_items").select(CARD_COLUMNS).eq("business_id", business.id).order("sort").order("created_at", { ascending: false })) ?? [];
   const [{ now, entries }, chips] = await Promise.all([liveEntries(), chipsByItem(business.id)]);
   const current = rows.find((row) => row.id === excludeItemId);
   const shaped = rows
@@ -198,7 +207,7 @@ const fetchPages = async (table, columns, order) => {
 // Sale pricing is decoration: if the flash sales cannot be read the products still show at their regular price.
 export async function getAllProducts() {
   const [rows, businesses] = await Promise.all([
-    fetchPages("public_items", "*", [["created_at", false], ["id", true]]),
+    fetchPages("public_items", CARD_COLUMNS, [["created_at", false], ["id", true]]),
     fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions", [["id", true]])
   ]);
   if (!rows.length) return [];
@@ -300,7 +309,7 @@ export async function getBusiness(ref, origin = null) {
   categoriesCache ??= getCategories();
   const [categories, items, chips, deals] = await Promise.all([
     categoriesCache,
-    supabase.from("public_items").select("*").eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap),
+    supabase.from("public_items").select(CARD_COLUMNS).eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap),
     chipsByItem(row.id),
     dealsForStore(row.id)
   ]);

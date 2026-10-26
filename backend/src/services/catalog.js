@@ -85,10 +85,12 @@ const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
   const at = now();
   const open = statusOf(b.hours, b.exceptions);
+  const listed = b.services.filter((svc) => svc.status !== "unlisted");
   return {
     ...rest,
     offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at)),
-    services: b.services.filter((svc) => svc.status !== "unlisted").map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
+    services: listed.map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
+    productCount: listed.length,
     closesAt: open.closesAt,
     opensAt: open.opensAt,
     openStatus: open,

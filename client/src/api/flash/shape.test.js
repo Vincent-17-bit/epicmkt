@@ -61,3 +61,49 @@ describe("customer item shape with videos", () => {
     for (const videoPaths of [undefined, null, []]) expect(itemOf({ id: "i2", name: "Plain", videoPaths }).videos).toEqual([]);
   });
 });
+
+describe("customer item shape with product details", () => {
+  const base = { id: "i1", name: "Kettle", description: "A kettle." };
+
+  it("an item without the new fields has the defaults", () => {
+    const item = itemOf(base);
+    expect(item).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [], shortDescription: "A kettle." });
+  });
+
+  it("maps the real values", () => {
+    const item = itemOf({
+      ...base,
+      shortDescription: "Boils fast",
+      brand: "Acme",
+      highlights: ["1.7 L", "Auto shut-off"],
+      includes: ["Base"],
+      terms: "6 month warranty",
+      packSize: "1 piece",
+      specs: [{ label: "Power", value: "2200 W", group: "Electrical" }, { label: "Colour", value: "Steel" }]
+    });
+    expect(item).toMatchObject({ brand: "Acme", shortDescription: "Boils fast", highlights: ["1.7 L", "Auto shut-off"], includes: ["Base"], terms: "6 month warranty", packSize: "1 piece" });
+    expect(item.specs).toEqual([{ label: "Power", value: "2200 W", group: "Electrical" }, { label: "Colour", value: "Steel" }]);
+  });
+
+  it("falls back to the shortened description when there is no short description", () => {
+    const long = `${"word ".repeat(60)}end`;
+    expect(itemOf({ ...base, description: long, shortDescription: "  " }).shortDescription.length).toBeLessThanOrEqual(141);
+  });
+
+  it("uses the empty default for any value of the wrong type and never throws", () => {
+    const item = itemOf({ ...base, shortDescription: 5, brand: {}, highlights: "fast", includes: { a: 1 }, terms: 7, packSize: ["x"], specs: "none" });
+    expect(item).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [], shortDescription: "A kettle." });
+    expect(itemOf({ ...base, description: 42, specs: [null, 3, { label: 4 }, { label: "A", value: {} }, { label: "B", value: 9 }], highlights: ["ok", 1, null] })).toMatchObject({
+      specs: [{ label: "B", value: "9" }],
+      highlights: ["ok"]
+    });
+  });
+
+  it("business shape carries a product count that defaults to 0", () => {
+    expect(businessOf(row(), { category: null, services: [] }).productCount).toBe(0);
+    expect(businessOf(row({ product_count: 12 }), { category: null, services: [] }).productCount).toBe(12);
+    expect(businessOf(row({ product_count: "x" }), { category: null, services: [] }).productCount).toBe(0);
+    expect(businessOf(row(), { category: null }).productCount).toBe(0);
+    expect(businessOf(row(), { category: null, services: [{}, {}] }).productCount).toBe(2);
+  });
+});

@@ -27,6 +27,29 @@ export const mediaUrl = (path) => {
   return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
 };
 
+const MAX_LIST = 20;
+const MAX_SPECS = 20;
+
+const textOf = (value) => (typeof value === "string" ? value.trim() : "");
+
+const listOf = (value) => (Array.isArray(value) ? value.map(textOf).filter(Boolean).slice(0, MAX_LIST) : []);
+
+const specsOf = (value) => {
+  if (!Array.isArray(value)) return [];
+  const rows = [];
+  for (const spec of value) {
+    if (!spec || typeof spec !== "object") continue;
+    const label = textOf(spec.label);
+    const val = typeof spec.value === "number" && Number.isFinite(spec.value) ? String(spec.value) : textOf(spec.value);
+    const group = textOf(spec.group);
+    if (label && val) rows.push({ label, value: val, ...(group ? { group } : {}) });
+    if (rows.length >= MAX_SPECS) break;
+  }
+  return rows;
+};
+
+const countOf = (value) => (Number.isInteger(value) && value >= 0 ? value : 0);
+
 const num = (value) => (value === null || value === undefined ? null : Number(value));
 
 const shorten = (text) => {
@@ -68,7 +91,7 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   variants: []
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
   return {
@@ -77,12 +100,14 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, price,
     businessSlug,
     name,
     description: description ?? "",
-    shortDescription: shorten(description ?? ""),
-    includes: [],
-    terms: "",
+    shortDescription: textOf(shortDescription) || shorten(typeof description === "string" ? description : ""),
+    brand: textOf(brand) || null,
+    highlights: listOf(highlights),
+    includes: listOf(includes),
+    terms: textOf(terms),
     duration: null,
     term: null,
-    packSize: null,
+    packSize: textOf(packSize) || null,
     imageUrl: images[0]?.url ?? null,
     images,
     videos,
@@ -97,7 +122,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, price,
     // How many are left, only when the seller counts stock, it is running low, and they chose to say so.
     stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
     variants: [],
-    specs: [],
+    specs: specsOf(specs),
     createdAt
   };
 };
@@ -223,6 +248,7 @@ export const businessOf = (row, { category, services, origin = null }) => {
     hue: 210,
     rating: 0,
     reviewCount: 0,
+    productCount: Number.isInteger(row.product_count) && row.product_count >= 0 ? row.product_count : countOf(services?.length),
     coverUrl: mediaUrl(row.cover_path),
     logoUrl: mediaUrl(row.logo_path),
     gallery: [],

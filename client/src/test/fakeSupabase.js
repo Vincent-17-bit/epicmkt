@@ -42,7 +42,7 @@ export const saleRow = (over = {}) => {
 };
 
 export function createFakeSupabase() {
-  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], offline: false, rpc: {} };
+  const state = { serverNow: null, sales: [], offers: [], items: [], businesses: [], categories: [], failing: null, status: "SUBSCRIBED", handlers: new Set(), calls: [], selects: [], offline: false, rpc: {} };
 
   const clock = () => state.serverNow ?? Date.now();
 
@@ -69,7 +69,8 @@ export function createFakeSupabase() {
       return { data, error: null, count: wantCount ? total : null };
     };
     const query = {
-      select: (_columns, options) => {
+      select: (columns, options) => {
+        state.selects.push([table, columns]);
         wantCount = options?.count === "exact";
         return query;
       },

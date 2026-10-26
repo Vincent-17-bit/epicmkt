@@ -255,6 +255,48 @@ describe("live item and business pages", () => {
     expect(rows[1].flash).not.toBeNull();
     expect(rows[0].flash).toBeNull();
   });
+
+  describe("item details from public_items", () => {
+    const HEAVY = ["highlights", "specs", "includes", "terms"];
+    const full = {
+      short_description: "Short one",
+      brand: "Acme",
+      highlights: ["Fast", "Light"],
+      specs: [{ label: "Weight", value: "1 kg" }],
+      includes: ["Charger"],
+      terms: "Warranty 6 months",
+      pack_size: "2 pieces"
+    };
+
+    it("maps the real detail fields onto the item", async () => {
+      db().items = [itemRow(full)];
+      db().businesses = [bizRow()];
+      const item = await live.getItemDetail("20000000-0000-0000-0000-000000000101");
+      expect(item).toMatchObject({ shortDescription: "Short one", brand: "Acme", highlights: ["Fast", "Light"], includes: ["Charger"], terms: "Warranty 6 months", packSize: "2 pieces" });
+      expect(item.specs).toEqual([{ label: "Weight", value: "1 kg" }]);
+    });
+
+    it("an item without them gets the defaults, and bad values never throw", async () => {
+      db().items = [itemRow()];
+      db().businesses = [bizRow()];
+      const plain = await live.getItemDetail("20000000-0000-0000-0000-000000000101");
+      expect(plain).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [] });
+      db().items = [itemRow({ brand: 1, highlights: "x", specs: 4, includes: {}, terms: [], pack_size: 9, short_description: false })];
+      const bad = await live.getItemDetail("20000000-0000-0000-0000-000000000101");
+      expect(bad).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [] });
+    });
+
+    it("store selective and the business page do not ask for the heavy fields", async () => {
+      db().items = [itemRow(), itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", ...full })];
+      db().businesses = [bizRow()];
+      db().selects = [];
+      await live.getStoreSelective("shop-a", { excludeItemId: "20000000-0000-0000-0000-000000000101" });
+      await live.getBusiness("shop-a");
+      const asked = db().selects.filter(([table]) => table === "public_items");
+      expect(asked.length).toBeGreaterThan(0);
+      for (const [, columns] of asked) for (const name of HEAVY) expect(columns, name).not.toContain(name);
+    });
+  });
 });
 
 describe("home products", () => {

@@ -8,6 +8,7 @@ import { defaultKind } from "../data/catalogItems.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
+const MAX_HIGHLIGHTS = 20;
 
 const SHORT_MAX = 140;
 
@@ -31,6 +32,8 @@ const toItem = (business, svc, index) => {
     name: svc.name,
     description: svc.description ?? "",
     shortDescription: svc.shortDescription ?? shorten(svc.description ?? ""),
+    brand: typeof svc.brand === "string" && svc.brand.trim() ? svc.brand.trim() : null,
+    highlights: Array.isArray(svc.highlights) ? svc.highlights.filter((h) => typeof h === "string" && h.trim()).slice(0, MAX_HIGHLIGHTS) : [],
     includes: svc.includes ?? [],
     terms: svc.terms ?? "",
     duration: svc.duration ?? null,
