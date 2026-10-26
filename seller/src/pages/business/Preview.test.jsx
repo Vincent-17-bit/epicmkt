@@ -16,10 +16,12 @@ describe("shop preview", () => {
     const page = await screen.findByTestId("shop-preview");
     expect(within(page).getByRole("heading", { level: 1, name: "Demo Shop" })).toBeInTheDocument();
     expect(within(page).getByText("Quality you can trust")).toBeInTheDocument();
-    for (const name of ["Fade cut", "Beard trim", "Hair dye", "Styling gel", "Wedding package"]) expect(within(page).getByText(name)).toBeInTheDocument();
+    for (const name of ["Fade cut", "Beard trim", "Hair dye", "Wedding package"]) expect(within(page).getByText(name)).toBeInTheDocument();
     expect(within(page).queryByText("Old special")).toBeNull();
+    // Out of stock items are not listed to customers, so the preview leaves them out too.
+    expect(within(page).queryByText("Styling gel")).toBeNull();
     expect(within(page).getByText("Opening hours")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Preview. This is how customers see your shop.");
+    expect(screen.getByText(/^Preview\. This is how customers see your shop/)).toHaveTextContent("Preview. This is how customers see your shop.");
     expect(screen.queryByTestId("preview-not-live")).toBeNull();
   });
 

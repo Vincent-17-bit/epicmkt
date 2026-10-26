@@ -2,21 +2,15 @@ import { formatKes } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
 import LazyImage from "./LazyImage.jsx";
+import OfferChip from "./OfferChip.jsx";
+import StockTag from "./StockTag.jsx";
 import styles from "./ProductCard.module.css";
 
 const DEFAULT_LABELS = {
   was: "Was",
-  availability: { available: "Available", limited: "Limited", unavailable: "Unavailable" }
+  lowStock: "Low stock",
+  onlyLeft: "Only {n} left"
 };
-
-export function AvailabilityDot({ availability = "available", label }) {
-  return (
-    <span className={styles.avail}>
-      <span className={`${styles.dot} ${styles[availability]}`} aria-hidden="true" />
-      <span className={styles.sr}>{label}</span>
-    </span>
-  );
-}
 
 export function DiscountChip({ percent }) {
   return <span className={styles.chip}>-{percent}%</span>;
@@ -26,7 +20,6 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
   const preview = isPreview(mode);
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
-  const availability = item.availability ?? "available";
   const act = actionProps(preview).button(() => onSelect?.(item));
 
   const card = (
@@ -35,6 +28,8 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
         <LazyImage fill src={item.imageUrl} className={styles.img} />
         {onSale && <DiscountChip percent={pricing.discountPercent} />}
         {item.flash?.sale && renderFlash?.(styles.flashChip, item.flash.sale)}
+        <OfferChip offer={item.offer} className={styles.offerChip} labels={labels.offerChip} />
+        <StockTag item={item} labels={labels} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>
@@ -52,7 +47,6 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
           ) : (
             <span />
           )}
-          <AvailabilityDot availability={availability} label={labels.availability[availability]} />
         </span>
       </span>
     </button>

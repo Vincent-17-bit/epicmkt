@@ -8,6 +8,8 @@ export * from "./seller/media.js";
 export * from "./seller/proofs.js";
 export * from "./seller/exceptions.js";
 export * from "./seller/flash.js";
+export * from "./offers.js";
+export * from "./availability.js";
 export * from "./seller/filters.js";
 export * from "./seller/bulk.js";
 export * from "./seller/importer.js";

@@ -103,7 +103,7 @@ describe("offer helpers", () => {
 });
 
 describe("buildItemJsonLd", () => {
-  const base = { id: "a b", name: "Pan", description: "Good", images: [{ url: "x.png" }], availability: "limited", business: { slug: "shop", name: "Shop" } };
+  const base = { id: "a b", name: "Pan", description: "Good", images: [{ url: "x.png" }], availability: "limited_stock", business: { slug: "shop", name: "Shop" } };
 
   it("builds a Product with price validity for a flash sale", () => {
     const data = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 240 }, flash: { sale: { endsAt: "2026-10-04T10:00:00.000Z" } } }, siteUrl: "https://e.test" });
@@ -118,6 +118,13 @@ describe("buildItemJsonLd", () => {
     expect(data.provider.name).toBe("Shop");
     expect(data.offers.priceValidUntil).toBeUndefined();
     expect(data.offers.availability).toBe("https://schema.org/InStock");
+  });
+
+  it("says out of stock for both sold-out words, and in stock for by appointment", () => {
+    const of = (availability) => buildItemJsonLd({ item: { ...base, availability, pricing: { salePrice: 300 } }, siteUrl: "https://e.test" }).offers.availability;
+    expect(of("out_of_stock")).toBe("https://schema.org/OutOfStock");
+    expect(of("unavailable")).toBe("https://schema.org/OutOfStock");
+    expect(of("by_appointment")).toBe("https://schema.org/InStock");
   });
 
   it("omits offers without a price", () => {

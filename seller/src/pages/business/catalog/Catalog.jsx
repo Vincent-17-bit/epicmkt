@@ -15,6 +15,7 @@ import ItemDialog from "./ItemDialog.jsx";
 import ListRow from "./ListRow.jsx";
 import ListingCard from "./ListingCard.jsx";
 import Modal from "./Modal.jsx";
+import RestockDialog from "./RestockDialog.jsx";
 import SavedViews from "./SavedViews.jsx";
 import Tracker from "./Tracker.jsx";
 import { readDevicePref, storeDevicePref } from "./cardItem.js";
@@ -62,6 +63,7 @@ export default function Catalog() {
   const [draft, setDraft] = useState(query);
   const [dialog, setDialog] = useState(null);
   const [editing, setEditing] = useState(undefined);
+  const [restocking, setRestocking] = useState(null);
   const [pending, setPending] = useState(() => new Set());
   const [undo, setUndo] = useState(null);
   const undoRef = useRef(null);
@@ -113,8 +115,22 @@ export default function Catalog() {
   const sections = useMemo(() => sectionsOf(enriched), [enriched]);
   const bounds = useMemo(() => priceBounds(enriched), [enriched]);
   const chips = useMemo(() => activeChips(query), [query]);
-  const shown = filtered.slice(0, limit);
+  // Out of stock items are not listed to customers. They live in their own section so the live items stay together.
+  const liveItems = useMemo(() => filtered.filter((i) => !i.soldOut), [filtered]);
+  const goneItems = useMemo(() => filtered.filter((i) => i.soldOut), [filtered]);
+  const shown = liveItems.slice(0, limit);
   const idsInOrder = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  // Moving works among the live items. Out of stock items keep their slots, so an item that comes back lands where it was.
+  const reorderLive = useCallback((fromId, toId, dir) => {
+    const live = liveItems.map((i) => i.id);
+    const a = live.indexOf(fromId);
+    const b = dir ? a + dir : live.indexOf(toId);
+    const nextLive = reorderIds(live, a, b);
+    if (nextLive === live) return null;
+    const queue = [...nextLive];
+    const liveSet = new Set(live);
+    return idsInOrder.map((id) => (liveSet.has(id) ? queue.shift() : id));
+  }, [liveItems, idsInOrder]);
   const canMove = query.sort === "manual" && !hasActiveFilters(query);
 
   useEffect(() => {
@@ -199,10 +215,9 @@ export default function Catalog() {
   }), []);
 
   const move = useCallback((id, dir) => {
-    const from = idsInOrder.indexOf(id);
-    const next = reorderIds(idsInOrder, from, from + dir);
-    if (next !== idsInOrder) run(() => api.reorderItems(next));
-  }, [idsInOrder, run]);
+    const next = reorderLive(id, null, dir);
+    if (next) run(() => api.reorderItems(next));
+  }, [reorderLive, run]);
 
   const drag = {
     enabled: canMove && !busy,
@@ -213,10 +228,10 @@ export default function Catalog() {
     over: (e) => { if (dragId.current) e.preventDefault(); },
     drop: (e, id) => {
       e.preventDefault();
-      const from = idsInOrder.indexOf(dragId.current);
-      const to = idsInOrder.indexOf(id);
+      const from = dragId.current;
       dragId.current = null;
-      if (from >= 0 && to >= 0 && from !== to) run(() => api.reorderItems(reorderIds(idsInOrder, from, to)));
+      const next = from && from !== id ? reorderLive(from, id, 0) : null;
+      if (next) run(() => api.reorderItems(next));
     },
   };
 
@@ -227,6 +242,11 @@ export default function Catalog() {
     toggle: (item) => run(() => api.bulkItems(item.visible && !item.draft ? "hide" : "show", [item.id]), item.visible && !item.draft ? "Item hidden." : "Item is now showing."),
     confirm: (item) => run(() => api.bulkItems("confirm_prices", [item.id]), "Price confirmed."),
     move,
+    soldOut: (item) => run(() => api.itemStock(item.id, "sold_out"), `${item.name} is out of stock. Customers no longer see it.`),
+    restock: (item) => {
+      if (item.trackStock) setRestocking(item);
+      else run(() => api.itemStock(item.id, "restock"), `${item.name} is back in stock. Customers can see it again.`);
+    },
   };
 
   const selectedIds = [...selected];
@@ -376,29 +396,46 @@ export default function Catalog() {
               </section>
             ) : (
               <>
-                <ul className={`${cards ? styles.grid : styles.list} ${mode === "compact" ? styles.compact : ""}`} data-mode={mode} data-testid="listing-grid">
-                  {shown.map((item, i) => {
-                    const Row = cards ? ListingCard : ListRow;
-                    return (
-                      <Row
-                        key={item.id}
-                        item={item}
-                        selected={selected.has(item.id)}
-                        handlers={handlers}
-                        canMove={canMove}
-                        isFirst={i === 0}
-                        isLast={i === filtered.length - 1}
-                        busy={busy}
-                        drag={drag}
-                      />
-                    );
-                  })}
-                </ul>
-                {filtered.length > shown.length && (
-                  <div className={styles.more}>
-                    <p className={ui.muted}>Showing {shown.length} of {filtered.length}</p>
-                    <button type="button" className={styles.ghost} onClick={() => setLimit((l) => l + PAGE_SIZE)}>Show {Math.min(PAGE_SIZE, filtered.length - shown.length)} more</button>
-                  </div>
+                {liveItems.length > 0 && (
+                  <>
+                    <ul className={`${cards ? styles.grid : styles.list} ${mode === "compact" ? styles.compact : ""}`} data-mode={mode} data-testid="listing-grid">
+                      {shown.map((item, i) => {
+                        const Row = cards ? ListingCard : ListRow;
+                        return (
+                          <Row
+                            key={item.id}
+                            item={item}
+                            selected={selected.has(item.id)}
+                            handlers={handlers}
+                            canMove={canMove}
+                            isFirst={i === 0}
+                            isLast={i === liveItems.length - 1}
+                            busy={busy}
+                            drag={drag}
+                          />
+                        );
+                      })}
+                    </ul>
+                    {liveItems.length > shown.length && (
+                      <div className={styles.more}>
+                        <p className={ui.muted}>Showing {shown.length} of {liveItems.length}</p>
+                        <button type="button" className={styles.ghost} onClick={() => setLimit((l) => l + PAGE_SIZE)}>Show {Math.min(PAGE_SIZE, liveItems.length - shown.length)} more</button>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {goneItems.length > 0 && (
+                  <section className={styles.gone} aria-labelledby="gone-title" data-testid="out-of-stock-section">
+                    <h2 id="gone-title">Out of stock <span className={styles.goneCount}>{goneItems.length}</span></h2>
+                    <p className={ui.muted}>Customers cannot see these. When you have more, choose Back in stock and they are listed again, in the same place.</p>
+                    <ul className={`${cards ? styles.grid : styles.list} ${mode === "compact" ? styles.compact : ""}`} data-mode={mode} data-testid="out-of-stock-grid">
+                      {goneItems.map((item) => {
+                        const Row = cards ? ListingCard : ListRow;
+                        return <Row key={item.id} item={item} selected={selected.has(item.id)} handlers={handlers} canMove={false} isFirst isLast busy={busy} drag={{ ...drag, enabled: false }} />;
+                      })}
+                    </ul>
+                  </section>
                 )}
               </>
             )}
@@ -439,6 +476,17 @@ export default function Catalog() {
           }}
         />
       )}
+      <RestockDialog
+        open={restocking !== null}
+        item={restocking}
+        onClose={() => setRestocking(null)}
+        onApply={async (count) => {
+          await api.itemStock(restocking.id, "restock", count);
+          await refresh();
+          setNotice({ tone: "ok", text: `${restocking.name} is back in stock. Customers can see it again.` });
+          setRestocking(null);
+        }}
+      />
       {editing !== undefined && (
         <ItemDialog
           key={editing?.id ?? "new"}

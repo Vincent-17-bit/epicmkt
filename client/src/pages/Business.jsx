@@ -6,7 +6,8 @@ import { distanceKm, shopUrl } from "@epicmkt/shared";
 import { coarsenCoords } from "@epicmkt/backend";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { expiryText, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
+import { hoursRows, socialLinks, statusText } from "../lib/businessView.js";
+import { t } from "../i18n/index.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
@@ -126,7 +127,16 @@ export default function Business() {
       fromTown={geo.town}
       locate={{ label: locateLabel, onClick: geo.request, disabled: geo.status === "asking" }}
       hoursRows={hoursRows(data.hours, data.exceptions)}
-      formatExpiry={expiryText}
+      offerLabels={{
+        title: t("offers.title"),
+        code: t("offer.code"),
+        copy: t("offer.copy"),
+        copied: t("offer.copied"),
+        endsIn: t("offer.endsIn"),
+        noEnd: t("offer.noEnd"),
+        onlyNow: t("offer.onlyNow"),
+        openProduct: t("offer.openProduct")
+      }}
       details={hasDetails ? <TemplateDetails fields={data.category.fields} attributes={data.attributes} /> : null}
       detailsTitle={`${data.category?.singular} details`}
       flash={<FlashStrip id="business-flash-title" businessId={data.id} heat={false} />}

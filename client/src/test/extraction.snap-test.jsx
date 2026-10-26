@@ -37,7 +37,7 @@ const biz = {
   category: { singular: "Barbershop", name: "Barbershops", icon: "scissors", fields: [] },
   shortcode: "fk1",
   hours: { mon: ["08:00", "17:00"], tue: ["08:00", "17:00"], wed: ["08:00", "17:00"], thu: ["08:00", "17:00"], fri: ["08:00", "17:00"], sat: ["09:00", "14:00"], sun: null },
-  offers: [{ id: "o1", title: "Student discount", description: "10% off with ID", expiresAt: "2099-01-01T00:00:00.000Z", code: "STUDENT" }],
+  offers: [{ id: "o1", kind: "percent_off", title: "Student discount", label: "10% off", plainLabel: "10% off", headline: "10% off", description: "10% off with ID", code: "STUDENT", terms: null, startsAt: null, endsAt: null, remainingMs: null, conditions: [], availableNow: true, products: [{ id: "s1", name: "Haircut", imageUrl: null, price: 500, role: "main" }] }],
   gallery: [
     { id: "g1", url: "/g1.jpg", caption: "Shopfront" },
     { id: "g2", url: "/g2.jpg", caption: "Chairs" }

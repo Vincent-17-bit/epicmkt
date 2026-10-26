@@ -37,8 +37,7 @@
   user-select: none;
 }
 
-.sale,
-.stock {
+.sale {
   position: absolute;
   top: var(--space-2);
   left: var(--space-2);
@@ -60,19 +59,15 @@
   left: var(--space-2);
 }
 
-.soldOut .img {
-  filter: grayscale(1);
-  opacity: 0.55;
-}
-
-.stock {
-  top: auto;
+/* The offer tag sits in the picture's top right, so the discount tag (top left), the flash timer (bottom left) and the
+   bottom edge keep their places. It is an overlay: it takes no room from the name, price or store. */
+.offer {
+  --offer-chip-size: clamp(0.625rem, 5.6cqw, 0.75rem);
+  position: absolute;
+  top: var(--space-2);
   right: var(--space-2);
-  bottom: var(--space-2);
-  left: var(--space-2);
-  background: var(--text);
-  color: var(--text-inverse);
-  text-align: center;
+  max-width: 72%;
+  z-index: 1;
 }
 
 .body {
@@ -143,29 +138,11 @@
   white-space: nowrap;
 }
 
-.dot {
-  flex: none;
-  align-self: center;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.ok {
-  background: var(--status-ok-dot);
-}
-
-.warn {
-  background: var(--status-warn);
-}
-
-.bad {
-  background: var(--status-bad);
-}
-
-.info {
-  background: var(--verified);
+/* "Low stock" / "Only 3 left" sits on the picture, bottom left (above the flash timer when there is one), so the price
+   always has the whole row. It is sized from the tile, like the rest of the type. */
+.stockTag {
+  --stock-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
+  --stock-over: calc(var(--text-xs) * 1.4 + 8px);
 }
 
 .store {
@@ -204,13 +181,6 @@
 
   .tile:hover .img {
     transform: scale(1.045);
-  }
-
-  .tile:hover .name {
-    text-decoration: underline;
-    text-decoration-color: var(--link-underline);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 3px;
   }
 }
 

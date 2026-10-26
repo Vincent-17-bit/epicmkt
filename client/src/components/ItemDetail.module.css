@@ -296,26 +296,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  color: var(--text-muted);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.available {
-  background: #16a34a;
-}
-
-.limited {
-  background: #f97316;
-}
-
-.unavailable {
-  background: #dc2626;
+.stockTag {
+  --stock-size: var(--text-sm);
+  align-self: flex-start;
 }
 
 .description {
@@ -700,4 +688,9 @@
   width: 100%;
   max-width: 40rem;
   margin-inline: auto;
+}
+
+/* The offer tag in the product's badge row: same tag as on the cards, in the flow rather than over a picture. */
+.offerBadge {
+  --offer-chip-size: var(--text-xs);
 }

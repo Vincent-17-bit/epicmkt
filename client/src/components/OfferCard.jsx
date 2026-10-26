@@ -2,8 +2,8 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { formatDistance } from "@epicmkt/shared";
-import { offerExpiry, offerValueLabel } from "../lib/itemView.js";
+import { formatDistance, offerHeadline, offerLabel } from "@epicmkt/shared";
+import { offerExpiry } from "../lib/itemView.js";
 import { offerHref } from "../lib/offers.js";
 import { t } from "../i18n/index.js";
 import styles from "./OfferCard.module.css";
@@ -15,7 +15,7 @@ function OfferCard({ view }) {
 
   return (
     <Link to={offerHref(view)} className={styles.card} draggable="false" aria-label={`${offer.title}, ${business.name}`}>
-      <span className={styles.value}>{offerValueLabel(offer)}</span>
+      <span className={styles.value}>{offerLabel(offer)}</span>
       <span className={styles.body}>
         <span className={styles.store}>
           <span className={styles.logo}>
@@ -26,6 +26,7 @@ function OfferCard({ view }) {
           {distance && <span className={styles.meta}>{distance}</span>}
         </span>
         <span className={styles.title}>{offer.title}</span>
+        <span className={styles.description}>{offerHeadline(offer)}</span>
         {offer.description && <span className={styles.description}>{offer.description}</span>}
         <span className={styles.meta}>
           <span>{appliesToLabel}</span>

@@ -20,7 +20,7 @@ export default function BusinessCard({ business }) {
       renderLink={renderLink}
       icon={categoryIcon(business.categoryIcon)}
       onContact={onContact}
-      promoLabels={{ flash: t("flash.promo"), offer: t("flash.offer") }}
+      promoLabels={{ flash: t("flash.promo"), offer: t("offer.chip"), products: t("offer.products") }}
     />
   );
 }

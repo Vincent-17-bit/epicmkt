@@ -8,8 +8,8 @@ export const cardItemOf = (item) => {
   const pricing = priced
     ? { regularPrice: item.price, salePrice: sale, savings: item.price - sale, discountPercent: item.price > 0 ? Math.round(((item.price - sale) / item.price) * 100) : 0, variants: [] }
     : null;
-  const availability = item.availability === "available" || item.availability === "by_appointment" ? "available" : item.availability === "limited_stock" ? "limited" : "unavailable";
-  return { id: item.id, name: item.name, imageUrl: mediaUrl(item.imagePaths?.[0]), pricing, availability };
+  const stockLeft = item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null;
+  return { id: item.id, name: item.name, imageUrl: mediaUrl(item.imagePaths?.[0]), pricing, availability: item.availability, stockLeft };
 };
 
 export const priceText = (item) => {

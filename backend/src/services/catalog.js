@@ -1,12 +1,16 @@
 import {
   PLAN_FEATURES,
+  dealOf,
   EVENT_TYPES,
   BUSINESS_STATUS,
   REPORT_REASONS,
   cardFacts,
   distanceKm,
   filterableFields,
+  isOpenAllDay,
+  isOpenLate,
   matchesFilter,
+  opensOn,
   searchableText,
   statusOf,
   normalizeText,
@@ -14,8 +18,9 @@ import {
 } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
+import { now } from "../clock.js";
 import { NotFoundError, ValidationError } from "../errors.js";
-import { promoCountsFor, runSweep } from "../promotions.js";
+import { liveStoreOffers, offerChipFor, offerProducts, promoCountsFor, runSweep } from "../promotions.js";
 import { looksLikeCoordinates, scrubPayload } from "../privacy.js";
 
 const TOP_SEARCH_WINDOW_MS = 7 * 86400000;
@@ -78,12 +83,12 @@ const toSummary = (b, origin) => ({
 
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
-  const now = Date.now();
+  const at = now();
   const open = statusOf(b.hours, b.exceptions);
   return {
     ...rest,
-    offers: (b.offers ?? []).filter((o) => Date.parse(o.expiresAt) > now),
-    services: b.services.filter((svc) => svc.status !== "unlisted"),
+    offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at)),
+    services: b.services.filter((svc) => svc.status !== "unlisted").map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
     closesAt: open.closesAt,
     opensAt: open.opensAt,
     openStatus: open,
@@ -152,8 +157,16 @@ export async function searchBusinesses({
   county = null,
   town = null,
   openNow = false,
+  closedNow = false,
+  open24 = false,
+  openLate = false,
+  openSunday = false,
   verifiedOnly = false,
   featuredOnly = false,
+  flashSale = false,
+  hasOffers = false,
+  hasWhatsapp = false,
+  newlyListed = false,
   radiusKm = null,
   minPrice = null,
   maxPrice = null,
@@ -177,8 +190,16 @@ export async function searchBusinesses({
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
     .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
+    .filter((b) => !closedNow || !statusOf(b.hours, b.exceptions).isOpen)
+    .filter((b) => !open24 || isOpenAllDay(b.hours))
+    .filter((b) => !openSunday || opensOn(b.hours, "sun"))
+    .filter((b) => !openLate || isOpenLate(b.hours, b.exceptions))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
+    .filter((b) => !flashSale || promoCountsFor(b).flash > 0)
+    .filter((b) => !hasOffers || promoCountsFor(b).offers > 0)
+    .filter((b) => !hasWhatsapp || Boolean(b.whatsapp))
+    .filter((b) => !newlyListed || Date.parse(b.createdAt) >= Date.now() - 30 * 86400000)
     .filter((b) => matchesAttrs(b, attrEntries))
     .map((b) => ({
       b,

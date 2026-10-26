@@ -1,4 +1,4 @@
--- 0045_utc_timezone.sql
+-- 0047_utc_timezone.sql
 -- The time contract (see docs/timezones.md and shared/src/time.js):
 --   * Every instant is stored as timestamptz. Postgres keeps it as UTC internally whatever the session zone is.
 --   * Every instant leaves the API as ISO 8601 in UTC. The database never formats a time for a viewer; the

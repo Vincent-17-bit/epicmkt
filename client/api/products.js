@@ -19,9 +19,11 @@
 import { PLAN_FEATURES } from "../../shared/src/constants.js";
 import { normalizeText } from "../../shared/src/utils.js";
 import { statusOf } from "../../shared/src/openState.js";
+import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
+import { cached } from "./_lib/redis.js";
 import { configured, restAll, rpc } from "./_lib/supabase.js";
 
 export const config = { runtime: "edge" };
@@ -49,8 +51,10 @@ const pricing = (regular, sale, priceType, unit) => ({
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
-  const data = await rpc("products_snapshot", { p_limit: MAX_ITEMS }, { timeoutMs: 12_000 });
-  return { items: data.items ?? [], businesses: data.businesses ?? [], truncated: data.truncated === true };
+  const { data, at } = await cached("products:snapshot:v1", { freshMs: FRESH_MS, staleMs: STALE_MS }, () =>
+    rpc("products_snapshot", { p_limit: MAX_ITEMS }, { timeoutMs: 12_000 })
+  );
+  return { at, items: data.items ?? [], businesses: data.businesses ?? [], truncated: data.truncated === true };
 }
 
 // Fallback when the function is not installed yet or is slow: page the public views, with narrow columns.
@@ -116,6 +120,8 @@ function buildSnapshot({ items, businesses, truncated }) {
   const products = [];
   const flashing = [];
   for (const row of items) {
+    // The view already leaves sold-out items out; this keeps an older database (before migration 0046) from listing one.
+    if (!isListed(row)) continue;
     const store = stores.get(row.business_id);
     if (!store) continue;
     const price = row.price === null || row.price === undefined ? NaN : Number(row.price);
@@ -129,6 +135,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       shortDescription: shorten(description),
       section: row.section ?? null,
       availability: row.availability ?? "available",
+      stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
       imagePath: row.image_path ?? null,
       imageUrl: row.image_path ?? null,
       priceType: row.price_type ?? "fixed",
@@ -203,7 +210,7 @@ async function build() {
     via = "views";
     parts = await fromViews();
   }
-  const snap = buildSnapshot(parts);
+  const snap = Object.assign(buildSnapshot(parts), { at: parts.at ?? Date.now() });
   if (snap.truncated) console.warn(`[products] catalogue larger than ${MAX_ITEMS} items; newest ${MAX_ITEMS} are served`);
   console.log(`[products] snapshot built via ${via}: ${snap.products.length} products, ${snap.stores.length} stores, ${Date.now() - started} ms`);
   return snap;
@@ -218,7 +225,7 @@ async function snapshot() {
   state.inflight ??= build()
     .then((snap) => {
       state.snap = snap;
-      state.at = Date.now();
+      state.at = snap.at;
       return snap;
     })
     .finally(() => {

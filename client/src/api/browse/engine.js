@@ -9,9 +9,11 @@
 import { PLAN_FEATURES } from "../../../../shared/src/constants.js";
 import { distanceKm, normalizeText, slugify } from "../../../../shared/src/utils.js";
 import { cardFacts } from "../../../../shared/src/template.js";
-import { businessStatus, statusOf } from "../../../../shared/src/openState.js";
+import { businessStatus, isOpenAllDay, isOpenLate, opensOn, statusOf } from "../../../../shared/src/openState.js";
 
 export const PRICED = new Set(["fixed", "from", "range"]);
+
+const NEW_WINDOW_MS = 30 * 86_400_000;
 
 export const notFound = (message) => Object.assign(new Error(message), { name: "NotFoundError", status: 404 });
 
@@ -88,6 +90,8 @@ const withSearchIndex = (b, categories) => {
     [normalizeText(`${b.tagline} ${b.description}`), 1]
   ];
   b.nameKey = normalizeText(b.name);
+  b.open24 = isOpenAllDay(b.hours);
+  b.opensSunday = opensOn(b.hours, "sun");
   return b;
 };
 
@@ -114,19 +118,34 @@ export function buildSnapshot({ rows, lowest, flashEnds, offerEnds, categoryRows
   }
   const counts = new Map();
   for (const b of businesses) counts.set(b.categoryId, (counts.get(b.categoryId) ?? 0) + 1);
-  return { businesses, categoryList, categories, byKey, counts, open: { minute: -1, map: new Map() } };
+  return { businesses, categoryList, categories, byKey, counts, open: { minute: -1, map: new Map(), late: new Map() } };
 }
 
 // "Open now" changes at most once a minute, so it is computed once per business per minute, not once per request.
-const isOpenNow = (snap, b, now) => {
+const openMemo = (snap, now) => {
   const minute = Math.floor(now / 60_000);
-  if (snap.open.minute !== minute) snap.open = { minute, map: new Map() };
-  let open = snap.open.map.get(b.id);
+  if (snap.open.minute !== minute) snap.open = { minute, map: new Map(), late: new Map() };
+  return snap.open;
+};
+
+const isOpenNow = (snap, b, now) => {
+  const memo = openMemo(snap, now);
+  let open = memo.map.get(b.id);
   if (open === undefined) {
     open = businessStatus(b.hours, b.exceptions, new Date(now)).isOpen;
-    snap.open.map.set(b.id, open);
+    memo.map.set(b.id, open);
   }
   return open;
+};
+
+const isLateOpen = (snap, b, now) => {
+  const memo = openMemo(snap, now);
+  let late = memo.late.get(b.id);
+  if (late === undefined) {
+    late = isOpenLate(b.hours, b.exceptions, new Date(now));
+    memo.late.set(b.id, late);
+  }
+  return late;
 };
 
 const liveCount = (ends, now) => ends.filter((at) => at > now).length;
@@ -206,8 +225,16 @@ export function searchBusinesses(snap, params = {}, now = Date.now()) {
     county = null,
     town = null,
     openNow: onlyOpen = false,
+    closedNow: onlyClosed = false,
+    open24 = false,
+    openLate = false,
+    openSunday = false,
     verifiedOnly = false,
     featuredOnly = false,
+    flashSale = false,
+    hasOffers = false,
+    hasWhatsapp = false,
+    newlyListed = false,
     radiusKm = null,
     minPrice = null,
     maxPrice = null,
@@ -228,8 +255,16 @@ export function searchBusinesses(snap, params = {}, now = Date.now()) {
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
     .filter((b) => !onlyOpen || isOpenNow(snap, b, now))
+    .filter((b) => !onlyClosed || !isOpenNow(snap, b, now))
+    .filter((b) => !open24 || b.open24)
+    .filter((b) => !openSunday || b.opensSunday)
+    .filter((b) => !openLate || isLateOpen(snap, b, now))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
+    .filter((b) => !flashSale || liveCount(b.flashEnds, now) > 0)
+    .filter((b) => !hasOffers || liveCount(b.offerEnds, now) > 0)
+    .filter((b) => !hasWhatsapp || Boolean(b.whatsapp))
+    .filter((b) => !newlyListed || Date.parse(b.createdAt) >= now - NEW_WINDOW_MS)
     .map((b) => ({
       b,
       score: scoreBusiness(b, tokens),

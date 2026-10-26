@@ -1,6 +1,6 @@
-import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS } from "@epicmkt/shared";
+import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale } from "@epicmkt/shared";
+import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -226,7 +226,7 @@ const FEATURES = {
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { items: [], flash: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 
 function resetBilling() {
@@ -271,6 +271,7 @@ function resetBilling() {
   bill.signals = [];
   bill.views = [];
   bill.flash = [];
+  bill.offers = [];
 }
 resetBilling();
 
@@ -539,13 +540,14 @@ export const getShopPreview = async () => {
     socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: bill.business.logoPath ?? null, coverPath: bill.business.coverPath ?? null, categoryName: "Barbershop",
   };
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
-  return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales });
+  return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
 };
 export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability };
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount) };
+  if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
     if (!item) throw new ApiError("item_not_found");
@@ -554,7 +556,7 @@ export const saveItem = async (id, f) => {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };
@@ -580,7 +582,14 @@ export const bulkItems = async (action, ids, args = {}) => {
     targets.forEach((i) => { if (i.section !== section) { i.section = section; affected += 1; } });
   } else if (action === "set_availability") {
     if (!["available", "limited_stock", "out_of_stock", "unavailable", "by_appointment"].includes(args.availability)) throw new ApiError("invalid_availability");
-    targets.forEach((i) => { if (i.availability !== args.availability) { i.availability = args.availability; affected += 1; } });
+    targets.forEach((i) => {
+      const relist = ["available", "limited_stock"].includes(args.availability);
+      if (i.trackStock && relist && !(i.stockCount > 0)) { skipped += 1; return; }
+      if (i.availability === args.availability) return;
+      i.availability = args.availability;
+      if (i.trackStock && ["out_of_stock", "unavailable"].includes(args.availability)) i.stockCount = 0;
+      affected += 1;
+    });
   } else if (action === "price_percent") {
     settleFlash();
     const eligible = targets.filter((i) => !inFlashSale(i.id));
@@ -594,6 +603,22 @@ export const bulkItems = async (action, ids, args = {}) => {
   } else targets.forEach((i) => { i.priceConfirmedAt = now; affected += 1; });
   targets.forEach((i) => { i.updatedAt = now; });
   return { affected, skipped };
+};
+export const itemStock = async (id, action, count = null) => {
+  signedIn();
+  await wait();
+  if (!["sold_out", "restock"].includes(action)) throw new ApiError("invalid_action");
+  const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (action === "sold_out") {
+    if (item.trackStock) { item.stockCount = 0; item.availability = "out_of_stock"; } else item.availability = "out_of_stock";
+  } else if (item.trackStock) {
+    if (!Number.isInteger(count) || count < 1 || count > 999999) throw new ApiError("stock_count_required");
+    item.stockCount = count;
+    item.availability = statusFromCount(count, item.lowStockThreshold);
+  } else item.availability = "available";
+  item.updatedAt = clockNow().toISOString();
+  return { availability: item.availability, stockCount: item.stockCount };
 };
 export const reorderItems = async (ids) => {
   signedIn();
@@ -707,6 +732,53 @@ export const endFlashSale = async (id) => {
   if (!sale) throw new ApiError("not_found");
   if (!["scheduled", "live"].includes(sale.status)) throw new ApiError("flash_closed");
   closeFlash(sale, "seller");
+  return true;
+};
+
+const OFFER_LIMITS = { standard: { activeOffers: 8 }, premium: { activeOffers: null } };
+export const listOffers = async () => { signedIn(); await wait(); return copy(bill.offers).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)); };
+export const getOfferQuota = async () => { signedIn(); await wait(); return offerQuota(bill.offers, OFFER_LIMITS[bill.business.planKey], nowMs()); };
+export const saveOffer = async (id, f) => {
+  writer();
+  await wait();
+  const old = id ? bill.offers.find((o) => o.id === id) : null;
+  if (id && !old) throw new ApiError("offer_not_found");
+  const v = validateOffer(f, { items: bill.items.filter((i) => !i.hiddenByAdmin && !i.removedByAdmin), nowMs: nowMs(), existing: old });
+  if (!v.ok) throw new ApiError(v.error, v.field);
+  const others = bill.offers.filter((o) => o.id !== id);
+  const wouldRun = offerPhase({ ...v.value, active: true }, nowMs()) !== "ended";
+  if (wouldRun && !offerQuota(others, OFFER_LIMITS[bill.business.planKey], nowMs()).canCreate) throw new ApiError("limit_reached", "limit_reached:offers");
+  const at = clockNow().toISOString();
+  const row = { ...(old ?? { id: `of-${++bill.seq}`, active: true, status: "active", createdAt: at }), ...v.value, updatedAt: at };
+  if (!old) bill.offers.push(row);
+  else Object.assign(old, row);
+  return copy(row);
+};
+export const setOfferActive = async (id, active) => {
+  writer();
+  await wait();
+  const o = bill.offers.find((x) => x.id === id);
+  if (!o) throw new ApiError("offer_not_found");
+  o.active = !!active;
+  o.status = active ? "active" : "paused";
+  return true;
+};
+export const endOffer = async (id) => {
+  writer();
+  await wait();
+  const o = bill.offers.find((x) => x.id === id);
+  if (!o) throw new ApiError("offer_not_found");
+  if (o.startsAt && Date.parse(o.startsAt) > nowMs()) { bill.offers = bill.offers.filter((x) => x.id !== id); return "removed"; }
+  o.endsAt = clockNow().toISOString();
+  o.status = "ended";
+  return "ended";
+};
+
+export const deleteOffer = async (id) => {
+  writer();
+  await wait();
+  if (!bill.offers.some((x) => x.id === id)) throw new ApiError("offer_not_found");
+  bill.offers = bill.offers.filter((x) => x.id !== id);
   return true;
 };
 

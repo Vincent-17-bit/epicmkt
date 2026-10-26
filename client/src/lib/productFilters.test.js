@@ -24,7 +24,7 @@ const f = (over) => ({ ...EMPTY_FILTERS, ...over });
 describe("applyFilters", () => {
   const bread = p({ name: "Bread", description: "Fresh white loaf", pricing: { regularPrice: 65, salePrice: 65, savings: 0, discountPercent: 0 } });
   const cake = p({ name: "Cake", section: "Celebration", pricing: { regularPrice: 1800, salePrice: 1440, savings: 360, discountPercent: 20 }, flash: { sale: {} } }, { verified: true, featured: true, categoryId: "bakery", town: "Kisumu" });
-  const knife = p({ name: "Knife set", imageUrl: null, availability: "out_of_stock", pricing: { regularPrice: 1470, salePrice: 1470, savings: 0, discountPercent: 0 } }, { categoryId: "hardware", town: "Kisumu", name: "Mwanzo Hardware" });
+  const knife = p({ name: "Knife set", imageUrl: null, availability: "available", pricing: { regularPrice: 1470, salePrice: 1470, savings: 0, discountPercent: 0 } }, { categoryId: "hardware", town: "Kisumu", name: "Mwanzo Hardware" });
   const noPrice = p({ name: "Custom order", pricing: null });
   const all = [bread, cake, knife, noPrice];
 
@@ -51,8 +51,7 @@ describe("applyFilters", () => {
     expect(ids(applyFilters(all, f({ categories: ["hardware", "bakery"], towns: ["kisumu"] })))).toEqual(["Knife set", "Cake"]);
   });
 
-  it("filters by stock, sale, flash sale, store badges and photo", () => {
-    expect(ids(applyFilters(all, f({ inStock: true })))).not.toContain("Knife set");
+  it("filters by sale, flash sale, store badges and photo", () => {
     expect(ids(applyFilters(all, f({ onSale: true })))).toEqual(["Cake"]);
     expect(ids(applyFilters(all, f({ flash: true })))).toEqual(["Cake"]);
     expect(ids(applyFilters(all, f({ verified: true })))).toEqual(["Cake"]);
@@ -61,7 +60,7 @@ describe("applyFilters", () => {
   });
 
   it("combines filters (all must hold)", () => {
-    expect(ids(applyFilters(all, f({ min: "1000", inStock: true, photo: true })))).toEqual(["Cake"]);
+    expect(ids(applyFilters(all, f({ min: "1000", photo: true })))).toEqual(["Cake"]);
     expect(applyFilters(all, f({ onSale: true, max: "100" }))).toEqual([]);
   });
 
@@ -81,8 +80,13 @@ describe("applyFilters", () => {
 
 describe("parseFilters and writeFilters", () => {
   it("round-trips every filter through the address", () => {
-    const set = f({ q: "bread", sort: "price_asc", min: "50", max: "900", categories: ["bakery", "hardware"], towns: ["kisumu"], inStock: true, onSale: true, flash: true, verified: true, featured: true, photo: true });
+    const set = f({ q: "bread", sort: "price_asc", min: "50", max: "900", categories: ["bakery", "hardware"], towns: ["kisumu"], onSale: true, flash: true, verified: true, featured: true, photo: true });
     expect(parseFilters(writeFilters(new URLSearchParams(), set))).toEqual(set);
+  });
+
+  it("drops the old In stock parameter from an old link when the filters are written again", () => {
+    expect(writeFilters(new URLSearchParams("foo=1&pstock=1&psale=1"), parseFilters(new URLSearchParams("pstock=1"))).toString()).toBe("foo=1");
+    expect(parseFilters(new URLSearchParams("pstock=1"))).toEqual(EMPTY_FILTERS);
   });
 
   it("leaves defaults out and keeps the page's other params", () => {
@@ -142,7 +146,6 @@ describe("price range and live counts", () => {
     expect(counts.categories.get("y")).toBe(1); // category choice is ignored, on-sale still applies
     expect(counts.categories.get("x")).toBeUndefined();
     expect(counts.towns.get("kisumu")).toBeUndefined(); // category x + on sale leaves nothing in Kisumu
-    expect(counts.flags.inStock).toBe(0);
     expect(countsFor([a, b, c], EMPTY_FILTERS).flags.onSale).toBe(1);
   });
 });

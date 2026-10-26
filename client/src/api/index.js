@@ -2,6 +2,7 @@ import * as backend from "@epicmkt/backend";
 import { looksLikeCoordinates, scrubPayload } from "@epicmkt/backend";
 import * as flashApi from "./flash/index.js";
 import * as browse from "./browse/index.js";
+import * as offersApi from "./offers/index.js";
 import * as products from "./products/index.js";
 
 export const getCategories = () => browse.getCategories();
@@ -34,6 +35,6 @@ export const items = {
 };
 export const flash = flashApi.flash;
 export const offers = {
-  list: (params) => backend.getOffers(params),
-  facets: () => backend.getOfferFacets()
+  list: (params) => offersApi.list(params),
+  facets: () => offersApi.facets()
 };

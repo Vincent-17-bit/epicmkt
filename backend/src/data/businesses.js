@@ -1,7 +1,6 @@
 import { slugify } from "@epicmkt/shared";
 import { demoItemId } from "./itemIds.js";
 import { attributesById } from "./attributes.js";
-import { offersById } from "./offers.js";
 import { coverArt, logoArt, serviceArt, galleryArt } from "./art.js";
 import { completeServices } from "./catalogItems.js";
 
@@ -38,7 +37,6 @@ const make = (i, b) => {
     email: null,
     socials: {},
     attributes: attributesById[id] ?? {},
-    offers: offersById[id] ?? [],
     stats: seedStats(i),
     createdAt: new Date(Date.UTC(2025, i % 12, 1 + (i % 27))).toISOString(),
     planExpiresAt: new Date(Date.UTC(2026, 9 + (i % 3), 1 + (i % 27))).toISOString(),
@@ -68,7 +66,7 @@ export const businesses = [
     services: [
       { name: "Haircut", priceKes: 150, section: "Cuts", description: "Clean cut with clippers and scissors, finished with a neck shave.", availability: "available" },
       { name: "Fade and beard", priceKes: 300, section: "Cuts", description: "Skin or taper fade with full beard shaping and line-up.", duration: "45 minutes", includes: ["Skin or taper fade", "Beard shaping and line-up", "Hot towel finish"], terms: "Walk-ins served in order of arrival.\nBook ahead on weekends." },
-      { name: "Kids cut", priceKes: 100, section: "Cuts", description: "Patient barbers for children under 12.", availability: "limited" }
+      { name: "Kids cut", priceKes: 100, section: "Cuts", description: "Patient barbers for children under 12.", availability: "limited_stock" }
     ],
     gallery: gallery(210, ["Shop front", "Fade work", "Beard trim", "Waiting area", "Kids corner", "Tools"])
   }),
@@ -277,7 +275,7 @@ export const businesses = [
         specs: [{ group: "Service", label: "Hair length", value: "Shoulder to mid-back" }, { group: "Service", label: "Lasts", value: "4 to 6 weeks" }, { group: "Booking", label: "Deposit", value: "KES 500" }, { group: "Booking", label: "Cancel", value: "24 hours notice" }]
       },
       { name: "Cornrows", priceKes: 800, section: "Braids", description: "Straight-back or styled cornrows." },
-      { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited" }
+      { name: "Wig install", priceKes: 1200, section: "Wigs", description: "Wig fitting, styling and install.", availability: "limited_stock" }
     ],
     gallery: gallery(330, ["Braiding area", "Wig display", "Results", "Reception"])
   }),

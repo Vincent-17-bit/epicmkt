@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { flashPrice, formatInstant, statusOf } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, formatInstant, isListed, offersByItem, statusOf } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
@@ -28,7 +28,8 @@ const safe = (fn, fallback) => {
 
 const endsText = (iso) => `Ends ${formatInstant(iso, { locale: "en-KE", weekday: "short", hour: "numeric", minute: "2-digit" })}`;
 
-const serviceOf = (item) => ({
+const serviceOf = (item, chips) => ({
+  offer: chips.get(item.id) ?? null,
   id: item.id,
   name: item.name,
   description: item.description ?? "",
@@ -38,6 +39,7 @@ const serviceOf = (item) => ({
   section: item.section,
   status: "listed",
   availability: item.availability,
+  stockLeft: item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null,
   imageUrl: mediaUrl(item.imagePaths?.[0]),
 });
 
@@ -45,7 +47,7 @@ const flashCards = (flashSales, items) =>
   flashSales
     .map((sale) => {
       const item = items.find((i) => i.id === sale.itemId);
-      if (!item || !Number.isFinite(item.price)) return null;
+      if (!item || !isListed(item) || !Number.isFinite(item.price)) return null;
       const salePrice = flashPrice(sale.discountType, sale.discountValue, item.price);
       const savings = item.price - salePrice;
       return {
@@ -54,7 +56,8 @@ const flashCards = (flashSales, items) =>
           id: item.id,
           name: item.name,
           imageUrl: mediaUrl(item.imagePaths?.[0]),
-          availability: item.availability === "limited_stock" ? "limited" : item.availability === "available" ? "available" : "unavailable",
+          availability: item.availability,
+          stockLeft: item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null,
           pricing: { regularPrice: item.price, salePrice, savings, discountPercent: item.price > 0 ? Math.round((savings / item.price) * 100) : 0 },
         },
       };
@@ -99,7 +102,12 @@ export default function Preview() {
     );
   }
 
-  const { shop, items, flashSales } = preview.data;
+  const { shop, items, flashSales, offers = [] } = preview.data;
+  const nowMs = Date.now();
+  const chips = new Map([...offersByItem(offers)].map(([id, list]) => [id, chipOf(list, nowMs)]).filter(([, c]) => c).map(([id, c]) => [id, { label: c.label, extra: c.extra }]));
+  const deals = offers
+    .map((o) => dealOf(o, o.items.map((e) => ({ e, item: items.find((i) => i.id === e.itemId) })).filter((x) => x.item).map(({ e, item }) => ({ id: item.id, name: item.name, imageUrl: mediaUrl(item.imagePaths?.[0]), price: item.price, role: e.role })), nowMs))
+    .filter((d) => d.scope === "store" || d.products.length > 0);
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
   const openStatus = safe(() => statusOf(hours, exceptions), statusOf({}, []));
@@ -129,8 +137,9 @@ export default function Preview() {
     coverUrl: mediaUrl(shop.coverPath),
     logoUrl: mediaUrl(shop.logoPath),
     gallery: [],
-    offers: [],
-    services: items.map(serviceOf),
+    offers: deals,
+    // Exactly what customers get: sold-out items are not listed.
+    services: items.filter(isListed).map((i) => serviceOf(i, chips)),
     // Same functions and same data as the customer page, so the preview cannot disagree with it.
     ...openFields,
   };
@@ -157,7 +166,7 @@ export default function Preview() {
           distanceKm={null}
           locate={{ label: "Show distance from me" }}
           hoursRows={hoursRows(hours, exceptions)}
-          formatExpiry={() => ""}
+          offerLabels={{ title: "Offers", code: "Code", copy: "Copy code", copied: "Copied", endsIn: "Ends in", noEnd: "No end date", onlyNow: "Not available at this hour", openProduct: "Open" }}
           flash={<FlashSection cards={flashCards(flashSales, items)} />}
           socials={socialLinks(shop.socials)}
           qr={<ShopQr slug={shop.slug} planKey={shop.planKey} hasLogo={!!shop.logoPath} label={`QR code linking to ${shop.name}`} />}

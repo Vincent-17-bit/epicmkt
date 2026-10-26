@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import Toggle from "./Toggle.jsx";
+import Radio from "./Radio.jsx";
 import TemplateFilters from "./TemplateFilters.jsx";
-import { RADII } from "../lib/filters.js";
+import { RADII, STATUS_OPTIONS, TOGGLES } from "../lib/filters.js";
 import styles from "./FilterPanel.module.css";
 
 export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
@@ -19,6 +20,13 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
 
   const id = (name) => `${idPrefix}-${name}`;
 
+  const togglesIn = (group) =>
+    TOGGLES.filter((t) => t.group === group).map((t) => (
+      <Toggle key={t.key} checked={filters[t.key]} onChange={(checked) => onChange({ [t.key]: checked })}>
+        {t.label}
+      </Toggle>
+    ));
+
   return (
     <form
       className={styles.panel}
@@ -29,16 +37,23 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
       }}
     >
       <fieldset className={styles.group}>
-        <legend className={styles.legend}>Availability</legend>
-        <Toggle checked={filters.openNow} onChange={(openNow) => onChange({ openNow })}>
-          Open now
-        </Toggle>
-        <Toggle checked={filters.verified} onChange={(verified) => onChange({ verified })}>
-          Verified only
-        </Toggle>
-        <Toggle checked={filters.featured} onChange={(featured) => onChange({ featured })}>
-          Featured only
-        </Toggle>
+        <legend className={styles.legend}>Opening hours</legend>
+        {STATUS_OPTIONS.map((option) => (
+          <Radio key={option.value} name={id("status")} checked={filters.status === option.value} onChange={() => onChange({ status: option.value })}>
+            {option.label}
+          </Radio>
+        ))}
+        {togglesIn("hours")}
+      </fieldset>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>Deals</legend>
+        {togglesIn("deals")}
+      </fieldset>
+
+      <fieldset className={styles.group}>
+        <legend className={styles.legend}>Business</legend>
+        {togglesIn("business")}
       </fieldset>
 
       <div className={styles.group}>

@@ -1,6 +1,9 @@
-import { BUSINESS_STATUS, nairobiNow, slugify } from "@epicmkt/shared";
+import { isListed, BUSINESS_STATUS, chipOf, liveOffers, offerAvailableNow, offerPhase, offerProductCount, offersByItem } from "@epicmkt/shared";
 import { store } from "./store.js";
 import { now } from "./clock.js";
+
+// A product customers can be shown: not taken down by its seller and not out of stock.
+const isPublicSvc = (svc) => svc.status !== "unlisted" && isListed(svc);
 
 const salePriceFor = (discount, regular) => {
   const raw =
@@ -57,49 +60,60 @@ export function liveSaleFor(item, business, at = now()) {
   );
 }
 
-const offerApplies = (offer, item) => {
-  if (offer.appliesTo === "store") return true;
-  if (offer.appliesTo === "items") return offer.itemIds.includes(item.id);
-  return Boolean(item.section) && slugify(item.section) === offer.sectionId;
-};
+const businessOffers = (business) => store.offers.filter((offer) => offer.businessId === business.id);
 
-const offerLive = (offer, at) =>
-  (offer.status === "active" || offer.status === "scheduled") &&
-  (!offer.startsAt || Date.parse(offer.startsAt) <= at) &&
-  (!offer.endsAt || at < Date.parse(offer.endsAt));
-
-const dayAllowed = (offer, at) => {
-  const days = offer.conditions?.daysOfWeek;
-  if (!days?.length) return true;
-  return days.includes(nairobiNow(new Date(at)).day);
-};
-
+// Offers showing right now on one product of a store. A product that is in no offer gets none.
 export function liveOffersFor(item, business, at = now()) {
   if (!item || !business || business.status !== BUSINESS_STATUS.ACTIVE || item.status !== "listed") return [];
-  return store.offers
-    .filter((offer) => offer.businessId === business.id && offerLive(offer, at) && offerApplies(offer, item) && dayAllowed(offer, at))
-    .sort((a, b) => (a.endsAt ? Date.parse(a.endsAt) : Infinity) - (b.endsAt ? Date.parse(b.endsAt) : Infinity));
+  return liveOffers(businessOffers(business), at).filter((offer) => offer.items.some((entry) => entry.itemId === item.id));
 }
 
-export const liveStoreOffers = (business, at = now()) =>
-  store.offers.filter((offer) => offer.businessId === business.id && offerLive(offer, at) && dayAllowed(offer, at));
+// Offers that are showing now anywhere in a store, on products customers can see.
+export function liveStoreOffers(business, at = now()) {
+  const listed = new Set(business.services.filter((svc) => isPublicSvc(svc)).map((svc) => svc.id));
+  return liveOffers(businessOffers(business), at).filter((offer) => offer.items.some((entry) => listed.has(entry.itemId)));
+}
 
+// The small chip a card shows for one product: the offer to name and how many more there are.
+export function offerChipFor(item, business, at = now()) {
+  const chip = chipOf(liveOffersFor(item, business, at), at);
+  return chip ? { id: chip.top.id, label: chip.label, extra: chip.extra } : null;
+}
+
+// The store card's Offer chip counts products that have an offer, not offers.
 export function promoCountsFor(business, at = now()) {
   if (!business) return { flash: 0, offers: 0 };
-  const items = business.services.filter((svc) => svc.status !== "unlisted");
+  const items = business.services.filter((svc) => isPublicSvc(svc));
   const flash = items.filter((svc) => liveSaleFor({ id: svc.id, status: svc.status ?? "listed" }, business, at)).length;
-  const offers = store.offers.filter(
-    (offer) => offer.businessId === business.id && offerLive(offer, at) && dayAllowed(offer, at)
-  ).length;
+  const listed = new Set(items.map((svc) => svc.id));
+  const offers = offerProductCount(
+    liveOffers(businessOffers(business), at).map((offer) => ({ ...offer, items: offer.items.filter((entry) => listed.has(entry.itemId)) })),
+    at
+  );
   return { flash, offers };
 }
 
-export function appliesToLabel(offer, business) {
-  if (offer.appliesTo === "store") return "Whole store";
-  if (offer.appliesTo === "items") return `${offer.itemIds.length} selected ${offer.itemIds.length === 1 ? "item" : "items"}`;
-  const section = business.services.find((svc) => svc.section && slugify(svc.section) === offer.sectionId)?.section;
-  return section ?? "Selected section";
-}
+// The products an offer is on that customers can see, with what a card needs to show them.
+export const offerProducts = (offer, business) =>
+  offer.items
+    .map((entry) => {
+      const svc = business.services.find((x) => x.id === entry.itemId);
+      return svc && isPublicSvc(svc)
+        ? { id: svc.id, name: svc.name, imageUrl: svc.imageUrl ?? null, price: Number.isFinite(svc.priceKes) ? svc.priceKes : null, role: entry.role }
+        : null;
+    })
+    .filter(Boolean);
+
+export const appliesToLabel = (offer, business) => {
+  const names = offer.items
+    .map((entry) => business.services.find((svc) => svc.id === entry.itemId)?.name)
+    .filter(Boolean);
+  if (names.length === 0) return "";
+  if (names.length <= 2) return names.join(" + ");
+  return `${names[0]} + ${names.length - 1} more`;
+};
+
+export { offerAvailableNow, offerPhase, offersByItem };
 
 export function endSale(sale, reason) {
   const at = new Date(now()).toISOString();
@@ -127,7 +141,7 @@ export function runSweep() {
   const at = now();
   for (const offer of store.offers) {
     if (offer.status === "scheduled" && (!offer.startsAt || at >= Date.parse(offer.startsAt))) offer.status = "active";
-    if (offer.status === "active" && offer.endsAt && at >= Date.parse(offer.endsAt)) offer.status = "expired";
+    if ((offer.status === "active" || offer.status === "paused") && offer.endsAt && at >= Date.parse(offer.endsAt)) offer.status = "expired";
   }
   for (const sale of store.flashSales) {
     if (sale.status === "scheduled" && at >= Date.parse(sale.startsAt)) sale.status = "live";

@@ -1,5 +1,6 @@
 .card {
   position: relative;
+  text-decoration: none;
   display: grid;
   grid-template-rows: auto 1fr;
   width: 100%;
@@ -84,28 +85,10 @@
   font-size: var(--text-xs);
 }
 
-.avail {
-  display: inline-flex;
-  align-items: center;
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--text-muted);
-}
-
-.available {
-  background: #16a34a;
-}
-
-.limited {
-  background: #f97316;
-}
-
-.unavailable {
-  background: #dc2626;
+/* Only shown when the item is running low: on the picture, bottom left, above the flash timer when there is one. */
+.stockTag {
+  --stock-size: var(--text-xs);
+  --stock-over: calc(var(--text-xs) * 1.4 + 8px);
 }
 
 .sr {
@@ -125,18 +108,21 @@
   .card:hover {
     border-color: var(--text);
   }
-
-  .card:hover .name {
-    text-decoration: underline;
-    text-decoration-color: var(--link-underline);
-    text-decoration-thickness: 2px;
-    text-underline-offset: 4px;
-  }
 }
 
 .card:focus-visible {
   outline: 2px solid var(--text);
   outline-offset: 2px;
+}
+
+/* Offer tag: top right of the picture, over it, so the discount tag, flash timer, name, price and availability stay put. */
+.offerChip {
+  --offer-chip-size: var(--text-xs);
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  max-width: 72%;
+  z-index: 1;
 }
 
 .flashChip {
