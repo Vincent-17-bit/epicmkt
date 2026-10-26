@@ -133,6 +133,7 @@ Deno.test("hitRateLimit: true inside the limit, false over it, 500 when the limi
   assertEquals(await hitRateLimit(fakeDb({ rpc: () => ({ data: true, error: null }) }), "k", 5, 60), true);
   assertEquals(await hitRateLimit(fakeDb({ rpc: () => ({ data: false, error: null }) }), "k", 5, 60), false);
   await rejects(hitRateLimit(fakeDb({ rpc: () => ({ data: null, error: { message: "x" } }) }), "k", 5, 60), 500, "server_error");
+  await rejects(hitRateLimit(fakeDb({ rpc: () => ({ data: null, error: { message: "TypeError: fetch failed" } }) }), "k", 5, 60), 503, "unavailable");
   await rejects(enforceRateLimit(fakeDb({ rpc: () => ({ data: false, error: null }) }), "k", 5, 60), 429, "rate_limited");
   const db = fakeDb();
   await hitRateLimit(db, "k", 5, 60);

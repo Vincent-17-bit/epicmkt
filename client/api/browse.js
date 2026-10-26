@@ -113,10 +113,17 @@ async function snapshot() {
   }
 }
 
+const RETRY_AFTER = 30;
+
 const reply = (body, status, cache) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": cache, "X-Content-Type-Options": "nosniff" }
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": cache,
+      "X-Content-Type-Options": "nosniff",
+      ...(status === 503 && body.retryAfter ? { "Retry-After": String(body.retryAfter) } : {})
+    }
   });
 
 const OK_CACHE = "public, max-age=10, s-maxage=30, stale-while-revalidate=300, stale-if-error=3600";
@@ -160,6 +167,6 @@ export default async function handler(req) {
   } catch (error) {
     if (error?.name === "NotFoundError") return reply({ error: "not_found", message: error.message }, 404, "public, s-maxage=30");
     console.error(`[browse] unavailable: ${error?.message ?? error}`);
-    return reply({ error: "unavailable" }, 502, "no-store");
+    return reply({ error: "unavailable", retryAfter: RETRY_AFTER }, 503, "no-store");
   }
 }

@@ -13,18 +13,25 @@ const TIMEOUT_MS = 8000;
 const MEMO_MS = 10_000;
 // After the endpoint fails, go straight to the fallback for a while instead of making every call wait for a timeout.
 const COOLDOWN_MS = 60_000;
+const UNAVAILABLE_MS = 10_000;
 
 const memo = new Map();
 const inflight = new Map();
 let downUntil = 0;
+let unavailableUntil = 0;
 
 const unreachable = (reason) => Object.assign(new Error(reason), { name: "BrowseEndpointError" });
+const unavailable = () => Object.assign(new Error("browse_unavailable"), { name: "BrowseUnavailableError" });
 
 async function fetchJson(query) {
   const res = await fetch(`${ENDPOINT}?${query}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (res.status === 404) {
     const body = await res.json().catch(() => ({}));
     if (body?.error === "not_found") throw new NotFoundError(body.message || "Not found");
+  }
+  if (res.status === 503) {
+    const body = await res.json().catch(() => ({}));
+    if (body?.error === "unavailable") throw unavailable();
   }
   const type = res.headers.get("content-type") ?? "";
   // A 404 page or the SPA's index.html is not an answer: treat it as "endpoint not here".
@@ -51,11 +58,16 @@ function ask(op, params) {
 
 // Runs the endpoint call; on "endpoint unreachable" (not on a real answer such as not-found) uses the fallback.
 async function viaEndpoint(op, params, fallback) {
+  if (Date.now() < unavailableUntil) throw unavailable();
   if (Date.now() < downUntil) return fallback();
   try {
     return await ask(op, params);
   } catch (error) {
     if (error?.name === "NotFoundError") throw error;
+    if (error?.name === "BrowseUnavailableError") {
+      unavailableUntil = Date.now() + UNAVAILABLE_MS;
+      throw error;
+    }
     downUntil = Date.now() + COOLDOWN_MS;
     return fallback();
   }
@@ -70,6 +82,7 @@ export function invalidateBrowseCache() {
   memo.clear();
   inflight.clear();
   downUntil = 0;
+  unavailableUntil = 0;
   legacy.invalidateBrowseCache();
 }
 

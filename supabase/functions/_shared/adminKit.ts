@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
 import { requireAdmin } from "./admin.ts";
-import { clientIp, corsHeaders, isProduction, json, sendMail, sendSms, sha256Hex } from "./http.ts";
+import { clientIp, corsHeaders, isProduction, json, sendMail, sendSms, serverError, sha256Hex } from "./http.ts";
 import { generateSellerId, makeTempPassword } from "./ids.ts";
 import { hitRateLimit } from "./ratelimit.ts";
 import type { Db } from "./seller.ts";
@@ -61,8 +61,8 @@ export const adminFn = <S extends z.ZodTypeAny>(d: AdminDeps, cfg: Config<S>, ru
       }
       const admin: Admin = { user: { id: who.user.id, email: who.user.email }, role };
       return await run({ req, d, admin, input: parsed.data });
-    } catch (_) {
-      return json({ error: "server_error" }, 500);
+    } catch (e) {
+      return serverError(e);
     }
   };
 

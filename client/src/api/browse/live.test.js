@@ -52,6 +52,20 @@ describe("live browse client", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("does not fall back to the database when the endpoint says the database is down, and answers fast for a while", async () => {
+    fetchMock.mockImplementation(async () => json({ error: "unavailable", retryAfter: 30 }, 503));
+    await expect(live.searchBusinesses({})).rejects.toMatchObject({ name: "BrowseUnavailableError" });
+    await expect(live.searchBusinesses({ page: 2 })).rejects.toMatchObject({ name: "BrowseUnavailableError" });
+    expect(legacy.searchBusinesses).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still falls back when the endpoint is only not configured", async () => {
+    fetchMock.mockImplementation(async () => json({ error: "not_configured" }, 503));
+    await live.searchBusinesses({});
+    expect(legacy.searchBusinesses).toHaveBeenCalledTimes(1);
+  });
+
   it("falls back to building the catalog in the browser when the endpoint is missing, and stops retrying for a while", async () => {
     fetchMock.mockImplementation(async () => new Response("<html></html>", { status: 200, headers: { "Content-Type": "text/html" } }));
     await live.searchBusinesses({});
