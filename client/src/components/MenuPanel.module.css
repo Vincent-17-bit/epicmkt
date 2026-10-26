@@ -51,8 +51,9 @@
 
 .inner {
   display: grid;
-  gap: var(--space-5);
-  padding-block: var(--space-4) var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-3) var(--space-4);
 }
 
 .srOnly {
@@ -68,8 +69,8 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 52px;
-  padding: 3px 3px 3px var(--space-4);
+  min-height: 46px;
+  padding: 2px 2px 2px var(--space-3);
   border: 2px solid var(--text);
   border-radius: var(--radius-pill);
   background: var(--surface);
@@ -109,12 +110,17 @@
 
 .submit {
   flex: none;
+  width: 38px;
+  height: 38px;
   border-color: var(--text);
   background: var(--primary);
 }
 
-.seller {
+.sellerStack .seller {
   width: 100%;
+  min-height: 46px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-md);
 }
 
 .sellerStack {
@@ -122,13 +128,19 @@
   gap: var(--space-2);
 }
 
+@media (min-width: 420px) and (max-width: 1023px) {
+  .sellerStack {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  }
+}
+
 .flashLink {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 48px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-card);
+  min-height: 46px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-pill);
   background: var(--flash-gradient);
   color: var(--flash-band-text);
   font-weight: 800;
@@ -152,8 +164,8 @@
 }
 
 .label {
-  margin-bottom: var(--space-3);
-  font-size: var(--text-sm);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -161,34 +173,32 @@
 
 .cats {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-@media (min-width: 480px) {
-  .cats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1280px) {
+@media (min-width: 600px) {
   .cats {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
   }
 }
 
 .cat {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: 52px;
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  height: 100%;
+  min-height: 46px;
+  padding: 5px var(--space-2);
   border: 2px solid var(--border);
   border-radius: var(--radius-card);
+  font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1.2;
   text-decoration: none;
   transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease,
     box-shadow var(--dur) ease;
@@ -204,16 +214,50 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--on-primary);
+  font-size: 0.8125rem;
   transition: transform var(--dur) ease;
 }
 
 .catName {
+  display: -webkit-box;
   min-width: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 359px) {
+  .cat {
+    gap: 6px;
+    padding-inline: 6px;
+    font-size: 0.8125rem;
+  }
+
+  .catIcon {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (min-width: 400px) {
+  .cat {
+    gap: 10px;
+    padding-inline: 10px;
+    font-size: 0.9375rem;
+  }
+
+  .catIcon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.875rem;
+  }
 }
 
 @media (hover: hover) {
@@ -250,13 +294,13 @@
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+  gap: 0 var(--space-1);
 }
 
 .small {
   display: inline-flex;
   align-items: center;
-  min-height: var(--tap);
+  min-height: 40px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
@@ -286,9 +330,9 @@
       "links cats"
       "theme cats";
     grid-template-rows: auto auto auto 1fr;
-    column-gap: var(--space-7);
+    column-gap: var(--space-6);
     align-items: start;
-    padding-block: var(--space-6);
+    padding-block: var(--space-5);
   }
 
   .areaSearch {
@@ -313,6 +357,17 @@
 
   .cats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cat {
+    min-height: 48px;
+    padding-inline: var(--space-3);
+    font-size: 1rem;
+  }
+
+  .catIcon {
+    width: 34px;
+    height: 34px;
   }
 }
 

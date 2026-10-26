@@ -105,7 +105,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                 {isPending
                   ? Array.from({ length: 6 }, (_, i) => (
                       <li key={i} aria-hidden="true">
-                        <Skeleton height="52px" radius="var(--radius-card)" />
+                        <Skeleton height="46px" radius="var(--radius-card)" />
                       </li>
                     ))
                   : data.map((category) => (
