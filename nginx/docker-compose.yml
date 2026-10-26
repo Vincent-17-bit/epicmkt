@@ -16,6 +16,7 @@ services:
       - ./allow:/etc/nginx/allow:ro
       - ./templates:/etc/nginx/templates:ro
       - ./reload.sh:/docker-entrypoint.d/90-reload.sh:ro
+      - /dev/null:/etc/nginx/conf.d/default.conf:ro
       - cache:/var/cache/nginx
       - certs:/etc/letsencrypt:ro
       - acme:/var/www/certbot
