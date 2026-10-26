@@ -4,6 +4,9 @@
 
 .panel {
   border-bottom: 1px solid var(--border);
+  /* Room kept clear when a panel is scrolled into view; the page layout sets a larger bottom gap for its sticky action bar. */
+  scroll-margin-top: var(--space-2);
+  scroll-margin-bottom: var(--spec-scroll-bottom, var(--space-2));
 }
 
 .heading {

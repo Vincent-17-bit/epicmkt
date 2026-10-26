@@ -1,13 +1,31 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { buildSpecGroups, countRows, limitGroups, SPEC_LIMIT } from "../lib/itemView.js";
 import { t } from "../i18n/index.js";
 import styles from "./ItemSpecs.module.css";
 
-function Panel({ id, title, open, onToggle, children }) {
+// The nearest ancestor that scrolls (the sheet's body, or null when the whole page scrolls).
+function scrollParent(node) {
+  for (let el = node.parentElement; el && el !== document.body; el = el.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(el).overflowY) && el.scrollHeight > el.clientHeight) return el;
+  }
+  return null;
+}
+
+// A panel opened far down the page would land off screen or behind the sticky bar. Bring it into view:
+// the whole panel when it fits, otherwise its heading and the start of its text. Does nothing if it is already in view.
+function bringIntoView(node) {
+  if (!node?.scrollIntoView) return;
+  const parent = scrollParent(node);
+  const room = parent ? parent.clientHeight : window.visualViewport?.height ?? window.innerHeight;
+  const calm = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  node.scrollIntoView({ block: node.offsetHeight <= room * 0.9 ? "nearest" : "start", inline: "nearest", behavior: calm ? "auto" : "smooth" });
+}
+
+function Panel({ id, title, open, onToggle, panelRef, children }) {
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} ref={panelRef}>
       <h3 className={styles.heading}>
         <button
           type="button"
@@ -37,10 +55,22 @@ export default function ItemSpecs({ item, category, attributes, onExpand }) {
   const total = countRows(groups);
   const shown = all ? groups : limitGroups(groups, SPEC_LIMIT);
   const includes = item.includes ?? [];
+  const nodes = useRef({});
+  const reveal = useRef(null);
   const toggle = (key) => () => {
-    if (!open[key]) onExpand?.(key);
+    if (!open[key]) {
+      onExpand?.(key);
+      reveal.current = key;
+    }
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   };
+
+  useEffect(() => {
+    const key = reveal.current;
+    if (!key) return;
+    reveal.current = null;
+    bringIntoView(nodes.current[key]);
+  }, [open]);
   const toggleAll = () => {
     if (!all) onExpand?.("specs_all");
     setAll((v) => !v);
@@ -96,7 +126,14 @@ export default function ItemSpecs({ item, category, attributes, onExpand }) {
   return (
     <section className={styles.section} aria-label={t("item.specs")}>
       {panels.map((panel) => (
-        <Panel key={panel.key} id={`${uid}-${panel.key}`} title={panel.title} open={Boolean(open[panel.key])} onToggle={toggle(panel.key)}>
+        <Panel
+          key={panel.key}
+          id={`${uid}-${panel.key}`}
+          title={panel.title}
+          open={Boolean(open[panel.key])}
+          onToggle={toggle(panel.key)}
+          panelRef={(node) => { nodes.current[panel.key] = node; }}
+        >
           {panel.body}
         </Panel>
       ))}

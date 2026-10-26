@@ -598,6 +598,9 @@
   position: static;
   z-index: auto;
   display: block;
+  /* The page scrolls under a fixed site header (reset.css already offsets scrolling for it) and above a sticky action bar:
+     ItemSpecs keeps a scrolled-to panel clear of the bar. */
+  --spec-scroll-bottom: calc(6rem + var(--safe-bottom));
 }
 
 .root[data-variant="page"] .sheet {
