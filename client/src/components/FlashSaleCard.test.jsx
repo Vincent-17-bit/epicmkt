@@ -42,9 +42,10 @@ describe("FlashSaleCard", () => {
     expect(screen.getByText("View deal")).toBeInTheDocument();
   });
 
-  it("swaps the band label when the sale is ending", () => {
+  it("drops the band label when the sale is ending soon", () => {
     view({ entry: entry({ endsAt: new Date(Date.now() + 20 * 60000).toISOString() }) });
-    expect(screen.getByText("Ending soon")).toBeInTheDocument();
+    expect(screen.queryByText("Ending soon")).toBeNull();
+    expect(screen.getByText("Min")).toBeInTheDocument();
   });
 
   it("uses a ribbon and no CTA in compact size", () => {

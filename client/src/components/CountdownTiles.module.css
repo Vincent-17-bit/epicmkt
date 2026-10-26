@@ -42,9 +42,27 @@
 }
 
 .card {
-  --tile-w: 44px;
-  --tile-h: 52px;
-  --digit-size: 24px;
+  --tile-w: 38px;
+  --tile-h: 36px;
+  --digit-size: 18px;
+}
+
+.card .tile {
+  border-radius: 8px;
+}
+
+.card .tile::after {
+  border-radius: 10px;
+}
+
+.card .unit {
+  margin-top: 2px;
+  font-size: 9px;
+}
+
+.card .colon {
+  width: 6px;
+  font-size: 14px;
 }
 
 .banner {

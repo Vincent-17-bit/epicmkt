@@ -6,7 +6,7 @@ import { formatDistance } from "@epicmkt/shared";
 import { LazyImage } from "@epicmkt/ui";
 import { useCardLife } from "../hooks/useCardLife.js";
 import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
-import { discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
+import { URGENCY, discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
 import { motionAllowed } from "../lib/motion.js";
 import { t } from "../i18n/index.js";
 import CountdownTiles from "./CountdownTiles.jsx";
@@ -112,10 +112,12 @@ function FlashSaleCard({ entry, size = "standard" }) {
 
       {!compact && (
         <span className={styles.band}>
-          <span className={styles.bandLabel}>
-            <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
-            {urgencyLabel(urgency)}
-          </span>
+          {urgency !== URGENCY.URGENT && (
+            <span className={styles.bandLabel}>
+              <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
+              {urgencyLabel(urgency)}
+            </span>
+          )}
           <CountdownTiles endsAt={sale.endsAt} variant="card" />
         </span>
       )}

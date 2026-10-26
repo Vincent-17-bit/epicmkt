@@ -115,7 +115,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-3);
   background: var(--flash-gradient);
   clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
   color: var(--flash-band-text);
@@ -327,6 +327,24 @@
   height: 8px;
   opacity: 0;
   animation: rise 4s ease-in infinite;
+}
+
+.card:not([data-size="compact"]) .media {
+  aspect-ratio: 16 / 10;
+}
+
+.card:not([data-size="compact"]) .body {
+  gap: 0.375rem;
+  padding: var(--space-2) var(--space-3);
+}
+
+.card:not([data-size="compact"]) .name {
+  min-height: 0;
+}
+
+.card:not([data-size="compact"]) .cta {
+  min-height: 36px;
+  margin-bottom: var(--space-2);
 }
 
 .card[data-size="compact"] .body {
