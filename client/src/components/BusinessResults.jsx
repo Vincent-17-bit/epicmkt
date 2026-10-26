@@ -3,6 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { faRotateRight, faArrowDown, faTableCells } from "@fortawesome/free-solid-svg-icons";
 import { Link } from "react-router-dom";
 import { searchBusinesses } from "../api/index.js";
+import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import BusinessCard from "./BusinessCard.jsx";
 import CardGrid from "./CardGrid.jsx";
 import Button from "./Button.jsx";
@@ -29,23 +30,24 @@ function CardSkeleton() {
 }
 
 export default function BusinessResults({ query = "", categoryId = null, filters = {}, onReset, onTotal, compact = false }) {
-  const { data, isPending, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
+  const { data, isPending, isError, isFetchNextPageError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["businesses", { query, categoryId, filters }],
     queryFn: ({ pageParam }) => searchBusinesses({ query, categoryId, ...filters, page: pageParam, pageSize: PAGE_SIZE }),
     initialPageParam: 1,
     getNextPageParam: (last) => (last.page < last.totalPages ? last.page + 1 : undefined)
   });
 
+  const online = useOnlineStatus();
   const firstTotal = data?.pages[0].total;
 
   useEffect(() => {
     if (onTotal && firstTotal !== undefined) onTotal(firstTotal);
   }, [onTotal, firstTotal]);
 
-  if (isError) {
+  if (isError && !data) {
     return (
       <div className={styles.state} role="alert">
-        <p>We could not load businesses.</p>
+        <p>{online ? "We could not load businesses." : "You are offline. Search needs a connection."}</p>
         <Button icon={faRotateRight} onClick={() => refetch()}>
           Try again
         </Button>
@@ -105,8 +107,11 @@ export default function BusinessResults({ query = "", categoryId = null, filters
       </CardGrid>
       {hasNextPage && (
         <div className={styles.more}>
+          {isFetchNextPageError && (
+            <p role="alert">We could not load more businesses.</p>
+          )}
           <Button variant="secondary" iconRight={faArrowDown} disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>
-            Load more
+            {isFetchNextPageError ? "Try again" : "Load more"}
           </Button>
         </div>
       )}

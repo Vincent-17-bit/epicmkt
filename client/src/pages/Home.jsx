@@ -18,6 +18,7 @@ import FeaturedStores from "../components/FeaturedStores.jsx";
 import RecentlyAdded from "../components/RecentlyAdded.jsx";
 import NearYou from "../components/NearYou.jsx";
 import HomeProducts from "../components/HomeProducts.jsx";
+import StatusPage from "../components/StatusPage.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
 
@@ -62,6 +63,21 @@ export default function Home() {
   useNoindex(missing);
 
   if (missing) return <NotFound />;
+
+  if (slug && isError && !data) {
+    return (
+      <StatusPage
+        icon={faRotateRight}
+        title="We could not load this category"
+        message="Check your connection and try again."
+        breadcrumbs
+      >
+        <Button icon={faRotateRight} onClick={() => refetch()}>
+          Try again
+        </Button>
+      </StatusPage>
+    );
+  }
 
   if (slug) {
     return (

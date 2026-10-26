@@ -191,9 +191,9 @@ export default function BecomeASeller() {
     else if (!values.agreePrivacy) out.push("Tick the Privacy Notice box");
     if (!values.authorised) out.push("Tick the authorisation declaration");
     if (!token) out.push("Complete the human check");
-    if (!legal) out.push("Wait for the terms to load");
+    if (!legal) out.push(legalQuery.isError ? "Reload the terms and privacy notice" : "Wait for the terms to load");
     return out;
-  }, [values, category, cards, docs.files, read, token, legal]);
+  }, [values, category, cards, docs.files, read, token, legal, legalQuery.isError]);
 
   const [sendTried, setSendTried] = useState(false);
 
@@ -260,6 +260,14 @@ export default function BecomeASeller() {
     send: (
       <div className={styles.sendStack}>
         <PlanStep catalog={catalog} />
+        {legalQuery.isError && !legal && (
+          <div className={styles.notice} role="alert">
+            <span>We could not load the Seller Terms and Privacy Notice. You need them to send your application.</span>
+            <Button size="sm" onClick={() => legalQuery.refetch()} disabled={legalQuery.isFetching}>
+              {legalQuery.isFetching ? "Retrying…" : "Try again"}
+            </Button>
+          </div>
+        )}
         <ReviewStep
           category={category}
           docs={docs}

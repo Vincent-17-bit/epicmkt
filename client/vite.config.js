@@ -139,6 +139,16 @@ export default defineConfig(({ mode }) => {
               }
             },
             {
+              urlPattern: ({ url }) => /\/rest\/v1\/categories/.test(url.pathname),
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "categories-api",
+                networkTimeoutSeconds: 4,
+                expiration: { maxEntries: 5, maxAgeSeconds: 60 * 60 * 24 },
+                cacheableResponse: { statuses: [200] }
+              }
+            },
+            {
               // Pictures and videos are cached on the device, so a product seen once is not downloaded again.
               urlPattern: ({ request, url }) =>
                 request.destination === "image" && (url.hostname === "res.cloudinary.com" || /\/storage\/v1\/(object|render\/image)\/public\//.test(url.pathname)),
