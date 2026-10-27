@@ -18,8 +18,11 @@ export default function ListRow({ item, selected, handlers, canMove, isFirst, is
       <span className={styles.thumb}>{src && <img src={src} alt="" loading="lazy" />}</span>
       <span className={styles.rowMain}>
         <span className={styles.rowName}>{item.name}</span>
+        {item.shortDescription && <span className={styles.rowBlurb} data-testid="row-blurb">{item.shortDescription}</span>}
         <span className={styles.rowMeta}>
           <span>{priceText(item)}</span>
+          {item.brand && <span>{item.brand}</span>}
+          {item.packSize && <span>{item.packSize}</span>}
           {item.section && <span>{item.section}</span>}
         </span>
         <Chips item={item} />

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_DEFAULT_GROUP, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
+import { ITEM_DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_DEFAULT_GROUP, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import Modal from "./Modal.jsx";
@@ -11,6 +11,7 @@ import styles from "./catalog.module.css";
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
 const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
 
+const DESCRIPTION_MAX = 2000;
 const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
 const NARROW = "(max-width: 56.25rem)";
 
@@ -237,8 +238,8 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
     ...queued.map((q) => ({ key: q.url, src: q.url, remove: () => removeQueued(q.url) })),
   ];
 
-  const field = (key, label, input, counter) => (
-    <Field label={label} error={errors[key]} counter={counter}>{input}</Field>
+  const field = (key, label, input, counter, note) => (
+    <Field label={label} error={errors[key]} counter={counter} note={note} id={note ? `${key}-note` : undefined}>{input}</Field>
   );
   const len = (key, max) => `${String(form[key] ?? "").length}/${max}`;
 
@@ -277,10 +278,10 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
         {section("basics", (
           <>
             {field("name", "Name", <input className={ui.input} value={form.name} onChange={set("name")} aria-invalid={Boolean(errors.name)} maxLength={120} />)}
-            {field("brand", "Brand (optional)", <input className={ui.input} value={form.brand} onChange={set("brand")} aria-invalid={Boolean(errors.brand)} maxLength={DETAIL_LIMITS.brand} />)}
+            {field("brand", "Brand (optional)", <input className={ui.input} value={form.brand} onChange={set("brand")} aria-invalid={Boolean(errors.brand)} aria-describedby="brand-note" maxLength={ITEM_DETAIL_LIMITS.brand} />, len("brand", ITEM_DETAIL_LIMITS.brand), "The maker or label, such as Nike or Brookside.")}
             {field("section", "Section", <input className={ui.input} value={form.section} onChange={set("section")} aria-invalid={Boolean(errors.section)} maxLength={60} />)}
-            {field("shortDescription", "Short description", <textarea className={ui.input} value={form.shortDescription} onChange={set("shortDescription")} aria-invalid={Boolean(errors.shortDescription)} maxLength={DETAIL_LIMITS.shortDescription} />, len("shortDescription", DETAIL_LIMITS.shortDescription))}
-            {field("description", "Full description", <textarea className={ui.input} value={form.description} onChange={set("description")} aria-invalid={Boolean(errors.description)} maxLength={DETAIL_LIMITS.description} />, len("description", DETAIL_LIMITS.description))}
+            {field("shortDescription", "Short description (optional)", <textarea className={ui.input} value={form.shortDescription} onChange={set("shortDescription")} aria-invalid={Boolean(errors.shortDescription)} aria-describedby="shortDescription-note" maxLength={ITEM_DETAIL_LIMITS.shortDescription} />, len("shortDescription", ITEM_DETAIL_LIMITS.shortDescription), "One line customers see under the name.")}
+            {field("description", "Full description", <textarea className={ui.input} value={form.description} onChange={set("description")} aria-invalid={Boolean(errors.description)} maxLength={DESCRIPTION_MAX} />, len("description", DESCRIPTION_MAX))}
           </>
         ))}
         {section("price", (
@@ -371,8 +372,8 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
         ))}
         {section("pack", (
           <>
-            {field("packSize", "Pack size (optional, such as 6 pieces)", <input className={ui.input} value={form.packSize} onChange={set("packSize")} aria-invalid={Boolean(errors.packSize)} maxLength={DETAIL_LIMITS.packSize} />, len("packSize", DETAIL_LIMITS.packSize))}
-            {field("terms", "Terms (optional, such as returns or delivery)", <textarea className={ui.input} value={form.terms} onChange={set("terms")} aria-invalid={Boolean(errors.terms)} maxLength={DETAIL_LIMITS.terms} />, len("terms", DETAIL_LIMITS.terms))}
+            {field("packSize", "Pack size (optional)", <input className={ui.input} value={form.packSize} onChange={set("packSize")} aria-invalid={Boolean(errors.packSize)} aria-describedby="packSize-note" maxLength={ITEM_DETAIL_LIMITS.packSize} />, len("packSize", ITEM_DETAIL_LIMITS.packSize), "What one purchase contains, such as 6 pieces or 500 ml.")}
+            {field("terms", "Terms (optional)", <textarea className={ui.input} value={form.terms} onChange={set("terms")} aria-invalid={Boolean(errors.terms)} aria-describedby="terms-note" maxLength={ITEM_DETAIL_LIMITS.terms} />, len("terms", ITEM_DETAIL_LIMITS.terms), "Anything customers should know first, such as a deposit, delivery time or returns.")}
           </>
         ))}
         {!item && <p className={styles.hint}>New items are saved as drafts. Use Show when you are ready for customers to see them.</p>}

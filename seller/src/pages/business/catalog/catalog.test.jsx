@@ -293,8 +293,8 @@ describe("view modes and layout", () => {
   it("uses two, three, four and five column grids at the required widths, with theme tokens only", () => {
     const css = readFileSync(resolve(process.cwd(), "src/pages/business/catalog/catalog.module.css"), "utf8");
     expect(css).toMatch(/\.grid \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/);
-    expect(css).toMatch(/@media \(min-width: 37.5rem\) \{\s*\.grid \{\s*grid-template-columns: repeat\(3/);
-    expect(css).toMatch(/@media \(min-width: 64rem\) \{\s*\.grid \{\s*grid-template-columns: repeat\(4/);
+    expect(css).toMatch(/@media \(min-width: (?:600px|37\.5rem)\) \{\s*\.grid \{\s*grid-template-columns: repeat\(3/);
+    expect(css).toMatch(/@media \(min-width: (?:1024px|64rem)\) \{\s*\.grid \{\s*grid-template-columns: repeat\(4/);
     expect(css).toMatch(/\.grid\.compact \{\s*grid-template-columns: repeat\(5/);
     expect(css).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(css).not.toMatch(/rgba?\(/);
@@ -429,6 +429,80 @@ describe("quick actions", () => {
     await user.type(within(dialog).getByLabelText("Value"), "Nike");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Sneaker", specs: [{ label: "Brand", value: "Nike" }] }));
+  });
+
+  it("puts a specification in a chosen group, defaults to Features & Specs, and keeps the group when editing", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Desk lamp");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "2400");
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
+    const groups = within(dialog).getAllByLabelText("Group");
+    expect(groups.map((g) => g.value)).toEqual(["Features & Specs", "Features & Specs"]);
+    expect(within(dialog).getAllByRole("option", { name: "Measurements" })).toHaveLength(2);
+    await user.selectOptions(groups[1], "Measurements");
+    const labels = within(dialog).getAllByLabelText("Label");
+    const values = within(dialog).getAllByLabelText("Value");
+    await user.type(labels[0], "Bulb");
+    await user.type(values[0], "E27");
+    await user.type(labels[1], "Height");
+    await user.type(values[1], "45 cm");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({
+      name: "Desk lamp",
+      specs: [{ group: "Features & Specs", label: "Bulb", value: "E27" }, { group: "Measurements", label: "Height", value: "45 cm" }],
+    }));
+    const made = (await screen.findAllByText("Desk lamp"))[0].closest("li");
+    await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    expect(within(edit).getAllByLabelText("Group").map((g) => g.value)).toEqual(["Features & Specs", "Measurements"]);
+    await user.selectOptions(within(edit).getAllByLabelText("Group")[0], "User guide");
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.at(-1).specs.map((r) => r.group)).toEqual(["User guide", "Measurements"]));
+  });
+
+  it("saves brand, short description, pack size, highlights, what's included and terms, and loads them again", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Birthday cake");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "1800");
+    await user.type(within(dialog).getByLabelText("Brand (optional)"), "Acme Bakers");
+    await user.type(within(dialog).getByLabelText("Short description (optional)"), "Soft vanilla sponge");
+    await user.type(within(dialog).getByLabelText("Pack size (optional)"), "Serves 10");
+    await user.type(within(dialog).getByLabelText("Terms (optional)"), "Order two days ahead");
+    await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
+    await user.type(within(dialog).getByLabelText("Highlight 1 title"), "Fresh");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(within(dialog).getAllByRole("alert").map((a) => a.textContent)).toContain("Add the highlight text.");
+    expect(within(dialog).getByLabelText("Highlight 1 text").getAttribute("aria-invalid")).toBe("true");
+    await user.type(within(dialog).getByLabelText("Highlight 1 text"), "Baked the same day");
+    await user.click(within(dialog).getByRole("button", { name: "Add included item" }));
+    await user.type(within(dialog).getByLabelText("Included item 1"), "Candles");
+    await user.click(within(dialog).getByRole("button", { name: "Add included item" }));
+    await user.type(within(dialog).getByLabelText("Included item 2"), "Cake box");
+    await user.click(within(dialog).getByRole("button", { name: "Remove included item 2" }));
+    expect(within(dialog).queryByLabelText("Included item 2")).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({
+      name: "Birthday cake", brand: "Acme Bakers", shortDescription: "Soft vanilla sponge", packSize: "Serves 10", terms: "Order two days ahead",
+      includes: ["Candles"], highlights: [{ title: "Fresh", text: "Baked the same day" }],
+    }));
+    const made = (await screen.findAllByText("Birthday cake"))[0].closest("li");
+    await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    expect(within(edit).getByLabelText("Brand (optional)").value).toBe("Acme Bakers");
+    expect(within(edit).getByLabelText("Highlight 1 text").value).toBe("Baked the same day");
+    expect(within(edit).getByLabelText("Included item 1").value).toBe("Candles");
+    await user.clear(within(edit).getByLabelText("Brand (optional)"));
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ brand: null, packSize: "Serves 10", highlights: [{ title: "Fresh", text: "Baked the same day" }] }));
   });
 
   it("adds photos to a new item, to an existing item, and removes one", async () => {
@@ -829,7 +903,7 @@ describe("item dialog sections and details", () => {
   it("counts the short and full descriptions", async () => {
     const user = userEvent.setup();
     const dialog = await openForm(user);
-    await user.type(within(dialog).getByLabelText("Short description"), "Soft");
+    await user.type(within(dialog).getByLabelText("Short description (optional)"), "Soft");
     expect(within(dialog).getByText("4/140")).toBeInTheDocument();
     expect(within(dialog).getByText("0/2000")).toBeInTheDocument();
   });
@@ -855,7 +929,7 @@ describe("item dialog sections and details", () => {
     for (let i = 0; i < 8; i += 1) await user.click(add);
     expect(add).toBeDisabled();
     expect(within(dialog).getByText("8 of 8")).toBeInTheDocument();
-    const rows = () => within(dialog).getAllByLabelText("Text");
+    const rows = () => within(dialog).getAllByLabelText(/^Highlight \d+ text$/);
     await user.type(rows()[0], "first");
     await user.type(rows()[1], "second");
     await user.click(within(dialog).getByRole("button", { name: "Move down (highlight 1)" }));
@@ -868,12 +942,12 @@ describe("item dialog sections and details", () => {
     const dialog = await openForm(user);
     await fillBasics(user, dialog);
     await user.type(within(dialog).getByLabelText("Brand (optional)"), "Ikea");
-    await user.type(within(dialog).getByLabelText("Short description"), "Three seats");
+    await user.type(within(dialog).getByLabelText("Short description (optional)"), "Three seats");
     await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
-    await user.type(within(dialog).getByLabelText("Bold lead (optional)"), "Soft");
-    await user.type(within(dialog).getByLabelText("Text"), "Cotton cover");
-    await user.click(within(dialog).getByRole("button", { name: "Add line" }));
-    await user.type(within(dialog).getByLabelText("Line 1"), "Cushions");
+    await user.type(within(dialog).getByLabelText("Highlight 1 title"), "Soft");
+    await user.type(within(dialog).getByLabelText("Highlight 1 text"), "Cotton cover");
+    await user.click(within(dialog).getByRole("button", { name: "Add included item" }));
+    await user.type(within(dialog).getByLabelText("Included item 1"), "Cushions");
     await user.type(within(dialog).getByLabelText(/^Pack size/), "1 piece");
     await user.type(within(dialog).getByLabelText(/^Terms/), "No returns");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
@@ -898,10 +972,10 @@ describe("item dialog sections and details", () => {
     const dialog = await openForm(user);
     await fillBasics(user, dialog);
     await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
-    await user.type(within(dialog).getByLabelText("Bold lead (optional)"), "Soft");
+    await user.type(within(dialog).getByLabelText("Highlight 1 title"), "Soft");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
-    expect(within(dialog).getByText("Add the text.")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Text")).toHaveFocus();
+    expect(within(dialog).getByText("Add the highlight text.")).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Highlight 1 text")).toHaveFocus();
   });
 
   it("reorders photos so the first is the cover", async () => {

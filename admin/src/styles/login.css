@@ -38,17 +38,6 @@
   color: var(--admin-muted);
 }
 
-.admin-login__logo {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--admin-primary);
-  color: #111111;
-  font-weight: 800;
-}
-
 .admin-login__title {
   margin: 0 0 0.25rem;
   font-size: 1.5rem;

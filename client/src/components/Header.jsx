@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUiStore } from "../stores/ui.js";
 import Container from "./Container.jsx";
-import Logo from "./Logo.jsx";
+import { Logo } from "@epicmkt/ui";
 import IconButton from "./IconButton.jsx";
 import LocationButton from "./LocationButton.jsx";
 import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";

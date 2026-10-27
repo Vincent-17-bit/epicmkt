@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, SPEC_GROUPS, SPEC_PRESETS, DETAIL_LIMITS, SPEC_DEFAULT_GROUP, storedItemDetails } from "./itemForm.js";
+import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS, SPEC_GROUPS, SPEC_PRESETS, SPEC_DEFAULT_GROUP, storedItemDetails } from "./itemForm.js";
 
 const base = { ...emptyItemForm(), name: "Fade cut", price: "500" };
 
@@ -116,64 +116,61 @@ test("specs: a group is kept when present, must be a known group, and is optiona
 });
 
 const details = (extra) => validateItemForm({ ...base, ...extra });
-const oldShape = { name: "Fade cut", description: "", section: "", unit: "", priceType: "fixed", price: "500", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false };
+const without = (...keys) => Object.fromEntries(Object.entries(base).filter(([k]) => !keys.includes(k)));
 
-test("details: a form without the new fields saves exactly as before", () => {
-  const r = validateItemForm(oldShape);
+test("details: text fields are trimmed, an empty one becomes null, and a long one is refused", () => {
+  const ok = details({ brand: "  Nike ", shortDescription: "", packSize: "Box of 6", terms: "Deposit first" });
+  assert.equal(ok.ok, true);
+  assert.deepEqual([ok.value.brand, ok.value.shortDescription, ok.value.packSize, ok.value.terms], ["Nike", null, "Box of 6", "Deposit first"]);
+  for (const key of ["brand", "shortDescription", "packSize", "terms"]) {
+    assert.equal(details({ [key]: "x".repeat(ITEM_DETAIL_LIMITS[key]) }).ok, true, key);
+    assert.ok(details({ [key]: "x".repeat(ITEM_DETAIL_LIMITS[key] + 1) }).errors[key], key);
+  }
+});
+
+test("details: a field the form does not carry is left out, so saving cannot wipe it", () => {
+  const r = validateItemForm(without("brand", "shortDescription", "packSize", "terms", "includes", "highlights"));
   assert.equal(r.ok, true);
-  for (const k of ["brand", "shortDescription", "highlights", "includes", "terms", "packSize", "specs"]) assert.equal(k in r.value, false, k);
+  for (const key of ["brand", "shortDescription", "packSize", "terms", "includes", "highlights"]) assert.equal(key in r.value, false, key);
+  assert.deepEqual(details({}).value.includes, []);
+  assert.deepEqual(details({}).value.highlights, []);
 });
 
-test("details: an empty new form sends empty values", () => {
-  const r = validateItemForm(base);
-  assert.deepEqual([r.value.brand, r.value.shortDescription, r.value.terms, r.value.packSize], ["", "", "", ""]);
-  assert.deepEqual([r.value.highlights, r.value.includes], [[], []]);
+test("includes: blank lines are dropped, lines are trimmed, and the limits hold", () => {
+  assert.deepEqual(details({ includes: [" Charger ", "", "  ", "Box"] }).value.includes, ["Charger", "Box"]);
+  const long = details({ includes: ["ok", "i".repeat(ITEM_DETAIL_LIMITS.includes.text + 1)] });
+  assert.deepEqual(Object.keys(long.errors.includes), ["1"]);
+  const rows = (n) => Array.from({ length: n }, (_, i) => `Item ${i}`);
+  assert.equal(details({ includes: rows(ITEM_DETAIL_LIMITS.includes.rows) }).ok, true);
+  assert.ok(details({ includes: rows(ITEM_DETAIL_LIMITS.includes.rows + 1) }).errors.includesCount);
 });
 
-test("details: text limits are errors on the field", () => {
-  const r = details({ brand: "b".repeat(61), shortDescription: "s".repeat(141), terms: "t".repeat(501), packSize: "p".repeat(41), description: "d".repeat(2001) });
-  assert.equal(r.ok, false);
-  assert.deepEqual(Object.keys(r.errors).sort(), ["brand", "description", "packSize", "shortDescription", "terms"]);
-  const edge = details({ brand: " Nike ", shortDescription: "s".repeat(140), terms: "t".repeat(500), packSize: "6 pieces" });
-  assert.deepEqual([edge.ok, edge.value.brand, edge.value.packSize], [true, "Nike", "6 pieces"]);
+test("highlights: the text is required, the title is optional, and the limits hold", () => {
+  const r = details({ highlights: [{ title: " Fast ", text: " Charges in 20 minutes " }, { title: "", text: "No title" }, { title: "", text: "" }] });
+  assert.deepEqual(r.value.highlights, [{ title: "Fast", text: "Charges in 20 minutes" }, { text: "No title" }]);
+  const missing = details({ highlights: [{ title: "Only a title", text: "" }] });
+  assert.equal(missing.errors.highlights[0].text, "Add the highlight text.");
+  const long = details({ highlights: [{ title: "t".repeat(ITEM_DETAIL_LIMITS.highlights.title + 1), text: "x".repeat(ITEM_DETAIL_LIMITS.highlights.text + 1) }] });
+  assert.ok(long.errors.highlights[0].title);
+  assert.ok(long.errors.highlights[0].text);
+  const rows = (n) => Array.from({ length: n }, (_, i) => ({ text: `Point ${i}` }));
+  assert.equal(details({ highlights: rows(ITEM_DETAIL_LIMITS.highlights.rows) }).ok, true);
+  assert.ok(details({ highlights: rows(ITEM_DETAIL_LIMITS.highlights.rows + 1) }).errors.highlightsCount);
 });
 
-test("details: highlights keep order, drop blank rows, and need text", () => {
-  const ok = details({ highlights: [{ title: " Soft ", text: " Cotton " }, { title: "", text: "" }, { title: "", text: "Machine washable" }] });
-  assert.deepEqual(ok.value.highlights, [{ title: "Soft", text: "Cotton" }, { text: "Machine washable" }]);
-  const bad = details({ highlights: [{ title: "Lead", text: "" }, { title: "x".repeat(41), text: "ok" }, { title: "", text: "t".repeat(201) }] });
-  assert.equal(bad.ok, false);
-  assert.deepEqual(Object.keys(bad.errors.highlights), ["0", "1", "2"]);
-  assert.ok(bad.errors.highlights[0].text && bad.errors.highlights[1].title && bad.errors.highlights[2].text);
-});
-
-test("details: at most 8 highlights and 10 included lines", () => {
-  const eight = Array.from({ length: DETAIL_LIMITS.highlightRows }, (_, i) => ({ title: "", text: `Point ${i}` }));
-  assert.equal(details({ highlights: eight }).ok, true);
-  assert.ok(details({ highlights: [...eight, { title: "", text: "One more" }] }).errors.highlightsCount);
-  const ten = Array.from({ length: DETAIL_LIMITS.includeRows }, (_, i) => `Item ${i}`);
-  assert.equal(details({ includes: ten }).ok, true);
-  assert.ok(details({ includes: [...ten, "One more"] }).errors.includesCount);
-});
-
-test("details: included lines are trimmed, blanks dropped, long lines flagged by row", () => {
-  assert.deepEqual(details({ includes: [" Charger ", "", "  ", "Cable"] }).value.includes, ["Charger", "Cable"]);
-  const bad = details({ includes: ["ok", "x".repeat(81)] });
-  assert.deepEqual(Object.keys(bad.errors.includes), ["1"]);
-});
-
-test("details: an item with the new fields round trips through the form", () => {
-  const item = { name: "Shirt", priceType: "fixed", price: 900, availability: "available", brand: "Nike", shortDescription: "Light", highlights: [{ title: "Soft", text: "Cotton" }, { text: "Cheap" }], includes: ["Tag"], terms: "No returns", packSize: "1", specs: [{ group: "Measurements", label: "Size", value: "M" }] };
+test("details: the form loads an item's details and sends them back unchanged", () => {
+  const item = { name: "Cake", priceType: "fixed", price: 900, availability: "available", brand: "Acme", shortDescription: "Fresh", packSize: "Box of 6", terms: "Order ahead", includes: ["Candles"], highlights: [{ title: "Soft", text: "Baked today" }, { text: "Nut free" }] };
   const f = formFromItem(item);
-  assert.deepEqual(f.highlights, [{ title: "Soft", text: "Cotton" }, { title: "", text: "Cheap" }]);
+  assert.deepEqual([f.brand, f.shortDescription, f.packSize, f.terms, f.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
+  assert.deepEqual(f.highlights, [{ title: "Soft", text: "Baked today" }, { title: "", text: "Nut free" }]);
   const v = validateItemForm(f).value;
-  assert.deepEqual([v.brand, v.shortDescription, v.includes, v.terms, v.packSize], ["Nike", "Light", ["Tag"], "No returns", "1"]);
-  assert.deepEqual(v.highlights, [{ title: "Soft", text: "Cotton" }, { text: "Cheap" }]);
-  const bare = formFromItem({ name: "Plain", priceType: "free", availability: "available" });
-  assert.deepEqual([bare.brand, bare.shortDescription, bare.highlights, bare.includes, bare.terms, bare.packSize], ["", "", [], [], "", ""]);
+  assert.deepEqual([v.brand, v.packSize, v.terms, v.includes], ["Acme", "Box of 6", "Order ahead", ["Candles"]]);
+  assert.deepEqual(v.highlights, item.highlights);
+  const bare = formFromItem({ name: "A cut", priceType: "fixed", price: 300, availability: "available" });
+  assert.deepEqual([bare.brand, bare.shortDescription, bare.packSize, bare.terms, bare.includes, bare.highlights], ["", "", "", "", [], []]);
 });
 
-test("spec presets: valid labels and groups, no duplicates", () => {
+test("spec presets: ten, valid labels and groups, no duplicates, and the form accepts them all", () => {
   assert.equal(SPEC_PRESETS.length, 10);
   const labels = SPEC_PRESETS.map((p) => p.label.toLowerCase());
   assert.equal(new Set(labels).size, labels.length);
@@ -181,37 +178,19 @@ test("spec presets: valid labels and groups, no duplicates", () => {
     assert.ok(SPEC_GROUPS.includes(p.group), p.label);
     assert.ok(p.label.length <= SPEC_LIMITS.label, p.label);
   }
-  assert.equal(validateItemForm({ ...base, specs: SPEC_PRESETS.map((p) => ({ group: p.group, label: p.label, value: "x" })) }).ok, true);
+  const form = { ...emptyItemForm(), name: "Sofa", price: "9000", specs: SPEC_PRESETS.map((p) => ({ group: p.group, label: p.label, value: "x" })) };
+  assert.equal(validateItemForm(form).ok, true);
 });
 
-test("specs: every limit is an error on its own row, and the count limit is on the list", () => {
-  const r = specs([{ label: "l".repeat(41), value: "v" }, { label: "ok", value: "v".repeat(121) }, { group: "Nope", label: "Size", value: "M" }, { label: "Fine", value: "Fine" }]);
-  assert.equal(r.ok, false);
-  assert.deepEqual(Object.keys(r.errors.specs), ["0", "1", "2"]);
-  assert.ok(r.errors.specs[0].label && !r.errors.specs[0].value);
-  assert.ok(r.errors.specs[1].value && !r.errors.specs[1].label);
-  assert.ok(r.errors.specs[2].group);
-  const edge = specs([{ label: "l".repeat(40), value: "v".repeat(120) }]);
-  assert.equal(edge.ok, true);
-  const rows = (n) => Array.from({ length: n }, (_, i) => ({ label: `Label ${i}`, value: "v" }));
-  assert.equal(specs(rows(SPEC_LIMITS.rows)).ok, true);
-  assert.ok(specs(rows(SPEC_LIMITS.rows + 1)).errors.specsCount);
+test("details: row errors keep the row's own index after blank rows and duplicates", () => {
+  const form = { ...emptyItemForm(), name: "Sofa", price: "9000" };
+  const specs = validateItemForm({ ...form, specs: [{ label: "", value: "" }, { label: "Size", value: "M" }, { label: "size", value: "L" }, { label: "Color", value: "" }] });
+  assert.deepEqual(Object.keys(specs.errors.specs), ["3"]);
+  const rows = validateItemForm({ ...form, highlights: [{ title: "", text: "" }, { title: "Lead", text: "" }], includes: ["", "x".repeat(ITEM_DETAIL_LIMITS.includes.text + 1)] });
+  assert.deepEqual([Object.keys(rows.errors.highlights), Object.keys(rows.errors.includes)], [["1"], ["1"]]);
 });
 
-test("specs: row errors keep the row's own index even when blank rows and duplicates come before it", () => {
-  const r = specs([{ label: "", value: "" }, { label: "Size", value: "M" }, { label: "size", value: "L" }, { label: "Color", value: "" }]);
-  assert.deepEqual(Object.keys(r.errors.specs), ["3"]);
-  assert.equal(r.errors.specs[3].value, "Add a value.");
-  const ok = specs([{ label: "", value: "" }, { label: "Size", value: "M" }, { label: "size", value: "L" }]);
-  assert.deepEqual(ok.value.specs, [{ label: "Size", value: "M" }]);
-});
-
-test("details: highlight and include errors use the row's own index after blank rows", () => {
-  const r = details({ highlights: [{ title: "", text: "" }, { title: "Lead", text: "" }], includes: ["", "x".repeat(81)] });
-  assert.deepEqual([Object.keys(r.errors.highlights), Object.keys(r.errors.includes)], [["1"], ["1"]]);
-});
-
-test("storedItemDetails: keeps only the keys that were sent, trimmed, empty text as null", () => {
+test("storedItemDetails: keeps only the keys that were sent, empty text as null", () => {
   assert.deepEqual(storedItemDetails({}), { ok: true, value: {} });
   const r = storedItemDetails({ brand: " Nike ", terms: "  ", highlights: [{ title: " ", text: "Soft" }, { title: "Lead", text: "Warm" }], includes: [" A "], specs: [{ label: "Size", value: "M" }] });
   assert.deepEqual(r.value, { brand: "Nike", terms: null, highlights: [{ text: "Soft" }, { title: "Lead", text: "Warm" }], includes: ["A"], specs: [{ group: SPEC_DEFAULT_GROUP, label: "Size", value: "M" }] });
@@ -231,7 +210,7 @@ test("storedItemDetails: refuses what the database refuses", () => {
 });
 
 test("storedItemDetails: accepts everything validateItemForm lets through", () => {
-  const form = { ...base, brand: " Ikea ", shortDescription: "S", terms: "T", packSize: "6", highlights: [{ title: " Soft ", text: " Cotton " }, { title: "", text: "" }], includes: [" Cushions ", ""], specs: [{ label: "Size", value: "M" }, { label: "", value: "" }, { group: "Measurements", label: "Weight", value: "9 kg" }] };
+  const form = { ...emptyItemForm(), name: "Sofa", price: "9000", brand: " Ikea ", shortDescription: "S", terms: "T", packSize: "6", highlights: [{ title: " Soft ", text: " Cotton " }, { title: "", text: "" }], includes: [" Cushions ", ""], specs: [{ label: "Size", value: "M" }, { label: "", value: "" }, { group: "Measurements", label: "Weight", value: "9 kg" }] };
   const v = validateItemForm(form).value;
   const stored = storedItemDetails(v);
   assert.equal(stored.ok, true);

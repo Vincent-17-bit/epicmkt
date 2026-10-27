@@ -203,7 +203,12 @@ describe("MediaVideo: one at a time", () => {
 describe("MediaVideo: stacking", () => {
   // jsdom cannot see stacking. This keeps the player above the item sheet it is opened from (it once opened underneath it).
   it("the player scrim is stacked above the item sheet", () => {
-    const zOf = (css, selector) => Number(new RegExp(`${selector}\\s*{[^}]*?z-index:\\s*(\\d+)`).exec(css)?.[1]);
+    const tokens = readFileSync(join(here, "../../../ui/src/styles/tokens.css"), "utf8");
+    const zOf = (css, selector) => {
+      const raw = new RegExp(`${selector}\\s*{[^}]*?z-index:\\s*([^;]+);`).exec(css)?.[1].trim();
+      const token = /^var\((--[\w-]+)\)$/.exec(raw ?? "")?.[1];
+      return Number(token ? new RegExp(`${token}:\\s*(\\d+)`).exec(tokens)?.[1] : raw);
+    };
     const sheet = zOf(cssText("ItemDetail.module.css"), "\\.root");
     const scrim = zOf(cssText("MediaVideo.module.css"), "\\.scrim");
     expect(Number.isFinite(sheet) && Number.isFinite(scrim)).toBe(true);

@@ -754,13 +754,6 @@
 }
 
 @media (min-width: 64rem) {
-  .root[data-variant="page"] .body {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    align-items: start;
-    gap: var(--space-4);
-  }
-
   .root[data-variant="page"] .media {
     position: sticky;
     top: calc(var(--header-h) + var(--space-3));
@@ -782,7 +775,7 @@
 }
 
 /* Loading, missing-item and error states sit centred across the whole page. */
-.root[data-variant="page"] .body > :not(.media):not(.content) {
+.root[data-variant="page"] .body > :not(.layout) {
   grid-column: 1 / -1;
   width: 100%;
   max-width: 40rem;

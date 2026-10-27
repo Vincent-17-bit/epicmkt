@@ -6,7 +6,7 @@ import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
 import Container from "./Container.jsx";
-import Logo from "./Logo.jsx";
+import { Logo } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./Footer.module.css";
 
@@ -110,7 +110,7 @@ export default function Footer() {
     <footer className={styles.footer} data-theme="light">
       <Container className={styles.top}>
         <div className={`${styles.brand} ${styles.about}`}>
-          <Logo tagline="Everything local. One tap away." />
+          <Logo tagline="Digitize. Scale. Thrive." />
           <p className={styles.aboutText}>
             EpicMKT is a directory of local businesses across Kenya. Find what you need nearby, then call, WhatsApp or get directions in one tap.
           </p>

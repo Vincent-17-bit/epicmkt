@@ -2,7 +2,7 @@
 // Kept as plain functions so they can be unit tested (seo.test.js).
 
 export const SITE_NAME = "EpicMKT";
-export const SITE_SLOGAN = "Everything local. One tap away.";
+export const SITE_SLOGAN = "Digitize. Scale. Thrive.";
 export const SITE_ALT_NAMES = ["Epic MKT", "EpicMKT Kenya", "EpicMKT App"];
 export const SITE_DESCRIPTION =
   "Find barbershops, water refill points, chemists, agrovets, gyms and more near you in Kenya. Call, WhatsApp or get directions.";

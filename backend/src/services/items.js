@@ -18,6 +18,18 @@ const shorten = (text) => {
   return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
 };
 
+const highlightsOf = (value) => {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const entry of value) {
+    const text = typeof entry === "string" ? entry.trim() : typeof entry?.text === "string" ? entry.text.trim() : "";
+    const title = typeof entry?.title === "string" ? entry.title.trim() : "";
+    if (text) out.push(typeof entry === "string" ? text : { ...(title ? { title } : {}), text });
+    if (out.length >= MAX_HIGHLIGHTS) break;
+  }
+  return out;
+};
+
 const toItem = (business, svc, index) => {
   const hue = business.hue ?? 210;
   const images = svc.images ?? [0, 1, 2].map((k) => ({
@@ -33,7 +45,7 @@ const toItem = (business, svc, index) => {
     description: svc.description ?? "",
     shortDescription: svc.shortDescription ?? shorten(svc.description ?? ""),
     brand: typeof svc.brand === "string" && svc.brand.trim() ? svc.brand.trim() : null,
-    highlights: Array.isArray(svc.highlights) ? svc.highlights.filter((h) => typeof h === "string" && h.trim()).slice(0, MAX_HIGHLIGHTS) : [],
+    highlights: highlightsOf(svc.highlights),
     includes: svc.includes ?? [],
     terms: svc.terms ?? "",
     duration: svc.duration ?? null,

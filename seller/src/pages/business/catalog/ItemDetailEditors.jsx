@@ -1,18 +1,24 @@
-import { DETAIL_LIMITS, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, SPEC_PRESETS } from "@epicmkt/shared";
+import { ITEM_DETAIL_LIMITS, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, SPEC_PRESETS } from "@epicmkt/shared";
 import ui from "../../../styles/ui.module.css";
 import styles from "./catalog.module.css";
 
-export function Field({ label, error, counter, children }) {
+export function Field({ label, error, counter, note, id, children }) {
   return (
     <div className={ui.field}>
       <label className={styles.stack}>
         <span className={ui.label}>{label}</span>
         {children}
       </label>
-      {(error || counter) && (
+      {note && (
+        <span id={id} className={styles.noteRow}>
+          <span className={styles.hint}>{note}</span>
+          {counter && <span className={styles.counter} aria-hidden="true">{counter}</span>}
+        </span>
+      )}
+      {((error) || (counter && !note)) && (
         <div className={styles.fieldMeta}>
           {error && <span className={ui.error} role="alert">{error}</span>}
-          {counter && <span className={styles.counter}>{counter}</span>}
+          {counter && !note && <span className={styles.counter}>{counter}</span>}
         </div>
       )}
     </div>
@@ -25,16 +31,16 @@ export function HighlightsEditor({ rows, errors, countError, onField, onAdd, onM
   return (
     <>
       <div className={styles.listTop}>
-        <p className={styles.hint}>Optional. Short selling points shown under the item name. Add a bold lead if you like.</p>
-        <span className={styles.counter}>{rows.length} of {DETAIL_LIMITS.highlightRows}</span>
+        <p className={styles.hint}>Optional. Up to {ITEM_DETAIL_LIMITS.highlights.rows} short points that sell the item. A title is optional and shows in bold before the text.</p>
+        <span className={styles.counter}>{rows.length} of {ITEM_DETAIL_LIMITS.highlights.rows}</span>
       </div>
       {rows.map((r, i) => (
         <div key={r._k} className={styles.stockBox} role="group" aria-label={`Highlight ${i + 1}`}>
-          <Field label="Bold lead (optional)" error={errors?.[i]?.title}>
-            <input className={ui.input} data-focus={`h-${r._k}-title`} value={r.title} onChange={onField(i, "title")} aria-invalid={Boolean(errors?.[i]?.title)} maxLength={DETAIL_LIMITS.highlightTitle} />
+          <Field label={`Highlight ${i + 1} title`} error={errors?.[i]?.title}>
+            <input className={ui.input} data-focus={`h-${r._k}-title`} value={r.title} onChange={onField(i, "title")} aria-invalid={Boolean(errors?.[i]?.title)} maxLength={ITEM_DETAIL_LIMITS.highlights.title} />
           </Field>
-          <Field label="Text" error={errors?.[i]?.text}>
-            <textarea className={ui.input} data-focus={`h-${r._k}-text`} value={r.text} onChange={onField(i, "text")} aria-invalid={Boolean(errors?.[i]?.text)} maxLength={DETAIL_LIMITS.highlightText} />
+          <Field label={`Highlight ${i + 1} text`} error={errors?.[i]?.text}>
+            <textarea className={ui.input} data-focus={`h-${r._k}-text`} value={r.text} onChange={onField(i, "text")} aria-invalid={Boolean(errors?.[i]?.text)} maxLength={ITEM_DETAIL_LIMITS.highlights.text} />
           </Field>
           <div className={styles.rowActions}>
             <button type="button" className={styles.rowBtn} onClick={() => onMove(i, -1)} disabled={i === 0} aria-label={`Move up (highlight ${i + 1})`}>Move up</button>
@@ -44,7 +50,7 @@ export function HighlightsEditor({ rows, errors, countError, onField, onAdd, onM
         </div>
       ))}
       {countError && <Anchor>{countError}</Anchor>}
-      <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={onAdd} disabled={rows.length >= DETAIL_LIMITS.highlightRows}>Add highlight</button>
+      <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={onAdd} disabled={rows.length >= ITEM_DETAIL_LIMITS.highlights.rows}>Add highlight</button>
     </>
   );
 }
@@ -58,7 +64,7 @@ export function SpecsEditor({ rows, errors, countError, onField, onPreset, onAdd
   return (
     <>
       <div className={styles.listTop}>
-        <p className={styles.hint}>Optional. Tap a common fact to add it, or add your own row.</p>
+        <p className={styles.hint}>Optional. Add short facts about this item, such as Size or Material. The group decides which section of the item page each fact appears under. Tap a common fact to add it.</p>
         <span className={styles.counter}>{rows.length} of {SPEC_LIMITS.rows}</span>
       </div>
       <ul className={styles.chips} aria-label="Common specifications">
@@ -101,23 +107,23 @@ export function IncludesEditor({ rows, errors, countError, onField, onAdd, onRem
   return (
     <>
       <div className={styles.listTop}>
-        <p className={styles.hint}>Optional. One short line for each thing in the box or package.</p>
-        <span className={styles.counter}>{rows.length} of {DETAIL_LIMITS.includeRows}</span>
+        <p className={styles.hint}>Optional. List what comes with the item, such as a charger or a gift box. Up to {ITEM_DETAIL_LIMITS.includes.rows} lines.</p>
+        <span className={styles.counter}>{rows.length} of {ITEM_DETAIL_LIMITS.includes.rows}</span>
       </div>
       {rows.map((r, i) => (
         <div key={r._k} className={ui.field}>
           <div className={styles.includeRow}>
             <label className={styles.stack}>
-              <span className={ui.label}>Line {i + 1}</span>
-              <input className={ui.input} data-focus={`i-${r._k}-text`} value={r.text} onChange={onField(i)} aria-invalid={Boolean(errors?.[i])} maxLength={DETAIL_LIMITS.includeLine} />
+              <span className={ui.label}>{`Included item ${i + 1}`}</span>
+              <input className={ui.input} data-focus={`i-${r._k}-text`} value={r.text} onChange={onField(i)} aria-invalid={Boolean(errors?.[i])} maxLength={ITEM_DETAIL_LIMITS.includes.text} />
             </label>
-            <button type="button" className={styles.rowBtn} onClick={() => onRemove(i)} aria-label={`Remove line ${i + 1}`}>Remove</button>
+            <button type="button" className={styles.rowBtn} onClick={() => onRemove(i)} aria-label={`Remove included item ${i + 1}`}>Remove</button>
           </div>
           {errors?.[i] && <span className={ui.error} role="alert">{errors[i]}</span>}
         </div>
       ))}
       {countError && <Anchor>{countError}</Anchor>}
-      <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={onAdd} disabled={rows.length >= DETAIL_LIMITS.includeRows}>Add line</button>
+      <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={onAdd} disabled={rows.length >= ITEM_DETAIL_LIMITS.includes.rows}>Add included item</button>
     </>
   );
 }

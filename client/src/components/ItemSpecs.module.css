@@ -72,15 +72,8 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
   font-size: var(--text-sm);
-}
-
-@media (min-width: 360px) {
-  .row {
-    grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
-    gap: var(--space-3);
-  }
 }
 
 .row:nth-child(even) {
@@ -89,6 +82,7 @@
 
 .label {
   min-width: 0;
+  padding-inline: var(--space-3);
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
@@ -96,8 +90,20 @@
 .value {
   min-width: 0;
   margin: 0;
+  padding-inline: var(--space-3);
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 360px) {
+  .row {
+    grid-template-columns: minmax(0, 40%) minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .label {
+    padding-inline-end: 0;
+  }
 }
 
 .text {

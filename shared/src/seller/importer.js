@@ -2,9 +2,12 @@ import { DB_AVAILABILITY } from "./filters.js";
 
 export const IMPORT_MAX_BYTES = 2 * 1024 * 1024;
 export const IMPORT_MAX_ROWS = 500;
-export const IMPORT_FIELDS = ["name", "price_type", "price", "unit", "availability", "section", "tags"];
-export const IMPORT_LABELS = { name: "Name", price_type: "Price type", price: "Price", unit: "Unit", availability: "Availability", section: "Section", tags: "Tags" };
-export const IMPORT_TEMPLATE = "name\tprice type\tprice\tunit\tavailability\tsection\ttags";
+export const IMPORT_FIELDS = ["name", "price_type", "price", "unit", "availability", "section", "tags", "brand", "short_description", "pack_size", "terms", "includes"];
+export const IMPORT_LABELS = {
+  name: "Name", price_type: "Price type", price: "Price", unit: "Unit", availability: "Availability", section: "Section", tags: "Tags",
+  brand: "Brand", short_description: "Short description", pack_size: "Pack size", terms: "Terms", includes: "Includes",
+};
+export const IMPORT_TEMPLATE = "name\tprice type\tprice\tunit\tavailability\tsection\ttags\tbrand\tshort description\tpack size\tterms\tincludes";
 
 const HEADERS = {
   name: ["name", "item", "item name", "product", "product name", "title", "service"],
@@ -14,6 +17,11 @@ const HEADERS = {
   availability: ["availability", "status", "stock status", "available"],
   section: ["section", "category", "group", "menu section"],
   tags: ["tags", "tag", "keywords"],
+  brand: ["brand", "make", "manufacturer"],
+  short_description: ["short description", "short_description", "summary", "tagline"],
+  pack_size: ["pack size", "pack_size", "pack", "package size"],
+  terms: ["terms", "conditions", "terms and conditions"],
+  includes: ["includes", "included", "what's included", "whats included", "in the box", "in the pack"],
 };
 
 const PRICE_TYPES = {
@@ -104,8 +112,10 @@ export const detectMapping = (firstRow) => {
   return { mapping, hasHeader: mapping.name !== null && matched >= 2 };
 };
 
+const POSITIONAL_FIELDS = IMPORT_FIELDS.slice(0, 7);
+
 export const positionalMapping = (columns) =>
-  Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, i < columns ? i : null]));
+  Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, POSITIONAL_FIELDS.includes(f) && i < columns ? i : null]));
 
 const parsePrice = (raw) => {
   const cleaned = raw.replace(/\s*(kes|ksh|kshs|\/=)\s*/gi, "").replace(/,/g, "").trim();
@@ -117,6 +127,7 @@ const parsePrice = (raw) => {
 };
 
 const TAG_LIMIT = 10;
+export const DETAIL_LIMITS = { brand: 60, short_description: 140, pack_size: 40, terms: 500, includes: 10, include: 80 };
 
 export const validateRow = (cells, mapping) => {
   const get = (field) => (mapping[field] === null || mapping[field] === undefined ? "" : String(cells[mapping[field]] ?? "").trim());
@@ -187,10 +198,25 @@ export const validateRow = (cells, mapping) => {
   if (tags.length > TAG_LIMIT) errors.push(`Use at most ${TAG_LIMIT} tags.`);
   if (tags.some((t) => t.length > 30)) errors.push("A tag is over 30 characters.");
 
+  const details = {};
+  for (const field of ["brand", "short_description", "pack_size", "terms"]) {
+    const text = get(field);
+    if (text.length > DETAIL_LIMITS[field]) errors.push(`${IMPORT_LABELS[field]} is over ${DETAIL_LIMITS[field]} characters.`);
+    else if (text) details[field] = text;
+  }
+  const includes = [];
+  for (const part of get("includes").split(/[,;|]/)) {
+    const entry = part.trim();
+    if (entry && !includes.some((t) => t.toLowerCase() === entry.toLowerCase())) includes.push(entry);
+  }
+  if (includes.length > DETAIL_LIMITS.includes) errors.push(`Use at most ${DETAIL_LIMITS.includes} included items.`);
+  if (includes.some((t) => t.length > DETAIL_LIMITS.include)) errors.push(`An included item is over ${DETAIL_LIMITS.include} characters.`);
+  if (includes.length) details.includes = includes;
+
   if (errors.length) return { errors };
   return {
     errors: [],
-    value: { name, price_type: priceType, price: priceValue, price_max: priceMax, unit: unit || null, availability, section: section || null, tags },
+    value: { name, price_type: priceType, price: priceValue, price_max: priceMax, unit: unit || null, availability, section: section || null, tags, ...details },
   };
 };
 

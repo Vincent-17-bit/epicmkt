@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { Logo } from "@epicmkt/ui";
 import * as api from "../api/index.js";
 import { errorText } from "../lib/errors.js";
 import ui from "../styles/ui.module.css";
@@ -45,6 +46,9 @@ export default function Login() {
 
   return (
     <div className={ui.page} style={{ maxWidth: "26rem" }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: "var(--space-4)" }}>
+        <Logo size={44} />
+      </div>
       <form className={ui.card} onSubmit={submit} noValidate>
         <h1 style={{ margin: 0, fontSize: "var(--text-xl)" }}>Seller sign in</h1>
         {notice && <p role="status" style={{ margin: 0, color: "var(--ok-text)", fontWeight: 600 }}>{notice}</p>}

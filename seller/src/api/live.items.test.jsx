@@ -31,11 +31,11 @@ describe("live saveItem with the new fields", () => {
     expect(sent()).toMatchObject({ brand: "Ikea", short_description: null, terms: null, pack_size: null, highlights: [{ title: "Soft", text: "Cotton" }], includes: ["Cushions"], specs: [{ group: "Measurements", label: "Size", value: "M" }] });
   });
 
-  it("sends empty lists so a save can clear them, and leaves out a key that is not a string or list", async () => {
+  it("sends empty lists and null so a save can clear a field, and leaves out a key that is undefined", async () => {
     await live.saveItem("it-9", { ...base, highlights: [], includes: [], specs: [], brand: undefined, terms: null });
     expect(sent()).toMatchObject({ highlights: [], includes: [], specs: [] });
     expect(sent()).not.toHaveProperty("brand");
-    expect(sent()).not.toHaveProperty("terms");
+    expect(sent()).toHaveProperty("terms", null);
   });
 
   it("sends what the mock would keep, for the same validated form", async () => {
