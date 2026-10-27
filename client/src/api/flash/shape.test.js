@@ -65,6 +65,14 @@ describe("customer item shape with videos", () => {
 describe("customer item shape with product details", () => {
   const base = { id: "i1", name: "Kettle", description: "A kettle." };
 
+  it("keeps title and text highlights from the database and drops malformed ones", () => {
+    const item = itemOf({
+      ...base,
+      highlights: [{ title: " Fast ", text: " Boils in 2 min " }, { text: "No title" }, { title: "No text" }, { title: 3, text: "Bad title" }, "Plain", 7, null, { text: "  " }]
+    });
+    expect(item.highlights).toEqual([{ title: "Fast", text: "Boils in 2 min" }, { text: "No title" }, { text: "Bad title" }, "Plain"]);
+  });
+
   it("an item without the new fields has the defaults", () => {
     const item = itemOf(base);
     expect(item).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [], shortDescription: "A kettle." });

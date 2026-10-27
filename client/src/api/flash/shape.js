@@ -34,6 +34,23 @@ const textOf = (value) => (typeof value === "string" ? value.trim() : "");
 
 const listOf = (value) => (Array.isArray(value) ? value.map(textOf).filter(Boolean).slice(0, MAX_LIST) : []);
 
+const highlightsOf = (value) => {
+  if (!Array.isArray(value)) return [];
+  const out = [];
+  for (const entry of value) {
+    if (typeof entry === "string") {
+      const text = textOf(entry);
+      if (text) out.push(text);
+    } else if (entry && typeof entry === "object") {
+      const text = textOf(entry.text);
+      const title = textOf(entry.title);
+      if (text) out.push({ ...(title ? { title } : {}), text });
+    }
+    if (out.length >= MAX_LIST) break;
+  }
+  return out;
+};
+
 const specsOf = (value) => {
   if (!Array.isArray(value)) return [];
   const rows = [];
@@ -102,7 +119,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     description: description ?? "",
     shortDescription: textOf(shortDescription) || shorten(typeof description === "string" ? description : ""),
     brand: textOf(brand) || null,
-    highlights: listOf(highlights),
+    highlights: highlightsOf(highlights),
     includes: listOf(includes),
     terms: textOf(terms),
     duration: null,
