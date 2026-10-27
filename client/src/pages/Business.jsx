@@ -144,6 +144,8 @@ export default function Business() {
       qr={<QrCode slug={data.slug} plan={data.plan} hasLogo={!!data.logoUrl} label={`QR code linking to ${data.name}`} />}
       shortUrl={shortUrl}
       hitSection={hit}
+      focusSection={sectionId}
+      focusItem={itemId}
       shareNote={shareNote}
       crumbInert={Boolean(itemId)}
       breadcrumbs={<PageBreadcrumbs />}

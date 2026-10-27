@@ -64,7 +64,7 @@ describe("live mode still works", () => {
   it("BusinessPage opens an item and shares", () => {
     const { h } = renderers.BusinessPage();
     // The product is in the services list and, as a deal, under Offers: open it from the list.
-    fireEvent.click(within(screen.getByRole("region", { name: "Services and prices" })).getByRole("button", { name: /Fade/ }));
+    fireEvent.click(within(screen.getByRole("region", { name: /^All products/ })).getByRole("button", { name: /Fade/ }));
     expect(h.onOpenItem).toHaveBeenCalledWith("s1");
     fireEvent.click(screen.getAllByRole("button", { name: "Share" })[0]);
     expect(h.onShare).toHaveBeenCalled();

@@ -5,14 +5,29 @@
 
 .services {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.services {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 8rem), 1fr));
+@media (min-width: 22.5rem) {
+  .services {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 48rem) {
+  .services {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 64rem) {
+  .services {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .service {
@@ -52,10 +67,6 @@
 }
 
 @media (min-width: 30rem) {
-  .services {
-    grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-  }
-
   .serviceText {
     flex-direction: row;
     align-items: baseline;
@@ -128,4 +139,42 @@
 /* Shown on the picture only when the item is running low. */
 .stockTag {
   --stock-size: 0.75rem;
+}
+
+.search {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-md);
+}
+
+.search::placeholder {
+  color: var(--text-muted);
+}
+
+.search:disabled {
+  opacity: 0.6;
+}
+
+.more {
+  justify-self: center;
+  min-height: var(--tap);
+  padding: 0 var(--space-5);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background-color var(--dur) ease;
+}
+
+@media (hover: hover) {
+  .more:hover {
+    background: var(--primary-tint);
+  }
 }

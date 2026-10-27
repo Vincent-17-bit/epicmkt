@@ -1,3 +1,12 @@
+import { listedOnly } from "@epicmkt/shared";
+
+export const PAGE_SIZE = 24;
+
+export const productCountOf = (business) =>
+  Number.isInteger(business?.productCount) && business.productCount >= 0 ? business.productCount : listedOnly(business?.services).length;
+
+export const productsLabel = (n) => `${n} ${n === 1 ? "product" : "products"}`;
+
 const AVAILABILITY_LABELS = {
   available: "Available",
   limited: "Low stock",
@@ -37,6 +46,21 @@ export function buildFacets(services) {
 
 export const countActive = (f) =>
   [f.section, f.availability, f.min !== "", f.max !== "", f.sort !== "default"].filter(Boolean).length;
+
+const haystack = (svc) =>
+  [svc.name, svc.brand, svc.section, ...(Array.isArray(svc.tags) ? svc.tags : [])]
+    .filter((v) => typeof v === "string")
+    .join("\n")
+    .toLowerCase();
+
+export function searchServices(services, query) {
+  const tokens = String(query ?? "").toLowerCase().split(/\s+/).filter(Boolean);
+  if (!tokens.length) return services;
+  return services.filter((svc) => {
+    const text = haystack(svc);
+    return tokens.every((token) => text.includes(token));
+  });
+}
 
 export function applyServiceFilters(services, f) {
   const min = f.min === "" ? null : Number(f.min);

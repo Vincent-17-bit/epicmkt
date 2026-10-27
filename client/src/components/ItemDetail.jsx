@@ -234,6 +234,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const variant = variants.find((v) => v.id === activeId) ?? null;
   const shown = variant ?? current?.pricing ?? null;
   const seller = current?.business ?? null;
+  const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   const message = current ? chatMessage({ item: current, variant, pricing: current.pricing }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
   const highlights = normalizeHighlights(current?.highlights);
@@ -474,6 +475,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                       <span>{seller.name}</span>
                       {seller.verified && (
                         <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("item.verified")} aria-label={t("item.verified")} />
+                      )}
+                      {Number.isInteger(sellerCount) && sellerCount > 0 && (
+                        <span className={styles.sellerCount}>{sellerCount === 1 ? "1 product" : `${sellerCount} products`}</span>
                       )}
                     </p>
                     <p className={styles.sellerMeta}>

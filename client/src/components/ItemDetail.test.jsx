@@ -56,6 +56,18 @@ describe("ItemDetail", () => {
     expect(screen.getAllByRole("link", { name: /Visit Store/ })[0]).toHaveAttribute("href", "/b/fade-kings");
   });
 
+  it("shows the store's product count by its name, and nothing without one", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    const first = mount({ business: { id: "b_001", slug: "fade-kings", name: "Fade Kings", productCount: 195 } });
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(screen.getByText("195 products")).toBeInTheDocument();
+    first.unmount();
+    mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(screen.queryByText(/products?$/)).toBeNull();
+  });
+
   it("shows an item's videos as thumbnails that never autoplay, and nothing when it has none", async () => {
     mocks.getStoreSelective.mockResolvedValue([]);
     mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), videos: [{ id: "v1", url: "a.mp4", caption: "Fade and beard" }, { id: "v2", url: "b.webm", caption: "Fade and beard" }] });

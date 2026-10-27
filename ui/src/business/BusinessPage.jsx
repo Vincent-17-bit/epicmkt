@@ -19,6 +19,7 @@ import Location from "./Location.jsx";
 import Photos from "./Photos.jsx";
 import Services from "./Services.jsx";
 import ShareQr from "./ShareQr.jsx";
+import { productCountOf, productsLabel } from "./serviceFilters.js";
 import styles from "./BusinessPage.module.css";
 
 export default function BusinessPage({
@@ -38,6 +39,8 @@ export default function BusinessPage({
   qr,
   shortUrl,
   hitSection,
+  focusSection,
+  focusItem,
   shareNote,
   crumbInert = false,
   breadcrumbs,
@@ -59,6 +62,7 @@ export default function BusinessPage({
   const callHref = telLink(business.phone);
   const directionsHref = directionsLink(business.lat, business.lng);
   const hasSlots = Boolean(overlay || quickActions);
+  const productCount = productCountOf(business);
 
   return (
     <article className={[styles.root, hasSlots && slots.root].filter(Boolean).join(" ") || undefined} style={{ "--hue": business.hue ?? 210 }} data-mode={preview ? "preview" : undefined}>
@@ -86,6 +90,7 @@ export default function BusinessPage({
             <FontAwesomeIcon icon={faStar} />
             {reviewsText}
           </span>
+          <span className={styles.rating}>{productsLabel(productCount)}</span>
         </div>
 
         <ClosedBanner status={business.openStatus} />
@@ -142,7 +147,15 @@ export default function BusinessPage({
         {flash}
 
         {business.services.length > 0 && (
-          <Services services={business.services} hitSection={hitSection} mode={mode} onOpenItem={onOpenItem} />
+          <Services
+            services={business.services}
+            count={productCount}
+            hitSection={hitSection}
+            focusSection={focusSection}
+            focusItem={focusItem}
+            mode={mode}
+            onOpenItem={onOpenItem}
+          />
         )}
 
         {business.gallery.length > 0 && (
