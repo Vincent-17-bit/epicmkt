@@ -420,7 +420,7 @@ describe("quick actions", () => {
     expect(within(dialog).queryByLabelText("Label")).toBeNull();
     await user.type(within(dialog).getByLabelText("Name"), "Sneaker");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "4500");
-    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
     await user.type(within(dialog).getByLabelText("Label"), "Brand");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     expect(within(dialog).getAllByRole("alert").map((a) => a.textContent)).toContain("Add a value.");
@@ -439,8 +439,8 @@ describe("quick actions", () => {
     const dialog = await screen.findByRole("dialog", { name: "Add item" });
     await user.type(within(dialog).getByLabelText("Name"), "Desk lamp");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "2400");
-    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
-    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
     const groups = within(dialog).getAllByLabelText("Group");
     expect(groups.map((g) => g.value)).toEqual(["Features & Specs", "Features & Specs"]);
     expect(within(dialog).getAllByRole("option", { name: "Measurements" })).toHaveLength(2);
@@ -880,5 +880,113 @@ describe("stock fields in the item form", () => {
     await user.click(within(dialog).getByLabelText("Count my stock"));
     await user.type(within(dialog).getByLabelText("How many do you have now?"), "0");
     expect(within(dialog).getByTestId("stock-result")).toHaveTextContent("Out of stock");
+  });
+});
+
+describe("item dialog sections", () => {
+  const openForm = async (user) => {
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    return screen.findByRole("dialog", { name: "Add item" });
+  };
+
+  it("adds a specification from a preset chip, disables used presets, and groups rows like the item page", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    await user.click(within(dialog).getByRole("button", { name: "Material" }));
+    expect(within(dialog).getByLabelText("Label")).toHaveValue("Material");
+    expect(within(dialog).getByRole("button", { name: "Material" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Dimensions (D x W x H)" }));
+    expect(within(dialog).getByRole("group", { name: "Features & Specs" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("group", { name: "Measurements" })).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
+    await user.type(within(dialog).getAllByLabelText("Label")[1], "weight");
+    expect(within(dialog).getByRole("button", { name: "Weight" })).toBeDisabled();
+    expect(within(dialog).getByText("3 of 20")).toBeInTheDocument();
+  });
+
+  it("counts highlights and moves them up and down", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    for (const text of ["One", "Two", "Three"]) {
+      await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
+      const boxes = within(dialog).getAllByLabelText(/^Highlight \d+ text$/);
+      await user.type(boxes.at(-1), text);
+    }
+    expect(within(dialog).getByText("3 of 8")).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Move highlight 1 down" }));
+    expect(within(dialog).getAllByLabelText(/^Highlight \d+ text$/).map((i) => i.value)).toEqual(["Two", "One", "Three"]);
+    expect(within(dialog).getByRole("button", { name: "Move highlight 1 up" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Move highlight 3 up" }));
+    expect(within(dialog).getAllByLabelText(/^Highlight \d+ text$/).map((i) => i.value)).toEqual(["Two", "Three", "One"]);
+  });
+
+  it("closes at once when nothing changed, and asks before throwing changes away", async () => {
+    const user = userEvent.setup();
+    let dialog = await openForm(user);
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add item" })).toBeNull());
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Draft only");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(/not saved/);
+    await user.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(within(dialog).getByLabelText("Name")).toHaveValue("Draft only");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await user.click(within(dialog).getByRole("button", { name: "Discard changes" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add item" })).toBeNull());
+  });
+
+  it("focuses the first field with an error", async () => {
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(within(dialog).getByLabelText("Name")).toHaveFocus();
+    await user.type(within(dialog).getByLabelText("Name"), "Lamp");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
+    await user.type(within(dialog).getByLabelText("Label"), "Color");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(within(dialog).getByLabelText("Value")).toHaveFocus();
+  });
+
+  it("collapses sections on a small screen, keeps the first open, and opens the one with an error", async () => {
+    window.matchMedia = (q) => ({ matches: q.includes("max-width: 56.25rem"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false });
+    const user = userEvent.setup();
+    const dialog = await openForm(user);
+    expect(within(dialog).getByRole("button", { name: "Basics" })).toHaveAttribute("aria-expanded", "true");
+    const price = within(dialog).getByRole("button", { name: "Price and stock" });
+    expect(price).toHaveAttribute("aria-expanded", "false");
+    expect(within(dialog).getByLabelText("Price (KES)")).not.toBeVisible();
+    await user.type(within(dialog).getByLabelText("Name"), "Lamp");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(price).toHaveAttribute("aria-expanded", "true");
+    expect(within(dialog).getByLabelText("Price (KES)")).toHaveFocus();
+  });
+
+  it("reorders photos with Move earlier and Move later, on a new item and on a saved one", async () => {
+    const user = userEvent.setup();
+    let n = 0;
+    URL.createObjectURL = vi.fn(() => `blob:order-${++n}`);
+    URL.revokeObjectURL = vi.fn();
+    const dialog = await openForm(user);
+    await user.type(within(dialog).getByLabelText("Name"), "Ordered");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    await user.upload(dialog.querySelector('input[type="file"]'), [pngFile("a.png"), pngFile("b.png")]);
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
+    expect(within(dialog).getByRole("button", { name: "Move photo 1 earlier" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Move photo 2 later" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Move photo 2 earlier" }));
+    expect(within(dialog).getByText("Cover").closest("li").querySelector("img")).toHaveAttribute("src", "blob:order-2");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Ordered", imageCount: 2 }));
+    const made = M.state.items.at(-1);
+    const [first, second] = made.imagePaths;
+    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    await user.click(within(edit).getByRole("button", { name: "Move photo 2 earlier" }));
+    await waitFor(() => expect(made.imagePaths).toEqual([second, first]));
   });
 });

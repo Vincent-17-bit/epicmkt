@@ -903,7 +903,7 @@
 
 .photoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -1004,6 +1004,20 @@
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);
+  min-height: var(--tap);
+}
+
+.checkRow input {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: calc((var(--tap) - 20px) / 2) 0 0;
+}
+
+.checkRow span {
+  align-self: center;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .specRow {
@@ -1015,6 +1029,7 @@
 .specRemove {
   composes: photoRemove;
   justify-self: start;
+  min-height: var(--tap);
   padding: 0 var(--space-3);
 }
 
@@ -1028,6 +1043,237 @@
   display: grid;
   gap: var(--space-2);
   min-width: 0;
+}
+
+.rowCard {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.rowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.specRow > .rowActions {
+  grid-column: 1 / -1;
+}
+
+.itemForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sec {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+}
+
+.secHead {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.secToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.secToggle:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.secStatic {
+  display: block;
+  padding: var(--space-3) var(--space-3) 0;
+  font-weight: 700;
+}
+
+.secLabel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.secMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.turned {
+  transform: rotate(180deg);
+}
+
+.secBody {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+}
+
+.secBody[hidden] {
+  display: none;
+}
+
+.countRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.presetChip {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.presetChip:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.presetChip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.presetChip:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.specGroup {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.specGroupTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.photoMove {
+  composes: photoRemove;
+  min-height: var(--tap);
+  padding: 0 var(--space-2);
+}
+
+.footStack {
+  display: grid;
+  flex: 1 1 100%;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.footBtns {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.modalForm {
+  width: min(48rem, calc(100vw - 2 * var(--space-4)));
+}
+
+.modalForm .modalBody {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.itemForm .hint,
+.itemForm .ok,
+.itemForm .err {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 56.25rem) {
+  .modalForm {
+    width: 100vw;
+    max-width: 100vw;
+    margin: auto 0 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+
+  .modalForm .modalInner {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+}
+
+@media (max-width: 30rem) {
+  .modalForm {
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .modalForm .modalInner {
+    height: 100%;
+    max-height: none;
+  }
+
+  .modalForm .modalFoot {
+    padding-bottom: calc(var(--space-4) + var(--safe-bottom));
+  }
+
+  .modalForm input,
+  .modalForm select,
+  .modalForm textarea {
+    font-size: 16px;
+  }
+
+  .footBtns > * {
+    flex: 1 1 0;
+  }
 }
 
 .noteRow {
@@ -1045,17 +1291,30 @@
   font-variant-numeric: tabular-nums;
 }
 
-@media (min-width: 37.5rem) {
+@media (min-width: 30.0625rem) {
   .specRow {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   }
   .specRowGrouped {
-    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 2fr) auto;
-    align-items: end;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .specRowGrouped > :first-child,
+  .specRowGrouped > :last-child {
+    grid-column: 1 / -1;
   }
   .includeRow {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: end;
+  }
+}
+
+@media (min-width: 56.3125rem) {
+  .specRowGrouped {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 2fr) auto;
+    align-items: end;
+  }
+  .specRowGrouped > :first-child,
+  .specRowGrouped > :last-child {
+    grid-column: auto;
   }
 }

@@ -127,6 +127,8 @@ export const removeItemPhoto = async (path) => {
   else await need().storage.from(MEDIA_BUCKET).remove([path]);
 };
 
+export const reorderItemPhotos = (itemId, paths) => rpc("seller_reorder_item_photos", { p_item: itemId, p_paths: paths });
+
 // The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).
 // Every upload gets a new id, so a changed picture is never served from a cache that still holds the old one. When the profile
 // points at the new picture the old one is queued for deletion by the database (or removed from the bucket if it is an older one).

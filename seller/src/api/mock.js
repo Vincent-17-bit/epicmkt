@@ -191,6 +191,16 @@ export const removeItemPhoto = async (path) => {
   item.imagePaths = item.imagePaths.filter((p) => p !== path);
   item.imageCount = item.imagePaths.length;
 };
+export const reorderItemPhotos = async (itemId, paths) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (!Array.isArray(paths) || paths.length === 0) throw new ApiError("no_items");
+  const known = paths.filter((p) => item.imagePaths.includes(p));
+  item.imagePaths = [...known, ...item.imagePaths.filter((p) => !known.includes(p))];
+  return known.length;
+};
 const SHOP_KINDS = ["logo", "cover"];
 export const uploadShopImage = async (kind, blob) => {
   signedIn();
