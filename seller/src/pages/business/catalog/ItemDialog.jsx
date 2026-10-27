@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
+import { DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import Modal from "./Modal.jsx";
@@ -34,7 +34,7 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   const priced = ["fixed", "from", "range"].includes(form.priceType);
   const toggle = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
   const setSpec = (i, k) => (e) => setForm((f) => ({ ...f, specs: f.specs.map((s, n) => (n === i ? { ...s, [k]: e.target.value } : s)) }));
-  const addSpec = () => setForm((f) => ({ ...f, specs: [...f.specs, { label: "", value: "" }] }));
+  const addSpec = () => setForm((f) => ({ ...f, specs: [...f.specs, { group: SPEC_DEFAULT_GROUP, label: "", value: "" }] }));
   const removeSpec = (i) => () => setForm((f) => ({ ...f, specs: f.specs.filter((_, n) => n !== i) }));
   const setHighlight = (i, k) => (e) => setForm((f) => ({ ...f, highlights: f.highlights.map((h, n) => (n === i ? { ...h, [k]: e.target.value } : h)) }));
   const addHighlight = () => setForm((f) => ({ ...f, highlights: [...f.highlights, { title: "", text: "" }] }));
@@ -240,9 +240,18 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
         {detail("terms", "Terms (optional)", "Anything customers should know first, such as a deposit, delivery time or returns.", DETAIL_LIMITS.terms, true)}
         <fieldset className={styles.stockBox}>
           <legend className={ui.label}>Specifications</legend>
-          <p className={styles.hint}>Optional. Add short facts about this item, such as Brand or Size.</p>
+          <p className={styles.hint}>Optional. Add short facts about this item, such as Size or Material. The group decides which section of the item page each fact appears under.</p>
           {form.specs.map((s, i) => (
-            <div key={i} className={styles.specRow}>
+            <div key={i} className={styles.specRowGrouped}>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>Group</span>
+                  <select className={ui.input} value={s.group || SPEC_DEFAULT_GROUP} onChange={setSpec(i, "group")} aria-invalid={Boolean(errors.specs?.[i]?.group)}>
+                    {SPEC_GROUPS.map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </label>
+                {errors.specs?.[i]?.group && <span className={ui.error} role="alert">{errors.specs[i].group}</span>}
+              </div>
               <div className={ui.field}>
                 <label className={styles.stack}>
                   <span className={ui.label}>Label</span>

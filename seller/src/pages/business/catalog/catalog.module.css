@@ -1018,6 +1018,12 @@
   padding: 0 var(--space-3);
 }
 
+.specRowGrouped {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .includeRow {
   display: grid;
   gap: var(--space-2);
@@ -1042,6 +1048,10 @@
 @media (min-width: 37.5rem) {
   .specRow {
     grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+    align-items: end;
+  }
+  .specRowGrouped {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 2fr) auto;
     align-items: end;
   }
   .includeRow {

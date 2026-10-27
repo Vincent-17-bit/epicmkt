@@ -431,6 +431,40 @@ describe("quick actions", () => {
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Sneaker", specs: [{ label: "Brand", value: "Nike" }] }));
   });
 
+  it("puts a specification in a chosen group, defaults to Features & Specs, and keeps the group when editing", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Desk lamp");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "2400");
+    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
+    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
+    const groups = within(dialog).getAllByLabelText("Group");
+    expect(groups.map((g) => g.value)).toEqual(["Features & Specs", "Features & Specs"]);
+    expect(within(dialog).getAllByRole("option", { name: "Measurements" })).toHaveLength(2);
+    await user.selectOptions(groups[1], "Measurements");
+    const labels = within(dialog).getAllByLabelText("Label");
+    const values = within(dialog).getAllByLabelText("Value");
+    await user.type(labels[0], "Bulb");
+    await user.type(values[0], "E27");
+    await user.type(labels[1], "Height");
+    await user.type(values[1], "45 cm");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({
+      name: "Desk lamp",
+      specs: [{ group: "Features & Specs", label: "Bulb", value: "E27" }, { group: "Measurements", label: "Height", value: "45 cm" }],
+    }));
+    const made = (await screen.findAllByText("Desk lamp"))[0].closest("li");
+    await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    expect(within(edit).getAllByLabelText("Group").map((g) => g.value)).toEqual(["Features & Specs", "Measurements"]);
+    await user.selectOptions(within(edit).getAllByLabelText("Group")[0], "User guide");
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.at(-1).specs.map((r) => r.group)).toEqual(["User guide", "Measurements"]));
+  });
+
   it("saves brand, short description, pack size, highlights, what's included and terms, and loads them again", async () => {
     const user = userEvent.setup();
     await open();
