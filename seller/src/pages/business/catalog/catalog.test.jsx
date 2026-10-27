@@ -431,6 +431,46 @@ describe("quick actions", () => {
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Sneaker", specs: [{ label: "Brand", value: "Nike" }] }));
   });
 
+  it("saves brand, short description, pack size, highlights, what's included and terms, and loads them again", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    await user.type(within(dialog).getByLabelText("Name"), "Birthday cake");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "1800");
+    await user.type(within(dialog).getByLabelText("Brand (optional)"), "Acme Bakers");
+    await user.type(within(dialog).getByLabelText("Short description (optional)"), "Soft vanilla sponge");
+    await user.type(within(dialog).getByLabelText("Pack size (optional)"), "Serves 10");
+    await user.type(within(dialog).getByLabelText("Terms (optional)"), "Order two days ahead");
+    await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
+    await user.type(within(dialog).getByLabelText("Highlight 1 title"), "Fresh");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(within(dialog).getAllByRole("alert").map((a) => a.textContent)).toContain("Add the highlight text.");
+    expect(within(dialog).getByLabelText("Highlight 1 text").getAttribute("aria-invalid")).toBe("true");
+    await user.type(within(dialog).getByLabelText("Highlight 1 text"), "Baked the same day");
+    await user.click(within(dialog).getByRole("button", { name: "Add included item" }));
+    await user.type(within(dialog).getByLabelText("Included item 1"), "Candles");
+    await user.click(within(dialog).getByRole("button", { name: "Add included item" }));
+    await user.type(within(dialog).getByLabelText("Included item 2"), "Cake box");
+    await user.click(within(dialog).getByRole("button", { name: "Remove included item 2" }));
+    expect(within(dialog).queryByLabelText("Included item 2")).toBeNull();
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({
+      name: "Birthday cake", brand: "Acme Bakers", shortDescription: "Soft vanilla sponge", packSize: "Serves 10", terms: "Order two days ahead",
+      includes: ["Candles"], highlights: [{ title: "Fresh", text: "Baked the same day" }],
+    }));
+    const made = (await screen.findAllByText("Birthday cake"))[0].closest("li");
+    await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    expect(within(edit).getByLabelText("Brand (optional)").value).toBe("Acme Bakers");
+    expect(within(edit).getByLabelText("Highlight 1 text").value).toBe("Baked the same day");
+    expect(within(edit).getByLabelText("Included item 1").value).toBe("Candles");
+    await user.clear(within(edit).getByLabelText("Brand (optional)"));
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ brand: null, packSize: "Serves 10", highlights: [{ title: "Fresh", text: "Baked the same day" }] }));
+  });
+
   it("adds photos to a new item, to an existing item, and removes one", async () => {
     const user = userEvent.setup();
     let n = 0;

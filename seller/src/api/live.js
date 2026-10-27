@@ -323,6 +323,10 @@ const itemRow = (f) => ({
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
   track_stock: Boolean(f.trackStock), stock_count: f.trackStock ? f.stockCount : null, low_stock_threshold: f.lowStockThreshold ?? 3, show_stock_count: Boolean(f.showStockCount),
   ...(Array.isArray(f.specs) && { specs: f.specs }),
+  // Only what the form carried goes to the database; a missing key keeps the stored value.
+  ...(f.brand !== undefined && { brand: f.brand }), ...(f.shortDescription !== undefined && { short_description: f.shortDescription }),
+  ...(f.packSize !== undefined && { pack_size: f.packSize }), ...(f.terms !== undefined && { terms: f.terms }),
+  ...(Array.isArray(f.includes) && { includes: f.includes }), ...(Array.isArray(f.highlights) && { highlights: f.highlights }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([

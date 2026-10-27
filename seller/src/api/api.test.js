@@ -61,6 +61,34 @@ test("specs: the live shape returns them the same way the mock does", () => {
   assert.deepEqual(shape.catalogItem({ ...row, specs: [{ label: "Size", value: "42" }] }).specs, [{ label: "Size", value: "42" }]);
 });
 
+test("item details: the mock saves them, keeps them when the form omits them, and refuses bad ones", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
+  const item = await find("it-fade");
+  assert.deepEqual(item.highlights, []);
+  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  await mock.saveItem("it-fade", { ...form, brand: " Acme ", shortDescription: "Fresh", packSize: "Box of 6", terms: "Order ahead", includes: ["Candles"], highlights: [{ title: " Soft ", text: "Baked today" }, { title: "", text: "Nut free" }] });
+  const saved = await find("it-fade");
+  assert.deepEqual([saved.brand, saved.shortDescription, saved.packSize, saved.terms, saved.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
+  assert.deepEqual(saved.highlights, [{ title: "Soft", text: "Baked today" }, { text: "Nut free" }]);
+  await mock.saveItem("it-fade", form);
+  assert.equal((await find("it-fade")).brand, "Acme");
+  assert.deepEqual((await find("it-fade")).includes, ["Candles"]);
+  await mock.saveItem("it-fade", { ...form, brand: null, includes: [], highlights: [] });
+  const cleared = await find("it-fade");
+  assert.deepEqual([cleared.brand, cleared.shortDescription, cleared.includes, cleared.highlights], [null, "Fresh", [], []]);
+  for (const bad of [{ brand: "x".repeat(61) }, { terms: "x".repeat(501) }, { includes: ["ok", 1] }, { includes: ["ok", ""] }, { highlights: [{ title: "No text" }] }, { highlights: "nope" }]) {
+    await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" });
+  }
+  const id = await mock.saveItem(null, { ...form, brand: "Acme", highlights: [{ text: "New" }] });
+  assert.deepEqual([(await find(id)).brand, (await find(id)).highlights], ["Acme", [{ text: "New" }]]);
+  const copyId = await mock.duplicateItem(id);
+  assert.deepEqual([(await find(copyId)).brand, (await find(copyId)).highlights], ["Acme", [{ text: "New" }]]);
+  assert.deepEqual(shape.catalogItem({ id: "x", name: "N", price_type: "free", highlights: [{ text: "A" }] }).highlights, [{ text: "A" }]);
+  assert.deepEqual(shape.catalogItem({ id: "x", name: "N", price_type: "free" }).highlights, []);
+});
+
 test("import details: the mock stores them, refuses bad ones, and rows without them are unchanged", async () => {
   mock.resetMock();
   await mock.login("es100001", "Demo-Passw0rd");

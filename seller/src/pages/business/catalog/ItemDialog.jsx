@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ITEM_PRICE_TYPES, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
+import { DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import Modal from "./Modal.jsx";
@@ -36,6 +36,12 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   const setSpec = (i, k) => (e) => setForm((f) => ({ ...f, specs: f.specs.map((s, n) => (n === i ? { ...s, [k]: e.target.value } : s)) }));
   const addSpec = () => setForm((f) => ({ ...f, specs: [...f.specs, { label: "", value: "" }] }));
   const removeSpec = (i) => () => setForm((f) => ({ ...f, specs: f.specs.filter((_, n) => n !== i) }));
+  const setHighlight = (i, k) => (e) => setForm((f) => ({ ...f, highlights: f.highlights.map((h, n) => (n === i ? { ...h, [k]: e.target.value } : h)) }));
+  const addHighlight = () => setForm((f) => ({ ...f, highlights: [...f.highlights, { title: "", text: "" }] }));
+  const removeHighlight = (i) => () => setForm((f) => ({ ...f, highlights: f.highlights.filter((_, n) => n !== i) }));
+  const setIncluded = (i) => (e) => setForm((f) => ({ ...f, includes: f.includes.map((t, n) => (n === i ? e.target.value : t)) }));
+  const addIncluded = () => setForm((f) => ({ ...f, includes: [...f.includes, ""] }));
+  const removeIncluded = (i) => () => setForm((f) => ({ ...f, includes: f.includes.filter((_, n) => n !== i) }));
   const countOk = /^\d{1,6}$/.test(String(form.stockCount).trim());
   const lowOk = /^\d{1,4}$/.test(String(form.lowStockThreshold).trim());
   const resulting = countOk && lowOk ? statusFromCount(Number(form.stockCount), Number(form.lowStockThreshold)) : null;
@@ -123,11 +129,30 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
       {errors[key] && <span className={ui.error} role="alert">{errors[key]}</span>}
     </div>
   );
+  // A text detail with a short explanation and a running count. The count is decoration; maxLength is what enforces the limit.
+  const detail = (key, label, note, max, multiline = false) => {
+    const Tag = multiline ? "textarea" : "input";
+    return (
+      <div className={ui.field}>
+        <label className={styles.stack}>
+          <span className={ui.label}>{label}</span>
+          <Tag className={ui.input} value={form[key]} onChange={set(key)} maxLength={max} aria-invalid={Boolean(errors[key])} aria-describedby={`${key}-note`} />
+        </label>
+        <span id={`${key}-note`} className={styles.noteRow}>
+          <span className={styles.hint}>{note}</span>
+          <span className={styles.counter} aria-hidden="true">{form[key].length}/{max}</span>
+        </span>
+        {errors[key] && <span className={ui.error} role="alert">{errors[key]}</span>}
+      </div>
+    );
+  };
 
   return (
     <Modal open={open} onClose={onClose} title={item ? "Edit item" : "Add item"} labelId="item-title" wide>
       <form className={styles.form} onSubmit={submit} noValidate>
         {field("name", "Name", <input className={ui.input} value={form.name} onChange={set("name")} aria-invalid={Boolean(errors.name)} maxLength={120} />)}
+        {detail("brand", "Brand (optional)", "The maker or label, such as Nike or Brookside.", DETAIL_LIMITS.brand)}
+        {detail("shortDescription", "Short description (optional)", "One line customers see under the name.", DETAIL_LIMITS.shortDescription)}
         {field("description", "Description", <textarea className={ui.input} value={form.description} onChange={set("description")} maxLength={2000} />)}
         {field("section", "Section", <input className={ui.input} value={form.section} onChange={set("section")} maxLength={60} />)}
         {field("priceType", "Price type", (
@@ -139,6 +164,7 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
         {form.priceType === "range" && field("priceMax", "Highest price (KES)", <input className={ui.input} inputMode="decimal" value={form.priceMax} onChange={set("priceMax")} aria-invalid={Boolean(errors.priceMax)} />)}
         {priced && field("salePrice", "Sale price (KES, optional)", <input className={ui.input} inputMode="decimal" value={form.salePrice} onChange={set("salePrice")} aria-invalid={Boolean(errors.salePrice)} />)}
         {field("unit", "Unit (optional, such as per cut)", <input className={ui.input} value={form.unit} onChange={set("unit")} maxLength={30} />)}
+        {detail("packSize", "Pack size (optional)", "What one purchase contains, such as 6 pieces or 500 ml.", DETAIL_LIMITS.packSize)}
         {!form.trackStock && field("availability", "Availability", (
           <select className={ui.input} value={form.availability} onChange={set("availability")}>
             {STATUS_CHOICES.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
@@ -168,6 +194,50 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
             </>
           )}
         </fieldset>
+        <fieldset className={styles.stockBox}>
+          <legend className={ui.label}>Highlights</legend>
+          <p className={styles.hint}>Optional. Up to {DETAIL_LIMITS.highlights.rows} short points that sell the item. A title is optional.</p>
+          {form.highlights.map((h, i) => (
+            <div key={i} className={styles.specRow}>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>{`Highlight ${i + 1} title`}</span>
+                  <input className={ui.input} value={h.title} onChange={setHighlight(i, "title")} aria-invalid={Boolean(errors.highlights?.[i]?.title)} maxLength={DETAIL_LIMITS.highlights.title} />
+                </label>
+                {errors.highlights?.[i]?.title && <span className={ui.error} role="alert">{errors.highlights[i].title}</span>}
+              </div>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>{`Highlight ${i + 1} text`}</span>
+                  <input className={ui.input} value={h.text} onChange={setHighlight(i, "text")} aria-invalid={Boolean(errors.highlights?.[i]?.text)} maxLength={DETAIL_LIMITS.highlights.text} />
+                </label>
+                {errors.highlights?.[i]?.text && <span className={ui.error} role="alert">{errors.highlights[i].text}</span>}
+              </div>
+              <button type="button" className={styles.specRemove} onClick={removeHighlight(i)} aria-label={`Remove highlight ${i + 1}`}>Remove</button>
+            </div>
+          ))}
+          {errors.highlightsCount && <span className={ui.error} role="alert">{errors.highlightsCount}</span>}
+          <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={addHighlight} disabled={form.highlights.length >= DETAIL_LIMITS.highlights.rows}>Add highlight</button>
+        </fieldset>
+        <fieldset className={styles.stockBox}>
+          <legend className={ui.label}>What's included</legend>
+          <p className={styles.hint}>Optional. List what comes with the item, such as a charger or a gift box. Up to {DETAIL_LIMITS.includes.rows} lines.</p>
+          {form.includes.map((t, i) => (
+            <div key={i} className={styles.includeRow}>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>{`Included item ${i + 1}`}</span>
+                  <input className={ui.input} value={t} onChange={setIncluded(i)} aria-invalid={Boolean(errors.includes?.[i])} maxLength={DETAIL_LIMITS.includes.text} />
+                </label>
+                {errors.includes?.[i] && <span className={ui.error} role="alert">{errors.includes[i]}</span>}
+              </div>
+              <button type="button" className={styles.specRemove} onClick={removeIncluded(i)} aria-label={`Remove included item ${i + 1}`}>Remove</button>
+            </div>
+          ))}
+          {errors.includesCount && <span className={ui.error} role="alert">{errors.includesCount}</span>}
+          <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={addIncluded} disabled={form.includes.length >= DETAIL_LIMITS.includes.rows}>Add included item</button>
+        </fieldset>
+        {detail("terms", "Terms (optional)", "Anything customers should know first, such as a deposit, delivery time or returns.", DETAIL_LIMITS.terms, true)}
         <fieldset className={styles.stockBox}>
           <legend className={ui.label}>Specifications</legend>
           <p className={styles.hint}>Optional. Add short facts about this item, such as Brand or Size.</p>

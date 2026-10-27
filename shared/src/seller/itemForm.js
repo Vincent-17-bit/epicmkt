@@ -41,6 +41,53 @@ const cleanSpecs = (raw) => {
   return { specs, errors };
 };
 
+// Same limits as the items table (migration 0050), so the form catches a problem before the database does.
+export const DETAIL_LIMITS = {
+  brand: 60,
+  shortDescription: 140,
+  packSize: 40,
+  terms: 500,
+  includes: { rows: 10, text: 80 },
+  highlights: { rows: 8, title: 40, text: 200 },
+};
+
+const cleanIncludes = (raw) => {
+  const includes = [];
+  const errors = {};
+  (Array.isArray(raw) ? raw : []).forEach((row, index) => {
+    const text = String(row ?? "").trim();
+    if (!text) return;
+    if (text.length > DETAIL_LIMITS.includes.text) {
+      errors[index] = `Use ${DETAIL_LIMITS.includes.text} characters or fewer.`;
+      return;
+    }
+    includes.push(text);
+  });
+  return { includes, errors };
+};
+
+const cleanHighlights = (raw) => {
+  const highlights = [];
+  const errors = {};
+  (Array.isArray(raw) ? raw : []).forEach((row, index) => {
+    const title = String(row?.title ?? "").trim();
+    const text = String(row?.text ?? "").trim();
+    if (!title && !text) return;
+    const rowErrors = {};
+    if (title.length > DETAIL_LIMITS.highlights.title) rowErrors.title = `Use ${DETAIL_LIMITS.highlights.title} characters or fewer.`;
+    if (!text) rowErrors.text = "Add the highlight text.";
+    else if (text.length > DETAIL_LIMITS.highlights.text) rowErrors.text = `Use ${DETAIL_LIMITS.highlights.text} characters or fewer.`;
+    if (Object.keys(rowErrors).length) {
+      errors[index] = rowErrors;
+      return;
+    }
+    highlights.push({ ...(title && { title }), text });
+  });
+  return { highlights, errors };
+};
+
+const TEXT_DETAILS = ["brand", "shortDescription", "packSize", "terms"];
+
 export const validateItemForm = (f) => {
   const errors = {};
   const name = String(f.name ?? "").trim();
@@ -92,11 +139,32 @@ export const validateItemForm = (f) => {
   const cleaned = cleanSpecs(f.specs);
   if (Object.keys(cleaned.errors).length) errors.specs = cleaned.errors;
   if (cleaned.specs.length > SPEC_LIMITS.rows) errors.specsCount = `Use ${SPEC_LIMITS.rows} rows or fewer.`;
+
+  // A detail the caller leaves out of the form is left out of the result, so saving never wipes what the form did not load.
+  const details = {};
+  for (const key of TEXT_DETAILS) {
+    if (!(key in f)) continue;
+    const text = String(f[key] ?? "").trim();
+    if (text.length > DETAIL_LIMITS[key]) errors[key] = `Use ${DETAIL_LIMITS[key]} characters or fewer.`;
+    details[key] = text || null;
+  }
+  if (Array.isArray(f.includes)) {
+    const inc = cleanIncludes(f.includes);
+    if (Object.keys(inc.errors).length) errors.includes = inc.errors;
+    if (inc.includes.length > DETAIL_LIMITS.includes.rows) errors.includesCount = `Use ${DETAIL_LIMITS.includes.rows} items or fewer.`;
+    details.includes = inc.includes;
+  }
+  if (Array.isArray(f.highlights)) {
+    const hl = cleanHighlights(f.highlights);
+    if (Object.keys(hl.errors).length) errors.highlights = hl.errors;
+    if (hl.highlights.length > DETAIL_LIMITS.highlights.rows) errors.highlightsCount = `Use ${DETAIL_LIMITS.highlights.rows} highlights or fewer.`;
+    details.highlights = hl.highlights;
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
-  return { ok: true, value: { name, description, section, unit, priceType: f.priceType, price: priceValue, priceMax: maxValue, salePrice: saleValue, availability: f.availability, trackStock, stockCount, lowStockThreshold, showStockCount: trackStock && Boolean(f.showStockCount), ...(Array.isArray(f.specs) && { specs: cleaned.specs }) } };
+  return { ok: true, value: { name, description, section, unit, priceType: f.priceType, price: priceValue, priceMax: maxValue, salePrice: saleValue, availability: f.availability, trackStock, stockCount, lowStockThreshold, showStockCount: trackStock && Boolean(f.showStockCount), ...(Array.isArray(f.specs) && { specs: cleaned.specs }), ...details } };
 };
 
-export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false, specs: [] });
+export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false, specs: [], brand: "", shortDescription: "", packSize: "", terms: "", includes: [], highlights: [] });
 
 export const formFromItem = (i) => ({
   name: i.name, description: i.description ?? "", section: i.section ?? "", unit: i.unit ?? "", priceType: i.priceType,
@@ -106,4 +174,7 @@ export const formFromItem = (i) => ({
   trackStock: Boolean(i.trackStock), stockCount: i.stockCount === null || i.stockCount === undefined ? "" : String(i.stockCount),
   lowStockThreshold: String(i.lowStockThreshold ?? 3), showStockCount: Boolean(i.showStockCount),
   specs: (Array.isArray(i.specs) ? i.specs : []).map((s) => ({ ...(s?.group && { group: s.group }), label: s?.label ?? "", value: s?.value ?? "" })),
+  brand: i.brand ?? "", shortDescription: i.shortDescription ?? "", packSize: i.packSize ?? "", terms: i.terms ?? "",
+  includes: (Array.isArray(i.includes) ? i.includes : []).map((t) => String(t ?? "")),
+  highlights: (Array.isArray(i.highlights) ? i.highlights : []).map((h) => ({ title: h?.title ?? "", text: h?.text ?? "" })),
 });
