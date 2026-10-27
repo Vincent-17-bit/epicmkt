@@ -18,7 +18,7 @@
   border-bottom: 2px solid var(--border-strong);
 }
 
-/* The cover is stored as a 3:1 crop (see seller/src/lib/imageCrop.js), so the banner keeps that shape. It used to be a free
+/* The cover is stored as a 3:1 crop (see imageCrop.js in the shop app), so the banner keeps that shape. It used to be a free
    height, which on a wide screen cut a photo down to a thin strip. On very wide screens it stops growing and centres. */
 .cover {
   display: flex;
@@ -195,6 +195,12 @@
   gap: var(--space-3);
   padding-top: var(--space-4);
   border-top: 2px solid var(--border);
+}
+
+@media (min-width: 64rem) {
+  .root:not([data-mode="preview"]) .wide {
+    margin-inline: calc((100% - 60rem) / 2);
+  }
 }
 
 .h2 {

@@ -147,17 +147,15 @@ export default function BusinessPage({
 
         {flash}
 
-        {business.services.length > 0 && (
-          <Services
-            services={business.services}
-            count={productCount}
-            hitSection={hitSection}
-            focusSection={focusSection}
-            focusItem={focusItem}
-            mode={mode}
-            onOpenItem={onOpenItem}
-          />
-        )}
+        <Services
+          services={business.services}
+          count={productCount}
+          hitSection={hitSection}
+          focusSection={focusSection}
+          focusItem={focusItem}
+          mode={mode}
+          onOpenItem={onOpenItem}
+        />
 
         {business.gallery.length > 0 && (
           <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />

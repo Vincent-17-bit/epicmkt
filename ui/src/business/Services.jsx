@@ -59,6 +59,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
     <BusinessSection
       title={`All products (${total})`}
       id="services"
+      wide
       action={canFilter ? <ServiceFilter facets={facets} filters={filters} onChange={setFilters} disabled={preview} /> : null}
     >
       {canFilter && (
@@ -81,7 +82,8 @@ export default function Services({ services: all, count, hitSection, focusSectio
           </button>
         </p>
       )}
-      {filtered.length === 0 && (
+      {services.length === 0 && <p className={styles.empty}>No products listed yet.</p>}
+      {services.length > 0 && filtered.length === 0 && (
         <p className={styles.empty}>{searching ? "Nothing matches your search." : "Nothing matches those filters."}</p>
       )}
       {groups.map((group) => (

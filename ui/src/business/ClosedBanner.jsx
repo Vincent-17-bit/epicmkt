@@ -2,7 +2,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faClock } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ClosedBanner.module.css";
 
-// Says why the shop is closed or on special hours today, and when it next opens. The reason is the seller's own words.
+// Says why the shop is closed or on special hours today, and when it next opens. The reason is the shop's own words.
 export default function ClosedBanner({ status }) {
   if (!status) return null;
   const { isOpen, reasonText, reopens, closes } = status;
