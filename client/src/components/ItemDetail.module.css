@@ -372,6 +372,15 @@
   color: var(--verified);
 }
 
+.sellerNameCounted {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.sellerNameCounted > span:first-child {
+  max-width: 100%;
+}
+
 .sellerName .sellerCount {
   flex: none;
   color: var(--text-muted);

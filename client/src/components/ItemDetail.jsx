@@ -471,7 +471,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                   </span>
                   <div className={styles.sellerText}>
                     <p className={styles.soldBy}>{t("item.soldBy")}</p>
-                    <p className={styles.sellerName}>
+                    <p className={sellerCount > 0 ? `${styles.sellerName} ${styles.sellerNameCounted}` : styles.sellerName}>
                       <span>{seller.name}</span>
                       {seller.verified && (
                         <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("item.verified")} aria-label={t("item.verified")} />

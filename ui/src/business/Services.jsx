@@ -101,7 +101,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
                     <StockTag item={svc} labels={labels} className={styles.stockTag} onPicture />
                   </span>
                   <span className={styles.serviceText}>
-                    <span className={styles.h3}>{svc.name}</span>
+                    <span className={`${styles.h3} ${styles.serviceName}`}>{svc.name}</span>
                     {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
                   </span>
                 </button>
