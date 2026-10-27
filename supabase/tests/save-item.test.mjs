@@ -1,5 +1,6 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
+import { storedItemDetails } from "../../shared/src/seller/itemForm.js";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
 
 let c;
@@ -160,4 +161,55 @@ test("specs from the seller form: saved with the default group, kept on a rename
   assert.deepEqual((await row(id)).specs, []);
   assert.deepEqual((await row(await item(ids.bizA))).specs, []);
   await saveFails(asA, id, full({ specs: [{ label: "Size", value: "" }] }), /invalid_details/);
+});
+
+const COLUMNS = { brand: "brand", shortDescription: "short_description", terms: "terms", packSize: "pack_size", highlights: "highlights", includes: "includes", specs: "specs" };
+const asColumns = (f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [COLUMNS[k], v]));
+const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+
+test("detail fields: the database keeps exactly what the mock keeps, and refuses exactly what the mock refuses", async () => {
+  const cases = [
+    {},
+    { brand: " Nike ", shortDescription: "S", terms: "  ", packSize: " 6 " },
+    { brand: "b".repeat(60), shortDescription: "s".repeat(140), terms: "t".repeat(500), packSize: "p".repeat(40) },
+    { brand: "b".repeat(61) }, { shortDescription: "s".repeat(141) }, { terms: "t".repeat(501) }, { packSize: "p".repeat(41) }, { brand: 5 },
+    { highlights: [{ title: "Soft", text: "Cotton" }, { text: "Warm" }, { title: " ", text: "No lead" }, { title: null, text: "Null lead" }] },
+    { highlights: many(8, (i) => ({ text: `P${i}` })) }, { highlights: many(9, (i) => ({ text: `P${i}` })) },
+    { highlights: [{ text: "" }] }, { highlights: [{ title: "t".repeat(41), text: "x" }] }, { highlights: [{ title: "t".repeat(40), text: "x".repeat(200) }] }, { highlights: [{ text: "x".repeat(201) }] },
+    { highlights: [{ text: "x", other: 1 }] }, { highlights: ["x"] }, { highlights: [{ title: 5, text: "x" }] },
+    { includes: [" A ", "B"] }, { includes: many(10, (i) => `L${i}`) }, { includes: many(11, (i) => `L${i}`) }, { includes: [""] }, { includes: [" "] }, { includes: ["x".repeat(80)] }, { includes: ["x".repeat(81)] }, { includes: [5] },
+    { specs: [{ label: "Size", value: "M" }, { group: "Measurements", label: "Weight", value: "9 kg" }] }, { specs: [{ group: null, label: "Size", value: "M" }] },
+    { specs: many(20, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: many(21, (i) => ({ label: `L${i}`, value: "v" })) },
+    { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: " " }] }, { specs: [{ label: "l".repeat(40), value: "v".repeat(120) }] }, { specs: [{ label: "l".repeat(41), value: "v" }] }, { specs: [{ label: "l", value: "v".repeat(121) }] },
+    { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ group: "", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
+    { specs: [{ label: " Size ", value: " M " }] }, { highlights: [{ title: " Lead ", text: " Text " }] }, { specs: [{ label: ` ${"l".repeat(40)}`, value: "v" }] }, { highlights: [{ text: ` ${"x".repeat(200)}` }] },
+  ];
+  const id = await save(asA, null, full());
+  for (const f of cases) {
+    const expected = storedItemDetails(f);
+    const label = JSON.stringify(f).slice(0, 80);
+    if (!expected.ok) {
+      await saveFails(asA, id, full(asColumns(f)), /invalid_details/);
+      continue;
+    }
+    await save(asA, id, full(asColumns(f)));
+    const r = await row(id);
+    const want = expected.value;
+    for (const [k, col] of Object.entries(COLUMNS)) {
+      if (!(k in want)) continue;
+      assert.deepEqual(r[col], want[k], `${k} for ${label}`);
+    }
+  }
+});
+
+test("detail fields: left out keeps the stored value, empty clears it, a duplicate copies them", async () => {
+  const id = await save(asA, null, full({ brand: "Nike", short_description: "S", terms: "T", pack_size: "6", highlights: [{ text: "Soft" }], includes: ["Tag"], specs: [{ label: "Size", value: "M" }] }));
+  await save(asA, id, full({ name: "Renamed" }));
+  const kept = await row(id);
+  assert.deepEqual([kept.brand, kept.short_description, kept.terms, kept.pack_size, kept.highlights, kept.includes, kept.specs.length], ["Nike", "S", "T", "6", [{ text: "Soft" }], ["Tag"], 1]);
+  const copy = await row((await tx(c, asA, (k) => sql(k, `select seller_duplicate_item($1) as id`, [id]), { commit: true }))[0].id);
+  assert.deepEqual([copy.brand, copy.highlights, copy.includes, copy.terms, copy.pack_size], ["Nike", [{ text: "Soft" }], ["Tag"], "T", "6"]);
+  await save(asA, id, full({ brand: "", short_description: "", terms: "", pack_size: "", highlights: [], includes: [], specs: [] }));
+  const cleared = await row(id);
+  assert.deepEqual([cleared.brand, cleared.short_description, cleared.terms, cleared.pack_size, cleared.highlights, cleared.includes, cleared.specs], [null, null, null, null, [], [], []]);
 });

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import styles from "./catalog.module.css";
 
-export default function Modal({ open, onClose, title, children, footer, wide = false, sheet = false, labelId }) {
+export default function Modal({ open, onClose, title, children, footer, wide = false, sheet = false, labelId, className = "" }) {
   const ref = useRef(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -20,7 +20,7 @@ export default function Modal({ open, onClose, title, children, footer, wide = f
   return (
     <dialog
       ref={ref}
-      className={`${styles.modal} ${wide ? styles.modalWide : ""} ${sheet ? styles.sheet : ""}`}
+      className={`${styles.modal} ${wide ? styles.modalWide : ""} ${sheet ? styles.sheet : ""} ${className}`}
       aria-labelledby={id}
       onClose={onClose}
       onCancel={(e) => { e.preventDefault(); onClose(); }}

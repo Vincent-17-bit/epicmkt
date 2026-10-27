@@ -1,4 +1,4 @@
-import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, SPEC_DEFAULT_GROUP } from "@epicmkt/shared";
+import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -183,6 +183,14 @@ export const uploadItemPhoto = async (itemId, file) => {
   item.imageCount = item.imagePaths.length;
   return { path };
 };
+export const reorderItemPhotos = async (itemId, paths) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  const known = paths.filter((p) => item.imagePaths.includes(p));
+  item.imagePaths = [...known, ...item.imagePaths.filter((p) => !known.includes(p))];
+};
 export const removeItemPhoto = async (path) => {
   signedIn();
   await wait();
@@ -257,7 +265,7 @@ function resetBilling() {
   const mk = (n, id, name, price, priceType, availability, visible, extra = {}) => ({
     id, name, price, priceType, availability, visible, hiddenByAdmin: false,
     description: "", section: null, priceMax: null, unit: null, salePrice: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false,
-    availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [], specs: [],
+    availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [], specs: [], brand: null, shortDescription: null, highlights: [], includes: [], terms: null, packSize: null,
     priceConfirmedAt: ISO(now - 5 * DAY), createdAt: ISO(now - (60 - n) * DAY), updatedAt: ISO(now - (30 - n) * DAY), imageCount: 1, imagePaths: [`demo/${id}.webp`], hasVideo: false, ...extra,
   });
   bill.items = [
@@ -542,11 +550,15 @@ export const getShopPreview = async () => {
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
 };
+const DETAIL_KEYS = [["brand", "text"], ["shortDescription", "text"], ["terms", "text"], ["packSize", "text"], ["highlights", "list"], ["includes", "list"], ["specs", "list"]];
 export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount), ...(Array.isArray(f.specs) && { specs: copy(f.specs).map((r) => ({ ...r, group: r.group || SPEC_DEFAULT_GROUP })) }) };
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount) };
+  const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter(([k, kind]) => (kind === "text" ? typeof f[k] === "string" : Array.isArray(f[k]))).map(([k]) => [k, f[k]])));
+  if (!details.ok) throw new ApiError("invalid_details");
+  Object.assign(fields, details.value);
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
@@ -556,7 +568,7 @@ export const saveItem = async (id, f) => {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, specs: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, highlights: [], includes: [], terms: null, packSize: null, ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };
@@ -654,7 +666,8 @@ export const importItems = async (rows) => {
     id: `it-imp-${++bill.seq}`, name: r.name, price: r.price ?? null, priceMax: r.price_max ?? null, priceType: r.price_type, unit: r.unit ?? null, salePrice: null,
     availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
     section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),
-    tags: r.tags ?? [], badge: null, variants: [], specs: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
+    tags: r.tags ?? [], badge: null, variants: [], specs: [], brand: null, shortDescription: null, highlights: [], includes: [], terms: null, packSize: null,
+    priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
   }));
   bill.items.push(...made);
   return { created: made.length };

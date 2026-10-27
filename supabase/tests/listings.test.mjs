@@ -252,8 +252,36 @@ test("saved views are validated, capped at ten and private", async () => {
   assert.equal((await sql(c, `select settings->>'other' as o from seller_settings where business_id = '${ids.bizA}'`))[0].o, "1");
 });
 
+test("reorder photos writes the cover order for that item's images only", async () => {
+  await sql(c, `delete from item_media`);
+  await sql(c, `delete from items`);
+  const a = await item(ids.bizA, "Photo A");
+  const other = await item(ids.bizA, "Photo B");
+  const foreign = await item(ids.bizB, "Photo C");
+  const media = (id, biz, kind, path, n) => sql(c, `insert into item_media (item_id, business_id, kind, path, mime, sort, created_at) values ($1, $2, $3, $4, 'x/y', $5::int, now() + make_interval(secs => $5::int))`, [id, biz, kind, path, n]);
+  for (const [n, path] of ["p1", "p2", "p3"].entries()) await media(a, ids.bizA, "image", path, n);
+  await media(a, ids.bizA, "video", "v1", 3);
+  await media(other, ids.bizA, "image", "o1", 0);
+  await media(foreign, ids.bizB, "image", "f1", 0);
+  const order = async () => (await as(asA, `select seller_catalog_items() as r`))[0].r.items.find((i) => i.id === a).image_paths;
+  assert.deepEqual(await order(), ["p1", "p2", "p3"]);
+  const changed = (await as(asA, `select seller_reorder_item_photos($1, $2::text[]) as n`, [a, ["p3", "p1", "p2", "o1", "f1", "nope"]]))[0].n;
+  assert.equal(changed, 3);
+  assert.deepEqual(await order(), ["p3", "p1", "p2"]);
+  const sorts = await sql(c, `select path, sort from item_media where path in ('v1', 'o1', 'f1') order by path`);
+  assert.deepEqual(sorts.map((r) => [r.path, r.sort]), [["f1", 0], ["o1", 0], ["v1", 3]]);
+  assert.equal((await as(asA, `select seller_reorder_item_photos($1, $2::text[]) as n`, [a, ["p3", "p1", "p2"]]))[0].n, 0);
+  await sql(c, `update items set visible = true, draft = false where id = $1`, [a]);
+  const seen = await tx(c, { role: "anon" }, (k) => sql(k, `select image_paths from public_items where id = $1`, [a]));
+  assert.deepEqual(seen[0].image_paths, ["p3", "p1", "p2"]);
+  await rejects(c, asB, `select seller_reorder_item_photos('${a}', array['p1'])`, [], /item_not_found/);
+  await rejects(c, asA, `select seller_reorder_item_photos('${a}', '{}'::text[])`, [], /no_items/);
+  await rejects(c, asA, `select seller_reorder_item_photos(gen_random_uuid(), array['p1'])`, [], /item_not_found/);
+  await rejects(c, asA, `select seller_reorder_item_photos('${a}', null)`, [], /no_items/);
+});
+
 test("anonymous callers cannot reach the listing functions", async () => {
-  for (const fn of ["seller_bulk_items('hide', '{}'::uuid[])", "seller_import_items('[]'::jsonb)", "seller_save_views('[]'::jsonb)", "seller_get_views()", "seller_reorder_items('{}'::uuid[])", "seller_duplicate_item(gen_random_uuid())"]) {
+  for (const fn of ["seller_bulk_items('hide', '{}'::uuid[])", "seller_import_items('[]'::jsonb)", "seller_save_views('[]'::jsonb)", "seller_get_views()", "seller_reorder_items('{}'::uuid[])", "seller_duplicate_item(gen_random_uuid())", "seller_reorder_item_photos(gen_random_uuid(), array['p1'])"]) {
     await rejects(c, { role: "anon" }, `select ${fn}`, [], /permission denied/);
   }
 });
@@ -262,7 +290,7 @@ test("a suspended seller cannot use any listing function", async () => {
   await sql(c, `update businesses set status = 'suspended' where id = '${ids.bizA}'`);
   const calls = [
     "seller_catalog_items()", "seller_catalog_stats()", "seller_get_views()", "seller_save_views('[]'::jsonb)",
-    "seller_bulk_items('hide', array[gen_random_uuid()])", "seller_reorder_items(array[gen_random_uuid()])",
+    "seller_bulk_items('hide', array[gen_random_uuid()])", "seller_reorder_items(array[gen_random_uuid()])", "seller_reorder_item_photos(gen_random_uuid(), array['p1'])",
     "seller_duplicate_item(gen_random_uuid())", "seller_import_items('[{\"name\":\"Ab\"}]'::jsonb)",
   ];
   for (const text of calls) await rejects(c, asA, `select ${text}`, [], /account_suspended/);

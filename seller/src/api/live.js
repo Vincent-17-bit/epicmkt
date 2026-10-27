@@ -121,6 +121,8 @@ export const uploadItemPhoto = async (itemId, file) => {
 
 // Deleting the row is enough for a Cloudinary picture: a database trigger queues the file and the media-gc job deletes it.
 // Older pictures are still files in the Supabase bucket and are removed from there as before.
+export const reorderItemPhotos = async (itemId, paths) => rpc("seller_reorder_item_photos", { p_item: itemId, p_paths: paths });
+
 export const removeItemPhoto = async (path) => {
   await rows(need().from("item_media").delete().eq("path", path));
   if (isCloudinaryId(path)) await purgeRemoved();
@@ -323,6 +325,12 @@ const itemRow = (f) => ({
   sale_price: f.salePrice ?? null, unit: f.unit || null, availability: f.availability,
   track_stock: Boolean(f.trackStock), stock_count: f.trackStock ? f.stockCount : null, low_stock_threshold: f.lowStockThreshold ?? 3, show_stock_count: Boolean(f.showStockCount),
   ...(Array.isArray(f.specs) && { specs: f.specs }),
+  ...(typeof f.brand === "string" && { brand: f.brand || null }),
+  ...(typeof f.shortDescription === "string" && { short_description: f.shortDescription || null }),
+  ...(typeof f.terms === "string" && { terms: f.terms || null }),
+  ...(typeof f.packSize === "string" && { pack_size: f.packSize || null }),
+  ...(Array.isArray(f.highlights) && { highlights: f.highlights }),
+  ...(Array.isArray(f.includes) && { includes: f.includes }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([
