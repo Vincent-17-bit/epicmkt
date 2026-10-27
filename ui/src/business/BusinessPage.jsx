@@ -31,6 +31,7 @@ export default function BusinessPage({
   fromTown,
   locate,
   hoursRows,
+  hoursCaption,
   offerLabels,
   details,
   detailsTitle,
@@ -166,7 +167,7 @@ export default function BusinessPage({
           <Details title={detailsTitle}>{details}</Details>
         )}
 
-        <Hours rows={hoursRows} />
+        <Hours rows={hoursRows} caption={hoursCaption} />
 
         <Location name={business.name} lat={business.lat} lng={business.lng} directionsHref={directionsHref} mode={mode} onDirections={track("directions")} />
 

@@ -6,7 +6,7 @@ import { distanceKm, shopUrl } from "@epicmkt/shared";
 import { coarsenCoords } from "@epicmkt/backend";
 import { getBusiness, logContactEvent } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
-import { hoursRows, socialLinks, statusText } from "../lib/businessView.js";
+import { hoursCaption, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
 import { t } from "../i18n/index.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
@@ -126,7 +126,8 @@ export default function Business() {
       distanceKm={distance}
       fromTown={geo.town}
       locate={{ label: locateLabel, onClick: geo.request, disabled: geo.status === "asking" }}
-      hoursRows={hoursRows(data.hours, data.exceptions)}
+      hoursRows={hoursRows(data.hours, data.exceptions, data.timezone)}
+      hoursCaption={hoursCaption(data.timezone)}
       offerLabels={{
         title: t("offers.title"),
         code: t("offer.code"),

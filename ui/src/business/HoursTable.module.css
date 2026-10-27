@@ -77,3 +77,26 @@
 .note {
   font-style: italic;
 }
+
+.caption {
+  caption-side: top;
+  padding: 0 var(--space-3) var(--space-2);
+  text-align: left;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.zone {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* The viewer's own reading of the shop's hours, under the shop's. */
+.viewer {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+}

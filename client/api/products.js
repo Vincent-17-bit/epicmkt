@@ -64,7 +64,7 @@ async function fromViews() {
       "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,created_at,image_paths&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
-    restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions&order=id"),
+    restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
     restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => [])
   ]);
   const best = new Map();
@@ -176,7 +176,7 @@ function tick(snap, now) {
   const at = new Date(now);
   for (const s of snap.stores) {
     try {
-      const { isOpen, line } = statusOf(s.hours ?? {}, Array.isArray(s.exceptions) ? s.exceptions : [], at);
+      const { isOpen, line } = statusOf(s.hours ?? {}, Array.isArray(s.exceptions) ? s.exceptions : [], at, s.timezone);
       s.shared.isOpen = isOpen;
       s.shared.statusLine = line;
     } catch {

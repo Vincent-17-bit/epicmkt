@@ -68,7 +68,7 @@ test("hours table rows: Monday to Sunday, each weekday as its next date, excepti
   const rows = hoursRowsFor(weekly, ex, at("2026-10-20", "09:30"));
   assert.deepEqual(rows.map((r) => r.day), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
   assert.deepEqual(rows.map((r) => r.date), ["2026-10-26", "2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25"]);
-  assert.deepEqual(rows.find((r) => r.today), { day: "tue", name: "Tuesday", date: "2026-10-20", dateLabel: "20 Oct", today: true, text: "Closed", changed: true, note: "Public holiday" });
+  assert.deepEqual(rows.find((r) => r.today), { day: "tue", name: "Tuesday", date: "2026-10-20", dateLabel: "20 Oct", today: true, text: "Closed", changed: true, note: "Public holiday", shopZone: "Africa/Nairobi", shopLabel: "EAT", viewerText: null, viewerLabel: "" });
   assert.equal(rows.find((r) => r.day === "sun").text, "10:00 AM to 2:00 PM");
   assert.equal(rows.find((r) => r.day === "wed").text, "8:00 AM to 6:00 PM");
   assert.equal(rows.find((r) => r.day === "wed").changed, false);

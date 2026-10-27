@@ -1,5 +1,5 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { DAYS, formatInstant, hoursRowsFor, nairobiNow } from "@epicmkt/shared";
+import { DAYS, formatInstant, getUserTimeZone, hoursRowsFor, nairobiNow, nextShopDateOf, safeShopZone, shopTimeNote, shopTimeText } from "@epicmkt/shared";
 
 export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -19,19 +19,34 @@ export const formatTime = (time) => {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
 };
 
-export function statusText(business) {
-  if (business.isOpen) return business.closesAt ? `Open now · Closes ${formatTime(business.closesAt)}` : "Open now";
+/**
+ * "Open now · Closes 6:00 PM EAT · 7:00 PM your time". The shop's own time always comes first with its zone name; the
+ * viewer's reading follows when it is a different clock. business.timezone is the shop's IANA zone (default Nairobi).
+ */
+export function statusText(business, viewerZone = getUserTimeZone()) {
+  const shopZone = safeShopZone(business.timezone);
+  const opts = { shopZone, viewerZone };
+  if (business.isOpen) {
+    if (!business.closesAt) return "Open now";
+    const date = nextShopDateOf(business.closesAt, new Date(), shopZone);
+    return `Open now · Closes ${shopTimeText(date, business.closesAt, opts)}`;
+  }
   const next = business.opensAt;
   if (!next) return "Closed";
+  const today = nairobiNow(new Date(), shopZone);
   // Compare dates, not weekdays: "opens next Tuesday" must not read as "opens today" when today is a Tuesday.
-  const day = next.date ? (next.date === nairobiNow().date ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `) : next.day === nairobiNow().day ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
-  return `Closed · Opens ${day}${formatTime(next.time)}`;
+  const day = next.date ? (next.date === today.date ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `) : next.day === today.day ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
+  const at = next.date ? shopTimeText(next.date, next.time, opts) : formatTime(next.time);
+  return `Closed · Opens ${day}${at}`;
 }
 
-/** Rows for the Opening hours table; exceptions replace the weekly hours for their date. */
-export const hoursRows = (hours, exceptions) => hoursRowsFor(hours, exceptions);
+/** Rows for the Opening hours table; exceptions replace the weekly hours for their date. Shop time, plus the viewer's. */
+export const hoursRows = (hours, exceptions, timeZone, viewerZone = getUserTimeZone()) => hoursRowsFor(hours, exceptions, new Date(), timeZone, viewerZone);
 
-export const todayKey = () => nairobiNow().day;
+/** The line above the hours table that says which zone the hours are in. */
+export const hoursCaption = (timeZone, viewerZone = getUserTimeZone()) => shopTimeNote(new Date(), { shopZone: timeZone, viewerZone });
+
+export const todayKey = (timeZone) => nairobiNow(new Date(), safeShopZone(timeZone)).day;
 
 export const SOCIALS = {
   instagram: { label: "Instagram", icon: faInstagram, url: (h) => `https://instagram.com/${h}` },

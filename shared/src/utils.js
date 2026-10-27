@@ -1,4 +1,5 @@
-import { BUSINESS_TIME_ZONE, zonedParts } from "./time.js";
+import { BUSINESS_TIME_ZONE, startOfDayUtcIso, zonedParts } from "./time.js";
+import { safeShopZone, shopDayInViewer, shopIntervalView, shopZoneLabel } from "./shopTime.js";
 import { addDays } from "./seller/exceptions.js";
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -201,20 +202,39 @@ export const formatClock = (time) => {
 
 /**
  * Rows for the "Opening hours" table, Monday to Sunday, for the coming 7 days so each weekday is its next date.
- * { day, name, date, dateLabel, today, text, changed, note }: `changed` is true when an exception replaces the weekly
- * hours for that date, `dateLabel` is that date as "20 Oct", and `note` is the exception's note (plain text) or null.
+ * { day, name, date, dateLabel, today, text, changed, note, shopZone, shopLabel, viewerText, viewerLabel }
+ *   text        the shop's own hours in the shop's zone ("9:00 AM to 6:00 PM"), "Closed" on a closed day.
+ *   shopLabel   the shop zone's short name ("EAT"), so the hours are never ambiguous.
+ *   viewerText  the same hours in the viewer's zone ("3:00 AM to 12:00 PM", "Sun 6:30 PM to Mon 1:00 AM"), or null when
+ *               no viewerZone was passed or it reads the same as the shop. For an all-day "closed" exception it is the
+ *               stretch of the viewer's clock that day covers. A weekly day off has no viewerText.
+ * `changed` is true when an exception replaces the weekly hours for that date, `dateLabel` is that date as "20 Oct", and
+ * `note` is the exception's note (plain text) or null.
+ *
+ * timeZone is the SHOP's zone (default Nairobi). viewerZone is opt in: pass getUserTimeZone() in a browser, nothing on a
+ * server, where there is no viewer.
  */
-export function hoursRowsFor(hours, exceptions, date, timeZone) {
-  return weekSchedule(hours, exceptions, date, timeZone)
-    .map((d) => ({
-      day: d.day,
-      name: DAY_LABELS[d.day],
-      date: d.date,
-      dateLabel: `${Number(d.date.slice(8))} ${MONTH_SHORT[Number(d.date.slice(5, 7)) - 1]}`,
-      today: d.today,
-      text: d.intervals.length ? d.intervals.map(([a, b]) => `${formatClock(a)} to ${formatClock(b)}`).join(", ") : "Closed",
-      changed: Boolean(d.exception),
-      note: d.exception?.note ? String(d.exception.note) : null
-    }))
+export function hoursRowsFor(hours, exceptions, date, timeZone, viewerZone) {
+  const shopZone = safeShopZone(timeZone);
+  return weekSchedule(hours, exceptions, date, shopZone)
+    .map((d) => {
+      const views = d.intervals.map((iv) => shopIntervalView(d.date, iv, { shopZone, viewerZone })).filter(Boolean);
+      const closedDay = d.exception?.kind === "closed" ? shopDayInViewer(d.date, { shopZone, viewerZone }) : null;
+      const viewerParts = views.map((v) => v.viewerText ?? v.shopText);
+      return {
+        day: d.day,
+        name: DAY_LABELS[d.day],
+        date: d.date,
+        dateLabel: `${Number(d.date.slice(8))} ${MONTH_SHORT[Number(d.date.slice(5, 7)) - 1]}`,
+        today: d.today,
+        text: d.intervals.length ? d.intervals.map(([a, b]) => `${formatClock(a)} to ${formatClock(b)}`).join(", ") : "Closed",
+        changed: Boolean(d.exception),
+        note: d.exception?.note ? String(d.exception.note) : null,
+        shopZone,
+        shopLabel: shopZoneLabel(startOfDayUtcIso(d.date, shopZone), shopZone),
+        viewerText: views.some((v) => v.viewerText) ? viewerParts.join(", ") : closedDay ? `Closed ${closedDay.from} to ${closedDay.to}` : null,
+        viewerLabel: views.find((v) => v.viewerText)?.viewerLabel ?? closedDay?.label ?? ""
+      };
+    })
     .sort((a, b) => WEEK_ORDER.indexOf(a.day) - WEEK_ORDER.indexOf(b.day));
 }

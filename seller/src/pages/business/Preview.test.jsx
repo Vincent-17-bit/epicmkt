@@ -1,4 +1,5 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { setUserTimeZone } from "@epicmkt/shared";
 import { screen, within } from "@testing-library/react";
 import * as api from "../../api/index.js";
 import { M, signedInApp, setTime } from "../../test/utils.jsx";
@@ -8,7 +9,8 @@ const open = (prepare) => signedInApp("/business/preview", prepare);
 describe("shop preview", () => {
   // Tue 20 Oct 2026, 09:30 in Nairobi, when the demo shop is open. Without a frozen clock this test only passed during
   // opening hours, because a "closed" banner is a second role="status" element.
-  afterEach(() => vi.useRealTimers());
+  beforeEach(() => setUserTimeZone("Africa/Nairobi"));
+  afterEach(() => { vi.useRealTimers(); setUserTimeZone(null); });
 
   it("shows the shop the way customers see it, with only the items customers can see", async () => {
     vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T06:30:00Z") });
@@ -87,14 +89,14 @@ describe("shop preview", () => {
       freezeTuesday();
       await open();
       const page = await screen.findByTestId("shop-preview");
-      expect(within(page).getByText("Open now · Closes 6:00 PM")).toBeInTheDocument();
+      expect(within(page).getByText("Open now · Closes 6:00 PM EAT")).toBeInTheDocument();
     });
 
     it("shows a closed day as closed, with the next opening, exactly as customers would see it", async () => {
       freezeTuesday();
       await open(() => api.saveException({ date: "2026-10-20", kind: "closed", note: "Public holiday" }));
       const page = await screen.findByTestId("shop-preview");
-      expect(within(page).getByText("Closed · Opens Wed 8:00 AM")).toBeInTheDocument();
+      expect(within(page).getByText("Closed · Opens Wed 8:00 AM EAT")).toBeInTheDocument();
       expect(within(within(page).getByText("Tuesday").closest("tr")).getByText("Closed")).toBeInTheDocument();
     });
 
@@ -102,7 +104,7 @@ describe("shop preview", () => {
       freezeTuesday();
       await open(() => api.saveException({ date: "2026-10-20", kind: "special", intervals: [["10:00", "12:00"], ["15:00", "17:00"]] }));
       const page = await screen.findByTestId("shop-preview");
-      expect(within(page).getByText("Closed · Opens 10:00 AM")).toBeInTheDocument();
+      expect(within(page).getByText("Closed · Opens 10:00 AM EAT")).toBeInTheDocument();
       expect(within(within(page).getByText("Tuesday").closest("tr")).getByText("10:00 AM to 12:00 PM, 3:00 PM to 5:00 PM")).toBeInTheDocument();
     });
 

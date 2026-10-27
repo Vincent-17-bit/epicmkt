@@ -1,5 +1,6 @@
-import { DAYS, closingInfo, exceptionFor, formatClock, intervalsOn, isOpenOn, nairobiNow } from "./utils.js";
-import { TIMEZONE_OFFSET_HOURS } from "./constants.js";
+import { DAYS, closingInfo, exceptionFor, intervalsOn, isOpenOn, nairobiNow } from "./utils.js";
+import { zonedTimeToUtc } from "./time.js";
+import { nextShopDateOf, safeShopZone, shopTimeText } from "./shopTime.js";
 import { addDays } from "./seller/exceptions.js";
 
 const DAY_NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -36,25 +37,36 @@ const reasonText = (reason) => {
   return null;
 };
 
-const reopenText = (opensAt, today) => {
+// Times are always written with the shop's zone ("6:00 PM EAT"). When a viewerZone is passed (browsers pass
+// getUserTimeZone(); servers pass nothing) and the viewer's clock reads differently, the viewer's own time follows
+// ("6:00 PM EAT · 7:00 PM your time"), with the weekday when the viewer's day is not the shop's day.
+const reopenText = (opensAt, today, opts) => {
   if (!opensAt) return null;
   const when = opensAt.date === today ? "today" : opensAt.date === addDays(today, 1) ? "tomorrow" : DAY_NAMES[opensAt.day].slice(0, 3);
-  return `Reopens ${when} at ${formatClock(opensAt.time)}`;
+  return `Reopens ${when} at ${shopTimeText(opensAt.date, opensAt.time, opts)}`;
 };
 
-export function describeStatus(status, date, timeZone) {
-  const today = nairobiNow(date, timeZone).date;
+/**
+ * Words for a status. timeZone is the SHOP's zone (default Nairobi); viewerZone is the viewer's, opt in.
+ * closes: "Closes 6:00 PM EAT" or "Closes 6:00 PM EAT · 7:00 PM your time". reopens: "Reopens tomorrow at 8:00 AM EAT".
+ */
+export function describeStatus(status, date, timeZone, viewerZone) {
+  const shopZone = safeShopZone(timeZone);
+  const now = nairobiNow(date, shopZone);
+  const opts = { shopZone, viewerZone };
   const reasonLine = reasonText(status.reason);
   if (status.isOpen) {
-    return { headline: "Open now", closes: status.closesAt ? `Closes ${formatClock(status.closesAt)}` : null, reasonText: reasonLine, reopens: null, line: reasonLine };
+    const closesDate = status.closesAt ? nextShopDateOf(status.closesAt, date ?? new Date(), shopZone) : null;
+    const closes = status.closesAt && closesDate ? `Closes ${shopTimeText(closesDate, status.closesAt, opts)}` : null;
+    return { headline: "Open now", closes, reasonText: reasonLine, reopens: null, line: reasonLine };
   }
-  const reopens = reopenText(status.opensAt, today);
+  const reopens = reopenText(status.opensAt, now.date, opts);
   return { headline: "Closed", closes: null, reasonText: reasonLine, reopens, line: [reasonLine, reopens].filter(Boolean).join(" · ") || null };
 }
 
-export const statusOf = (hours, exceptions, date, timeZone) => {
+export const statusOf = (hours, exceptions, date, timeZone, viewerZone) => {
   const status = businessStatus(hours, exceptions, date, timeZone);
-  return { ...status, ...describeStatus(status, date, timeZone) };
+  return { ...status, ...describeStatus(status, date, timeZone, viewerZone) };
 };
 
 const LATE_HOUR = 21;
@@ -75,8 +87,10 @@ export const isOpenAllDay = (hours) => DAYS.every((day) => spansDay(slotOf(hours
 
 export const opensOn = (hours, day) => slotOf(hours, day) !== null;
 
-export function isOpenLate(hours, exceptions, date = new Date()) {
-  const { date: today } = nairobiNow(date);
-  const evening = new Date(Date.parse(`${today}T00:00:00Z`) + (LATE_HOUR - TIMEZONE_OFFSET_HOURS) * 3600000);
-  return isOpenOn(hours, exceptions, evening);
+export function isOpenLate(hours, exceptions, date = new Date(), timeZone) {
+  const zone = safeShopZone(timeZone);
+  const { date: today } = nairobiNow(date, zone);
+  const [year, month, day] = today.split("-").map(Number);
+  // 21:00 on the shop's calendar date, as a real instant in the shop's zone (daylight saving included).
+  return isOpenOn(hours, exceptions, zonedTimeToUtc({ year, month, day, hour: LATE_HOUR }, zone), zone);
 }

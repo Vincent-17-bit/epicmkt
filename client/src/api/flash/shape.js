@@ -1,4 +1,4 @@
-import { distanceKm, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, distanceKm, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -76,16 +76,16 @@ const shorten = (text) => {
 };
 
 // Exceptions (closed days, special hours) override the weekly hours for their date. A missing list means none.
-const statusFor = (hours, exceptions) => {
+const statusFor = (hours, exceptions, timeZone) => {
   try {
-    return statusOf(hours, exceptions);
+    return statusOf(hours, exceptions, undefined, timeZone);
   } catch {
     return statusOf({}, []);
   }
 };
 
-export const statusCard = (hours, exceptions) => {
-  const { isOpen, line } = statusFor(hours, exceptions);
+export const statusCard = (hours, exceptions, timeZone) => {
+  const { isOpen, line } = statusFor(hours, exceptions, timeZone);
   return { isOpen, statusLine: line };
 };
 
@@ -157,7 +157,7 @@ export const cardOfFlash = (row, origin) => ({
   lng: row.business_lng,
   phone: row.business_phone,
   whatsapp: row.business_whatsapp,
-  ...statusCard(row.business_hours, row.business_exceptions),
+  ...statusCard(row.business_hours, row.business_exceptions, row.business_timezone),
   distanceKm: distanceFrom(origin, row.business_lat, row.business_lng)
 });
 
@@ -174,7 +174,7 @@ export const cardOfBusiness = (row, origin) => ({
   lng: row.lng,
   phone: row.phone,
   whatsapp: row.whatsapp,
-  ...statusCard(row.hours, row.exceptions),
+  ...statusCard(row.hours, row.exceptions, row.timezone),
   distanceKm: distanceFrom(origin, row.lat, row.lng)
 });
 
@@ -231,7 +231,8 @@ export const flashParts = (entry, now) => ({
 export const businessOf = (row, { category, services, origin = null }) => {
   const hours = row.hours && typeof row.hours === "object" ? row.hours : {};
   const exceptions = exceptionsOf(row.exceptions);
-  const status = statusFor(hours, exceptions);
+  const timezone = row.timezone ?? BUSINESS_TIME_ZONE;
+  const status = statusFor(hours, exceptions, timezone);
   let today = null;
   try {
     today = todayHours(hours);

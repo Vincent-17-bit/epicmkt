@@ -18,12 +18,12 @@ test("a closed exception wins over the weekly hours and carries the seller's not
   const status = statusOf(weekly, ex, at("2026-10-20", "10:00"));
   assert.equal(status.isOpen, false);
   assert.deepEqual(status.reason, { kind: "closed_day", note: "Public holiday" });
-  assert.equal(status.line, "Closed today: Public holiday · Reopens tomorrow at 8:00 AM");
+  assert.equal(status.line, "Closed today: Public holiday · Reopens tomorrow at 8:00 AM EAT");
 });
 
 test("a closed exception without a note still says closed today", () => {
   const status = statusOf(weekly, [closed("2026-10-20")], at("2026-10-20", "10:00"));
-  assert.equal(status.line, "Closed today · Reopens tomorrow at 8:00 AM");
+  assert.equal(status.line, "Closed today · Reopens tomorrow at 8:00 AM EAT");
 });
 
 test("special hours: open inside them, closed outside, both explain themselves", () => {
@@ -33,26 +33,26 @@ test("special hours: open inside them, closed outside, both explain themselves",
   assert.equal(inside.line, "Special hours today: Stocktake");
   const outside = statusOf(weekly, ex, at("2026-10-20", "15:00"));
   assert.equal(outside.isOpen, false);
-  assert.equal(outside.line, "Special hours today: Stocktake · Reopens tomorrow at 8:00 AM");
+  assert.equal(outside.line, "Special hours today: Stocktake · Reopens tomorrow at 8:00 AM EAT");
 });
 
 test("weekly closed day names the day and says when it reopens", () => {
   const status = statusOf(weekly, [], at("2026-10-25", "11:00"));
   assert.equal(status.isOpen, false);
-  assert.equal(status.line, "Closed on Sundays · Reopens tomorrow at 8:00 AM");
+  assert.equal(status.line, "Closed on Sundays · Reopens tomorrow at 8:00 AM EAT");
 });
 
 test("before opening and after closing on a working day read as outside hours", () => {
   const early = statusOf(weekly, [], at("2026-10-20", "06:00"));
-  assert.equal(early.line, "Reopens today at 8:00 AM");
+  assert.equal(early.line, "Reopens today at 8:00 AM EAT");
   const late = statusOf(weekly, [], at("2026-10-20", "19:00"));
-  assert.equal(late.line, "Reopens tomorrow at 8:00 AM");
+  assert.equal(late.line, "Reopens tomorrow at 8:00 AM EAT");
 });
 
 test("reopening further away is named by weekday", () => {
   const ex = [closed("2026-10-23"), closed("2026-10-24"), closed("2026-10-25")];
   const status = statusOf(weekly, ex, at("2026-10-23", "10:00"));
-  assert.equal(status.line, "Closed today · Reopens Mon at 8:00 AM");
+  assert.equal(status.line, "Closed today · Reopens Mon at 8:00 AM EAT");
 });
 
 test("no hours at all says so instead of naming a day", () => {
@@ -96,7 +96,7 @@ test("describeStatus for an open shop gives the closing line", () => {
   const status = businessStatus(weekly, [], at("2026-10-20", "10:00"));
   const text = describeStatus(status, at("2026-10-20", "10:00"));
   assert.equal(text.headline, "Open now");
-  assert.equal(text.closes, "Closes 6:00 PM");
+  assert.equal(text.closes, "Closes 6:00 PM EAT");
   assert.equal(text.line, null);
 });
 

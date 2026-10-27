@@ -108,3 +108,18 @@ test("whatever Postgres prints for a timestamptz, in any session zone, the brows
   }
   await sql(c, `select set_config('TimeZone', 'UTC', false)`);
 });
+
+test("hours_open_in reads a shop's hours in the shop's own zone", async () => {
+  const hours = { mon: [["10:00", "22:00"]] };
+  const at = (iso) => sql(c, `select hours_open_in($1::jsonb, '[]'::jsonb, $2::timestamptz, $3) as open`, [JSON.stringify(hours), iso, "Asia/Kolkata"]).then((r) => r[0].open);
+  assert.equal(await at("2026-10-26T16:29:00Z"), true, "21:59 Monday in Mumbai");
+  assert.equal(await at("2026-10-26T16:30:00Z"), false, "22:00 Monday in Mumbai");
+  const nairobi = await sql(c, `select hours_open_in($1::jsonb, '[]'::jsonb, '2026-10-26T16:30:00Z'::timestamptz, 'Africa/Nairobi') as open`, [JSON.stringify(hours)]);
+  assert.equal(nairobi[0].open, true, "the same instant is 19:30 in Nairobi, still open there");
+});
+
+test("businesses.timezone exists and defaults to Nairobi", async () => {
+  const rows = await sql(c, `select column_default from information_schema.columns where table_name = 'businesses' and column_name = 'timezone'`);
+  assert.equal(rows.length, 1);
+  assert.match(rows[0].column_default, /Africa\/Nairobi/);
+});

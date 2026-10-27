@@ -332,7 +332,7 @@ const itemRow = (f) => ({
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([
-    rows(need().from("businesses").select("id, slug, name, category_id, plan_key, status, verification_level, tagline, description, phone, whatsapp, socials, county, town, address, lat, lng, logo_path, cover_path, tags, hours, exceptions").maybeSingle()),
+    rows(need().from("businesses").select("id, slug, name, category_id, plan_key, status, verification_level, tagline, description, phone, whatsapp, socials, county, town, address, lat, lng, logo_path, cover_path, tags, hours, exceptions, timezone").maybeSingle()),
     getCatalog(),
     listFlashSales(),
     listOffers().catch(() => []),

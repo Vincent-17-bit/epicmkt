@@ -160,13 +160,13 @@ test("the default zone is still Nairobi", () => {
   assert.equal(isOpenOn(weekdayHours, [], new Date("2026-10-25T05:59:00Z")), false, "08:59 Nairobi");
   const status = statusOf(weekdayHours, [], new Date("2026-10-25T05:00:00Z"));
   assert.equal(status.headline, "Closed");
-  assert.equal(status.reopens, "Reopens today at 9:00 AM");
+  assert.equal(status.reopens, "Reopens today at 9:00 AM EAT");
 });
 
 test("statusOf in another zone reads the same story in that zone's time", () => {
   const status = statusOf(weekdayHours, [], new Date("2026-07-15T12:00:00Z"), NY); // 08:00 EDT
   assert.equal(status.headline, "Closed");
-  assert.equal(status.reopens, "Reopens today at 9:00 AM");
+  assert.equal(status.reopens, "Reopens today at 9:00 AM GMT-4", "labelled with the shop's own zone, never Nairobi's");
   assert.equal(businessStatus(weekdayHours, [], new Date("2026-07-15T14:00:00Z"), NY).isOpen, true);
 });
 

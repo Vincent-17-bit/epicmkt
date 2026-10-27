@@ -132,7 +132,7 @@ const isOpenNow = (snap, b, now) => {
   const memo = openMemo(snap, now);
   let open = memo.map.get(b.id);
   if (open === undefined) {
-    open = businessStatus(b.hours, b.exceptions, new Date(now)).isOpen;
+    open = businessStatus(b.hours, b.exceptions, new Date(now), b.timezone).isOpen;
     memo.map.set(b.id, open);
   }
   return open;
@@ -142,7 +142,7 @@ const isLateOpen = (snap, b, now) => {
   const memo = openMemo(snap, now);
   let late = memo.late.get(b.id);
   if (late === undefined) {
-    late = isOpenLate(b.hours, b.exceptions, new Date(now));
+    late = isOpenLate(b.hours, b.exceptions, new Date(now), b.timezone);
     memo.late.set(b.id, late);
   }
   return late;
@@ -152,7 +152,7 @@ const liveCount = (ends, now) => ends.filter((at) => at > now).length;
 
 export const toSummary = (b, snap, origin, now = Date.now()) => {
   const category = snap.categories.get(b.categoryId) ?? null;
-  const status = statusOf(b.hours, b.exceptions, new Date(now));
+  const status = statusOf(b.hours, b.exceptions, new Date(now), b.timezone);
   return {
     id: b.id,
     slug: b.slug,

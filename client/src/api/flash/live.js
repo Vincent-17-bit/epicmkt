@@ -208,7 +208,7 @@ const fetchPages = async (table, columns, order) => {
 export async function getAllProducts() {
   const [rows, businesses] = await Promise.all([
     fetchPages("public_items", CARD_COLUMNS, [["created_at", false], ["id", true]]),
-    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions", [["id", true]])
+    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone", [["id", true]])
   ]);
   if (!rows.length) return [];
   const byId = new Map(businesses.map((b) => [b.id, b]));
@@ -241,7 +241,7 @@ export async function getAllProducts() {
           categoryId: business.category_id,
           town: business.town ?? "",
           county: business.county ?? "",
-          ...statusCard(business.hours, business.exceptions)
+          ...statusCard(business.hours, business.exceptions, business.timezone)
         }
       }
     ];

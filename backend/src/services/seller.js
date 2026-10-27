@@ -22,7 +22,7 @@ export async function getSellerBusiness(sellerId) {
   return {
     ...business,
     planFeatures: PLAN_FEATURES[business.plan],
-    isOpen: statusOf(business.hours, business.exceptions).isOpen
+    isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen
   };
 }
 

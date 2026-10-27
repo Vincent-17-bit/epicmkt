@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
-  addDays, dayLabel, describeException, formatClock, isOvernight, upcomingExceptions, validateException,
+  addDays, dayLabel, describeException, describeExceptionForViewer, formatClock, getUserTimeZone, safeShopZone, shopTimeNote, isOvernight, upcomingExceptions, validateException,
 } from "@epicmkt/shared";
 import { dayOf } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
@@ -14,6 +14,8 @@ import styles from "./exceptions.module.css";
 
 export const UNDO_MS = 8000;
 const todayOf = () => dayOf(now());
+// The same exception in the viewer's own clock, when that reads differently from the shop's.
+const viewerLine = (e, shopZone) => describeExceptionForViewer(e, { shopZone, viewerZone: getUserTimeZone() }).viewerText;
 const nextDayLabel = (date) => (date ? dayLabel(addDays(date, 1)) : "the next day");
 
 const DAY_MS = 86_400_000;
@@ -74,7 +76,7 @@ function previewOf({ kind, intervals, note }) {
   return { head: "Special hours", detail: [text, clean].filter(Boolean).join(". ") || null, hours: ok };
 }
 
-function ExceptionForm({ initial, existing, onSave, onCancel }) {
+function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
   const today = todayOf();
   const [date, setDate] = useState(initial?.date ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "closed");
@@ -104,6 +106,10 @@ function ExceptionForm({ initial, existing, onSave, onCancel }) {
 
   const title = initial ? "Edit exception" : "Add an exception";
   const preview = previewOf({ kind, intervals, note });
+  const viewerZone = getUserTimeZone();
+  const converted = date
+    ? describeExceptionForViewer({ date, kind, intervals: (intervals ?? []).filter((iv) => iv?.[0] && iv?.[1]) }, { shopZone, viewerZone })
+    : null;
   const quickDates = [
     { label: "Tomorrow", value: addDays(today, 1) },
     { label: "Next Saturday", value: nextWeekday(today, 6) },
@@ -154,6 +160,7 @@ function ExceptionForm({ initial, existing, onSave, onCancel }) {
                 <button key={p.label} type="button" className={styles.chip} onClick={() => setIntervals(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
               ))}
             </div>
+            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.</p>
             <p className={styles.count} id="exc-overnight-hint">
               Open past midnight? Set the closing time earlier than the opening time, for example 20:00 to 02:00. The hours after midnight count for the next day.
             </p>
@@ -205,6 +212,8 @@ function ExceptionForm({ initial, existing, onSave, onCancel }) {
         <p className={styles.previewHead}>{preview.head}</p>
         {kind === "special" && <DayBar intervals={preview.hours} />}
         {preview.detail && <p className={styles.previewDetail}>{preview.detail}</p>}
+        {converted?.shopText && <p className={styles.previewDetail} data-testid="preview-shop-time">{converted.shopText}</p>}
+        {converted?.viewerText && <p className={styles.previewDetail} data-testid="preview-viewer-time">{converted.viewerText}</p>}
       </aside>
     </form>
   );
@@ -221,6 +230,8 @@ export default function Exceptions() {
   useRealtime(["businesses"], refresh);
   useEffect(() => () => timers.current.forEach(clearTimeout), []);
 
+  const shop = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
+  const shopZone = safeShopZone(shop.data?.shop?.timezone);
   const today = todayOf();
   const list = upcomingExceptions(q.data, today);
   const full = list.length >= EXCEPTION_LIMIT;
@@ -285,7 +296,7 @@ export default function Exceptions() {
       )}
       {error && <p className={ui.error} role="alert">{error}</p>}
 
-      {form && <ExceptionForm key={form.initial?.id ?? "new"} initial={form.initial} existing={list} onSave={save} onCancel={() => setForm(null)} />}
+      {form && <ExceptionForm key={form.initial?.id ?? "new"} shopZone={shopZone} initial={form.initial} existing={list} onSave={save} onCancel={() => setForm(null)} />}
 
       {q.isLoading ? (
         <p role="status">Loading</p>
@@ -312,6 +323,7 @@ export default function Exceptions() {
                       {todayLabel(e.date) && <span className={`${ui.pill} ${ui.tone_info}`}>{todayLabel(e.date)}</span>}
                     </h3>
                     <p>{describeException(e)}</p>
+                    {viewerLine(e, shopZone) && <p className={styles.when} data-testid="exception-viewer-time">{viewerLine(e, shopZone)}</p>}
                     {e.kind === "special" && <DayBar intervals={e.intervals} />}
                     {e.note && <p className={styles.note}>{e.note}</p>}
                     {relative(e.date, today) && <p className={styles.when}>{relative(e.date, today)}</p>}

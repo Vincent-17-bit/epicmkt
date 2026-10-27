@@ -3,12 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { chipOf, dealOf, flashPrice, formatInstant, isListed, offersByItem, statusOf } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, formatInstant, isListed, offersByItem, statusOf, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
 import { errorText } from "../../lib/errors.js";
-import { hoursRows, socialLinks, statusText } from "../../lib/shopView.js";
+import { hoursCaption, hoursRows, socialLinks, statusText } from "../../lib/shopView.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./Preview.module.css";
 
@@ -26,7 +26,7 @@ const safe = (fn, fallback) => {
   }
 };
 
-const endsText = (iso) => `Ends ${formatInstant(iso, { locale: "en-KE", weekday: "short", hour: "numeric", minute: "2-digit" })}`;
+const endsText = (iso) => `Ends ${formatInstant(iso, { locale: "en-KE", weekday: "short", hour: "numeric", minute: "2-digit" })} ${zoneLabel(iso)}`;
 
 const serviceOf = (item, chips) => ({
   offer: chips.get(item.id) ?? null,
@@ -110,8 +110,8 @@ export default function Preview() {
     .filter((d) => d.scope === "store" || d.products.length > 0);
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
-  const openStatus = safe(() => statusOf(hours, exceptions), statusOf({}, []));
-  const openFields = { isOpen: openStatus.isOpen, closesAt: openStatus.closesAt, opensAt: openStatus.opensAt, statusLine: openStatus.line, openStatus };
+  const openStatus = safe(() => statusOf(hours, exceptions, undefined, shop.timezone), statusOf({}, []));
+  const openFields = { timezone: shop.timezone, isOpen: openStatus.isOpen, closesAt: openStatus.closesAt, opensAt: openStatus.opensAt, statusLine: openStatus.line, openStatus };
   const business = {
     id: shop.slug,
     slug: shop.slug,
@@ -165,7 +165,8 @@ export default function Preview() {
           reviewsText="New"
           distanceKm={null}
           locate={{ label: "Show distance from me" }}
-          hoursRows={hoursRows(hours, exceptions)}
+          hoursRows={hoursRows(hours, exceptions, shop.timezone)}
+          hoursCaption={hoursCaption(shop.timezone)}
           offerLabels={{ title: "Offers", code: "Code", copy: "Copy code", copied: "Copied", endsIn: "Ends in", noEnd: "No end date", onlyNow: "Not available at this hour", openProduct: "Open" }}
           flash={<FlashSection cards={flashCards(flashSales, items)} />}
           socials={socialLinks(shop.socials)}

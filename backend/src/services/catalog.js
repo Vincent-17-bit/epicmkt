@@ -75,8 +75,8 @@ const toSummary = (b, origin) => ({
   whatsapp: b.whatsapp,
   lat: b.lat,
   lng: b.lng,
-  isOpen: statusOf(b.hours, b.exceptions).isOpen,
-  statusLine: statusOf(b.hours, b.exceptions).line,
+  isOpen: statusOf(b.hours, b.exceptions, undefined, b.timezone).isOpen,
+  statusLine: statusOf(b.hours, b.exceptions, undefined, b.timezone).line,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });
@@ -84,7 +84,7 @@ const toSummary = (b, origin) => ({
 const toPublic = (b, origin) => {
   const { sellerId, stats, status, createdAt, planExpiresAt, ...rest } = b;
   const at = now();
-  const open = statusOf(b.hours, b.exceptions);
+  const open = statusOf(b.hours, b.exceptions, undefined, b.timezone);
   const listed = b.services.filter((svc) => svc.status !== "unlisted");
   return {
     ...rest,
@@ -191,8 +191,8 @@ export async function searchBusinesses({
     .filter((b) => !county || b.county === county)
     .filter((b) => !town || b.townSlug === town)
     .filter((b) => b.rating >= minRating)
-    .filter((b) => !openNow || statusOf(b.hours, b.exceptions).isOpen)
-    .filter((b) => !closedNow || !statusOf(b.hours, b.exceptions).isOpen)
+    .filter((b) => !openNow || statusOf(b.hours, b.exceptions, undefined, b.timezone).isOpen)
+    .filter((b) => !closedNow || !statusOf(b.hours, b.exceptions, undefined, b.timezone).isOpen)
     .filter((b) => !open24 || isOpenAllDay(b.hours))
     .filter((b) => !openSunday || opensOn(b.hours, "sun"))
     .filter((b) => !openLate || isOpenLate(b.hours, b.exceptions))

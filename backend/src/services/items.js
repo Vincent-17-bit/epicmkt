@@ -92,8 +92,8 @@ const sellerCard = (business, origin) => ({
   lng: business.lng,
   phone: business.phone,
   whatsapp: business.whatsapp,
-  isOpen: statusOf(business.hours, business.exceptions).isOpen,
-  statusLine: statusOf(business.hours, business.exceptions).line,
+  isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
+  statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line,
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 
@@ -266,8 +266,8 @@ export async function getAllProducts() {
           categoryId: business.categoryId,
           town: business.area ?? "",
           county: business.county ?? "",
-          isOpen: statusOf(business.hours, business.exceptions).isOpen,
-          statusLine: statusOf(business.hours, business.exceptions).line
+          isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
+          statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line
         }
       });
     });
@@ -332,7 +332,7 @@ export async function getFlashSales({
     if (businessId && business.id !== businessId && business.slug !== businessId) continue;
     if (categoryId && business.categoryId !== categoryId) continue;
     if (town && business.townSlug !== town) continue;
-    if (openNow && !statusOf(business.hours, business.exceptions).isOpen) continue;
+    if (openNow && !statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen) continue;
     business.services.forEach((svc, index) => {
       if (svc.status === "unlisted") return;
       const item = toItem(business, svc, index);
