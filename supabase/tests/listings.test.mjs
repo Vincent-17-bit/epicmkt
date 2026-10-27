@@ -180,6 +180,19 @@ test("reorder writes the manual order", async () => {
   assert.equal((await row(other)).sort, 0);
 });
 
+test("reorder photos sets the cover and refuses another seller's item", async () => {
+  await sql(c, `delete from items`);
+  const it = await item(ids.bizA, "Photo item");
+  const other = await item(ids.bizB, "Other photo item");
+  for (const [n, p] of ["p1", "p2", "p3"].entries()) await sql(c, `insert into item_media (item_id, business_id, kind, path, mime, sort) values ($1, $2, 'image', $3, 'image/jpeg', $4)`, [it, ids.bizA, `${ids.bizA}/${p}`, n]);
+  const paths = ["p3", "p1", "p2"].map((p) => `${ids.bizA}/${p}`);
+  await as(asA, `select seller_reorder_item_photos($1, $2::text[])`, [it, paths]);
+  const order = (await as(asA, `select seller_catalog_items() as r`))[0].r.items.find((i) => i.id === it).image_paths;
+  assert.deepEqual(order, paths);
+  await rejects(c, asA, `select seller_reorder_item_photos($1, $2::text[])`, [other, paths], /item_not_found/);
+  await rejects(c, { role: "anon" }, `select seller_reorder_item_photos($1, $2::text[])`, [it, paths], /permission denied/);
+});
+
 test("duplicate makes a hidden draft copy and respects the plan limit", async () => {
   await sql(c, `delete from items`);
   await sql(c, `update plans set items_limit = 2 where category_id = 'barber' and plan_key = 'standard'`);

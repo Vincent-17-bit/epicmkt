@@ -28,6 +28,7 @@ export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
 export const getShopPreview = (...a) => impl.getShopPreview(...a);
 export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);
 export const removeItemPhoto = (...a) => impl.removeItemPhoto(...a);
+export const reorderItemPhotos = (...a) => impl.reorderItemPhotos(...a);
 export const uploadShopImage = (...a) => impl.uploadShopImage(...a);
 export const removeShopImage = (...a) => impl.removeShopImage(...a);
 export const exportData = (...a) => impl.exportData(...a);
