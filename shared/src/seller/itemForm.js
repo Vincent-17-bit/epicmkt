@@ -11,6 +11,8 @@ const money = (raw) => {
 };
 
 export const SPEC_LIMITS = { rows: 20, label: 40, value: 120 };
+export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
+export const SPEC_DEFAULT_GROUP = SPEC_GROUPS[0];
 
 const cleanSpecs = (raw) => {
   const specs = [];
@@ -19,8 +21,10 @@ const cleanSpecs = (raw) => {
   (Array.isArray(raw) ? raw : []).forEach((row, index) => {
     const label = String(row?.label ?? "").trim();
     const value = String(row?.value ?? "").trim();
+    const group = String(row?.group ?? "").trim();
     if (!label && !value) return;
     const rowErrors = {};
+    if (group && !SPEC_GROUPS.includes(group)) rowErrors.group = "Choose a group from the list.";
     if (!label) rowErrors.label = "Add a label.";
     else if (label.length > SPEC_LIMITS.label) rowErrors.label = `Use ${SPEC_LIMITS.label} characters or fewer.`;
     if (!value) rowErrors.value = "Add a value.";
@@ -32,7 +36,7 @@ const cleanSpecs = (raw) => {
     const key = label.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
-    specs.push({ label, value });
+    specs.push({ ...(group && { group }), label, value });
   });
   return { specs, errors };
 };
@@ -101,5 +105,5 @@ export const formFromItem = (i) => ({
   availability: STATUS_CHOICES.some((c) => c.key === statusForForm(i.availability)) ? statusForForm(i.availability) : "available",
   trackStock: Boolean(i.trackStock), stockCount: i.stockCount === null || i.stockCount === undefined ? "" : String(i.stockCount),
   lowStockThreshold: String(i.lowStockThreshold ?? 3), showStockCount: Boolean(i.showStockCount),
-  specs: (Array.isArray(i.specs) ? i.specs : []).map((s) => ({ label: s?.label ?? "", value: s?.value ?? "" })),
+  specs: (Array.isArray(i.specs) ? i.specs : []).map((s) => ({ ...(s?.group && { group: s.group }), label: s?.label ?? "", value: s?.value ?? "" })),
 });

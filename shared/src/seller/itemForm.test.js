@@ -104,3 +104,13 @@ test("specs are optional: none given, none returned, and the form round-trips", 
   const f = formFromItem({ name: "Shoe", priceType: "fixed", price: 300, availability: "available", specs: [{ label: "Size", value: "42" }] });
   assert.deepEqual(validateItemForm(f).value.specs, [{ label: "Size", value: "42" }]);
 });
+
+test("specs: a group is kept when present, must be a known group, and is optional", () => {
+  const r = specs([{ group: "Measurements", label: "Width", value: "20 cm" }, { label: "Size", value: "42" }]);
+  assert.deepEqual(r.value.specs, [{ group: "Measurements", label: "Width", value: "20 cm" }, { label: "Size", value: "42" }]);
+  const bad = specs([{ group: "Elsewhere", label: "Width", value: "20 cm" }]);
+  assert.ok(bad.errors.specs[0].group);
+  assert.equal(bad.errors.specs[0].label, undefined);
+  const f = formFromItem({ name: "Shoe", priceType: "fixed", price: 300, availability: "available", specs: [{ group: "User guide", label: "Wash", value: "Cold" }] });
+  assert.deepEqual(validateItemForm(f).value.specs, [{ group: "User guide", label: "Wash", value: "Cold" }]);
+});

@@ -411,6 +411,26 @@ describe("quick actions", () => {
     await waitFor(() => expect(M.state.items.at(-1).price).toBe(500));
   });
 
+  it("adds specification rows, marks the incomplete row, and saves them", async () => {
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    await user.click(screen.getByRole("button", { name: "Add item" }));
+    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    expect(within(dialog).queryByLabelText("Label")).toBeNull();
+    await user.type(within(dialog).getByLabelText("Name"), "Sneaker");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "4500");
+    await user.click(within(dialog).getByRole("button", { name: "Add specification" }));
+    await user.type(within(dialog).getByLabelText("Label"), "Brand");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    expect(within(dialog).getAllByRole("alert").map((a) => a.textContent)).toContain("Add a value.");
+    expect(within(dialog).getByLabelText("Value").getAttribute("aria-invalid")).toBe("true");
+    expect(within(dialog).getByLabelText("Label").getAttribute("aria-invalid")).not.toBe("true");
+    await user.type(within(dialog).getByLabelText("Value"), "Nike");
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Sneaker", specs: [{ label: "Brand", value: "Nike" }] }));
+  });
+
   it("adds photos to a new item, to an existing item, and removes one", async () => {
     const user = userEvent.setup();
     let n = 0;

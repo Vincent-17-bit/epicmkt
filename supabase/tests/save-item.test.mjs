@@ -148,3 +148,16 @@ test("a failed save leaves the item exactly as it was", async () => {
   assert.equal(after.name, before.name);
   assert.equal(String(after.updated_at), String(before.updated_at));
 });
+
+test("specs from the seller form: saved with the default group, kept on a rename, cleared by an empty list, copied on duplicate", async () => {
+  const id = await save(asA, null, full({ specs: [{ label: "Size", value: "42" }, { group: "Measurements", label: "Width", value: "20 cm" }] }));
+  assert.deepEqual((await row(id)).specs, [{ group: "Features & Specs", label: "Size", value: "42" }, { group: "Measurements", label: "Width", value: "20 cm" }]);
+  await save(asA, id, full({ name: "Renamed" }));
+  assert.equal((await row(id)).specs.length, 2);
+  const copy = (await tx(c, asA, (k) => sql(k, `select seller_duplicate_item($1) as id`, [id]), { commit: true }))[0].id;
+  assert.equal((await row(copy)).specs.length, 2);
+  await save(asA, id, full({ specs: [] }));
+  assert.deepEqual((await row(id)).specs, []);
+  assert.deepEqual((await row(await item(ids.bizA))).specs, []);
+  await saveFails(asA, id, full({ specs: [{ label: "Size", value: "" }] }), /invalid_details/);
+});

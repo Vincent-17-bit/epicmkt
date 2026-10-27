@@ -1,4 +1,4 @@
-import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount } from "@epicmkt/shared";
+import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, SPEC_DEFAULT_GROUP } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -546,7 +546,7 @@ export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount), ...(Array.isArray(f.specs) && { specs: copy(f.specs) }) };
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount), ...(Array.isArray(f.specs) && { specs: copy(f.specs).map((r) => ({ ...r, group: r.group || SPEC_DEFAULT_GROUP })) }) };
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);

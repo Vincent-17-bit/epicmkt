@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ITEM_PRICE_TYPES, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
+import { ITEM_PRICE_TYPES, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import Modal from "./Modal.jsx";
@@ -33,6 +33,9 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   const priced = ["fixed", "from", "range"].includes(form.priceType);
   const toggle = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.checked }));
+  const setSpec = (i, k) => (e) => setForm((f) => ({ ...f, specs: f.specs.map((s, n) => (n === i ? { ...s, [k]: e.target.value } : s)) }));
+  const addSpec = () => setForm((f) => ({ ...f, specs: [...f.specs, { label: "", value: "" }] }));
+  const removeSpec = (i) => () => setForm((f) => ({ ...f, specs: f.specs.filter((_, n) => n !== i) }));
   const countOk = /^\d{1,6}$/.test(String(form.stockCount).trim());
   const lowOk = /^\d{1,4}$/.test(String(form.lowStockThreshold).trim());
   const resulting = countOk && lowOk ? statusFromCount(Number(form.stockCount), Number(form.lowStockThreshold)) : null;
@@ -164,6 +167,31 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
               {resulting && <p className={styles.hint} data-testid="stock-result">Right now: {COUNTED_TEXT[resulting]}.</p>}
             </>
           )}
+        </fieldset>
+        <fieldset className={styles.stockBox}>
+          <legend className={ui.label}>Specifications</legend>
+          <p className={styles.hint}>Optional. Add short facts about this item, such as Brand or Size.</p>
+          {form.specs.map((s, i) => (
+            <div key={i} className={styles.specRow}>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>Label</span>
+                  <input className={ui.input} value={s.label} onChange={setSpec(i, "label")} aria-invalid={Boolean(errors.specs?.[i]?.label)} maxLength={SPEC_LIMITS.label} />
+                </label>
+                {errors.specs?.[i]?.label && <span className={ui.error} role="alert">{errors.specs[i].label}</span>}
+              </div>
+              <div className={ui.field}>
+                <label className={styles.stack}>
+                  <span className={ui.label}>Value</span>
+                  <input className={ui.input} value={s.value} onChange={setSpec(i, "value")} aria-invalid={Boolean(errors.specs?.[i]?.value)} maxLength={SPEC_LIMITS.value} />
+                </label>
+                {errors.specs?.[i]?.value && <span className={ui.error} role="alert">{errors.specs[i].value}</span>}
+              </div>
+              <button type="button" className={styles.specRemove} onClick={removeSpec(i)} aria-label={`Remove specification ${i + 1}`}>Remove</button>
+            </div>
+          ))}
+          {errors.specsCount && <span className={ui.error} role="alert">{errors.specsCount}</span>}
+          <button type="button" className={`${styles.ghost} ${styles.photoAdd}`} onClick={addSpec} disabled={form.specs.length >= SPEC_LIMITS.rows}>Add specification</button>
         </fieldset>
         <fieldset className={styles.photos}>
           <legend className={ui.label}>Photos</legend>
