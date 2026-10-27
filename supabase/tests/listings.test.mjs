@@ -271,6 +271,9 @@ test("reorder photos writes the cover order for that item's images only", async 
   const sorts = await sql(c, `select path, sort from item_media where path in ('v1', 'o1', 'f1') order by path`);
   assert.deepEqual(sorts.map((r) => [r.path, r.sort]), [["f1", 0], ["o1", 0], ["v1", 3]]);
   assert.equal((await as(asA, `select seller_reorder_item_photos($1, $2::text[]) as n`, [a, ["p3", "p1", "p2"]]))[0].n, 0);
+  await as(asA, `select seller_reorder_item_photos($1, $2::text[])`, [a, ["p2", "p1", "p2", "p3"]]);
+  assert.deepEqual(await order(), ["p2", "p1", "p3"]);
+  await as(asA, `select seller_reorder_item_photos($1, $2::text[])`, [a, ["p3", "p1", "p2"]]);
   await sql(c, `update items set visible = true, draft = false where id = $1`, [a]);
   const seen = await tx(c, { role: "anon" }, (k) => sql(k, `select image_paths from public_items where id = $1`, [a]));
   assert.deepEqual(seen[0].image_paths, ["p3", "p1", "p2"]);

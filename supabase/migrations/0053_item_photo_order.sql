@@ -11,7 +11,7 @@ begin
     raise exception 'item_not_found' using errcode = 'P0001';
   end if;
   update public.item_media m set sort = o.pos
-    from (select u.path, (u.ord - 1)::integer as pos from unnest(p_paths) with ordinality as u(path, ord)) o
+    from (select u.path, (row_number() over (order by min(u.ord)) - 1)::integer as pos from unnest(p_paths) with ordinality as u(path, ord) group by u.path) o
     where m.item_id = p_item and m.business_id = v_id and m.kind = 'image' and m.path = o.path and m.sort <> o.pos;
   get diagnostics v_n = row_count;
   return v_n;
