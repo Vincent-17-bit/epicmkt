@@ -45,6 +45,7 @@ export const changePassword = ({ code, newPassword }) => fn("seller-change-passw
 // Saves the email the last "verify_email" code was sent to. Needs that code and the seller's current password.
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
+export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });
 const rows = async (q) => {

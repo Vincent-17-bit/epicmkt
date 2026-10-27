@@ -141,6 +141,19 @@ export const updateProfile = async (patch) => {
   Object.assign(state.business, patch);
   return { ...state.business };
 };
+export const setTimezone = async (timezone) => {
+  writer();
+  await wait();
+  const tz = String(timezone ?? "").trim();
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: tz });
+  } catch {
+    throw new ApiError("invalid_timezone");
+  }
+  if (!tz) throw new ApiError("invalid_timezone");
+  bill.business.timezone = tz;
+  return tz;
+};
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
   writer();
@@ -545,6 +558,7 @@ export const getShopPreview = async () => {
   const cat = await getCatalog();
   const hours = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["08:00", "18:00"]]));
   const shop = {
+    timezone: bill.business.timezone ?? "Africa/Nairobi",
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",
     planKey: bill.business.planKey, status: bill.business.status, live: cat.shop.live, verified: bill.business.verificationLevel === "verified",
     county: "Kisumu", town: "Maseno", address: "Main Street", lat: -0.09, lng: 34.6, phone: "0712345678", whatsapp: "0712345678",

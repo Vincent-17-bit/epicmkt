@@ -79,3 +79,23 @@ describe("account page", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("That code is not valid or has expired.");
   });
 });
+
+describe("shop time zone", () => {
+  it("shows the shop's zone, saves a new one, and the shop preview follows", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/account");
+    const select = await screen.findByLabelText("Time zone");
+    await waitFor(() => expect(select).toBeEnabled());
+    expect(select).toHaveValue("Africa/Nairobi");
+    const save = screen.getByRole("button", { name: "Save time zone" });
+    expect(save).toBeDisabled();
+    await user.selectOptions(select, "Asia/Kolkata");
+    await waitFor(() => expect(screen.getByLabelText("Time zone")).toHaveValue("Asia/Kolkata"));
+    expect(screen.getByTestId("shop-tz-now")).toHaveTextContent("GMT+5:30");
+    await user.click(save);
+    expect(await screen.findByTestId("shop-tz-saved")).toBeInTheDocument();
+    expect(M.state.business).toBeDefined();
+    const shop = await (await import("../../api/index.js")).getShopPreview();
+    expect(shop.shop.timezone).toBe("Asia/Kolkata");
+  });
+});

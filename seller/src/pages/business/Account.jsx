@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { PASSWORD_MESSAGES, formatDate, passwordProblems } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, PASSWORD_MESSAGES, formatDate, passwordProblems, safeShopZone, shopZoneLabel, zonedParts } from "@epicmkt/shared";
 import { planLabel } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
@@ -245,6 +245,69 @@ function PasswordCard({ business }) {
   );
 }
 
+// Opening hours and exceptions are wall-clock times in the shop's own zone. Shops default to Nairobi.
+// Browsers list some zones under old names (Asia/Calcutta for Asia/Kolkata), so the common modern names come first.
+const COMMON_ZONES = [
+  "Africa/Nairobi", "Africa/Kampala", "Africa/Dar_es_Salaam", "Africa/Addis_Ababa", "Africa/Kigali", "Africa/Lagos", "Africa/Johannesburg", "Africa/Cairo",
+  "Asia/Dubai", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Karachi", "Asia/Dhaka", "Asia/Bangkok", "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo",
+  "Europe/London", "Europe/Paris", "Europe/Berlin", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Sao_Paulo",
+  "Australia/Sydney", "Pacific/Auckland"
+];
+const allZones = (current) => {
+  let rest = [];
+  try { rest = Intl.supportedValuesOf("timeZone"); } catch { rest = []; }
+  return [...new Set([current, ...COMMON_ZONES, ...rest])];
+};
+const clockIn = (zone) => {
+  const p = zonedParts(new Date(), zone);
+  return p ? `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}` : "";
+};
+
+function ShopTimeZone() {
+  const qc = useQueryClient();
+  const shop = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
+  const saved = safeShopZone(shop.data?.shop?.timezone);
+  const [choice, setChoice] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [error, setError] = useState("");
+  const value = choice ?? saved;
+  const dirty = value !== saved;
+
+  const save = async () => {
+    setBusy(true);
+    setError("");
+    setMsg("");
+    try {
+      await api.setTimezone(value);
+      await qc.invalidateQueries({ queryKey: ["shop-preview"] });
+      setChoice(null);
+      setMsg("Saved. Your opening hours now follow this time zone.");
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className={ui.card} aria-labelledby="tz-title">
+      <h2 id="tz-title">Shop time zone</h2>
+      <p className={ui.muted}>Your opening hours and exceptions are times on your shop's clock. Customers in other countries see them converted to their own time.</p>
+      <div className={ui.field}>
+        <label className={ui.label} htmlFor="shop-tz">Time zone</label>
+        <select id="shop-tz" className={ui.input} value={value} onChange={(e) => { setChoice(e.target.value); setMsg(""); }} disabled={busy || shop.isLoading}>
+          {allZones(saved).map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}
+        </select>
+        <span className={ui.muted} data-testid="shop-tz-now">It is {clockIn(value)} there now ({shopZoneLabel(new Date(), value)}).</span>
+      </div>
+      {error && <p className={ui.error} role="alert">{error}</p>}
+      {msg && <p role="status" data-testid="shop-tz-saved">{msg}</p>}
+      <button type="button" className={ui.btn} onClick={save} disabled={busy || !dirty}>{busy ? "Saving" : "Save time zone"}</button>
+    </section>
+  );
+}
+
 export default function Account() {
   const sub = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription });
   if (sub.isLoading) return <div className={ui.page}><p role="status">Loading</p></div>;
@@ -274,6 +337,8 @@ export default function Account() {
       </section>
 
       <SignInSummary business={b} />
+
+      <ShopTimeZone />
 
       <section className={ui.card} aria-labelledby="strike-title">
         <h2 id="strike-title">Strikes</h2>
