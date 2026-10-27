@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, DETAIL_LIMITS } from "./itemForm.js";
+import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS } from "./itemForm.js";
 
 const base = { ...emptyItemForm(), name: "Fade cut", price: "500" };
 
@@ -123,8 +123,8 @@ test("details: text fields are trimmed, an empty one becomes null, and a long on
   assert.equal(ok.ok, true);
   assert.deepEqual([ok.value.brand, ok.value.shortDescription, ok.value.packSize, ok.value.terms], ["Nike", null, "Box of 6", "Deposit first"]);
   for (const key of ["brand", "shortDescription", "packSize", "terms"]) {
-    assert.equal(details({ [key]: "x".repeat(DETAIL_LIMITS[key]) }).ok, true, key);
-    assert.ok(details({ [key]: "x".repeat(DETAIL_LIMITS[key] + 1) }).errors[key], key);
+    assert.equal(details({ [key]: "x".repeat(ITEM_DETAIL_LIMITS[key]) }).ok, true, key);
+    assert.ok(details({ [key]: "x".repeat(ITEM_DETAIL_LIMITS[key] + 1) }).errors[key], key);
   }
 });
 
@@ -138,11 +138,11 @@ test("details: a field the form does not carry is left out, so saving cannot wip
 
 test("includes: blank lines are dropped, lines are trimmed, and the limits hold", () => {
   assert.deepEqual(details({ includes: [" Charger ", "", "  ", "Box"] }).value.includes, ["Charger", "Box"]);
-  const long = details({ includes: ["ok", "i".repeat(DETAIL_LIMITS.includes.text + 1)] });
+  const long = details({ includes: ["ok", "i".repeat(ITEM_DETAIL_LIMITS.includes.text + 1)] });
   assert.deepEqual(Object.keys(long.errors.includes), ["1"]);
   const rows = (n) => Array.from({ length: n }, (_, i) => `Item ${i}`);
-  assert.equal(details({ includes: rows(DETAIL_LIMITS.includes.rows) }).ok, true);
-  assert.ok(details({ includes: rows(DETAIL_LIMITS.includes.rows + 1) }).errors.includesCount);
+  assert.equal(details({ includes: rows(ITEM_DETAIL_LIMITS.includes.rows) }).ok, true);
+  assert.ok(details({ includes: rows(ITEM_DETAIL_LIMITS.includes.rows + 1) }).errors.includesCount);
 });
 
 test("highlights: the text is required, the title is optional, and the limits hold", () => {
@@ -150,12 +150,12 @@ test("highlights: the text is required, the title is optional, and the limits ho
   assert.deepEqual(r.value.highlights, [{ title: "Fast", text: "Charges in 20 minutes" }, { text: "No title" }]);
   const missing = details({ highlights: [{ title: "Only a title", text: "" }] });
   assert.equal(missing.errors.highlights[0].text, "Add the highlight text.");
-  const long = details({ highlights: [{ title: "t".repeat(DETAIL_LIMITS.highlights.title + 1), text: "x".repeat(DETAIL_LIMITS.highlights.text + 1) }] });
+  const long = details({ highlights: [{ title: "t".repeat(ITEM_DETAIL_LIMITS.highlights.title + 1), text: "x".repeat(ITEM_DETAIL_LIMITS.highlights.text + 1) }] });
   assert.ok(long.errors.highlights[0].title);
   assert.ok(long.errors.highlights[0].text);
   const rows = (n) => Array.from({ length: n }, (_, i) => ({ text: `Point ${i}` }));
-  assert.equal(details({ highlights: rows(DETAIL_LIMITS.highlights.rows) }).ok, true);
-  assert.ok(details({ highlights: rows(DETAIL_LIMITS.highlights.rows + 1) }).errors.highlightsCount);
+  assert.equal(details({ highlights: rows(ITEM_DETAIL_LIMITS.highlights.rows) }).ok, true);
+  assert.ok(details({ highlights: rows(ITEM_DETAIL_LIMITS.highlights.rows + 1) }).errors.highlightsCount);
 });
 
 test("details: the form loads an item's details and sends them back unchanged", () => {

@@ -42,7 +42,7 @@ const cleanSpecs = (raw) => {
 };
 
 // Same limits as the items table (migration 0050), so the form catches a problem before the database does.
-export const DETAIL_LIMITS = {
+export const ITEM_DETAIL_LIMITS = {
   brand: 60,
   shortDescription: 140,
   packSize: 40,
@@ -57,8 +57,8 @@ const cleanIncludes = (raw) => {
   (Array.isArray(raw) ? raw : []).forEach((row, index) => {
     const text = String(row ?? "").trim();
     if (!text) return;
-    if (text.length > DETAIL_LIMITS.includes.text) {
-      errors[index] = `Use ${DETAIL_LIMITS.includes.text} characters or fewer.`;
+    if (text.length > ITEM_DETAIL_LIMITS.includes.text) {
+      errors[index] = `Use ${ITEM_DETAIL_LIMITS.includes.text} characters or fewer.`;
       return;
     }
     includes.push(text);
@@ -74,9 +74,9 @@ const cleanHighlights = (raw) => {
     const text = String(row?.text ?? "").trim();
     if (!title && !text) return;
     const rowErrors = {};
-    if (title.length > DETAIL_LIMITS.highlights.title) rowErrors.title = `Use ${DETAIL_LIMITS.highlights.title} characters or fewer.`;
+    if (title.length > ITEM_DETAIL_LIMITS.highlights.title) rowErrors.title = `Use ${ITEM_DETAIL_LIMITS.highlights.title} characters or fewer.`;
     if (!text) rowErrors.text = "Add the highlight text.";
-    else if (text.length > DETAIL_LIMITS.highlights.text) rowErrors.text = `Use ${DETAIL_LIMITS.highlights.text} characters or fewer.`;
+    else if (text.length > ITEM_DETAIL_LIMITS.highlights.text) rowErrors.text = `Use ${ITEM_DETAIL_LIMITS.highlights.text} characters or fewer.`;
     if (Object.keys(rowErrors).length) {
       errors[index] = rowErrors;
       return;
@@ -145,19 +145,19 @@ export const validateItemForm = (f) => {
   for (const key of TEXT_DETAILS) {
     if (!(key in f)) continue;
     const text = String(f[key] ?? "").trim();
-    if (text.length > DETAIL_LIMITS[key]) errors[key] = `Use ${DETAIL_LIMITS[key]} characters or fewer.`;
+    if (text.length > ITEM_DETAIL_LIMITS[key]) errors[key] = `Use ${ITEM_DETAIL_LIMITS[key]} characters or fewer.`;
     details[key] = text || null;
   }
   if (Array.isArray(f.includes)) {
     const inc = cleanIncludes(f.includes);
     if (Object.keys(inc.errors).length) errors.includes = inc.errors;
-    if (inc.includes.length > DETAIL_LIMITS.includes.rows) errors.includesCount = `Use ${DETAIL_LIMITS.includes.rows} items or fewer.`;
+    if (inc.includes.length > ITEM_DETAIL_LIMITS.includes.rows) errors.includesCount = `Use ${ITEM_DETAIL_LIMITS.includes.rows} items or fewer.`;
     details.includes = inc.includes;
   }
   if (Array.isArray(f.highlights)) {
     const hl = cleanHighlights(f.highlights);
     if (Object.keys(hl.errors).length) errors.highlights = hl.errors;
-    if (hl.highlights.length > DETAIL_LIMITS.highlights.rows) errors.highlightsCount = `Use ${DETAIL_LIMITS.highlights.rows} highlights or fewer.`;
+    if (hl.highlights.length > ITEM_DETAIL_LIMITS.highlights.rows) errors.highlightsCount = `Use ${ITEM_DETAIL_LIMITS.highlights.rows} highlights or fewer.`;
     details.highlights = hl.highlights;
   }
   if (Object.keys(errors).length) return { ok: false, errors };
