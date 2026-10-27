@@ -1,3 +1,4 @@
+import { LogoMark } from "@epicmkt/ui";
 import { useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext.jsx";
@@ -17,7 +18,7 @@ function safeTarget(from) {
 function Brand() {
   return (
     <div className="admin-login__brand">
-      <div className="admin-login__logo" aria-hidden="true">E</div>
+      <LogoMark size={44} />
       <div>
         <strong>EpicMKT</strong>
         <span>Admin</span>

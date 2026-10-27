@@ -1,3 +1,4 @@
+import { LogoMark } from "@epicmkt/ui";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -123,7 +124,7 @@ export default function AdminLayout() {
       <div className="admin-rail">
         <aside id="admin-sidebar" className="admin-sidebar">
           <div className="admin-sidebar__brand">
-            <div className="admin-sidebar__logo">E</div>
+            <LogoMark size={32} />
             <div className="admin-sidebar__brand-copy"><strong>EpicMKT</strong><span>Admin</span></div>
           </div>
 

@@ -101,18 +101,6 @@ select {
   overflow: hidden;
 }
 
-.admin-sidebar__logo {
-  flex: none;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--admin-primary);
-  color: #111111;
-  font-weight: 800;
-}
-
 .admin-sidebar__brand-copy {
   display: flex;
   flex-direction: column;
