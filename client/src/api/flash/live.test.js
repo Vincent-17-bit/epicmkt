@@ -124,8 +124,8 @@ describe("flash adapters", () => {
   it("filters, sorts and pages like the mock", async () => {
     const now = Date.now();
     db().sales = [
-      row(1, { ends_at: new Date(now + 30 * 60000).toISOString(), sale_price: "900.00", discount_percent: "10", business_category_id: "tailors", business_town: "Kisumu", business_slug: "t-one", business_lat: -0.09, business_lng: 34.76, business_id: B }),
-      row(2, { ends_at: new Date(now + 5 * HOUR).toISOString(), sale_price: "500.00", business_id: A }),
+      row(1, { now, ends_at: new Date(now + 30 * 60000).toISOString(), sale_price: "900.00", discount_percent: "10", business_category_id: "tailors", business_town: "Kisumu", business_slug: "t-one", business_lat: -0.09, business_lng: 34.76, business_id: B }),
+      row(2, { now, ends_at: new Date(now + 5 * HOUR).toISOString(), sale_price: "500.00", business_id: A }),
       row(3, { ends_at: new Date(now + 30 * HOUR).toISOString(), sale_price: "300.00", business_id: A, starts_at: new Date(now - 100000).toISOString() })
     ];
     const names = async (params) => (await live.list(params)).items.map((e) => e.item.name);
