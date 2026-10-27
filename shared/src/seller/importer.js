@@ -112,8 +112,10 @@ export const detectMapping = (firstRow) => {
   return { mapping, hasHeader: mapping.name !== null && matched >= 2 };
 };
 
+const POSITIONAL_FIELDS = IMPORT_FIELDS.slice(0, 7);
+
 export const positionalMapping = (columns) =>
-  Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, i < columns ? i : null]));
+  Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, POSITIONAL_FIELDS.includes(f) && i < columns ? i : null]));
 
 const parsePrice = (raw) => {
   const cleaned = raw.replace(/\s*(kes|ksh|kshs|\/=)\s*/gi, "").replace(/,/g, "").trim();

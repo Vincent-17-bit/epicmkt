@@ -258,6 +258,7 @@ function resetBilling() {
     id, name, price, priceType, availability, visible, hiddenByAdmin: false,
     description: "", section: null, priceMax: null, unit: null, salePrice: null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false,
     availableFrom: null, season: null, draft: false, sort: n, removedByAdmin: false, adminHideReason: null, tags: [], badge: null, variants: [], specs: [],
+    brand: null, shortDescription: null, packSize: null, terms: null, includes: [],
     priceConfirmedAt: ISO(now - 5 * DAY), createdAt: ISO(now - (60 - n) * DAY), updatedAt: ISO(now - (30 - n) * DAY), imageCount: 1, imagePaths: [`demo/${id}.webp`], hasVideo: false, ...extra,
   });
   bill.items = [
@@ -556,7 +557,7 @@ export const saveItem = async (id, f) => {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, specs: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, specs: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };
@@ -647,10 +648,25 @@ export const importItems = async (rows) => {
   if (bill.business.planKey !== "premium") throw new ApiError("premium_required");
   if (!Array.isArray(rows) || rows.length === 0) throw new ApiError("no_rows");
   if (rows.length > 500) throw new ApiError("too_many_rows");
-  if (rows.some((r) => [r.name, r.section, r.unit].some((v) => /^[=+\-@]/.test(String(v ?? ""))))) throw new ApiError("formula_rejected");
+  const formula = (v) => /^[=+\-@]/.test(String(v ?? ""));
+  if (rows.some((r) => [r.name, r.section, r.unit, r.brand, r.short_description, r.pack_size, r.terms, ...(Array.isArray(r.includes) ? r.includes : [])].some(formula))) throw new ApiError("formula_rejected");
+  const text = (v, max) => {
+    if (v === undefined || v === null) return null;
+    if (typeof v !== "string" || v.trim().length > max) throw new ApiError("invalid_details");
+    return v.trim() || null;
+  };
+  const list = (v) => {
+    if (v === undefined || v === null) return [];
+    if (!Array.isArray(v) || v.some((e) => typeof e !== "string")) throw new ApiError("invalid_details");
+    const out = v.map((e) => e.trim()).filter(Boolean);
+    if (out.length > 10 || out.some((e) => e.length > 80)) throw new ApiError("invalid_details");
+    return out;
+  };
+  const details = rows.map((r) => ({ brand: text(r.brand, 60), shortDescription: text(r.short_description, 140), packSize: text(r.pack_size, 40), terms: text(r.terms, 500), includes: list(r.includes) }));
   const now = clockNow().toISOString();
   let sort = Math.max(0, ...bill.items.map((i) => i.sort));
-  const made = rows.map((r) => ({
+  const made = rows.map((r, n) => ({
+    ...details[n],
     id: `it-imp-${++bill.seq}`, name: r.name, price: r.price ?? null, priceMax: r.price_max ?? null, priceType: r.price_type, unit: r.unit ?? null, salePrice: null,
     availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
     section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),

@@ -34,7 +34,8 @@ test("detects headers and falls back to positions", () => {
   const noHeader = detectMapping(["Fade cut", "500"]);
   assert.equal(noHeader.hasHeader, false);
   assert.deepEqual(positionalMapping(3), { name: 0, price_type: 1, price: 2, unit: null, availability: null, section: null, tags: null, brand: null, short_description: null, pack_size: null, terms: null, includes: null });
-  assert.deepEqual(positionalMapping(7).brand, null);
+  assert.deepEqual(Object.values(positionalMapping(12)).slice(0, 7), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(Object.values(positionalMapping(12)).slice(7), [null, null, null, null, null]);
   assert.equal(detectMapping(["Product", "Cost", "Category"]).mapping.section, 2);
 });
 
@@ -174,7 +175,7 @@ test("detail columns are limited like the database limits them", () => {
   const bad = (cell, index) => {
     const cells = ["Cake", "fixed", "900", "", "", "", "", "", "", "", "", ""];
     cells[index] = cell;
-    return validateRow(cells, positionalMapping(12));
+    return validateRow(cells, { ...positionalMapping(7), brand: 7, short_description: 8, pack_size: 9, terms: 10, includes: 11 });
   };
   assert.match(bad("x".repeat(61), 7).errors[0], /Brand is over 60/);
   assert.match(bad("x".repeat(141), 8).errors[0], /Short description is over 140/);

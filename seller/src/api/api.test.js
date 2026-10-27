@@ -60,3 +60,34 @@ test("specs: the live shape returns them the same way the mock does", () => {
   assert.deepEqual(shape.catalogItem(row).specs, []);
   assert.deepEqual(shape.catalogItem({ ...row, specs: [{ label: "Size", value: "42" }] }).specs, [{ label: "Size", value: "42" }]);
 });
+
+test("import details: the mock stores them, refuses bad ones, and rows without them are unchanged", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  mock.__mock.setBusiness({ planKey: "premium" });
+  const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
+  const bare = await find("it-fade");
+  assert.deepEqual([bare.brand, bare.shortDescription, bare.packSize, bare.terms, bare.includes], [null, null, null, null, []]);
+  const before = (await mock.getCatalog()).items.length;
+  await assert.rejects(mock.importItems([{ name: "Fine", price_type: "free" }, { name: "Bad", price_type: "free", brand: "x".repeat(61) }]), { code: "invalid_details" });
+  await assert.rejects(mock.importItems([{ name: "Bad", price_type: "free", includes: ["ok", 1] }]), { code: "invalid_details" });
+  await assert.rejects(mock.importItems([{ name: "Bad", price_type: "free", terms: "=cmd" }]), { code: "formula_rejected" });
+  assert.equal((await mock.getCatalog()).items.length, before);
+  assert.deepEqual(await mock.importItems([
+    { name: "Cake", price_type: "free", brand: " Acme ", short_description: "Fresh", pack_size: "Box of 6", terms: "Order ahead", includes: ["Candles", " "] },
+    { name: "Plain", price_type: "free" },
+  ]), { created: 2 });
+  const items = (await mock.getCatalog()).items;
+  const cake = items.find((i) => i.name === "Cake");
+  assert.deepEqual([cake.brand, cake.shortDescription, cake.packSize, cake.terms, cake.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
+  const plain = items.find((i) => i.name === "Plain");
+  assert.deepEqual([plain.brand, plain.shortDescription, plain.packSize, plain.terms, plain.includes], [null, null, null, null, []]);
+});
+
+test("import details: the live shape returns them the same way the mock does", () => {
+  const row = { id: "i1", name: "A", price_type: "fixed", availability: "available", created_at: "2026-01-01" };
+  const plain = shape.catalogItem(row);
+  assert.deepEqual([plain.brand, plain.shortDescription, plain.packSize, plain.terms, plain.includes], [null, null, null, null, []]);
+  const full = shape.catalogItem({ ...row, brand: "Acme", short_description: "Fresh", pack_size: "Box", terms: "Ahead", includes: ["Candles"] });
+  assert.deepEqual([full.brand, full.shortDescription, full.packSize, full.terms, full.includes], ["Acme", "Fresh", "Box", "Ahead", ["Candles"]]);
+});
