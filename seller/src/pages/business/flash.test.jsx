@@ -24,7 +24,7 @@ describe("seller flash sales", () => {
   it("shows an empty state and the plan quota", async () => {
     await open();
     expect(await screen.findByTestId("empty")).toBeInTheDocument();
-    expect(screen.getByTestId("flash-quota")).toHaveTextContent("Running now: 0 of 1");
+    await waitFor(() => expect(screen.getByTestId("flash-quota")).toHaveTextContent("Running now: 0 of 1"));
     expect(screen.getByTestId("flash-quota")).toHaveTextContent("This month: 0 of 3");
   });
 
@@ -43,7 +43,7 @@ describe("seller flash sales", () => {
     expect(rows()[0]).toHaveTextContent("Live");
     expect(rows()[0]).toHaveTextContent("20% off (KES 400), Weekend fade deal");
     expect(screen.getByTestId("flash-timer")).toHaveTextContent("06:00:0");
-    expect(screen.getByTestId("flash-quota")).toHaveTextContent("Running now: 1 of 1");
+    await waitFor(() => expect(screen.getByTestId("flash-quota")).toHaveTextContent("Running now: 1 of 1"));
     expect(M.state.flash[0].status).toBe("live");
   });
 

@@ -527,3 +527,63 @@ test("items and stores without details select exactly as before", async () => {
   const catalog = (await as(asA, `select seller_catalog_items() as r`))[0].r;
   assert.deepEqual(catalog.items.map((i) => i.highlights), [[]]);
 });
+
+test("import stores the optional details and leaves rows without them as before", async () => {
+  await sql(c, `delete from items`);
+  const rows = json([
+    { name: "Cake", price_type: "fixed", price: 900, brand: " Acme ", short_description: "Fresh daily", pack_size: "Box of 6", terms: "Order a day ahead", includes: ["Candles", " Knife ", ""] },
+    { name: "Plain", price_type: "fixed", price: 10 },
+    { name: "Blanks", price_type: "fixed", price: 10, brand: "", short_description: null, includes: null },
+  ]);
+  assert.deepEqual((await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r, { created: 3 });
+  const made = Object.fromEntries((await sql(c, `select * from items where business_id = $1`, [ids.bizB])).map((m) => [m.name, m]));
+  assert.deepEqual([made.Cake.brand, made.Cake.short_description, made.Cake.pack_size, made.Cake.terms], ["Acme", "Fresh daily", "Box of 6", "Order a day ahead"]);
+  assert.deepEqual(made.Cake.includes, ["Candles", "Knife"]);
+  for (const name of ["Plain", "Blanks"]) {
+    assert.deepEqual([made[name].brand, made[name].short_description, made[name].pack_size, made[name].terms], [null, null, null, null], name);
+    assert.deepEqual([made[name].highlights, made[name].specs, made[name].includes], [[], [], []], name);
+  }
+  assert.ok(Object.values(made).every((m) => m.draft && !m.visible));
+});
+
+test("a bad detail stops the whole import", async () => {
+  await sql(c, `delete from items`);
+  const ok = { name: "Fine row", price_type: "fixed", price: 5 };
+  const longer = (n) => "x".repeat(n);
+  for (const [bad, pattern] of [
+    [{ brand: longer(61) }, /invalid_details/],
+    [{ short_description: longer(141) }, /invalid_details/],
+    [{ pack_size: longer(41) }, /invalid_details/],
+    [{ terms: longer(501) }, /invalid_details/],
+    [{ brand: 5 }, /invalid_details/],
+    [{ includes: "Cable" }, /invalid_details/],
+    [{ includes: [1] }, /invalid_details/],
+    [{ includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, /invalid_details/],
+    [{ includes: [longer(81)] }, /invalid_details/],
+    [{ brand: "=cmd" }, /formula_rejected/],
+    [{ terms: "@SUM(A1)" }, /formula_rejected/],
+    [{ includes: ["Cable", "+1+1"] }, /formula_rejected/],
+  ]) {
+    await rejects(c, asB, `select seller_import_items($1::jsonb)`, [json([ok, { name: "Bad row", price_type: "fixed", price: 5, ...bad }])], pattern);
+  }
+  assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 0);
+});
+
+test("the seller catalog carries the details only when an item has them", async () => {
+  await sql(c, `delete from items`);
+  await item(ids.bizA, "Bare");
+  await item(ids.bizA, "Full", { brand: "Acme", specs: json([spec(1, { group: "Measurements" })]), includes: ["Charger"] });
+  const items = (await as(asA, `select seller_catalog_items() as r`))[0].r.items;
+  const by = Object.fromEntries(items.map((i) => [i.name, i]));
+  assert.deepEqual([by.Bare.brand, by.Bare.highlights, by.Bare.specs, by.Bare.includes], [null, [], [], []]);
+  assert.equal(by.Full.specs[0].group, "Measurements");
+  assert.deepEqual(by.Full.includes, ["Charger"]);
+  const worst = await item(ids.bizA, "Worst", {
+    brand: "b".repeat(60), short_description: "s".repeat(140), terms: "t".repeat(500), pack_size: "p".repeat(40),
+    highlights: json(Array.from({ length: 8 }, () => ({ title: "t".repeat(40), text: "h".repeat(200) }))),
+    specs: json(Array.from({ length: 20 }, () => ({ group: "Features & Specs", label: "l".repeat(40), value: "v".repeat(120) }))),
+    includes: Array.from({ length: 10 }, () => "i".repeat(80)),
+  });
+  const bytes = (await sql(c, `select length(to_jsonb(i)::text) - length((to_jsonb(i) - 'brand' - 'short_description' - 'highlights' - 'specs' - 'includes' - 'terms' - 'pack_size')::text) as n from items i where id = $1`, [worst]))[0].n;
+  assert.ok(bytes < 9000, `the largest item adds ${bytes} bytes`);
+});

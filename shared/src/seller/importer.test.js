@@ -33,7 +33,8 @@ test("detects headers and falls back to positions", () => {
   assert.equal(found.mapping.tags, 6);
   const noHeader = detectMapping(["Fade cut", "500"]);
   assert.equal(noHeader.hasHeader, false);
-  assert.deepEqual(positionalMapping(3), { name: 0, price_type: 1, price: 2, unit: null, availability: null, section: null, tags: null });
+  assert.deepEqual(positionalMapping(3), { name: 0, price_type: 1, price: 2, unit: null, availability: null, section: null, tags: null, brand: null, short_description: null, pack_size: null, terms: null, includes: null });
+  assert.deepEqual(positionalMapping(7).brand, null);
   assert.equal(detectMapping(["Product", "Cost", "Category"]).mapping.section, 2);
 });
 
@@ -97,9 +98,9 @@ test("formula injection is refused in every mapped column", () => {
     assert.equal(startsWithFormula(bad), true, JSON.stringify(bad));
   }
   assert.equal(startsWithFormula("Fade cut"), false);
-  const cols = { name: 0, price_type: 1, price: 2, unit: 3, availability: 4, section: 5, tags: 6 };
-  const base = ["Fade", "fixed", "100", "", "", "", ""];
-  for (let i = 0; i < 7; i += 1) {
+  const cols = { name: 0, price_type: 1, price: 2, unit: 3, availability: 4, section: 5, tags: 6, brand: 7, short_description: 8, pack_size: 9, terms: 10, includes: 11 };
+  const base = ["Fade", "fixed", "100", "", "", "", "", "", "", "", "", ""];
+  for (let i = 0; i < 12; i += 1) {
     const cells = [...base];
     cells[i] = "=cmd|' /C calc'!A0";
     const res = validateRow(cells, cols);
@@ -153,4 +154,34 @@ test("the error report names each problem and defuses formulas", () => {
   assert.ok(lines[1].includes("'=BAD()"));
   assert.ok(!/(^|,)=BAD/.test(lines[1]));
   assert.match(lines[2], /required/);
+});
+
+const DETAIL_HEAD = `${HEAD}\tbrand\tshort description\tpack size\tterms\tincludes`;
+
+test("detail columns are detected by their headers and stay out of the row when empty", () => {
+  const found = detectMapping(DETAIL_HEAD.split("\t"));
+  assert.deepEqual([found.mapping.brand, found.mapping.short_description, found.mapping.pack_size, found.mapping.terms, found.mapping.includes], [7, 8, 9, 10, 11]);
+  const r = run(`${DETAIL_HEAD}\nCake\tfixed\t900\t\t\t\t\tAcme\tFresh daily\tBox of 6\tOrder a day ahead\tCandles; Knife | Box\nPlain\tfixed\t10\t\t\t\t\t\t\t\t\t`);
+  assert.equal(r.rejected.length, 0);
+  assert.deepEqual(r.valid[0].value, {
+    name: "Cake", price_type: "fixed", price: 900, price_max: null, unit: null, availability: "available", section: null, tags: [],
+    brand: "Acme", short_description: "Fresh daily", pack_size: "Box of 6", terms: "Order a day ahead", includes: ["Candles", "Knife", "Box"],
+  });
+  assert.deepEqual(Object.keys(r.valid[1].value), ["name", "price_type", "price", "price_max", "unit", "availability", "section", "tags"]);
+});
+
+test("detail columns are limited like the database limits them", () => {
+  const bad = (cell, index) => {
+    const cells = ["Cake", "fixed", "900", "", "", "", "", "", "", "", "", ""];
+    cells[index] = cell;
+    return validateRow(cells, positionalMapping(12));
+  };
+  assert.match(bad("x".repeat(61), 7).errors[0], /Brand is over 60/);
+  assert.match(bad("x".repeat(141), 8).errors[0], /Short description is over 140/);
+  assert.match(bad("x".repeat(41), 9).errors[0], /Pack size is over 40/);
+  assert.match(bad("x".repeat(501), 10).errors[0], /Terms is over 500/);
+  assert.match(bad(Array.from({ length: 11 }, (_, i) => `p${i}`).join(","), 11).errors[0], /at most 10 included/);
+  assert.match(bad("x".repeat(81), 11).errors[0], /included item is over 80/);
+  assert.equal(bad("x".repeat(60), 7).errors.length, 0);
+  assert.equal(bad("x".repeat(500), 10).errors.length, 0);
 });

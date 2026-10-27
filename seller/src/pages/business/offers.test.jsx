@@ -16,7 +16,7 @@ describe("seller offers", () => {
   it("shows an empty state and the plan quota", async () => {
     await open();
     expect(await screen.findByTestId("empty")).toBeInTheDocument();
-    expect(screen.getByTestId("offer-quota")).toHaveTextContent("Active now: 0 of 8");
+    await waitFor(() => expect(screen.getByTestId("offer-quota")).toHaveTextContent("Active now: 0 of 8"));
   });
 
   it("builds a buy 2 get 1 free offer from a recipe on one product only", async () => {
