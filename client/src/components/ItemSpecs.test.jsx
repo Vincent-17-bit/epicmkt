@@ -3,19 +3,35 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ItemSpecs from "./ItemSpecs.jsx";
 
-const specs = Array.from({ length: 10 }, (_, i) => ({ label: `Spec ${i + 1}`, value: `Value ${i + 1}` }));
+const grouped = [
+  { group: "Measurements", label: "Width", value: "10 cm" },
+  { group: "Features & Specs", label: "Power", value: "2200 W" },
+  { group: "User guide", label: "Care", value: "Wipe clean" },
+  { group: "Features & Specs", label: "Colour", value: "Steel" }
+];
 
 describe("ItemSpecs", () => {
-  it("opens Specifications by default and limits to 8 rows", async () => {
-    render(<ItemSpecs item={{ specs, description: "Full text", includes: [], terms: "" }} />);
-    expect(screen.getByRole("button", { name: "Specifications" })).toHaveAttribute("aria-expanded", "true");
+  it("renders one panel per group in the fixed order, the first open, empty groups hidden", () => {
+    render(<ItemSpecs item={{ specs: grouped, description: "Full text", includes: [], terms: "" }} />);
+    const buttons = screen.getAllByRole("button").map((b) => b.textContent);
+    expect(buttons).toEqual(["Features & Specs", "Measurements", "User guide", "Description"]);
+    expect(screen.getByRole("button", { name: "Features & Specs" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Measurements" })).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("button", { name: "Description" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getAllByRole("term")).toHaveLength(8);
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: "Show all specs" }));
-    expect(screen.getAllByRole("term")).toHaveLength(10);
-    await user.click(screen.getByRole("button", { name: "Show fewer" }));
-    expect(screen.getAllByRole("term")).toHaveLength(8);
+    expect(screen.queryByRole("button", { name: "Item details" })).not.toBeInTheDocument();
+  });
+
+  it("puts ungrouped specs under Features & Specs and meta rows under Item details", () => {
+    render(<ItemSpecs item={{ specs: [{ label: "Colour", value: "Red" }], packSize: "2 kg", description: "", includes: [], terms: "" }} />);
+    expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Features & Specs", "Item details"]);
+    expect(screen.getAllByRole("term", { hidden: true }).map((t) => t.textContent)).toEqual(["Colour", "Pack size"]);
+  });
+
+  it("never truncates long values and keeps dl, dt and dd", () => {
+    const value = "x".repeat(300);
+    const { container } = render(<ItemSpecs item={{ specs: [{ group: "Features & Specs", label: "Long", value }], description: "", includes: [], terms: "" }} />);
+    expect(container.querySelector("dl dt")).toHaveTextContent("Long");
+    expect(container.querySelector("dl dd")).toHaveTextContent(value);
   });
 
   it("toggles panels independently and shows optional ones only when present", async () => {
@@ -23,15 +39,14 @@ describe("ItemSpecs", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Description" }));
     expect(screen.getByText("Full text")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Specifications" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Features & Specs" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "What's included" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Terms and notes" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Show all specs" })).not.toBeInTheDocument();
   });
 
   it("hides empty panels and the whole section when nothing exists", () => {
     const { container, rerender } = render(<ItemSpecs item={{ specs: [], description: "Only text", includes: [], terms: "" }} />);
-    expect(screen.queryByRole("button", { name: "Specifications" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Features & Specs" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "What's included" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Description" })).toBeInTheDocument();
     rerender(<ItemSpecs item={{ specs: [], description: "", includes: [], terms: "" }} />);
@@ -55,12 +70,24 @@ describe("ItemSpecs", () => {
       await user.click(screen.getByRole("button", { name: "Description" }));
       expect(scroll).toHaveBeenCalledTimes(1);
       expect(scroll.mock.instances[0]).toContainElement(screen.getByRole("button", { name: "Description" }));
-      expect(scroll.mock.instances[0]).not.toContainElement(screen.getByRole("button", { name: "Specifications" }));
+      expect(scroll.mock.instances[0]).not.toContainElement(screen.getByRole("button", { name: "Features & Specs" }));
       expect(scroll.mock.calls[0][0]).toMatchObject({ inline: "nearest", behavior: "smooth" });
       await user.click(screen.getByRole("button", { name: "Description" }));
       expect(scroll).toHaveBeenCalledTimes(1);
       await user.click(screen.getByRole("button", { name: "Terms and notes" }));
       expect(scroll).toHaveBeenCalledTimes(2);
+    });
+
+    it("opens and scrolls to the first spec panel when reveal changes, not on mount", () => {
+      const scroll = vi.fn();
+      Element.prototype.scrollIntoView = scroll;
+      const onExpand = vi.fn();
+      const { rerender } = render(<ItemSpecs item={{ ...item, specs: grouped }} reveal={3} onExpand={onExpand} />);
+      expect(scroll).not.toHaveBeenCalled();
+      rerender(<ItemSpecs item={{ ...item, specs: grouped }} reveal={4} onExpand={onExpand} />);
+      expect(scroll).toHaveBeenCalledTimes(1);
+      expect(scroll.mock.calls[0][0]).toMatchObject({ block: "start" });
+      expect(screen.getByRole("button", { name: "Features & Specs" })).toHaveAttribute("aria-expanded", "true");
     });
 
     it("does not animate for people who asked for reduced motion", async () => {

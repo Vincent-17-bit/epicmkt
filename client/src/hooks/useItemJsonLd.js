@@ -5,7 +5,8 @@ import { buildItemJsonLd } from "../lib/itemView.js";
 const ID = "item-jsonld";
 
 export function useItemJsonLd(item) {
-  const key = item ? `${item.id}|${item.pricing?.salePrice}|${item.flash?.sale.endsAt ?? ""}|${item.availability}` : "";
+  const details = item ? `${item.brand ?? ""}|${(item.specs ?? []).map((spec) => `${spec.label}=${spec.value}`).join(";")}` : "";
+  const key = item ? `${item.id}|${item.pricing?.salePrice}|${item.flash?.sale.endsAt ?? ""}|${item.availability}|${details}` : "";
 
   useEffect(() => {
     document.getElementById(ID)?.remove();

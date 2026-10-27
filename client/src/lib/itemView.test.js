@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, limitGroups, offerExpiry, offerTarget, offerValueLabel } from "./itemView.js";
+import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, normalizeHighlights, offerExpiry, offerTarget, offerValueLabel } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -51,29 +51,41 @@ describe("buildSpecGroups", () => {
     ]
   };
 
-  it("merges specs, meta and template fields without duplicates", () => {
+  it("merges specs, meta and template fields into the fixed groups without duplicates", () => {
     const groups = buildSpecGroups({
-      item: { specs: [{ group: "A", label: "Duration", value: "1h" }, { label: "Colour", value: "Red" }], duration: "2h", packSize: "2 kg", pricing: { unit: "kg" } },
+      item: { specs: [{ group: "Measurements", label: "Duration", value: "1h" }, { label: "Colour", value: "Red" }], duration: "2h", packSize: "2 kg", pricing: { unit: "kg" } },
       category,
       attributes: { walkins: true, chairs: 4, about: "text", kids: false }
     });
-    expect(groups.map((g) => g.name)).toEqual(["A", null, "Barbershop details"]);
-    expect(groups[1].rows.map((r) => r.label)).toEqual(["Colour", "Pack size", "Unit"]);
-    expect(groups[2].rows).toEqual([{ label: "Walk-ins", value: "Yes" }, { label: "Chairs", value: "4" }]);
+    expect(groups.map((g) => g.name)).toEqual(["Features & Specs", "Measurements", "Item details"]);
+    expect(groups[0].rows).toEqual([{ label: "Colour", value: "Red" }]);
+    expect(groups[2].rows.map((r) => r.label)).toEqual(["Pack size", "Unit", "Walk-ins", "Chairs"]);
+  });
+
+  it("orders groups fixed regardless of input order and sends unknown groups to Features & Specs", () => {
+    const groups = buildSpecGroups({
+      item: { specs: [{ group: "User guide", label: "A", value: "1" }, { group: "Measurements", label: "B", value: "2" }, { group: "Nope", label: "C", value: "3" }] },
+      category: null,
+      attributes: {}
+    });
+    expect(groups.map((g) => g.name)).toEqual(["Features & Specs", "Measurements", "User guide"]);
   });
 
   it("returns nothing when there is nothing to show", () => {
     expect(buildSpecGroups({ item: { specs: [] }, category: null, attributes: {} })).toEqual([]);
+    expect(countRows([])).toBe(0);
   });
 });
 
-describe("limitGroups", () => {
-  const groups = [{ name: "A", rows: [1, 2, 3].map((n) => ({ label: `a${n}`, value: "x" })) }, { name: "B", rows: [1, 2, 3].map((n) => ({ label: `b${n}`, value: "x" })) }];
-
-  it("cuts across groups and drops empty ones", () => {
-    expect(countRows(limitGroups(groups, 4))).toBe(4);
-    expect(limitGroups(groups, 3).map((g) => g.name)).toEqual(["A"]);
-    expect(countRows(limitGroups(groups, 8))).toBe(6);
+describe("normalizeHighlights", () => {
+  it("accepts strings and title/text objects and drops blanks", () => {
+    expect(normalizeHighlights(["Plain", { title: "Lead", text: "Body" }, { text: " Only " }, { title: "T" }, { text: "" }, "  ", null, 4])).toEqual([
+      { title: "", text: "Plain" },
+      { title: "Lead", text: "Body" },
+      { title: "", text: "Only" },
+      { title: "", text: "T" }
+    ]);
+    expect(normalizeHighlights(undefined)).toEqual([]);
   });
 });
 
@@ -125,6 +137,21 @@ describe("buildItemJsonLd", () => {
     expect(of("out_of_stock")).toBe("https://schema.org/OutOfStock");
     expect(of("unavailable")).toBe("https://schema.org/OutOfStock");
     expect(of("by_appointment")).toBe("https://schema.org/InStock");
+  });
+
+  it("adds the item's brand and specs, and keeps the store brand without them", () => {
+    const withDetails = buildItemJsonLd({
+      item: { ...base, kind: "product", pricing: { salePrice: 1 }, brand: " Thermos ", specs: [{ group: "Measurements", label: "Capacity", value: "1 litre" }, { label: "", value: "x" }] },
+      siteUrl: "https://e.test"
+    });
+    expect(withDetails.brand).toEqual({ "@type": "Brand", name: "Thermos" });
+    expect(withDetails.additionalProperty).toEqual([{ "@type": "PropertyValue", name: "Capacity", value: "1 litre" }]);
+    const plain = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 1 } }, siteUrl: "https://e.test" });
+    expect(plain.brand).toEqual({ "@type": "Brand", name: "Shop" });
+    expect(plain.additionalProperty).toBeUndefined();
+    const service = buildItemJsonLd({ item: { ...base, kind: "service", pricing: null, brand: "Acme" }, siteUrl: "https://e.test" });
+    expect(service.brand.name).toBe("Acme");
+    expect(service.provider.name).toBe("Shop");
   });
 
   it("omits offers without a price", () => {

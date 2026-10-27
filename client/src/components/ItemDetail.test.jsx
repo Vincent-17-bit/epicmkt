@@ -233,6 +233,62 @@ describe("ItemDetail", () => {
   });
 });
 
+describe("ItemDetail details", () => {
+  const hl = (n) => Array.from({ length: n }, (_, i) => ({ title: i === 0 ? "Lead" : undefined, text: `Point ${i + 1}` }));
+
+  it("renders brand and highlights, five at first with Show all, in order before the panels", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, brand: "Thermos", highlights: hl(7), pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(screen.getByText("Thermos")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "About this item" })).toBeInTheDocument();
+    expect(screen.getByText("Lead").tagName).toBe("STRONG");
+    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^Lead/.test(li.textContent))).toHaveLength(5);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Show all" }));
+    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^Lead/.test(li.textContent))).toHaveLength(7);
+    await user.click(screen.getByRole("button", { name: "Show fewer" }));
+    const about = screen.getByRole("heading", { name: "About this item" });
+    const specs = screen.getByRole("button", { name: "Features & Specs" });
+    expect(about.compareDocumentPosition(specs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("opens and scrolls to the spec panels from See more product details", async () => {
+    const scroll = vi.fn();
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = scroll;
+    mocks.getDetail.mockResolvedValue({ ...base, highlights: hl(2), pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Features & Specs" }));
+    await user.click(screen.getByRole("button", { name: "See more product details" }));
+    expect(screen.getByRole("button", { name: "Features & Specs" })).toHaveAttribute("aria-expanded", "true");
+    expect(scroll).toHaveBeenLastCalledWith(expect.objectContaining({ block: "start" }));
+    Element.prototype.scrollIntoView = original;
+  });
+
+  it("renders nothing extra without brand or highlights", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, highlights: [], pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    expect(screen.queryByRole("heading", { name: "About this item" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "See more product details" })).not.toBeInTheDocument();
+  });
+
+  it("works in the page layout", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, highlights: hl(1), pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mount({ layout: "page" });
+    await screen.findByRole("heading", { level: 1, name: "Fade and beard" });
+    expect(screen.getByRole("heading", { name: "About this item" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Features & Specs" })).toBeInTheDocument();
+  });
+});
+
 describe("ItemDetail flash expiry", () => {
   afterEach(() => {
     vi.useRealTimers();

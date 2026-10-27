@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { buildSpecGroups, countRows, limitGroups, SPEC_LIMIT } from "../lib/itemView.js";
+import { buildSpecGroups } from "../lib/itemView.js";
 import { t } from "../i18n/index.js";
 import styles from "./ItemSpecs.module.css";
 
@@ -15,13 +15,21 @@ function scrollParent(node) {
 
 // A panel opened far down the page would land off screen or behind the sticky bar. Bring it into view:
 // the whole panel when it fits, otherwise its heading and the start of its text. Does nothing if it is already in view.
-function bringIntoView(node) {
+function bringIntoView(node, force) {
   if (!node?.scrollIntoView) return;
   const parent = scrollParent(node);
   const room = parent ? parent.clientHeight : window.visualViewport?.height ?? window.innerHeight;
   const calm = typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  node.scrollIntoView({ block: node.offsetHeight <= room * 0.9 ? "nearest" : "start", inline: "nearest", behavior: calm ? "auto" : "smooth" });
+  node.scrollIntoView({ block: force ?? (node.offsetHeight <= room * 0.9 ? "nearest" : "start"), inline: "nearest", behavior: calm ? "auto" : "smooth" });
 }
+
+const GROUP_PANELS = {
+  "Features & Specs": { key: "specs_features", title: "item.group.features" },
+  Measurements: { key: "specs_measurements", title: "item.group.measurements" },
+  "Additional details": { key: "specs_additional", title: "item.group.additional" },
+  "User guide": { key: "specs_guide", title: "item.group.guide" },
+  "Item details": { key: "specs_details", title: "item.group.details" }
+};
 
 function Panel({ id, title, open, onToggle, panelRef, children }) {
   return (
@@ -46,63 +54,57 @@ function Panel({ id, title, open, onToggle, panelRef, children }) {
   );
 }
 
-export default function ItemSpecs({ item, category, attributes, onExpand }) {
+export default function ItemSpecs({ item, category, attributes, onExpand, reveal = 0 }) {
   const uid = useId();
-  const [open, setOpen] = useState({ specs: true });
-  const [all, setAll] = useState(false);
-
   const groups = buildSpecGroups({ item, category, attributes });
-  const total = countRows(groups);
-  const shown = all ? groups : limitGroups(groups, SPEC_LIMIT);
+  const firstKey = groups.length ? GROUP_PANELS[groups[0].name].key : null;
+  const [open, setOpen] = useState(firstKey ? { [firstKey]: true } : {});
   const includes = item.includes ?? [];
   const nodes = useRef({});
-  const reveal = useRef(null);
+  const pending = useRef({ key: null, force: undefined });
   const toggle = (key) => () => {
     if (!open[key]) {
       onExpand?.(key);
-      reveal.current = key;
+      pending.current = { key, force: undefined };
     }
     setOpen((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   useEffect(() => {
-    const key = reveal.current;
+    const { key, force } = pending.current;
     if (!key) return;
-    reveal.current = null;
-    bringIntoView(nodes.current[key]);
+    pending.current = { key: null, force: undefined };
+    bringIntoView(nodes.current[key], force);
   }, [open]);
-  const toggleAll = () => {
-    if (!all) onExpand?.("specs_all");
-    setAll((v) => !v);
-  };
+
+  const seen = useRef(reveal);
+  useEffect(() => {
+    if (reveal === seen.current) return;
+    seen.current = reveal;
+    if (!firstKey) return;
+    if (!open[firstKey]) onExpand?.(firstKey);
+    pending.current = { key: firstKey, force: "start" };
+    setOpen((prev) => ({ ...prev, [firstKey]: true }));
+  }, [reveal]);
 
   const panels = [
-    total > 0 && {
-      key: "specs",
-      title: t("item.specs"),
-      body: (
-        <>
-          {shown.map((group) => (
-            <div key={group.name ?? "_"} className={styles.group}>
-              {group.name && <h4 className={styles.groupName}>{group.name}</h4>}
-              <dl className={styles.table}>
-                {group.rows.map((row) => (
-                  <div key={row.label} className={styles.row}>
-                    <dt className={styles.label}>{row.label}</dt>
-                    <dd className={styles.value}>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          ))}
-          {total > SPEC_LIMIT && (
-            <button type="button" className={styles.more} aria-expanded={all} onClick={toggleAll}>
-              {all ? t("item.showLess") : t("item.showAll")}
-            </button>
-          )}
-        </>
-      )
-    },
+    ...groups.map((group) => {
+      const { key, title } = GROUP_PANELS[group.name];
+      return {
+        key,
+        title: t(title),
+        body: (
+          <dl className={styles.table}>
+            {group.rows.map((row) => (
+              <div key={row.label} className={styles.row}>
+                <dt className={styles.label}>{row.label}</dt>
+                <dd className={styles.value}>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )
+      };
+    }),
     item.description && { key: "description", title: t("item.description"), body: <p className={styles.text}>{item.description}</p> },
     includes.length > 0 && {
       key: "included",

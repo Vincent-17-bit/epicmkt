@@ -30,53 +30,54 @@ export function offerTarget(offer, business) {
 }
 
 const SCALARS = ["text", "number", "price", "boolean", "select", "multiselect"];
-const LIMIT_ROWS = 8;
+
+export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
+export const HIGHLIGHT_LIMIT = 5;
+
+const [DEFAULT_GROUP, , , , DETAILS_GROUP] = SPEC_GROUPS;
 
 const isBlank = (value) => value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
+const asGroup = (name, fallback) => (SPEC_GROUPS.includes(name) ? name : fallback);
+
 export function buildSpecGroups({ item, category, attributes }) {
-  const groups = [];
+  const buckets = new Map(SPEC_GROUPS.map((name) => [name, []]));
   const seen = new Set();
   const add = (name, label, value) => {
-    const key = label.trim().toLowerCase();
-    if (!label || isBlank(value) || seen.has(key)) return;
+    const key = typeof label === "string" ? label.trim().toLowerCase() : "";
+    if (!key || isBlank(value) || seen.has(key)) return;
     seen.add(key);
-    let group = groups.find((g) => g.name === name);
-    if (!group) {
-      group = { name, rows: [] };
-      groups.push(group);
-    }
-    group.rows.push({ label, value: String(value) });
+    buckets.get(name).push({ label, value: String(value) });
   };
-  for (const spec of item?.specs ?? []) add(spec.group ?? null, spec.label, spec.value);
-  add(null, "Duration", item?.duration);
-  add(null, "Term", item?.term);
-  add(null, "Pack size", item?.packSize);
-  add(null, "Unit", item?.pricing?.unit);
-  const fallback = category?.singular ? `${category.singular} details` : null;
+  for (const spec of item?.specs ?? []) add(asGroup(spec.group, DEFAULT_GROUP), spec.label, spec.value);
+  add(DETAILS_GROUP, "Duration", item?.duration);
+  add(DETAILS_GROUP, "Term", item?.term);
+  add(DETAILS_GROUP, "Pack size", item?.packSize);
+  add(DETAILS_GROUP, "Unit", item?.pricing?.unit);
   for (const field of visibleFields(category?.fields, attributes)) {
     if (!SCALARS.includes(field.type)) continue;
     const value = attributes?.[field.key];
     if (isBlank(value) || (field.type === "boolean" && value === false)) continue;
-    add(field.group ?? fallback, field.label, formatValue(field, value));
+    add(DETAILS_GROUP, field.label, formatValue(field, value));
   }
-  return groups.filter((g) => g.rows.length > 0);
-}
-
-export function limitGroups(groups, max = LIMIT_ROWS) {
-  let left = max;
-  const out = [];
-  for (const group of groups) {
-    if (left <= 0) break;
-    const rows = group.rows.slice(0, left);
-    left -= rows.length;
-    out.push({ ...group, rows });
-  }
-  return out;
+  return SPEC_GROUPS.map((name) => ({ name, rows: buckets.get(name) })).filter((g) => g.rows.length > 0);
 }
 
 export const countRows = (groups) => groups.reduce((sum, g) => sum + g.rows.length, 0);
-export const SPEC_LIMIT = LIMIT_ROWS;
+
+export function normalizeHighlights(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const entry of list) {
+    const raw = typeof entry === "string" ? { text: entry } : entry;
+    if (!raw || typeof raw !== "object") continue;
+    const text = typeof raw.text === "string" ? raw.text.trim() : "";
+    const title = typeof raw.title === "string" ? raw.title.trim() : "";
+    if (!text && !title) continue;
+    out.push(text ? { title, text } : { title: "", text: title });
+  }
+  return out;
+}
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -130,8 +131,14 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
     ...(item.description ? { description: item.description } : {}),
     ...(item.images?.length ? { image: item.images.map((image) => image.url) } : {})
   };
+  const brand = typeof item.brand === "string" ? item.brand.trim() : "";
   if (item.kind === "service") data.provider = seller;
-  else data.brand = { "@type": "Brand", name: item.business.name };
+  if (brand) data.brand = { "@type": "Brand", name: brand };
+  else if (item.kind !== "service") data.brand = { "@type": "Brand", name: item.business.name };
+  const properties = (item.specs ?? [])
+    .filter((spec) => spec && typeof spec.label === "string" && spec.label.trim() && !isBlank(spec.value))
+    .map((spec) => ({ "@type": "PropertyValue", name: spec.label.trim(), value: String(spec.value) }));
+  if (properties.length) data.additionalProperty = properties;
   if (item.pricing) {
     data.offers = {
       "@type": "Offer",
