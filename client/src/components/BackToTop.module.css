@@ -1,6 +1,6 @@
 .btn {
   position: fixed;
-  left: max(var(--space-3), var(--safe-left));
+  right: max(var(--space-3), var(--safe-right));
   bottom: calc(var(--space-3) + var(--safe-bottom));
   z-index: 15;
   display: inline-flex;
@@ -55,9 +55,15 @@
   transform: scale(0.96);
 }
 
+@media (max-width: 56rem) {
+  .lifted {
+    bottom: calc(var(--space-3) + 4.75rem + var(--safe-bottom));
+  }
+}
+
 @media (min-width: 64rem) {
   .btn {
-    left: max(var(--space-5), var(--safe-left));
+    right: max(var(--space-5), var(--safe-right));
     bottom: calc(var(--space-5) + var(--safe-bottom));
   }
 }

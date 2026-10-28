@@ -72,7 +72,7 @@ export default function Layout() {
           <Footer />
         </main>
       </div>
-      <BackToTop hidden={layered || /^\/b\/[^/]+\/i\//.test(pathname)} />
+      <BackToTop hidden={layered} lifted={/^\/b\/[^/]+\/i\//.test(pathname)} />
       <UpdatePrompt />
       <LocationDialog />
       <Toaster />
