@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  IMPORT_FIELDS, IMPORT_LABELS, IMPORT_MAX_BYTES, IMPORT_MAX_ROWS, IMPORT_TEMPLATE, checkImportFile, detectMapping, errorReportCsv,
+  IMPORT_FIELDS, IMPORT_LABELS, IMPORT_MAX_BYTES, IMPORT_MAX_ROWS, IMPORT_SPEC_HINT, IMPORT_TEMPLATE, checkImportFile, detectMapping, errorReportCsv,
   parseDelimited, positionalMapping, toImportPayload, validateImport,
 } from "@epicmkt/shared";
 import Modal from "./Modal.jsx";
@@ -120,7 +120,7 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
             <button type="button" role="tab" aria-selected={tab === "paste"} className={styles.tab} onClick={() => setTab("paste")}>Paste rows</button>
             <button type="button" role="tab" aria-selected={tab === "csv"} className={styles.tab} onClick={() => setTab("csv")}>Upload CSV</button>
           </div>
-          <p className={styles.hint}>Columns: {IMPORT_TEMPLATE.split("\t").join(", ")}. Up to {IMPORT_MAX_ROWS} rows and 2 MB. Imported items are saved as drafts, so nothing shows to customers until you choose Show.</p>
+          <p className={styles.hint}>Columns: {IMPORT_TEMPLATE.split("\t").join(", ")}. {IMPORT_SPEC_HINT} Up to {IMPORT_MAX_ROWS} rows and 2 MB. Imported items are saved as drafts, so nothing shows to customers until you choose Show.</p>
           {tab === "paste" ? (
             <>
               <textarea className={ui.input} rows={8} value={text} onChange={(e) => setText(e.target.value)} aria-label="Paste rows" placeholder="Copy cells from Excel or Google Sheets and paste here" />
@@ -157,6 +157,11 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
               </label>
             ))}
           </div>
+          {mapping.specs?.length > 0 && (
+            <p className={styles.hint} data-testid="import-spec-columns">
+              Specification columns found: {mapping.specs.map((c) => `${c.label} (${c.group})`).join(", ")}.
+            </p>
+          )}
           {result?.message && <p className={ui.error} role="alert">{result.message}</p>}
           {result && !result.message && (
             <p data-testid="import-summary" className={styles.summaryText}>

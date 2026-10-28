@@ -718,6 +718,52 @@ describe("paste and CSV import", () => {
     expect(await screen.findByText("2 items imported as drafts.")).toBeInTheDocument();
   });
 
+  it("reads highlights and spec columns, shows the spec columns it found, and stores them on the drafts", async () => {
+    const user = userEvent.setup();
+    await open("/business/catalog", async () => M.setBusiness({ planKey: "premium" }));
+    await ready();
+    await user.click(importButton());
+    const dialog = await screen.findByRole("dialog", { name: "Import items" });
+    expect(dialog).toHaveTextContent("spec:Label");
+    const head = "name\tprice\tbrand\tincludes\thighlights\tspec:Material\tspec:Measurements/Weight";
+    const text = [head, "Kettle\t3000\tAcme\tBase | Cord, 1 m\tBoils fast | Auto shut-off\tSteel\t1.2 kg", "Mug\t200\t\t\t\t\t", `Bad\t10\t\t\t\t${"s".repeat(121)}\t`].join("\n");
+    fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: text } });
+    await user.click(within(dialog).getByRole("button", { name: "Preview" }));
+    expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("2 ready to import, 1 rejected, 3 rows in total.");
+    expect(within(dialog).getByTestId("import-spec-columns")).toHaveTextContent("Material (Features & Specs), Weight (Measurements)");
+    expect(within(dialog).getByLabelText("Highlights column")).toHaveValue("4");
+    const rejected = within(dialog).getByTestId("import-rejected");
+    expect(rejected).toHaveTextContent("4");
+    expect(rejected).toHaveTextContent('Spec "Material": Use 120 characters or fewer.');
+    await user.click(within(dialog).getByRole("button", { name: "Import 2 items" }));
+    await waitFor(() => expect(M.state.items).toHaveLength(8));
+    const kettle = M.state.items.find((i) => i.name === "Kettle");
+    expect(kettle.includes).toEqual(["Base", "Cord, 1 m"]);
+    expect(kettle.highlights).toEqual([{ text: "Boils fast" }, { text: "Auto shut-off" }]);
+    expect(kettle.specs).toEqual([{ group: "Features & Specs", label: "Material", value: "Steel" }, { group: "Measurements", label: "Weight", value: "1.2 kg" }]);
+    expect(await screen.findByText("2 items imported as drafts.")).toBeInTheDocument();
+  });
+
+  it("names the rows the server skipped, and still reports the rows it created", async () => {
+    const user = userEvent.setup();
+    await open("/business/catalog", async () => M.setBusiness({ planKey: "premium" }));
+    await ready();
+    await user.click(importButton());
+    const dialog = await screen.findByRole("dialog", { name: "Import items" });
+    const realImport = api.importItems;
+    const spy = vi.spyOn(api, "importItems").mockImplementation(async (list) => {
+      const out = await realImport(list.slice(0, 1));
+      return { ...out, skipped: [{ row: 3, error: "invalid_details" }] };
+    });
+    fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: "name\tprice\nOne\t10\nTwo\t20" } });
+    await user.click(within(dialog).getByRole("button", { name: "Preview" }));
+    await user.click(within(dialog).getByRole("button", { name: "Import 2 items" }));
+    const note = await screen.findByRole("alert");
+    expect(note).toHaveTextContent("1 items imported as drafts. 1 row was skipped because a detail was not valid (row 3).");
+    expect(spy.mock.calls[0][0].map((r) => r.row)).toEqual([2, 3]);
+    spy.mockRestore();
+  });
+
   it("has no plan limit on how many items can be imported", async () => {
     const user = userEvent.setup();
     await open("/business/catalog", async () => {

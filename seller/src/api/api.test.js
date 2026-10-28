@@ -97,19 +97,44 @@ test("import details: the mock stores them, refuses bad ones, and rows without t
   const bare = await find("it-fade");
   assert.deepEqual([bare.brand, bare.shortDescription, bare.packSize, bare.terms, bare.includes], [null, null, null, null, []]);
   const before = (await mock.getCatalog()).items.length;
-  await assert.rejects(mock.importItems([{ name: "Fine", price_type: "free" }, { name: "Bad", price_type: "free", brand: "x".repeat(61) }]), { code: "invalid_details" });
-  await assert.rejects(mock.importItems([{ name: "Bad", price_type: "free", includes: ["ok", 1] }]), { code: "invalid_details" });
-  await assert.rejects(mock.importItems([{ name: "Bad", price_type: "free", terms: "=cmd" }]), { code: "formula_rejected" });
-  assert.equal((await mock.getCatalog()).items.length, before);
+  // A bad detail skips only that row and names it; the other rows are still created (the database does the same).
+  assert.deepEqual(await mock.importItems([{ name: "Fine", price_type: "free", row: 2 }, { name: "Bad", price_type: "free", row: 3, brand: "x".repeat(61) }]), { created: 1, skipped: [{ row: 3, error: "invalid_details" }] });
+  assert.deepEqual(await mock.importItems([{ name: "Bad", price_type: "free", includes: ["ok", 1] }]), { created: 0, skipped: [{ row: 1, error: "invalid_details" }] });
+  assert.deepEqual(await mock.importItems([{ name: "Bad", price_type: "free", terms: "=cmd" }]), { created: 0, skipped: [{ row: 1, error: "formula_rejected" }] });
+  // A bad name still refuses everything.
+  await assert.rejects(mock.importItems([{ name: "Fine", price_type: "free" }, { name: "=SUM(A1)", price_type: "free" }]), { code: "formula_rejected" });
+  assert.equal((await mock.getCatalog()).items.length, before + 1);
   assert.deepEqual(await mock.importItems([
     { name: "Cake", price_type: "free", brand: " Acme ", short_description: "Fresh", pack_size: "Box of 6", terms: "Order ahead", includes: ["Candles", " "] },
     { name: "Plain", price_type: "free" },
-  ]), { created: 2 });
+  ]), { created: 2, skipped: [] });
   const items = (await mock.getCatalog()).items;
   const cake = items.find((i) => i.name === "Cake");
   assert.deepEqual([cake.brand, cake.shortDescription, cake.packSize, cake.terms, cake.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
   const plain = items.find((i) => i.name === "Plain");
   assert.deepEqual([plain.brand, plain.shortDescription, plain.packSize, plain.terms, plain.includes], [null, null, null, null, []]);
+});
+
+test("import details: highlights and specs are stored, a missing group is filled, bad ones skip the row", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  mock.__mock.setBusiness({ planKey: "premium" });
+  const spec = (over = {}) => ({ group: "Measurements", label: "Weight", value: "2 kg", ...over });
+  const out = await mock.importItems([
+    { name: "Kettle", price_type: "free", row: 2, highlights: [{ text: "Fast" }, { title: " ", text: "Quiet" }, { title: "Safe", text: "Auto off" }], specs: [{ label: "Material", value: "Steel" }, spec()] },
+    { name: "Too many specs", price_type: "free", row: 3, specs: Array.from({ length: 21 }, (_, i) => spec({ label: `L${i}` })) },
+    { name: "Bad group", price_type: "free", row: 4, specs: [spec({ group: "Nope" })] },
+    { name: "Nine highlights", price_type: "free", row: 5, highlights: Array.from({ length: 9 }, () => ({ text: "x" })) },
+    { name: "Formula spec", price_type: "free", row: 6, specs: [spec({ value: "=1+1" })] },
+    { name: "Plain", price_type: "free", row: 7 },
+  ]);
+  assert.deepEqual(out, { created: 2, skipped: [{ row: 3, error: "invalid_details" }, { row: 4, error: "invalid_details" }, { row: 5, error: "invalid_details" }, { row: 6, error: "formula_rejected" }] });
+  const items = (await mock.getCatalog()).items;
+  const kettle = items.find((i) => i.name === "Kettle");
+  assert.deepEqual(kettle.highlights, [{ text: "Fast" }, { text: "Quiet" }, { title: "Safe", text: "Auto off" }]);
+  assert.deepEqual(kettle.specs, [{ group: "Features & Specs", label: "Material", value: "Steel" }, { group: "Measurements", label: "Weight", value: "2 kg" }]);
+  const plain = items.find((i) => i.name === "Plain");
+  assert.deepEqual([plain.highlights, plain.specs], [[], []]);
 });
 
 test("import details: the live shape returns them the same way the mock does", () => {

@@ -227,7 +227,7 @@ test("import is Premium only, drafts-safe, limited and atomic", async () => {
   ]);
   await rejects(c, asA, `select seller_import_items('${rows}'::jsonb)`, [], /premium_required/);
   const res = (await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r;
-  assert.deepEqual(res, { created: 2 });
+  assert.deepEqual(res, { created: 2, skipped: [] });
   const made = await sql(c, `select * from items where business_id = $1 order by sort`, [ids.bizB]);
   assert.equal(made.length, 2);
   assert.ok(made.every((m) => m.draft && !m.visible));
@@ -559,7 +559,7 @@ test("import stores the optional details and leaves rows without them as before"
     { name: "Plain", price_type: "fixed", price: 10 },
     { name: "Blanks", price_type: "fixed", price: 10, brand: "", short_description: null, includes: null },
   ]);
-  assert.deepEqual((await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r, { created: 3 });
+  assert.deepEqual((await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r, { created: 3, skipped: [] });
   const made = Object.fromEntries((await sql(c, `select * from items where business_id = $1`, [ids.bizB])).map((m) => [m.name, m]));
   assert.deepEqual([made.Cake.brand, made.Cake.short_description, made.Cake.pack_size, made.Cake.terms], ["Acme", "Fresh daily", "Box of 6", "Order a day ahead"]);
   assert.deepEqual(made.Cake.includes, ["Candles", "Knife"]);
@@ -570,27 +570,56 @@ test("import stores the optional details and leaves rows without them as before"
   assert.ok(Object.values(made).every((m) => m.draft && !m.visible));
 });
 
-test("a bad detail stops the whole import", async () => {
+test("a bad detail skips only that row and reports it", async () => {
   await sql(c, `delete from items`);
   const ok = { name: "Fine row", price_type: "fixed", price: 5 };
   const longer = (n) => "x".repeat(n);
-  for (const [bad, pattern] of [
-    [{ brand: longer(61) }, /invalid_details/],
-    [{ short_description: longer(141) }, /invalid_details/],
-    [{ pack_size: longer(41) }, /invalid_details/],
-    [{ terms: longer(501) }, /invalid_details/],
-    [{ brand: 5 }, /invalid_details/],
-    [{ includes: "Cable" }, /invalid_details/],
-    [{ includes: [1] }, /invalid_details/],
-    [{ includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, /invalid_details/],
-    [{ includes: [longer(81)] }, /invalid_details/],
-    [{ brand: "=cmd" }, /formula_rejected/],
-    [{ terms: "@SUM(A1)" }, /formula_rejected/],
-    [{ includes: ["Cable", "+1+1"] }, /formula_rejected/],
+  const spec = (over = {}) => ({ group: "Measurements", label: "Weight", value: "2 kg", ...over });
+  for (const bad of [
+    { brand: longer(61) }, { short_description: longer(141) }, { pack_size: longer(41) }, { terms: longer(501) }, { brand: 5 },
+    { includes: "Cable" }, { includes: [1] }, { includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, { includes: [longer(81)] },
+    { highlights: {} }, { highlights: Array.from({ length: 9 }, () => ({ text: "Fast" })) }, { highlights: [{ text: longer(201) }] }, { highlights: [{ title: "Only a title" }] },
+    { specs: {} }, { specs: Array.from({ length: 21 }, (_, i) => spec({ label: `Label ${i}` })) }, { specs: [spec({ group: "Nonsense" })] }, { specs: [spec({ value: longer(121) })] },
+    { specs: [spec({ label: "  " })] },
   ]) {
-    await rejects(c, asB, `select seller_import_items($1::jsonb)`, [json([ok, { name: "Bad row", price_type: "fixed", price: 5, ...bad }])], pattern);
+    const out = (await as(asB, `select seller_import_items($1::jsonb) as r`, [json([ok, { name: "Bad row", price_type: "fixed", price: 5, row: 7, ...bad }])]))[0].r;
+    assert.deepEqual(out, { created: 1, skipped: [{ row: 7, error: "invalid_details" }] }, JSON.stringify(bad).slice(0, 60));
+    await sql(c, `delete from items`);
   }
+  for (const bad of [{ brand: "=cmd" }, { terms: "@SUM(A1)" }, { includes: ["Cable", "+1+1"] }, { highlights: [{ text: "-5 off" }] }, { highlights: [{ title: "=x", text: "ok" }] }, { specs: [spec({ value: "=1+1" })] }, { specs: [spec({ label: "@x" })] }]) {
+    const out = (await as(asB, `select seller_import_items($1::jsonb) as r`, [json([{ name: "Bad row", price_type: "fixed", price: 5, row: 4, ...bad }, ok])]))[0].r;
+    assert.deepEqual(out, { created: 1, skipped: [{ row: 4, error: "formula_rejected" }] }, JSON.stringify(bad).slice(0, 60));
+    await sql(c, `delete from items`);
+  }
+  // Several bad rows are all reported; a row sent without a number is named by its place in the list; every good row is stored.
+  const many = [ok, { name: "Bad one", price_type: "free", row: 3, brand: longer(61) }, { name: "Good two", price_type: "free", row: 4 }, { name: "Bad two", price_type: "free", brand: "=x" }, { name: "Good three", price_type: "free" }];
+  assert.deepEqual((await as(asB, `select seller_import_items($1::jsonb) as r`, [json(many)]))[0].r, {
+    created: 3, skipped: [{ row: 3, error: "invalid_details" }, { row: 4, error: "formula_rejected" }],
+  });
+  assert.deepEqual((await sql(c, `select name from items where business_id = $1 order by sort`, [ids.bizB])).map((m) => m.name), ["Fine row", "Good two", "Good three"]);
+  await sql(c, `delete from items`);
+  // Problems that are not about the optional details still refuse the whole import.
+  await rejects(c, asB, `select seller_import_items($1::jsonb)`, [json([ok, { name: "=SUM(A1)", price_type: "fixed", price: 5 }])], /formula_rejected/);
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 0);
+});
+
+test("import stores highlights and specs, and fills a missing spec group", async () => {
+  await sql(c, `delete from items`);
+  const rows = json([
+    { name: "Kettle", price_type: "fixed", price: 3000, row: 2,
+      highlights: [{ text: "Boils in 3 minutes" }, { title: " ", text: "Auto shut-off" }, { title: "Quiet", text: "Under 50 dB" }],
+      specs: [{ label: "Material", value: "Steel" }, { group: null, label: "Colour", value: "Black" }, { group: "Measurements", label: "Capacity", value: "1.7 l" }] },
+    { name: "Plain", price_type: "fixed", price: 10, row: 3 },
+  ]);
+  assert.deepEqual((await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r, { created: 2, skipped: [] });
+  const made = Object.fromEntries((await sql(c, `select * from items where business_id = $1`, [ids.bizB])).map((m) => [m.name, m]));
+  assert.deepEqual(made.Kettle.highlights, [{ text: "Boils in 3 minutes" }, { text: "Auto shut-off" }, { title: "Quiet", text: "Under 50 dB" }]);
+  assert.deepEqual(made.Kettle.specs, [
+    { group: "Features & Specs", label: "Material", value: "Steel" }, { group: "Features & Specs", label: "Colour", value: "Black" },
+    { group: "Measurements", label: "Capacity", value: "1.7 l" },
+  ]);
+  assert.deepEqual([made.Plain.highlights, made.Plain.specs], [[], []]);
+  assert.ok(Object.values(made).every((m) => m.draft && !m.visible));
 });
 
 test("the seller catalog carries the details only when an item has them", async () => {

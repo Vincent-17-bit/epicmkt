@@ -678,31 +678,38 @@ export const importItems = async (rows) => {
   if (!Array.isArray(rows) || rows.length === 0) throw new ApiError("no_rows");
   if (rows.length > 500) throw new ApiError("too_many_rows");
   const formula = (v) => /^[=+\-@]/.test(String(v ?? ""));
-  if (rows.some((r) => [r.name, r.section, r.unit, r.brand, r.short_description, r.pack_size, r.terms, ...(Array.isArray(r.includes) ? r.includes : [])].some(formula))) throw new ApiError("formula_rejected");
-  const text = (v, max) => {
-    if (v === undefined || v === null) return null;
-    if (typeof v !== "string" || v.trim().length > max) throw new ApiError("invalid_details");
-    return v.trim() || null;
+  // Like seller_import_items: a bad name, section or unit refuses the whole import, but a row whose optional details are not valid
+  // is skipped and reported, and the other rows are still created.
+  if (rows.some((r) => [r.name, r.section, r.unit].some(formula))) throw new ApiError("formula_rejected");
+  const arr = (v) => (Array.isArray(v) ? v : []);
+  const detailFormula = (r) =>
+    [r.brand, r.short_description, r.pack_size, r.terms, ...arr(r.includes).map((e) => (typeof e === "string" ? e.trim() : e)), ...arr(r.highlights).flatMap((h) => [h?.text, h?.title]), ...arr(r.specs).flatMap((x) => [x?.label, x?.value])].some(formula);
+  const detailsOf = (r) => {
+    if (detailFormula(r)) return { error: "formula_rejected" };
+    const listOk = (v) => v === undefined || v === null || Array.isArray(v);
+    if (!listOk(r.includes) || !listOk(r.highlights) || !listOk(r.specs)) return { error: "invalid_details" };
+    if (arr(r.includes).some((e) => typeof e !== "string")) return { error: "invalid_details" };
+    const sentKeys = { brand: r.brand, shortDescription: r.short_description, packSize: r.pack_size, terms: r.terms };
+    const f = Object.fromEntries(Object.entries(sentKeys).filter(([, v]) => v !== undefined && v !== null));
+    f.includes = arr(r.includes).map((e) => e.trim()).filter(Boolean);
+    f.highlights = arr(r.highlights);
+    f.specs = arr(r.specs);
+    const out = storedItemDetails(f);
+    return out.ok ? { value: out.value } : { error: "invalid_details" };
   };
-  const list = (v) => {
-    if (v === undefined || v === null) return [];
-    if (!Array.isArray(v) || v.some((e) => typeof e !== "string")) throw new ApiError("invalid_details");
-    const out = v.map((e) => e.trim()).filter(Boolean);
-    if (out.length > 10 || out.some((e) => e.length > 80)) throw new ApiError("invalid_details");
-    return out;
-  };
-  const details = rows.map((r) => ({ brand: text(r.brand, 60), shortDescription: text(r.short_description, 140), packSize: text(r.pack_size, 40), terms: text(r.terms, 500), includes: list(r.includes) }));
+  const checked = rows.map((r, n) => ({ r, row: Number.isInteger(r.row) && r.row >= 0 ? r.row : n + 1, ...detailsOf(r) }));
+  const skipped = checked.filter((c) => c.error).map((c) => ({ row: c.row, error: c.error }));
   const now = clockNow().toISOString();
   let sort = Math.max(0, ...bill.items.map((i) => i.sort));
-  const made = rows.map((r, n) => ({
-    ...details[n],
+  const made = checked.filter((c) => !c.error).map(({ r, value }) => ({
+    brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], specs: [], ...value,
     id: `it-imp-${++bill.seq}`, name: r.name, price: r.price ?? null, priceMax: r.price_max ?? null, priceType: r.price_type, unit: r.unit ?? null, salePrice: null,
     availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
     section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),
-    tags: r.tags ?? [], badge: null, variants: [], specs: [], highlights: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
+    tags: r.tags ?? [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
   }));
   bill.items.push(...made);
-  return { created: made.length };
+  return { created: made.length, skipped };
 };
 export const getSavedViews = async () => { signedIn(); await wait(); return copy(bill.views); };
 export const saveSavedViews = async (views) => {

@@ -14,7 +14,7 @@ export const SPEC_LIMITS = { rows: 20, label: 40, value: 120 };
 export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
 export const SPEC_DEFAULT_GROUP = SPEC_GROUPS[0];
 
-const cleanSpecs = (raw) => {
+export const cleanSpecs = (raw) => {
   const specs = [];
   const errors = {};
   const seen = new Set();
@@ -51,7 +51,7 @@ export const ITEM_DETAIL_LIMITS = {
   highlights: { rows: 8, title: 40, text: 200 },
 };
 
-const cleanIncludes = (raw) => {
+export const cleanIncludes = (raw) => {
   const includes = [];
   const errors = {};
   (Array.isArray(raw) ? raw : []).forEach((row, index) => {
@@ -66,7 +66,7 @@ const cleanIncludes = (raw) => {
   return { includes, errors };
 };
 
-const cleanHighlights = (raw) => {
+export const cleanHighlights = (raw) => {
   const highlights = [];
   const errors = {};
   (Array.isArray(raw) ? raw : []).forEach((row, index) => {

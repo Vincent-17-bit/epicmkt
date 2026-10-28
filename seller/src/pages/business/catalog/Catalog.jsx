@@ -471,7 +471,12 @@ export default function Catalog() {
           onImport={async (rows) => {
             const out = await api.importItems(rows);
             await refresh();
-            setNotice({ tone: "ok", text: `${out.created} items imported as drafts.` });
+            const skipped = Array.isArray(out.skipped) ? out.skipped : [];
+            const rowsText = skipped.slice(0, 5).map((k) => k.row).join(", ") + (skipped.length > 5 ? " and more" : "");
+            setNotice({
+              tone: skipped.length ? "error" : "ok",
+              text: `${out.created} items imported as drafts.${skipped.length ? ` ${skipped.length} ${skipped.length === 1 ? "row was" : "rows were"} skipped because a detail was not valid (row ${rowsText}). Fix ${skipped.length === 1 ? "it" : "them"} and import again.` : ""}`,
+            });
             setDialog(null);
           }}
         />

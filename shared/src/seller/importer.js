@@ -1,13 +1,17 @@
 import { DB_AVAILABILITY } from "./filters.js";
+import { ITEM_DETAIL_LIMITS, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, cleanHighlights, cleanIncludes, cleanSpecs } from "./itemForm.js";
 
 export const IMPORT_MAX_BYTES = 2 * 1024 * 1024;
 export const IMPORT_MAX_ROWS = 500;
-export const IMPORT_FIELDS = ["name", "price_type", "price", "unit", "availability", "section", "tags", "brand", "short_description", "pack_size", "terms", "includes"];
+export const IMPORT_FIELDS = ["name", "price_type", "price", "unit", "availability", "section", "tags", "brand", "short_description", "pack_size", "terms", "includes", "highlights"];
 export const IMPORT_LABELS = {
   name: "Name", price_type: "Price type", price: "Price", unit: "Unit", availability: "Availability", section: "Section", tags: "Tags",
-  brand: "Brand", short_description: "Short description", pack_size: "Pack size", terms: "Terms", includes: "Includes",
+  brand: "Brand", short_description: "Short description", pack_size: "Pack size", terms: "Terms", includes: "Includes", highlights: "Highlights",
 };
-export const IMPORT_TEMPLATE = "name\tprice type\tprice\tunit\tavailability\tsection\ttags\tbrand\tshort description\tpack size\tterms\tincludes";
+export const IMPORT_TEMPLATE = "name\tprice type\tprice\tunit\tavailability\tsection\ttags\tbrand\tshort description\tpack size\tterms\tincludes\thighlights";
+// Specification columns are named in the header, one column per row: "spec:Material", or "spec:Measurements/Weight" to choose the group.
+export const IMPORT_SPEC_HINT = `Spec columns: spec:Label, or spec:Group/Label (${SPEC_GROUPS.join(", ")}). Separate included items and highlights with |.`;
+export const IMPORT_LIST_SEPARATOR = "|";
 
 const HEADERS = {
   name: ["name", "item", "item name", "product", "product name", "title", "service"],
@@ -22,6 +26,7 @@ const HEADERS = {
   pack_size: ["pack size", "pack_size", "pack", "package size"],
   terms: ["terms", "conditions", "terms and conditions"],
   includes: ["includes", "included", "what's included", "whats included", "in the box", "in the pack"],
+  highlights: ["highlights", "highlight", "about this item", "key features", "bullet points"],
 };
 
 const PRICE_TYPES = {
@@ -96,10 +101,32 @@ export const parseDelimited = (input) => {
 
 const norm = (s) => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
 
+// "spec:Material" or "spec:Measurements/Weight". The group is only taken from the text before the first "/" when it names one of
+// the five groups (any case); otherwise the whole text is the label and the group is the default, so "spec:Width/Height" still works.
+export const specColumnOf = (cell, index) => {
+  const found = /^\s*spec\s*:\s*(.+?)\s*$/i.exec(String(cell ?? ""));
+  if (!found) return null;
+  const rest = found[1];
+  const slash = rest.indexOf("/");
+  if (slash > 0) {
+    const group = SPEC_GROUPS.find((g) => g.toLowerCase() === rest.slice(0, slash).trim().toLowerCase());
+    const label = rest.slice(slash + 1).trim();
+    if (group && label) return { index, group, label };
+  }
+  return { index, group: SPEC_DEFAULT_GROUP, label: rest };
+};
+
 export const detectMapping = (firstRow) => {
   const mapping = Object.fromEntries(IMPORT_FIELDS.map((f) => [f, null]));
   const used = new Set();
+  const specs = [];
   firstRow.forEach((cell, index) => {
+    const spec = specColumnOf(cell, index);
+    if (spec) {
+      specs.push(spec);
+      used.add(index);
+      return;
+    }
     const key = norm(cell);
     for (const field of IMPORT_FIELDS) {
       if (mapping[field] === null && !used.has(index) && HEADERS[field].includes(key)) {
@@ -108,14 +135,14 @@ export const detectMapping = (firstRow) => {
       }
     }
   });
-  const matched = Object.values(mapping).filter((v) => v !== null).length;
-  return { mapping, hasHeader: mapping.name !== null && matched >= 2 };
+  const matched = Object.values(mapping).filter((v) => v !== null).length + specs.length;
+  return { mapping: { ...mapping, specs }, hasHeader: mapping.name !== null && matched >= 2 };
 };
 
 const POSITIONAL_FIELDS = IMPORT_FIELDS.slice(0, 7);
 
 export const positionalMapping = (columns) =>
-  Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, POSITIONAL_FIELDS.includes(f) && i < columns ? i : null]));
+  ({ ...Object.fromEntries(IMPORT_FIELDS.map((f, i) => [f, POSITIONAL_FIELDS.includes(f) && i < columns ? i : null])), specs: [] });
 
 const parsePrice = (raw) => {
   const cleaned = raw.replace(/\s*(kes|ksh|kshs|\/=)\s*/gi, "").replace(/,/g, "").trim();
@@ -127,16 +154,24 @@ const parsePrice = (raw) => {
 };
 
 const TAG_LIMIT = 10;
-export const DETAIL_LIMITS = { brand: 60, short_description: 140, pack_size: 40, terms: 500, includes: 10, include: 80 };
+const LIST_FIELDS = ["includes", "highlights"];
+const listOf = (cell) => cell.split(IMPORT_LIST_SEPARATOR).map((part) => part.trim()).filter(Boolean);
+export const DETAIL_LIMITS = { brand: 60, short_description: 140, pack_size: 40, terms: 500, includes: ITEM_DETAIL_LIMITS.includes.rows, include: ITEM_DETAIL_LIMITS.includes.text, highlights: ITEM_DETAIL_LIMITS.highlights.rows };
 
 export const validateRow = (cells, mapping) => {
   const get = (field) => (mapping[field] === null || mapping[field] === undefined ? "" : String(cells[mapping[field]] ?? "").trim());
   const errors = [];
+  const specColumns = Array.isArray(mapping.specs) ? mapping.specs : [];
   for (const field of IMPORT_FIELDS) {
     const index = mapping[field];
-    if (index !== null && index !== undefined && startsWithFormula(String(cells[index] ?? ""))) {
-      errors.push(`${IMPORT_LABELS[field]} starts with = + - or @ (spreadsheet formula). Remove that character.`);
-    }
+    if (index === null || index === undefined) continue;
+    const cell = String(cells[index] ?? "");
+    // A list cell is checked part by part, because the database checks every line it stores.
+    const parts = LIST_FIELDS.includes(field) ? cell.split(IMPORT_LIST_SEPARATOR) : [cell];
+    if (parts.some(startsWithFormula)) errors.push(`${IMPORT_LABELS[field]} starts with = + - or @ (spreadsheet formula). Remove that character.`);
+  }
+  for (const col of specColumns) {
+    if (startsWithFormula(String(cells[col.index] ?? ""))) errors.push(`Spec "${col.label}" starts with = + - or @ (spreadsheet formula). Remove that character.`);
   }
   if (errors.length) return { errors };
 
@@ -204,14 +239,30 @@ export const validateRow = (cells, mapping) => {
     if (text.length > DETAIL_LIMITS[field]) errors.push(`${IMPORT_LABELS[field]} is over ${DETAIL_LIMITS[field]} characters.`);
     else if (text) details[field] = text;
   }
+  // Included items and highlights are separated by |, so a comma inside one item stays part of it.
   const includes = [];
-  for (const part of get("includes").split(/[,;|]/)) {
-    const entry = part.trim();
-    if (entry && !includes.some((t) => t.toLowerCase() === entry.toLowerCase())) includes.push(entry);
-  }
+  for (const entry of listOf(get("includes"))) if (!includes.some((t) => t.toLowerCase() === entry.toLowerCase())) includes.push(entry);
   if (includes.length > DETAIL_LIMITS.includes) errors.push(`Use at most ${DETAIL_LIMITS.includes} included items.`);
-  if (includes.some((t) => t.length > DETAIL_LIMITS.include)) errors.push(`An included item is over ${DETAIL_LIMITS.include} characters.`);
-  if (includes.length) details.includes = includes;
+  const includeCheck = cleanIncludes(includes);
+  if (Object.keys(includeCheck.errors).length) errors.push(`An included item is over ${DETAIL_LIMITS.include} characters.`);
+  else if (includes.length) details.includes = includeCheck.includes;
+
+  const highlightCheck = cleanHighlights(listOf(get("highlights")).map((text) => ({ text })));
+  if (highlightCheck.highlights.length + Object.keys(highlightCheck.errors).length > DETAIL_LIMITS.highlights) errors.push(`Use at most ${DETAIL_LIMITS.highlights} highlights.`);
+  if (Object.keys(highlightCheck.errors).length) errors.push(`A highlight is over ${ITEM_DETAIL_LIMITS.highlights.text} characters.`);
+  else if (highlightCheck.highlights.length) details.highlights = highlightCheck.highlights;
+
+  // One column per specification. An empty cell means the item has no such row.
+  const filledSpecs = specColumns
+    .map((col) => ({ col, value: String(cells[col.index] ?? "").trim() }))
+    .filter((s) => s.value !== "");
+  const specCheck = cleanSpecs(filledSpecs.map((s) => ({ group: s.col.group, label: s.col.label, value: s.value })));
+  for (const [at, problem] of Object.entries(specCheck.errors)) {
+    const label = filledSpecs[Number(at)].col.label;
+    for (const message of Object.values(problem)) errors.push(`Spec "${label}": ${message}`);
+  }
+  if (specCheck.specs.length > SPEC_LIMITS.rows) errors.push(`Use at most ${SPEC_LIMITS.rows} specifications.`);
+  else if (specCheck.specs.length) details.specs = specCheck.specs;
 
   if (errors.length) return { errors };
   return {
@@ -259,4 +310,5 @@ export const errorReportCsv = (rejected, headers = []) => {
   return [head.map(csvCell).join(","), ...lines].join("\r\n");
 };
 
-export const toImportPayload = (valid) => valid.map((v) => v.value);
+// Each row carries its spreadsheet row number, which the database hands back if it has to skip the row.
+export const toImportPayload = (valid) => valid.map((v) => ({ ...v.value, row: v.row }));
