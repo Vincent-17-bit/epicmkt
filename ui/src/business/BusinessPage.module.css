@@ -1,9 +1,72 @@
-.page {
+.root {
+  container: biz / inline-size;
+}
+
+.root .page {
   display: grid;
   gap: var(--space-4);
-  max-width: 48rem;
+  max-width: var(--content-width);
   padding-block: var(--space-5) clamp(var(--space-5), 5vw, var(--space-7));
+  padding-inline: max(var(--space-4), var(--safe-left)) max(var(--space-4), var(--safe-right));
   margin-inline: auto;
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.main,
+.side {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@container biz (min-width: 48rem) {
+  .root .page,
+  .root .heroInner {
+    padding-inline: max(var(--space-5), var(--safe-left)) max(var(--space-5), var(--safe-right));
+  }
+
+  .side {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-5);
+  }
+
+  .side > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+  }
+}
+
+@container biz (min-width: 72rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) clamp(20rem, 28cqi, 28rem);
+    align-items: start;
+    gap: var(--space-6);
+  }
+
+  .side {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-4);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+  }
+
+  .side > section:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@container biz (min-width: 80rem) {
+  .root .page,
+  .root .heroInner {
+    padding-inline: max(var(--space-6), var(--safe-left)) max(var(--space-6), var(--safe-right));
+  }
 }
 
 .state {
@@ -25,7 +88,7 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  max-width: 72rem;
+  max-width: var(--content-width);
   min-height: 9rem;
   margin-inline: auto;
   aspect-ratio: 3 / 1;
@@ -50,8 +113,22 @@
   display: flex;
   align-items: flex-end;
   gap: var(--space-4);
-  max-width: 48rem;
   padding-bottom: var(--space-4);
+}
+
+@container biz (min-width: 48rem) {
+  .heroInner {
+    gap: var(--space-5);
+  }
+
+  .logo {
+    width: 8rem;
+    margin-top: -4rem;
+  }
+
+  .name {
+    font-size: var(--text-3xl);
+  }
 }
 
 .logo {
@@ -132,6 +209,7 @@
 }
 
 .description {
+  max-width: 72ch;
   font-size: var(--text-lg);
 }
 
@@ -195,16 +273,6 @@
   gap: var(--space-3);
   padding-top: var(--space-4);
   border-top: 2px solid var(--border);
-}
-
-@media (min-width: 64rem) {
-  .root:not([data-mode="preview"]) .wide > * {
-    margin-inline: calc((100% - 60rem) / 2);
-  }
-
-  .root:not([data-mode="preview"]) .wide > input {
-    width: 60rem;
-  }
 }
 
 .h2 {

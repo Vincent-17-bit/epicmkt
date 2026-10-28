@@ -59,7 +59,6 @@ export default function Services({ services: all, count, hitSection, focusSectio
     <BusinessSection
       title={`All products (${total})`}
       id="services"
-      wide
       action={canFilter ? <ServiceFilter facets={facets} filters={filters} onChange={setFilters} disabled={preview} /> : null}
     >
       {canFilter && (

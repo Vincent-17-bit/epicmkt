@@ -83,103 +83,108 @@ export default function BusinessPage({
             {quickActions}
           </div>
         )}
-        <div className={styles.badges}>
-          {business.plan === "premium" && <FeaturedBadge />}
-          {business.verified && <VerifiedBadge />}
-          <span className={business.isOpen ? styles.open : styles.closed}>{statusText}</span>
-          <span className={styles.rating}>
-            <FontAwesomeIcon icon={faStar} />
-            {reviewsText}
-          </span>
-          <span className={styles.rating}>{productsLabel(productCount)}</span>
-        </div>
-
-        <ClosedBanner status={business.openStatus} />
-
-        <p className={styles.description}>{business.description}</p>
-
-        <ul className={styles.facts}>
-          <li>
-            <FontAwesomeIcon icon={faLocationDot} />
-            <span>
-              {business.address}, {business.area}, {business.county}
-            </span>
-          </li>
-          <li>
-            <FontAwesomeIcon icon={faLocationArrow} />
-            {distanceKm != null ? (
-              <span>
-                {formatDistance(distanceKm)} away <span className={styles.note}>(straight line{fromTown ? ` from ${fromTown}` : ""})</span>
+        <div className={styles.layout}>
+          <div className={styles.main}>
+            <div className={styles.badges}>
+              {business.plan === "premium" && <FeaturedBadge />}
+              {business.verified && <VerifiedBadge />}
+              <span className={business.isOpen ? styles.open : styles.closed}>{statusText}</span>
+              <span className={styles.rating}>
+                <FontAwesomeIcon icon={faStar} />
+                {reviewsText}
               </span>
-            ) : (
-              <button type="button" className={styles.linkBtn} {...act.button(locate?.onClick)} disabled={preview || locate?.disabled}>
-                {locate?.label}
-              </button>
-            )}
-          </li>
-        </ul>
+              <span className={styles.rating}>{productsLabel(productCount)}</span>
+            </div>
 
-        {business.tags?.length > 0 && (
-          <ul className={styles.tags} aria-label="Tags">
-            {business.tags.map((tag) => (
-              <li key={tag} className={styles.tag}>
-                {tag}
+            <ClosedBanner status={business.openStatus} />
+
+            <p className={styles.description}>{business.description}</p>
+
+            <ul className={styles.facts}>
+              <li>
+                <FontAwesomeIcon icon={faLocationDot} />
+                <span>
+                  {business.address}, {business.area}, {business.county}
+                </span>
               </li>
-            ))}
-          </ul>
-        )}
+              <li>
+                <FontAwesomeIcon icon={faLocationArrow} />
+                {distanceKm != null ? (
+                  <span>
+                    {formatDistance(distanceKm)} away <span className={styles.note}>(straight line{fromTown ? ` from ${fromTown}` : ""})</span>
+                  </span>
+                ) : (
+                  <button type="button" className={styles.linkBtn} {...act.button(locate?.onClick)} disabled={preview || locate?.disabled}>
+                    {locate?.label}
+                  </button>
+                )}
+              </li>
+            </ul>
 
-        <ActionRow
-          callHref={callHref}
-          whatsappHref={whatsappHref}
-          directionsHref={directionsHref}
-          shareNote={shareNote}
-          mode={mode}
-          onCall={track("call")}
-          onWhatsApp={track("whatsapp")}
-          onDirections={track("directions")}
-          onShare={onShare}
-        />
+            {business.tags?.length > 0 && (
+              <ul className={styles.tags} aria-label="Tags">
+                {business.tags.map((tag) => (
+                  <li key={tag} className={styles.tag}>
+                    {tag}
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {business.offers.length > 0 && (
-          <Offers offers={business.offers} mode={mode} onOpenItem={onOpenItem} labels={offerLabels} />
-        )}
+            <ActionRow
+              callHref={callHref}
+              whatsappHref={whatsappHref}
+              directionsHref={directionsHref}
+              shareNote={shareNote}
+              mode={mode}
+              onCall={track("call")}
+              onWhatsApp={track("whatsapp")}
+              onDirections={track("directions")}
+              onShare={onShare}
+            />
 
-        {flash}
+            {business.offers.length > 0 && (
+              <Offers offers={business.offers} mode={mode} onOpenItem={onOpenItem} labels={offerLabels} />
+            )}
 
-        <Services
-          services={business.services}
-          count={productCount}
-          hitSection={hitSection}
-          focusSection={focusSection}
-          focusItem={focusItem}
-          mode={mode}
-          onOpenItem={onOpenItem}
-        />
+            {flash}
 
-        {business.gallery.length > 0 && (
-          <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />
-        )}
+            <Services
+              services={business.services}
+              count={productCount}
+              hitSection={hitSection}
+              focusSection={focusSection}
+              focusItem={focusItem}
+              mode={mode}
+              onOpenItem={onOpenItem}
+            />
 
-        {details && (
-          <Details title={detailsTitle}>{details}</Details>
-        )}
+            {business.gallery.length > 0 && (
+              <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />
+            )}
 
-        <Hours rows={hoursRows} caption={hoursCaption} />
+            {details && (
+              <Details title={detailsTitle}>{details}</Details>
+            )}
+          </div>
+          <aside className={styles.side}>
+            <Hours rows={hoursRows} caption={hoursCaption} />
 
-        <Location name={business.name} lat={business.lat} lng={business.lng} directionsHref={directionsHref} mode={mode} onDirections={track("directions")} />
+            <Location name={business.name} lat={business.lat} lng={business.lng} directionsHref={directionsHref} mode={mode} onDirections={track("directions")} />
 
-        {socials.length > 0 && (
-          <Follow socials={socials} mode={mode} />
-        )}
+            {socials.length > 0 && (
+              <Follow socials={socials} mode={mode} />
+            )}
 
-        <ShareQr qr={qr} shortUrl={shortUrl} shareNote={shareNote} mode={mode} onShare={onShare} />
+            <ShareQr qr={qr} shortUrl={shortUrl} shareNote={shareNote} mode={mode} onShare={onShare} />
 
-        <p className={styles.report}>
-          <button type="button" className={styles.linkBtn} {...act.button(onReport)}>
-            <FontAwesomeIcon icon={faFlag} /> Report a problem
-          </button>
-        </p>
+            <p className={styles.report}>
+              <button type="button" className={styles.linkBtn} {...act.button(onReport)}>
+                <FontAwesomeIcon icon={faFlag} /> Report a problem
+              </button>
+            </p>
+          </aside>
+        </div>
       </Container>
 
       <BottomBar

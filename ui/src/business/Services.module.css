@@ -5,50 +5,23 @@
 
 .services {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  --card-min: 9.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr));
   gap: var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.group[data-preview] {
-  container-type: inline-size;
-}
-
-@media (min-width: 22.5rem) {
-  .services:not([data-preview]) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+@container biz (min-width: 48rem) {
+  .services {
+    --card-min: 11.5rem;
   }
 }
 
-@media (min-width: 48rem) {
-  .services:not([data-preview]) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 64rem) {
-  .services:not([data-preview]) {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@container (min-width: 20.5rem) {
-  .services[data-preview] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@container (min-width: 40rem) {
-  .services[data-preview] {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@container (min-width: 60rem) {
-  .services[data-preview] {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+@container biz (min-width: 96rem) {
+  .services {
+    --card-min: 12.5rem;
   }
 }
 
@@ -58,6 +31,7 @@
   border: 2px solid var(--border-strong);
   border-radius: var(--radius-card);
   background: var(--surface);
+  container-type: inline-size;
 }
 
 .serviceMedia {
@@ -89,39 +63,12 @@
   padding: var(--space-3);
 }
 
-@media (min-width: 30rem) {
-  .services:not([data-preview]) .serviceText {
+@container (min-width: 15rem) {
+  .serviceText {
     flex-direction: row;
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-2);
-  }
-}
-
-@media (min-width: 64rem) {
-  .services:not([data-preview]) .serviceText {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: var(--space-1);
-  }
-}
-
-@container (min-width: 28rem) {
-  .services[data-preview] .serviceText {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2);
-  }
-}
-
-@container (min-width: 60rem) {
-  .services[data-preview] .serviceText {
-    flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: var(--space-1);
   }
 }
 
