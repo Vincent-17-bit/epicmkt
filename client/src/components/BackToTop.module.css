@@ -1,0 +1,70 @@
+.btn {
+  position: fixed;
+  left: max(var(--space-3), var(--safe-left));
+  bottom: calc(var(--space-3) + var(--safe-bottom));
+  z-index: 15;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 2px solid var(--text);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(0.5rem);
+  transition: opacity var(--dur) ease, transform var(--dur) ease, visibility 0s linear var(--dur), background-color var(--dur) ease;
+}
+
+.btn svg {
+  font-size: 0.875rem;
+}
+
+.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+}
+
+.btn:active {
+  transform: scale(0.96);
+}
+
+@media (min-width: 64rem) {
+  .btn {
+    left: max(var(--space-5), var(--safe-left));
+    bottom: calc(var(--space-5) + var(--safe-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+    transform: none;
+  }
+}
