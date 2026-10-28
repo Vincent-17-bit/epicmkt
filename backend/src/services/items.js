@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, statusOf } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, rankSimilar, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -239,6 +239,59 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
     return 0;
   });
   return rows.slice(0, limit);
+}
+
+// Items like this one, from other stores of the same category. Listed items of active stores only; the ranking itself
+// lives in @epicmkt/shared so the live adapter orders them identically. Anything that goes wrong returns [].
+export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}) {
+  await delay();
+  runSweep();
+  try {
+    const found = locate(itemId);
+    if (!found || found.business.status !== BUSINESS_STATUS.ACTIVE) return [];
+    const { business: base, item: seed } = found;
+    const from = originOf(origin);
+    const shape = (business, item) => {
+      const sale = liveSaleFor(item, business);
+      const pricing = buildPricing(item, sale);
+      return { item, business, pricing, sale, price: pricing?.salePrice ?? item.regularPrice };
+    };
+    const current = shape(base, seed);
+    const pool = [];
+    for (const business of store.businesses) {
+      if (business.id === base.id || business.status !== BUSINESS_STATUS.ACTIVE || business.categoryId !== base.categoryId) continue;
+      business.services.forEach((svc, index) => {
+        const item = toItem(business, svc, index);
+        if (item.status === "listed") pool.push(shape(business, item));
+      });
+    }
+    const point = (row) => ({ lat: row.business.lat, lng: row.business.lng });
+    const ranked = rankSimilar({
+      current: { id: seed.id, businessId: base.id, name: seed.name, section: seed.section, price: current.price, tags: base.tags, ...point(current) },
+      candidates: pool.map((row) => ({
+        id: row.item.id,
+        businessId: row.business.id,
+        name: row.item.name,
+        section: row.item.section,
+        price: row.price,
+        tags: row.business.tags,
+        createdAt: row.item.createdAt,
+        ...point(row),
+        row
+      })),
+      origin: from,
+      limit
+    });
+    return ranked.map(({ row }) => ({
+      ...row.item,
+      pricing: row.pricing,
+      flash: row.sale ? flashParts(row.item, row.sale) : null,
+      offer: offerChipFor(row.item, row.business),
+      business: sellerCard(row.business, from)
+    }));
+  } catch {
+    return [];
+  }
 }
 
 // Every listed product of every active store, for the home page. Filtering, sorting and paging happen in the client.

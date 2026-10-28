@@ -35,6 +35,7 @@ import { useInView } from "../hooks/useInView.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
 import OfferStrip from "./OfferStrip.jsx";
+import SimilarItems from "./SimilarItems.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
 import styles from "./ItemDetail.module.css";
@@ -523,6 +524,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               )}
 
               {selective}
+              <SimilarItems itemId={current.id} businessId={business.id} />
               </div>
 
               <div className={styles.panels}>

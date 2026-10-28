@@ -9,7 +9,7 @@ const KEY = "epicmkt.town";
 const OPT_OUT_KEY = "epicmkt.geo.off";
 
 // Query keys that embed a position. Dropped on reset so no stale fix lingers in the cache.
-const POSITIONAL_QUERIES = new Set(["nearby", "flash-page", "offers-page", "flash-strip"]);
+const POSITIONAL_QUERIES = new Set(["nearby", "flash-page", "offers-page", "flash-strip", "similar-items"]);
 
 const readTown = () => {
   try {

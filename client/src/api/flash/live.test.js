@@ -256,6 +256,83 @@ describe("live item and business pages", () => {
     expect(rows[0].flash).toBeNull();
   });
 
+  describe("getSimilarItems", () => {
+    const C = "10000000-0000-0000-0000-00000000000c";
+    const D = "10000000-0000-0000-0000-00000000000d";
+    const SEED = "20000000-0000-0000-0000-000000000101";
+    const id = (n) => `20000000-0000-0000-0000-0000000002${String(n).padStart(2, "0")}`;
+    const setup = () => {
+      db().businesses = [
+        bizRow(),
+        bizRow({ id: B, slug: "shop-b", name: "Shop B", tags: ["fade"] }),
+        bizRow({ id: C, slug: "shop-c", name: "Shop C", lat: -0.4, lng: 34.9 }),
+        bizRow({ id: D, slug: "bakery", name: "Bakery", category_id: "bakeries" })
+      ];
+    };
+
+    it("returns listed items of other stores in the same category, never the current store, item or category", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", section: "Cuts" }),
+        itemRow({ id: id(1), business_id: B, name: "Fade cut", section: "Cuts" }),
+        itemRow({ id: id(2), business_id: C, name: "Tonic", section: "Care", price: "1100.00" }),
+        itemRow({ id: id(3), business_id: D, name: "Bread", section: "Cuts" })
+      ];
+      const rows = await live.getSimilarItems(SEED);
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(2)]);
+      expect(rows[0].business).toMatchObject({ id: B, slug: "shop-b", name: "Shop B" });
+    });
+
+    it("ranks the same section first, then the closest price, and puts a running sale's price on the item", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: id(1), business_id: B, name: "Beard oil", section: "Care", price: "1000.00" }),
+        itemRow({ id: id(2), business_id: B, name: "Shave", section: "Cuts", price: "9000.00" }),
+        itemRow({ id: id(3), business_id: C, name: "Trim", section: "cuts", price: "1200.00" })
+      ];
+      db().sales = [row(3, { item_id: id(3), business_id: C, regular_price: "1200.00", sale_price: "960.00" })];
+      const rows = await live.getSimilarItems(SEED, { limit: 3 });
+      expect(rows.map((r) => r.id)).toEqual([id(3), id(2), id(1)]);
+      expect(rows[0].pricing.salePrice).toBe(960);
+      expect(rows[0].flash).not.toBeNull();
+    });
+
+    it("prefers a nearer store when everything else ties", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: id(1), business_id: C, name: "Trim", section: "Cuts" }),
+        itemRow({ id: id(2), business_id: B, name: "Trim", section: "Cuts" })
+      ];
+      db().businesses[1].lat = -0.0059;
+      db().businesses[1].lng = 34.6001;
+      const rows = await live.getSimilarItems(SEED, { origin: { lat: -0.0058, lng: 34.6 } });
+      expect(rows.map((r) => r.id)).toEqual([id(2), id(1)]);
+    });
+
+    it("is empty for unknown ids, a lone store, and non-live ids, and does not ask for the heavy fields", async () => {
+      setup();
+      db().items = [itemRow()];
+      expect(await live.getSimilarItems("fade-and-beard")).toEqual([]);
+      expect(await live.getSimilarItems("20000000-0000-0000-0000-0000000009ff")).toEqual([]);
+      db().selects = [];
+      expect(await live.getSimilarItems(SEED)).toEqual([]);
+      db().items = [itemRow(), itemRow({ id: id(1), business_id: B, highlights: ["x"], specs: [{ label: "a", value: "b" }] })];
+      db().selects = [];
+      expect(await live.getSimilarItems(SEED)).toHaveLength(1);
+      for (const [table, columns] of db().selects.filter(([t]) => t === "public_items")) for (const name of ["highlights", "specs", "includes", "terms"]) expect(columns, `${table} ${name}`).not.toContain(name);
+    });
+
+    it("throws when the items cannot be read (the API entry turns that into an empty row)", async () => {
+      setup();
+      db().items = [itemRow(), itemRow({ id: id(1), business_id: B })];
+      db().failing = { message: "down" };
+      await expect(live.getSimilarItems(SEED)).rejects.toThrow();
+    });
+  });
+
   describe("item details from public_items", () => {
     const HEAVY = ["highlights", "specs", "includes", "terms"];
     const full = {
