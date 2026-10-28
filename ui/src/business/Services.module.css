@@ -13,7 +13,7 @@
   list-style: none;
 }
 
-@container biz (min-width: 48rem) {
+@container biz (min-width: 45rem) {
   .services {
     --card-min: 11.5rem;
   }

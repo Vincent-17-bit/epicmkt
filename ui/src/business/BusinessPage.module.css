@@ -25,7 +25,7 @@
   min-width: 0;
 }
 
-@container biz (min-width: 48rem) {
+@container biz (min-width: 45rem) {
   .root .page,
   .root .heroInner {
     padding-inline: max(var(--space-5), var(--safe-left)) max(var(--space-5), var(--safe-right));
@@ -116,7 +116,7 @@
   padding-bottom: var(--space-4);
 }
 
-@container biz (min-width: 48rem) {
+@container biz (min-width: 45rem) {
   .heroInner {
     gap: var(--space-5);
   }
