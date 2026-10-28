@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt, faStore } from "@fortawesome/free-solid-svg-icons";
 import { BusinessPage, BusinessPageSkeleton, ProductCard } from "@epicmkt/ui";
-import { chipOf, dealOf, flashPrice, formatInstant, isListed, offersByItem, statusOf, zoneLabel } from "@epicmkt/shared";
+import { chipOf, dealOf, flashPrice, formatInstant, getUserTimeZone, isListed, offersByItem, statusOf, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import ShopQr from "../../components/ShopQr.jsx";
@@ -120,7 +120,7 @@ export default function Preview() {
     .filter((d) => d.scope === "store" || d.products.length > 0);
   const hours = shop.hours ?? {};
   const exceptions = shop.exceptions ?? [];
-  const openStatus = safe(() => statusOf(hours, exceptions, undefined, shop.timezone), statusOf({}, []));
+  const openStatus = safe(() => statusOf(hours, exceptions, undefined, shop.timezone, getUserTimeZone()), statusOf({}, []));
   const openFields = { timezone: shop.timezone, isOpen: openStatus.isOpen, closesAt: openStatus.closesAt, opensAt: openStatus.opensAt, statusLine: openStatus.line, openStatus };
   const business = {
     id: shop.slug,

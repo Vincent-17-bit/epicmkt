@@ -179,6 +179,7 @@ export const toSummary = (b, snap, origin, now = Date.now()) => {
     whatsapp: b.whatsapp,
     lat: b.lat,
     lng: b.lng,
+    timezone: b.timezone,
     isOpen: status.isOpen,
     statusLine: status.line,
     distanceKm: distanceTo(origin, b),
