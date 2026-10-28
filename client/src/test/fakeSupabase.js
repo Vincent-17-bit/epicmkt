@@ -58,12 +58,13 @@ export function createFakeSupabase() {
   const from = (table) => {
     const filters = [];
     const inFilters = [];
+    const tests = [];
     let window = null;
     let wantCount = false;
     const run = () => {
       state.calls.push(table);
       if (state.failing) return { data: null, error: state.failing };
-      let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])));
+      let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])) && tests.every((test) => test(row)));
       const total = data.length;
       if (window) data = data.slice(window[0], window[1] + 1);
       return { data, error: null, count: wantCount ? total : null };
@@ -82,6 +83,35 @@ export function createFakeSupabase() {
       },
       eq: (col, value) => {
         filters.push([col, value]);
+        return query;
+      },
+      neq: (col, value) => {
+        tests.push((row) => row[col] !== value);
+        return query;
+      },
+      gte: (col, value) => {
+        tests.push((row) => Number(row[col]) >= value);
+        return query;
+      },
+      lte: (col, value) => {
+        tests.push((row) => Number(row[col]) <= value);
+        return query;
+      },
+      // Case-insensitive match; a backslash escapes the next character, as in Postgres. % is any run, _ any one character.
+      ilike: (col, pattern) => {
+        const source = String(pattern).replace(/\\(.)|(%)|(_)|[.*+?^${}()|[\]]/g, (m, esc, any, one) => (esc ? esc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : any ? ".*" : one ? "." : `\\${m}`));
+        const re = new RegExp(`^${source}$`, "i");
+        tests.push((row) => re.test(String(row[col] ?? "")));
+        return query;
+      },
+      // Only the "col.ilike.%text%,col.ilike.%text%" form: a row passes when any clause matches.
+      or: (clauses) => {
+        const tests2 = String(clauses).split(",").map((clause) => {
+          const [col, op, ...rest] = clause.split(".");
+          const re = new RegExp(String(rest.join(".")).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*"), "i");
+          return (row) => op === "ilike" && re.test(String(row[col] ?? ""));
+        });
+        tests.push((row) => tests2.some((test) => test(row)));
         return query;
       },
       in: (col, values) => {

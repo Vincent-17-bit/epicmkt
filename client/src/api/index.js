@@ -35,6 +35,8 @@ export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
+  // Items like this one from other stores of the same category, ranked; [] when none or on any failure.
+  getSimilar: (itemId, opts) => flashApi.getSimilarItems(itemId, opts),
   getAll: () => flashApi.getAllProducts(),
   // The home grid asks the server for one page at a time, plus the filter options and live option counts.
   getPage: (filters, opts) => products.getPage(filters, opts),

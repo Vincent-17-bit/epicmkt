@@ -256,6 +256,97 @@ describe("live item and business pages", () => {
     expect(rows[0].flash).toBeNull();
   });
 
+  describe("getSimilarItems", () => {
+    const C = "10000000-0000-0000-0000-00000000000c";
+    const D = "10000000-0000-0000-0000-00000000000d";
+    const SEED = "20000000-0000-0000-0000-000000000101";
+    const id = (n) => `20000000-0000-0000-0000-0000000002${String(n).padStart(2, "0")}`;
+    const setup = () => {
+      db().businesses = [
+        bizRow(),
+        bizRow({ id: B, slug: "shop-b", name: "Shop B", tags: ["fade"] }),
+        bizRow({ id: C, slug: "shop-c", name: "Shop C", lat: -0.4, lng: 34.9 }),
+        bizRow({ id: D, slug: "bakery", name: "Bakery", category_id: "bakeries" })
+      ];
+    };
+
+    it("finds the same kind of item in any other store, whatever its category, never the current store or item, and not unrelated ones", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", section: "Cuts" }),
+        itemRow({ id: id(1), business_id: B, name: "Fade cut", section: "Cuts" }),
+        itemRow({ id: id(2), business_id: C, name: "Tonic", section: "Care", price: "1100.00" }),
+        itemRow({ id: id(3), business_id: D, name: "Fade cut loaf", section: "Bakery" }),
+        itemRow({ id: id(4), business_id: D, name: "Bread", section: "Bakery" })
+      ];
+      const rows = await live.getSimilarItems(SEED);
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
+      expect(rows.some((r) => r.id === id(4))).toBe(false);
+      expect(rows[0].business).toMatchObject({ id: B, slug: "shop-b", name: "Shop B" });
+    });
+
+    it("ranks a shared name word first, then the same section, then the closest price, and puts a running sale's price on the item", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: id(1), business_id: B, name: "Beard oil", section: "Care", price: "1000.00" }),
+        itemRow({ id: id(2), business_id: B, name: "Shave", section: "Cuts", price: "9000.00" }),
+        itemRow({ id: id(3), business_id: C, name: "Trim", section: "cuts", price: "1200.00" })
+      ];
+      db().sales = [row(3, { item_id: id(3), business_id: C, regular_price: "1200.00", sale_price: "960.00" })];
+      const rows = await live.getSimilarItems(SEED, { limit: 3 });
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
+      expect(rows[1].pricing.salePrice).toBe(960);
+      expect(rows[1].flash).not.toBeNull();
+    });
+
+    it("prefers a nearer store when everything else ties", async () => {
+      setup();
+      db().items = [
+        itemRow(),
+        itemRow({ id: id(1), business_id: C, name: "Trim", section: "Cuts" }),
+        itemRow({ id: id(2), business_id: B, name: "Trim", section: "Cuts" })
+      ];
+      db().businesses[1].lat = -0.0059;
+      db().businesses[1].lng = 34.6001;
+      const rows = await live.getSimilarItems(SEED, { origin: { lat: -0.0058, lng: 34.6 } });
+      expect(rows.map((r) => r.id)).toEqual([id(2), id(1)]);
+    });
+
+    it("gives about half the row to different featured stores that have the item, alternating with the rest", async () => {
+      const shop = (n, over = {}) => ({ ...bizRow(), id: `10000000-0000-0000-0000-0000000001${n}`, slug: `shop-${n}`, name: `Shop ${n}`, ...over });
+      db().businesses = [bizRow(), shop(1, { plan_key: "premium" }), shop(2, { plan_key: "premium" }), shop(3), shop(4), shop(5)];
+      const at = (n, k, over = {}) => itemRow({ id: id(10 * n + k), business_id: `10000000-0000-0000-0000-0000000001${n}`, name: "Fade cut", section: "Cuts", ...over });
+      db().items = [itemRow(), at(1, 1), at(1, 2), at(1, 3), at(2, 1), at(3, 1), at(4, 1), at(5, 1)];
+      const rows = await live.getSimilarItems(SEED, { limit: 4 });
+      const premium = (r) => r.business.featured;
+      expect(rows).toHaveLength(4);
+      expect(rows.map(premium)).toEqual([true, false, true, false]);
+      expect(new Set(rows.map((r) => r.business.id)).size).toBe(4);
+    });
+
+    it("is empty for unknown ids, a lone store, and non-live ids, and does not ask for the heavy fields", async () => {
+      setup();
+      db().items = [itemRow()];
+      expect(await live.getSimilarItems("fade-and-beard")).toEqual([]);
+      expect(await live.getSimilarItems("20000000-0000-0000-0000-0000000009ff")).toEqual([]);
+      db().selects = [];
+      expect(await live.getSimilarItems(SEED)).toEqual([]);
+      db().items = [itemRow(), itemRow({ id: id(1), business_id: B, highlights: ["x"], specs: [{ label: "a", value: "b" }] })];
+      db().selects = [];
+      expect(await live.getSimilarItems(SEED)).toHaveLength(1);
+      for (const [table, columns] of db().selects.filter(([t]) => t === "public_items")) for (const name of ["highlights", "specs", "includes", "terms"]) expect(columns, `${table} ${name}`).not.toContain(name);
+    });
+
+    it("throws when the items cannot be read (the API entry turns that into an empty row)", async () => {
+      setup();
+      db().items = [itemRow(), itemRow({ id: id(1), business_id: B })];
+      db().failing = { message: "down" };
+      await expect(live.getSimilarItems(SEED)).rejects.toThrow();
+    });
+  });
+
   describe("item details from public_items", () => {
     const HEAVY = ["highlights", "specs", "includes", "terms"];
     const full = {

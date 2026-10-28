@@ -174,6 +174,7 @@ export default {
   "video.heading": "Videos",
   "item.storeSelective": "Store Selective",
   "item.seeAll": "See all in store",
+  "item.similar": "Similar items",
   "item.scrollLeft": "Scroll left",
   "item.scrollRight": "Scroll right",
   "home.products": "Products",

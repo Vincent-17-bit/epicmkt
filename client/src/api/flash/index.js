@@ -53,6 +53,19 @@ export const getStoreSelective = async (businessId, opts) => {
   return backend.getStoreSelective(businessId, opts);
 };
 
+// Similar items are a nicety: any failure, or an item that is not known, is simply an empty row. A real (live) item is
+// only ever matched against live data; the demo backend answers for demo ids, which live never knows.
+export const getSimilarItems = async (itemId, opts) => {
+  try {
+    if (!isLive()) return await backend.getSimilarItems(itemId, opts);
+    const live = await liveAdapter();
+    const rows = live.isLiveId(itemId) ? await live.getSimilarItems(itemId, opts) : await backend.getSimilarItems(itemId, opts);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+};
+
 // Live data is authoritative: with Supabase configured an empty marketplace shows no products, never demo ones.
 export const getAllProducts = async () => (isLive() ? (await liveAdapter()).getAllProducts() : backend.getAllProducts());
 
