@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { businessOf, cardOfBusiness, cardOfFlash, itemOf } from "./shape.js";
-import { hoursRows } from "../../lib/businessView.js";
+import { hoursCaption, hoursRows, statusText } from "../../lib/businessView.js";
+import { toSummary } from "../browse/engine.js";
+import { setUserTimeZone } from "@epicmkt/shared";
 
 // Tue 20 Oct 2026, 09:30 in Nairobi (UTC+3).
 beforeEach(() => vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-20T06:30:00Z") }));
@@ -113,5 +115,36 @@ describe("customer item shape with product details", () => {
     expect(businessOf(row({ product_count: "x" }), { category: null, services: [] }).productCount).toBe(0);
     expect(businessOf(row(), { category: null }).productCount).toBe(0);
     expect(businessOf(row(), { category: null, services: [{}, {}] }).productCount).toBe(2);
+  });
+});
+
+describe("customer business shape for a shop outside Nairobi", () => {
+  const sanJuan = "America/Puerto_Rico";
+  beforeEach(() => setUserTimeZone("Africa/Nairobi"));
+  afterEach(() => setUserTimeZone(null));
+
+  it("keeps the shop's zone and uses it in the badge, hours caption and banner", () => {
+    const b = businessOf(row({ timezone: sanJuan }), { category: null, services: [] });
+    expect(b.timezone).toBe(sanJuan);
+    expect(b.isOpen).toBe(false);
+    expect(statusText(b)).toBe("Closed · Opens 8:00 AM GMT-4 · 3:00 PM your time");
+    expect(hoursCaption(b.timezone)).toBe("Hours are in shop time (GMT-4). Your time is shown too.");
+    expect(b.openStatus.reopens).toBe("Reopens today at 8:00 AM GMT-4 · 3:00 PM your time");
+  });
+
+  it("reads today's hours on the shop's calendar day", () => {
+    vi.setSystemTime(new Date("2026-10-20T22:30:00Z"));
+    const b = businessOf(row({ timezone: sanJuan }), { category: null, services: [] });
+    expect(b.todayHours).toBe(hours.tue);
+  });
+
+  it("falls back to Nairobi when the shop has no zone", () => {
+    expect(businessOf(row(), { category: null, services: [] }).timezone).toBe("Africa/Nairobi");
+  });
+
+  it("business summaries carry the zone", () => {
+    const b = { id: "b1", slug: "shop", name: "Shop", categoryId: "barber", hours, exceptions: [], timezone: sanJuan, tags: [], attributes: {}, flashEnds: [], offerEnds: [] };
+    const snap = { categories: new Map() };
+    expect(toSummary(b, snap, null, Date.now()).timezone).toBe(sanJuan);
   });
 });

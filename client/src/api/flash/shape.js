@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, distanceKm, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -76,9 +76,9 @@ const shorten = (text) => {
 };
 
 // Exceptions (closed days, special hours) override the weekly hours for their date. A missing list means none.
-const statusFor = (hours, exceptions, timeZone) => {
+const statusFor = (hours, exceptions, timeZone, viewerZone) => {
   try {
-    return statusOf(hours, exceptions, undefined, timeZone);
+    return statusOf(hours, exceptions, undefined, timeZone, viewerZone);
   } catch {
     return statusOf({}, []);
   }
@@ -232,10 +232,10 @@ export const businessOf = (row, { category, services, origin = null }) => {
   const hours = row.hours && typeof row.hours === "object" ? row.hours : {};
   const exceptions = exceptionsOf(row.exceptions);
   const timezone = row.timezone ?? BUSINESS_TIME_ZONE;
-  const status = statusFor(hours, exceptions, timezone);
+  const status = statusFor(hours, exceptions, timezone, getUserTimeZone());
   let today = null;
   try {
-    today = todayHours(hours);
+    today = todayHours(hours, undefined, timezone);
   } catch {
     today = null;
   }
@@ -260,6 +260,7 @@ export const businessOf = (row, { category, services, origin = null }) => {
     socials: row.socials ?? {},
     hours,
     exceptions,
+    timezone,
     tags: row.tags ?? [],
     plan: row.plan_key,
     verified: row.verification_level === "verified",
