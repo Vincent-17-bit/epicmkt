@@ -108,6 +108,11 @@ export default function Footer() {
 
   return (
     <footer className={styles.footer} data-theme="light">
+      <button type="button" className={styles.topBar} onClick={toTop}>
+        <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
+        Back to top
+      </button>
+
       <Container className={styles.top}>
         <div className={`${styles.brand} ${styles.about}`}>
           <Logo tagline="Digitize. Scale. Thrive." />
@@ -170,10 +175,6 @@ export default function Footer() {
           <p className={styles.note}>EpicMKT lists businesses and does not process orders or payments.</p>
           <ThemeSwitch className={styles.theme} />
           <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. All rights reserved.</small>
-          <button type="button" className={styles.top_btn} onClick={toTop}>
-            <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
-            Back to top
-          </button>
         </div>
       </Container>
     </footer>

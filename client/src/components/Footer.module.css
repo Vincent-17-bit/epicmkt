@@ -1,9 +1,43 @@
 .footer {
   --footer-accent: #0a6aa8;
   margin-top: clamp(var(--space-6), 6vw, var(--space-8));
-  padding-block: var(--space-6) calc(var(--space-4) + var(--safe-bottom));
+  padding-block: 0 calc(var(--space-4) + var(--safe-bottom));
   background: var(--footer-bg);
   color: var(--text);
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--tap);
+  margin-bottom: var(--space-6);
+  padding: 0 var(--space-4);
+  border: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background-color var(--dur) ease;
+}
+
+.topBar:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+@media (hover: hover) {
+  .topBar:hover {
+    background: var(--primary);
+    color: var(--on-primary);
+  }
+}
+
+.topBar:active {
+  background: var(--primary-pressed);
 }
 
 /* ---------- Link groups ----------
@@ -217,21 +251,19 @@
   }
 }
 
-.social:active,
-.top_btn:active {
+.social:active {
   transform: scale(0.97);
 }
 
 /* ---------- Bottom bar ----------
-   Phones: note, then a full-width theme switch, then copyright and
-   back-to-top sharing one row. */
+   Phones: note, then a full-width theme switch, then copyright. */
 .bottom {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-areas:
-    "note note"
-    "theme theme"
-    "copy top";
+    "note"
+    "theme"
+    "copy";
   align-items: center;
   gap: var(--space-3) var(--space-3);
   margin-top: var(--space-5);
@@ -261,23 +293,6 @@
   line-height: 1.4;
 }
 
-.top_btn {
-  grid-area: top;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap);
-  padding: 0 var(--space-4);
-  border: 2px solid var(--text);
-  border-radius: var(--radius-pill);
-  background: var(--primary);
-  color: var(--on-primary);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  white-space: nowrap;
-  transition: transform var(--dur) ease;
-}
 
 /* ---------- Tablet: two columns, always expanded ---------- */
 @media (min-width: 40rem) {
@@ -317,7 +332,7 @@
     grid-template-columns: minmax(0, 1fr) auto;
     grid-template-areas:
       "note theme"
-      "copy top";
+      "copy copy";
     gap: var(--space-4) var(--space-5);
     margin-top: var(--space-6);
     padding-top: var(--space-5);
@@ -331,10 +346,6 @@
 
   .theme button {
     padding-inline: var(--space-4);
-  }
-
-  .top_btn {
-    justify-self: end;
   }
 }
 
