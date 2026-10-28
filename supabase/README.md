@@ -20,6 +20,45 @@ supabase db push        # runs migrations 0001 to 0011 in order
 columns, the outbound message log columns, three admin-only tables (`message_templates`, `site_config`, `content_pages`),
 role-aware policies and the admin RPCs. It is safe to run again.
 
+### Migration numbers
+
+Supabase records a migration by its numeric prefix, so a number is permanent: never rename, renumber or reuse one after
+it may have been applied anywhere. `npm run check:migrations` (part of `npm run test:seller-backend`) fails on a new
+duplicate number, a number out of order, an unexplained gap, a header that names another file, and a reference in this
+file to a migration that does not exist.
+
+Two numbers are each used by two files. They are frozen in `SHARED_NUMBERS` in `scripts/check-migrations.mjs` and are
+not to be changed:
+
+| Number | Files, in the order they apply |
+| --- | --- |
+| `0042` | `0042_browse_snapshot.sql`, then `0042_search_postgis.sql` |
+| `0046` | `0046_item_availability.sql`, then `0046_store_offers.sql` |
+
+Why they were not renumbered: a database that already applied either file would then report it as missing, and moving
+`0046_store_offers.sql` later would run it after `0051_offers_skip_unlisted.sql` and undo the sold-out rule that 0051
+restores. For the same reason **never re-run these files on a database that is already up to date** (re-running
+`0046_item_availability.sql` fails on the later `public_items` columns, and re-running `0046_store_offers.sql` drops the
+sold-out rule again).
+
+Because the CLI keeps one history row per number, a brand-new project must be checked after `supabase db push`: run the
+query below in the SQL editor. Every column must be `true`. A `false` means that file was skipped; run that one file by
+hand, in the order above, before the later migrations are applied.
+
+```sql
+select
+  exists (select 1 from pg_proc where proname = 'browse_snapshot' and pronamespace = 'public'::regnamespace) as "0042_browse_snapshot",
+  exists (select 1 from pg_proc where proname = 'search_businesses' and pronamespace = 'public'::regnamespace) as "0042_search_postgis",
+  exists (select 1 from pg_proc where proname = 'item_is_listed' and pronamespace = 'public'::regnamespace) as "0046_item_availability",
+  exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'offers' and column_name = 'scope')
+    and exists (select 1 from pg_proc where proname = 'seller_delete_offer' and pronamespace = 'public'::regnamespace) as "0046_store_offers";
+```
+
+Numbers `0032`, `0033` and `0034` have no file, on purpose. Nothing was ever committed under them on any branch. The
+public-exception migrations were first written as `0024` to `0026`, and when `main` gained the admin migrations `0024`
+to `0031` they were renumbered straight to `0035` to `0037`. The gap is listed in `RESERVED` in
+`scripts/check-migrations.mjs`. Do not add placeholder files for it. New migrations take the next free number.
+
 The schema the admin functions must code against (these are the real columns, not an idealised design):
 
 | Area | What to know |
