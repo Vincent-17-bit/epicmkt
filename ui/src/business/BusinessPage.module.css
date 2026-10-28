@@ -198,8 +198,12 @@
 }
 
 @media (min-width: 64rem) {
-  .root:not([data-mode="preview"]) .wide {
+  .root:not([data-mode="preview"]) .wide > * {
     margin-inline: calc((100% - 60rem) / 2);
+  }
+
+  .root:not([data-mode="preview"]) .wide > input {
+    width: 60rem;
   }
 }
 
