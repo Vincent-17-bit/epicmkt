@@ -1,14 +1,20 @@
 .section {
   display: grid;
-  gap: var(--space-1);
-  padding: var(--space-4) 0 0;
+  padding: var(--space-3) 0 0;
   border-top: 1px solid var(--border);
 }
 
 .title {
-  padding: 0 var(--space-4);
+  margin: 0;
   font-size: var(--text-lg);
   font-weight: 700;
+  line-height: 1.2;
+}
+
+@media (max-width: 22.5rem) {
+  .title {
+    font-size: var(--text-base, 1rem);
+  }
 }
 
 /* The shared scroller pads its rows for a full-width band; here the heading is directly above, so tighten it. */
@@ -17,8 +23,14 @@
 }
 
 .scroller > ul {
-  padding-top: var(--space-2);
+  gap: 10px;
   padding-bottom: var(--space-4);
+}
+
+@media (min-width: 48rem) {
+  .scroller > ul {
+    gap: 12px;
+  }
 }
 
 .entry {

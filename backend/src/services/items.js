@@ -271,6 +271,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
       candidates: pool.map((row) => ({
         id: row.item.id,
         businessId: row.business.id,
+        featured: PLAN_FEATURES[row.business.plan]?.featured === true,
         categoryId: row.business.categoryId,
         name: row.item.name,
         section: row.item.section,

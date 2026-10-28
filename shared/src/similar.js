@@ -17,8 +17,8 @@ import { distanceKm } from "./utils.js";
 //   7. Distance band       from the visitor if their position is known, else from the store being viewed.
 //   8. Exact tie-breakers  closer price, nearer store, newer item, then id so the order is deterministic.
 //
-// After ranking, no single store may fill the row: at most `perStore` items per store come first (in rank order), and
-// any space left is filled after them from the rest in rank order, so a thin result still returns a full row.
+// The row is then composed so no store overpowers the others: one best item per store first, about half the row from
+// different featured stores that really have this kind of item, then the rest (see `compose`).
 
 const STOP = new Set(["the", "and", "for", "with", "pack", "pcs", "set", "new", "size", "from", "your", "our", "best"]);
 const NAME_CAP = 4;
@@ -80,13 +80,13 @@ const point = (value) => (value && Number.isFinite(value.lat) && Number.isFinite
 /**
  * @param {object} args
  * @param {object} args.current   { id, businessId, categoryId?, name, section, price, tags, lat, lng }
- * @param {object[]} args.candidates each { id, businessId, categoryId?, name, section, price, tags, lat, lng, createdAt }
+ * @param {object[]} args.candidates each { id, businessId, featured?, categoryId?, name, section, price, tags, lat, lng, createdAt }
  * @param {{lat:number,lng:number}|null} [args.origin] the visitor's position when known
  * @param {number} [args.limit]
  * @param {number} [args.perStore]
  * @returns the candidates, best first, never including the current item or any item of the current store
  */
-export function rankSimilar({ current, candidates, origin = null, limit = 12, perStore = 3 }) {
+export function rankSimilar({ current, candidates, origin = null, limit = 12, perStore = 2 }) {
   if (!current || !Array.isArray(candidates)) return [];
   const section = fold(current.section);
   const words = nameTokens(current.name);
@@ -136,22 +136,63 @@ export function rankSimilar({ current, candidates, origin = null, limit = 12, pe
       (a.candidate.id < b.candidate.id ? -1 : a.candidate.id > b.candidate.id ? 1 : 0)
   );
 
-  const cap = Math.max(1, perStore);
-  const perShop = new Map();
-  const chosen = [];
-  const spare = [];
+  return compose(scored, Math.max(0, limit), Math.max(1, perStore)).map((row) => row.candidate);
+}
+
+// Builds the row from the ranked list so no store can overpower the others:
+//   - each store contributes its single best item first;
+//   - about half the row (`ceil(limit / 2)`) goes to DIFFERENT featured stores, but only ones that genuinely have this
+//     kind of item (a shared name word or the section). Featured is a priority, never a way to put in an unrelated
+//     product, so with fewer such stores the row simply has fewer featured cards;
+//   - the rest is every other store's best item, in rank order;
+//   - if that is still short, second items are added (at most `perStore` per store), then any remaining ones;
+//   - finally featured and other cards alternate, featured first, so each screenful shows a mix at any width.
+function compose(scored, limit, perStore) {
+  const quota = Math.ceil(limit / 2);
+  const shops = new Set();
+  const best = [];
+  const rest = [];
   for (const row of scored) {
-    const used = perShop.get(row.candidate.businessId) ?? 0;
-    if (used < cap && chosen.length < limit) {
-      perShop.set(row.candidate.businessId, used + 1);
-      chosen.push(row);
+    if (shops.has(row.candidate.businessId)) {
+      rest.push(row);
     } else {
-      spare.push(row);
+      shops.add(row.candidate.businessId);
+      best.push(row);
     }
   }
-  for (const row of spare) {
-    if (chosen.length >= limit) break;
-    chosen.push(row);
+  const featured = best.filter((row) => row.candidate.featured === true && row.match === 0).slice(0, quota);
+  const taken = new Set(featured);
+  const others = [];
+  const surplus = [];
+  for (const row of best) {
+    if (taken.has(row)) continue;
+    if (row.candidate.featured === true && row.match === 0) surplus.push(row);
+    else if (featured.length + others.length < limit) others.push(row);
   }
-  return chosen.slice(0, Math.max(0, limit)).map((row) => row.candidate);
+  // Featured stores beyond the quota only fill space the other stores leave, so they never crowd them out.
+  for (const row of surplus) {
+    if (featured.length + others.length >= limit) break;
+    others.push(row);
+  }
+  const perShop = new Map();
+  for (const row of [...featured, ...others]) perShop.set(row.candidate.businessId, 1);
+  const total = () => featured.length + others.length;
+  for (const row of rest) {
+    if (total() >= limit) break;
+    const used = perShop.get(row.candidate.businessId) ?? 0;
+    if (used < perStore) {
+      perShop.set(row.candidate.businessId, used + 1);
+      others.push(row);
+    }
+  }
+  for (const row of rest) {
+    if (total() >= limit) break;
+    if (!others.includes(row)) others.push(row);
+  }
+  const out = [];
+  for (let i = 0; i < Math.max(featured.length, others.length); i += 1) {
+    if (featured[i]) out.push(featured[i]);
+    if (others[i]) out.push(others[i]);
+  }
+  return out.slice(0, limit);
 }

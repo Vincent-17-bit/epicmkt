@@ -104,3 +104,49 @@
   outline: 2px solid var(--text);
   outline-offset: 2px;
 }
+
+/*
+ * Arrows in the header row, beside the title, so they never sit over a card and a tap on a card is never taken by an
+ * arrow. They are shown whenever the row can scroll (dimmed at an end) and hidden when everything already fits.
+ */
+.header {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 calc(var(--space-4) + 44px * 2 + var(--space-2)) 0 var(--space-4);
+}
+
+.frame .navTop {
+  top: 0;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  transform: none;
+  box-shadow: none;
+}
+
+.frame .navTop.prev {
+  right: calc(var(--space-4) + 44px + var(--space-2));
+  left: auto;
+}
+
+.frame .navTop.next {
+  right: var(--space-4);
+}
+
+.frame .navTop:disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.frame[data-scrollable="false"] .navTop {
+  display: none;
+}
+
+.frame[data-header="true"][data-scrollable="false"] .header {
+  padding-right: var(--space-4);
+}
+
+.frame[data-header="true"] .row {
+  padding-top: var(--space-1);
+}

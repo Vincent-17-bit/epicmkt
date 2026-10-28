@@ -5,7 +5,7 @@ import styles from "./HScroller.module.css";
 
 const DRAG_THRESHOLD = 5;
 
-export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "", alwaysNav = false }) {
+export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "", alwaysNav = false, header = null }) {
   const rowRef = useRef(null);
   const drag = useRef({ active: false, moved: false, startX: 0, startLeft: 0 });
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -76,7 +76,8 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
   };
 
   return (
-    <div className={`${styles.frame} ${className}`} style={cellWidth ? { "--cell": cellWidth } : undefined}>
+    <div className={`${styles.frame} ${className}`} style={cellWidth ? { "--cell": cellWidth } : undefined} data-scrollable={edges.left || edges.right ? "true" : "false"} data-header={header ? "true" : undefined}>
+      {header && <div className={styles.header}>{header}</div>}
       <ul
         ref={rowRef}
         className={`${styles.row} ${dragging ? styles.dragging : ""}`}
@@ -98,10 +99,10 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
           </li>
         ))}
       </ul>
-      <button type="button" className={`${styles.nav} ${styles.prev} ${alwaysNav ? styles.navAlways : ""}`} onClick={page(-1)} disabled={!edges.left} aria-label={leftLabel} tabIndex={-1}>
+      <button type="button" className={`${styles.nav} ${styles.prev} ${header ? styles.navTop : alwaysNav ? styles.navAlways : ""}`} onClick={page(-1)} disabled={!edges.left} aria-label={leftLabel} tabIndex={-1}>
         <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" />
       </button>
-      <button type="button" className={`${styles.nav} ${styles.next} ${alwaysNav ? styles.navAlways : ""}`} onClick={page(1)} disabled={!edges.right} aria-label={rightLabel} tabIndex={-1}>
+      <button type="button" className={`${styles.nav} ${styles.next} ${header ? styles.navTop : alwaysNav ? styles.navAlways : ""}`} onClick={page(1)} disabled={!edges.right} aria-label={rightLabel} tabIndex={-1}>
         <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
       </button>
     </div>

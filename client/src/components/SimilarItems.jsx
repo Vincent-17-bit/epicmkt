@@ -9,7 +9,9 @@ import styles from "./SimilarItems.module.css";
 
 const LIMIT = 12;
 const MIN_SHOWN = 2;
-const CELL = "clamp(160px, 44vw, 220px)";
+// Two cards and a peek of the third fit a phone; very small phones still show one and a half, so there is always a
+// visible hint to swipe.
+const CELL = "clamp(148px, 42vw, 220px)";
 
 // A position only nudges the order (nearer stores first), so a coarse key keeps the cache steady as it jitters.
 const roundOf = (coords) =>
@@ -38,10 +40,19 @@ export default function SimilarItems({ itemId, businessId }) {
 
   return (
     <section className={styles.section} aria-labelledby="similar-items-title" data-similar="">
-      <h3 id="similar-items-title" className={styles.title}>
-        {t("item.similar")}
-      </h3>
-      <HScroller key={itemId} leftLabel={t("item.scrollLeft")} rightLabel={t("item.scrollRight")} busy={isPending} cellWidth={CELL} className={styles.scroller} alwaysNav>
+      <HScroller
+        key={itemId}
+        header={
+          <h3 id="similar-items-title" className={styles.title}>
+            {t("item.similar")}
+          </h3>
+        }
+        leftLabel={t("item.scrollLeft")}
+        rightLabel={t("item.scrollRight")}
+        busy={isPending}
+        cellWidth={CELL}
+        className={styles.scroller}
+      >
         {isPending
           ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height="15rem" radius="var(--radius-card)" />)
           : rows.map((row, index) => (

@@ -189,6 +189,7 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
 
 const SIMILAR_STORES = 100;
 const SIMILAR_POOL = 120;
+const SIMILAR_FEATURED_POOL = 60;
 const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level,plan_key,hours,exceptions,timezone";
 const likeEscape = (value) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 const originOfPoint = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
@@ -210,10 +211,25 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
   const section = typeof seed.section === "string" ? seed.section.trim() : "";
   // Only letters and digits reach the filter, so a name can never alter the query.
   const words = [...nameTokens(seed.name)].map((w) => w.replace(/[^a-z0-9]/g, "")).filter((w) => w.length >= 3).sort((x, y) => y.length - x.length).slice(0, 3);
-  const pool = (query) => query.neq("business_id", base.id).order("created_at", { ascending: false }).limit(SIMILAR_POOL);
-  const reads = [];
-  if (section) reads.push(pool(supabase.from("public_items").select(CARD_COLUMNS).ilike("section", likeEscape(section))));
-  if (words.length) reads.push(pool(supabase.from("public_items").select(CARD_COLUMNS).or(words.map((w) => `name.ilike.%${w}%`).join(","))));
+  const pool = (query, size = SIMILAR_POOL) => query.neq("business_id", base.id).order("created_at", { ascending: false }).limit(size);
+  // The same search twice: across every store, and again across featured stores only, so a crowded marketplace of
+  // recent items from other stores cannot push the featured stores that have this item out of the pool.
+  const searches = (ids) => {
+    const scope = () => {
+      const q = supabase.from("public_items").select(CARD_COLUMNS);
+      return ids ? q.in("business_id", ids) : q;
+    };
+    const size = ids ? SIMILAR_FEATURED_POOL : SIMILAR_POOL;
+    const out = [];
+    if (section) out.push(pool(scope().ilike("section", likeEscape(section)), size));
+    if (words.length) out.push(pool(scope().or(words.map((w) => `name.ilike.%${w}%`).join(",")), size));
+    return out;
+  };
+  const featuredKeys = Object.keys(PLAN_FEATURES).filter((key) => PLAN_FEATURES[key]?.featured === true);
+  const featuredIds = featuredKeys.length
+    ? (unwrap(await supabase.from("public_businesses").select("id").in("plan_key", featuredKeys).neq("id", base.id).limit(SIMILAR_STORES)) ?? []).map((b) => b.id)
+    : [];
+  const reads = [...searches(null), ...(featuredIds.length ? searches(featuredIds) : [])];
   const rows = new Map();
   const take = (data) => {
     for (const row of data ?? []) if (row.id !== seed.id && row.business_id !== base.id && !rows.has(row.id)) rows.set(row.id, row);
@@ -275,6 +291,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     candidates: shaped.map((s) => ({
       id: s.item.id,
       businessId: s.business.id,
+      featured: PLAN_FEATURES[s.business.plan_key]?.featured === true,
       categoryId: s.business.category_id,
       name: s.item.name,
       section: s.item.section,

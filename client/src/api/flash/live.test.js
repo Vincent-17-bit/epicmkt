@@ -314,6 +314,18 @@ describe("live item and business pages", () => {
       expect(rows.map((r) => r.id)).toEqual([id(2), id(1)]);
     });
 
+    it("gives about half the row to different featured stores that have the item, alternating with the rest", async () => {
+      const shop = (n, over = {}) => ({ ...bizRow(), id: `10000000-0000-0000-0000-0000000001${n}`, slug: `shop-${n}`, name: `Shop ${n}`, ...over });
+      db().businesses = [bizRow(), shop(1, { plan_key: "premium" }), shop(2, { plan_key: "premium" }), shop(3), shop(4), shop(5)];
+      const at = (n, k, over = {}) => itemRow({ id: id(10 * n + k), business_id: `10000000-0000-0000-0000-0000000001${n}`, name: "Fade cut", section: "Cuts", ...over });
+      db().items = [itemRow(), at(1, 1), at(1, 2), at(1, 3), at(2, 1), at(3, 1), at(4, 1), at(5, 1)];
+      const rows = await live.getSimilarItems(SEED, { limit: 4 });
+      const premium = (r) => r.business.featured;
+      expect(rows).toHaveLength(4);
+      expect(rows.map(premium)).toEqual([true, false, true, false]);
+      expect(new Set(rows.map((r) => r.business.id)).size).toBe(4);
+    });
+
     it("is empty for unknown ids, a lone store, and non-live ids, and does not ask for the heavy fields", async () => {
       setup();
       db().items = [itemRow()];
