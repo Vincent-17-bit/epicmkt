@@ -160,6 +160,7 @@ declare
   v_tz text := btrim(coalesce(p_timezone, ''));
 begin
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
+  perform public.assert_seller_active();
   if v_tz = '' or not exists (select 1 from pg_catalog.pg_timezone_names where name = v_tz) then
     raise exception 'invalid_timezone' using errcode = '22023';
   end if;

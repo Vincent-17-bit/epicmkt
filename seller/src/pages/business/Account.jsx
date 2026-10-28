@@ -248,7 +248,7 @@ function PasswordCard({ business }) {
 // Opening hours and exceptions are wall-clock times in the shop's own zone. Shops default to Nairobi.
 // Browsers list some zones under old names (Asia/Calcutta for Asia/Kolkata), so the common modern names come first.
 const COMMON_ZONES = [
-  "Africa/Nairobi", "Africa/Kampala", "Africa/Dar_es_Salaam", "Africa/Addis_Ababa", "Africa/Kigali", "Africa/Lagos", "Africa/Johannesburg", "Africa/Cairo",
+  BUSINESS_TIME_ZONE, "Africa/Kampala", "Africa/Dar_es_Salaam", "Africa/Addis_Ababa", "Africa/Kigali", "Africa/Lagos", "Africa/Johannesburg", "Africa/Cairo",
   "Asia/Dubai", "Asia/Kolkata", "Asia/Kathmandu", "Asia/Karachi", "Asia/Dhaka", "Asia/Bangkok", "Asia/Singapore", "Asia/Shanghai", "Asia/Tokyo",
   "Europe/London", "Europe/Paris", "Europe/Berlin", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Sao_Paulo",
   "Australia/Sydney", "Pacific/Auckland"
