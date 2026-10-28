@@ -192,3 +192,15 @@
   --offer-validity-urgent-bg: #ffffff;
   --offer-validity-urgent-text: #b91c1c;
 }
+
+@media (min-width: 100rem) {
+  :root {
+    --content-width: 92rem;
+  }
+}
+
+@media (min-width: 125rem) {
+  :root {
+    --content-width: 108rem;
+  }
+}

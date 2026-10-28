@@ -17,3 +17,9 @@
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
+@container biz (min-width: 45rem) {
+  .mapFrame {
+    height: 18rem;
+  }
+}

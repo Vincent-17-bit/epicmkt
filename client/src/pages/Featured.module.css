@@ -42,6 +42,12 @@
   }
 }
 
+@media (min-width: 100rem) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 .more {
   display: flex;
   flex-direction: column;

@@ -217,7 +217,7 @@ export default function Home() {
               </h2>
               <p className={styles.ctaCopy}>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
             </div>
-            <Button as={Link} to="/sell" variant="dark" size="lg" iconRight={faArrowRight} className={styles.ctaButton}>
+            <Button as={Link} to="/sell" variant="dark" iconRight={faArrowRight} className={styles.ctaButton}>
               Become a seller
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -11,6 +12,14 @@ import { errorText } from "../../lib/errors.js";
 import { hoursCaption, hoursRows, socialLinks, statusText } from "../../lib/shopView.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./Preview.module.css";
+
+const DEVICES = [
+  { id: "phone", label: "Phone", width: "24rem" },
+  { id: "tablet", label: "Tablet", width: "48rem" },
+  { id: "laptop", label: "Laptop", width: "80rem" },
+  { id: "desktop", label: "Desktop", width: "96rem" },
+  { id: "fit", label: "Fit", width: "100%" },
+];
 
 const NOT_LIVE = {
   paused: "Your shop is paused.",
@@ -84,6 +93,7 @@ function FlashSection({ cards }) {
 }
 
 export default function Preview() {
+  const [device, setDevice] = useState("tablet");
   const preview = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
 
   const back = <Link to="/business/catalog" className={styles.back}>Back to My listings</Link>;
@@ -156,7 +166,14 @@ export default function Preview() {
           <p>{NOT_LIVE[shop.status] ?? "Your shop is not live."} This preview shows what they will see once it is live again.</p>
         </div>
       )}
-      <div className={styles.page} data-testid="shop-preview">
+      <div className={styles.devices} role="group" aria-label="Preview width">
+        {DEVICES.map((d) => (
+          <button key={d.id} type="button" className={styles.device} aria-pressed={device === d.id} onClick={() => setDevice(d.id)}>
+            {d.label}
+          </button>
+        ))}
+      </div>
+      <div className={styles.page} data-testid="shop-preview" style={{ maxWidth: DEVICES.find((d) => d.id === device).width }}>
         <BusinessPage
           mode="preview"
           business={business}
