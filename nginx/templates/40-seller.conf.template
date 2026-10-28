@@ -1,0 +1,29 @@
+server {
+    include /etc/nginx/snippets/listen.conf;
+    include /etc/nginx/snippets/tls.conf;
+    include /etc/nginx/snippets/guard.conf;
+    server_name ${SELLER_DOMAIN};
+    set $up_host ${SELLER_UPSTREAM};
+
+    location = /robots.txt {
+        default_type text/plain;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location ^~ /assets/ {
+        limit_req zone=rl_static burst=300 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/cache.conf;
+        include /etc/nginx/snippets/headers-private.conf;
+        proxy_cache static;
+        proxy_cache_valid 200 365d;
+        proxy_pass https://vercel_seller;
+    }
+
+    location / {
+        limit_req zone=rl_page burst=60 nodelay;
+        include /etc/nginx/snippets/proxy.conf;
+        include /etc/nginx/snippets/headers-private.conf;
+        proxy_pass https://vercel_seller;
+    }
+}

@@ -1,0 +1,38 @@
+upstream vercel_client {
+    zone vercel_client 64k;
+    least_conn;
+    server ${CLIENT_UPSTREAM}:443 max_fails=3 fail_timeout=15s;
+    server ${CLIENT_UPSTREAM_BACKUP}:443 backup max_fails=3 fail_timeout=15s;
+    keepalive 32;
+    keepalive_time 1h;
+    keepalive_timeout 60s;
+}
+
+upstream vercel_seller {
+    zone vercel_seller 64k;
+    least_conn;
+    server ${SELLER_UPSTREAM}:443 max_fails=3 fail_timeout=15s;
+    server ${SELLER_UPSTREAM_BACKUP}:443 backup max_fails=3 fail_timeout=15s;
+    keepalive 16;
+    keepalive_time 1h;
+    keepalive_timeout 60s;
+}
+
+upstream vercel_admin {
+    zone vercel_admin 64k;
+    least_conn;
+    server ${ADMIN_UPSTREAM}:443 max_fails=3 fail_timeout=15s;
+    server ${ADMIN_UPSTREAM_BACKUP}:443 backup max_fails=3 fail_timeout=15s;
+    keepalive 8;
+    keepalive_time 1h;
+    keepalive_timeout 60s;
+}
+
+upstream supabase_storage {
+    zone supabase_storage 64k;
+    least_conn;
+    server ${SUPABASE_HOST}:443 max_fails=3 fail_timeout=15s;
+    keepalive 32;
+    keepalive_time 1h;
+    keepalive_timeout 60s;
+}
