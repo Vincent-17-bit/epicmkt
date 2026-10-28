@@ -22,12 +22,30 @@ test("never returns the current item or anything from the current store", () => 
   assert.deepEqual(ids(rows), ["ok"]);
 });
 
-test("same section beats everything else", () => {
+test("a shared name word beats a shared section, and a shared section beats nothing", () => {
   const rows = rankSimilar({
     current,
-    candidates: [make("close-price", { section: "Chairs", name: "Wooden dining table" }), make("same-section", { section: " tables ", price: 90000 })]
+    candidates: [
+      make("nothing", { section: "Chairs", name: "Item" }),
+      make("section-only", { section: " tables ", name: "Item", price: 90000 }),
+      make("same-name", { section: "Chairs", name: "Wooden dining table" })
+    ]
   });
-  assert.deepEqual(ids(rows), ["same-section", "close-price"]);
+  assert.deepEqual(ids(rows), ["same-name", "section-only", "nothing"]);
+});
+
+test("any category: the same product in any store is found, unrelated products are not", () => {
+  const bread = { id: "cur", businessId: "b0", categoryId: "bakeries", name: "White bread loaf", section: "Bread", price: 60, tags: [] };
+  const rows = rankSimilar({
+    current: bread,
+    candidates: [
+      make("same-category", { categoryId: "bakeries", name: "Cake slice", section: "Cakes", price: 60 }),
+      make("supermarket-bread", { categoryId: "supermarkets", name: "Brown Bread", section: "Bakery", price: 70 }),
+      make("shoes", { categoryId: "shoes", name: "Sneakers", section: "Men", price: 60 }),
+      make("kiosk-loaf", { categoryId: "kiosks", name: "Sliced bread loaf 400g", section: "Food", price: 65 })
+    ]
+  });
+  assert.deepEqual(ids(rows), ["kiosk-loaf", "supermarket-bread", "same-category"]);
 });
 
 test("within a section, shared name words and tags rank higher", () => {

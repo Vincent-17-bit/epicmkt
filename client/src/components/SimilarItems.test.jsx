@@ -17,7 +17,7 @@ const similar = (n) =>
     imageUrl: "b.png",
     availability: "available",
     pricing: i === 0 ? pricing(1000, 800) : pricing(500, 500),
-    business: { id: `b${i}`, slug: `shop-${i}`, name: `Shop ${i}` }
+    business: { id: `b${i}`, slug: `shop-${i}`, name: `Shop ${i}`, verified: i === 1 }
   }));
 
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>;
@@ -63,12 +63,36 @@ describe("SimilarItems", () => {
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Similar items" })).toBeNull());
   });
 
-  it("opens the item in its own store and tracks the click", async () => {
+  it("uses the same product card as the home grid: a link to the item in its own store, store name included", async () => {
     mocks.getSimilar.mockResolvedValue(similar(3));
     mount();
-    await userEvent.click(await screen.findByRole("button", { name: /Other 1/ }));
+    const link = await screen.findByRole("link", { name: /Other 1/ });
+    expect(link).toHaveAttribute("href", "/b/shop-1/i/s1");
+    expect(link).toHaveTextContent("Shop 1");
+  });
+
+  it("counts the click without stopping the link", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(3));
+    mount();
+    await userEvent.click(await screen.findByRole("link", { name: /Other 1/ }));
     expect(screen.getByTestId("where")).toHaveTextContent("/b/shop-1/i/s1");
     expect(logEvent).toHaveBeenCalledWith("similar_item_click", { businessId: "b-cur", itemId: "cur", targetItemId: "s1", targetBusinessId: "b1", position: 2 });
+  });
+
+  it("has scroll arrows that page the row, shown only while there is more to scroll to", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(6));
+    mount();
+    await screen.findByText("Other 0");
+    const next = screen.getByRole("button", { name: "Scroll right" });
+    const prev = screen.getByRole("button", { name: "Scroll left" });
+    expect(prev).toBeDisabled();
+    const row = document.querySelector("[data-similar] ul");
+    Object.defineProperties(row, { scrollWidth: { value: 2000, configurable: true }, clientWidth: { value: 400, configurable: true } });
+    row.scrollBy = vi.fn();
+    row.dispatchEvent(new Event("scroll"));
+    await waitFor(() => expect(next).toBeEnabled());
+    await userEvent.click(next);
+    expect(row.scrollBy).toHaveBeenCalledWith({ left: 400, behavior: "smooth" });
   });
 
   it("drops rows that cannot be opened", async () => {

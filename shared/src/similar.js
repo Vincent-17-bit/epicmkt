@@ -2,22 +2,27 @@ import { distanceKm } from "./utils.js";
 
 // Ranking for "Similar items" on a product page. Pure: no I/O, so the demo backend and the live adapter rank the same way.
 //
-// Candidates are listed, public items from OTHER stores of the same category (the adapters filter that). This module
-// orders them. The criteria are strict tiers, compared in this order; a later tier only matters when every earlier one
-// ties. Continuous values (price, distance) are put into bands first, otherwise they would almost never tie and the
-// tiers below them could never act.
+// Candidates are listed, public items from OTHER stores, any category: a bread on one page should find every bread.
+// An item only qualifies when it is clearly the same kind of thing: it shares a word with the name, sits in the same
+// section, or belongs to a store of the same category. Qualifying items are ordered by strict tiers, a later tier only
+// mattering when every earlier one ties. Continuous values (price, distance) are put into bands first, otherwise they
+// would almost never tie and the tiers below them could never act.
 //
-//   1. Same section        the seller's own grouping ("Sofas") is the strongest signal that two items compete.
-//   2. Affinity            shared words in the item name (strong) and shared store tags (weak), capped so it is a tier.
-//   3. Price band          how close the price is: within 25%, 60%, 2.5x, further; unknown price ranks last.
-//   4. Distance band       from the visitor if their position is known, else from the store being viewed.
-//   5. Exact tie-breakers  closer price, nearer store, newer item, then id so the order is deterministic.
+//   1. Match               shares a name word or the section (0) beats merely being in the same category (1).
+//   2. Name words          the more words shared with the item name, the closer the product (capped).
+//   3. Same section        the seller's own grouping ("Sofas").
+//   4. Same category       the store sells the same kind of thing.
+//   5. Shared store tags   a weak signal, capped.
+//   6. Price band          within 25%, 60%, 2.5x, further; unknown price ranks last.
+//   7. Distance band       from the visitor if their position is known, else from the store being viewed.
+//   8. Exact tie-breakers  closer price, nearer store, newer item, then id so the order is deterministic.
 //
 // After ranking, no single store may fill the row: at most `perStore` items per store come first (in rank order), and
-// any space left is filled after them from the rest in rank order, so a category with few stores still returns a full row.
+// any space left is filled after them from the rest in rank order, so a thin result still returns a full row.
 
 const STOP = new Set(["the", "and", "for", "with", "pack", "pcs", "set", "new", "size", "from", "your", "our", "best"]);
-const AFFINITY_CAP = 6;
+const NAME_CAP = 4;
+const TAG_CAP = 3;
 const PRICE_BANDS = [1.25, 1.6, 2.5];
 const PRICE_UNKNOWN = 4;
 const DISTANCE_BANDS_KM = [3, 10, 25, 60];
@@ -35,7 +40,7 @@ const fold = (value) =>
 
 const stem = (word) => (word.length > 3 && word.endsWith("s") && !word.endsWith("ss") ? word.slice(0, -1) : word);
 
-const tokensOf = (value) => {
+export const nameTokens = (value) => {
   const out = new Set();
   for (const word of fold(value).split(" ")) {
     if (word.length < 3 || STOP.has(word)) continue;
@@ -74,8 +79,8 @@ const point = (value) => (value && Number.isFinite(value.lat) && Number.isFinite
 
 /**
  * @param {object} args
- * @param {object} args.current   { id, businessId, name, section, price, tags, lat, lng }
- * @param {object[]} args.candidates each { id, businessId, name, section, price, tags, lat, lng, createdAt }
+ * @param {object} args.current   { id, businessId, categoryId?, name, section, price, tags, lat, lng }
+ * @param {object[]} args.candidates each { id, businessId, categoryId?, name, section, price, tags, lat, lng, createdAt }
  * @param {{lat:number,lng:number}|null} [args.origin] the visitor's position when known
  * @param {number} [args.limit]
  * @param {number} [args.perStore]
@@ -84,7 +89,7 @@ const point = (value) => (value && Number.isFinite(value.lat) && Number.isFinite
 export function rankSimilar({ current, candidates, origin = null, limit = 12, perStore = 3 }) {
   if (!current || !Array.isArray(candidates)) return [];
   const section = fold(current.section);
-  const words = tokensOf(current.name);
+  const words = nameTokens(current.name);
   const tags = tagSet(current.tags);
   const unitPrice = priceOf(current);
   const from = point(origin) ?? point(current);
@@ -97,11 +102,17 @@ export function rankSimilar({ current, candidates, origin = null, limit = 12, pe
     seen.add(candidate.id);
     const price = priceOf(candidate);
     const km = from && point(candidate) ? distanceKm(from, point(candidate)) : null;
-    const affinity = Math.min(AFFINITY_CAP, overlap(words, tokensOf(candidate.name)) * 2 + overlap(tags, tagSet(candidate.tags)));
+    const named = Math.min(NAME_CAP, overlap(words, nameTokens(candidate.name)));
+    const inSection = Boolean(section) && fold(candidate.section) === section;
+    const inCategory = !current.categoryId || candidate.categoryId === current.categoryId;
+    if (!named && !inSection && !inCategory) continue;
     scored.push({
       candidate,
-      sameSection: section && fold(candidate.section) === section ? 0 : 1,
-      affinity,
+      match: named || inSection ? 0 : 1,
+      named,
+      sameSection: inSection ? 0 : 1,
+      sameCategory: inCategory ? 0 : 1,
+      tagged: Math.min(TAG_CAP, overlap(tags, tagSet(candidate.tags))),
       band: priceBand(unitPrice, price),
       near: distanceBand(km),
       gap: unitPrice !== null && price !== null ? Math.abs(Math.log(price / unitPrice)) : Infinity,
@@ -112,8 +123,11 @@ export function rankSimilar({ current, candidates, origin = null, limit = 12, pe
 
   scored.sort(
     (a, b) =>
+      a.match - b.match ||
+      b.named - a.named ||
       a.sameSection - b.sameSection ||
-      b.affinity - a.affinity ||
+      a.sameCategory - b.sameCategory ||
+      b.tagged - a.tagged ||
       a.band - b.band ||
       a.near - b.near ||
       a.gap - b.gap ||

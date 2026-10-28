@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, distanceKm, isListed, rankSimilar } from "@epicmkt/shared";
+import { PLAN_FEATURES, distanceKm, isListed, nameTokens, rankSimilar } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -189,41 +189,64 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
 
 const SIMILAR_STORES = 100;
 const SIMILAR_POOL = 120;
-const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level";
+const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level,plan_key,hours,exceptions,timezone";
 const likeEscape = (value) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 const originOfPoint = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
 const pointOf = (b) => (Number.isFinite(b?.lat) && Number.isFinite(b?.lng) ? { lat: b.lat, lng: b.lng } : null);
 
-// Items like this one from other stores of the same category: listed and public only (the views already hide the rest).
-// The database narrows the pool (same section, and a price window around this item) and the shared ranking orders it,
-// so the demo backend and live rank identically. Throws on a failed read; the caller turns that into an empty row.
+// Items like this one from ANY other store, whatever its category: a bread finds every bread. The database narrows the
+// pool (same section, a shared word in the name, and, only when that is thin, the same category) and the shared ranking
+// orders it, so the demo backend and live rank identically. Listed and public only (the views already hide the rest).
+// Throws on a failed read; the caller turns that into an empty row.
 export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}) {
   if (!isLiveId(itemId)) return [];
   const seed = unwrap(await supabase.from("public_items").select(CARD_COLUMNS).eq("id", itemId).maybeSingle());
   if (!seed) return [];
   const base = unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("id", seed.business_id).maybeSingle());
-  if (!base?.category_id) return [];
-  const here = originOfPoint(origin) ?? pointOf(base);
-  const siblings = (unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("category_id", base.category_id).neq("id", base.id).limit(500)) ?? [])
-    .map((b) => ({ b, km: here && pointOf(b) ? distanceKm(here, pointOf(b)) : Infinity, sameCounty: base.county && b.county === base.county ? 0 : 1 }))
-    .sort((x, y) => x.sameCounty - y.sameCounty || x.km - y.km)
-    .slice(0, SIMILAR_STORES)
-    .map(({ b }) => b);
-  if (!siblings.length) return [];
-  const stores = new Map(siblings.map((b) => [b.id, b]));
-  const ids = [...stores.keys()];
-  const price = seed.price === null ? NaN : Number(seed.price);
-  const pool = (query) => query.in("business_id", ids).order("created_at", { ascending: false }).limit(SIMILAR_POOL);
-  const reads = [];
+  if (!base) return [];
+  const visitor = originOfPoint(origin);
+  const here = visitor ?? pointOf(base);
+
   const section = typeof seed.section === "string" ? seed.section.trim() : "";
+  // Only letters and digits reach the filter, so a name can never alter the query.
+  const words = [...nameTokens(seed.name)].map((w) => w.replace(/[^a-z0-9]/g, "")).filter((w) => w.length >= 3).sort((x, y) => y.length - x.length).slice(0, 3);
+  const pool = (query) => query.neq("business_id", base.id).order("created_at", { ascending: false }).limit(SIMILAR_POOL);
+  const reads = [];
   if (section) reads.push(pool(supabase.from("public_items").select(CARD_COLUMNS).ilike("section", likeEscape(section))));
-  let near = supabase.from("public_items").select(CARD_COLUMNS);
-  if (Number.isFinite(price) && price > 0) near = near.gte("price", Math.floor(price * 0.4)).lte("price", Math.ceil(price * 2.5));
-  reads.push(pool(near));
+  if (words.length) reads.push(pool(supabase.from("public_items").select(CARD_COLUMNS).or(words.map((w) => `name.ilike.%${w}%`).join(","))));
   const rows = new Map();
-  for (const result of await Promise.all(reads)) for (const row of unwrap(result) ?? []) if (!rows.has(row.id)) rows.set(row.id, row);
-  const listed = [...rows.values()].filter((row) => row.id !== seed.id && stores.has(row.business_id) && isListed(row));
+  const take = (data) => {
+    for (const row of data ?? []) if (row.id !== seed.id && row.business_id !== base.id && !rows.has(row.id)) rows.set(row.id, row);
+  };
+  for (const result of await Promise.all(reads)) take(unwrap(result));
+
+  let stores = new Map();
+  const loadStores = async (ids) => {
+    const missing = ids.filter((id) => !stores.has(id)).slice(0, SIMILAR_STORES * 2);
+    if (!missing.length) return;
+    for (const b of unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).in("id", missing)) ?? []) stores.set(b.id, b);
+  };
+
+  // Too few real matches: fill from stores of the same category, nearest first.
+  if (rows.size < limit && base.category_id) {
+    const siblings = (unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("category_id", base.category_id).neq("id", base.id).limit(500)) ?? [])
+      .map((b) => ({ b, km: here && pointOf(b) ? distanceKm(here, pointOf(b)) : Infinity, sameCounty: base.county && b.county === base.county ? 0 : 1 }))
+      .sort((x, y) => x.sameCounty - y.sameCounty || x.km - y.km)
+      .slice(0, SIMILAR_STORES)
+      .map(({ b }) => b);
+    for (const b of siblings) stores.set(b.id, b);
+    if (siblings.length) {
+      const price = seed.price === null ? NaN : Number(seed.price);
+      let near = supabase.from("public_items").select(CARD_COLUMNS).in("business_id", siblings.map((b) => b.id));
+      if (Number.isFinite(price) && price > 0) near = near.gte("price", Math.floor(price * 0.4)).lte("price", Math.ceil(price * 2.5));
+      take(unwrap(await pool(near)));
+    }
+  }
+  const listed = [...rows.values()].filter(isListed);
   if (!listed.length) return [];
+  await loadStores([...new Set(listed.map((row) => row.business_id))]);
+  const usable = listed.filter((row) => stores.has(row.business_id));
+  if (!usable.length) return [];
 
   // Sale prices and offer chips are decoration: if either cannot be read the items still show at their regular price.
   let live = { now: Date.now(), entries: [] };
@@ -239,19 +262,20 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     // no chips
   }
   const sales = new Map(live.entries.map((entry) => [entry.item.id, entry]));
-  const shaped = listed.map((row) => {
+  const shaped = usable.map((row) => {
     const business = stores.get(row.business_id);
     const item = itemRow(row, business);
     const entry = sales.get(row.id);
     const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
     return { item, business, entry, pricing };
   });
-  const seedSale = sales.get(seed.id)?.pricing?.salePrice;
+  const seedPrice = seed.price === null ? NaN : Number(seed.price);
   const ranked = rankSimilar({
-    current: { id: seed.id, businessId: base.id, name: seed.name, section: seed.section, price: seedSale ?? price, tags: base.tags, ...(pointOf(base) ?? {}) },
+    current: { id: seed.id, businessId: base.id, categoryId: base.category_id, name: seed.name, section: seed.section, price: sales.get(seed.id)?.pricing?.salePrice ?? seedPrice, tags: base.tags, ...(pointOf(base) ?? {}) },
     candidates: shaped.map((s) => ({
       id: s.item.id,
       businessId: s.business.id,
+      categoryId: s.business.category_id,
       name: s.item.name,
       section: s.item.section,
       price: s.pricing?.salePrice ?? null,
@@ -260,15 +284,26 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
       ...(pointOf(s.business) ?? {}),
       s
     })),
-    origin: originOfPoint(origin),
+    origin: visitor,
     limit
   });
+  // The same business fields the home product grid gives its cards, so the card looks and behaves the same.
   return ranked.map(({ s }) => ({
     ...s.item,
     pricing: s.pricing,
     flash: s.entry ? flashParts(s.entry, live.now) : null,
     offer: chips.get(s.item.id) ?? null,
-    business: { id: s.business.id, slug: s.business.slug, name: s.business.name, verified: s.business.verification_level === "verified" }
+    business: {
+      id: s.business.id,
+      slug: s.business.slug,
+      name: s.business.name,
+      verified: s.business.verification_level === "verified",
+      featured: PLAN_FEATURES[s.business.plan_key]?.featured === true,
+      categoryId: s.business.category_id,
+      town: s.business.town ?? "",
+      county: s.business.county ?? "",
+      ...statusCard(s.business.hours, s.business.exceptions, s.business.timezone)
+    }
   }));
 }
 

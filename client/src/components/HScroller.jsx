@@ -5,7 +5,7 @@ import styles from "./HScroller.module.css";
 
 const DRAG_THRESHOLD = 5;
 
-export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "" }) {
+export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "", alwaysNav = false }) {
   const rowRef = useRef(null);
   const drag = useRef({ active: false, moved: false, startX: 0, startLeft: 0 });
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -98,10 +98,10 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
           </li>
         ))}
       </ul>
-      <button type="button" className={`${styles.nav} ${styles.prev}`} onClick={page(-1)} disabled={!edges.left} aria-label={leftLabel} tabIndex={-1}>
+      <button type="button" className={`${styles.nav} ${styles.prev} ${alwaysNav ? styles.navAlways : ""}`} onClick={page(-1)} disabled={!edges.left} aria-label={leftLabel} tabIndex={-1}>
         <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" />
       </button>
-      <button type="button" className={`${styles.nav} ${styles.next}`} onClick={page(1)} disabled={!edges.right} aria-label={rightLabel} tabIndex={-1}>
+      <button type="button" className={`${styles.nav} ${styles.next} ${alwaysNav ? styles.navAlways : ""}`} onClick={page(1)} disabled={!edges.right} aria-label={rightLabel} tabIndex={-1}>
         <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
       </button>
     </div>

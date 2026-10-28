@@ -94,3 +94,13 @@
     background: var(--primary-tint);
   }
 }
+
+/* For rows whose arrows must work on touch screens and small widths too. They only show while there is more to scroll to. */
+.navAlways {
+  display: inline-flex;
+}
+
+.navAlways:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

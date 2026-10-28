@@ -270,21 +270,23 @@ describe("live item and business pages", () => {
       ];
     };
 
-    it("returns listed items of other stores in the same category, never the current store, item or category", async () => {
+    it("finds the same kind of item in any other store, whatever its category, never the current store or item, and not unrelated ones", async () => {
       setup();
       db().items = [
         itemRow(),
         itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", section: "Cuts" }),
         itemRow({ id: id(1), business_id: B, name: "Fade cut", section: "Cuts" }),
         itemRow({ id: id(2), business_id: C, name: "Tonic", section: "Care", price: "1100.00" }),
-        itemRow({ id: id(3), business_id: D, name: "Bread", section: "Cuts" })
+        itemRow({ id: id(3), business_id: D, name: "Fade cut loaf", section: "Bakery" }),
+        itemRow({ id: id(4), business_id: D, name: "Bread", section: "Bakery" })
       ];
       const rows = await live.getSimilarItems(SEED);
-      expect(rows.map((r) => r.id)).toEqual([id(1), id(2)]);
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
+      expect(rows.some((r) => r.id === id(4))).toBe(false);
       expect(rows[0].business).toMatchObject({ id: B, slug: "shop-b", name: "Shop B" });
     });
 
-    it("ranks the same section first, then the closest price, and puts a running sale's price on the item", async () => {
+    it("ranks a shared name word first, then the same section, then the closest price, and puts a running sale's price on the item", async () => {
       setup();
       db().items = [
         itemRow(),
@@ -294,9 +296,9 @@ describe("live item and business pages", () => {
       ];
       db().sales = [row(3, { item_id: id(3), business_id: C, regular_price: "1200.00", sale_price: "960.00" })];
       const rows = await live.getSimilarItems(SEED, { limit: 3 });
-      expect(rows.map((r) => r.id)).toEqual([id(3), id(2), id(1)]);
-      expect(rows[0].pricing.salePrice).toBe(960);
-      expect(rows[0].flash).not.toBeNull();
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
+      expect(rows[1].pricing.salePrice).toBe(960);
+      expect(rows[1].flash).not.toBeNull();
     });
 
     it("prefers a nearer store when everything else ties", async () => {

@@ -241,7 +241,7 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
-// Items like this one, from other stores of the same category. Listed items of active stores only; the ranking itself
+// Items like this one from any other store, whatever its category (a bread finds every bread). Listed items of active stores only; the ranking itself
 // lives in @epicmkt/shared so the live adapter orders them identically. Anything that goes wrong returns [].
 export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}) {
   await delay();
@@ -259,7 +259,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     const current = shape(base, seed);
     const pool = [];
     for (const business of store.businesses) {
-      if (business.id === base.id || business.status !== BUSINESS_STATUS.ACTIVE || business.categoryId !== base.categoryId) continue;
+      if (business.id === base.id || business.status !== BUSINESS_STATUS.ACTIVE) continue;
       business.services.forEach((svc, index) => {
         const item = toItem(business, svc, index);
         if (item.status === "listed") pool.push(shape(business, item));
@@ -267,10 +267,11 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     }
     const point = (row) => ({ lat: row.business.lat, lng: row.business.lng });
     const ranked = rankSimilar({
-      current: { id: seed.id, businessId: base.id, name: seed.name, section: seed.section, price: current.price, tags: base.tags, ...point(current) },
+      current: { id: seed.id, businessId: base.id, categoryId: base.categoryId, name: seed.name, section: seed.section, price: current.price, tags: base.tags, ...point(current) },
       candidates: pool.map((row) => ({
         id: row.item.id,
         businessId: row.business.id,
+        categoryId: row.business.categoryId,
         name: row.item.name,
         section: row.item.section,
         price: row.price,
@@ -287,7 +288,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
       pricing: row.pricing,
       flash: row.sale ? flashParts(row.item, row.sale) : null,
       offer: offerChipFor(row.item, row.business),
-      business: sellerCard(row.business, from)
+      business: { ...sellerCard(row.business, from), featured: PLAN_FEATURES[row.business.plan]?.featured === true }
     }));
   } catch {
     return [];

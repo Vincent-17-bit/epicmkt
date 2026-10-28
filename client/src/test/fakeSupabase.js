@@ -104,6 +104,16 @@ export function createFakeSupabase() {
         tests.push((row) => re.test(String(row[col] ?? "")));
         return query;
       },
+      // Only the "col.ilike.%text%,col.ilike.%text%" form: a row passes when any clause matches.
+      or: (clauses) => {
+        const tests2 = String(clauses).split(",").map((clause) => {
+          const [col, op, ...rest] = clause.split(".");
+          const re = new RegExp(String(rest.join(".")).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*"), "i");
+          return (row) => op === "ilike" && re.test(String(row[col] ?? ""));
+        });
+        tests.push((row) => tests2.some((test) => test(row)));
+        return query;
+      },
       in: (col, values) => {
         inFilters.push([col, values]);
         return query;
