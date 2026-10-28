@@ -1,4 +1,4 @@
-import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, SPEC_DEFAULT_GROUP } from "@epicmkt/shared";
+import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -553,41 +553,16 @@ export const getShopPreview = async () => {
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
 };
-// The optional item details, checked like seller_save_item does. A key the form did not send is left out, so the stored value stays.
-const itemDetails = (f) => {
-  const out = {};
-  const text = (key, max) => {
-    if (f[key] === undefined) return;
-    if (f[key] !== null && typeof f[key] !== "string") throw new ApiError("invalid_details");
-    const t = (f[key] ?? "").trim();
-    if (t.length > max) throw new ApiError("invalid_details");
-    out[key] = t || null;
-  };
-  text("brand", 60); text("shortDescription", 140); text("packSize", 40); text("terms", 500);
-  if (f.includes !== undefined) {
-    if (f.includes !== null && (!Array.isArray(f.includes) || f.includes.some((e) => typeof e !== "string"))) throw new ApiError("invalid_details");
-    const list = (f.includes ?? []).map((e) => e.trim());
-    if (list.length > 10 || list.some((e) => !e || e.length > 80)) throw new ApiError("invalid_details");
-    out.includes = list;
-  }
-  if (f.highlights !== undefined) {
-    if (f.highlights !== null && !Array.isArray(f.highlights)) throw new ApiError("invalid_details");
-    const list = (f.highlights ?? []).map((h) => {
-      const title = typeof h?.title === "string" ? h.title.trim() : "";
-      const body = typeof h?.text === "string" ? h.text.trim() : "";
-      if (!body || body.length > 200 || title.length > 40) throw new ApiError("invalid_details");
-      return { ...(title && { title }), text: body };
-    });
-    if (list.length > 8) throw new ApiError("invalid_details");
-    out.highlights = list;
-  }
-  return out;
-};
+const DETAIL_KEYS = ["brand", "shortDescription", "packSize", "terms", "includes", "highlights", "specs"];
+const sent = (f, k) => (k === "specs" ? Array.isArray(f.specs) : f[k] !== undefined);
 export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount), ...(Array.isArray(f.specs) && { specs: copy(f.specs).map((r) => ({ ...r, group: r.group || SPEC_DEFAULT_GROUP })) }), ...itemDetails(f) };
+  const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount) };
+  const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
+  if (!details.ok) throw new ApiError("invalid_details");
+  Object.assign(fields, details.value);
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);

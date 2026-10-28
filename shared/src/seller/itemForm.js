@@ -88,6 +88,55 @@ const cleanHighlights = (raw) => {
 
 const TEXT_DETAILS = ["brand", "shortDescription", "packSize", "terms"];
 
+const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+const filled = (v, max) => typeof v === "string" && v.trim() !== "" && v.length <= max;
+
+// What seller_save_item keeps for the detail fields a save sends, or { ok: false } where it refuses them (invalid_details).
+// Only keys that are present come back, because a save that leaves a key out leaves the stored value alone.
+// Like the database, it trims the four text fields and the included lines, and keeps spec and highlight text as sent.
+export const storedItemDetails = (f) => {
+  const value = {};
+  const bad = { ok: false };
+  for (const key of TEXT_DETAILS) {
+    if (!(key in f)) continue;
+    if (f[key] !== null && typeof f[key] !== "string") return bad;
+    const text = String(f[key] ?? "").trim();
+    if (text.length > ITEM_DETAIL_LIMITS[key]) return bad;
+    value[key] = text || null;
+  }
+  if ("highlights" in f) {
+    const list = f.highlights ?? [];
+    const max = ITEM_DETAIL_LIMITS.highlights;
+    if (!Array.isArray(list) || list.length > max.rows) return bad;
+    value.highlights = [];
+    for (const row of list) {
+      if (!isRecord(row) || Object.keys(row).some((k) => k !== "title" && k !== "text") || !filled(row.text, max.text)) return bad;
+      if (row.title != null && typeof row.title !== "string") return bad;
+      const lead = row.title != null && row.title.trim() !== "";
+      if (lead && row.title.length > max.title) return bad;
+      value.highlights.push({ ...(lead && { title: row.title }), text: row.text });
+    }
+  }
+  if ("includes" in f) {
+    const list = f.includes ?? [];
+    const max = ITEM_DETAIL_LIMITS.includes;
+    if (!Array.isArray(list) || list.length > max.rows || !list.every((t) => typeof t === "string" && filled(t.trim(), max.text))) return bad;
+    value.includes = list.map((t) => t.trim());
+  }
+  if ("specs" in f) {
+    const list = f.specs ?? [];
+    if (!Array.isArray(list) || list.length > SPEC_LIMITS.rows) return bad;
+    value.specs = [];
+    for (const row of list) {
+      if (!isRecord(row) || Object.keys(row).some((k) => !["group", "label", "value"].includes(k))) return bad;
+      const group = row.group ?? SPEC_DEFAULT_GROUP;
+      if (!SPEC_GROUPS.includes(group) || !filled(row.label, SPEC_LIMITS.label) || !filled(row.value, SPEC_LIMITS.value)) return bad;
+      value.specs.push({ group, label: row.label, value: row.value });
+    }
+  }
+  return { ok: true, value };
+};
+
 export const validateItemForm = (f) => {
   const errors = {};
   const name = String(f.name ?? "").trim();

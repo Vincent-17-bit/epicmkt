@@ -68,7 +68,7 @@ test("item details: the mock saves them, keeps them when the form omits them, an
   const item = await find("it-fade");
   assert.deepEqual(item.highlights, []);
   const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
-  await mock.saveItem("it-fade", { ...form, brand: " Acme ", shortDescription: "Fresh", packSize: "Box of 6", terms: "Order ahead", includes: ["Candles"], highlights: [{ title: " Soft ", text: "Baked today" }, { title: "", text: "Nut free" }] });
+  await mock.saveItem("it-fade", { ...form, brand: " Acme ", shortDescription: "Fresh", packSize: "Box of 6", terms: "Order ahead", includes: ["Candles"], highlights: [{ title: "Soft", text: "Baked today" }, { title: "", text: "Nut free" }] });
   const saved = await find("it-fade");
   assert.deepEqual([saved.brand, saved.shortDescription, saved.packSize, saved.terms, saved.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
   assert.deepEqual(saved.highlights, [{ title: "Soft", text: "Baked today" }, { text: "Nut free" }]);
@@ -118,4 +118,58 @@ test("import details: the live shape returns them the same way the mock does", (
   assert.deepEqual([plain.brand, plain.shortDescription, plain.packSize, plain.terms, plain.includes], [null, null, null, null, []]);
   const full = shape.catalogItem({ ...row, brand: "Acme", short_description: "Fresh", pack_size: "Box", terms: "Ahead", includes: ["Candles"] });
   assert.deepEqual([full.brand, full.shortDescription, full.packSize, full.terms, full.includes], ["Acme", "Fresh", "Box", "Ahead", ["Candles"]]);
+});
+
+const signedInMock = async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
+  const item = await find("it-fade");
+  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  return { find, form };
+};
+const NONE = { brand: null, shortDescription: null, highlights: [], includes: [], terms: null, packSize: null };
+const pick = (item) => Object.fromEntries(Object.keys(NONE).map((k) => [k, item[k]]));
+
+test("details: items without the new fields come back empty, from the mock seed and from new items", async () => {
+  const { find, form } = await signedInMock();
+  assert.deepEqual(pick(await find("it-fade")), NONE);
+  assert.deepEqual(pick(await find(await mock.saveItem(null, form))), NONE);
+});
+
+test("details: the mock stores trimmed text and strips an empty lead", async () => {
+  const { find, form } = await signedInMock();
+  const id = await mock.saveItem(null, { ...form, brand: " Nike ", shortDescription: " Light ", terms: " No returns ", packSize: " 6 ", highlights: [{ title: " ", text: "Soft" }, { title: "Lead", text: "Warm" }], includes: [" Charger ", "Cable"], specs: [{ group: "Measurements", label: "Size", value: "M" }] });
+  const saved = await find(id);
+  assert.deepEqual(pick(saved), { brand: "Nike", shortDescription: "Light", terms: "No returns", packSize: "6", highlights: [{ text: "Soft" }, { title: "Lead", text: "Warm" }], includes: ["Charger", "Cable"] });
+  assert.deepEqual(saved.specs, [{ group: "Measurements", label: "Size", value: "M" }]);
+});
+
+test("details: a save that leaves a field out keeps it, an empty or null value clears it", async () => {
+  const { find, form } = await signedInMock();
+  const id = await mock.saveItem(null, { ...form, brand: "Nike", highlights: [{ text: "Soft" }], includes: ["Tag"], terms: "T", packSize: "1", shortDescription: "S" });
+  await mock.saveItem(id, form);
+  assert.deepEqual(pick(await find(id)), { brand: "Nike", highlights: [{ text: "Soft" }], includes: ["Tag"], terms: "T", packSize: "1", shortDescription: "S" });
+  await mock.saveItem(id, { ...form, brand: null, highlights: [], includes: [], terms: "", packSize: null, shortDescription: "" });
+  assert.deepEqual(pick(await find(id)), NONE);
+});
+
+test("details: a duplicate copies the new fields", async () => {
+  const { find, form } = await signedInMock();
+  const id = await mock.saveItem(null, { ...form, brand: "Nike", highlights: [{ title: "A", text: "B" }], includes: ["Tag"] });
+  const copy = await find(await mock.duplicateItem(id));
+  assert.deepEqual([copy.brand, copy.highlights, copy.includes], ["Nike", [{ title: "A", text: "B" }], ["Tag"]]);
+});
+
+test("details: the mock refuses what the database refuses, specs included, and keeps the item as it was", async () => {
+  const { find, form } = await signedInMock();
+  const before = await find("it-fade");
+  const rows = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+  const refused = [
+    { highlights: [{ text: "ok", extra: 1 }] }, { highlights: [{ title: "Lead", text: "  " }] },
+    { specs: rows(21, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "l".repeat(41), value: "v" }] }, { specs: [{ label: "l", value: "v".repeat(121) }] },
+    { specs: [{ label: "Size", value: "" }] }, { specs: [{ group: "Nope", label: "Size", value: "M" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
+  ];
+  for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
+  assert.deepEqual(await find("it-fade"), before);
 });

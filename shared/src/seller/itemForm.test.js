@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS } from "./itemForm.js";
+import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS, SPEC_DEFAULT_GROUP, storedItemDetails } from "./itemForm.js";
 
 const base = { ...emptyItemForm(), name: "Fade cut", price: "500" };
 
@@ -168,4 +168,41 @@ test("details: the form loads an item's details and sends them back unchanged", 
   assert.deepEqual(v.highlights, item.highlights);
   const bare = formFromItem({ name: "A cut", priceType: "fixed", price: 300, availability: "available" });
   assert.deepEqual([bare.brand, bare.shortDescription, bare.packSize, bare.terms, bare.includes, bare.highlights], ["", "", "", "", [], []]);
+});
+
+test("details: row errors keep the row's own index after blank rows and duplicates", () => {
+  const form = { ...emptyItemForm(), name: "Sofa", price: "9000" };
+  const specs = validateItemForm({ ...form, specs: [{ label: "", value: "" }, { label: "Size", value: "M" }, { label: "size", value: "L" }, { label: "Color", value: "" }] });
+  assert.deepEqual(Object.keys(specs.errors.specs), ["3"]);
+  const rows = validateItemForm({ ...form, highlights: [{ title: "", text: "" }, { title: "Lead", text: "" }], includes: ["", "x".repeat(ITEM_DETAIL_LIMITS.includes.text + 1)] });
+  assert.deepEqual([Object.keys(rows.errors.highlights), Object.keys(rows.errors.includes)], [["1"], ["1"]]);
+});
+
+test("storedItemDetails: keeps only the keys that were sent, empty text as null", () => {
+  assert.deepEqual(storedItemDetails({}), { ok: true, value: {} });
+  const r = storedItemDetails({ brand: " Nike ", terms: "  ", highlights: [{ title: " ", text: "Soft" }, { title: "Lead", text: "Warm" }], includes: [" A "], specs: [{ label: "Size", value: "M" }] });
+  assert.deepEqual(r.value, { brand: "Nike", terms: null, highlights: [{ text: "Soft" }, { title: "Lead", text: "Warm" }], includes: ["A"], specs: [{ group: SPEC_DEFAULT_GROUP, label: "Size", value: "M" }] });
+  assert.deepEqual(storedItemDetails({ specs: [{ label: " Size ", value: " M " }], highlights: [{ text: " Soft " }] }).value, { specs: [{ group: SPEC_DEFAULT_GROUP, label: " Size ", value: " M " }], highlights: [{ text: " Soft " }] });
+  assert.deepEqual(storedItemDetails({ highlights: null, includes: null, specs: null }).value, { highlights: [], includes: [], specs: [] });
+});
+
+test("storedItemDetails: refuses what the database refuses", () => {
+  const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
+  const bad = [
+    { brand: "b".repeat(61) }, { shortDescription: "s".repeat(141) }, { terms: "t".repeat(501) }, { packSize: "p".repeat(41) }, { brand: 5 },
+    { highlights: many(9, (i) => ({ text: `P${i}` })) }, { highlights: [{ text: "" }] }, { highlights: [{ title: "t".repeat(41), text: "x" }] }, { highlights: [{ text: "t".repeat(201) }] }, { highlights: [{ text: "x", other: 1 }] }, { highlights: ["x"] },
+    { includes: many(11, (i) => `L${i}`) }, { includes: [""] }, { includes: ["x".repeat(81)] }, { includes: [5] },
+    { specs: many(21, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: "" }] }, { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
+  ];
+  for (const f of bad) assert.deepEqual(storedItemDetails(f), { ok: false }, JSON.stringify(f).slice(0, 60));
+});
+
+test("storedItemDetails: accepts everything validateItemForm lets through", () => {
+  const form = { ...emptyItemForm(), name: "Sofa", price: "9000", brand: " Ikea ", shortDescription: "S", terms: "T", packSize: "6", highlights: [{ title: " Soft ", text: " Cotton " }, { title: "", text: "" }], includes: [" Cushions ", ""], specs: [{ label: "Size", value: "M" }, { label: "", value: "" }, { group: "Measurements", label: "Weight", value: "9 kg" }] };
+  const v = validateItemForm(form).value;
+  const stored = storedItemDetails(v);
+  assert.equal(stored.ok, true);
+  assert.deepEqual(stored.value.highlights, v.highlights);
+  assert.deepEqual(stored.value.includes, v.includes);
+  assert.deepEqual(stored.value.specs.map(({ label, value }) => ({ label, value })), v.specs.map(({ label, value }) => ({ label, value })));
 });
