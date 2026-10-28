@@ -30,7 +30,33 @@
   font-size: var(--text-sm);
 }
 
+.devices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.device {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.device[aria-pressed="true"] {
+  border-color: var(--text);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
 .page {
+  width: 100%;
+  margin-inline: auto;
   overflow: hidden;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-card);

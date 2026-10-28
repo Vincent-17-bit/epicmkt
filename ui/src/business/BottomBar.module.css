@@ -30,7 +30,7 @@
   font-size: 1.125rem;
 }
 
-@media (min-width: 48rem) {
+@container biz (min-width: 45rem) {
   .bar {
     display: none;
   }

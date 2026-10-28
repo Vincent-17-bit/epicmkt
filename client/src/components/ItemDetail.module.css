@@ -718,7 +718,7 @@
 
 .root[data-variant="page"] .sheet {
   display: block;
-  max-width: 68rem;
+  max-width: var(--content-width);
   max-height: none;
   margin: 0 auto;
   overflow: visible;
@@ -733,6 +733,20 @@
   background: transparent;
 }
 
+@media (min-width: 48rem) {
+  .root[data-variant="page"] .header,
+  .root[data-variant="page"] .body {
+    padding-inline: var(--space-5);
+  }
+}
+
+@media (min-width: 80rem) {
+  .root[data-variant="page"] .header,
+  .root[data-variant="page"] .body {
+    padding-inline: var(--space-6);
+  }
+}
+
 .root[data-variant="page"] .body {
   overflow: visible;
   padding-inline: var(--space-4);
@@ -740,7 +754,7 @@
 
 .root[data-variant="page"] .media,
 .root[data-variant="page"] .content {
-  max-width: 40rem;
+  max-width: 48rem;
   margin-inline: auto;
 }
 
@@ -763,7 +777,7 @@
   position: sticky;
   bottom: 0;
   z-index: 5;
-  max-width: 40rem;
+  max-width: 48rem;
   margin-inline: auto;
   border: 2px solid var(--border-strong);
   border-bottom: 0;
@@ -795,7 +809,7 @@
 .root[data-variant="page"] .body > :not(.layout) {
   grid-column: 1 / -1;
   width: 100%;
-  max-width: 40rem;
+  max-width: 48rem;
   margin-inline: auto;
 }
 
@@ -811,7 +825,38 @@
     align-items: start;
     gap: var(--space-3) var(--space-4);
   }
+}
 
+@media (min-width: 64rem) {
+  .root[data-variant="page"] .layout {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: var(--space-4) var(--space-5);
+  }
+}
+
+@media (min-width: 90rem) {
+  .root[data-variant="page"] .layout {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: var(--space-5) var(--space-6);
+  }
+
+  .root[data-variant="page"] .title {
+    font-size: var(--text-2xl);
+  }
+
+  .root[data-variant="page"] .price,
+  .root[data-variant="page"] .salePrice {
+    font-size: var(--text-2xl);
+  }
+
+  .root[data-variant="page"] .info,
+  .root[data-variant="page"] .sold,
+  .root[data-variant="page"] .about {
+    padding: var(--space-5);
+  }
+}
+
+@media (min-width: 64rem) {
   .root[data-variant="page"] .media {
     grid-column: 1;
     grid-row: 1;
