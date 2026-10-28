@@ -291,7 +291,7 @@ describe("view modes and layout", () => {
   });
 
   it("uses two, three, four and five column grids at the required widths, with theme tokens only", () => {
-    const css = readFileSync(resolve(process.cwd(), "src/pages/business/catalog/catalog.module.css"), "utf8");
+    const css = readFileSync(resolve(__dirname, "catalog.module.css"), "utf8");
     expect(css).toMatch(/\.grid \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/);
     expect(css).toMatch(/@media \(min-width: (?:600px|37\.5rem)\) \{\s*\.grid \{\s*grid-template-columns: repeat\(3/);
     expect(css).toMatch(/@media \(min-width: (?:1024px|64rem)\) \{\s*\.grid \{\s*grid-template-columns: repeat\(4/);

@@ -52,7 +52,7 @@ async function fromViews() {
   const safe = (p) => p.catch(() => []);
   const [rows, items, categoryRows, flash, offers] = await Promise.all([
     restAll(
-      "public_businesses?select=id,slug,name,category_id,plan_key,verification_level,tagline,description,phone,whatsapp,county,town,lat,lng,logo_path,cover_path,tags,hours,created_at,exceptions&order=id"
+      "public_businesses?select=id,slug,name,category_id,plan_key,verification_level,tagline,description,phone,whatsapp,county,town,lat,lng,logo_path,cover_path,tags,hours,created_at,exceptions,timezone&order=id"
     ),
     restAll("public_items?select=business_id,price,price_type&order=id"),
     rest("categories?select=id,name,icon,sort,active&active=eq.true&order=sort"),

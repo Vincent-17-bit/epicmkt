@@ -59,6 +59,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
     <BusinessSection
       title={`All products (${total})`}
       id="services"
+      wide
       action={canFilter ? <ServiceFilter facets={facets} filters={filters} onChange={setFilters} disabled={preview} /> : null}
     >
       {canFilter && (
@@ -81,17 +82,19 @@ export default function Services({ services: all, count, hitSection, focusSectio
           </button>
         </p>
       )}
-      {filtered.length === 0 && (
+      {services.length === 0 && <p className={styles.empty}>No products listed yet.</p>}
+      {services.length > 0 && filtered.length === 0 && (
         <p className={styles.empty}>{searching ? "Nothing matches your search." : "Nothing matches those filters."}</p>
       )}
       {groups.map((group) => (
         <div
           key={group.id ?? "all"}
           id={group.id ? `section-${group.id}` : undefined}
-          className={group.id && group.id === hitSection ? styles.sectionHit : undefined}
+          className={[styles.group, group.id && group.id === hitSection && styles.sectionHit].filter(Boolean).join(" ")}
+          data-preview={preview ? "" : undefined}
         >
           {group.name && <h3 className={styles.h3}>{group.name}</h3>}
-          <ul className={styles.services}>
+          <ul className={styles.services} data-preview={preview ? "" : undefined}>
             {group.items.map((svc) => (
               <li key={svc.id} className={styles.service}>
                 <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
@@ -101,7 +104,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
                     <StockTag item={svc} labels={labels} className={styles.stockTag} onPicture />
                   </span>
                   <span className={styles.serviceText}>
-                    <span className={styles.h3}>{svc.name}</span>
+                    <span className={`${styles.h3} ${styles.serviceName}`}>{svc.name}</span>
                     {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
                   </span>
                 </button>

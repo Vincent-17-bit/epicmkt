@@ -260,3 +260,29 @@ test("PostGIS keeps a point for every business with coordinates", async () => {
   assert.equal(byId[without], false);
   assert.equal((await sql(c, `select count(*)::int as n from pg_indexes where indexname = 'businesses_geo_idx'`))[0].n, 1);
 });
+
+test("open now and is_open are read in each shop's own zone", async () => {
+  // Same hours on every day: the hour it is right now in Mumbai. Mumbai is 2h30 ahead of Nairobi, so the Nairobi clock
+  // is never inside that hour.
+  const h = (await sql(c, `select extract(hour from now() at time zone 'Asia/Kolkata')::int as h`))[0].h;
+  const pad = (n) => String(n % 24).padStart(2, "0");
+  const slot = [`${pad(h)}:00`, `${pad(h + 1)}:00`];
+  await shop({ name: "Mumbai Open", hours: allDays(slot), timezone: "Asia/Kolkata" });
+  await shop({ name: "Nairobi Same Hours", hours: allDays(slot) });
+  const open = await search({ p_open_now: true });
+  assert.deepEqual(names(open), ["Mumbai Open"]);
+  assert.equal(open.items[0].is_open, true);
+  const all = await search({});
+  assert.equal(all.items.find((i) => i.name === "Nairobi Same Hours").is_open, false);
+});
+
+test("the public views and snapshots carry the shop's timezone", async () => {
+  await shop({ name: "Mumbai Shop", hours: allDays(["09:00", "17:00"]), timezone: "Asia/Kolkata" });
+  const rows = await tx(c, anon, (k) => sql(k, `select timezone from public_businesses where name = 'Mumbai Shop'`));
+  assert.deepEqual(rows.map((r) => r.timezone), ["Asia/Kolkata"]);
+  const snap = await tx(c, anon, (k) => sql(k, `select browse_snapshot() as s`));
+  assert.equal(snap[0].s.businesses.find((b) => b.name === "Mumbai Shop").timezone, "Asia/Kolkata");
+  const flash = await sql(c, `select 1 from information_schema.columns where table_name = 'public_flash_sales' and column_name = 'business_timezone'`);
+  assert.equal(flash.length, 1);
+  await assert.rejects(() => sql(c, `update businesses set timezone = 'Mars/Olympus' where name = 'Mumbai Shop'`));
+});

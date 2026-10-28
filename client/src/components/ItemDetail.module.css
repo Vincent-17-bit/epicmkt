@@ -313,6 +313,7 @@
 
 .sold {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   padding: var(--space-4);
   border-top: 1px solid var(--border);
@@ -372,6 +373,15 @@
   color: var(--verified);
 }
 
+.sellerNameCounted {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+.sellerNameCounted > span:first-child {
+  max-width: 100%;
+}
+
 .sellerName .sellerCount {
   flex: none;
   color: var(--text-muted);
@@ -405,7 +415,7 @@
 
 .actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -498,7 +508,7 @@
 
 .footer {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
   border-top: 1px solid var(--border);

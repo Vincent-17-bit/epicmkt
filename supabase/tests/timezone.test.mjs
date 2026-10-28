@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, sql } from "./db.mjs";
+import { createDatabase, connect, sql, tx, rejects, seedFixtures, ids } from "./db.mjs";
 import { parseInstant } from "../../shared/src/time.js";
 
 // The time contract (docs/timezones.md): instants are stored as UTC timestamptz and leave as ISO 8601 UTC; business
@@ -110,7 +110,7 @@ test("whatever Postgres prints for a timestamptz, in any session zone, the brows
 });
 
 test("hours_open_in reads a shop's hours in the shop's own zone", async () => {
-  const hours = { mon: [["10:00", "22:00"]] };
+  const hours = { mon: ["10:00", "22:00"] };
   const at = (iso) => sql(c, `select hours_open_in($1::jsonb, '[]'::jsonb, $2::timestamptz, $3) as open`, [JSON.stringify(hours), iso, "Asia/Kolkata"]).then((r) => r[0].open);
   assert.equal(await at("2026-10-26T16:29:00Z"), true, "21:59 Monday in Mumbai");
   assert.equal(await at("2026-10-26T16:30:00Z"), false, "22:00 Monday in Mumbai");
@@ -122,4 +122,19 @@ test("businesses.timezone exists and defaults to Nairobi", async () => {
   const rows = await sql(c, `select column_default from information_schema.columns where table_name = 'businesses' and column_name = 'timezone'`);
   assert.equal(rows.length, 1);
   assert.match(rows[0].column_default, /Africa\/Nairobi/);
+});
+
+test("a seller can set their shop's zone, a bad zone is refused, and another shop is untouched", async () => {
+  await seedFixtures(c);
+  const asA = { role: "authenticated", sub: ids.userA };
+  const out = await tx(c, asA, (k) => sql(k, `select seller_set_timezone('Asia/Kolkata') as tz`), { commit: true });
+  assert.equal(out[0].tz, "Asia/Kolkata");
+  const rows = await sql(c, `select id, timezone from businesses where id in ($1, $2) order by id`, [ids.bizA, ids.bizB]);
+  assert.deepEqual(rows.map((r) => [r.id, r.timezone]), [[ids.bizA, "Asia/Kolkata"], [ids.bizB, "Africa/Nairobi"]]);
+  await rejects(c, asA, `select seller_set_timezone('Mars/Olympus')`, [], /invalid_timezone/);
+  await rejects(c, asA, `select seller_set_timezone('')`, [], /invalid_timezone/);
+  await rejects(c, { role: "anon" }, `select seller_set_timezone('Asia/Kolkata')`, [], /permission denied/);
+  await assert.rejects(() => sql(c, `update businesses set timezone = 'Mars/Olympus' where id = $1`, [ids.bizA]), /unknown time zone/);
+  const audit = await sql(c, `select action from audit_log where business_id = $1 and action = 'timezone_changed'`, [ids.bizA]);
+  assert.equal(audit.length, 1);
 });

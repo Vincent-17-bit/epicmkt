@@ -73,4 +73,12 @@ describe("Services on the store page", () => {
     expect(list.queryByRole("button", { name: "Show more" })).toBeNull();
     expect(list.getByRole("button", { name: /Only one/ })).toBeInTheDocument();
   });
+
+  it("says so when a store has no products, with no search or paging", () => {
+    render(<Services services={[]} />);
+    const region = within(screen.getByRole("region", { name: "All products (0)" }));
+    expect(region.getByText("No products listed yet.")).toBeInTheDocument();
+    expect(region.queryByPlaceholderText("Search this store")).toBeNull();
+    expect(region.queryByText(/Nothing matches/)).toBeNull();
+  });
 });

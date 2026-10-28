@@ -7,6 +7,7 @@
 //
 // It must stay free of browser, Node and Supabase imports so it runs anywhere.
 import { PLAN_FEATURES } from "../../../../shared/src/constants.js";
+import { BUSINESS_TIME_ZONE } from "../../../../shared/src/time.js";
 import { distanceKm, normalizeText, slugify } from "../../../../shared/src/utils.js";
 import { cardFacts } from "../../../../shared/src/template.js";
 import { businessStatus, isOpenAllDay, isOpenLate, opensOn, statusOf } from "../../../../shared/src/openState.js";
@@ -71,6 +72,7 @@ const buildBusiness = (row, categories, fromPriceKes, flashEnds = [], offerEnds 
     lng: row.lng,
     hours: row.hours && typeof row.hours === "object" ? row.hours : {},
     exceptions: Array.isArray(row.exceptions) ? row.exceptions : [],
+    timezone: row.timezone ?? BUSINESS_TIME_ZONE,
     createdAt: row.created_at ?? "",
     flashEnds,
     offerEnds,

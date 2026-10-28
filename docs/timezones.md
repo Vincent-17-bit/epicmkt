@@ -65,6 +65,19 @@ The edge functions get the same module: `npm run sync:shared` copies `shared/src
 | `npm run test:tz` | the unit suites again under 10 different machine time zones |
 | `npm run test:db` | UTC storage, session zone independence, analytics under 12 session zones |
 
+## Shop time and the viewer's time (`shared/src/shopTime.js`)
+
+A shop's opening hours, exceptions and closing times are wall-clock times in **the shop's own zone** (`businesses.timezone`, an IANA name, default `Africa/Nairobi`). Open or closed is always computed in that zone, so it is the same for every viewer. Only the wording changes:
+
+- The shop's time is always labelled: `6:00 PM EAT`, `10:00 PM GMT+5:30`. (The GMT form is used where an abbreviation would be ambiguous: IST is India, Ireland and Israel.)
+- A browser also passes `getUserTimeZone()` as the **viewer zone**, and when the viewer's clock reads differently the viewer's time follows: `6:00 PM EAT · 7:00 PM your time`, with the weekday when the viewer's day is not the shop's day.
+- The viewer zone is **opt in**. Server code (the `statusLine` strings built in the API) passes none and prints shop time with its label, which is right for everyone.
+- A shop time is turned into a real instant on its own date (`zonedTimeToUtc`) and the viewer's reading is taken at that instant, so each side's daylight saving on that date is used.
+- Exceptions stay attached to the shop's calendar date; `describeExceptionForViewer` converts the wording. An all-day closure becomes the span of the viewer's clock it covers.
+- Flash sale and offer times are instants and are shown in the viewer's zone with its label (`formatEndsAt`).
+
+Sellers set the zone on the Account page (`seller_set_timezone`). The column is validated against the database's zone list. `hours_open_in(hours, exceptions, at, tz)` is the SQL twin of `isOpenOn`; `search_businesses` ("open now" and `is_open`) uses it with each shop's zone, and `public_businesses`, `public_flash_sales`, `browse_snapshot` and `products_snapshot` carry the zone next to the hours.
+
 ## Not built yet
 
-The business zone is fixed to Nairobi. The helpers already take a zone, so a per-business `timezone` column is a schema change, a seller setting and a pass over the SQL that computes "open now" (migration 0042), not a rewrite of the logic.
+The admin console cannot change a shop's zone (only the seller can). Hours are still typed and stored as plain wall-clock times; moving a shop to another zone moves its hours with it.

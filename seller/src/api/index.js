@@ -14,6 +14,7 @@ export const requestOtp = (...a) => impl.requestOtp(...a);
 export const changePassword = (...a) => impl.changePassword(...a);
 export const setLoginEmail = (...a) => impl.setLoginEmail(...a);
 export const updateProfile = (...a) => impl.updateProfile(...a);
+export const setTimezone = (...a) => impl.setTimezone(...a);
 export const requestChange = (...a) => impl.requestChange(...a);
 export const cancelChange = (...a) => impl.cancelChange(...a);
 export const listChanges = (...a) => impl.listChanges(...a);

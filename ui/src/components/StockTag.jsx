@@ -3,7 +3,7 @@ import styles from "./StockTag.module.css";
 
 export const STOCK_LABELS = { lowStock: "Low stock", onlyLeft: "Only {n} left" };
 
-// A small amber tag for an item that is running low: "Low stock", or "Only 3 left" when the seller shares the number.
+// A small amber tag for an item that is running low: "Low stock", or "Only 3 left" when the shop shares the number.
 // An item that is available has nothing to say, so this renders nothing for it. Sold-out items are not listed to
 // customers at all, so there is no tag for them either.
 export default function StockTag({ item, labels = STOCK_LABELS, className = "", onPicture = false, lifted = false }) {
