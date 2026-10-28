@@ -13,6 +13,16 @@ const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price
 const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
 
 const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
+const VIDEO_TYPES = "video/mp4,video/webm";
+const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
+
+// A quick check so a wrong file is refused before a long upload. The server reads the real bytes and has the final say
+// (type, size, length of up to 60 seconds).
+const videoProblem = (file) => {
+  if (!["video/mp4", "video/webm"].includes(file.type)) return errorText({ code: "video_unsupported" });
+  if (file.size > VIDEO_MAX_BYTES) return errorText({ code: "video_too_large" });
+  return null;
+};
 
 const SPEC_PRESETS = [
   { label: "Material", group: "Features & Specs" },
@@ -99,6 +109,10 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   const [queued, setQueued] = useState([]);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [photoErrors, setPhotoErrors] = useState([]);
+  const [videos, setVideos] = useState([]);
+  const [queuedVideos, setQueuedVideos] = useState([]);
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [videoErrors, setVideoErrors] = useState([]);
   const [openSections, setOpenSections] = useState({ basics: true });
   const [focusTick, setFocusTick] = useState(0);
   const [confirming, setConfirming] = useState(false);
@@ -106,6 +120,17 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   queuedRef.current = queued;
   const pendingFocus = useRef(null);
   useEffect(() => () => queuedRef.current.forEach((q) => URL.revokeObjectURL(q.url)), []);
+  const queuedVideosRef = useRef(queuedVideos);
+  queuedVideosRef.current = queuedVideos;
+  useEffect(() => () => queuedVideosRef.current.forEach((q) => URL.revokeObjectURL(q.url)), []);
+
+  // The item's saved videos are read when the dialog opens (the catalog list only carries photo paths).
+  useEffect(() => {
+    if (!item?.id) return undefined;
+    let live = true;
+    api.listItemVideos(item.id).then((paths) => live && setVideos(paths)).catch(() => {});
+    return () => { live = false; };
+  }, [item?.id]);
 
   useEffect(() => {
     const want = pendingFocus.current;
@@ -187,7 +212,7 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
     setError("");
     setBusy(true);
     try {
-      await onSave(check.value, queued.map((q) => q.file));
+      await onSave(check.value, queued.map((q) => q.file), queuedVideos.map((q) => q.file));
     } catch (err) {
       setError(errorText(err));
     } finally {
@@ -261,6 +286,60 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
       setPhotoBusy(false);
     }
   };
+
+  const addVideos = async (e) => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length) return;
+    setVideoBusy(true);
+    setVideoErrors([]);
+    const problems = [];
+    for (const file of files) {
+      const bad = videoProblem(file);
+      if (bad) {
+        problems.push(`${file.name}: ${bad}`);
+        continue;
+      }
+      if (!item) {
+        setQueuedVideos((q) => [...q, { file, url: URL.createObjectURL(file) }]);
+        continue;
+      }
+      try {
+        const { path } = await api.uploadItemVideo(item.id, file);
+        setVideos((list) => [...list, path]);
+      } catch (err) {
+        problems.push(`${file.name}: ${errorText(err)}`);
+        if (err?.code === "video_limit") break;
+      }
+    }
+    setVideoErrors(problems);
+    setVideoBusy(false);
+    if (item) onPhotosChanged?.();
+  };
+
+  const removeSavedVideo = async (path) => {
+    setVideoBusy(true);
+    setVideoErrors([]);
+    try {
+      await api.removeItemVideo(path);
+      setVideos((list) => list.filter((p) => p !== path));
+      onPhotosChanged?.();
+    } catch (err) {
+      setVideoErrors([errorText(err)]);
+    } finally {
+      setVideoBusy(false);
+    }
+  };
+
+  const removeQueuedVideo = (url) => {
+    URL.revokeObjectURL(url);
+    setQueuedVideos((list) => list.filter((q) => q.url !== url));
+  };
+
+  const videoTiles = [
+    ...videos.map((path) => ({ key: path, src: mediaUrl(path), remove: () => removeSavedVideo(path) })),
+    ...queuedVideos.map((q) => ({ key: q.url, src: q.url, remove: () => removeQueuedVideo(q.url) })),
+  ];
 
   const moveQueued = (from, to) => setQueued((list) => moved(list, from, to));
 
@@ -410,6 +489,25 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
           </label>
           <p className={styles.hint}>JPG, PNG or WebP, at least 200 pixels, up to 10 MB each. The first photo is the cover.{!item && " Photos upload when you add the item."}</p>
           {photoErrors.map((m) => <p key={m} className={ui.error} role="alert">{m}</p>)}
+        </Section>
+
+        <Section id={`${uid}-videos`} title="Videos" meta={videoTiles.length > 0 ? `${videoTiles.length}` : undefined} open={isOpen("videos")} compact={compact} onToggle={toggleSection("videos")}>
+          {videoTiles.length > 0 && (
+            <ul className={styles.videoGrid}>
+              {videoTiles.map((t, i) => (
+                <li key={t.key} className={styles.videoTile}>
+                  <video className={styles.videoPreview} src={t.src} controls preload="metadata" playsInline aria-label={`Video ${i + 1} for this item`} />
+                  <button type="button" className={styles.specRemove} onClick={t.remove} disabled={videoBusy || busy} aria-label={`Remove video ${i + 1}`}>Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <label className={`${styles.ghost} ${styles.photoAdd}`}>
+            <input type="file" accept={VIDEO_TYPES} multiple className={styles.sr} onChange={addVideos} disabled={videoBusy || busy} />
+            <span>{videoBusy ? "Uploading..." : "Add videos"}</span>
+          </label>
+          <p className={styles.hint}>MP4 or WebM, up to 60 seconds and 25 MB each. Customers watch them under this item's photos. How many you can add depends on your plan.{!item && " Videos upload when you add the item."}</p>
+          {videoErrors.map((m) => <p key={m} className={ui.error} role="alert">{m}</p>)}
         </Section>
 
         <Section id={`${uid}-highlights`} title="About this item" meta={form.highlights.length > 0 ? `${form.highlights.length} of ${hlMax}` : undefined} open={isOpen("highlights")} compact={compact} onToggle={toggleSection("highlights")}>

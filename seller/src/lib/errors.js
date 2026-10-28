@@ -108,6 +108,12 @@ const MESSAGES = {
   upload_not_found: "That upload expired. Please try the photo again.",
   file_not_uploaded: "The photo did not upload. Check your connection and try again.",
   photo_limit: "You have reached the photo limit for this item on your plan. Remove one to add another.",
+  video_unsupported: "Use an MP4 or WebM video.",
+  video_too_large: "Each video must be 25 MB or smaller.",
+  video_too_long: "Each video must be 60 seconds or shorter.",
+  video_unreadable: "We could not read that video. Try an MP4 or WebM file saved from your phone or editor.",
+  video_too_big: "That video is larger than 8000 pixels. Use a smaller one.",
+  video_limit: "You have reached the video limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };
 

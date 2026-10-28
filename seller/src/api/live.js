@@ -128,6 +128,42 @@ export const removeItemPhoto = async (path) => {
   else await need().storage.from(MEDIA_BUCKET).remove([path]);
 };
 
+// Videos stay in the Supabase bucket (not Cloudinary). An upload is three steps, like a photo, but the file goes to storage:
+//   1. seller-media-sign (purpose item_video)  checks the item is this shop's and the plan has room, and returns an upload ticket.
+//   2. the browser sends the file straight to the bucket with that ticket.
+//   3. seller-media-finalize                   reads the real bytes, checks type, size and length, and attaches the video to the item.
+const VIDEO_EXT = { "video/mp4": "mp4", "video/webm": "webm" };
+const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
+// finalize answers with the same reasons it uses for pictures; say them in words that are about videos.
+const VIDEO_REASON = { unsupported_type: "video_unsupported", too_large: "video_too_large", too_long: "video_too_long", unreadable: "video_unreadable", too_big_dimensions: "video_too_big", limit_reached: "video_limit" };
+const asVideoError = (e) => (VIDEO_REASON[e?.code] ? new ApiError(VIDEO_REASON[e.code], e.message) : e);
+
+export const listItemVideos = async (itemId) =>
+  (await rows(need().from("item_media").select("path").eq("item_id", itemId).eq("kind", "video").order("sort", { ascending: true }).order("created_at", { ascending: true }))).map((r) => r.path);
+
+export const uploadItemVideo = async (itemId, file) => {
+  const type = VIDEO_EXT[file?.type];
+  if (!type) throw new ApiError("video_unsupported");
+  if (file.size > VIDEO_MAX_BYTES) throw new ApiError("video_too_large");
+  let ticket;
+  try {
+    ticket = await signUpload({ purpose: "item_video", itemId, type });
+  } catch (e) {
+    throw asVideoError(e);
+  }
+  const { error } = await need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+  if (error) throw new ApiError("file_not_uploaded");
+  try {
+    await finalizeMedia({ itemId, path: ticket.path });
+  } catch (e) {
+    throw asVideoError(e);
+  }
+  return { path: ticket.path };
+};
+
+// A video row is removed exactly like a photo row: delete it, then drop the file from the bucket.
+export const removeItemVideo = (path) => removeItemPhoto(path);
+
 export const reorderItemPhotos = (itemId, paths) => rpc("seller_reorder_item_photos", { p_item: itemId, p_paths: paths });
 
 // The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).

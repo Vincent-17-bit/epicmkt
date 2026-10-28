@@ -1035,4 +1035,27 @@ describe("item dialog sections", () => {
     await user.click(within(edit).getByRole("button", { name: "Move photo 2 earlier" }));
     await waitFor(() => expect(made.imagePaths).toEqual([second, first]));
   });
+
+  it("adds a video to a new item, refuses other formats, and removes a saved video", async () => {
+    const user = userEvent.setup();
+    URL.createObjectURL = vi.fn(() => "blob:clip");
+    URL.revokeObjectURL = vi.fn();
+    const dialog = await openForm(user);
+    await user.type(within(dialog).getByLabelText("Name"), "Clip");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    const input = dialog.querySelector('input[accept="video/mp4,video/webm"]');
+    expect(input).not.toBeNull();
+    await user.upload(input, new File([new Uint8Array(20)], "clip.mp4", { type: "video/mp4" }));
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Remove video 1" })).toBeInTheDocument());
+    fireEvent.change(input, { target: { files: [new File(["x"], "clip.mov", { type: "video/quicktime" })] } });
+    expect(await within(dialog).findByText(/clip\.mov: Use an MP4 or WebM video/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Clip", hasVideo: true }));
+    const made = M.state.items.at(-1);
+    expect(await api.listItemVideos(made.id)).toHaveLength(1);
+    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
+    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    await user.click(await within(edit).findByRole("button", { name: "Remove video 1" }));
+    await waitFor(() => expect(made.hasVideo).toBe(false));
+  });
 });

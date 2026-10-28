@@ -48,6 +48,7 @@ function setup(opts: { cloud?: boolean } = {}) {
       }
       return Promise.resolve({ data: null, error: null });
     },
+    storage: { from: () => ({ createSignedUploadUrl: (path: string) => Promise.resolve({ data: { token: `upload-token-for-${path}`, path }, error: null }) }) },
     auth: { getUser: (t: string) => Promise.resolve(t === TOKEN ? { data: { user: { id: "u1" } }, error: null } : { data: { user: null }, error: { message: "bad" } }) },
   };
   const destroyed: string[][] = [];
@@ -292,4 +293,30 @@ Deno.test("media-purge: nothing queued is a quick no-op; no Cloudinary or a data
   assertEquals((await sellerMediaPurge(setup({ cloud: false }).deps)(authed({}))).status, 503);
   s.rpcs["media_gc_claim_for_business"] = () => ({ data: null, error: { message: "down" } });
   assertEquals((await sellerMediaPurge(s.deps)(authed({}))).status, 500);
+});
+
+// ---- item videos -----------------------------------------------------------------------------------------------------
+
+Deno.test("media-sign: an item video gets an upload ticket under the seller's own prefix, with no Cloudinary involved", async () => {
+  const s = setup({ cloud: false });
+  s.rpcs["media_limit_ok"] = () => ({ data: true, error: null });
+  const r = await read(await sellerMediaSign(s.deps)(authed({ purpose: "item_video", itemId: ITEM, type: "mp4" })));
+  assertEquals(r.status, 200);
+  assert(r.body.path.startsWith(`${BIZ}/${ITEM}/`) && r.body.path.endsWith(".mp4"));
+  assert(UUID.test(r.body.path.slice(`${BIZ}/${ITEM}/`.length, -4)));
+  assertEquals(r.body.token, `upload-token-for-${r.body.path}`);
+  assertEquals(r.body.kind, "video");
+  const asked = s.rpcCalls.find((c) => c.name === "media_limit_ok")!;
+  assertEquals(asked.args, { p_item: ITEM, p_kind: "video" });
+});
+
+Deno.test("media-sign: a video is refused for another shop's item, at the plan limit, and for formats other than mp4 or webm", async () => {
+  const s = setup();
+  const h = sellerMediaSign(s.deps);
+  s.rpcs["media_limit_ok"] = () => ({ data: true, error: null });
+  assertEquals((await h(authed({ purpose: "item_video", itemId: FOREIGN_ITEM, type: "mp4" }))).status, 404);
+  assertEquals((await h(authed({ purpose: "item_video", itemId: ITEM, type: "mov" }))).status, 400);
+  assertEquals((await h(authed({ purpose: "item_video", itemId: ITEM }))).status, 400);
+  s.rpcs["media_limit_ok"] = () => ({ data: false, error: null });
+  assertEquals(await read(await h(authed({ purpose: "item_video", itemId: ITEM, type: "webm" }))), { status: 409, body: { error: "limit_reached" } });
 });

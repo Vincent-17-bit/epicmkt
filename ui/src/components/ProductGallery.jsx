@@ -16,9 +16,11 @@ export default function ProductGallery({ images, name, labels = DEFAULT_LABELS }
     setActive(Math.round(track.scrollLeft / track.clientWidth));
   };
 
+  // Jump straight to the chosen picture. A smooth scroll would slide past every picture in between (and the thumbnail
+  // highlight would follow along), which is what made a tapped thumbnail look like it was "going through all images".
   const goTo = (index) => {
     const track = trackRef.current;
-    track?.scrollTo({ left: index * track.clientWidth, behavior: "smooth" });
+    track?.scrollTo({ left: index * track.clientWidth, behavior: "instant" });
     setActive(index);
   };
 

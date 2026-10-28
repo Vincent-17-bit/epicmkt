@@ -499,9 +499,10 @@ export default function Catalog() {
           item={editing}
           onClose={() => setEditing(undefined)}
           onPhotosChanged={refresh}
-          onSave={async (value, files = []) => {
+          onSave={async (value, files = [], videoFiles = []) => {
             const id = await api.saveItem(editing?.id ?? null, value);
             const failed = [];
+            const failedVideos = [];
             for (const file of files) {
               try {
                 await api.uploadItemPhoto(id, file);
@@ -510,9 +511,20 @@ export default function Catalog() {
                 if (err?.code === "photo_limit") break;
               }
             }
+            for (const file of videoFiles) {
+              try {
+                await api.uploadItemVideo(id, file);
+              } catch (err) {
+                failedVideos.push(errorText(err));
+                if (err?.code === "video_limit") break;
+              }
+            }
             await refresh();
             const base = editing ? "Item saved." : "Item added as a draft.";
-            setNotice(failed.length ? { tone: "error", text: `${base} ${files.length - failed.length} of ${files.length} photos uploaded. ${failed[0]} Open Edit to add the rest.` } : { tone: "ok", text: base });
+            const problems = [];
+            if (failed.length) problems.push(`${files.length - failed.length} of ${files.length} photos uploaded. ${failed[0]}`);
+            if (failedVideos.length) problems.push(`${videoFiles.length - failedVideos.length} of ${videoFiles.length} videos uploaded. ${failedVideos[0]}`);
+            setNotice(problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Open Edit to add the rest.` } : { tone: "ok", text: base });
             setEditing(undefined);
           }}
         />

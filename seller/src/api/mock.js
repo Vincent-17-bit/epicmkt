@@ -204,6 +204,34 @@ export const removeItemPhoto = async (path) => {
   item.imagePaths = item.imagePaths.filter((p) => p !== path);
   item.imageCount = item.imagePaths.length;
 };
+// Demo videos live in memory, per item. The real API reads them from item_media.
+const demoVideos = new Map();
+export const listItemVideos = async (itemId) => { signedIn(); await wait(); return [...(demoVideos.get(itemId) ?? [])]; };
+export const uploadItemVideo = async (itemId, file) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (!["video/mp4", "video/webm"].includes(file?.type)) throw new ApiError("video_unsupported");
+  if (file.size > 25 * 1024 * 1024) throw new ApiError("video_too_large");
+  const list = demoVideos.get(itemId) ?? [];
+  if (list.length >= (bill.business.planKey === "premium" ? 3 : 1)) throw new ApiError("video_limit");
+  const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.mp4`;
+  demoVideos.set(itemId, [...list, path]);
+  item.hasVideo = true;
+  return { path };
+};
+export const removeItemVideo = async (path) => {
+  signedIn();
+  await wait();
+  for (const [itemId, list] of demoVideos) {
+    if (!list.includes(path)) continue;
+    const next = list.filter((p) => p !== path);
+    demoVideos.set(itemId, next);
+    const item = bill.items.find((i) => i.id === itemId);
+    if (item) item.hasVideo = next.length > 0;
+  }
+};
 export const reorderItemPhotos = async (itemId, paths) => {
   signedIn();
   await wait();
