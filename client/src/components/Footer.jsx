@@ -167,7 +167,7 @@ export default function Footer() {
 
       <Container>
         <div className={styles.bottom}>
-          <p className={styles.note}>EpicMKT lists businesses and does not process orders or payments.</p>
+          <p className={styles.note}>Find it nearby. Call, WhatsApp or get directions in one tap.</p>
           <ThemeSwitch className={styles.theme} />
           <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. All rights reserved.</small>
           <button type="button" className={styles.top_btn} onClick={toTop}>

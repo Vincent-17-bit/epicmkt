@@ -26,7 +26,7 @@ export default function Intro() {
         <h1 id="intro-title">Put your business in front of local customers</h1>
         <p className={styles.short}>Free to apply. You pay only after we approve you.</p>
         <p className={styles.long}>
-          EpicMKT is a directory of local businesses across Kenya. Customers find you and contact you by call, WhatsApp or directions. You pay a simple monthly listing fee. There are no orders or payments on the site.
+          EpicMKT is a directory of local businesses across Kenya. Customers find you and contact you by call, WhatsApp or directions. You pay a simple monthly listing fee and keep every sale.
         </p>
       </div>
       <ol className={styles.how} aria-label="How it works">

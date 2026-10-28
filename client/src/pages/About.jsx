@@ -16,7 +16,7 @@ export default function About() {
         WhatsApp or get directions.
       </p>
       <p>
-        EpicMKT does not take orders or payments. You deal directly with the business, and we simply help you find and reach them.
+        When you find a business you like, you contact it directly. Prices, orders and payment are agreed between you and the business.
       </p>
       <p>
         Businesses pay a monthly fee to be listed on a Standard or Premium plan. Premium businesses are marked Featured and appear first in

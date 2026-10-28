@@ -49,7 +49,7 @@ const steps = [
   { title: "Register your business", text: "Add your name, category, phone and WhatsApp number, location and opening hours." },
   { title: "We check your details", text: "We review your listing so customers can trust it. Checked businesses earn a Verified badge." },
   { title: "Go live", text: "Add photos, prices and offers. Your page, short link and QR code are ready to share." },
-  { title: "Get contacted", text: "Customers call, message or visit you directly. You keep the sale, because EpicMKT never touches orders or payments." }
+  { title: "Get contacted", text: "Customers call, message or visit you directly. You keep the full sale, with no commission." }
 ];
 
 const yes = { yes: true };
@@ -70,7 +70,7 @@ const rows = [
 const faqs = [
   {
     q: "Does EpicMKT take a cut of my sales?",
-    a: "No. EpicMKT is a directory and never handles orders or payments. You pay a flat monthly fee for your plan and every sale stays with you."
+    a: "No. You pay a flat monthly fee for your plan and every sale stays with you."
   },
   {
     q: "How do customers buy from me?",
@@ -131,7 +131,7 @@ export default function Sell() {
               Compare plans
             </Button>
           </div>
-          <p className={styles.heroNote}>No commission. EpicMKT never handles your orders or payments.</p>
+          <p className={styles.heroNote}>No commission. A flat monthly fee, and every sale is yours.</p>
         </Container>
       </section>
 
@@ -239,8 +239,7 @@ export default function Sell() {
           </table>
         </div>
         <p className={styles.fine}>
-          <FontAwesomeIcon icon={faShieldHalved} /> Prices are in Kenya shillings per month. EpicMKT lists businesses only and does not handle orders or
-          payments.
+          <FontAwesomeIcon icon={faShieldHalved} /> Prices are in Kenya shillings per month, with no commission on your sales.
         </p>
       </Container>
 

@@ -4,8 +4,8 @@ import { usePageTitle } from "../hooks/usePageTitle.js";
 
 const faqs = [
   {
-    q: "Does EpicMKT take orders or payments?",
-    a: "No. EpicMKT only helps you find a business and contact it. Any order or payment is arranged directly with the business."
+    q: "How do I buy from a business?",
+    a: "Contact the business using the Call, WhatsApp or Directions buttons on its listing. You agree the order, price and payment directly with them."
   },
   {
     q: "How do I contact a business?",

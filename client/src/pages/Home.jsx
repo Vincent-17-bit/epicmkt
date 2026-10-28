@@ -205,7 +205,7 @@ export default function Home() {
 
       <RecentlyAdded />
 
-      <section className={styles.section} aria-labelledby="cta-title">
+      <section className={`${styles.section} ${styles.ctaSection}`} aria-labelledby="cta-title">
         <Container>
           <div className={styles.cta}>
             <span className={styles.ctaIcon}>
@@ -215,7 +215,7 @@ export default function Home() {
               <h2 id="cta-title" className={styles.ctaTitle}>
                 List your business
               </h2>
-              <p className={styles.ctaCopy}>Get found by customers nearby. Standard from KES 500 a month, Premium from KES 1,500.</p>
+              <p className={styles.ctaCopy}>Get found by customers nearby.</p>
             </div>
             <Button as={Link} to="/sell" variant="dark" iconRight={faArrowRight} className={styles.ctaButton}>
               Become a seller
