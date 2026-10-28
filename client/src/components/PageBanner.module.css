@@ -1,5 +1,5 @@
 .banner {
-  padding-block: clamp(var(--space-5), 5vw, var(--space-7));
+  padding-block: clamp(var(--space-3), 2vw, var(--space-5));
   background: var(--primary);
   color: var(--on-primary);
 }
@@ -7,7 +7,8 @@
 .inner {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  padding-block: var(--space-2);
 }
 
 .icon {
@@ -15,29 +16,33 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: clamp(52px, 8vw, 72px);
-  height: clamp(52px, 8vw, 72px);
+  width: clamp(2.25rem, 4vw, 2.75rem);
+  height: clamp(2.25rem, 4vw, 2.75rem);
   border-radius: var(--radius-pill);
   background: var(--ring-gap);
   color: var(--primary);
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-size: clamp(0.9375rem, 1.6vw, 1.125rem);
 }
 
 .text {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .title {
-  font-size: var(--text-2xl);
+  font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.75rem);
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .subtitle {
-  font-size: var(--text-lg);
+  max-width: 64ch;
+  font-size: clamp(0.875rem, 0.82rem + 0.25vw, 1rem);
+  line-height: 1.4;
+  text-wrap: pretty;
 }
 
 .withCrumbs {
