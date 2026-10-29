@@ -1,23 +1,23 @@
 .page {
-  padding-block: clamp(var(--space-5), 4vw, var(--space-7));
+  padding-block: var(--space-4) var(--space-6);
 }
 
 .page > :first-child {
-  margin-top: calc(clamp(var(--space-5), 4vw, var(--space-7)) * -1);
-  margin-bottom: clamp(var(--space-4), 3vw, var(--space-5));
+  margin-top: calc(var(--space-4) * -1);
+  margin-bottom: var(--space-2);
 }
 
 /* ---------- Header ---------- */
 .hero {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   max-width: 56rem;
-  margin-bottom: clamp(var(--space-5), 4vw, var(--space-7));
+  margin-bottom: var(--space-4);
 }
 
 .eyebrow {
   justify-self: start;
-  padding: var(--space-1) var(--space-3);
+  padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--primary-tint);
   color: var(--on-primary-tint);
@@ -28,16 +28,17 @@
 }
 
 .title {
-  font-size: var(--text-3xl);
+  font-size: var(--text-2xl);
   font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
   text-wrap: balance;
 }
 
 .intro {
   max-width: 62ch;
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
+  line-height: 1.5;
   color: var(--text-muted);
   text-wrap: pretty;
 }
@@ -45,8 +46,8 @@
 .highlights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: var(--space-3);
-  margin: var(--space-3) 0 0;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -55,9 +56,9 @@
   display: grid;
   gap: var(--space-1);
   align-content: start;
-  padding: var(--space-4);
+  padding: var(--space-3);
   border: 1px solid var(--border);
-  border-top: 4px solid var(--primary);
+  border-top: 3px solid var(--primary);
   border-radius: var(--radius-card);
   background: var(--surface);
 }
@@ -77,7 +78,7 @@
 /* ---------- Layout ---------- */
 .layout {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--space-4);
   align-items: start;
 }
 
