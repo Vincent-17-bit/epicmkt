@@ -3,3 +3,57 @@
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* The plans PDF request: the message that will be sent, shown before the visitor sends it */
+.request {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding: clamp(var(--space-4), 4vw, var(--space-6));
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.requestIcon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+  font-size: var(--text-lg);
+}
+
+.requestTitle {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.requestHint {
+  font-size: var(--text-sm);
+}
+
+.bubble {
+  max-width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card) var(--radius-card) var(--radius-card) 0;
+  background: var(--surface-2);
+  font-size: var(--text-md);
+  line-height: 1.45;
+}
+
+.request .channels {
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+@media (max-width: 29.9375rem) {
+  .request .channels > * {
+    flex: 1 1 100%;
+  }
+}

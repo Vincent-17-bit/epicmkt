@@ -42,16 +42,16 @@ const view = (ui) => {
 beforeEach(() => vi.mocked(getCatalogPricing).mockReset());
 
 describe("Pricing page", () => {
-  it("shows the price for each type of business from the plan catalog", async () => {
+  it("heads each plan with the lowest real price in the catalog, and lists no per-business price table", async () => {
     vi.mocked(getCatalogPricing).mockResolvedValue(catalog);
     view(<Pricing />);
-    const bands = await screen.findByRole("table", { name: "Monthly price by type of business" });
-    const water = within(bands).getByRole("row", { name: /Water refill station/ });
-    expect(within(water).getByText("KES 300")).toBeInTheDocument();
-    expect(within(water).getByText("KES 800")).toBeInTheDocument();
-    const chemist = within(bands).getByRole("row", { name: /Chemist or pharmacy/ });
-    expect(within(chemist).getByText("KES 1,200")).toBeInTheDocument();
-    expect(within(chemist).getByText("KES 3,000")).toBeInTheDocument();
+    const table = await screen.findByRole("table", { name: "Comparison of Standard and Premium plans" });
+    const [standard, premium] = within(table).getAllByRole("columnheader");
+    expect(standard).toHaveTextContent("From KES 300");
+    expect(premium).toHaveTextContent("From KES 800");
+    expect(screen.queryByRole("table", { name: /Monthly price by type of business/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("What you pay")).not.toBeInTheDocument();
+    expect(screen.queryByText("KES 3,000")).not.toBeInTheDocument();
   });
 
   it("compares the plans, showing both texts only where the plans differ", async () => {
@@ -88,7 +88,7 @@ describe("Pricing page", () => {
     expect(screen.queryByText(/KES/)).not.toBeInTheDocument();
     vi.mocked(getCatalogPricing).mockResolvedValue(catalog);
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByRole("table", { name: /Monthly price/ })).toBeInTheDocument();
+    expect(await screen.findByRole("table", { name: /Comparison/ })).toBeInTheDocument();
   }, 10000);
 
   it("falls back to the admin when the catalog is empty", async () => {
@@ -111,7 +111,7 @@ describe("Sell page uses the same catalog", () => {
     view(<Sell />);
     expect(await screen.findByText(/Plans start at KES 300 a month/)).toBeInTheDocument();
     for (const link of screen.getAllByRole("link", { name: "List my business" })) expect(link).toHaveAttribute("href", "/become-a-seller");
-    expect(screen.getByRole("link", { name: "pricing by type of business" })).toHaveAttribute("href", "/pricing");
+    expect(screen.getByRole("link", { name: "pricing" })).toHaveAttribute("href", "/pricing");
   });
 });
 

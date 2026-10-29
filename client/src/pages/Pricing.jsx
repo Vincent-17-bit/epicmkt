@@ -17,7 +17,7 @@ const faqs = [
   },
   {
     q: "Why does the price depend on my type of business?",
-    a: "Each type of business has its own monthly price, so what you pay reflects your trade. The table above shows the price for every type, and your price is shown again before you send your application."
+    a: "Each type of business has its own monthly price. The prices above start at the lowest, and your exact price is shown before you send your application. For the full list, ask for the plans PDF."
   },
   {
     q: "When do I pay?",
@@ -41,7 +41,7 @@ const faqs = [
   },
   {
     q: "How do I get the plans PDF?",
-    a: "Contact the EpicMKT admin and we will send it to you. It lists the plans and prices for every type of business."
+    a: "Contact EpicMKT support and we will send it to you. It lists the plans and prices for every type of business."
   }
 ];
 
@@ -76,7 +76,7 @@ export default function Pricing() {
         <ContactCard
           id="plans-pdf-title"
           title="Want the plans PDF?"
-          text="Contact the EpicMKT admin and we will send you the plans PDF, with the plans and prices for every type of business."
+          text="Contact EpicMKT support and we will send you the plans PDF, with the plans and prices for every type of business."
           label="Ask for the plans PDF"
           to={PLANS_PDF_PATH}
         />

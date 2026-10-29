@@ -46,7 +46,7 @@ export default function PlansSection({ id = "plans", children }) {
   } else if (!reference || !bands.length) {
     body = (
       <p className={styles.fine}>
-        Plans are not available to show right now. <Link to={PLANS_PDF_PATH}>Ask the admin for the plans PDF</Link>.
+        Plans are not available to show right now. <Link to={PLANS_PDF_PATH}>Ask for the plans PDF</Link>.
       </p>
     );
   } else {
@@ -105,45 +105,9 @@ export default function PlansSection({ id = "plans", children }) {
           </table>
         </div>
 
-        <div className={styles.bands}>
-          <h3 className={styles.h3}>What you pay</h3>
-          <p className={styles.bandsLead}>
-            {ranged ? "Your monthly fee depends on your type of business." : "Your monthly fee is the same for every type of business."}
-          </p>
-          <div className={styles.tableWrap}>
-            <table className={`${styles.table} ${styles.bandTable}`}>
-              <caption className={styles.srOnly}>Monthly price by type of business</caption>
-              <thead>
-                <tr>
-                  <th scope="col" className={styles.bandHead}>
-                    Type of business
-                  </th>
-                  <th scope="col" className={styles.bandPrice}>
-                    Standard
-                  </th>
-                  <th scope="col" className={`${styles.bandPrice} ${styles.premiumCell}`}>
-                    Premium
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {bands.map((band) => (
-                  <tr key={band.key}>
-                    <th scope="row" className={styles.rowLabel}>
-                      {band.categories.map((c) => c.name).join(", ")}
-                    </th>
-                    <td className={styles.bandPrice}>{formatKes(band.standard)}</td>
-                    <td className={`${styles.bandPrice} ${styles.premiumCell}`}>{formatKes(band.premium)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         <p className={styles.fine}>
-          <FontAwesomeIcon icon={faShieldHalved} /> Prices are in Kenya shillings per month, with no commission on your sales. Applying is free and you
-          pay only after we approve you.
+          <FontAwesomeIcon icon={faShieldHalved} /> Prices start at the amounts shown and depend on your type of business. They are in Kenya shillings per month, with
+          no commission on your sales. Applying is free and you pay only after we approve you.
         </p>
       </>
     );

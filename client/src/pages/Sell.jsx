@@ -143,7 +143,7 @@ export default function Sell() {
 
       <PlansSection>
         <p className={styles.more}>
-          Want the details? See <Link to="/pricing">pricing by type of business</Link> and how to get the plans PDF.
+          Want the details? See <Link to="/pricing">pricing</Link> and how to get the plans PDF.
         </p>
       </PlansSection>
 
