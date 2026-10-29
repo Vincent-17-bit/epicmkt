@@ -7,6 +7,8 @@ import { cleanup } from "@testing-library/react";
 beforeEach(() => setUserTimeZone("Africa/Nairobi"));
 afterEach(() => {
   cleanup();
+  // The item editor keeps unsaved drafts in localStorage; one test's draft must never reach the next.
+  try { localStorage.clear(); } catch { /* no storage in this environment */ }
   setUserTimeZone(null);
 });
 

@@ -11,6 +11,7 @@ import Flash from "./pages/business/Flash.jsx";
 import Offers from "./pages/business/Offers.jsx";
 import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
+import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
 import Preview from "./pages/business/Preview.jsx";
 import QrPoster from "./pages/business/QrPoster.jsx";
 
@@ -19,6 +20,9 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route element={<RequireSeller />}>
+        {/* The item editor is a page of its own, without the app's bottom navigation, so it can have its own bars. */}
+        <Route path="/business/catalog/new" element={<ItemEditor />} />
+        <Route path="/business/catalog/:itemId/edit" element={<ItemEditor />} />
         <Route path="/business" element={<Layout />}>
           <Route index element={<Navigate to="subscription" replace />} />
           <Route path="subscription" element={<Subscription />} />
