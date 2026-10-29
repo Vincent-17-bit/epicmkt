@@ -33,6 +33,15 @@ export const sellerMediaSign = (d: Deps) => wrap(async (req) => {
     if (room.data !== true) return json({ error: "limit_reached" }, 409);
     // The path starts with this shop's id, which seller-media-finalize and attach_item_media both insist on.
     const path = `${business}/${body.itemId}/${crypto.randomUUID()}.${body.type}`;
+    // Recorded before the ticket exists, so a file that is uploaded but never finalized is found and queued for deletion by the hourly
+    // sweep (video tickets get three hours, the ticket lasts two).
+    const registered = await d.db.rpc("media_register_upload", { p_business: business, p_item: body.itemId, p_purpose: "item_video", p_public_id: path });
+    if (registered.error) {
+      const m = String(registered.error.message ?? "");
+      if (/item_not_found/.test(m)) return json({ error: "item_not_found" }, 404);
+      if (/path_not_owned/.test(m)) return json({ error: "forbidden" }, 403);
+      return json({ error: "server_error" }, 500);
+    }
     const ticket = await d.db.storage.from(BUCKET).createSignedUploadUrl(path);
     if (ticket.error || !ticket.data?.token) return json({ error: "server_error" }, 500);
     return json({ path, token: ticket.data.token, kind: "video", expiresIn: 7200 });

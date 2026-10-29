@@ -37,6 +37,9 @@ const toItem = (business, svc, index) => {
     url: k === 0 ? svc.imageUrl : serviceArt((hue + 36 * (k + 1)) % 360, svc.name),
     caption: svc.name
   }));
+  const videos = svc.videos ?? [];
+  // The same merged list the live API returns: photos first (a video is never the cover), then the videos.
+  const media = svc.media ?? [...images.map((m) => ({ ...m, kind: "image" })), ...videos.map((m) => ({ ...m, kind: "video" }))];
   return {
     id: svc.id,
     businessId: business.id,
@@ -53,7 +56,8 @@ const toItem = (business, svc, index) => {
     packSize: svc.packSize ?? null,
     imageUrl: svc.imageUrl,
     images,
-    videos: svc.videos ?? [],
+    videos,
+    media,
     regularPrice: Number.isFinite(svc.priceKes) ? svc.priceKes : null,
     priceType: svc.priceType ?? "fixed",
     unit: svc.unit ?? null,

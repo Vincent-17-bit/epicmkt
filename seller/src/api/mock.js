@@ -206,6 +206,7 @@ export const removeItemPhoto = async (path) => {
 };
 // Demo videos live in memory, per item. The real API reads them from item_media.
 const demoVideos = new Map();
+// DEPRECATED: use listItemMedia.
 export const listItemVideos = async (itemId) => { signedIn(); await wait(); return [...(demoVideos.get(itemId) ?? [])]; };
 export const uploadItemVideo = async (itemId, file) => {
   signedIn();
@@ -232,6 +233,7 @@ export const removeItemVideo = async (path) => {
     if (item) item.hasVideo = next.length > 0;
   }
 };
+// DEPRECATED: use reorderItemMedia.
 export const reorderItemPhotos = async (itemId, paths) => {
   signedIn();
   await wait();
@@ -241,6 +243,46 @@ export const reorderItemPhotos = async (itemId, paths) => {
   const known = paths.filter((p) => item.imagePaths.includes(p));
   item.imagePaths = [...known, ...item.imagePaths.filter((p) => !known.includes(p))];
   return known.length;
+};
+// One ordered sequence per item, as the database keeps it. Photos and videos are added to the end; the first photo is the cover.
+const demoOrder = new Map();
+const sequence = (item) => {
+  const have = [...item.imagePaths.map((path) => ({ path, kind: "image" })), ...(demoVideos.get(item.id) ?? []).map((path) => ({ path, kind: "video" }))];
+  const wanted = demoOrder.get(item.id) ?? [];
+  const known = new Map(have.map((m) => [m.path, m]));
+  const ordered = [...wanted.filter((p) => known.has(p)), ...have.map((m) => m.path).filter((p) => !wanted.includes(p))];
+  demoOrder.set(item.id, ordered);
+  return ordered.map((path, sort) => ({ ...known.get(path), sort }));
+};
+const mediaLimitsFor = (item, seq) => ({
+  photos: { used: seq.filter((m) => m.kind === "image").length, max: bill.business.planKey === "premium" ? 15 : 7 },
+  videos: { used: seq.filter((m) => m.kind === "video").length, max: bill.business.planKey === "premium" ? 3 : 1 },
+});
+export const getItemMedia = async (itemId) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId);
+  if (!item) throw new ApiError("item_not_found");
+  const seq = sequence(item);
+  return { media: seq.map((m) => ({ path: m.path, kind: m.kind, sort: m.sort })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
+};
+export const listItemMedia = async (itemId) => (await getItemMedia(itemId)).media;
+export const getItemMediaLimits = async (itemId) => (await getItemMedia(itemId)).limits;
+export const reorderItemMedia = async (itemId, paths) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (!Array.isArray(paths)) throw new ApiError("no_items");
+  const have = sequence(item).map((m) => m.path);
+  if (new Set(paths).size !== paths.length) throw new ApiError("duplicate_path");
+  if (paths.some((p) => !have.includes(p))) throw new ApiError("path_not_found");
+  if (paths.length !== have.length) throw new ApiError("order_incomplete");
+  const before = have.join("\n");
+  demoOrder.set(itemId, [...paths]);
+  const seq = sequence(item);
+  item.imagePaths = seq.filter((m) => m.kind === "image").map((m) => m.path);
+  return { updated: before === paths.join("\n") ? 0 : paths.filter((p, i) => have[i] !== p).length, cover: seq.find((m) => m.kind === "image")?.path ?? null };
 };
 const SHOP_KINDS = ["logo", "cover"];
 export const uploadShopImage = async (kind, blob) => {

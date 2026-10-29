@@ -459,57 +459,76 @@ const png = (width: number, height: number) => {
   const be = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
   return Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, ...be(13), 0x49, 0x48, 0x44, 0x52, ...be(width), ...be(height), 8, 6, 0, 0, 0]);
 };
+const mp4Bytes = (width: number, height: number, seconds: number) => {
+  const be = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+  const str = (x: string) => [...x].map((c) => c.charCodeAt(0));
+  const box = (name: string, ...parts: number[][]) => { const body = parts.flat(); return [...be(body.length + 8), ...str(name), ...body]; };
+  const mvhd = box("mvhd", [0, 0, 0, 0], be(0), be(0), be(1000), be(seconds * 1000), new Array(80).fill(0));
+  const tkhd = box("tkhd", [0, 0, 0, 3], be(0), be(0), be(1), be(0), be(seconds * 1000), new Array(8).fill(0), [0, 0, 0, 0, 0, 0, 0, 0], new Array(36).fill(0), be(width * 65536), be(height * 65536));
+  return Uint8Array.from([...box("ftyp", str("isom"), be(0), str("isom")), ...box("moov", mvhd, box("trak", tkhd)), ...box("mdat", [1, 2, 3, 4])]);
+};
 
-Deno.test("media-finalize: ownership, real type, limits and cleanup", async () => {
+// Finalize is for videos in the bucket (pictures go through Cloudinary): the path must be one this shop was signed for.
+Deno.test("media-finalize (video): ownership, real type, limits and cleanup", async () => {
   const w = world();
   const h = sellerMediaFinalize(deps(w));
-  const good = "b1/items/a.png";
   const itemId = "11111111-1111-4111-8111-111111111111";
+  const good = `b1/${itemId}/a.mp4`;
   w.tables.items = [{ id: itemId, business_id: "b1" }, { id: "22222222-2222-4222-8222-222222222222", business_id: "other" }];
+  w.rpcResults["media_confirm_upload"] = (a: any) => (a.p_public_id.endsWith("unsigned.mp4") ? { data: null, error: { message: "upload_not_found" } } : { data: { purpose: "item_video", item_id: itemId }, error: null });
 
   assertEquals((await h(post({ itemId, path: good }))).status, 401);
-  const foreign = await read(await h(authed({ itemId, path: "other/items/a.png" })));
+  const foreign = await read(await h(authed({ itemId, path: "other/x/a.mp4" })));
   assertEquals(foreign.status, 403);
-  assertEquals((await h(authed({ itemId, path: "b1/../other/x.png" }))).status, 403);
+  assertEquals((await h(authed({ itemId, path: "b1/../other/x.mp4" }))).status, 403);
   assertEquals(w.removed, []);
 
-  const otherItem = await read(await h(authed({ itemId: "22222222-2222-4222-8222-222222222222", path: good })));
+  const otherItem = await read(await h(authed({ itemId: "22222222-2222-4222-8222-222222222222", path: `b1/22222222-2222-4222-8222-222222222222/a.mp4` })));
   assertEquals(otherItem.status, 404);
-  assertEquals(w.removed, [good]);
+  assertEquals(w.removed, [`b1/22222222-2222-4222-8222-222222222222/a.mp4`]);
   w.removed.length = 0;
 
-  assertEquals((await read(await h(authed({ itemId, path: good })))).status, 404);
+  assertEquals((await read(await h(authed({ itemId, path: good })))).status, 404); // signed, but nothing was uploaded
+  assertEquals((await read(await h(authed({ itemId, path: `b1/${itemId}/unsigned.mp4` })))).body.error, "upload_not_found");
+  assertEquals((await read(await h(authed({ itemId, path: `b1/${itemId}/a.png` })))).body.error, "unsupported_type"); // pictures are not finalized here
 
-  w.files.set("b1/items/fake.png", new TextEncoder().encode("<svg onload=alert(1)></svg> not an image"));
-  const fake = await read(await h(authed({ itemId, path: "b1/items/fake.png" })));
+  w.files.set(`b1/${itemId}/fake.mp4`, new TextEncoder().encode("<svg onload=alert(1)></svg> not a video"));
+  const fake = await read(await h(authed({ itemId, path: `b1/${itemId}/fake.mp4` })));
   assertEquals([fake.status, fake.body.error], [422, "unsupported_type"]);
-  assertEquals(w.removed, ["b1/items/fake.png"]);
+  assertEquals(w.removed, [`b1/${itemId}/fake.mp4`]);
   w.removed.length = 0;
 
-  w.files.set("b1/items/tiny.png", png(50, 50));
-  assertEquals((await read(await h(authed({ itemId, path: "b1/items/tiny.png" })))).body.error, "too_small");
-  assertEquals(w.removed, ["b1/items/tiny.png"]);
+  w.files.set(`b1/${itemId}/pic.mp4`, png(800, 600));
+  assertEquals((await read(await h(authed({ itemId, path: `b1/${itemId}/pic.mp4` })))).body.error, "unsupported_type");
+  assertEquals(w.removed, [`b1/${itemId}/pic.mp4`]);
   w.removed.length = 0;
 
-  w.files.set(good, png(800, 600));
+  w.files.set(`b1/${itemId}/long.mp4`, mp4Bytes(640, 480, 61));
+  assertEquals((await read(await h(authed({ itemId, path: `b1/${itemId}/long.mp4` })))).body.error, "too_long");
+  assertEquals(w.removed, [`b1/${itemId}/long.mp4`]);
+  w.removed.length = 0;
+
+  const bytes = mp4Bytes(1280, 720, 12);
+  w.files.set(good, bytes);
   w.rpcResults["attach_item_media"] = () => ({ data: null, error: { message: "limit_reached:item_media" } });
   const full = await read(await h(authed({ itemId, path: good })));
   assertEquals([full.status, full.body.error], [409, "limit_reached"]);
   assertEquals(w.removed, [good]);
   w.removed.length = 0;
 
+  // A transient database error keeps the file: the signed ticket is still good, so the seller's retry can finish.
+  w.files.set(good, bytes);
   w.rpcResults["attach_item_media"] = () => ({ data: null, error: { message: "boom" } });
   assertEquals((await read(await h(authed({ itemId, path: good })))).status, 500);
-  assertEquals(w.removed, [good]);
-  w.removed.length = 0;
+  assertEquals(w.removed, []);
 
   w.rpcResults["attach_item_media"] = () => ({ data: "media-1", error: null });
   const ok = await read(await h(authed({ itemId, path: good })));
   assertEquals(ok.status, 201);
-  assertEquals(ok.body, { id: "media-1", kind: "image", width: 800, height: 600, durationSec: null, size: png(800, 600).length });
+  assertEquals(ok.body, { id: "media-1", kind: "video", width: 1280, height: 720, durationSec: 12, size: bytes.length });
   assertEquals(w.removed, []);
   const call = w.rpcCalls.filter((c) => c.name === "attach_item_media").at(-1)!.args;
-  assertEquals([call.p_kind, call.p_mime, call.p_path, call.p_item], ["image", "image/png", good, itemId]);
+  assertEquals([call.p_kind, call.p_mime, call.p_path, call.p_item], ["video", "video/mp4", good, itemId]);
 
   w.tables.item_media.push({ id: "m", path: good });
   assertEquals((await read(await h(authed({ itemId, path: good })))).status, 409);

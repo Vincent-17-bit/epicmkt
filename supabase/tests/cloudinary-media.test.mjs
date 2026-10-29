@@ -38,13 +38,14 @@ test("a Cloudinary photo that is deleted by the seller is queued for removal in 
   assert.deepEqual(await queue(), [`${id}|photo_removed`]);
 });
 
-test("legacy Supabase paths and videos never enter the Cloudinary queue", async () => {
+test("legacy Supabase pictures never enter the queue; a removed video queues its bucket file", async () => {
   await reset();
   const it = await item();
+  const video = `${ids.bizA}/${it}/${uuid()}.mp4`;
   await sql(c, `insert into item_media (item_id, business_id, kind, path, mime) values
-    ($1, $2, 'image', $3, 'image/webp'), ($1, $2, 'video', $4, 'video/mp4')`, [it, ids.bizA, `${ids.bizA}/${it}/${uuid()}.webp`, `${ids.bizA}/${it}/${uuid()}.mp4`]);
+    ($1, $2, 'image', $3, 'image/webp'), ($1, $2, 'video', $4, 'video/mp4')`, [it, ids.bizA, `${ids.bizA}/${it}/${uuid()}.webp`, video]);
   await sql(c, `delete from item_media`);
-  assert.deepEqual(await queue(), []);
+  assert.deepEqual(await queue(), [`${video}|video_removed`]);
 });
 
 test("deleting an item or a business queues its Cloudinary photos too (cascades fire the trigger)", async () => {

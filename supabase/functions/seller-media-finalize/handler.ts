@@ -62,10 +62,14 @@ async function finalizeHosted(d: Deps, businessId: string, path: string, itemId:
   return json({ id: attached.data, kind: "image", width: hosted.width, height: hosted.height, durationSec: null, size: hosted.bytes }, 201);
 }
 
-// Videos, and pictures stored before the move to Cloudinary: still in the Supabase bucket, checked from the real bytes.
+// Videos: still in the Supabase bucket, checked from the real bytes. Only a path this shop was signed for (seller-media-sign records it)
+// is accepted, and the file must be what its extension says, so a picture cannot be attached as a video or the other way round.
+const EXT = /\.(mp4|webm)$/i;
 async function finalizeStored(d: Deps, businessId: string, path: string, itemId: string) {
   const store = d.db.storage.from(BUCKET);
-  const discard = async () => { try { await store.remove([path]); } catch {} };
+  const discard = async () => { try { await store.remove([path]); } catch { /* the sweep queues it */ } };
+
+  if (!path.startsWith(`${businessId}/${itemId}/`) || !EXT.test(path)) return json({ error: EXT.test(path) ? "forbidden" : "unsupported_type" }, EXT.test(path) ? 403 : 422);
 
   const taken = await d.db.from("item_media").select("id").eq("path", path).maybeSingle();
   if (taken.data) return json({ error: "already_attached" }, 409);
@@ -76,6 +80,14 @@ async function finalizeStored(d: Deps, businessId: string, path: string, itemId:
     return json({ error: "item_not_found" }, 404);
   }
 
+  const confirmed = await d.db.rpc("media_confirm_upload", { p_business: businessId, p_public_id: path });
+  if (confirmed.error) {
+    const gone = /upload_not_found/.test(String(confirmed.error.message));
+    return json({ error: gone ? "upload_not_found" : "server_error" }, gone ? 404 : 500);
+  }
+  const issued = confirmed.data as { purpose: string; item_id: string | null } | null;
+  if (issued?.purpose !== "item_video" || issued.item_id !== itemId) return json({ error: "forbidden" }, 403);
+
   const file = await store.download(path);
   if (file.error || !file.data) return json({ error: "file_not_found" }, 404);
   const bytes = new Uint8Array(await file.data.arrayBuffer());
@@ -84,14 +96,19 @@ async function finalizeStored(d: Deps, businessId: string, path: string, itemId:
     await discard();
     return json({ error: info.reason }, 422);
   }
+  if (info.kind !== "video" || !path.toLowerCase().endsWith(`.${info.type}`)) {
+    await discard();
+    return json({ error: "unsupported_type" }, 422);
+  }
 
   const attached = await d.db.rpc("attach_item_media", {
     p_item: itemId, p_kind: info.kind, p_path: path, p_mime: info.mime,
     p_width: info.width, p_height: info.height, p_duration: info.durationSec, p_size: info.size,
   });
   if (attached.error) {
-    await discard();
-    return json({ error: /limit_reached/.test(attached.error.message ?? "") ? "limit_reached" : "server_error" }, /limit_reached/.test(attached.error.message ?? "") ? 409 : 500);
+    const limit = /limit_reached/.test(attached.error.message ?? "");
+    if (limit) await discard();
+    return json({ error: limit ? "limit_reached" : "server_error" }, limit ? 409 : 500);
   }
   return json({ id: attached.data, kind: info.kind, width: info.width, height: info.height, durationSec: info.durationSec, size: info.size }, 201);
 }

@@ -61,7 +61,7 @@ async function fromRpc() {
 async function fromViews() {
   const [rows, businesses, sales] = await Promise.all([
     restAll(
-      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,created_at,image_paths&order=created_at.desc,id.asc",
+      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
@@ -86,6 +86,7 @@ async function fromViews() {
       availability: r.availability,
       created_at: r.created_at,
       image_path: r.image_paths?.[0] ?? null,
+      video_paths: r.video_paths?.length ? r.video_paths : null,
       sale_id: s?.id ?? null,
       sale_price: s?.sale_price ?? null,
       sale_starts_at: s?.starts_at ?? null,
@@ -138,6 +139,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
       imagePath: row.image_path ?? null,
       imageUrl: row.image_path ?? null,
+      videoPaths: Array.isArray(row.video_paths) ? row.video_paths : [],
       priceType: row.price_type ?? "fixed",
       unit: row.unit ?? null,
       regularPrice: regular,

@@ -64,6 +64,39 @@ describe("customer item shape with videos", () => {
   });
 });
 
+describe("customer item media: one sequence, plus images[] and videos[] for older code", () => {
+  const mediaPaths = [
+    { path: "a/v1.mp4", kind: "video", duration: 9 },
+    { path: "a/p1.webp", kind: "image", duration: null },
+    { path: "a/p2.webp", kind: "image", duration: null },
+    { path: "a/v2.webm", kind: "video", duration: 4 },
+  ];
+  const item = itemOf({ id: "i1", name: "Reel item", imagePaths: ["a/p1.webp", "a/p2.webp"], videoPaths: ["a/v1.mp4", "a/v2.webm"], mediaPaths });
+
+  it("lists photos and videos in the seller's order, with ids that match images[] and videos[]", () => {
+    expect(item.media.map((m) => [m.id, m.kind])).toEqual([["v1", "video"], ["i1", "image"], ["i2", "image"], ["v2", "video"]]);
+    expect(item.media.map((m) => m.url.split("/").pop())).toEqual(["v1.mp4", "p1.webp", "p2.webp", "v2.webm"]);
+    expect(item.media.every((m) => m.caption === "Reel item")).toBe(true);
+    for (const m of item.media) expect(m).not.toHaveProperty("poster");
+    for (const v of item.videos) expect(item.media.find((m) => m.id === v.id).url).toBe(v.url);
+    for (const i of item.images) expect(item.media.find((m) => m.id === i.id).url).toBe(i.url);
+  });
+
+  it("keeps images and videos and takes the cover from the first photo, never from a video first in the sequence", () => {
+    expect(item.images.map((i) => i.id)).toEqual(["i1", "i2"]);
+    expect(item.videos.map((v) => v.id)).toEqual(["v1", "v2"]);
+    expect(item.imageUrl).toBe(item.images[0].url);
+    expect(item.media[0].kind).toBe("video");
+  });
+
+  it("falls back to photos then videos when the database sends no media list, and tolerates junk", () => {
+    const old = itemOf({ id: "i2", name: "Old", imagePaths: ["a/p1.webp"], videoPaths: ["a/v1.mp4"] });
+    expect(old.media.map((m) => [m.id, m.kind])).toEqual([["i1", "image"], ["v1", "video"]]);
+    expect(itemOf({ id: "i3", name: "Bare" }).media).toEqual([]);
+    expect(itemOf({ id: "i4", name: "Odd", mediaPaths: [null, { path: "", kind: "image" }, { path: "a/x", kind: "pdf" }, { path: "a/ok.webp", kind: "image" }] }).media.map((m) => m.id)).toEqual(["i1"]);
+  });
+});
+
 describe("customer item shape with product details", () => {
   const base = { id: "i1", name: "Kettle", description: "A kettle." };
 
