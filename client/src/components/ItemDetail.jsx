@@ -465,6 +465,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 {current.shortDescription && <p className={styles.description}>{current.shortDescription}</p>}
               </div>
 
+              <SimilarItems key={`similar-${current.id}`} itemId={current.id} businessId={business.id} />
+
               <section className={styles.sold} aria-label={t("item.soldBy")}>
                 <div className={styles.seller}>
                   <span className={styles.logo}>
@@ -524,7 +526,6 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               )}
 
               {selective}
-              <SimilarItems itemId={current.id} businessId={business.id} />
               </div>
 
               <div className={styles.panels}>

@@ -22,13 +22,13 @@ const detail = {
   business: { slug: "fade-kings", name: "Fade Kings", phone: "0712555101", whatsapp: "0712555101", townName: "Maseno", isOpen: true, verified: true }
 };
 
-const mocks = vi.hoisted(() => ({ getDetail: vi.fn(), getStoreSelective: vi.fn(), getBusiness: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDetail: vi.fn(), getStoreSelective: vi.fn(), getBusiness: vi.fn(), getSimilar: vi.fn() }));
 vi.mock("../api/index.js", () => ({
   getBusiness: mocks.getBusiness,
   logContactEvent: vi.fn(),
   logEvent: vi.fn(),
   reportBusiness: vi.fn(),
-  items: { getDetail: mocks.getDetail, getStoreSelective: mocks.getStoreSelective }
+  items: { getDetail: mocks.getDetail, getStoreSelective: mocks.getStoreSelective, getSimilar: mocks.getSimilar }
 }));
 
 const Where = () => {
@@ -88,5 +88,24 @@ describe("ItemPage", () => {
     mocks.getBusiness.mockRejectedValue(Object.assign(new Error("nope"), { name: "NotFoundError" }));
     mount("/b/ghost/i/x");
     expect(await screen.findByText(/not found|couldn.t find|doesn.t exist/i)).toBeInTheDocument();
+  });
+
+  it("puts Similar items right after the description and before the seller card", async () => {
+    mocks.getBusiness.mockResolvedValue(biz);
+    mocks.getDetail.mockResolvedValue(detail);
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getSimilar.mockResolvedValue(
+      [1, 2, 3].map((n) => ({ id: `s${n}`, name: `Other ${n}`, imageUrl: "b.png", availability: "available", pricing: detail.pricing, business: { id: `b${n}`, slug: `shop-${n}`, name: `Shop ${n}`, verified: false } }))
+    );
+    const { container } = mount();
+    const similar = await waitFor(() => {
+      const el = container.querySelector("[data-similar]");
+      expect(el).not.toBeNull();
+      return el;
+    });
+    const description = screen.getAllByText("Sharp.")[0];
+    const sold = container.querySelector("section[aria-label]:not([data-similar])[class*='sold']");
+    expect(description.compareDocumentPosition(similar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    if (sold) expect(similar.compareDocumentPosition(sold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

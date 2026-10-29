@@ -61,7 +61,9 @@ export const getSimilarItems = async (itemId, opts) => {
     const live = await liveAdapter();
     const rows = live.isLiveId(itemId) ? await live.getSimilarItems(itemId, opts) : await backend.getSimilarItems(itemId, opts);
     return Array.isArray(rows) ? rows : [];
-  } catch {
+  } catch (error) {
+    // Still an empty row for the visitor, but a failed read is visible in the browser console instead of silent.
+    console.warn("[similar-items] could not load:", error?.message ?? error);
     return [];
   }
 };
