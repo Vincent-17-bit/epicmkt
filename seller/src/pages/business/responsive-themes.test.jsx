@@ -32,7 +32,8 @@ describe("themes", () => {
     const used = new Set();
     for (const f of cssFiles) for (const m of read(f).matchAll(/var\((--[a-z0-9-]+)/g)) used.add(m[1]);
     // Layout hooks a caller may set; each is read with a built-in fallback, so it is not a theme token.
-    const OPTIONAL_HOOKS = new Set(["--view-as-height"]);
+    // Local lengths declared in one stylesheet (not colours, so no light and dark values): --ed-brand is the height of the shop logo row on the item page.
+    const OPTIONAL_HOOKS = new Set(["--view-as-height", "--ed-brand"]);
     const missing = [];
     for (const v of used) {
       if (OPTIONAL_HOOKS.has(v)) continue;
