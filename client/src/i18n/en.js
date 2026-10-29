@@ -4,6 +4,8 @@ export default {
   "breadcrumb.search": "Search",
   "breadcrumb.sell": "Become a seller",
   "breadcrumb.register": "Register",
+  "breadcrumb.pricing": "Pricing",
+  "breadcrumb.sellerGuide": "Seller guide",
   "breadcrumb.about": "About",
   "breadcrumb.contact": "Contact",
   "breadcrumb.faq": "FAQs",

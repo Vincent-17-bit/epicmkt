@@ -10,6 +10,8 @@ export const STATIC_TRAILS = {
   "/featured": [{ key: "breadcrumbs.featured" }],
   "/sell": [{ key: "breadcrumb.sell" }],
   "/sell/register": [{ key: "breadcrumb.sell", to: "/sell" }, { key: "breadcrumb.register" }],
+  "/pricing": [{ key: "breadcrumb.pricing" }],
+  "/seller-guide": [{ key: "breadcrumb.sellerGuide" }],
   "/about": [{ key: "breadcrumb.about" }],
   "/contact": [{ key: "breadcrumb.contact" }],
   "/faq": [{ key: "breadcrumb.faq" }],

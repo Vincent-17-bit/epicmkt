@@ -1,0 +1,66 @@
+/* Icon, words and button on one line when there is room, stacked and full width on a phone. */
+.cta {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.ctaIcon {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--ring-gap);
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.ctaText {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ctaTitle {
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.ctaCopy {
+  max-width: 56ch;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.ctaButton {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+@media (min-width: 48rem) {
+  .cta {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .ctaIcon {
+    align-self: center;
+  }
+
+  .ctaButton {
+    grid-column: auto;
+    width: auto;
+  }
+}

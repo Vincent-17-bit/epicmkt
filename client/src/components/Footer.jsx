@@ -26,8 +26,8 @@ const columns = [
     title: "For businesses",
     links: [
       { to: "/become-a-seller", label: "Become a seller" },
-      { to: "/sell#plans", label: "Pricing" },
-      { to: "/sell#how", label: "Seller guide" }
+      { to: "/pricing", label: "Pricing" },
+      { to: "/seller-guide", label: "Seller guide" }
     ]
   },
   {

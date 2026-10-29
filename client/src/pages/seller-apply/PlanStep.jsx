@@ -3,26 +3,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown, faCircleCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 import Button from "../../components/Button.jsx";
-import { formatKes, planLabel } from "../../shared/billing.js";
+import { PLAN_FEATURE_GROUPS as GROUPS, compareFeatureRows as compareRows, formatKes, planLabel } from "../../shared/billing.js";
 import { CatalogError, CatalogLoading } from "./CatalogState.jsx";
 import { ErrorLine, fieldId } from "./Field.jsx";
 import styles from "./plans.module.css";
-
-const GROUPS = ["Visibility", "Catalog", "Promotions", "Tools", "Support"];
-const norm = (t) => t.replace(/\d+/g, "…");
-
-function compareRows(standard, premium) {
-  const rows = [];
-  for (const group of GROUPS) {
-    const s = standard.features?.[group] ?? [];
-    const p = premium.features?.[group] ?? [];
-    const map = new Map();
-    s.forEach((t) => map.set(norm(t), { label: norm(t), standard: t }));
-    p.forEach((t) => map.set(norm(t), { ...(map.get(norm(t)) ?? { label: norm(t) }), premium: t }));
-    if (map.size) rows.push({ group, items: [...map.values()] });
-  }
-  return rows;
-}
 
 function PlanCard({ planKey, plan, selected, open, onSelect, onToggle, name }) {
   const uid = useId();
