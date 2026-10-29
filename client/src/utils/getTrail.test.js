@@ -112,6 +112,8 @@ describe("getTrail", () => {
     ["/offers", ["Home", "Offers"]],
     ["/sell", ["Home", "Become a seller"]],
     ["/sell/register", ["Home", "Become a seller", "Register"]],
+    ["/pricing", ["Home", "Pricing"]],
+    ["/seller-guide", ["Home", "Seller guide"]],
     ["/about", ["Home", "About"]],
     ["/contact", ["Home", "Contact"]],
     ["/faq", ["Home", "FAQs"]],

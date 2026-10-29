@@ -168,7 +168,7 @@ const XML = (value) => esc(value);
 
 export const SITEMAP_LIMIT = 50000;
 
-export const STATIC_PATHS = ["/", "/flash", "/offers", "/featured", "/sell", "/become-a-seller", "/about", "/contact", "/faq", "/privacy", "/terms", "/cookies"];
+export const STATIC_PATHS = ["/", "/flash", "/offers", "/featured", "/sell", "/pricing", "/seller-guide", "/become-a-seller", "/about", "/contact", "/faq", "/privacy", "/terms", "/cookies"];
 
 const day = (value) => {
   const time = Date.parse(value ?? "");

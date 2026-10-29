@@ -12,13 +12,58 @@ const DOCS = [
   { to: "/cookies", label: "Cookie notice", blurb: "What we store on your device." }
 ];
 
+const LEGAL_CONTACT = {
+  title: "Questions about this document?",
+  text: "Our team will respond to legal, privacy and data requests through the contact page.",
+  label: "Contact EpicMKT",
+  to: "/contact"
+};
+
+/** The blue "need to talk to us?" block that closes a document. */
+export function ContactCard({ title, text, label, to, id = "legal-contact-title" }) {
+  return (
+    <aside className={styles.contact} aria-labelledby={id}>
+      <h2 id={id} className={styles.contactTitle}>
+        {title}
+      </h2>
+      <p>{text}</p>
+      <Link to={to} className={styles.contactLink}>
+        {label} <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+      </Link>
+    </aside>
+  );
+}
+
+/** Cards that lead to the related pages. docs: [{ to, label, blurb }] */
+export function SiblingLinks({ docs, label = "Other legal documents" }) {
+  if (!docs.length) return null;
+  return (
+    <nav className={styles.siblings} aria-label={label}>
+      {docs.map((d) => (
+        <Link key={d.to} to={d.to} className={styles.sibling}>
+          <span>
+            <span className={styles.siblingTitle}>{d.label}</span>
+            <span className={styles.siblingText}>{d.blurb}</span>
+          </span>
+          <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /**
- * Shared layout for the legal pages: a header with the document's key points,
- * a sticky contents list, numbered clauses and links to the sibling documents.
+ * Shared layout for the legal pages and the seller guide: a header with the key points, a sticky contents list,
+ * numbered sections and links to related pages.
  *
  * sections: [{ id, title, body: ReactNode }]
+ * contact:  { title, text, label, to } for the closing block (defaults to the legal contact block)
+ * related:  { label, docs } for the links under it (defaults to the other legal documents)
+ * children: anything that should close the page, after the links
  */
-export default function LegalPage({ title, eyebrow, intro, highlights = [], sections, current }) {
+export default function LegalPage({ title, eyebrow, intro, highlights = [], sections, current, contact = LEGAL_CONTACT, related, children }) {
+  const relatedDocs = related?.docs ?? DOCS.filter((d) => d.label !== current);
+  const relatedLabel = related?.label ?? "Other legal documents";
   const [active, setActive] = useState(sections[0]?.id);
 
   useEffect(() => {
@@ -98,27 +143,11 @@ export default function LegalPage({ title, eyebrow, intro, highlights = [], sect
             </section>
           ))}
 
-          <aside className={styles.contact} aria-labelledby="legal-contact-title">
-            <h2 id="legal-contact-title" className={styles.contactTitle}>
-              Questions about this document?
-            </h2>
-            <p>Our team will respond to legal, privacy and data requests through the contact page.</p>
-            <Link to="/contact" className={styles.contactLink}>
-              Contact EpicMKT <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-            </Link>
-          </aside>
+          <ContactCard {...contact} />
 
-          <nav className={styles.siblings} aria-label="Other legal documents">
-            {DOCS.filter((d) => d.label !== current).map((d) => (
-              <Link key={d.to} to={d.to} className={styles.sibling}>
-                <span>
-                  <span className={styles.siblingTitle}>{d.label}</span>
-                  <span className={styles.siblingText}>{d.blurb}</span>
-                </span>
-                <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-              </Link>
-            ))}
-          </nav>
+          <SiblingLinks docs={relatedDocs} label={relatedLabel} />
+
+          {children}
         </article>
       </div>
     </Container>
