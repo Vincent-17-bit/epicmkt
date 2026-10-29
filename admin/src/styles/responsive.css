@@ -144,9 +144,9 @@
     display: grid;
     margin-top: 0.6rem;
     padding: 0.5rem 0.8rem;
-    border: 1px solid var(--admin-border);
+    border: 1px solid var(--border);
     border-radius: 0.8rem;
-    background: var(--admin-surface);
+    background: var(--surface);
   }
 
   table[data-cards] td {
@@ -167,7 +167,7 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--admin-muted);
+    color: var(--text-muted);
   }
 
   table[data-cards] td[data-label=""],
@@ -210,7 +210,7 @@
     z-index: 30;
     display: block;
     border: 0;
-    background: rgb(0 0 0 / 0.5);
+    background: var(--scrim);
   }
 
   .admin-more {
@@ -222,8 +222,8 @@
     overflow: auto;
     padding: 0.9rem 0.75rem calc(4.75rem + env(safe-area-inset-bottom));
     border-radius: 1.1rem 1.1rem 0 0;
-    background: var(--admin-surface);
-    box-shadow: var(--admin-shadow);
+    background: var(--surface);
+    box-shadow: var(--shadow);
     animation: sheet-in 200ms ease;
   }
 
@@ -247,10 +247,10 @@
     gap: 0.35rem;
     min-height: 4.25rem;
     padding: 0.6rem 0.3rem;
-    border: 1px solid var(--admin-border);
+    border: 1px solid var(--border);
     border-radius: 0.8rem;
-    background: var(--admin-bg);
-    color: var(--admin-text);
+    background: var(--bg);
+    color: var(--text);
     font-size: 0.74rem;
     font-weight: 600;
     text-align: center;
@@ -263,8 +263,8 @@
   }
 
   .admin-more__item.is-active {
-    border-color: var(--admin-primary);
-    background: var(--admin-primary-tint);
+    border-color: var(--primary);
+    background: var(--primary-tint);
   }
 
   .admin-more__badge,
@@ -276,8 +276,8 @@
     height: 1.1rem;
     padding: 0 0.3rem;
     border-radius: 999px;
-    background: var(--admin-danger);
-    color: var(--admin-danger-ink);
+    background: var(--danger);
+    color: var(--on-danger);
     font-size: 0.62rem;
     font-weight: 700;
     line-height: 1.1rem;
@@ -293,8 +293,8 @@
     grid-auto-columns: 1fr;
     gap: 0.25rem;
     padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
-    background: var(--admin-header);
-    border-top: 1px solid var(--admin-border);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
   }
 
   .admin-tab {
@@ -310,7 +310,7 @@
     border: 0;
     border-radius: 0.7rem;
     background: transparent;
-    color: var(--admin-muted);
+    color: var(--text-muted);
     font-size: 0.68rem;
     font-weight: 600;
     text-decoration: none;
@@ -329,8 +329,8 @@
   }
 
   .admin-tab.is-active {
-    background: var(--admin-primary-tint);
-    color: var(--admin-primary-strong);
+    background: var(--primary-tint);
+    color: var(--primary-text);
   }
 
   .admin-tab__badge {

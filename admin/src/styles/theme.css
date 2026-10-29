@@ -1,0 +1,157 @@
+/*
+ * Admin semantic tokens: the ONE source of colour for the admin app.
+ * Every colour in admin.css, responsive.css and login.css must come from here.
+ * Both themes are defined explicitly; :root falls back to light so an unthemed
+ * page is still readable.
+ *
+ * Contrast (checked by src/styles/theme.contrast.ui.test.js):
+ *   text on bg/surface/surface-raised >= 4.5:1, text-muted likewise,
+ *   every *-text / on-* pairing >= 4.5:1.
+ */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f3f4f6;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f3f4f6;
+  --border: #e5e7eb;
+  --border-strong: #d1d5db;
+  --text: #111111;
+  --text-muted: #4b5563;
+  --text-inverse: #ffffff;
+
+  --primary: #38b6ff;
+  --primary-strong: #1ea3f0;
+  --primary-text: #0369a1;
+  --primary-tint: #e6f5ff;
+  --on-primary: #111111;
+
+  --danger: #b91c1c;
+  --danger-tint: #fee2e2;
+  --on-danger: #ffffff;
+
+  --success: #15803d;
+  --success-tint: #dcfce7;
+  --success-solid: #15803d;
+  --on-success: #ffffff;
+
+  --warning: #b45309;
+  --warning-tint: #fef3c7;
+  --warning-solid: #f59e0b;
+  --on-warning: #111111;
+
+  --neutral-tint: rgb(107 114 128 / 0.14);
+  --skeleton: rgb(107 114 128 / 0.22);
+  --skeleton-shine: rgb(107 114 128 / 0.5);
+  --table-head: rgb(56 182 255 / 0.08);
+
+  --scrim: rgb(17 17 17 / 0.5);
+  --shadow: 0 8px 20px rgb(17 17 17 / 0.08);
+  --shadow-pop: 0 1rem 2rem rgb(17 17 17 / 0.18);
+
+  --toast-bg: #111111;
+  --toast-text: #ffffff;
+  --toast-border: rgb(255 255 255 / 0.25);
+
+  --tick-green: #15803d;
+  --tick-blue: #0369a1;
+  --chart-fill: #1ea3f0;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-text: #374151;
+  --sidebar-text-muted: #4b5563;
+  --sidebar-text-active: #111111;
+  --sidebar-hover: rgb(17 17 17 / 0.06);
+  --sidebar-active: rgb(56 182 255 / 0.18);
+  --sidebar-border: #e5e7eb;
+  --sidebar-shadow: 0 0 2rem rgb(17 17 17 / 0.14);
+
+  /* Theme-independent layout sizes live with the tokens for one place to look. */
+  --rail-w: 3.5rem;
+  --rail-open-w: 14.5rem;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #111111;
+  --surface: #1a1a1a;
+  --surface-raised: #232323;
+  --surface-sunken: #0d0d0d;
+  --border: #333333;
+  --border-strong: #4a4a4a;
+  --text: #f3f4f6;
+  --text-muted: #9ca3af;
+  --text-inverse: #111111;
+
+  --primary: #38b6ff;
+  --primary-strong: #66c7ff;
+  --primary-text: #38b6ff;
+  --primary-tint: rgb(56 182 255 / 0.16);
+  --on-primary: #111111;
+
+  --danger: #f87171;
+  --danger-tint: rgb(248 113 113 / 0.16);
+  --on-danger: #111111;
+
+  --success: #4ade80;
+  --success-tint: rgb(74 222 128 / 0.14);
+  --success-solid: #22c55e;
+  --on-success: #111111;
+
+  --warning: #fbbf24;
+  --warning-tint: rgb(251 191 36 / 0.14);
+  --warning-solid: #fbbf24;
+  --on-warning: #111111;
+
+  --neutral-tint: rgb(156 163 175 / 0.16);
+  --skeleton: rgb(156 163 175 / 0.16);
+  --skeleton-shine: rgb(156 163 175 / 0.34);
+  --table-head: rgb(56 182 255 / 0.1);
+
+  --scrim: rgb(0 0 0 / 0.7);
+  --shadow: 0 12px 28px rgb(0 0 0 / 0.42);
+  --shadow-pop: 0 1rem 2rem rgb(0 0 0 / 0.6);
+
+  --toast-bg: #f3f4f6;
+  --toast-text: #111111;
+  --toast-border: rgb(17 17 17 / 0.2);
+
+  --tick-green: #4ade80;
+  --tick-blue: #38bdf8;
+  --chart-fill: #38b6ff;
+
+  --sidebar-bg: #0d0d0d;
+  --sidebar-text: #d1d5db;
+  --sidebar-text-muted: #9ca3af;
+  --sidebar-text-active: #ffffff;
+  --sidebar-hover: rgb(255 255 255 / 0.07);
+  --sidebar-active: rgb(255 255 255 / 0.13);
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-shadow: 0 0 2rem rgb(0 0 0 / 0.6);
+}
+
+/*
+ * Short colour transition when the theme flips. The attribute is set by
+ * ThemeProvider only for the duration of the switch, so ordinary hovers and
+ * layout animations are not slowed down.
+ */
+html[data-theme-switching],
+html[data-theme-switching] *,
+html[data-theme-switching] *::before,
+html[data-theme-switching] *::after {
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease,
+    fill 150ms ease, stroke 150ms ease, box-shadow 150ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme-switching],
+  html[data-theme-switching] *,
+  html[data-theme-switching] *::before,
+  html[data-theme-switching] *::after {
+    transition: none !important;
+  }
+}

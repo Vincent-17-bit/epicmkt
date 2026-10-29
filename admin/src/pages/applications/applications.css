@@ -14,15 +14,15 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.55rem 0.8rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.6rem;
-  background: var(--admin-surface);
-  color: var(--admin-text);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .applications__table td a {
   font-weight: 700;
-  color: var(--admin-text);
+  color: var(--text);
 }
 
 /* Codes and amounts read as one unit: never break "EPM-2026-AB2041" or "Standard KES 1,500" across lines. */
@@ -37,7 +37,7 @@
 }
 
 .applications__row:hover {
-  background: rgba(56, 182, 255, 0.07);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
 }
 
 .applications__overdue {
@@ -47,7 +47,7 @@
 .applications__empty {
   padding: 2rem 1rem;
   text-align: center;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .applications__pager {
@@ -84,9 +84,9 @@
   flex-direction: column;
   gap: 0.6rem;
   padding: 0.8rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--admin-primary-tint);
+  background: var(--primary-tint);
 }
 
 .applications__preview p {
@@ -100,14 +100,14 @@
 .applications__message figcaption {
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .applications__message blockquote {
   margin: 0.25rem 0 0;
   padding: 0.5rem 0.7rem;
-  border-left: 3px solid var(--admin-primary);
-  background: var(--admin-surface);
+  border-left: 3px solid var(--primary);
+  background: var(--surface);
   white-space: pre-wrap;
 }
 
@@ -123,7 +123,7 @@
 }
 
 .detail__back a {
-  color: var(--admin-primary);
+  color: var(--primary-text);
   font-weight: 600;
 }
 
@@ -169,7 +169,7 @@
 }
 
 .detail__field dt {
-  color: var(--admin-muted);
+  color: var(--text-muted);
   font-size: 0.8rem;
 }
 
@@ -193,7 +193,7 @@
   align-items: center;
   gap: 1rem;
   padding: 0.7rem 0.8rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
 }
 
@@ -225,7 +225,7 @@
   display: flex;
   flex-direction: column;
   padding-left: 0.8rem;
-  border-left: 3px solid var(--admin-border);
+  border-left: 3px solid var(--border);
 }
 
 @media (max-width: 40rem) {
