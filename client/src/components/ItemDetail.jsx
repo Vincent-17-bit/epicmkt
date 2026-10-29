@@ -23,8 +23,8 @@ import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
-import MediaVideo from "./MediaVideo.jsx";
-import { OfferChip, StockTag } from "@epicmkt/ui";
+import ItemDescription from "./ItemDescription.jsx";
+import { OfferChip, StockTag, coverUrl, dedupeDescription, metaDescription } from "@epicmkt/ui";
 
 const stockLabels = () => ({ lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft") });
 import FlashBanner from "./FlashBanner.jsx";
@@ -121,7 +121,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   usePageTitle(isPage && fresh ? `${fresh.name} | ${business.name}` : undefined);
   usePageMeta(
     isPage && fresh
-      ? { description: fresh.description, image: fresh.images?.[0]?.url ?? business.coverUrl ?? business.logoUrl, path: `/b/${business.slug}/i/${encodeURIComponent(fresh.id)}` }
+      ? { description: metaDescription(fresh), image: coverUrl(fresh) ?? business.coverUrl ?? business.logoUrl, path: `/b/${business.slug}/i/${encodeURIComponent(fresh.id)}` }
       : undefined
   );
 
@@ -239,6 +239,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const message = current ? chatMessage({ item: current, variant, pricing: current.pricing }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
   const highlights = normalizeHighlights(current?.highlights);
+  const fullDescription = current ? dedupeDescription(current.shortDescription, current.description) : "";
   const hasSpecs = current ? buildSpecGroups({ item: current, category: business.category, attributes: business.attributes }).length > 0 : false;
 
   const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
@@ -368,14 +369,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               {current.flash && !hold && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
               <div className={styles.layout}>
               <div className={styles.media}>
-                <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
-                {current.videos?.length > 0 && (
-                  <section className={styles.videos} aria-label={t("video.heading")}>
-                    {current.videos.map((video) => (
-                      <MediaVideo key={`${current.id}-${video.id}`} src={video.url} label={current.name} />
-                    ))}
-                  </section>
-                )}
+                <ItemGallery key={`gallery-${current.id}`} item={current} />
               </div>
               <div className={styles.content}>
               <div className={styles.details}>
@@ -395,21 +389,11 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               )}
 
               <div className={styles.info}>
-                <div className={styles.badges}>
-                  {shown && shown.savings > 0 && <span className={styles.saleChip}>{t("item.sale")} -{shown.discountPercent}%</span>}
-                  {current.section && <span className={styles.tag}>{current.section}</span>}
-                  {current.offers.length > 0 && (
-                    <OfferChip
-                      offer={{ label: offerLabel(current.offers[0].offer), extra: current.offers.length - 1 }}
-                      className={styles.offerBadge}
-                      labels={{ offer: t("offer.chip"), more: t("offer.more") }}
-                    />
-                  )}
-                </div>
+                {current.brand && <p className={styles.brand}>{current.brand}</p>}
                 <Heading id="item-title" ref={titleRef} tabIndex={-1} className={styles.title}>
                   {current.name}
                 </Heading>
-                {current.brand && <p className={styles.brand}>{current.brand}</p>}
+                {current.shortDescription && <p className={styles.description}>{current.shortDescription}</p>}
 
                 {shown && !current.flash && (
                   <div className={styles.priceBlock}>
@@ -418,6 +402,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                         <p className={styles.salePrice}>
                           {formatKes(shown.salePrice)}
                           {current.pricing.unit && <span className={styles.unit}> / {current.pricing.unit}</span>}
+                          <span className={styles.saleChip}>{t("item.sale")} -{shown.discountPercent}%</span>
                         </p>
                         <p className={styles.was}>
                           <s>
@@ -437,8 +422,6 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                     )}
                   </div>
                 )}
-
-                <OfferStrip key={current.id} offers={current.offers} item={current} price={shown?.salePrice ?? null} onOpenProduct={onSelect} />
 
                 {variants.length > 0 && (
                   <div role="radiogroup" aria-label={t("item.options")} className={styles.variants}>
@@ -461,8 +444,26 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 {/* Available says nothing. Running low gets the amber tag; by appointment is worth knowing before a visit. */}
                 {current.availability === "limited_stock" && <StockTag item={current} labels={stockLabels()} className={styles.stockTag} />}
                 {current.availability === "by_appointment" && <p className={styles.availability}>{t("item.availability.by_appointment")}</p>}
+                {current.packSize && (
+                  <p className={styles.packSize}>
+                    <span className={styles.packLabel}>{t("item.packSize")}:</span> {current.packSize}
+                  </p>
+                )}
 
-                {current.shortDescription && <p className={styles.description}>{current.shortDescription}</p>}
+                <OfferStrip key={current.id} offers={current.offers} item={current} price={shown?.salePrice ?? null} onOpenProduct={onSelect} />
+
+                {(current.section || current.offers.length > 0) && (
+                  <div className={styles.badges}>
+                    {current.section && <span className={styles.tag}>{current.section}</span>}
+                    {current.offers.length > 0 && (
+                      <OfferChip
+                        offer={{ label: offerLabel(current.offers[0].offer), extra: current.offers.length - 1 }}
+                        className={styles.offerBadge}
+                        labels={{ offer: t("offer.chip"), more: t("offer.more") }}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <SimilarItems key={`similar-${current.id}`} itemId={current.id} businessId={business.id} />
@@ -524,6 +525,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               {highlights.length > 0 && (
                 <Highlights key={`highlights-${current.id}`} items={highlights} onMore={hasSpecs ? () => setSpecsPing((n) => n + 1) : undefined} />
               )}
+
+              {fullDescription && <ItemDescription key={`description-${current.id}`} text={fullDescription} />}
 
               {selective}
               </div>

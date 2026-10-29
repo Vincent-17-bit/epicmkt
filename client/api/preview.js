@@ -15,7 +15,7 @@ import { cloudinaryCloud, configured, rest, siteOrigin, supabaseUrl } from "./_l
 export const config = { runtime: "edge" };
 
 const BUSINESS = "id,slug,name,category_id,tagline,description,phone,socials,county,town,address,lat,lng,logo_path,cover_path";
-const ITEM = "id,business_id,name,description,price,price_max,price_type,availability,image_paths";
+const ITEM = "id,business_id,name,description,short_description,price,price_max,price_type,availability,image_paths";
 
 const html = (body, status, cache) =>
   new Response(body, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": cache } });

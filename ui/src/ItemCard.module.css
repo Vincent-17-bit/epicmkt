@@ -173,3 +173,15 @@
   gap: var(--space-1);
   padding: var(--space-2) 0 0;
 }
+
+/* The short description: up to two lines under the name, cut with an ellipsis. */
+.blurb {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}

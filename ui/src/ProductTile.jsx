@@ -2,6 +2,7 @@ import { formatKes, isListed } from "@epicmkt/shared";
 import { isPreview } from "./preview.js";
 import OfferChip from "./components/OfferChip.jsx";
 import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
+import { cardBlurb, coverUrl } from "./lib/media.js";
 import LazyImage from "./components/LazyImage.jsx";
 import StockTag from "./components/StockTag.jsx";
 import styles from "./ProductTile.module.css";
@@ -55,7 +56,7 @@ export default function ProductTile({
   const onSale = Boolean(pricing && pricing.savings > 0);
   // A short line after the name. It shares the name's two lines, so it fills the space a short name leaves and is cut
   // with an ellipsis when long: it can never push the price or the store out of the card.
-  const blurb = (item.shortDescription || item.description || item.section || "").replace(/\s+/g, " ").trim();
+  const blurb = cardBlurb(item) || String(item.section ?? "").trim();
 
   if (!isListed(item)) return null;
 
@@ -66,7 +67,7 @@ export default function ProductTile({
       data-mode={preview ? "preview" : undefined}
     >
       <span className={styles.media}>
-        <LazyImage fill src={item.imageUrl} className={styles.img} />
+        <LazyImage fill src={coverUrl(item)} className={styles.img} />
         {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
         <OfferChip offer={item.offer} className={styles.offer} labels={labels.offerChip} />

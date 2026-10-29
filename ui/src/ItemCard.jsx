@@ -1,4 +1,5 @@
 import { formatKes } from "@epicmkt/shared";
+import { cardBlurb, coverUrl } from "./lib/media.js";
 import LazyImage from "./components/LazyImage.jsx";
 import OfferChip from "./components/OfferChip.jsx";
 import StockTag from "./components/StockTag.jsx";
@@ -23,6 +24,7 @@ export default function ItemCard({
 }) {
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
+  const blurb = cardBlurb(item);
 
   const face = (
     <button
@@ -33,7 +35,7 @@ export default function ItemCard({
       aria-haspopup="dialog"
     >
       <span className={styles.media}>
-        <LazyImage fill src={item.imageUrl} className={styles.img} />
+        <LazyImage fill src={coverUrl(item)} className={styles.img} />
         {onSale && <span className={styles.chip}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flashChip)}
         <OfferChip offer={item.offer} className={styles.offerChip} labels={labels.offerChip} />
@@ -41,6 +43,7 @@ export default function ItemCard({
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>
+        {blurb && <span className={styles.blurb}>{blurb}</span>}
         <span className={styles.meta}>
           {pricing ? (
             <span className={styles.prices}>
