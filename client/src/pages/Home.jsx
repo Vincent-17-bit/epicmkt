@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { getCategories } from "../api/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
@@ -18,6 +18,7 @@ import FeaturedStores from "../components/FeaturedStores.jsx";
 import RecentlyAdded from "../components/RecentlyAdded.jsx";
 import NearYou from "../components/NearYou.jsx";
 import HomeProducts from "../components/HomeProducts.jsx";
+import ListBusinessBanner from "../components/ListBusinessBanner.jsx";
 import StatusPage from "../components/StatusPage.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
@@ -207,20 +208,7 @@ export default function Home() {
 
       <section className={`${styles.section} ${styles.ctaSection}`} aria-labelledby="cta-title">
         <Container>
-          <div className={styles.cta}>
-            <span className={styles.ctaIcon}>
-              <FontAwesomeIcon icon={faStore} />
-            </span>
-            <div className={styles.ctaText}>
-              <h2 id="cta-title" className={styles.ctaTitle}>
-                List your business
-              </h2>
-              <p className={styles.ctaCopy}>Get found by customers nearby.</p>
-            </div>
-            <Button as={Link} to="/sell" variant="dark" iconRight={faArrowRight} className={styles.ctaButton}>
-              Become a seller
-            </Button>
-          </div>
+          <ListBusinessBanner titleId="cta-title" />
         </Container>
       </section>
     </>

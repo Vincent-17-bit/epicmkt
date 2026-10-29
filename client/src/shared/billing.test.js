@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatKes, formatKesPerMonth, planLabel, planPrice, upgradeCost, priceRange, summarizePlan, getPlan, addCalendarMonth, graceEndsAt, listingState, categoryChangeQuote } from './billing';
+import { formatKes, formatKesPerMonth, planLabel, planPrice, upgradeCost, priceRange, priceBands, compareFeatureRows, summarizePlan, getPlan, addCalendarMonth, graceEndsAt, listingState, categoryChangeQuote } from './billing';
 
 const cat = {
   id: 'bakery',
@@ -75,5 +75,42 @@ describe('categoryChangeQuote', () => {
     expect(categoryChangeQuote({ oldPrice: 800, newPrice: 500, paidUntil: '2026-10-20', now })).toEqual({
       extraDueNow: 0, appliesFromNextRenewal: true, newMonthlyPrice: 500,
     });
+  });
+});
+
+describe('public plan comparison', () => {
+  const water = { id: 'water', name: 'Water', plans: { standard: { price: 300 }, premium: { price: 800 } } };
+  const lpg = { id: 'lpg', name: 'LPG', plans: { standard: { price: 300 }, premium: { price: 800 } } };
+  const chemist = { id: 'chemist', name: 'Chemist', plans: { standard: { price: 1200 }, premium: { price: 3000 } } };
+  const broken = { id: 'x', name: 'No plans', plans: {} };
+
+  it('groups business types that pay the same, cheapest first', () => {
+    const bands = priceBands([chemist, water, broken, lpg]);
+    expect(bands.map((b) => [b.standard, b.premium, b.categories.map((c) => c.name)])).toEqual([
+      [300, 800, ['Water', 'LPG']],
+      [1200, 3000, ['Chemist']]
+    ]);
+  });
+
+  it('returns no bands when there is nothing to price', () => {
+    expect(priceBands([])).toEqual([]);
+    expect(priceBands(undefined)).toEqual([]);
+  });
+
+  it('lines up features that differ only in their numbers', () => {
+    const rows = compareFeatureRows(
+      { features: { Catalog: ['Shop gallery of 5 photos', 'Unlimited items'], Support: ['Standard support'] } },
+      { features: { Catalog: ['Shop gallery of 20 photos', 'Unlimited items'], Visibility: ['Featured badge'], Support: ['Priority support'] } }
+    );
+    expect(rows.map((r) => r.group)).toEqual(['Visibility', 'Catalog', 'Support']);
+    const catalog = rows.find((r) => r.group === 'Catalog').items;
+    expect(catalog[0]).toEqual({ label: 'Shop gallery of … photos', standard: 'Shop gallery of 5 photos', premium: 'Shop gallery of 20 photos' });
+    expect(catalog[1].standard).toBe(catalog[1].premium);
+    expect(rows.find((r) => r.group === 'Visibility').items[0].standard).toBeUndefined();
+    expect(rows.find((r) => r.group === 'Support').items).toHaveLength(2);
+  });
+
+  it('copes with missing plans', () => {
+    expect(compareFeatureRows(undefined, undefined)).toEqual([]);
   });
 });

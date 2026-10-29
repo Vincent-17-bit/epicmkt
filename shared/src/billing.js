@@ -48,6 +48,42 @@ export function summarizePlan(category, planKey) {
   };
 }
 
+// ---- Public plan comparison -------------------------------------------------------------------------------------------
+
+export const PLAN_FEATURE_GROUPS = ['Visibility', 'Catalog', 'Promotions', 'Tools', 'Support'];
+
+const featureKey = (text) => text.replace(/\d+/g, '…');
+
+// Lines up the Standard and Premium feature lists group by group. Two lines that differ only in their numbers
+// ("Up to 7 photos" / "Up to 15 photos") become one row with a different text in each plan.
+export function compareFeatureRows(standard, premium) {
+  const rows = [];
+  for (const group of PLAN_FEATURE_GROUPS) {
+    const map = new Map();
+    for (const text of standard?.features?.[group] ?? []) map.set(featureKey(text), { label: featureKey(text), standard: text });
+    for (const text of premium?.features?.[group] ?? []) {
+      const key = featureKey(text);
+      map.set(key, { ...(map.get(key) ?? { label: key }), premium: text });
+    }
+    if (map.size) rows.push({ group, items: [...map.values()] });
+  }
+  return rows;
+}
+
+// Groups the business types by what they pay, cheapest first, so the public page can say "these types pay X and Y".
+export function priceBands(categories) {
+  const bands = new Map();
+  for (const category of categories ?? []) {
+    const standard = planPrice(category, 'standard');
+    const premium = planPrice(category, 'premium');
+    if (standard === null || premium === null) continue;
+    const key = `${standard}:${premium}`;
+    if (!bands.has(key)) bands.set(key, { key, standard, premium, categories: [] });
+    bands.get(key).categories.push({ id: category.id, name: category.name });
+  }
+  return [...bands.values()].sort((a, b) => a.standard - b.standard || a.premium - b.premium);
+}
+
 export const DAY_MS = 86_400_000;
 const isDay = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const nairobiDay = (d) => {

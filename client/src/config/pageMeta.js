@@ -7,6 +7,8 @@ export const PAGE_DESCRIPTIONS = {
   "/contact": "Questions about a listing, feedback, or want your business listed? Contact the EpicMKT team.",
   "/faq": "Answers to common questions about finding businesses on EpicMKT and listing your own.",
   "/sell": "List your business on EpicMKT and get found by customers nearby in Kenya. No commission. Compare plans and start today.",
+  "/pricing": "Simple monthly pricing for listing your business on EpicMKT in Kenya. Compare Standard and Premium, see the price for your type of business and ask for the plans PDF.",
+  "/seller-guide": "How to list your business on EpicMKT: what to prepare, how to apply, how payment works and how to build your page.",
   "/privacy": "How EpicMKT handles your personal data and your rights under the Kenya Data Protection Act, 2019.",
   "/terms": "The terms for using EpicMKT, including what EpicMKT does and does not do.",
   "/cookies": "How EpicMKT uses cookies and storage on your device, and how you can control them."
