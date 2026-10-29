@@ -1,5 +1,5 @@
 import { render } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { RouterProvider, createMemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "../App.jsx";
 import * as api from "../api/index.js";
@@ -19,14 +19,13 @@ export async function signedInApp(path = "/business/subscription", prepare) {
   await api.login("ES100001", "Demo-Passw0rd");
   await prepare?.();
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0, gcTime: 0 } } });
+  const router = createMemoryRouter([{ path: "*", element: <App /> }], { initialEntries: [path] });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
-        <App />
-      </MemoryRouter>
+      <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  return { ...view, client };
+  return { ...view, client, router };
 }
 
 export const nairobiMidnight = (day) => new Date(`${day}T00:00:00+03:00`).toISOString();
