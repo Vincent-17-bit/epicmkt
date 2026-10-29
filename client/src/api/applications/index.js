@@ -6,6 +6,7 @@ export const submitApplication = async (...args) => (await adapter()).submitAppl
 
 export const requestStatusOtp = async (...args) => (await adapter()).requestStatusOtp(...args);
 export const verifyStatusOtp = async (...args) => (await adapter()).verifyStatusOtp(...args);
+export const endStatusSession = async (...args) => (await adapter()).endStatusSession(...args);
 export const getApplication = async (...args) => (await adapter()).getApplication(...args);
 export const saveCorrections = async (...args) => (await adapter()).saveCorrections(...args);
 export const resubmitApplication = async (...args) => (await adapter()).resubmitApplication(...args);

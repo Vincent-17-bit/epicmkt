@@ -2,6 +2,7 @@ import { categories } from '../../data/categories';
 import { GLOBAL_LIMITS, planRows } from '../../config/plans.seed';
 import { legalDocs } from '../../data/legal';
 import { getPricingOverrides, saveApplication, saveFiles } from './mockStore';
+import { startSession } from './mockStatus';
 import { applicationSchema, requiredSlots, allowedSlots } from '../../shared/validators';
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -94,7 +95,7 @@ export async function submitApplication({ payload, files, startedAt, hp }, onFil
     documents: files.map(({ slot, file }) => ({ slot, name: file.name, mime: file.type, size: file.size })),
   });
   await saveFiles(ref, files);
-  return { referenceNo: ref };
+  return { referenceNo: ref, session: startSession(ref, true) };
 }
 
-export { requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication } from './mockStatus';
+export { requestStatusOtp, verifyStatusOtp, endStatusSession, getApplication, saveCorrections, resubmitApplication } from './mockStatus';

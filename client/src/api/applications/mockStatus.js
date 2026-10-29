@@ -10,6 +10,7 @@ const SESSION_KEY = 'epicmkt.mock.sessions';
 const DEV_CODE = '123456';
 const MAX_ATTEMPTS = 5;
 const SESSION_MS = 30 * 60_000;
+const REMEMBER_MS = 30 * 24 * 3_600_000;
 const OTP_MS = 10 * 60_000;
 
 const apiError = (code, details) => Object.assign(new Error(code), { details: { error: code, ...details } });
@@ -56,7 +57,7 @@ export async function requestStatusOtp({ referenceNo, phone }) {
   return generic;
 }
 
-export async function verifyStatusOtp({ referenceNo, phone, code }) {
+export async function verifyStatusOtp({ referenceNo, phone, code, remember }) {
   await wait(300);
   const ref = normRef(referenceNo);
   const norm = normalizePhone(String(phone ?? ''));
@@ -76,10 +77,20 @@ export async function verifyStatusOtp({ referenceNo, phone, code }) {
   const { [key]: _used, ...rest } = all;
   writeJson(OTP_KEY, rest);
 
+  return startSession(ref, remember === true);
+}
+
+export function startSession(ref, remembered) {
   const token = [...crypto.getRandomValues(new Uint8Array(24))].map((b) => b.toString(16).padStart(2, '0')).join('');
-  const expiresAt = new Date(Date.now() + SESSION_MS).toISOString();
-  writeJson(SESSION_KEY, { ...readJson(SESSION_KEY, {}), [token]: { ref, expiresAt } });
-  return { token, expiresAt };
+  const expiresAt = new Date(Date.now() + (remembered ? REMEMBER_MS : SESSION_MS)).toISOString();
+  writeJson(SESSION_KEY, { ...readJson(SESSION_KEY, {}), [token]: { ref, expiresAt, remembered } });
+  return { token, expiresAt, remembered };
+}
+
+export async function endStatusSession(session) {
+  const { [session?.token]: _gone, ...rest } = readJson(SESSION_KEY, {});
+  writeJson(SESSION_KEY, rest);
+  return { ok: true };
 }
 
 function sessionRecord(session) {

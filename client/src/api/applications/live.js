@@ -66,7 +66,7 @@ export async function submitApplication({ payload, files, turnstileToken, starte
 
   const fin = await supabase.functions.invoke('finalize-application', { body: { applicationId, finalizeToken } });
   if (fin.error) throw await toApiError(fin.error);
-  return { referenceNo: fin.data.referenceNo };
+  return { referenceNo: fin.data.referenceNo, session: fin.data.session };
 }
 
 async function call(name, body) {
@@ -77,7 +77,9 @@ async function call(name, body) {
 
 export const requestStatusOtp = ({ referenceNo, phone }) => call('status-request-otp', { referenceNo, phone });
 
-export const verifyStatusOtp = ({ referenceNo, phone, code }) => call('status-verify-otp', { referenceNo, phone, code });
+export const verifyStatusOtp = ({ referenceNo, phone, code, remember }) => call('status-verify-otp', { referenceNo, phone, code, remember });
+
+export const endStatusSession = (session) => call('status-signout', { token: session.token });
 
 export async function getApplication(session) {
   const data = await call('status-get', { token: session.token });

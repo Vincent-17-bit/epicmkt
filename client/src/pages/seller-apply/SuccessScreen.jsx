@@ -5,7 +5,7 @@ import { faCircleCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
 import Button from "../../components/Button.jsx";
 import styles from "./success.module.css";
 
-export default function SuccessScreen({ referenceNo, email }) {
+export default function SuccessScreen({ referenceNo, email, remembered }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -29,6 +29,7 @@ export default function SuccessScreen({ referenceNo, email }) {
       <p role="status" className={styles.sent}>
         A copy was sent to {email}.
       </p>
+      {remembered && <p className={styles.sent}>This device is remembered for 30 days, so you can check your application here without a code.</p>}
       <ol className={styles.next}>
         <li>We review your application. You may be asked to correct items.</li>
         <li>When approved, you pay the monthly fee by M-Pesa.</li>

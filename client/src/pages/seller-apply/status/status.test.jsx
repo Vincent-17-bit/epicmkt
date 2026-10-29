@@ -36,14 +36,32 @@ beforeEach(() => {
   simSeed();
 });
 
-afterEach(() => sessionStorage.clear());
+afterEach(() => {
+  sessionStorage.clear();
+  localStorage.clear();
+});
 
 describe("check my application", () => {
+  it("keeps a remembered device signed in and forgets it on sign out", async () => {
+    const user = userEvent.setup();
+    const first = mount();
+    await signIn(user, "EPM-2026-DEMO01");
+    expect(await screen.findByRole("button", { name: /sign out/i })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("epicmkt.status.session"))).toMatchObject({ remembered: true });
+    first.unmount();
+    mount();
+    const out = await screen.findByRole("button", { name: /sign out/i });
+    expect(screen.queryByLabelText("6 digit code")).not.toBeInTheDocument();
+    await user.click(out);
+    expect(await screen.findByRole("button", { name: "Send me a code" })).toBeInTheDocument();
+    expect(localStorage.getItem("epicmkt.status.session")).toBeNull();
+  }, 20000);
+
   it("validates the form and gives the same reply for wrong details", async () => {
     const user = userEvent.setup();
     mount();
     await user.click(await screen.findByRole("button", { name: "Send me a code" }));
-    expect(screen.getByText("Enter your reference number, for example EPM-2026-ABC234")).toBeInTheDocument();
+    expect(screen.getByText(`Enter your reference number, for example EPM-${new Date().getFullYear()}-ABC234`)).toBeInTheDocument();
     expect(screen.getByText(/valid phone number/)).toBeInTheDocument();
     await user.type(screen.getByLabelText("Reference number"), "EPM-2026-NOPE99");
     await user.type(screen.getByLabelText("Phone number"), "0700000000");

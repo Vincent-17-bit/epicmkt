@@ -2,6 +2,8 @@ import { applicationSchema } from "./validate.ts";
 
 export const SESSION_MINUTES = 30;
 export const OTP_MINUTES = 10;
+export const REMEMBER_DAYS = 30;
+export const REMEMBER_MINUTES = REMEMBER_DAYS * 24 * 60;
 
 export const FIELD_COLUMNS: Record<string, string> = {
   "owner.fullName": "owner_full_name",
@@ -37,10 +39,13 @@ export async function sessionApp(db: any, sha256Hex: (s: string) => Promise<stri
   if (typeof token !== "string" || token.length < 32) return null;
   const { data: s } = await db
     .from("status_sessions")
-    .select("application_id, expires_at")
+    .select("application_id, expires_at, remembered, token_hash")
     .eq("token_hash", await sha256Hex(token))
     .maybeSingle();
   if (!s || new Date(s.expires_at).getTime() <= Date.now()) return null;
+  if (s.remembered && new Date(s.expires_at).getTime() < Date.now() + (REMEMBER_MINUTES - 60 * 24) * 60_000) {
+    await db.from("status_sessions").update({ expires_at: nowPlus(REMEMBER_MINUTES) }).eq("token_hash", s.token_hash);
+  }
   const { data: app } = await db.from("applications").select("*").eq("id", s.application_id).maybeSingle();
   return app && app.status !== "uploading" ? app : null;
 }

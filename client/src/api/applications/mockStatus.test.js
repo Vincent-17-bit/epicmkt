@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   requestStatusOtp, verifyStatusOtp, getApplication, saveCorrections, resubmitApplication,
 } from './mockStatus';
-import { simSeed, simFlag, simSetStatus } from './mockStatus';
+import { simSeed, simFlag, simSetStatus, endStatusSession } from './mockStatus';
 import { findApplication } from './mockStore';
 
 const PHONE = '0712345678';
@@ -79,6 +79,18 @@ describe('status session', () => {
     expect(app.referenceNo).toBe('EPM-2026-DEMO01');
     expect(app.payment).toBeNull();
     vi.setSystemTime(new Date('2026-10-06T08:31:00Z'));
+    await expect(getApplication(session)).rejects.toThrow('session_expired');
+  });
+
+  it('keeps a remembered session for 30 days and ends it on sign out', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-06T08:00:00Z'));
+    await requestStatusOtp({ referenceNo: 'EPM-2026-DEMO01', phone: PHONE });
+    const session = await verifyStatusOtp({ referenceNo: 'EPM-2026-DEMO01', phone: PHONE, code: '123456', remember: true });
+    expect(session.remembered).toBe(true);
+    vi.setSystemTime(new Date('2026-11-01T08:00:00Z'));
+    expect((await getApplication(session)).referenceNo).toBe('EPM-2026-DEMO01');
+    await endStatusSession(session);
     await expect(getApplication(session)).rejects.toThrow('session_expired');
   });
 

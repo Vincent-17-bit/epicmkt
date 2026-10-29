@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { normalizePhone } from "../_shared/validate.ts";
 import { clientIp, corsHeaders, json, randomToken, sha256Hex } from "../_shared/http.ts";
-import { SESSION_MINUTES, nowPlus } from "../_shared/status.ts";
+import { REMEMBER_MINUTES, SESSION_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -42,11 +42,12 @@ Deno.serve(async (req) => {
 
   await db.from("otp_requests").update({ used: true }).eq("id", otp.id);
   const token = randomToken();
-  const expiresAt = nowPlus(SESSION_MINUTES);
+  const remembered = body?.remember === true;
+  const expiresAt = nowPlus(remembered ? REMEMBER_MINUTES : SESSION_MINUTES);
   const ins = await db.from("status_sessions").insert({
-    token_hash: await sha256Hex(token), application_id: app.id, expires_at: expiresAt,
+    token_hash: await sha256Hex(token), application_id: app.id, expires_at: expiresAt, remembered,
   });
   if (ins.error) return json({ error: "server_error" }, 500);
   await db.from("application_events").insert({ application_id: app.id, actor: "seller", type: "session_started", data: {} });
-  return json({ token, expiresAt });
+  return json({ token, expiresAt, remembered });
 });

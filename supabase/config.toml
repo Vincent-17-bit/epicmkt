@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.status-get]
 verify_jwt = false
 
+[functions.status-signout]
+verify_jwt = false
+
 [functions.status-correct]
 verify_jwt = false
 
