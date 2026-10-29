@@ -133,6 +133,24 @@ describe("MediaGallery: moving between slides", () => {
   });
 });
 
+describe("MediaGallery: arrow buttons", () => {
+  it("step to the next and previous slide and never open the zoom", () => {
+    HTMLDialogElement.prototype.showModal = vi.fn();
+    const { container } = render(<MediaGallery media={mixed} name="Shoe" />);
+    // The arrows are display:none on touch screens, so jsdom gives them no accessible name; find them by label.
+    const prev = () => container.querySelector('button[aria-label="Previous"]');
+    const next = () => container.querySelector('button[aria-label="Next"]');
+    expect(prev()).toBeDisabled();
+    fireEvent.click(next());
+    expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(next());
+    expect(tabs()[2]).toHaveAttribute("aria-selected", "true");
+    fireEvent.click(prev());
+    expect(tabs()[1]).toHaveAttribute("aria-selected", "true");
+    expect(HTMLDialogElement.prototype.showModal).not.toHaveBeenCalled();
+  });
+});
+
 describe("MediaGallery: video rules", () => {
   const openVideoFirst = () => {
     const utils = render(<MediaGallery media={[video(1), video(2), photo(1)]} name="Shoe" />);
