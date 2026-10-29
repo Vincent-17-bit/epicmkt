@@ -49,17 +49,29 @@ const merge = (base, saved) => ({
 
 const stepOfPath = (path) => Math.max(0, STEPS.findIndex((s) => s.paths.some((p) => path === p || path.startsWith(`${p}.`))));
 
+const MESSAGES = {
+  too_fast: "That was very quick. Please check your details and send again in a few seconds.",
+  captcha_failed: "The human check did not pass. Please tick it again and send.",
+  rate_limited: "You have tried a few times already. Please wait a while, then send again.",
+  invalid: "Some of your answers were not accepted. Go back, check each step and send again.",
+  invalid_files: "Your documents could not be read. Add them again and send.",
+  invalid_file: "One of your files was not accepted. Replace it and send again.",
+  missing_documents: "Some required documents are missing. Add them and send again.",
+  unknown_category: "That business type is no longer available. Go back to step 1 and choose again.",
+  unknown_plan: "That package is no longer available. Go to the last step and choose again.",
+  legal_version_changed: "The terms were updated. Please open and read them again."
+};
+
+const OFFLINE = "We could not reach EpicMKT. Check your connection and try again. Your draft is saved.";
+const UPLOAD = "A file did not finish uploading. Check your connection and send again. Your draft is saved.";
+const SERVER = "Something went wrong on our side, not yours. Your draft is saved. Please try again in a few minutes.";
+
 function describe(e) {
   const code = e?.details?.error ?? e?.message;
-  const map = {
-    too_fast: "That was very quick. Please check your details and send again in a few seconds.",
-    captcha_failed: "The human check did not pass. Please try again.",
-    rate_limited: "Too many attempts. Please wait a while and try again.",
-    invalid_file: "One of your files was not accepted. Replace it and send again.",
-    missing_documents: "Some required documents are missing. Add them and send again.",
-    legal_version_changed: "The terms were updated. Please open and read them again."
-  };
-  return map[code] ?? "We could not send your application. Your draft is saved. Check your connection and try again.";
+  if (MESSAGES[code]) return MESSAGES[code];
+  if (e?.name === "FunctionsFetchError" || (typeof navigator !== "undefined" && navigator.onLine === false)) return OFFLINE;
+  if (String(e?.name).startsWith("Storage")) return UPLOAD;
+  return SERVER;
 }
 
 export default function BecomeASeller() {
