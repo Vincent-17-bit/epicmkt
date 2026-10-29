@@ -178,39 +178,6 @@
   border-top: 2px solid var(--border-strong);
 }
 
-/* What you pay, by type of business */
-.bands {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.bandsLead {
-  font-size: var(--text-sm);
-}
-
-.bandTable {
-  min-width: 22rem;
-}
-
-.bandTable .rowLabel {
-  width: 58%;
-  line-height: 1.4;
-}
-
-.bandHead {
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--text-sm);
-  text-align: left;
-}
-
-.bandPrice {
-  padding: var(--space-3) var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
-}
-
 .fine a {
   font-weight: 700;
 }
