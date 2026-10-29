@@ -1,0 +1,61 @@
+.section {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.body {
+  display: grid;
+  gap: var(--space-3);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.paragraph {
+  margin: 0;
+  /* A single line break the seller typed stays a line break. */
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  justify-self: start;
+  min-height: var(--tap);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.toggle:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Phones: show about six lines and fade the rest out. From 768 px the whole text is shown. */
+@media (max-width: 47.99rem) {
+  .body[data-open="false"] {
+    max-height: calc(1.6em * 6 + var(--space-3));
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(#000 calc(100% - 2.4em), transparent);
+    mask-image: linear-gradient(#000 calc(100% - 2.4em), transparent);
+  }
+}
+
+@media (min-width: 90rem) {
+  .section {
+    padding: var(--space-5);
+  }
+}

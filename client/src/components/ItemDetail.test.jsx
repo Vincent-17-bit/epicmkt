@@ -68,23 +68,84 @@ describe("ItemDetail", () => {
     expect(screen.queryByText(/products?$/)).toBeNull();
   });
 
-  it("shows an item's videos as thumbnails that never autoplay, and nothing when it has none", async () => {
+  it("puts photos and videos in one gallery in the seller's order, with no separate videos section", async () => {
     mocks.getStoreSelective.mockResolvedValue([]);
-    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), videos: [{ id: "v1", url: "a.mp4", caption: "Fade and beard" }, { id: "v2", url: "b.webm", caption: "Fade and beard" }] });
+    mocks.getDetail.mockResolvedValue({
+      ...base,
+      pricing: pricing(300, 300),
+      media: [
+        { id: "i1", kind: "image", url: "https://x.test/1.jpg", caption: "Fade" },
+        { id: "v1", kind: "video", url: "a.mp4" },
+        { id: "i2", kind: "image", url: "https://x.test/2.jpg", caption: "Beard" }
+      ]
+    });
     const { container, unmount } = mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(screen.getAllByRole("button", { name: "Watch video: Fade and beard" })).toHaveLength(2);
-    const videos = container.querySelectorAll("video");
-    expect(videos).toHaveLength(2);
-    videos.forEach((v) => {
+    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual(["Photo 1 of 3", "Video 2 of 3", "Photo 3 of 3"]);
+    expect(screen.queryByRole("button", { name: /Watch video/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Videos" })).toBeNull();
+    container.querySelectorAll("video").forEach((v) => {
       expect(v.hasAttribute("autoplay")).toBe(false);
       expect(v.muted).toBe(true);
     });
     unmount();
-    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
-    const plain = mount();
+    // The older payload (images[] + videos[]) still works.
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), images: [{ id: "i1", url: "https://x.test/1.jpg" }], videos: [{ id: "v1", url: "a.mp4" }] });
+    mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(plain.container.querySelector("video")).toBeNull();
+    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual(["Photo 1 of 2", "Video 2 of 2"]);
+  });
+
+  it("shows information in order: brand, name, short description, price, pack size, highlights, description", async () => {
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getDetail.mockResolvedValue({
+      ...base,
+      brand: "Wahl",
+      shortDescription: "Quiet cordless clipper",
+      description: "Quiet cordless clipper\n\nRuns for ninety minutes.\nCharges in two hours.",
+      packSize: "1 unit",
+      highlights: [{ text: "Point one" }],
+      pricing: pricing(300, 300)
+    });
+    const { container } = mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    const title = container.querySelector("#item-title");
+    const text = container.textContent;
+    // The name also sits in the breadcrumb above; look it up from the page title itself.
+    const at = (needle) => (needle === "Fade and beard" ? text.indexOf(needle, text.indexOf("Wahl")) : text.indexOf(needle));
+    expect(title).toHaveTextContent("Fade and beard");
+    const order = ["Wahl", "Fade and beard", "Quiet cordless clipper", "KES 300", "Pack size", "Point one", "Runs for ninety minutes."].map(at);
+    expect(order.every((n) => n >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    // The short description appears once: it is not repeated at the top of the full description.
+    expect(text.split("Quiet cordless clipper").length - 1).toBe(1);
+  });
+
+  it("keeps paragraph breaks in the description and offers Read more / Read less only when it overflows", async () => {
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getDetail.mockResolvedValue({ ...base, shortDescription: "", description: "First paragraph.\n\nSecond paragraph.", pricing: pricing(300, 300) });
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "scrollHeight");
+    const { container, unmount } = mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    const section = container.querySelector("[data-description]");
+    expect(section.querySelectorAll("p")).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "Read more" })).toBeNull();
+    unmount();
+
+    Object.defineProperty(HTMLElement.prototype, "scrollHeight", { configurable: true, get: () => 900 });
+    Object.defineProperty(HTMLElement.prototype, "clientHeight", { configurable: true, get: () => 100 });
+    try {
+      mount();
+      await screen.findByRole("heading", { name: "Fade and beard" });
+      const more = await screen.findByRole("button", { name: "Read more" });
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      await userEvent.setup().click(more);
+      expect(screen.getByRole("button", { name: "Read less" })).toHaveAttribute("aria-expanded", "true");
+    } finally {
+      if (original) Object.defineProperty(HTMLElement.prototype, "scrollHeight", original);
+      else delete HTMLElement.prototype.scrollHeight;
+      delete HTMLElement.prototype.clientHeight;
+    }
   });
 
   it("uses the flash sale wording and shows both prices", async () => {
@@ -228,7 +289,7 @@ describe("ItemDetail", () => {
 
   it("logs analytics events", async () => {
     logEvent.mockClear();
-    mocks.getDetail.mockResolvedValue({ ...base, description: "Full", pricing: pricing(300, 300) });
+    mocks.getDetail.mockResolvedValue({ ...base, description: "Full", terms: "No refunds", pricing: pricing(300, 300) });
     mocks.getStoreSelective.mockResolvedValue(selective(3));
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
@@ -240,8 +301,8 @@ describe("ItemDetail", () => {
     expect(logEvent).toHaveBeenCalledWith("visit_store_click", expect.objectContaining({ placement: "card" }));
     await user.click(await screen.findByRole("button", { name: /Other 0/ }));
     expect(logEvent).toHaveBeenCalledWith("store_selective_click", expect.objectContaining({ targetItemId: "s0", position: 1 }));
-    await user.click(screen.getByRole("button", { name: "Description" }));
-    expect(logEvent).toHaveBeenCalledWith("spec_expand", expect.objectContaining({ panel: "description" }));
+    await user.click(screen.getByRole("button", { name: "Terms and notes" }));
+    expect(logEvent).toHaveBeenCalledWith("spec_expand", expect.objectContaining({ panel: "terms" }));
   });
 });
 

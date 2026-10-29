@@ -1,6 +1,7 @@
 import { formatKes } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import slots from "../slots.module.css";
+import { cardBlurb, coverUrl } from "../lib/media.js";
 import LazyImage from "./LazyImage.jsx";
 import OfferChip from "./OfferChip.jsx";
 import StockTag from "./StockTag.jsx";
@@ -20,12 +21,13 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
   const preview = isPreview(mode);
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
+  const blurb = cardBlurb(item);
   const act = actionProps(preview).button(() => onSelect?.(item));
 
   const card = (
     <button type="button" data-card="" className={`${styles.card} ${className}`} aria-haspopup="dialog" data-mode={preview ? "preview" : undefined} {...act}>
       <span className={styles.media}>
-        <LazyImage fill src={item.imageUrl} className={styles.img} />
+        <LazyImage fill src={coverUrl(item)} className={styles.img} />
         {onSale && <DiscountChip percent={pricing.discountPercent} />}
         {item.flash?.sale && renderFlash?.(styles.flashChip, item.flash.sale)}
         <OfferChip offer={item.offer} className={styles.offerChip} labels={labels.offerChip} />
@@ -33,6 +35,7 @@ export default function ProductCard({ item, onSelect, className = "", labels = D
       </span>
       <span className={styles.text}>
         <span className={styles.name}>{item.name}</span>
+        {blurb && <span className={styles.blurb}>{blurb}</span>}
         <span className={styles.meta}>
           {pricing ? (
             <span className={styles.prices}>

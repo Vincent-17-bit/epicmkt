@@ -105,7 +105,6 @@ export default function ItemSpecs({ item, category, attributes, onExpand, reveal
         )
       };
     }),
-    item.description && { key: "description", title: t("item.description"), body: <p className={styles.text}>{item.description}</p> },
     includes.length > 0 && {
       key: "included",
       title: t("item.included"),

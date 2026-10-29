@@ -32,6 +32,17 @@ const shell = `<!doctype html><html><head>
     <title>EpicMKT: Find local businesses in Kenya</title>
   </head><body><div id="root"></div></body></html>`;
 
+describe("item share description", () => {
+  it("prefers the short description and falls back to the description", () => {
+    const base = { id: ID, business_id: BID, name: "Skin fade", price: 500, price_max: null, price_type: "fixed", availability: "available", image_paths: [] };
+    const withShort = buildMeta({ origin: "https://epicmkt.test", supabaseUrl: "https://s.test", business, item: { ...base, short_description: "Crisp and quick", description: "Long words here." } });
+    expect(withShort.description).toContain("Crisp and quick");
+    expect(withShort.description).not.toContain("Long words");
+    const fallback = buildMeta({ origin: "https://epicmkt.test", supabaseUrl: "https://s.test", business, item: { ...base, short_description: "", description: "Long words here." } });
+    expect(fallback.description).toContain("Long words here");
+  });
+});
+
 describe("helpers", () => {
   it("escapes everything that could break out of an attribute", () => {
     expect(esc(`a"b<c>&'`)).toBe("a&quot;b&lt;c&gt;&amp;&#39;");
