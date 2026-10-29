@@ -44,7 +44,7 @@ const sections = [
           </li>
         </ul>
         <p>
-          Your monthly fee depends on your type of business. See <Link to="/pricing">pricing for every type of business</Link>, or ask the admin for the{" "}
+          Your monthly fee depends on your type of business. See <Link to="/pricing">pricing</Link>, or ask EpicMKT support for the{" "}
           <Link to={PLANS_PDF_PATH}>plans PDF</Link>.
         </p>
       </>
