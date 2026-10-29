@@ -33,6 +33,16 @@ afterEach(() => {
 });
 
 describe("products live client", () => {
+  it("keeps a card's videos and builds media with the cover first", async () => {
+    fetchMock.mockResolvedValue(json({ items: [{ id: "i1", name: "Loaf", imagePath: "b1/a.webp", imageUrl: "b1/a.webp", videoPaths: ["b1/i1/v.mp4"] }, { id: "i2", name: "Bun", imagePath: null, imageUrl: null, videoPaths: [] }], total: 2, catalogTotal: 2, page: 1, pageSize: 24, hasMore: false }));
+    const { items } = await live.getProductsPage({ q: "", sort: "newest", min: "", max: "", categories: [], towns: [], onSale: false });
+    expect(items[0].videos).toHaveLength(1);
+    expect(items[0].videos[0].url).toContain("b1/i1/v.mp4");
+    expect(items[0].media.map((m) => m.kind)).toEqual(["image", "video"]);
+    expect(items[0].images).toHaveLength(1);
+    expect(items[1]).toMatchObject({ images: [], videos: [], media: [] });
+  });
+
   it("asks the endpoint for one canonical question and turns picture paths into urls", async () => {
     fetchMock.mockResolvedValue(json({ items: [{ id: "i1", name: "Loaf", imagePath: "b1/a.webp", imageUrl: "b1/a.webp" }], total: 1, catalogTotal: 9, page: 1, pageSize: 24, hasMore: false }));
     const page = await live.getProductsPage({ q: "", sort: "newest", min: "", max: "", categories: [], towns: [], onSale: true });

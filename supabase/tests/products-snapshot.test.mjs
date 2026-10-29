@@ -24,7 +24,8 @@ test("returns public items newest first with slim columns and only their stores"
   assert.deepEqual(s.items.map((i) => i.name), ["New loaf", "Old loaf"]);
   assert.equal(s.truncated, false);
   assert.equal(s.items[0].description.length, 160);
-  assert.ok(!("image_paths" in s.items[0]) && !("video_paths" in s.items[0]));
+  assert.ok(!("image_paths" in s.items[0]) && !("media" in s.items[0]), "only the cover path and the video paths ride along");
+  assert.equal(s.items[0].video_paths, null, "no videos: null, so the payload stays slim");
   assert.deepEqual(s.businesses.map((b) => b.id), [ids.bizA]);
 });
 

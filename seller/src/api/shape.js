@@ -26,6 +26,15 @@ export const instructions = (r) => ({
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
 });
 
+// One row of an item's media sequence, and the plan limits beside it. Live and mock return the same shape.
+export const mediaItem = (m) => ({ path: m.path, kind: m.kind, sort: m.sort, ...(m.duration != null ? { duration: Number(m.duration) } : {}) });
+const mediaLimit = (l) => ({ used: Number(l?.used ?? 0), max: l?.max == null ? null : Number(l.max) });
+export const itemMedia = (r) => ({
+  media: (r?.media ?? []).map(mediaItem),
+  cover: r?.cover ?? null,
+  limits: { photos: mediaLimit(r?.limits?.photos), videos: mediaLimit(r?.limits?.videos) },
+});
+
 export const messageFile = (a) => ({ id: a.id, messageId: a.message_id, name: a.original_name, mime: a.mime, size: a.size_bytes, path: a.path, by: a.uploaded_by });
 
 export const message = (m, attachments = []) => ({

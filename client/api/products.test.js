@@ -89,6 +89,27 @@ describe("/api/products", () => {
     expect(bread.flash.sale).toMatchObject({ itemId: "item-1" });
   });
 
+  it("carries a card's video paths from the snapshot, and an empty list when there are none", async () => {
+    payload.items[0].video_paths = ["b1/item-1/clip.mp4"];
+    const body = await (await call("op=page&q=bread")).json();
+    expect(body.items[0].videoPaths).toEqual(["b1/item-1/clip.mp4"]);
+    const plain = await (await call("op=page&q=cake")).json();
+    expect(plain.items[0].videoPaths).toEqual([]);
+  });
+
+  it("the page-the-views fallback asks for video_paths too, so videos are not dropped there", async () => {
+    fetchMock.mockImplementation(async (url) => {
+      const u = String(url);
+      if (u.includes("/rpc/products_snapshot")) return new Response("{}", { status: 500 });
+      if (u.includes("public_items?")) return new Response(JSON.stringify([{ id: "item-1", business_id: "b1", name: "Bread", description: "", price: "100", price_type: "fixed", availability: "available", created_at: "2026-02-01T00:00:00Z", image_paths: ["b1/one.webp"], video_paths: ["b1/item-1/clip.mp4"] }]), { status: 200 });
+      if (u.includes("public_businesses?")) return new Response(JSON.stringify([payload.businesses[0]]), { status: 200 });
+      return new Response("[]", { status: 200 });
+    });
+    const body = await (await call("op=page")).json();
+    expect(fetchMock.mock.calls.some(([u]) => String(u).includes("image_paths,video_paths"))).toBe(true);
+    expect(body.items[0]).toMatchObject({ imagePath: "b1/one.webp", videoPaths: ["b1/item-1/clip.mp4"] });
+  });
+
   it("does not show a flash sale that has already ended, even from a snapshot built earlier", async () => {
     const body = await (await call("op=page&q=cake")).json();
     expect(body.items[0].flash).toBeNull();

@@ -108,9 +108,17 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   variants: []
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, mediaPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
+  // One ordered list of photos and videos, as the seller arranged them (the database's shared sequence). The ids match images[] and
+  // videos[]. Without it (older cards) the photos come first, then the videos. A video has no poster picture yet, so none is set.
+  const sequence = Array.isArray(mediaPaths) ? mediaPaths : [...(imagePaths ?? []).map((path) => ({ path, kind: "image" })), ...(videoPaths ?? []).map((path) => ({ path, kind: "video" }))];
+  let photoN = 0;
+  let videoN = 0;
+  const media = sequence
+    .filter((m) => m?.path && (m.kind === "image" || m.kind === "video"))
+    .map((m) => ({ id: m.kind === "video" ? `v${++videoN}` : `i${++photoN}`, kind: m.kind, url: mediaUrl(m.path), caption: name }));
   return {
     id,
     businessId,
@@ -128,6 +136,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     imageUrl: images[0]?.url ?? null,
     images,
     videos,
+    media,
     regularPrice: Number.isFinite(price) ? price : null,
     priceType: priceType ?? "fixed",
     unit: unit ?? null,

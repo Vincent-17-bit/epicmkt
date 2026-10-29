@@ -135,9 +135,27 @@ export const removeItemPhoto = async (path) => {
 const VIDEO_EXT = { "video/mp4": "mp4", "video/webm": "webm" };
 const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
 // finalize answers with the same reasons it uses for pictures; say them in words that are about videos.
-const VIDEO_REASON = { unsupported_type: "video_unsupported", too_large: "video_too_large", too_long: "video_too_long", unreadable: "video_unreadable", too_big_dimensions: "video_too_big", limit_reached: "video_limit" };
-const asVideoError = (e) => (VIDEO_REASON[e?.code] ? new ApiError(VIDEO_REASON[e.code], e.message) : e);
+const VIDEO_REASON = { unsupported_type: "video_unsupported", too_large: "video_too_large", too_long: "video_too_long", unreadable: "video_unreadable", too_big_dimensions: "video_too_big", limit_reached: "video_limit", upload_not_found: "video_expired", file_not_found: "video_not_uploaded" };
+// Codes that mean "the server could not do it", not "you did something wrong". They used to fall through to the generic
+// "check your connection" text, which sent sellers with a working connection round in circles.
+const SERVER_SIDE = new Set(["server_error", "bad_request", "request_failed", "forbidden", "media_not_configured"]);
+const asVideoError = (e) => {
+  if (VIDEO_REASON[e?.code]) return new ApiError(VIDEO_REASON[e.code], e.message);
+  if (SERVER_SIDE.has(e?.code)) return new ApiError("video_unavailable", e.message, { status: e.status });
+  return e;
+};
+// What the bucket said when it refused the file, in the same words finalize would have used.
+const videoStorageCode = (error) => {
+  const status = Number(error?.statusCode ?? error?.status ?? 0);
+  const text = String(error?.message ?? "");
+  if (status === 413 || /exceed|too large|payload/i.test(text)) return "video_too_large";
+  if (/mime|not supported|invalid.*type/i.test(text)) return "video_unsupported";
+  if (status === 401 || status === 403 || /expired|jwt|token|signature/i.test(text)) return "video_expired";
+  return "video_not_uploaded";
+};
+const logVideo = (stage, e) => console.error(`[video upload] ${stage} failed:`, e?.code ?? e?.name, e?.message ?? "", e?.status ?? "");
 
+// DEPRECATED: use listItemMedia, which returns photos and videos in one ordered list.
 export const listItemVideos = async (itemId) =>
   (await rows(need().from("item_media").select("path").eq("item_id", itemId).eq("kind", "video").order("sort", { ascending: true }).order("created_at", { ascending: true }))).map((r) => r.path);
 
@@ -149,13 +167,30 @@ export const uploadItemVideo = async (itemId, file) => {
   try {
     ticket = await signUpload({ purpose: "item_video", itemId, type });
   } catch (e) {
+    logVideo("sign", e);
     throw asVideoError(e);
   }
-  const { error } = await need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
-  if (error) throw new ApiError("file_not_uploaded");
+  if (!ticket?.path || !ticket?.token) {
+    logVideo("sign", { code: "bad_ticket" });
+    throw new ApiError("video_unavailable");
+  }
+  let stored;
+  try {
+    stored = await need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+  } catch (e) {
+    logVideo("storage", e);
+    throw new ApiError("video_not_uploaded");
+  }
+  if (stored?.error) {
+    logVideo("storage", stored.error);
+    throw new ApiError(videoStorageCode(stored.error), stored.error.message);
+  }
   try {
     await finalizeMedia({ itemId, path: ticket.path });
   } catch (e) {
+    // Finalize already ran once (the answer was lost on the way back): the video is attached, so this retry is a success.
+    if (e?.code === "already_attached") return { path: ticket.path };
+    logVideo("finalize", e);
     throw asVideoError(e);
   }
   return { path: ticket.path };
@@ -164,7 +199,20 @@ export const uploadItemVideo = async (itemId, file) => {
 // A video row is removed exactly like a photo row: delete it, then drop the file from the bucket.
 export const removeItemVideo = (path) => removeItemPhoto(path);
 
+// DEPRECATED: use reorderItemMedia. This only orders photos, inside the slots photos already occupy.
 export const reorderItemPhotos = (itemId, paths) => rpc("seller_reorder_item_photos", { p_item: itemId, p_paths: paths });
+
+// Photos and videos are ONE ordered sequence. The first photo in it is the cover; a video is never the cover.
+//   getItemMedia(itemId) -> { media: [{ path, kind, sort, duration? }], cover, limits: { photos: { used, max }, videos: { used, max } } }
+//   max is null when the plan has no limit, so the screen can say "3 of 10 photos, 1 of 2 videos".
+export const getItemMedia = async (itemId) => shape.itemMedia(await rpc("seller_item_media", { p_item: itemId }));
+export const listItemMedia = async (itemId) => (await getItemMedia(itemId)).media;
+export const getItemMediaLimits = async (itemId) => (await getItemMedia(itemId)).limits;
+// `paths` must be every path of the item, once each, in the new order. Anything else is refused and nothing changes.
+export const reorderItemMedia = async (itemId, paths) => {
+  const r = await rpc("seller_reorder_item_media", { p_item: itemId, p_paths: paths });
+  return { updated: r?.updated ?? 0, cover: r?.cover ?? null };
+};
 
 // The shop logo and cover photo. The browser sends an already-cropped, re-encoded picture (see lib/photoCanvas.js).
 // Every upload gets a new id, so a changed picture is never served from a cache that still holds the old one. When the profile

@@ -111,7 +111,7 @@ const findBusiness = async (ref) => {
   return unwrap(await supabase.from("public_businesses").select("*").eq(columnFor(ref), ref).maybeSingle());
 };
 
-const CARD_COLUMNS = "id,business_id,name,description,price,price_type,unit,section,availability,stock_left,image_paths,video_paths,sort,created_at";
+const CARD_COLUMNS = "id,business_id,name,description,price,price_type,unit,section,availability,stock_left,image_paths,video_paths,media,sort,created_at";
 
 const itemRow = (row, business) =>
   itemOf({
@@ -135,6 +135,7 @@ const itemRow = (row, business) =>
     stockLeft: row.stock_left ?? null,
     imagePaths: row.image_paths,
     videoPaths: row.video_paths,
+    mediaPaths: row.media,
     createdAt: row.created_at
   });
 

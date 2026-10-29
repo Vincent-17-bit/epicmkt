@@ -113,6 +113,12 @@ const MESSAGES = {
   video_too_long: "Each video must be 60 seconds or shorter.",
   video_unreadable: "We could not read that video. Try an MP4 or WebM file saved from your phone or editor.",
   video_too_big: "That video is larger than 8000 pixels. Use a smaller one.",
+  video_not_uploaded: "The video did not upload. Check your connection and try again.",
+  video_unavailable: "Video upload is not working right now. Please try again in a few minutes. If it keeps happening, contact EpicMKT support.",
+  video_expired: "That upload expired. Please add the video again.",
+  path_not_found: "One of those pictures or videos no longer belongs to this item. Reload and try again.",
+  order_incomplete: "The order is missing some pictures or videos. Reload and try again.",
+  duplicate_path: "A picture or video was listed twice. Reload and try again.",
   video_limit: "You have reached the video limit for this item on your plan. Remove one to add another.",
   ...PROOF_ERRORS,
 };
