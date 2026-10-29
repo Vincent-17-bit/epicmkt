@@ -14,7 +14,7 @@ import styles from "./Layout.module.css";
 export const BELL_KEY = ["unread"];
 
 // The round mark in the header: the shop's logo, or its initials until it has one (or if the file cannot load).
-function ShopMark({ name, logoPath }) {
+export function ShopMark({ name, logoPath }) {
   const src = mediaUrl(logoPath);
   const [failed, setFailed] = useState(false);
   useEffect(() => { setFailed(false); }, [src]);
@@ -88,7 +88,8 @@ export default function Layout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [more]);
-  const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname);
+  // The bare /business address is allowed so it can send a suspended seller on to Notifications.
+  const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname) || /^\/business\/?$/.test(pathname);
   const moreActive = /^\/business\/(exceptions|flash|offers|qr|account)/.test(pathname);
 
   const toggle = () => {
@@ -105,7 +106,8 @@ export default function Layout() {
   return (
     <div className={styles.shell}>
       <header className={styles.header}>
-        <Link to={suspended ? "/business/notifications" : "/business/subscription"} className={styles.brand}>
+        {/* The shop mark and name open My listings (a suspended seller cannot open it, so they go to Notifications). */}
+        <Link to={suspended ? "/business/notifications" : "/business/catalog"} className={styles.brand}>
           <ShopMark name={business?.name} logoPath={business?.logoPath} />
           <span className={styles.brandText}>
             <strong className={styles.shop} data-testid="shop-name">{business?.name ?? "Your shop"}</strong>

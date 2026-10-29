@@ -444,3 +444,45 @@ describe("editing an item", () => {
     expect(await screen.findByText("Item added as a draft.")).toBeInTheDocument();
   });
 });
+
+describe("the shop logo on the item page", () => {
+  it("is shown on Add item and on Edit item, at phone, tablet and desktop widths", async () => {
+    for (const width of [360, 700, 1000]) {
+      const { unmount } = await openNew(width);
+      const brand = screen.getByTestId("editor-brand");
+      expect(brand).toHaveTextContent("Demo Shop");
+      expect(brand).toHaveTextContent("EpicMKT Seller");
+      expect(brand).toHaveAttribute("href", "/business/catalog");
+      unmount();
+    }
+    viewport(1000);
+    const { router } = await signedInApp("/business/catalog");
+    const item = M.state.items.find((i) => i.visible && !i.draft && !i.removedByAdmin);
+    await act(async () => { router.navigate(`/business/catalog/${item.id}/edit`); });
+    expect(await screen.findByTestId("editor-brand")).toHaveTextContent("Demo Shop");
+  });
+
+  it("opens My listings when there is nothing unsaved", async () => {
+    const user = userEvent.setup();
+    const { router } = await openNew();
+    await user.click(screen.getByTestId("editor-brand"));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/business/catalog"));
+  });
+
+  it("asks before leaving when there are unsaved changes, and keeps the seller on the item page if they keep editing", async () => {
+    const user = userEvent.setup();
+    const { router } = await openNew();
+    await user.type(screen.getByLabelText("Name"), "Sourdough");
+    await user.click(screen.getByTestId("editor-brand"));
+    const dialog = await screen.findByRole("dialog", { name: "Leave without saving?" });
+    await user.click(within(dialog).getByRole("button", { name: "Keep editing" }));
+    expect(router.state.location.pathname).toBe("/business/catalog/new");
+    expect(screen.getByLabelText("Name")).toHaveValue("Sourdough");
+  });
+
+  it("keeps the Add item button in the header as it was", async () => {
+    await openNew();
+    expect(headerButton("Add item")).toBeInTheDocument();
+    expect(headerButton("Save as draft")).toBeInTheDocument();
+  });
+});

@@ -6,6 +6,7 @@ import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/fr
 import { emptyItemForm, formFromItem, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
+import { ShopMark } from "../../../../components/Layout.jsx";
 import Modal from "../Modal.jsx";
 import BasicsSection from "./BasicsSection.jsx";
 import DetailsSection from "./DetailsSection.jsx";
@@ -52,10 +53,10 @@ export default function ItemEditor() {
     );
   }
   const sections = [...new Set(catalog.data.items.map((i) => i.section).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} />;
+  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} business={business} />;
 }
 
-function EditorForm({ item, sections, category }) {
+function EditorForm({ item, sections, category, business }) {
   const navigate = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
@@ -325,6 +326,14 @@ function EditorForm({ item, sections, category }) {
   return (
     <div ref={root} className={styles.editor} data-bp={bp}>
       <header className={styles.head}>
+        {/* The shop logo stays in view here, as on every other screen, and opens My listings. Unsaved changes are still guarded. */}
+        <Link to={CATALOG} className={styles.brand} data-testid="editor-brand">
+          <ShopMark name={business?.name} logoPath={business?.logoPath} />
+          <span className={styles.brandText}>
+            <strong className={styles.brandShop}>{business?.name ?? "Your shop"}</strong>
+            <span className={styles.brandApp}>EpicMKT Seller</span>
+          </span>
+        </Link>
         <IconBtn icon={faChevronLeft} label="Back to your listings" onClick={leave} />
         <div className={styles.headTitle}>
           <h1>{isNew ? "Add item" : "Edit item"}</h1>
