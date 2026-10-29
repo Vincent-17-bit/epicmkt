@@ -285,10 +285,10 @@ export default function MediaGallery({ media, images, videos, name = "", labels,
               <p className={styles.counter} aria-hidden="true">
                 {index + 1} / {count}
               </p>
-              <button type="button" className={`${styles.arrow} ${styles.prev}`} onClick={() => goTo(index - 1)} disabled={index === 0} aria-label={text.previous}>
+              <button type="button" className={`${styles.arrow} ${styles.prev}`} onClick={(e) => { e.stopPropagation(); goTo(index - 1); }} disabled={index === 0} aria-label={text.previous}>
                 <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" />
               </button>
-              <button type="button" className={`${styles.arrow} ${styles.next}`} onClick={() => goTo(index + 1)} disabled={index === count - 1} aria-label={text.next}>
+              <button type="button" className={`${styles.arrow} ${styles.next}`} onClick={(e) => { e.stopPropagation(); goTo(index + 1); }} disabled={index === count - 1} aria-label={text.next}>
                 <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
               </button>
             </>

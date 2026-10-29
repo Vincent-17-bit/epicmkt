@@ -8,6 +8,7 @@
 .stage {
   position: relative;
   min-width: 0;
+  isolation: isolate;
 }
 
 /* One fixed shape for the stage, so nothing moves while a picture or a video loads. */
@@ -70,6 +71,7 @@
 
 .playBig {
   position: absolute;
+  z-index: 3;
   inset: 0;
   margin: auto;
   display: grid;
@@ -87,6 +89,7 @@
 
 .controls {
   position: absolute;
+  z-index: 3;
   right: var(--space-2);
   bottom: var(--space-2);
   display: flex;
@@ -120,6 +123,7 @@
 
 .counter {
   position: absolute;
+  z-index: 3;
   left: var(--space-2);
   bottom: var(--space-2);
   margin: 0;
@@ -134,6 +138,7 @@
 
 .arrow {
   position: absolute;
+  z-index: 3;
   top: 50%;
   display: none;
   transform: translateY(-50%);
