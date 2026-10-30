@@ -43,7 +43,8 @@ export default function LiveActivityPanel({ undoMs }) {
   const [confirmRows, setConfirmRows] = useState(null);
   const [clearing, setClearing] = useState(false);
   const [clearError, setClearError] = useState("");
-  // Tells "you cleared it" apart from "nothing has happened yet", so the empty message is truthful.
+  // Set once the admin has deleted or cleared something here. It only matters when the list is empty: then the message
+  // says "you cleared it" instead of "nothing has happened yet".
   const [cleared, setCleared] = useState(false);
 
   const clearAll = async (reason) => {
@@ -104,7 +105,7 @@ export default function LiveActivityPanel({ undoMs }) {
                     type="button"
                     className="activity-list__delete"
                     aria-label={`Delete: ${text}`}
-                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); remove(row); }}
+                    onClick={(event) => { event.preventDefault(); event.stopPropagation(); setCleared(true); remove(row); }}
                   >
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
