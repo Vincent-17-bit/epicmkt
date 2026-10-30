@@ -426,6 +426,35 @@ textarea {
   gap: 0.5rem;
 }
 
+/* Larger text makes the 768-1000px header tight. Only the search field gives way; the bell, theme
+   toggle and avatar keep their size and the toggle label never wraps out of its button. */
+.admin-header__left {
+  flex: none;
+}
+
+.admin-header__right {
+  min-width: 0;
+}
+
+.admin-header__right > .admin-bell,
+.admin-header__right > .admin-theme-toggle,
+.admin-header__right > .admin-avatar {
+  flex: none;
+}
+
+.admin-theme-toggle {
+  white-space: nowrap;
+}
+
+.admin-header__right > .admin-search {
+  flex: 0 1 18rem;
+  min-width: 0;
+}
+
+.admin-header__right > .admin-search .admin-global-search {
+  min-width: 0;
+}
+
 .admin-crumbs {
   display: flex;
   align-items: baseline;
@@ -510,6 +539,15 @@ textarea {
   justify-content: center;
   gap: 0.4rem;
   white-space: nowrap;
+}
+
+/* Long labels in a narrow dialog wrap and the button grows, instead of clipping on both sides. */
+.modal .admin-button {
+  height: auto;
+  min-height: 2.25rem;
+  padding-block: 0.4rem;
+  white-space: normal;
+  text-align: center;
 }
 
 .admin-button--sm {
