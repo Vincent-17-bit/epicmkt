@@ -306,13 +306,13 @@
     gap: var(--space-1);
     min-width: 0;
     min-height: 3.4rem;
-    padding: var(--space-1) var(--space-1);
+    padding: var(--space-1) 0;
     border: 0;
     border-radius: var(--radius-md);
     background: transparent;
     color: var(--text-muted);
     font-size: var(--fs-xs);
-    font-weight: 600;
+    font-weight: 500;
     text-decoration: none;
     cursor: pointer;
   }
@@ -331,6 +331,7 @@
   .admin-tab.is-active {
     background: var(--primary-tint);
     color: var(--primary-text);
+    font-weight: 600;
   }
 
   .admin-tab__badge {
@@ -360,10 +361,6 @@
 }
 
 @media (max-width: 17rem) {
-  html {
-    font-size: var(--fs-sm);
-  }
-
   .admin-header {
     padding: var(--space-2) var(--space-2);
   }

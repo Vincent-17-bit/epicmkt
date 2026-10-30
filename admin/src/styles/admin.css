@@ -1,5 +1,5 @@
 html {
-  font-size: var(--fs-sm);
+  font-size: 100%;
 }
 
 html, body, #root {
@@ -144,7 +144,7 @@ select {
   gap: var(--space-3);
   flex: none;
   width: 100%;
-  min-height: var(--space-10);
+  min-height: var(--nav-item-h);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-sm);
@@ -502,7 +502,7 @@ select {
   padding: 0;
   list-style: none;
   color: var(--text-muted);
-  font-size: var(--fs-xs);
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
@@ -623,6 +623,7 @@ select {
   color: var(--on-primary);
   font-size: var(--fs-sm);
   font-weight: 800;
+  text-decoration: none;
 }
 
 .admin-content {
@@ -829,7 +830,7 @@ a.admin-button {
 
 .two-column {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17.143rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: var(--space-3);
 }
 
@@ -1201,7 +1202,7 @@ th {
 
 .settings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15.714rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(13.75rem, 1fr));
   gap: var(--space-3);
 }
 
@@ -2205,22 +2206,22 @@ th {
 /* Plans, categories and the template builder */
 .plan-impact { background: color-mix(in srgb, var(--warning) 10%, transparent); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); margin: 0; }
 .plan-history { list-style: none; padding: 0; display: grid; gap: var(--space-3); max-height: 50vh; overflow: auto; }
-.modal__form--wide { min-width: min(51.429rem, 92vw); max-height: 80vh; overflow: auto; }
+.modal__form--wide { min-width: min(45rem, 92vw); max-height: 80vh; overflow: auto; }
 .builder { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3); display: grid; gap: var(--space-3); }
 .builder__item { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3); display: grid; gap: var(--space-2); }
 .builder__row { display: flex; gap: var(--space-3); flex-wrap: wrap; align-items: flex-end; }
-.builder__row > .field { flex: 1 1 11.429rem; }
+.builder__row > .field { flex: 1 1 10rem; }
 .builder__flags { gap: var(--space-5); }
 .builder__tools { display: flex; gap: var(--space-2); }
 
 /* Audit and Analytics */
 .audit-diff td { background: color-mix(in srgb, currentColor 4%, transparent); }
 .audit-diff table { width: 100%; }
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(12.143rem, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 var(--space-6); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.75rem, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 var(--space-6); }
 .stat { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-1); }
 .stat strong { font-size: var(--fs-xl); }
 .chart { margin: 0 0 var(--space-5); }
-.chart svg { width: 100%; height: 8.571rem; fill: var(--chart-fill); display: block; }
+.chart svg { width: 100%; height: 7.5rem; fill: var(--chart-fill); display: block; }
 .funnel td { padding: var(--space-1) var(--space-5) var(--space-1) 0; }
 
 .theme-toggle {
@@ -2285,5 +2286,29 @@ th {
   .activity-list li:focus-within .activity-list__delete,
   .activity-list__delete:focus-visible {
     opacity: 1;
+  }
+}
+
+.admin-button {
+  white-space: nowrap;
+}
+
+/* Short screens: tighter rows so the whole sidebar fits without scrolling. */
+@media (max-height: 58rem) {
+  :root {
+    --nav-item-h: 2rem;
+  }
+
+  .admin-sidebar__brand {
+    padding-bottom: var(--space-2);
+  }
+
+  .admin-nav-group + .admin-nav-group {
+    margin-top: var(--space-1);
+    padding-top: var(--space-1);
+  }
+
+  .admin-nav-group__label {
+    padding-block: 0;
   }
 }

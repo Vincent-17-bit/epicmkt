@@ -23,7 +23,7 @@ export default function HealthRing({ score, size = 36 }) {
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>
-      <span className="health-ring__value" style={{ fontSize: size * 0.3 }}>{value}</span>
+      <span className="health-ring__value" style={{ fontSize: Math.max(12, size * 0.3) }}>{value}</span>
     </span>
   );
 }

@@ -66,7 +66,7 @@ function AssignPanel({ row, onClose, onDone }) {
               {t.reason && t.reason !== "search" && t.reason !== "name" ? <div className="muted">Suggested: {t.reason}</div> : null}
             </div>
             <button type="button" className="secondary-button" disabled={assign.isPending} onClick={() => { setError(""); assign.mutate(t); }}>
-              Assign here
+              Assign to this business
             </button>
           </li>
         ))}
@@ -259,12 +259,12 @@ export default function PaymentsPage() {
                         <td>
                           {row.status === "awaiting_confirmation" && row.applicationId ? (
                             <button type="button" className="secondary-button" disabled={confirm.isPending || !canPay} title={whyPay} onClick={() => { setNotice(null); confirm.mutate(row); }}>
-                              Confirm {months ?? 1} month{(months ?? 1) === 1 ? "" : "s"}
+                              Confirm payment
                             </button>
                           ) : null}
                           {row.status === "needs_assignment" ? (
                             <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={() => setAssigning(assigning === row.key ? null : row.key)}>
-                              {assigning === row.key ? "Close" : "Assign…"}
+                              {assigning === row.key ? "Cancel" : "Choose business"}
                             </button>
                           ) : null}
                         </td>

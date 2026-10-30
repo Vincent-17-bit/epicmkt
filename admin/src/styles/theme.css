@@ -96,6 +96,7 @@
   --fs-2xl: 1.75rem;
 
   --indicator-w: 3px;
+  --nav-item-h: 2.25rem;
 
   /* Focus ring shared by every interactive element. */
   --focus-ring: 2px solid var(--primary-text);

@@ -386,11 +386,11 @@ export function NotesTab({ id }) {
                   <Button size="sm" disabled={pin.isPending} onClick={() => pin.mutate(n)}>{n.pinned ? "Unpin" : "Pin"}</Button>
                   {asking === n.id ? (
                     <>
-                      <Button size="sm" className="admin-button--danger" disabled={del.isPending} onClick={() => del.mutate(n)}>Yes, delete</Button>
+                      <Button size="sm" className="admin-button--danger" disabled={del.isPending} onClick={() => del.mutate(n)}>Delete note</Button>
                       <Button size="sm" onClick={() => setAsking(null)}>Keep</Button>
                     </>
                   ) : (
-                    <Button size="sm" onClick={() => setAsking(n.id)}>Delete</Button>
+                    <Button size="sm" onClick={() => setAsking(n.id)}>Delete note</Button>
                   )}
                 </span>
               </li>
