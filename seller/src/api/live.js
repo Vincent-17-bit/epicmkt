@@ -518,3 +518,95 @@ export const supportContacts = async () => {
     return base;
   }
 };
+
+// ---------------------------------------------------------------------------
+// Gallery, team and class timetable
+// ---------------------------------------------------------------------------
+const adminState = (r) => (r.removed_by_admin || r.admin_status === "removed" ? "removed" : r.hidden_by_admin || r.admin_status === "hidden" ? "hidden" : "ok");
+const galleryPhoto = (r) => ({
+  id: r.id, path: r.path, caption: r.caption ?? null, pairId: r.pair_id ?? null, pairRole: r.pair_role ?? null, sort: r.sort ?? 0,
+  width: r.width ?? null, height: r.height ?? null, adminState: adminState(r), adminReason: r.admin_hide_reason ?? r.admin_reason ?? null,
+});
+export const listGallery = async () => (await rows(need().from("gallery_photos").select("*").is("deleted_at", null).order("sort").order("created_at"))).map(galleryPhoto);
+// One picture: ask for a Cloudinary ticket, send the file, tell the server what Cloudinary answered. The server adds the row.
+export const addGalleryPhoto = async ({ file, caption, pairId, pairRole }) => {
+  if (!PHOTO_EXT[file?.type]) throw new ApiError("unsupported_type");
+  const body = await shrinkIfHuge(file);
+  let signed;
+  try {
+    signed = await signUpload({ purpose: "gallery" });
+  } catch (e) {
+    throw e?.code === "limit_reached" ? new ApiError("limit_reached", "limit_reached:gallery_photos") : e;
+  }
+  const hosted = await sendToCloudinary(signed, body);
+  try {
+    const done = await finalizeGallery({ path: signed.publicId, cloudinary: hostedFacts(hosted), caption: caption || undefined, pairId, pairRole });
+    return { id: done.id, path: signed.publicId };
+  } catch (e) {
+    throw e?.code === "limit_reached" ? new ApiError("limit_reached", "limit_reached:gallery_photos") : e;
+  }
+};
+const finalizeGallery = (body) => fn("seller-media-finalize", body);
+export const updateGalleryCaption = async (ids, caption) => rows(need().from("gallery_photos").update({ caption: caption?.trim() || null }).in("id", ids));
+// Delete is two steps so Undo works: hide now (deleted_at), remove for good when the Undo time runs out.
+export const deleteGalleryPhotos = async (ids) => rows(need().from("gallery_photos").update({ deleted_at: new Date().toISOString() }).in("id", ids));
+export const restoreGalleryPhotos = async (ids) => rows(need().from("gallery_photos").update({ deleted_at: null }).in("id", ids));
+export const purgeGalleryPhotos = async (ids) => {
+  await rows(need().from("gallery_photos").delete().in("id", ids).not("deleted_at", "is", null));
+  await purgeRemoved();
+};
+export const reorderGallery = (ids) => rpc("seller_reorder_gallery", { p_ids: ids });
+
+const staffMember = (r) => ({
+  id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoPath: r.photo_path ?? null, sort: r.sort ?? 0,
+  serviceIds: (r.staff_services ?? []).map((x) => x.item_id), adminState: adminState(r), adminReason: r.admin_hide_reason ?? r.admin_reason ?? null,
+});
+export const listStaff = async () => (await rows(need().from("staff_members").select("*, staff_services(item_id)").order("sort").order("created_at"))).map(staffMember);
+export const uploadStaffPhoto = async (file) => {
+  if (!PHOTO_EXT[file?.type]) throw new ApiError("unsupported_type");
+  const signed = await signUpload({ purpose: "staff" });
+  const hosted = await sendToCloudinary(signed, await shrinkIfHuge(file));
+  await finalizeMedia({ path: signed.publicId, cloudinary: hostedFacts(hosted) });
+  return { path: signed.publicId };
+};
+export const saveStaff = async (id, draft) => {
+  const db = need();
+  const businessId = (await rows(db.from("businesses").select("id").maybeSingle()))?.id;
+  if (!businessId) throw new ApiError("not_a_seller");
+  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photo_path: draft.photoPath ?? null };
+  const row = id
+    ? await rows(db.from("staff_members").update(fields).eq("id", id).select().single())
+    : await rows(db.from("staff_members").insert({ ...fields, business_id: businessId }).select().single());
+  if (draft.serviceIds) {
+    const have = (await rows(db.from("staff_services").select("item_id").eq("staff_id", row.id))).map((x) => x.item_id);
+    const drop = have.filter((x) => !draft.serviceIds.includes(x));
+    const add = draft.serviceIds.filter((x) => !have.includes(x));
+    if (drop.length) await rows(db.from("staff_services").delete().eq("staff_id", row.id).in("item_id", drop));
+    if (add.length) await rows(db.from("staff_services").insert(add.map((item_id) => ({ staff_id: row.id, item_id, business_id: businessId }))));
+  }
+  // A replaced or removed picture is queued by the database; ask for it to be deleted now.
+  if (id) await purgeRemoved();
+  return { id: row.id };
+};
+export const deleteStaff = async (id) => {
+  await rows(need().from("staff_members").delete().eq("id", id));
+  await purgeRemoved();
+};
+
+const slot = (r) => ({
+  id: r.id, dayOfWeek: r.day_of_week, startTime: String(r.start_time).slice(0, 5), endTime: String(r.end_time).slice(0, 5), className: r.class_name,
+  staffId: r.staff_id ?? null, adminState: adminState(r), adminReason: r.admin_hide_reason ?? r.admin_reason ?? null,
+});
+export const listTimetable = async () => (await rows(need().from("timetable_slots").select("*").order("day_of_week").order("start_time"))).map(slot);
+export const saveSlot = async (id, draft) => {
+  const db = need();
+  const fields = { day_of_week: Number(draft.dayOfWeek), start_time: draft.startTime, end_time: draft.endTime, class_name: draft.className.trim(), staff_id: draft.staffId || null };
+  try {
+    if (id) return slot(await rows(db.from("timetable_slots").update(fields).eq("id", id).select().single()));
+    const businessId = (await rows(db.from("businesses").select("id").maybeSingle()))?.id;
+    return slot(await rows(db.from("timetable_slots").insert({ ...fields, business_id: businessId }).select().single()));
+  } catch (e) {
+    throw /no_overlap/.test(e?.message ?? "") ? new ApiError("trainer_busy") : e;
+  }
+};
+export const deleteSlot = async (id) => rows(need().from("timetable_slots").delete().eq("id", id));

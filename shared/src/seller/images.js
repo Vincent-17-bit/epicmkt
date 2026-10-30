@@ -102,6 +102,8 @@ export function uploadTransformation({ aiUpscale = false } = {}) {
 /** Where a seller's uploads live in Cloudinary. The business id comes first, so ownership is checkable by prefix. */
 export const itemPhotoId = (businessId, itemId, uuid) => `${businessId}/${itemId}/${uuid}`;
 export const shopImageId = (businessId, kind, uuid) => `${businessId}/profile/${kind}-${uuid}`;
+export const galleryImageId = (businessId, uuid) => `${businessId}/gallery/${uuid}`;
+export const staffImageId = (businessId, uuid) => `${businessId}/staff/${uuid}`;
 
 /** A public id the given business may own: its own prefix, no traversal, no extension. */
 export const ownsImageId = (businessId, publicId) =>

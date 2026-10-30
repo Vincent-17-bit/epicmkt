@@ -1,4 +1,4 @@
-import { CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
+import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -324,6 +324,9 @@ export const exportData = async () => { signedIn(); await wait(); return { busin
 const CATEGORIES = {
   barber: { id: "barber", name: "Barber", group: "Beauty", prices: { standard: 500, premium: 1500 } },
   salon: { id: "salon", name: "Salon", group: "Beauty", prices: { standard: 800, premium: 2000 } },
+  barbershop: { id: "barbershop", name: "Barbershop", group: "Beauty", prices: { standard: 500, premium: 1500 } },
+  "salon-beauty": { id: "salon-beauty", name: "Hair and beauty", group: "Beauty", prices: { standard: 800, premium: 2000 } },
+  "gym-fitness": { id: "gym-fitness", name: "Fitness club", group: "Fitness", prices: { standard: 1000, premium: 2500 } },
   kiosk: { id: "kiosk", name: "Kiosk", group: "Retail", prices: { standard: 300, premium: 900 } },
 };
 const FEATURES = {
@@ -375,6 +378,9 @@ function resetBilling() {
   const now = Date.now();
   bill.seq = 0;
   bill.now = null;
+  bill.gallery = [];
+  bill.staff = [];
+  bill.slots = [];
   bill.listeners = new Set();
   bill.usedCodes = new Set(["OTHERBIZ01"]);
   bill.intent = null;
@@ -984,6 +990,98 @@ export const subscribe = (tables, onEvent) => {
   bill.listeners.add(entry);
   return () => bill.listeners.delete(entry);
 };
+
+
+// ---------------------------------------------------------------------------
+// Gallery, team and class timetable (same rules as the database)
+// ---------------------------------------------------------------------------
+const MOCK_LIMITS = { standard: { galleryPhotos: 5 }, premium: { galleryPhotos: 20 } };
+const writable = () => { signedIn(); if (bill.business.status === "suspended") throw new ApiError("account_suspended"); };
+const photoUrl = (file) => (typeof URL.createObjectURL === "function" && file instanceof Blob ? URL.createObjectURL(file) : `mock/gallery-${++bill.seq}.webp`);
+const countedGallery = () => bill.gallery.filter((g) => !g.deleted && g.adminState === "ok");
+export const listGallery = async () => { signedIn(); await wait(); return copy(bill.gallery.filter((g) => !g.deleted).sort((a, b) => a.sort - b.sort)); };
+export const addGalleryPhoto = async ({ file, caption, pairId, pairRole }) => {
+  writable();
+  await wait();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file?.type)) throw new ApiError("unsupported_type");
+  if (countedGallery().length >= limitsFor(bill.business.planKey, MOCK_LIMITS).galleryPhotos) throw new ApiError("limit_reached", "limit_reached:gallery_photos");
+  if (pairId && !PAIR_CATEGORIES.includes(bill.business.categoryId)) throw new ApiError("pair_category");
+  const id = `gal${++bill.seq}`;
+  const path = photoUrl(file);
+  bill.gallery.push({ id, path, caption: String(caption ?? "").trim().slice(0, GALLERY_CAPTION_MAX) || null, pairId: pairId ?? null, pairRole: pairRole ?? null, sort: Math.max(-1, ...bill.gallery.map((g) => g.sort)) + 1, width: 800, height: 600, adminState: "ok", adminReason: null, deleted: false });
+  return { id, path };
+};
+export const updateGalleryCaption = async (ids, caption) => {
+  writable();
+  await wait();
+  for (const g of bill.gallery) if (ids.includes(g.id)) g.caption = String(caption ?? "").trim().slice(0, GALLERY_CAPTION_MAX) || null;
+};
+export const deleteGalleryPhotos = async (ids) => { writable(); await wait(); for (const g of bill.gallery) if (ids.includes(g.id)) g.deleted = true; };
+export const restoreGalleryPhotos = async (ids) => {
+  writable();
+  await wait();
+  const back = bill.gallery.filter((g) => ids.includes(g.id) && g.deleted && g.adminState === "ok");
+  if (countedGallery().length + back.length > limitsFor(bill.business.planKey, MOCK_LIMITS).galleryPhotos) throw new ApiError("limit_reached", "limit_reached:gallery_photos");
+  for (const g of back) g.deleted = false;
+};
+export const purgeGalleryPhotos = async (ids) => { writable(); await wait(); bill.gallery = bill.gallery.filter((g) => !(ids.includes(g.id) && g.deleted)); };
+export const reorderGallery = async (ids) => {
+  writable();
+  await wait();
+  if (new Set(ids).size !== ids.length) throw new ApiError("invalid_order");
+  ids.forEach((id, i) => { const g = bill.gallery.find((x) => x.id === id && !x.deleted); if (g) g.sort = i; });
+  return ids.length;
+};
+
+export const listStaff = async () => { signedIn(); await wait(); return copy(bill.staff); };
+export const uploadStaffPhoto = async (file) => {
+  writable();
+  await wait();
+  if (!["image/jpeg", "image/png", "image/webp"].includes(file?.type)) throw new ApiError("unsupported_type");
+  return { path: photoUrl(file) };
+};
+export const saveStaff = async (id, draft) => {
+  writable();
+  await wait();
+  if (Object.keys(validateStaffDraft(draft)).length) throw new ApiError("invalid_staff");
+  const serviceIds = draft.serviceIds ?? [];
+  if (serviceIds.length) {
+    if (bill.business.planKey !== "premium") throw new ApiError("premium_only", "premium_only:services");
+    if (serviceIds.some((s) => !bill.items.some((i) => i.id === s))) throw new ApiError("item_not_owned");
+  }
+  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photoPath: draft.photoPath ?? null, serviceIds };
+  const found = id ? bill.staff.find((m) => m.id === id) : null;
+  if (id && !found) throw new ApiError("not_found");
+  if (found) Object.assign(found, fields);
+  else bill.staff.push({ id: `stf${++bill.seq}`, sort: bill.staff.length, adminState: "ok", adminReason: null, ...fields });
+  return { id: found?.id ?? bill.staff.at(-1).id };
+};
+export const deleteStaff = async (id) => {
+  writable();
+  await wait();
+  bill.staff = bill.staff.filter((m) => m.id !== id);
+  for (const s of bill.slots) if (s.staffId === id) s.staffId = null;
+};
+
+export const listTimetable = async () => { signedIn(); await wait(); return copy([...bill.slots].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime))); };
+export const saveSlot = async (id, draft) => {
+  writable();
+  await wait();
+  const premium = bill.business.planKey === "premium";
+  if (!id && !premium) throw new ApiError("premium_only", "premium_only:timetable");
+  if (!TIMETABLE_CATEGORIES.includes(bill.business.categoryId)) throw new ApiError("timetable_category");
+  const slots = bill.slots.map((s) => ({ id: s.id, day_of_week: s.dayOfWeek, start_time: s.startTime, end_time: s.endTime, staff_id: s.staffId }));
+  const errors = validateSlotDraft({ id, day_of_week: Number(draft.dayOfWeek), start_time: draft.startTime, end_time: draft.endTime, class_name: draft.className, staff_id: draft.staffId || null }, slots, bill.staff);
+  if (errors.staff_id?.includes("already has a class")) throw new ApiError("trainer_busy");
+  if (Object.keys(errors).length) throw new ApiError("invalid_slot");
+  const fields = { dayOfWeek: Number(draft.dayOfWeek), startTime: draft.startTime, endTime: draft.endTime, className: draft.className.trim(), staffId: draft.staffId || null };
+  const found = id ? bill.slots.find((s) => s.id === id) : null;
+  if (found) { Object.assign(found, fields); return copy(found); }
+  const made = { id: `slt${++bill.seq}`, adminState: "ok", adminReason: null, ...fields };
+  bill.slots.push(made);
+  return copy(made);
+};
+export const deleteSlot = async (id) => { writable(); await wait(); bill.slots = bill.slots.filter((s) => s.id !== id); };
 
 // Test and demo hooks: what the admin or the automatic matcher does on the server.
 export const __mock = {

@@ -1,5 +1,5 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faImages, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -151,6 +151,8 @@ export default function Layout() {
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>
+              <Item to="/business/gallery" icon={faImages}>Gallery</Item>
+              <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
               <Item to="/business/account" icon={faUser}>Account</Item>
               <Item to="/business/settings" icon={faGear}>Settings</Item>
