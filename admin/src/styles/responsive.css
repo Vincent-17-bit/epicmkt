@@ -16,8 +16,8 @@
     height: auto;
     min-height: 0;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.55rem 0.75rem;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
 
   .admin-header__left {
@@ -40,7 +40,7 @@
   .admin-page-title {
     overflow: hidden;
     text-overflow: ellipsis;
-    font-size: 1.1rem;
+    font-size: var(--fs-lg);
   }
 
   .admin-search {
@@ -65,7 +65,7 @@
   }
 
   .admin-content {
-    padding: 0.75rem;
+    padding: var(--space-3);
     scrollbar-width: none;
   }
 
@@ -84,7 +84,7 @@
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: var(--fs-md);
   }
 
   .admin-content > *,
@@ -142,17 +142,17 @@
 
   table[data-cards] tr {
     display: grid;
-    margin-top: 0.6rem;
-    padding: 0.5rem 0.8rem;
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--border);
-    border-radius: 0.8rem;
+    border-radius: var(--radius-md);
     background: var(--surface);
   }
 
   table[data-cards] td {
     position: relative;
     display: block;
-    padding: 0.4rem 0 0.4rem 38%;
+    padding: var(--space-2) 0 var(--space-2) 38%;
     border: 0;
     overflow-wrap: anywhere;
   }
@@ -163,7 +163,7 @@
     left: 0;
     top: 0.55rem;
     width: 34%;
-    font-size: 0.68rem;
+    font-size: var(--fs-xs);
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
@@ -187,13 +187,13 @@
 
   .modal-backdrop {
     align-items: end;
-    padding: 0.5rem;
+    padding: var(--space-2);
   }
 
   .modal {
     width: 100%;
     max-height: calc(100dvh - 1rem);
-    border-radius: 1rem;
+    border-radius: var(--radius-lg);
   }
 
   .modal__footer {
@@ -220,10 +220,10 @@
     display: block;
     max-height: 75dvh;
     overflow: auto;
-    padding: 0.9rem 0.75rem calc(4.75rem + env(safe-area-inset-bottom));
-    border-radius: 1.1rem 1.1rem 0 0;
+    padding: var(--space-4) var(--space-3) calc(4.75rem + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
-    box-shadow: var(--shadow);
+    box-shadow: var(--elevation-2);
     animation: sheet-in 200ms ease;
   }
 
@@ -231,11 +231,11 @@
   .admin-more__foot {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .admin-more__foot {
-    margin-top: 0.75rem;
+    margin-top: var(--space-3);
   }
 
   .admin-more__item {
@@ -244,14 +244,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: var(--space-1);
     min-height: 4.25rem;
-    padding: 0.6rem 0.3rem;
+    padding: var(--space-2) var(--space-1);
     border: 1px solid var(--border);
-    border-radius: 0.8rem;
+    border-radius: var(--radius-md);
     background: var(--bg);
     color: var(--text);
-    font-size: 0.74rem;
+    font-size: var(--fs-sm);
     font-weight: 600;
     text-align: center;
     text-decoration: none;
@@ -259,7 +259,7 @@
   }
 
   .admin-more__item svg {
-    font-size: 1.15rem;
+    font-size: var(--fs-lg);
   }
 
   .admin-more__item.is-active {
@@ -274,11 +274,11 @@
     right: 0.4rem;
     min-width: 1.1rem;
     height: 1.1rem;
-    padding: 0 0.3rem;
-    border-radius: 999px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-pill);
     background: var(--danger);
     color: var(--on-danger);
-    font-size: 0.62rem;
+    font-size: var(--fs-xs);
     font-weight: 700;
     line-height: 1.1rem;
     text-align: center;
@@ -291,8 +291,8 @@
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 1fr;
-    gap: 0.25rem;
-    padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--border);
   }
@@ -303,22 +303,22 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: var(--space-1);
     min-width: 0;
     min-height: 3.4rem;
-    padding: 0.3rem 0.1rem;
+    padding: var(--space-1) var(--space-1);
     border: 0;
-    border-radius: 0.7rem;
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--text-muted);
-    font-size: 0.68rem;
+    font-size: var(--fs-xs);
     font-weight: 600;
     text-decoration: none;
     cursor: pointer;
   }
 
   .admin-tab svg {
-    font-size: 1.15rem;
+    font-size: var(--fs-lg);
   }
 
   .admin-tab span {
@@ -353,11 +353,11 @@
 
 @media (max-width: 30rem) {
   .admin-header {
-    padding: 0.5rem 0.6rem;
+    padding: var(--space-2) var(--space-2);
   }
 
   .admin-content {
-    padding: 0.6rem;
+    padding: var(--space-2);
   }
 
   .admin-more__grid,
@@ -372,11 +372,11 @@
 
 @media (max-width: 17rem) {
   html {
-    font-size: 12px;
+    font-size: var(--fs-sm);
   }
 
   .admin-header {
-    padding: 0.4rem 0.5rem;
+    padding: var(--space-2) var(--space-2);
   }
 
   .admin-content :where(div, section, form, fieldset, label, input, select, textarea, ul, li, a, span, p) {
@@ -409,7 +409,7 @@
   }
 
   .admin-page-title {
-    font-size: 0.95rem;
+    font-size: var(--fs-md);
   }
 
   .admin-avatar {
@@ -418,12 +418,12 @@
   }
 
   .admin-content {
-    padding: 0.4rem;
+    padding: var(--space-2);
   }
 
   .admin-tabbar {
-    gap: 0.1rem;
-    padding: 0.2rem;
+    gap: var(--space-1);
+    padding: var(--space-1);
   }
 
   .admin-tab {
@@ -441,7 +441,7 @@
     min-width: 0.9rem;
     height: 0.9rem;
     line-height: 0.9rem;
-    font-size: 0.55rem;
+    font-size: var(--fs-xs);
   }
 
   .admin-more__grid,
@@ -451,7 +451,7 @@
 
   .admin-more__item {
     min-height: 3.5rem;
-    font-size: 0.68rem;
+    font-size: var(--fs-xs);
   }
 
   .tabs__count {
@@ -466,7 +466,7 @@
     position: static;
     display: block;
     width: auto;
-    margin-bottom: 0.1rem;
+    margin-bottom: var(--space-1);
   }
 
   .modal-backdrop {
@@ -475,7 +475,7 @@
 
   .modal {
     max-height: 100dvh;
-    border-radius: 0.7rem 0.7rem 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .field-group,
