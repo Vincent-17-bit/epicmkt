@@ -537,7 +537,8 @@ select {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-width: 17rem;
+  min-width: 0;
+  width: 100%;
   height: 2rem;
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
@@ -2310,5 +2311,31 @@ th {
 
   .admin-nav-group__label {
     padding-block: 0;
+  }
+}
+
+.admin-header__right {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.admin-search {
+  flex: 0 1 17rem;
+  min-width: 0;
+}
+
+.admin-header__right > :not(.admin-search) {
+  flex: none;
+}
+
+/* Tablet and narrower: secondary columns and labels give way so the important ones stay in view. */
+@media (max-width: 63.99rem) {
+  .col-secondary {
+    display: none;
+  }
+
+  .admin-header .theme-toggle__label {
+    display: none;
   }
 }

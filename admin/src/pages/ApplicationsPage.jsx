@@ -94,8 +94,8 @@ export default function ApplicationsPage() {
                 <th>Reference</th>
                 <th>Business</th>
                 <th>Owner</th>
-                <th>Town</th>
-                <th>Plan</th>
+                <th className="col-secondary">Town</th>
+                <th className="col-secondary">Plan</th>
                 <th>Status</th>
                 <th>Submitted</th>
               </tr>
@@ -116,8 +116,8 @@ export default function ApplicationsPage() {
                         </td>
                         <td>{row.businessName}</td>
                         <td>{row.ownerName}</td>
-                        <td>{row.town}</td>
-                        <td>{row.plan === "premium" ? "Premium" : "Standard"} <span className="muted">{formatKes(row.price)}</span></td>
+                        <td className="col-secondary">{row.town}</td>
+                        <td className="col-secondary">{row.plan === "premium" ? "Premium" : "Standard"} <span className="muted">{formatKes(row.price)}</span></td>
                         <td><ApplicationStatus status={row.status} /></td>
                         <td title={formatDateTime(row.submittedAt)}>
                           {timeAgo(row.submittedAt)}
