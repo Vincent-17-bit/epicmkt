@@ -23,6 +23,9 @@ The database and the edge functions enforce the rules (`has_role()` and `require
 | Seller messages (read, send) | reviewer, support |
 | Flash sales (view, end) | reviewer, support |
 | Live activity feed on the Command Center | reviewer |
+| Delete or clear items in the live activity feed (`activity.manage`, `admin_delete_activity()`, migration 0059) | reviewer |
 | Settings, categories, plans, content, admin accounts | owner only |
+
+Deleting from the live activity feed never changes the audit log. A notification row is deleted for good; an audit row is only hidden from the feed of the admin who deleted it (`admin_activity_dismissals`, one private list per admin), so the Audit page and every other admin still see it.
 
 `admin/src/auth/permissions.test.js` pins these rules. If a migration changes who may call a function, change the table and the test together.

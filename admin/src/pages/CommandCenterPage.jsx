@@ -1,28 +1,16 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/index.js";
-import { usePermissions } from "../hooks/usePermissions.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import { canReview, describeError } from "../lib/applications.js";
 import { briefFor } from "../lib/counts.js";
-import { describeActivity } from "../lib/activity.js";
-import { timeAgo } from "../lib/time.js";
+import LiveActivityPanel, { ACTIVITY_KEY } from "../components/LiveActivityPanel.jsx";
 
-export const ACTIVITY_KEY = ["admin-activity"];
+export { ACTIVITY_KEY };
 
 export default function CommandCenterPage() {
   const navigate = useNavigate();
   const { admin } = useAuth();
-  const { can, why } = usePermissions();
   const { data, isPending, isError, error, refetch, isFetching } = useAdminCounts();
-  const activity = useQuery({
-    queryKey: ACTIVITY_KEY,
-    queryFn: () => api.getAdminActivity({ limit: 15 }),
-    enabled: can("activity.view"),
-    refetchInterval: 60_000,
-    placeholderData: (previous) => previous,
-  });
 
   // "--" while loading or when the numbers could not be fetched. Never a made-up zero.
   const show = (value) => (isPending || (isError && !data) ? "--" : value ?? "--");
@@ -96,37 +84,7 @@ export default function CommandCenterPage() {
           </ul>
         </section>
 
-        <section className="panel">
-          <div className="panel__header">
-            <h3>Live activity</h3>
-          </div>
-          {!can("activity.view") ? (
-            <p className="muted">{why("activity.view")}</p>
-          ) : activity.isPending ? (
-            <p className="muted">Loading activity</p>
-          ) : activity.isError && !activity.data ? (
-            <div className="banner banner--error" role="alert">
-              <span>Could not load the activity. {describeError(activity.error)}</span>
-              <button type="button" className="secondary-button admin-button--sm" onClick={() => activity.refetch()} disabled={activity.isFetching}>
-                {activity.isFetching ? "Retrying" : "Try again"}
-              </button>
-            </div>
-          ) : activity.data?.length ? (
-            <ul className="activity-list">
-              {activity.data.map((row) => {
-                const { text, to } = describeActivity(row);
-                return (
-                  <li key={row.id}>
-                    {to ? <Link to={to}>{text}</Link> : <span>{text}</span>}
-                    {row.at ? <time className="muted" dateTime={row.at}> · {timeAgo(row.at)}</time> : null}
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="muted">Nothing has happened yet. New applications, payments and seller requests show up here as they arrive.</p>
-          )}
-        </section>
+        <LiveActivityPanel />
       </div>
     </div>
   );
