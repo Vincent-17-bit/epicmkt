@@ -119,7 +119,12 @@ function Player({ src, poster, label, onClose }) {
   );
 }
 
-export default function MediaVideo({ src, poster, label = "" }) {
+const clock = (sec) => {
+  const total = Math.max(0, Math.round(Number(sec) || 0));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+};
+
+export default function MediaVideo({ src, poster, label = "", fill = false, durationSec = null }) {
   const thumbRef = useRef(null);
   const openerRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -150,9 +155,10 @@ export default function MediaVideo({ src, poster, label = "" }) {
 
   return (
     <>
-      <button ref={openerRef} type="button" className={styles.thumb} onPointerEnter={startPreview} onPointerLeave={stopPreview} onClick={openPlayer} aria-haspopup="dialog" aria-label={label ? `${t("video.watch")}: ${label}` : t("video.watch")}>
+      <button ref={openerRef} type="button" className={fill ? `${styles.thumb} ${styles.fill}` : styles.thumb} onPointerEnter={startPreview} onPointerLeave={stopPreview} onClick={openPlayer} aria-haspopup="dialog" aria-label={label ? `${t("video.watch")}: ${label}` : t("video.watch")}>
         <video ref={thumbRef} className={styles.preview} src={poster ? src : `${src}#t=0.001`} poster={poster ?? undefined} muted playsInline preload="metadata" tabIndex={-1} aria-hidden="true" disablePictureInPicture />
         <span className={styles.badge} aria-hidden="true" />
+        {durationSec > 0 && <span className={styles.duration} aria-hidden="true">{clock(durationSec)}</span>}
       </button>
       {open && <Player src={src} poster={poster} label={label || t("video.watch")} onClose={closePlayer} />}
     </>

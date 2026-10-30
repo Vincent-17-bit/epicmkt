@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -70,7 +70,7 @@ describe("ItemDetail", () => {
 
   it("shows an item's videos as thumbnails that never autoplay, and nothing when it has none", async () => {
     mocks.getStoreSelective.mockResolvedValue([]);
-    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), videos: [{ id: "v1", url: "a.mp4", caption: "Fade and beard" }, { id: "v2", url: "b.webm", caption: "Fade and beard" }] });
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), media: [{ id: "i1", kind: "image", url: "a.jpg", caption: "Fade and beard" }, { id: "v1", kind: "video", url: "a.mp4", caption: "Fade and beard", durationSec: 12 }, { id: "v2", kind: "video", url: "b.webm", caption: "Fade and beard", durationSec: 5 }] });
     const { container, unmount } = mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
     expect(screen.getAllByRole("button", { name: "Watch video: Fade and beard" })).toHaveLength(2);
@@ -85,6 +85,31 @@ describe("ItemDetail", () => {
     const plain = mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
     expect(plain.container.querySelector("video")).toBeNull();
+  });
+
+  it("shows photos and videos in one gallery in the seller's order, with a video allowed first", async () => {
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getDetail.mockResolvedValue({
+      ...base,
+      pricing: pricing(300, 300),
+      media: [
+        { id: "v1", kind: "video", url: "a.mp4", caption: "Fade and beard", durationSec: 75 },
+        { id: "i1", kind: "image", url: "p1.jpg", caption: "Fade and beard" },
+        { id: "v2", kind: "video", url: "b.mp4", caption: "Fade and beard", durationSec: null },
+        { id: "i2", kind: "image", url: "p2.jpg", caption: "Fade and beard" },
+      ],
+    });
+    mount();
+    await screen.findByRole("heading", { name: "Fade and beard" });
+    const track = screen.getByRole("group", { name: "Fade and beard" });
+    const slides = [...track.children];
+    expect(slides).toHaveLength(4);
+    expect(within(slides[0]).getByRole("button", { name: "Watch video: Fade and beard" })).toBeInTheDocument();
+    expect(slides[1]).toHaveAttribute("aria-label", "Zoom photo 1 / 2");
+    expect(within(slides[2]).getByRole("button", { name: "Watch video: Fade and beard" })).toBeInTheDocument();
+    expect(slides[3]).toHaveAttribute("aria-label", "Zoom photo 2 / 2");
+    expect(screen.getAllByRole("button", { name: /^(Photo|Video) \d$/ }).map((b) => b.getAttribute("aria-label"))).toEqual(["Video 1", "Photo 1", "Video 2", "Photo 2"]);
+    expect(screen.getAllByText("1:15")).toHaveLength(2);
   });
 
   it("uses the flash sale wording and shows both prices", async () => {

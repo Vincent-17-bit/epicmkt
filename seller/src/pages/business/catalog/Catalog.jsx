@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SORT_OPTIONS, TRACKER, activeChips, buildCatalogQuery, clearFilters, computeStats, enrichItems, filterCount, hasActiveFilters, parseCatalogQuery,
@@ -11,7 +11,6 @@ import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
 import ImportDialog from "./ImportDialog.jsx";
-import ItemDialog from "./ItemDialog.jsx";
 import ListRow from "./ListRow.jsx";
 import ListingCard from "./ListingCard.jsx";
 import Modal from "./Modal.jsx";
@@ -49,6 +48,8 @@ const NOT_LIVE = {
 
 export default function Catalog() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const query = useMemo(() => parseCatalogQuery(params.toString()), [params]);
   const desktop = useMedia("(min-width: 1024px)");
@@ -57,12 +58,11 @@ export default function Catalog() {
   const [mode, setModeState] = useState(() => readDevicePref("seller.catalog.view", "comfortable", MODES.map((m) => m[0])));
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [selected, setSelected] = useState(() => new Set());
-  const [notice, setNotice] = useState(null);
+  const [notice, setNotice] = useState(() => location.state?.notice ?? null);
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [draft, setDraft] = useState(query);
   const [dialog, setDialog] = useState(null);
-  const [editing, setEditing] = useState(undefined);
   const [restocking, setRestocking] = useState(null);
   const [pending, setPending] = useState(() => new Set());
   const [undo, setUndo] = useState(null);
@@ -237,7 +237,7 @@ export default function Catalog() {
 
   const handlers = {
     select: toggleSelect,
-    edit: (item) => setEditing(item),
+    edit: (item) => navigate(`/business/catalog/${item.id}/edit`),
     duplicate: (item) => run(() => api.duplicateItem(item.id), "Copy added as a draft."),
     toggle: (item) => run(() => api.bulkItems(item.visible && !item.draft ? "hide" : "show", [item.id]), item.visible && !item.draft ? "Item hidden." : "Item is now showing."),
     confirm: (item) => run(() => api.bulkItems("confirm_prices", [item.id]), "Price confirmed."),
@@ -286,7 +286,7 @@ export default function Catalog() {
           <p className={ui.muted}>{limitText}</p>
         </div>
         <div className={styles.headActions}>
-          <button type="button" className={styles.primary} onClick={() => setEditing(null)}>Add item</button>
+          <button type="button" className={styles.primary} onClick={() => navigate("/business/catalog/new")}>Add item</button>
           <button type="button" className={styles.ghost} onClick={() => setDialog("import")}>Import items{shop.planKey !== "premium" ? " (Premium)" : ""}</button>
         </div>
       </header>
@@ -315,7 +315,7 @@ export default function Catalog() {
             <li>Customers then see it on your page and can call or WhatsApp you.</li>
           </ol>
           <div className={styles.headActions}>
-            <button type="button" className={styles.primary} onClick={() => setEditing(null)}>Add your first item</button>
+            <button type="button" className={styles.primary} onClick={() => navigate("/business/catalog/new")}>Add your first item</button>
             <button type="button" className={styles.ghost} onClick={() => setDialog("import")}>Import from a spreadsheet{shop.planKey !== "premium" ? " (Premium)" : ""}</button>
           </div>
         </section>
@@ -492,43 +492,6 @@ export default function Catalog() {
           setRestocking(null);
         }}
       />
-      {editing !== undefined && (
-        <ItemDialog
-          key={editing?.id ?? "new"}
-          open
-          item={editing}
-          onClose={() => setEditing(undefined)}
-          onPhotosChanged={refresh}
-          onSave={async (value, files = [], videoFiles = []) => {
-            const id = await api.saveItem(editing?.id ?? null, value);
-            const failed = [];
-            const failedVideos = [];
-            for (const file of files) {
-              try {
-                await api.uploadItemPhoto(id, file);
-              } catch (err) {
-                failed.push(errorText(err));
-                if (err?.code === "photo_limit") break;
-              }
-            }
-            for (const file of videoFiles) {
-              try {
-                await api.uploadItemVideo(id, file);
-              } catch (err) {
-                failedVideos.push(errorText(err));
-                if (err?.code === "video_limit") break;
-              }
-            }
-            await refresh();
-            const base = editing ? "Item saved." : "Item added as a draft.";
-            const problems = [];
-            if (failed.length) problems.push(`${files.length - failed.length} of ${files.length} photos uploaded. ${failed[0]}`);
-            if (failedVideos.length) problems.push(`${videoFiles.length - failedVideos.length} of ${videoFiles.length} videos uploaded. ${failedVideos[0]}`);
-            setNotice(problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Open Edit to add the rest.` } : { tone: "ok", text: base });
-            setEditing(undefined);
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -64,6 +64,43 @@ describe("customer item shape with videos", () => {
   });
 });
 
+describe("customer item media sequence", () => {
+  const media = [
+    { kind: "video", path: "a/clip.mp4", durationSec: 12.5 },
+    { kind: "image", path: "a/one.webp", durationSec: null },
+    { kind: "video", path: "a/second.webm", durationSec: null },
+    { kind: "image", path: "a/two.webp", durationSec: null },
+  ];
+
+  it("keeps photos and videos in the one order the seller set", () => {
+    const item = itemOf({ id: "i1", name: "Mixed", media, imagePaths: ["a/one.webp", "a/two.webp"], videoPaths: ["a/clip.mp4", "a/second.webm"] });
+    expect(item.media.map((m) => [m.id, m.kind])).toEqual([["v1", "video"], ["i1", "image"], ["v2", "video"], ["i2", "image"]]);
+    expect(item.media[0].durationSec).toBe(12.5);
+    expect(item.media[2].durationSec).toBeNull();
+    expect(item.media[1].url).toMatch(/a\/one\.webp$/);
+  });
+
+  it("still gives the separate photo and video lists, and the cover is the first photo even when a video comes first", () => {
+    const item = itemOf({ id: "i1", name: "Mixed", media });
+    expect(item.images.map((m) => m.id)).toEqual(["i1", "i2"]);
+    expect(item.videos.map((m) => m.id)).toEqual(["v1", "v2"]);
+    expect(item.imageUrl).toMatch(/a\/one\.webp$/);
+    expect(item.images[0]).not.toHaveProperty("kind");
+  });
+
+  it("falls back to photos first and videos after for rows that only carry the two lists", () => {
+    const item = itemOf({ id: "i1", name: "Old", imagePaths: ["a/p.webp"], videoPaths: ["a/v.mp4"] });
+    expect(item.media.map((m) => [m.id, m.kind])).toEqual([["i1", "image"], ["v1", "video"]]);
+  });
+
+  it("ignores malformed entries and an empty or missing list", () => {
+    const item = itemOf({ id: "i1", name: "Odd", media: [null, { kind: "gif", path: "x" }, { kind: "image" }, { kind: "image", path: "a/ok.webp" }] });
+    expect(item.media.map((m) => m.id)).toEqual(["i1"]);
+    expect(itemOf({ id: "i2", name: "None", media: [] }).media).toEqual([]);
+    expect(itemOf({ id: "i3", name: "None" }).media).toEqual([]);
+  });
+});
+
 describe("customer item shape with product details", () => {
   const base = { id: "i1", name: "Kettle", description: "A kettle." };
 

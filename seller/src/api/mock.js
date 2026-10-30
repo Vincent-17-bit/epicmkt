@@ -26,6 +26,7 @@ export const resetMock = () => {
   state.otp = null;
   state.signedIn = false;
   state.failures.clear();
+  sequences.clear();
   state.changes = [];
   state.business = { name: DEMO.name, plan_key: DEMO.plan, status: DEMO.status, tagline: null };
   state.priceConfirmedAt = null;
@@ -185,62 +186,103 @@ export const catalogStats = async () => {
 };
 export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
-export const uploadItemPhoto = async (itemId, file) => {
-  signedIn();
-  await wait();
+// Each item's photos and videos are one ordered list, kept in memory in demo mode. The real API reads item_media.
+// imagePaths and hasVideo stay derived from it so the rest of the portal keeps working unchanged.
+const sequences = new Map();
+const LIMITS = () => (bill.business.planKey === "premium" ? { photos: 15, videos: 3 } : { photos: 7, videos: 1 });
+const findItem = (itemId) => {
   const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
   if (!item) throw new ApiError("item_not_found");
-  if (item.imagePaths.length >= (bill.business.planKey === "premium" ? 15 : 7)) throw new ApiError("photo_limit");
-  const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.webp`;
-  item.imagePaths.push(path);
+  return item;
+};
+const sequenceOf = (item) => {
+  if (!sequences.has(item.id)) sequences.set(item.id, item.imagePaths.map((path) => ({ path, kind: "image", durationSec: null })));
+  return sequences.get(item.id);
+};
+const sync = (item, list) => {
+  sequences.set(item.id, list);
+  item.imagePaths = list.filter((m) => m.kind === "image").map((m) => m.path);
   item.imageCount = item.imagePaths.length;
-  return { path };
+  item.hasVideo = list.some((m) => m.kind === "video");
+};
+const mockUpload = async (signal, onProgress) => {
+  const abort = () => new ApiError("upload_cancelled");
+  if (signal?.aborted) throw abort();
+  onProgress?.(null, "preparing");
+  for (const f of [0.25, 0.5, 0.75, 1]) {
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(resolve, 30);
+      signal?.addEventListener("abort", () => { clearTimeout(t); reject(abort()); }, { once: true });
+    });
+    onProgress?.(f, f === 1 ? "finishing" : "uploading");
+  }
+};
+export const listItemMedia = async (itemId) => {
+  signedIn();
+  await wait();
+  return copy(sequenceOf(findItem(itemId)));
+};
+export const getMediaLimits = async () => { signedIn(); await wait(); return LIMITS(); };
+export const uploadItemPhoto = async (itemId, file, { signal, onProgress } = {}) => {
+  signedIn();
+  await wait();
+  const item = findItem(itemId);
+  const list = sequenceOf(item);
+  if (list.filter((m) => m.kind === "image").length >= LIMITS().photos) throw new ApiError("photo_limit");
+  await mockUpload(signal, onProgress);
+  const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.webp`;
+  sync(item, [...sequenceOf(item), { path, kind: "image", durationSec: null }]);
+  return { path, kind: "image" };
 };
 export const removeItemPhoto = async (path) => {
   signedIn();
   await wait();
-  const item = bill.items.find((i) => i.imagePaths.includes(path));
-  if (!item) return;
-  item.imagePaths = item.imagePaths.filter((p) => p !== path);
-  item.imageCount = item.imagePaths.length;
+  for (const item of bill.items) {
+    const list = sequenceOf(item);
+    if (list.some((m) => m.path === path)) sync(item, list.filter((m) => m.path !== path));
+  }
 };
-// Demo videos live in memory, per item. The real API reads them from item_media.
-const demoVideos = new Map();
-export const listItemVideos = async (itemId) => { signedIn(); await wait(); return [...(demoVideos.get(itemId) ?? [])]; };
-export const uploadItemVideo = async (itemId, file) => {
+export const listItemVideos = async (itemId) => { signedIn(); await wait(); return sequenceOf(findItem(itemId)).filter((m) => m.kind === "video").map((m) => m.path); };
+export const uploadItemVideo = async (itemId, file, { signal, onProgress, durationSec = null } = {}) => {
   signedIn();
   await wait();
-  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
-  if (!item) throw new ApiError("item_not_found");
+  const item = findItem(itemId);
   if (!["video/mp4", "video/webm"].includes(file?.type)) throw new ApiError("video_unsupported");
   if (file.size > 25 * 1024 * 1024) throw new ApiError("video_too_large");
-  const list = demoVideos.get(itemId) ?? [];
-  if (list.length >= (bill.business.planKey === "premium" ? 3 : 1)) throw new ApiError("video_limit");
+  const list = sequenceOf(item);
+  if (list.filter((m) => m.kind === "video").length >= LIMITS().videos) throw new ApiError("video_limit");
+  await mockUpload(signal, onProgress);
   const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.mp4`;
-  demoVideos.set(itemId, [...list, path]);
-  item.hasVideo = true;
-  return { path };
+  sync(item, [...sequenceOf(item), { path, kind: "video", durationSec }]);
+  return { path, kind: "video" };
 };
-export const removeItemVideo = async (path) => {
+export const removeItemVideo = (path) => removeItemPhoto(path);
+const reordered = (list, paths) => {
+  const rank = new Map();
+  paths.forEach((p, n) => { if (!rank.has(p)) rank.set(p, n); });
+  const listed = list.filter((m) => rank.has(m.path)).sort((x, y) => rank.get(x.path) - rank.get(y.path));
+  return { listed: listed.length, next: [...listed, ...list.filter((m) => !rank.has(m.path))] };
+};
+export const reorderItemMedia = async (itemId, paths) => {
   signedIn();
   await wait();
-  for (const [itemId, list] of demoVideos) {
-    if (!list.includes(path)) continue;
-    const next = list.filter((p) => p !== path);
-    demoVideos.set(itemId, next);
-    const item = bill.items.find((i) => i.id === itemId);
-    if (item) item.hasVideo = next.length > 0;
-  }
+  const item = findItem(itemId);
+  if (!Array.isArray(paths) || paths.length === 0) throw new ApiError("no_items");
+  const { listed, next } = reordered(sequenceOf(item), paths);
+  sync(item, next);
+  return listed;
 };
 export const reorderItemPhotos = async (itemId, paths) => {
   signedIn();
   await wait();
-  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
-  if (!item) throw new ApiError("item_not_found");
+  const item = findItem(itemId);
   if (!Array.isArray(paths) || paths.length === 0) throw new ApiError("no_items");
-  const known = paths.filter((p) => item.imagePaths.includes(p));
-  item.imagePaths = [...known, ...item.imagePaths.filter((p) => !known.includes(p))];
-  return known.length;
+  const list = sequenceOf(item);
+  const photos = list.filter((m) => m.kind === "image");
+  const { listed, next } = reordered(photos, paths);
+  let n = 0;
+  sync(item, list.map((m) => (m.kind === "image" ? next[n++] : m)));
+  return listed;
 };
 const SHOP_KINDS = ["logo", "cover"];
 export const uploadShopImage = async (kind, blob) => {

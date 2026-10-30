@@ -23,7 +23,6 @@ import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import Skeleton from "./Skeleton.jsx";
 import ItemGallery from "./ItemGallery.jsx";
-import MediaVideo from "./MediaVideo.jsx";
 import { OfferChip, StockTag } from "@epicmkt/ui";
 
 const stockLabels = () => ({ lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft") });
@@ -368,14 +367,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               {current.flash && !hold && shown && <FlashStickyBar endsAt={current.flash.sale.endsAt} price={shown.salePrice} visible={!bannerInView} />}
               <div className={styles.layout}>
               <div className={styles.media}>
-                <ItemGallery key={`gallery-${current.id}`} images={current.images} name={current.name} />
-                {current.videos?.length > 0 && (
-                  <section className={styles.videos} aria-label={t("video.heading")}>
-                    {current.videos.map((video) => (
-                      <MediaVideo key={`${current.id}-${video.id}`} src={video.url} label={current.name} />
-                    ))}
-                  </section>
-                )}
+                <ItemGallery key={`gallery-${current.id}`} images={current.images} videos={current.videos} media={current.media} name={current.name} />
               </div>
               <div className={styles.content}>
               <div className={styles.details}>

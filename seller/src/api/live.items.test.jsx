@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { validateItemForm, emptyItemForm, storedItemDetails } from "@epicmkt/shared";
 
 const rpc = vi.fn();
-vi.mock("./client.js", () => ({ supabase: { rpc: (...a) => rpc(...a), from: vi.fn() } }));
+const from = vi.fn();
+const invoke = vi.fn();
+vi.mock("./client.js", () => ({ supabase: { rpc: (...a) => rpc(...a), from: (...a) => from(...a), functions: { invoke: (...a) => invoke(...a) } } }));
 
 const live = await import("./live.js");
 const mock = await import("./mock.js");
@@ -60,5 +62,108 @@ describe("live reorderItemPhotos", () => {
     rpc.mockResolvedValue({ data: 2, error: null });
     await expect(live.reorderItemPhotos("it-1", ["b", "a"])).resolves.toBe(2);
     expect(rpc).toHaveBeenCalledWith("seller_reorder_item_photos", { p_item: "it-1", p_paths: ["b", "a"] });
+  });
+});
+
+const table = (data) => {
+  const q = { select: () => q, eq: () => q, order: () => q, limit: () => q, maybeSingle: () => q, then: (ok, bad) => Promise.resolve({ data, error: null }).then(ok, bad) };
+  return q;
+};
+
+describe("live item media", () => {
+  it("lists one ordered sequence of photos and videos", async () => {
+    rpc.mockResolvedValue({ data: [{ path: "b/v.mp4", kind: "video", durationSec: "9.25", width: 640, height: 360 }, { path: "b/p", kind: "image", durationSec: null }], error: null });
+    const list = await live.listItemMedia("it-1");
+    expect(rpc).toHaveBeenCalledWith("seller_list_item_media", { p_item: "it-1" });
+    expect(list.map((m) => [m.kind, m.path, m.durationSec])).toEqual([["video", "b/v.mp4", 9.25], ["image", "b/p", null]]);
+  });
+
+  it("sends the mixed order in one call", async () => {
+    rpc.mockResolvedValue({ data: 3, error: null });
+    await expect(live.reorderItemMedia("it-1", ["v", "p1", "p2"])).resolves.toBe(3);
+    expect(rpc).toHaveBeenCalledWith("seller_reorder_item_media", { p_item: "it-1", p_paths: ["v", "p1", "p2"] });
+  });
+
+  it("turns a database error into a seller error code", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "item_not_found" } });
+    await expect(live.reorderItemMedia("x", ["a"])).rejects.toMatchObject({ code: "item_not_found" });
+  });
+
+  it("reads the per-item limits for the shop's plan from the same limits the server enforces", async () => {
+    const data = {
+      businesses: { id: "b", plan_key: "premium", category_id: "barber" },
+      categories: { id: "barber", name: "Barber" },
+      plans: [],
+      global_limits: { id: 1, standard: { photosPerItem: 7, videosPerItem: 1 }, premium: { photosPerItem: 15, videosPerItem: 3 } },
+    };
+    from.mockImplementation((name) => table(data[name]));
+    rpc.mockResolvedValue({ data: 1, error: null });
+    await expect(live.getMediaLimits()).resolves.toEqual({ photos: 15, videos: 3 });
+    data.businesses.plan_key = "standard";
+    await expect(live.getMediaLimits()).resolves.toEqual({ photos: 7, videos: 1 });
+  });
+});
+
+describe("live uploads with progress and cancel", () => {
+  const photo = () => new File([new Uint8Array(10)], "a.png", { type: "image/png" });
+
+  it("stops before asking the server for anything when it is already cancelled", async () => {
+    invoke.mockReset();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(live.uploadItemPhoto("it-1", photo(), { signal: controller.signal })).rejects.toMatchObject({ code: "upload_cancelled" });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("reports real byte progress for a photo and finishes by attaching it", async () => {
+    invoke.mockReset();
+    invoke.mockImplementation(async (name) => (name === "seller-media-sign"
+      ? { data: { uploadUrl: "https://up.test/x", fields: { a: "1" }, publicId: "b/it-1/x" }, error: null }
+      : { data: { ok: true }, error: null }));
+    const sent = [];
+    class FakeXhr {
+      constructor() { this.upload = {}; }
+      open() {}
+      abort() { this.onabort?.(); }
+      send(form) {
+        sent.push(form);
+        setTimeout(() => {
+          this.upload.onprogress({ lengthComputable: true, loaded: 5, total: 10 });
+          this.upload.onprogress({ lengthComputable: true, loaded: 10, total: 10 });
+          this.status = 200;
+          this.responseText = JSON.stringify({ public_id: "b/it-1/x", version: 1, signature: "s", width: 300, height: 300, bytes: 10, format: "png" });
+          this.onload();
+        }, 0);
+      }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+    const seen = [];
+    const out = await live.uploadItemPhoto("it-1", photo(), { onProgress: (f, stage) => seen.push([f, stage]) });
+    vi.unstubAllGlobals();
+    expect(out).toEqual({ path: "b/it-1/x", kind: "image" });
+    expect(seen[0]).toEqual([null, "preparing"]);
+    expect(seen).toContainEqual([0.5, "uploading"]);
+    expect(seen).toContainEqual([1, "uploading"]);
+    expect(seen.at(-1)).toEqual([1, "finishing"]);
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["seller-media-sign", "seller-media-finalize"]);
+  });
+
+  it("cancels a photo that is on its way up and never attaches it", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValue({ data: { uploadUrl: "https://up.test/x", fields: {}, publicId: "b/it-1/x" }, error: null });
+    class HangingXhr {
+      constructor() { this.upload = {}; }
+      open() {}
+      send() {}
+      abort() { this.onabort(); }
+    }
+    vi.stubGlobal("XMLHttpRequest", HangingXhr);
+    const controller = new AbortController();
+    const pending = live.uploadItemPhoto("it-1", photo(), { signal: controller.signal, onProgress: () => {} });
+    await new Promise((r) => setTimeout(r, 10));
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: "upload_cancelled" });
+    vi.unstubAllGlobals();
+    expect(invoke.mock.calls.map((c) => c[0])).toEqual(["seller-media-sign"]);
   });
 });

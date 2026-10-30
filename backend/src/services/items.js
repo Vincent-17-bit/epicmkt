@@ -54,6 +54,7 @@ const toItem = (business, svc, index) => {
     imageUrl: svc.imageUrl,
     images,
     videos: svc.videos ?? [],
+    media: [...images.map((m) => ({ ...m, kind: "image" })), ...(svc.videos ?? []).map((m) => ({ ...m, kind: "video", durationSec: null }))],
     regularPrice: Number.isFinite(svc.priceKes) ? svc.priceKes : null,
     priceType: svc.priceType ?? "fixed",
     unit: svc.unit ?? null,

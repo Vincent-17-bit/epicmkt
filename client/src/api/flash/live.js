@@ -135,6 +135,7 @@ const itemRow = (row, business) =>
     stockLeft: row.stock_left ?? null,
     imagePaths: row.image_paths,
     videoPaths: row.video_paths,
+    media: row.media,
     createdAt: row.created_at
   });
 

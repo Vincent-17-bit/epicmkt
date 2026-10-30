@@ -541,7 +541,7 @@ test("items and stores without details select exactly as before", async () => {
   const cols = (view) => sql(c, `select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position`, [view]).then((x) => x.map((y) => y.column_name));
   const items = await cols("public_items");
   assert.deepEqual(items.slice(0, 15), ["id", "business_id", "name", "description", "section", "price", "price_max", "price_type", "unit", "availability", "sort", "created_at", "image_paths", "video_paths", "stock_left"]);
-  assert.deepEqual(items.slice(15), ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size"]);
+  assert.deepEqual(items.slice(15), ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size", "media"]);
   const stores = await cols("public_businesses");
   assert.deepEqual(stores.slice(-3), ["exceptions", "product_count", "timezone"]);
   const grants = await sql(c, `select grantee from information_schema.role_table_grants where table_schema = 'public' and table_name in ('public_items', 'public_businesses') and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated', 'service_role')`);

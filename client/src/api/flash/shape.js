@@ -108,9 +108,24 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   variants: []
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, createdAt }) => {
+// One list in the order the seller set, photos and videos mixed. Older rows (and cached card data) only know the two separate
+// lists, so those become photos first and videos after, which is how they were always shown.
+const mediaOf = ({ imagePaths, videoPaths, sequence, name }) => {
+  const entry = (kind, path, n, durationSec) => ({ id: `${kind === "video" ? "v" : "i"}${n}`, kind, url: mediaUrl(path), caption: name, ...(kind === "video" ? { durationSec: Number.isFinite(durationSec) && durationSec > 0 ? durationSec : null } : {}) });
+  if (Array.isArray(sequence) && sequence.length > 0) {
+    const count = { image: 0, video: 0 };
+    const media = sequence
+      .filter((m) => m && typeof m.path === "string" && (m.kind === "image" || m.kind === "video"))
+      .map((m) => entry(m.kind, m.path, ++count[m.kind], Number(m.durationSec)));
+    return { media, images: media.filter((m) => m.kind === "image").map(({ durationSec, kind, ...rest }) => rest), videos: media.filter((m) => m.kind === "video").map(({ kind, ...rest }) => rest) };
+  }
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
+  return { images, videos, media: [...images.map((m) => ({ ...m, kind: "image" })), ...videos.map((m) => ({ ...m, kind: "video", durationSec: null }))] };
+};
+
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, media: sequence, createdAt }) => {
+  const { images, videos, media } = mediaOf({ imagePaths, videoPaths, sequence, name });
   return {
     id,
     businessId,
@@ -128,6 +143,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     imageUrl: images[0]?.url ?? null,
     images,
     videos,
+    media,
     regularPrice: Number.isFinite(price) ? price : null,
     priceType: priceType ?? "fixed",
     unit: unit ?? null,

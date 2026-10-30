@@ -114,6 +114,11 @@ const MESSAGES = {
   video_unreadable: "We could not read that video. Try an MP4 or WebM file saved from your phone or editor.",
   video_too_big: "That video is larger than 8000 pixels. Use a smaller one.",
   video_limit: "You have reached the video limit for this item on your plan. Remove one to add another.",
+  video_mov: "This looks like an iPhone video (.mov, often HEVC). Record again with Settings > Camera > Formats > Most Compatible, or choose an MP4 or WebM file.",
+  video_unplayable: "Your browser could not play this video. If it came from a phone, it may be HEVC: record it as Most Compatible (iPhone: Settings > Camera > Formats), or choose another MP4 or WebM file.",
+  photo_heic: "This is an iPhone HEIC photo, which cannot be used here. Choose a JPG, PNG or WebP, or set your camera to Most Compatible.",
+  media_unsupported: "Use a photo (JPG, PNG or WebP) or a video (MP4 or WebM).",
+  upload_cancelled: "Upload cancelled.",
   ...PROOF_ERRORS,
 };
 

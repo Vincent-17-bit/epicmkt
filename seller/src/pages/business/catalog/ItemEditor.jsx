@@ -1,28 +1,20 @@
 import { cloneElement, useEffect, useId, useRef, useState } from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { ITEM_DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm, inspectMedia } from "@epicmkt/shared";
+import { ITEM_DETAIL_LIMITS, ITEM_PRICE_TYPES, SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, STATUS_CHOICES, emptyItemForm, formFromItem, statusFromCount, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
-import { mediaUrl } from "../../../api/shape.js";
-import Modal from "./Modal.jsx";
+import MediaManager from "../../../components/mediaManager/MediaManager.jsx";
+import useMediaManager from "../../../components/mediaManager/useMediaManager.js";
+import ItemPreview from "./ItemPreview.jsx";
 import { errorText } from "../../../lib/errors.js";
 import ui from "../../../styles/ui.module.css";
 import styles from "./catalog.module.css";
+import page from "./itemEditor.module.css";
 
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
 const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
-
-const PHOTO_TYPES = "image/jpeg,image/png,image/webp";
-const VIDEO_TYPES = "video/mp4,video/webm";
-const VIDEO_MAX_BYTES = 25 * 1024 * 1024;
-
-// A quick check so a wrong file is refused before a long upload. The server reads the real bytes and has the final say
-// (type, size, length of up to 60 seconds).
-const videoProblem = (file) => {
-  if (!["video/mp4", "video/webm"].includes(file.type)) return errorText({ code: "video_unsupported" });
-  if (file.size > VIDEO_MAX_BYTES) return errorText({ code: "video_too_large" });
-  return null;
-};
 
 const SPEC_PRESETS = [
   { label: "Material", group: "Features & Specs" },
@@ -44,12 +36,6 @@ const SECTION_OF = {
   specs: "specs", specsCount: "specs",
   includes: "included", includesCount: "included",
   packSize: "terms", terms: "terms",
-};
-
-const photoProblem = async (file) => {
-  const info = inspectMedia(new Uint8Array(await file.arrayBuffer()));
-  if (!info.ok) return errorText({ code: info.reason });
-  return info.kind === "image" ? null : errorText({ code: "unsupported_type" });
 };
 
 const useMedia = (query) => {
@@ -95,42 +81,45 @@ function Section({ id, title, meta, open, compact, onToggle, children }) {
   );
 }
 
-export default function ItemDialog({ open, item, onClose, onSave, onPhotosChanged }) {
+export default function ItemEditor() {
+  const { itemId } = useParams();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
+  const limits = useQuery({ queryKey: ["media-limits"], queryFn: api.getMediaLimits, retry: false });
+  const found = itemId ? catalog.data?.items.find((i) => i.id === itemId) : null;
+  if (itemId && catalog.isLoading) return <div className={page.page}><p aria-busy="true">Loading item...</p></div>;
+  if (itemId && (!found || found.removedByAdmin)) {
+    return (
+      <div className={page.page}>
+        <h1>Item not found</h1>
+        <p>This item does not exist or can no longer be edited.</p>
+        <Link className={styles.primary} to="/business/catalog">Back to catalog</Link>
+      </div>
+    );
+  }
+  return <EditorBody key={found?.id ?? "new"} item={found ?? null} limits={limits.data ?? null} navigate={navigate} qc={qc} />;
+}
+
+function EditorBody({ item, limits, navigate, qc }) {
   const uid = useId();
   const formId = `${uid}-item-form`;
   const formRef = useRef(null);
+  const previewRef = useRef(null);
   const compact = useMedia("(max-width: 56.25rem)");
   const [form, setForm] = useState(() => (item ? formFromItem(item) : emptyItemForm()));
   const [initial] = useState(() => JSON.stringify(form));
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(() => item?.imagePaths ?? []);
-  const [queued, setQueued] = useState([]);
-  const [photoBusy, setPhotoBusy] = useState(false);
-  const [photoErrors, setPhotoErrors] = useState([]);
-  const [videos, setVideos] = useState([]);
-  const [queuedVideos, setQueuedVideos] = useState([]);
-  const [videoBusy, setVideoBusy] = useState(false);
-  const [videoErrors, setVideoErrors] = useState([]);
-  const [openSections, setOpenSections] = useState({ basics: true });
+  const [createdId, setCreatedId] = useState(null);
+  const [notice, setNotice] = useState("");
+  const [openSections, setOpenSections] = useState({ basics: true, media: true });
   const [focusTick, setFocusTick] = useState(0);
   const [confirming, setConfirming] = useState(false);
-  const queuedRef = useRef(queued);
-  queuedRef.current = queued;
+  const manager = useMediaManager({ itemId: item?.id ?? null, limits, fallbackPaths: item?.imagePaths ?? [] });
+  const hasItem = Boolean(item || createdId);
   const pendingFocus = useRef(null);
-  useEffect(() => () => queuedRef.current.forEach((q) => URL.revokeObjectURL(q.url)), []);
-  const queuedVideosRef = useRef(queuedVideos);
-  queuedVideosRef.current = queuedVideos;
-  useEffect(() => () => queuedVideosRef.current.forEach((q) => URL.revokeObjectURL(q.url)), []);
-
-  // The item's saved videos are read when the dialog opens (the catalog list only carries photo paths).
-  useEffect(() => {
-    if (!item?.id) return undefined;
-    let live = true;
-    api.listItemVideos(item.id).then((paths) => live && setVideos(paths)).catch(() => {});
-    return () => { live = false; };
-  }, [item?.id]);
 
   useEffect(() => {
     const want = pendingFocus.current;
@@ -155,11 +144,18 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
     el.scrollIntoView?.({ block: "center", behavior: calm ? "auto" : "smooth" });
   }, [focusTick]);
 
-  const dirty = JSON.stringify(form) !== initial || queued.length > 0;
+  const dirty = JSON.stringify(form) !== initial || manager.dirty;
+  const onClose = () => navigate("/business/catalog");
   const requestClose = () => {
     if (dirty) setConfirming(true);
     else onClose();
   };
+  useEffect(() => {
+    if (!dirty) return undefined;
+    const guard = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [dirty]);
   const focusOn = (key) => { pendingFocus.current = { key, tries: 4 }; };
   const toggleSection = (id) => () => setOpenSections((o) => ({ ...o, [id]: !o[id] }));
   const isOpen = (id) => Boolean(openSections[id]);
@@ -210,147 +206,27 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
     }
     setErrors({});
     setError("");
+    setNotice("");
     setBusy(true);
     try {
-      await onSave(check.value, queued.map((q) => q.file), queuedVideos.map((q) => q.file));
+      const id = await api.saveItem(item?.id ?? createdId ?? null, check.value);
+      setCreatedId(id);
+      const result = await manager.commit(id);
+      await qc.invalidateQueries({ queryKey: ["catalog"] });
+      const base = item ? "Item saved." : "Item added as a draft.";
+      if (result.failed || result.orderError) {
+        const parts = [];
+        if (result.failed) parts.push(`${result.failed} ${result.failed === 1 ? "file" : "files"} did not upload. Retry or remove ${result.failed === 1 ? "it" : "them"} below.`);
+        if (result.orderError) parts.push(`The order could not be saved. ${result.orderError}`);
+        setNotice(`${base} ${parts.join(" ")}`);
+        return;
+      }
+      navigate("/business/catalog", { state: { notice: { tone: "ok", text: base } } });
     } catch (err) {
       setError(errorText(err));
     } finally {
       setBusy(false);
     }
-  };
-
-  const addPhotos = async (e) => {
-    const files = [...e.target.files];
-    e.target.value = "";
-    if (!files.length) return;
-    setPhotoBusy(true);
-    setPhotoErrors([]);
-    const problems = [];
-    for (const file of files) {
-      const bad = await photoProblem(file);
-      if (bad) {
-        problems.push(`${file.name}: ${bad}`);
-        continue;
-      }
-      if (!item) {
-        const url = URL.createObjectURL(file);
-        setQueued((q) => [...q, { file, url }]);
-        continue;
-      }
-      try {
-        const { path } = await api.uploadItemPhoto(item.id, file);
-        setSaved((list) => [...list, path]);
-      } catch (err) {
-        problems.push(`${file.name}: ${errorText(err)}`);
-        if (err?.code === "photo_limit") break;
-      }
-    }
-    setPhotoErrors(problems);
-    setPhotoBusy(false);
-    if (item) onPhotosChanged?.();
-  };
-
-  const removeSaved = async (path) => {
-    setPhotoBusy(true);
-    setPhotoErrors([]);
-    try {
-      await api.removeItemPhoto(path);
-      setSaved((list) => list.filter((p) => p !== path));
-      onPhotosChanged?.();
-    } catch (err) {
-      setPhotoErrors([errorText(err)]);
-    } finally {
-      setPhotoBusy(false);
-    }
-  };
-
-  const removeQueued = (url) => {
-    URL.revokeObjectURL(url);
-    setQueued((list) => list.filter((q) => q.url !== url));
-  };
-
-  const moveSaved = async (from, to) => {
-    const before = saved;
-    const next = moved(saved, from, to);
-    setPhotoBusy(true);
-    setPhotoErrors([]);
-    setSaved(next);
-    try {
-      await api.reorderItemPhotos(item.id, next);
-      onPhotosChanged?.();
-    } catch (err) {
-      setSaved(before);
-      setPhotoErrors([errorText(err)]);
-    } finally {
-      setPhotoBusy(false);
-    }
-  };
-
-  const addVideos = async (e) => {
-    const files = [...e.target.files];
-    e.target.value = "";
-    if (!files.length) return;
-    setVideoBusy(true);
-    setVideoErrors([]);
-    const problems = [];
-    for (const file of files) {
-      const bad = videoProblem(file);
-      if (bad) {
-        problems.push(`${file.name}: ${bad}`);
-        continue;
-      }
-      if (!item) {
-        setQueuedVideos((q) => [...q, { file, url: URL.createObjectURL(file) }]);
-        continue;
-      }
-      try {
-        const { path } = await api.uploadItemVideo(item.id, file);
-        setVideos((list) => [...list, path]);
-      } catch (err) {
-        problems.push(`${file.name}: ${errorText(err)}`);
-        if (err?.code === "video_limit") break;
-      }
-    }
-    setVideoErrors(problems);
-    setVideoBusy(false);
-    if (item) onPhotosChanged?.();
-  };
-
-  const removeSavedVideo = async (path) => {
-    setVideoBusy(true);
-    setVideoErrors([]);
-    try {
-      await api.removeItemVideo(path);
-      setVideos((list) => list.filter((p) => p !== path));
-      onPhotosChanged?.();
-    } catch (err) {
-      setVideoErrors([errorText(err)]);
-    } finally {
-      setVideoBusy(false);
-    }
-  };
-
-  const removeQueuedVideo = (url) => {
-    URL.revokeObjectURL(url);
-    setQueuedVideos((list) => list.filter((q) => q.url !== url));
-  };
-
-  const videoTiles = [
-    ...videos.map((path) => ({ key: path, src: mediaUrl(path), remove: () => removeSavedVideo(path) })),
-    ...queuedVideos.map((q) => ({ key: q.url, src: q.url, remove: () => removeQueuedVideo(q.url) })),
-  ];
-
-  const moveQueued = (from, to) => setQueued((list) => moved(list, from, to));
-
-  const tiles = [
-    ...saved.map((path, n) => ({ key: path, src: mediaUrl(path), remove: () => removeSaved(path), move: (to) => moveSaved(n, to), at: n, count: saved.length })),
-    ...queued.map((q, n) => ({ key: q.url, src: q.url, remove: () => removeQueued(q.url), move: (to) => moveQueued(n, to), at: n, count: queued.length })),
-  ];
-  const movePhoto = (t, i, dir) => () => {
-    const to = t.at + dir;
-    focusOn(`photo-${i + dir}-${dir < 0 ? (to === 0 ? "later" : "earlier") : (to === t.count - 1 ? "earlier" : "later")}`);
-    t.move(to);
   };
 
   const field = (key, label, input) => (
@@ -399,8 +275,12 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
   const hlMax = ITEM_DETAIL_LIMITS.highlights.rows;
   const incMax = ITEM_DETAIL_LIMITS.includes.rows;
 
-  const footer = confirming ? (
-    <div className={styles.footStack}>
+  const waiting = manager.inFlight > 0;
+  const status = busy ? (waiting ? `Finishing ${manager.inFlight} ${manager.inFlight === 1 ? "upload" : "uploads"}...` : "Saving...") : waiting ? `${manager.inFlight} ${manager.inFlight === 1 ? "upload is" : "uploads are"} still running. Save waits for ${manager.inFlight === 1 ? "it" : "them"}.` : "";
+  const title = hasItem ? "Edit item" : "Add item";
+
+  const actions = confirming ? (
+    <div className={page.confirm}>
       <p className={styles.undo} role="alert">You have changes that are not saved. Leave without saving them?</p>
       <div className={styles.footBtns}>
         <button type="button" className={styles.ghost} onClick={() => setConfirming(false)} autoFocus>Keep editing</button>
@@ -408,17 +288,25 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
       </div>
     </div>
   ) : (
-    <div className={styles.footStack}>
+    <div className={page.confirm}>
       {error && <p className={ui.error} role="alert">{error}</p>}
+      {status && <p className={page.status} role="status">{status}</p>}
       <div className={styles.footBtns}>
         <button type="button" className={styles.ghost} onClick={requestClose}>Cancel</button>
-        <button type="submit" form={formId} className={styles.primary} disabled={busy}>{item ? "Save changes" : "Add item"}</button>
+        <button type="submit" form={formId} className={styles.primary} disabled={busy}>{hasItem ? "Save changes" : "Add item"}</button>
       </div>
     </div>
   );
 
   return (
-    <Modal open={open} onClose={requestClose} title={item ? "Edit item" : "Add item"} labelId="item-title" responsive footer={footer}>
+    <section className={page.page} aria-labelledby="item-title">
+      <header className={page.head}>
+        <button type="button" className={page.back} onClick={requestClose}>Back to catalog</button>
+        <h1 id="item-title" className={page.title}>{title}</h1>
+        <a className={page.previewLink} href="#item-preview" onClick={(e) => { e.preventDefault(); previewRef.current?.focus(); previewRef.current?.scrollIntoView?.({ block: "start" }); }}>Preview</a>
+      </header>
+      {notice && <p className={page.notice} role="alert">{notice}</p>}
+      <div className={page.layout}>
       <form id={formId} ref={formRef} className={styles.itemForm} onSubmit={submit} noValidate>
         <Section id={`${uid}-basics`} title="Basics" open={isOpen("basics")} compact={compact} onToggle={toggleSection("basics")}>
           {field("name", "Name", <input className={ui.input} value={form.name} onChange={set("name")} maxLength={120} />)}
@@ -469,45 +357,8 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
           </fieldset>
         </Section>
 
-        <Section id={`${uid}-photos`} title="Photos" meta={tiles.length > 0 ? `${tiles.length}` : undefined} open={isOpen("photos")} compact={compact} onToggle={toggleSection("photos")}>
-          {tiles.length > 0 && (
-            <ul className={styles.photoGrid}>
-              {tiles.map((t, i) => (
-                <li key={t.key} className={styles.photoTile}>
-                  {t.src ? <img src={t.src} alt="" /> : <span className={styles.photoBlank} aria-hidden="true" />}
-                  {i === 0 && <span className={styles.photoCover}>Cover</span>}
-                  <button type="button" className={styles.photoMove} data-focus={`photo-${i}-earlier`} onClick={movePhoto(t, i, -1)} disabled={photoBusy || busy || t.at === 0} aria-label={`Move photo ${i + 1} earlier`}>Move earlier</button>
-                  <button type="button" className={styles.photoMove} data-focus={`photo-${i}-later`} onClick={movePhoto(t, i, 1)} disabled={photoBusy || busy || t.at === t.count - 1} aria-label={`Move photo ${i + 1} later`}>Move later</button>
-                  <button type="button" className={styles.specRemove} onClick={t.remove} disabled={photoBusy || busy} aria-label={`Remove photo ${i + 1}`}>Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <label className={`${styles.ghost} ${styles.photoAdd}`}>
-            <input type="file" accept={PHOTO_TYPES} multiple className={styles.sr} onChange={addPhotos} disabled={photoBusy || busy} />
-            <span>{photoBusy ? "Working..." : "Add photos"}</span>
-          </label>
-          <p className={styles.hint}>JPG, PNG or WebP, at least 200 pixels, up to 10 MB each. The first photo is the cover.{!item && " Photos upload when you add the item."}</p>
-          {photoErrors.map((m) => <p key={m} className={ui.error} role="alert">{m}</p>)}
-        </Section>
-
-        <Section id={`${uid}-videos`} title="Videos" meta={videoTiles.length > 0 ? `${videoTiles.length}` : undefined} open={isOpen("videos")} compact={compact} onToggle={toggleSection("videos")}>
-          {videoTiles.length > 0 && (
-            <ul className={styles.videoGrid}>
-              {videoTiles.map((t, i) => (
-                <li key={t.key} className={styles.videoTile}>
-                  <video className={styles.videoPreview} src={t.src} controls preload="metadata" playsInline aria-label={`Video ${i + 1} for this item`} />
-                  <button type="button" className={styles.specRemove} onClick={t.remove} disabled={videoBusy || busy} aria-label={`Remove video ${i + 1}`}>Remove</button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <label className={`${styles.ghost} ${styles.photoAdd}`}>
-            <input type="file" accept={VIDEO_TYPES} multiple className={styles.sr} onChange={addVideos} disabled={videoBusy || busy} />
-            <span>{videoBusy ? "Uploading..." : "Add videos"}</span>
-          </label>
-          <p className={styles.hint}>MP4 or WebM, up to 60 seconds and 25 MB each. Customers watch them under this item's photos. How many you can add depends on your plan.{!item && " Videos upload when you add the item."}</p>
-          {videoErrors.map((m) => <p key={m} className={ui.error} role="alert">{m}</p>)}
+        <Section id={`${uid}-media`} title="Photos and videos" meta={manager.tiles.length > 0 ? `${manager.tiles.length}` : undefined} open={isOpen("media")} compact={compact} onToggle={toggleSection("media")}>
+          <MediaManager manager={manager} hasItem={hasItem} disabled={busy} />
         </Section>
 
         <Section id={`${uid}-highlights`} title="About this item" meta={form.highlights.length > 0 ? `${form.highlights.length} of ${hlMax}` : undefined} open={isOpen("highlights")} compact={compact} onToggle={toggleSection("highlights")}>
@@ -583,8 +434,13 @@ export default function ItemDialog({ open, item, onClose, onSave, onPhotosChange
           {detail("terms", "Terms (optional)", "Anything customers should know first, such as a deposit, delivery time or returns.", ITEM_DETAIL_LIMITS.terms, true)}
         </Section>
 
-        {!item && <p className={styles.hint}>New items are saved as drafts. Use Show when you are ready for customers to see them.</p>}
+        {!hasItem && <p className={styles.hint}>New items are saved as drafts. Use Show when you are ready for customers to see them.</p>}
       </form>
-    </Modal>
+      <aside id="item-preview" ref={previewRef} tabIndex={-1} className={page.preview} aria-label="Live preview">
+        <ItemPreview form={form} tiles={manager.tiles} />
+      </aside>
+      </div>
+      <footer className={page.foot}>{actions}</footer>
+    </section>
   );
 }

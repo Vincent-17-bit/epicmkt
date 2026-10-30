@@ -74,6 +74,11 @@ const num = (v) => (v === null || v === undefined ? null : Number(v));
 export const mediaUrl = (path) =>
   imageUrl(path, { cloudName: import.meta.env?.VITE_CLOUDINARY_CLOUD_NAME, supabaseUrl: import.meta.env?.VITE_SUPABASE_URL });
 
+export const media = (m) => ({
+  path: m.path, kind: m.kind === "video" ? "video" : "image", mime: m.mime ?? null, width: m.width ?? null, height: m.height ?? null,
+  durationSec: m.durationSec === null || m.durationSec === undefined ? null : Number(m.durationSec), size: m.size ?? null,
+});
+
 export const catalogItem = (i) => ({
   id: i.id, name: i.name, description: i.description ?? "", section: i.section ?? null,
   price: num(i.price), priceMax: num(i.price_max), priceType: i.price_type, unit: i.unit ?? null, salePrice: num(i.sale_price),

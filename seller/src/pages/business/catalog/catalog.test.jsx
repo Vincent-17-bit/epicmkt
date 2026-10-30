@@ -395,16 +395,17 @@ describe("quick actions", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const dialog = await screen.findByRole("region", { name: "Add item" });
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     expect(within(dialog).getAllByRole("alert").length).toBeGreaterThan(0);
     await user.type(within(dialog).getByLabelText("Name"), "Shave");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "450");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Shave", price: 450, draft: true, visible: false }));
-    const made = (await screen.findAllByText("Shave"))[0].closest("li");
+    await ready();
+    const made = (await screen.findAllByText("Shave")).map((n) => n.closest("li")).find(Boolean);
     await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    const edit = await screen.findByRole("region", { name: "Edit item" });
     await user.clear(within(edit).getByLabelText("Price (KES)"));
     await user.type(within(edit).getByLabelText("Price (KES)"), "500");
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
@@ -416,7 +417,7 @@ describe("quick actions", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const dialog = await screen.findByRole("region", { name: "Add item" });
     expect(within(dialog).queryByLabelText("Label")).toBeNull();
     await user.type(within(dialog).getByLabelText("Name"), "Sneaker");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "4500");
@@ -436,7 +437,7 @@ describe("quick actions", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const dialog = await screen.findByRole("region", { name: "Add item" });
     await user.type(within(dialog).getByLabelText("Name"), "Desk lamp");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "2400");
     await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
@@ -456,9 +457,10 @@ describe("quick actions", () => {
       name: "Desk lamp",
       specs: [{ group: "Features & Specs", label: "Bulb", value: "E27" }, { group: "Measurements", label: "Height", value: "45 cm" }],
     }));
-    const made = (await screen.findAllByText("Desk lamp"))[0].closest("li");
+    await ready();
+    const made = (await screen.findAllByText("Desk lamp")).map((n) => n.closest("li")).find(Boolean);
     await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    const edit = await screen.findByRole("region", { name: "Edit item" });
     expect(within(edit).getAllByLabelText("Group").map((g) => g.value)).toEqual(["Features & Specs", "Measurements"]);
     await user.selectOptions(within(edit).getAllByLabelText("Group")[0], "User guide");
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
@@ -470,7 +472,7 @@ describe("quick actions", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const dialog = await screen.findByRole("region", { name: "Add item" });
     await user.type(within(dialog).getByLabelText("Name"), "Birthday cake");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "1800");
     await user.type(within(dialog).getByLabelText("Brand (optional)"), "Acme Bakers");
@@ -494,46 +496,16 @@ describe("quick actions", () => {
       name: "Birthday cake", brand: "Acme Bakers", shortDescription: "Soft vanilla sponge", packSize: "Serves 10", terms: "Order two days ahead",
       includes: ["Candles"], highlights: [{ title: "Fresh", text: "Baked the same day" }],
     }));
-    const made = (await screen.findAllByText("Birthday cake"))[0].closest("li");
+    await ready();
+    const made = (await screen.findAllByText("Birthday cake")).map((n) => n.closest("li")).find(Boolean);
     await go(user, () => within(made).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    const edit = await screen.findByRole("region", { name: "Edit item" });
     expect(within(edit).getByLabelText("Brand (optional)").value).toBe("Acme Bakers");
     expect(within(edit).getByLabelText("Highlight 1 text").value).toBe("Baked the same day");
     expect(within(edit).getByLabelText("Included item 1").value).toBe("Candles");
     await user.clear(within(edit).getByLabelText("Brand (optional)"));
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ brand: null, packSize: "Serves 10", highlights: [{ title: "Fresh", text: "Baked the same day" }] }));
-  });
-
-  it("adds photos to a new item, to an existing item, and removes one", async () => {
-    const user = userEvent.setup();
-    let n = 0;
-    URL.createObjectURL = vi.fn(() => `blob:photo-${++n}`);
-    URL.revokeObjectURL = vi.fn();
-    await open();
-    await ready();
-    await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
-    await user.type(within(dialog).getByLabelText("Name"), "Photo item");
-    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    const input = dialog.querySelector('input[type="file"]');
-    await user.upload(input, [pngFile("a.png"), pngFile("b.png")]);
-    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
-    expect(within(dialog).getByText("Cover")).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Remove photo 2" }));
-    expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
-    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
-    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Photo item", imageCount: 1 }));
-    const made = M.state.items.at(-1);
-    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
-    await user.upload(edit.querySelector('input[type="file"]'), pngFile("c.png"));
-    await waitFor(() => expect(made.imageCount).toBe(2));
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2);
-    await user.click(within(edit).getByRole("button", { name: "Remove photo 1" }));
-    await waitFor(() => expect(made.imageCount).toBe(1));
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
   });
 
   it("rejects a file that is not an image or is too small", async () => {
@@ -543,7 +515,7 @@ describe("quick actions", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add item" });
+    const dialog = await screen.findByRole("region", { name: "Add item" });
     const input = dialog.querySelector('input[type="file"]');
     fireEvent.change(input, { target: { files: [new File([new Uint8Array(40)], "x.png", { type: "image/png" }), pngFile("tiny.png", 50)] } });
     expect(await within(dialog).findByText(/x\.png: Use a JPG, PNG or WebP image/)).toBeInTheDocument();
@@ -562,7 +534,7 @@ describe("quick actions", () => {
     await ready();
     const before = target.price;
     await go(user, () => within(card(target.id)).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
+    const edit = await screen.findByRole("region", { name: "Edit item" });
     await user.clear(within(edit).getByLabelText("Price (KES)"));
     await user.type(within(edit).getByLabelText("Price (KES)"), String(before + 100));
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
@@ -895,7 +867,7 @@ describe("stock fields in the item form", () => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    return screen.findByRole("dialog", { name: "Add item" });
+    return screen.findByRole("region", { name: "Add item" });
   };
 
   it("offers Available, Low stock, Out of stock and By appointment, and not Unavailable", async () => {
@@ -929,12 +901,12 @@ describe("stock fields in the item form", () => {
   });
 });
 
-describe("item dialog sections", () => {
+describe("item editor sections", () => {
   const openForm = async (user) => {
     await open();
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    return screen.findByRole("dialog", { name: "Add item" });
+    return screen.findByRole("region", { name: "Add item" });
   };
 
   it("adds a specification from a preset chip, disables used presets, and groups rows like the item page", async () => {
@@ -974,7 +946,7 @@ describe("item dialog sections", () => {
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Add item" })).toBeNull());
     await user.click(screen.getByRole("button", { name: "Add item" }));
-    dialog = await screen.findByRole("dialog", { name: "Add item" });
+    dialog = await screen.findByRole("region", { name: "Add item" });
     await user.type(within(dialog).getByLabelText("Name"), "Draft only");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(within(dialog).getByRole("alert")).toHaveTextContent(/not saved/);
@@ -1012,50 +984,4 @@ describe("item dialog sections", () => {
     expect(within(dialog).getByLabelText("Price (KES)")).toHaveFocus();
   });
 
-  it("reorders photos with Move earlier and Move later, on a new item and on a saved one", async () => {
-    const user = userEvent.setup();
-    let n = 0;
-    URL.createObjectURL = vi.fn(() => `blob:order-${++n}`);
-    URL.revokeObjectURL = vi.fn();
-    const dialog = await openForm(user);
-    await user.type(within(dialog).getByLabelText("Name"), "Ordered");
-    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    await user.upload(dialog.querySelector('input[type="file"]'), [pngFile("a.png"), pngFile("b.png")]);
-    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
-    expect(within(dialog).getByRole("button", { name: "Move photo 1 earlier" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Move photo 2 later" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: "Move photo 2 earlier" }));
-    expect(within(dialog).getByText("Cover").closest("li").querySelector("img")).toHaveAttribute("src", "blob:order-2");
-    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
-    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Ordered", imageCount: 2 }));
-    const made = M.state.items.at(-1);
-    const [first, second] = made.imagePaths;
-    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
-    await user.click(within(edit).getByRole("button", { name: "Move photo 2 earlier" }));
-    await waitFor(() => expect(made.imagePaths).toEqual([second, first]));
-  });
-
-  it("adds a video to a new item, refuses other formats, and removes a saved video", async () => {
-    const user = userEvent.setup();
-    URL.createObjectURL = vi.fn(() => "blob:clip");
-    URL.revokeObjectURL = vi.fn();
-    const dialog = await openForm(user);
-    await user.type(within(dialog).getByLabelText("Name"), "Clip");
-    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    const input = dialog.querySelector('input[accept="video/mp4,video/webm"]');
-    expect(input).not.toBeNull();
-    await user.upload(input, new File([new Uint8Array(20)], "clip.mp4", { type: "video/mp4" }));
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Remove video 1" })).toBeInTheDocument());
-    fireEvent.change(input, { target: { files: [new File(["x"], "clip.mov", { type: "video/quicktime" })] } });
-    expect(await within(dialog).findByText(/clip\.mov: Use an MP4 or WebM video/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
-    await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Clip", hasVideo: true }));
-    const made = M.state.items.at(-1);
-    expect(await api.listItemVideos(made.id)).toHaveLength(1);
-    await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
-    const edit = await screen.findByRole("dialog", { name: "Edit item" });
-    await user.click(await within(edit).findByRole("button", { name: "Remove video 1" }));
-    await waitFor(() => expect(made.hasVideo).toBe(false));
-  });
 });

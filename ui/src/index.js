@@ -23,6 +23,7 @@ export { planShowcase, SHOWCASE_SLOTS } from "./components/showcasePlan.js";
 export { default as ProductCard, DiscountChip } from "./components/ProductCard.jsx";
 export { default as StockTag, STOCK_LABELS } from "./components/StockTag.jsx";
 export { default as ProductGallery } from "./components/ProductGallery.jsx";
+export { default as MediaGallery } from "./components/MediaGallery.jsx";
 export { default as ShopCard } from "./components/ShopCard.jsx";
 export { default as BusinessPage } from "./business/BusinessPage.jsx";
 export { default as BusinessHero } from "./business/BusinessHero.jsx";
