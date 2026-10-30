@@ -71,7 +71,7 @@
 
   /* Theme-independent layout sizes live with the tokens for one place to look. */
   --rail-w: 3.5rem;
-  --rail-open-w: 14.5rem;
+  --rail-open-w: 16.5rem; /* was 14.5rem at a 14px root; widened so 16px nav labels and badges fit */
 }
 
 [data-theme="dark"] {
