@@ -34,19 +34,24 @@
 }
 
 .admin-login__brand span {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
   color: var(--text-muted);
 }
 
 .admin-login__title {
   margin: 0 0 0.25rem;
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  letter-spacing: var(--ls-xl);
 }
 
 .admin-login__lead {
   margin: 0 0 1.25rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
 }
 
 .admin-login__error {
@@ -55,7 +60,8 @@
   border: 1px solid var(--danger);
   border-radius: 0.75rem;
   color: var(--danger);
-  font-size: 0.88rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .admin-login__field {
@@ -65,8 +71,9 @@
 }
 
 .admin-login__field label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+  font-weight: var(--fw-medium);
   color: var(--text-muted);
 }
 
@@ -91,7 +98,7 @@
 
 .admin-login__submit {
   width: 100%;
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
 }
 
 .admin-login__submit:disabled {
@@ -108,7 +115,9 @@
 
 .admin-gate h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  letter-spacing: var(--ls-xl);
 }
 
 .admin-gate p {
@@ -172,7 +181,8 @@
 
 .admin-login__hint {
   color: var(--text-muted);
-  font-size: 0.78rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .admin-login__success {
@@ -182,7 +192,8 @@
   border-radius: 0.75rem;
   background: var(--primary-tint);
   color: var(--text);
-  font-size: 0.88rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .admin-login__link {
@@ -193,7 +204,8 @@
   border: 0;
   background: transparent;
   color: var(--primary-text);
-  font-size: 0.88rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
   cursor: pointer;
 }
 
@@ -208,7 +220,8 @@
 
 .admin-login__code {
   letter-spacing: 0.35em;
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
   text-align: center;
 }
 
@@ -229,13 +242,15 @@
 }
 
 .account-details dt {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
   color: var(--text-muted);
 }
 
 .account-details dd {
   margin: 0;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .account-form__actions {

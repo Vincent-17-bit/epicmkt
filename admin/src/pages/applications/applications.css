@@ -21,7 +21,7 @@
 }
 
 .applications__table td a {
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
   color: var(--text);
 }
 
@@ -98,8 +98,10 @@
 }
 
 .applications__message figcaption {
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
+  font-weight: var(--fw-semibold);
   color: var(--text-muted);
 }
 
@@ -115,7 +117,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .detail__back {
@@ -124,7 +126,7 @@
 
 .detail__back a {
   color: var(--primary-text);
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
 }
 
 .detail__head {
@@ -137,7 +139,9 @@
 
 .detail__title {
   margin: 0 0 0.25rem;
-  font-size: clamp(1.05rem, 1rem + 0.4vw, 1.4rem);
+  font-size: var(--fs-xl);
+  line-height: var(--lh-xl);
+  letter-spacing: var(--ls-xl);
 }
 
 .detail__head p {
@@ -170,7 +174,9 @@
 
 .detail__field dt {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
 }
 
 .detail__field dd {
@@ -209,7 +215,8 @@
 
 .detail__hint {
   margin: 0.75rem 0 0;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .detail__timeline {
