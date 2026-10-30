@@ -255,6 +255,8 @@
 
 .admin-tooltip {
   position: fixed;
+  top: var(--tip-top);
+  left: var(--tip-left);
   z-index: 70;
   margin-left: var(--space-2);
   padding: var(--space-1) var(--space-3);

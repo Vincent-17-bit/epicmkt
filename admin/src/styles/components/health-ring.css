@@ -4,6 +4,8 @@
   display: inline-grid;
   place-items: center;
   flex: none;
+  width: var(--ring-size, 44px);
+  height: var(--ring-size, 44px);
 }
 
 .health-ring svg {

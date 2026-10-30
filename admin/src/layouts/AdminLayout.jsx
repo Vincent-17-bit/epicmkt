@@ -147,7 +147,7 @@ export default function AdminLayout() {
         </aside>
       </div>
 
-      {tip ? <div className="admin-tooltip" role="presentation" style={{ top: tip.top, left: tip.left }}>{tip.label}</div> : null}
+      {tip ? <div className="admin-tooltip" role="presentation" style={{ "--tip-top": `${tip.top}px`, "--tip-left": `${tip.left}px` }}>{tip.label}</div> : null}
 
       <div className="admin-main">
         <header className="admin-header">

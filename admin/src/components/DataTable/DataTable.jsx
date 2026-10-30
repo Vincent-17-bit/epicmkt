@@ -309,9 +309,9 @@ export default function DataTable({
           if (event.target === event.currentTarget && active < 0 && rows.length) setActive(0);
         }}
       >
-        <div className="dt__inner" style={mobile ? undefined : { minWidth }}>
+        <div className="dt__inner" style={mobile ? undefined : { "--dt-min-w": `${minWidth}px` }}>
           {mobile ? null : (
-            <div className="dt__head" role="row" style={{ gridTemplateColumns: template }}>
+            <div className="dt__head" role="row" style={{ "--dt-cols": template }}>
               {selectable ? (
                 <div className="dt__hcell dt__hcell--check" role="columnheader">
                   <input ref={headCheckRef} type="checkbox" tabIndex={-1} checked={pageAll} onChange={togglePage} aria-label="Select all rows on this page" />
@@ -323,10 +323,9 @@ export default function DataTable({
                 return (
                   <div
                     key={column.key}
-                    className="dt__hcell"
+                    className={column.align === "end" ? "dt__hcell dt__hcell--end" : "dt__hcell"}
                     role="columnheader"
                     aria-sort={dir ? (dir === "asc" ? "ascending" : "descending") : undefined}
-                    style={{ justifyContent: column.align === "end" ? "flex-end" : "flex-start" }}
                   >
                     {key ? (
                       <button type="button" tabIndex={-1} className="dt__sort" onClick={() => changeSort(key)}>
@@ -348,7 +347,7 @@ export default function DataTable({
               ))
             : null}
 
-          <div className="dt__body" style={{ height: virtualizer.getTotalSize() }}>
+          <div className="dt__body" style={{ "--dt-body-h": `${virtualizer.getTotalSize()}px` }}>
             {virtualizer.getVirtualItems().map((item) => {
               const row = rows[item.index];
               if (!row) return null;
@@ -362,7 +361,7 @@ export default function DataTable({
                   role="row"
                   aria-selected={selectable ? isSelected : undefined}
                   className={["dt__row", item.index === active && "is-active", isSelected && "is-selected", onRowOpen && "is-clickable"].filter(Boolean).join(" ")}
-                  style={{ transform: `translateY(${item.start - scrollMargin}px)`, gridTemplateColumns: mobile ? undefined : template }}
+                  style={{ "--dt-y": `${item.start - scrollMargin}px`, "--dt-cols": mobile ? undefined : template }}
                   onClick={() => {
                     setActive(item.index);
                     onRowOpen?.(row);
@@ -376,10 +375,9 @@ export default function DataTable({
                   {visible.map((column) => (
                     <div
                       key={column.key}
-                      className="dt__cell"
+                      className={!mobile && column.align === "end" ? "dt__cell dt__cell--end" : "dt__cell"}
                       role="gridcell"
                       data-label={column.label ?? column.header}
-                      style={{ justifyContent: !mobile && column.align === "end" ? "flex-end" : undefined }}
                     >
                       {column.render ? column.render(row) : column.accessor?.(row)}
                     </div>
