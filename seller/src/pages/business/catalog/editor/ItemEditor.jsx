@@ -209,7 +209,7 @@ function EditorForm({ item, sections, category, business }) {
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       const base = isNew ? "Item added as a draft." : "Item saved.";
       const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Open Edit to add the rest.` } : { tone: "ok", text: base };
-      if (!stay) {
+      if (!stay && !(problems.length > 0 && !isNew)) {
         allow();
         navigate(backTo, { state: { notice: result } });
         return;
@@ -385,7 +385,7 @@ function EditorForm({ item, sections, category, business }) {
           </form>
         </div>
 
-        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} area={area} /></aside>}
+        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
             <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" />
