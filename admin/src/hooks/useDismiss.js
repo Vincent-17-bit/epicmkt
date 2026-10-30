@@ -1,14 +1,19 @@
 import { useEffect } from "react";
 
 // Closes a popover when the person clicks outside it or presses Escape.
-export function useDismiss(ref, open, close) {
+// Escape also returns focus to `returnFocusRef` (the control that opened it), so a keyboard user is not dropped
+// at the top of the page.
+export function useDismiss(ref, open, close, returnFocusRef) {
   useEffect(() => {
     if (!open) return undefined;
     const onPointer = (event) => {
       if (ref.current && !ref.current.contains(event.target)) close();
     };
     const onKey = (event) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape") {
+        close();
+        returnFocusRef?.current?.focus?.({ preventScroll: true });
+      }
     };
     document.addEventListener("mousedown", onPointer);
     document.addEventListener("touchstart", onPointer);
@@ -18,5 +23,5 @@ export function useDismiss(ref, open, close) {
       document.removeEventListener("touchstart", onPointer);
       document.removeEventListener("keydown", onKey);
     };
-  }, [ref, open, close]);
+  }, [ref, open, close, returnFocusRef]);
 }

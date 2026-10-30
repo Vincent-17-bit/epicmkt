@@ -35,7 +35,7 @@ export default function NotificationBell() {
   const messageList = useQuery({ queryKey: MESSAGES_KEY, queryFn: () => api.listMessages(), refetchInterval: open ? 30_000 : 60_000, retry: false, enabled: open || (messageCount.data ?? 0) > 0 });
 
   const close = useCallback(() => setOpen(false), []);
-  useDismiss(boxRef, open, close);
+  useDismiss(boxRef, open, close, buttonRef);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
   // Optimistic: the note disappears and the badge drops at once; if saving fails, both come back.
@@ -156,7 +156,7 @@ export default function NotificationBell() {
             <>
               {messageRows.length > 0 ? (
                 <section aria-labelledby="bell-messages-heading">
-                  <h3 className="admin-bell__section" id="bell-messages-heading">Messages <span className="admin-bell__count">{unreadMessages}</span></h3>
+                  <h2 className="admin-bell__section heading-sm" id="bell-messages-heading">Messages <span className="admin-bell__count">{unreadMessages}</span></h2>
                   <ul className="admin-bell__list">
                     {messageRows.map((item) => (
                       <li key={item.id} className="admin-bell__row">
@@ -179,7 +179,7 @@ export default function NotificationBell() {
               ) : null}
               {rows.length > 0 ? (
                 <section aria-labelledby="bell-activity-heading">
-                  <h3 className="admin-bell__section" id="bell-activity-heading">Activity <span className="admin-bell__count">{unreadNotes}</span></h3>
+                  <h2 className="admin-bell__section heading-sm" id="bell-activity-heading">Activity <span className="admin-bell__count">{unreadNotes}</span></h2>
                   <ul className="admin-bell__list">
                     {rows.map((row) => {
                       const { text, to } = describeActivity(row);

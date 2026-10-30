@@ -314,7 +314,7 @@ export default function DataTable({
             <div className="dt__head" role="row" style={{ "--dt-cols": template }}>
               {selectable ? (
                 <div className="dt__hcell dt__hcell--check" role="columnheader">
-                  <input ref={headCheckRef} type="checkbox" tabIndex={-1} checked={pageAll} onChange={togglePage} aria-label="Select all rows on this page" />
+                  <input ref={headCheckRef} type="checkbox" checked={pageAll} onChange={togglePage} aria-label="Select all rows on this page" />
                 </div>
               ) : null}
               {visible.map((column) => {
@@ -325,10 +325,10 @@ export default function DataTable({
                     key={column.key}
                     className={column.align === "end" ? "dt__hcell dt__hcell--end" : "dt__hcell"}
                     role="columnheader"
-                    aria-sort={dir ? (dir === "asc" ? "ascending" : "descending") : undefined}
+                    aria-sort={dir ? (dir === "asc" ? "ascending" : "descending") : key ? "none" : undefined}
                   >
                     {key ? (
-                      <button type="button" tabIndex={-1} className="dt__sort" onClick={() => changeSort(key)}>
+                      <button type="button" className="dt__sort" onClick={() => changeSort(key)}>
                         {column.header}
                         {dir ? <FontAwesomeIcon icon={dir === "asc" ? faChevronUp : faChevronDown} /> : null}
                       </button>

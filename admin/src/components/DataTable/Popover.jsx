@@ -11,7 +11,10 @@ export default function Popover({ label, icon, children }) {
       if (!ref.current?.contains(event.target)) setOpen(false);
     };
     const escape = (event) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        setOpen(false);
+        ref.current?.querySelector("button")?.focus({ preventScroll: true });
+      }
     };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
