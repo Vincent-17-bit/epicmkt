@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { daysLeft, formatDay, formatKes, planLabel, subscriptionView } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import Banners from "../../components/Banners.jsx";
+import SetupCard from "../../onboarding/SetupCard.jsx";
 import { now } from "../../lib/clock.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import PaymentCard from "./PaymentCard.jsx";
@@ -97,6 +98,7 @@ export default function Subscription() {
         <p className={ui.muted}>{business.name}</p>
       </div>
 
+      <SetupCard />
       <Banners business={business} onAction={() => choose({ purpose: null })} skip={suspended ? ["suspended"] : []} />
 
       <section className={ui.card} aria-labelledby="sum-title">

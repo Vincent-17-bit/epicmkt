@@ -1,4 +1,4 @@
-import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
+import { CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -17,6 +17,9 @@ const state = {
   changes: [],
   business: { name: DEMO.name, plan_key: DEMO.plan, status: DEMO.status, tagline: null },
   priceConfirmedAt: null,
+  settings: {},
+  logins: [],
+  others: 2,
 };
 
 const wait = () => new Promise((r) => setTimeout(r, 120));
@@ -29,6 +32,9 @@ export const resetMock = () => {
   state.changes = [];
   state.business = { name: DEMO.name, plan_key: DEMO.plan, status: DEMO.status, tagline: null };
   state.priceConfirmedAt = null;
+  state.settings = {};
+  state.logins = [];
+  state.others = 2;
   resetBilling();
 };
 
@@ -53,6 +59,11 @@ const sellerIdFor = (identifier) => {
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const maskEmail = (e) => e.replace(/^([^@])[^@]*(@.+)$/, "$1*******$2");
 
+const logLogin = (success) => {
+  state.logins.push({ id: `l${state.logins.length + 1}`, success, user_agent: (typeof navigator !== "undefined" && navigator.userAgent) || "", created_at: new Date().toISOString() });
+  if (state.logins.length > 200) state.logins.shift();
+};
+
 export const login = async (identifier, password) => {
   await wait();
   const typed = String(identifier).trim().toLowerCase();
@@ -63,11 +74,13 @@ export const login = async (identifier, password) => {
   if (sid && password === state.password) {
     state.failures.delete(key);
     state.signedIn = true;
+    logLogin(true);
     return { expiresAt: Math.floor(Date.now() / 1000) + 3600 };
   }
   f.n = f.until && f.until <= Date.now() ? 1 : f.n + 1;
   f.until = f.n >= MAX_FAILURES ? Date.now() + LOCK_MS : 0;
   state.failures.set(key, f);
+  if (sid) logLogin(false);
   if (f.until) throw new ApiError("locked", "Seller ID or password is incorrect.", { retryAfter: LOCK_MS / 1000 });
   throw new ApiError("invalid_credentials", "Seller ID or password is incorrect.");
 };
@@ -161,6 +174,7 @@ export const pauseListing = async (pause) => {
   const from = pause ? "live" : "paused";
   if (state.business.status !== from) throw new ApiError("invalid_status");
   state.business.status = pause ? "paused" : "live";
+  if (bill.business) bill.business.status = state.business.status;
   return state.business.status;
 };
 export const requestDeletion = async (name) => {
@@ -320,6 +334,41 @@ const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
 const bill = { items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+// ---- Settings, help and onboarding (mirror the live functions) ----
+export const getBusinessFacts = async () => {
+  signedIn();
+  await wait();
+  const b = bill.business;
+  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null };
+};
+export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
+
+const SETTINGS_KEYS = ["idle_minutes", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
+export const saveSettings = async (patch) => {
+  writer();
+  await wait();
+  if (patch === null || typeof patch !== "object" || Array.isArray(patch)) throw new ApiError("invalid_patch");
+  const bad = Object.keys(patch).find((k) => !SETTINGS_KEYS.includes(k));
+  if (bad) throw new ApiError("field_not_allowed", `field_not_allowed:${bad}`);
+  if (patch.business?.announcement?.enabled === true && bill.business.planKey !== "premium") throw new ApiError("premium_only");
+  for (const key of CRITICAL_EVENTS) if (patch.notifications?.events?.[key]?.in_app === false) throw new ApiError("critical_in_app_required");
+  state.settings = mergeSettings(state.settings, patch);
+  return resolveSettings(state.settings);
+};
+export const loginHistory = async () => { signedIn(); await wait(); return summarizeLogins(state.logins); };
+export const signOutOthers = async () => {
+  writer();
+  await wait();
+  const n = state.others;
+  state.others = 0;
+  return { ok: true, signedOut: n };
+};
+export const supportContacts = async () => {
+  signedIn();
+  await wait();
+  return { whatsapp: "+254700000111", phone: "+254700000222", email: "support@epicmkt.test", hours: "Mon to Sat, 8am to 6pm" };
+};
+
 export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 
 function resetBilling() {

@@ -1,3 +1,4 @@
+import { BUSINESS_TIME_ZONE, zonedParts } from "../time.js";
 // Seller settings: defaults, sanitising, messaging rules and delivery policy.
 // Pure and dependency free so the portal, the mock API and the edge functions share one copy.
 
@@ -9,7 +10,6 @@ export const CARD_VIEWS = ["comfortable", "compact", "list"];
 export const PRICE_REMINDER_DAYS = [14, 30, 60];
 export const AVAILABILITY_DEFAULTS = ["available", "limited_stock", "out_of_stock", "unavailable"];
 export const CHANNELS = ["in_app", "sms", "email"];
-export const TIMEZONE_OFFSET_HOURS = 3; // Africa/Nairobi has no daylight saving
 
 export const GREETING_MAX = 160;
 export const GREETING_VARIABLES = ["item", "price"];
@@ -260,10 +260,10 @@ export const mergeSettings = merge;
 export const SETTINGS_KEYS = ["idle_minutes", "saved_views", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
 
 // ---- quiet hours and delivery -----------------------------------------------------------------
-const shifted = (date) => new Date(new Date(date).getTime() + TIMEZONE_OFFSET_HOURS * 3_600_000);
+// Quiet hours are clock times in the business time zone, so the clock is read through the shared zone helpers.
 export const nairobiMinutes = (date) => {
-  const d = shifted(date);
-  return d.getUTCHours() * 60 + d.getUTCMinutes();
+  const p = zonedParts(date, BUSINESS_TIME_ZONE);
+  return p.hour * 60 + p.minute;
 };
 
 export function isQuietNow(quiet, now = new Date()) {
@@ -279,10 +279,9 @@ export function isQuietNow(quiet, now = new Date()) {
 export function quietEndsAt(quiet, now = new Date()) {
   if (!isQuietNow(quiet, now)) return null;
   const e = clockMinutes(quiet.end);
-  const local = shifted(now);
-  const target = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), Math.floor(e / 60), e % 60));
-  if (target.getTime() <= local.getTime()) target.setUTCDate(target.getUTCDate() + 1);
-  return new Date(target.getTime() - TIMEZONE_OFFSET_HOURS * 3_600_000);
+  const t = nairobiMinutes(now);
+  const wait = (e - t + 1440) % 1440 || 1440;
+  return new Date(Math.floor(new Date(now).getTime() / 60_000) * 60_000 + wait * 60_000);
 }
 
 export const MESSAGE_KINDS = ["critical", "transactional", "normal"];

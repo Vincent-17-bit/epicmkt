@@ -73,4 +73,10 @@ export const SELLER_API = [
   "saveOffer",
   "setOfferActive",
   "endOffer",
+  "getBusinessFacts",
+  "getSettings",
+  "saveSettings",
+  "loginHistory",
+  "signOutOthers",
+  "supportContacts",
 ];

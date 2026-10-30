@@ -1,9 +1,13 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { faBell, faBolt, faCalendarXmark, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
+import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
-import { getTheme, setTheme } from "../lib/theme.js";
+import { getTheme, setTheme, watchSystemTheme } from "../lib/theme.js";
+import { useSettings } from "../state/settings.js";
+import { useToasts } from "../state/toast.js";
+import { DEFAULT_IDLE, idleMinutes, useIdle } from "../state/useIdle.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/shape.js";
@@ -70,6 +74,15 @@ export default function Layout() {
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
   const suspended = business?.status === "suspended";
+  // The seller's saved settings (appearance, inactivity timeout, defaults). Loaded once, then kept in the settings store.
+  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
+  const loadSettings = useSettings((s) => s.load);
+  const settingsLoaded = useSettings((s) => s.loaded);
+  const storedIdle = useSettings((s) => s.settings.idle_minutes);
+  const toasts = useToasts((s) => s.toasts);
+  const dismissToast = useToasts((s) => s.dismiss);
+  useEffect(() => { if (settingsQuery.data) loadSettings(settingsQuery.data); }, [settingsQuery.data, loadSettings]);
+  useEffect(() => watchSystemTheme(), []);
   const ack = () => api.ackDelivered().then((n) => { if (n) qc.invalidateQueries({ queryKey: ["messages"] }); }).catch(() => {});
   useEffect(() => { ack(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useRealtime(["messages"], () => {
@@ -90,18 +103,25 @@ export default function Layout() {
   }, [more]);
   // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
   const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname);
-  const moreActive = /^\/business\/(exceptions|flash|offers|qr|account)/.test(pathname);
+  const moreActive = /^\/business\/(exceptions|flash|offers|qr|account|settings|help|onboarding)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     setThemeState(next);
+    const st = useSettings.getState();
+    if (st.loaded && st.settings.appearance.theme !== next) st.update({ appearance: { theme: next } }, { quiet: true });
   };
+  // The saved choice can change from Settings (or arrive from another device), so follow it.
+  const savedTheme = useSettings((s) => (s.loaded ? s.settings.appearance.theme : null));
+  useEffect(() => { setThemeState(getTheme()); }, [savedTheme]);
   const signOut = async () => {
     await api.logout();
     qc.clear();
+    useSettings.getState().reset();
     navigate("/login");
   };
+  const idle = useIdle({ minutes: idleMinutes(settingsLoaded ? storedIdle : DEFAULT_IDLE), active: Boolean(business), onTimeout: signOut });
 
   return (
     <div className={styles.shell}>
@@ -127,12 +147,14 @@ export default function Layout() {
             )}
           </div>
           {!suspended && (
-            <div id="more-links" className={styles.secondary} data-open={more}>
+            <div id="more-links" className={styles.moreLinks} data-open={more}>
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
               <Item to="/business/account" icon={faUser}>Account</Item>
+              <Item to="/business/settings" icon={faGear}>Settings</Item>
+              <Item to="/business/help" icon={faCircleInfo}>Help</Item>
             </div>
           )}
         </nav>
@@ -158,6 +180,18 @@ export default function Layout() {
         {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
+      {/* Only mounted while there is a message, so it never adds a second status region to a page. */}
+      {toasts.length > 0 && <Toaster toasts={toasts} onDismiss={dismissToast} />}
+      <Modal open={idle.warning} onClose={idle.stay} labelledBy="idle-title">
+        <div className={styles.idle}>
+          <h2 id="idle-title">Are you still there?</h2>
+          <p>You will be signed out in {idle.remaining ?? 0} seconds because of inactivity.</p>
+          <div className={styles.idleActions}>
+            <Button onClick={idle.stay}>Stay signed in</Button>
+            <Button variant="secondary" onClick={signOut}>Sign out</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

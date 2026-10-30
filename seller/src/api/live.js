@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota } from "@epicmkt/shared";
+import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota } from "@epicmkt/shared";
 import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
@@ -488,3 +488,33 @@ export const saveOffer = async (id, f) => {
 export const setOfferActive = (id, active) => rpc("seller_set_offer_active", { p_id: id, p_active: !!active });
 export const endOffer = (id) => rpc("seller_end_offer", { p_id: id });
 export const deleteOffer = (id) => rpc("seller_delete_offer", { p_id: id });
+
+// ---- Settings, help and onboarding ----
+// The few business columns the settings and setup screens read that the shared business shape does not carry.
+export const getBusinessFacts = async () => {
+  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path").maybeSingle());
+  if (!b) throw new ApiError("not_a_seller");
+  return b;
+};
+export const getSettings = async () => {
+  const row = await rows(need().from("seller_settings").select("settings").maybeSingle());
+  return resolveSettings(row?.settings ?? {});
+};
+export const saveSettings = async (patch) => resolveSettings(await rpc("seller_save_settings", { p_patch: patch }));
+export const loginHistory = async () => {
+  const data = await rows(need().from("login_events").select("id, success, user_agent, created_at").order("created_at", { ascending: false }).limit(200));
+  return summarizeLogins(data ?? []);
+};
+export const signOutOthers = () => fn("seller-signout-others", {});
+// Contact details come from the admin-edited "support" site setting, with the build-time values as a fallback.
+export const supportContacts = async () => {
+  const env = import.meta.env ?? {};
+  const base = { whatsapp: env.VITE_CONTACT_WHATSAPP || "", phone: env.VITE_CONTACT_PHONE || "", email: env.VITE_CONTACT_EMAIL || "", hours: env.VITE_SUPPORT_HOURS || "" };
+  try {
+    const { data } = await need().from("site_config").select("value").eq("key", "support").maybeSingle();
+    const v = data?.value && typeof data.value === "object" ? data.value : {};
+    return { ...base, ...Object.fromEntries(Object.entries(v).filter(([k, x]) => k in base && typeof x === "string" && x.trim())) };
+  } catch {
+    return base;
+  }
+};

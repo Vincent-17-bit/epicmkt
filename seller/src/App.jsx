@@ -14,6 +14,9 @@ import Catalog from "./pages/business/catalog/Catalog.jsx";
 import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
 import Preview from "./pages/business/Preview.jsx";
 import QrPoster from "./pages/business/QrPoster.jsx";
+import Settings from "./settings/Settings.jsx";
+import Help from "./help/Help.jsx";
+import Onboarding from "./onboarding/Onboarding.jsx";
 
 export default function App() {
   return (
@@ -36,6 +39,9 @@ export default function App() {
           <Route path="offers" element={<Offers />} />
           <Route path="preview" element={<Preview />} />
           <Route path="qr" element={<QrPoster />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="help" element={<Help />} />
+          <Route path="onboarding" element={<Onboarding />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/business/subscription" replace />} />
