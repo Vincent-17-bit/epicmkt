@@ -48,13 +48,6 @@ html {
   text-size-adjust: 100%;
 }
 
-/* The root stays at the browser default (100% = 16px) so the app respects the user's own font-size setting. */
-html {
-  font-size: 100%;
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-}
-
 :root {
   --font-admin: "Inter Variable", "Inter Fallback", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
     Arial, sans-serif;
@@ -87,40 +80,6 @@ html {
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
-}
-
-/* ---------------------------------------------------------------------------------------------
- * Base semantics. Class rules elsewhere override these; they exist so that elements with no
- * explicit size or weight land on the scale instead of the browser default.
- * ------------------------------------------------------------------------------------------- */
-h1 { font-size: var(--fs-xl); line-height: var(--lh-xl); letter-spacing: var(--ls-xl); }
-h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
-h3, h4, h5, h6 { font-size: var(--fs-md); line-height: var(--lh-md); }
-h1, h2, h3, h4, h5, h6, strong, b, th { font-weight: var(--fw-semibold); }
-
-/* Table and data cells are 14px; 13px secondary lines inside them opt in with --fs-xs. */
-td,
-.dt__cell {
-  font-size: var(--fs-sm);
-  line-height: var(--lh-sm);
-}
-
-/* Tabular figures so digits line up in columns and KPI numbers do not jitter as they update. */
-td,
-th,
-.dt__cell,
-.dt__hcell,
-.kpi-card strong,
-.stat strong,
-.biz-stats strong,
-.health-ring__value,
-.msg-list__time,
-.admin-bell__time,
-.tabs__count,
-.admin-nav-item__badge,
-.admin-tab__badge {
-  font-feature-settings: "tnum" 1;
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------------------------------------------------------------------------------------------
