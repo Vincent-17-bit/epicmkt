@@ -1,6 +1,6 @@
 import { LogoMark } from "@epicmkt/ui";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faBolt,
@@ -15,11 +15,9 @@ import {
   faGears,
   faHourglassHalf,
   faLayerGroup,
-  faMoon,
   faShieldHalved,
   faSitemap,
   faStore,
-  faSun,
   faRightFromBracket,
   faUserCheck,
   faUser,
@@ -36,6 +34,7 @@ import GlobalSearch from "../components/GlobalSearch.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
 import useTableLabels from "../hooks/useTableLabels.js";
 import NotificationBell from "../components/NotificationBell.jsx";
+import ThemeToggle from "../theme/ThemeToggle.jsx";
 
 const navGroups = [
   [
@@ -98,17 +97,6 @@ export default function AdminLayout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [moreOpen]);
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem("epicmkt-admin-theme");
-    if (saved) return saved;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
-
-  useMemo(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("epicmkt-admin-theme", theme);
-  }, [theme]);
-
   const visibleGroups = navGroups
     .map((group) => group.filter((item) => !item.permission || can(item.permission)))
     .filter((group) => group.length > 0);
@@ -117,7 +105,6 @@ export default function AdminLayout() {
   const moreItems = visibleItems.filter((item) => !tabPaths.includes(item.to));
   const moreActive = moreItems.some((item) => (item.end ? pathname === item.to : pathname === item.to || pathname.startsWith(`${item.to}/`)));
   const moreBadge = moreItems.reduce((sum, item) => sum + (badges[item.to] || 0), 0);
-  const toggleTheme = () => setTheme((value) => (value === "light" ? "dark" : "light"));
 
   return (
     <div className="admin-app">
@@ -174,14 +161,7 @@ export default function AdminLayout() {
           <div className="admin-header__right">
             <GlobalSearch />
             <NotificationBell />
-            <button
-              type="button"
-              className="admin-theme-toggle admin-wide-only"
-              aria-label="Toggle theme"
-              onClick={toggleTheme}
-            >
-              <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} /> {theme === "light" ? "Dark" : "Light"}
-            </button>
+            <ThemeToggle />
             <Link
               to="/admin/account"
               className="admin-avatar"
@@ -220,10 +200,7 @@ export default function AdminLayout() {
             })}
           </div>
           <div className="admin-more__foot">
-            <button type="button" className="admin-more__item" onClick={toggleTheme}>
-              <FontAwesomeIcon icon={theme === "light" ? faMoon : faSun} fixedWidth />
-              <span>{theme === "light" ? "Dark" : "Light"}</span>
-            </button>
+            <ThemeToggle variant="menu" />
             <Link to="/admin/account" className="admin-more__item">
               <FontAwesomeIcon icon={faUser} fixedWidth />
               <span>Account</span>

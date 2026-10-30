@@ -80,7 +80,7 @@
 }
 
 .admin-login__field input:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
   border-color: var(--primary);
 }
@@ -141,7 +141,7 @@
 }
 
 .admin-password input:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
   border-color: var(--primary);
 }
@@ -167,7 +167,7 @@
 }
 
 .admin-password__toggle:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
 }
 
 .admin-login__hint {

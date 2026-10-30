@@ -140,7 +140,7 @@ select {
 
 .admin-nav-item:focus-visible,
 .admin-health:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: -2px;
 }
 
@@ -377,7 +377,7 @@ select {
 
 .admin-system-checks__recheck:hover:not(:disabled) { background: var(--neutral-tint); }
 .admin-system-checks__recheck:disabled { opacity: 0.6; cursor: progress; }
-.admin-system-checks__recheck:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.admin-system-checks__recheck:focus-visible { outline: 2px solid var(--primary-text); outline-offset: 2px; }
 
 .admin-main {
   flex: 1 1 auto;
@@ -500,7 +500,7 @@ select {
 }
 
 .admin-button:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
 }
 
@@ -790,7 +790,7 @@ th {
 }
 
 .tabs__tab:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
 }
 
@@ -898,7 +898,7 @@ th {
 .field input:focus-visible,
 .field select:focus-visible,
 .field textarea:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
 }
 
@@ -1274,7 +1274,7 @@ th {
 }
 
 .msg-list__item:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: -2px;
 }
 
@@ -1359,7 +1359,7 @@ th {
 }
 
 .msg-icon:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
 }
 
@@ -1631,7 +1631,7 @@ th {
 }
 
 .msg-composer__input:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
 }
 
@@ -1657,7 +1657,7 @@ th {
 
 .msg-composer__send:focus-visible,
 .msg-composer__attach:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
 }
 
@@ -1841,7 +1841,7 @@ th {
 .admin-search__result:focus-visible,
 .admin-bell__item:focus-visible,
 .admin-bell__markall:focus-visible,
-.admin-global-search__clear:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.admin-global-search__clear:focus-visible { outline: 2px solid var(--primary-text); outline-offset: 2px; }
 
 @media (max-width: 48rem) {
   .admin-search { flex: 1 1 100%; }
@@ -1929,3 +1929,21 @@ th {
 .chart { margin: 0 0 1.143rem; }
 .chart svg { width: 100%; height: 8.571rem; fill: var(--chart-fill); display: block; }
 .funnel td { padding: 0.286rem 1.143rem 0.286rem 0; }
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 47.99rem) {
+  .admin-theme-toggle.theme-toggle .theme-toggle__label {
+    display: none;
+  }
+
+  .admin-theme-toggle.theme-toggle {
+    min-width: 2.5rem;
+    justify-content: center;
+  }
+}
