@@ -41,6 +41,8 @@ export const ACTIONS = {
   "flash.view": { label: "see flash sales", roles: ["reviewer", "support"] },
   "flash.end": { label: "end a flash sale", roles: ["reviewer", "support"] },
   "activity.view": { label: "see the live activity feed", roles: ["reviewer"] },
+  // Mirrors has_role(array['reviewer']) in admin_delete_activity() (migration 0059); the owner is implied.
+  "activity.manage": { label: "delete or clear items in the live activity feed", roles: ["reviewer"] },
   "audit.view": { label: "read the audit log", roles: ANY },
   "catalogue.edit": { label: "edit categories, plans and content", roles: [] },
   "settings.view": { label: "open settings", roles: [] },

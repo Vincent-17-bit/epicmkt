@@ -82,6 +82,13 @@ export async function getAdminActivity({ limit = 15 } = {}) {
   return data ?? [];
 }
 
+// Notification rows ("n:...") are deleted for good. Audit rows ("a:...") are only hidden from this admin's feed:
+// the audit log itself is never changed (migration 0059). Returns { deleted, dismissed, skipped }.
+export async function deleteAdminActivity({ ids, reason = null } = {}) {
+  const { data } = check(await client().rpc("admin_delete_activity", { p_ids: ids, p_reason: reason }));
+  return { deleted: 0, dismissed: 0, skipped: 0, ...(data ?? {}) };
+}
+
 // ---- Applications --------------------------------------------------------------------------------------------
 
 const LIST_COLUMNS = "id, reference_no, business_name, owner_full_name, phone, town, county, plan_key, price_at_submission, status, verification_level, submitted_at, reviewer_id";
