@@ -7,7 +7,7 @@ export default function RoleGuard({ permission, children }) {
   return (
     <div className="page-shell">
       <section className="panel no-access" role="alert">
-        <h3>You do not have access to this page</h3>
+        <h2 className="heading-sm">You do not have access to this page</h2>
         <p>{why(permission)}</p>
         <p className="muted">Ask an owner if you need access.</p>
       </section>

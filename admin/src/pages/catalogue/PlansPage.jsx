@@ -106,12 +106,12 @@ export default function PlansPage() {
   return (
     <div className="page-shell">
       <section className="panel">
-        <div className="panel__header"><h3>Plans and pricing</h3></div>
+        <div className="panel__header"><h2 className="heading-sm">Plans and pricing</h2></div>
         <p className="muted">Price changes reach new and unpaid applications and the seller and application pages straight away. A payment that covers the price and matches the category activates the shop automatically. Sellers already live keep the monthly price on their account.</p>
         {isError ? <LoadError what="plans" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
-              <thead><tr><th>Category</th><th>Standard</th><th>Premium</th></tr></thead>
+              <thead><tr><th scope="col">Category</th><th scope="col">Standard</th><th scope="col">Premium</th></tr></thead>
               <tbody>
                 {isLoading ? <tr><td colSpan={3}><span className="skeleton" /></td></tr>
                   : groups.map((g) => (

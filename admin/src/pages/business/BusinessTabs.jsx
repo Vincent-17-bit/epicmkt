@@ -155,7 +155,7 @@ export function PaymentsTab({ id }) {
       {(rows) => (
         <div className="biz-table-wrap">
           <table className="biz-table">
-            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Type</th><th>M-Pesa code</th><th>Receipt</th><th>Covers until</th></tr></thead>
+            <thead><tr><th scope="col">Date</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Type</th><th scope="col">M-Pesa code</th><th scope="col">Receipt</th><th scope="col">Covers until</th></tr></thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id}>
@@ -210,7 +210,7 @@ export function ItemsTab({ id }) {
         {(rows) => (
           <div className="biz-table-wrap">
             <table className="biz-table">
-              <thead><tr><th>Item</th><th>Section</th><th>Price</th><th>Customers see it?</th><th><span className="sr-only">Action</span></th></tr></thead>
+              <thead><tr><th scope="col">Item</th><th scope="col">Section</th><th scope="col">Price</th><th scope="col">Customers see it?</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
               <tbody>
                 {rows.map((i) => (
                   <tr key={i.id}>

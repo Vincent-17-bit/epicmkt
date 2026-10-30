@@ -49,7 +49,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.msg-pane__head h3 {
+.msg-pane__head :is(h2, h3) {
   margin: 0;
   font-size: var(--fs-md);
   line-height: var(--lh-md);
@@ -274,7 +274,7 @@
   min-width: 0;
 }
 
-.msg-thread__who h3 {
+.msg-thread__who :is(h2, h3) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

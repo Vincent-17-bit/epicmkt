@@ -191,14 +191,14 @@ export default function ApplicationDetailPage() {
 
       {app.adminNote || app.rejectionReason ? (
         <section className="panel">
-          <div className="panel__header"><h3>{app.rejectionReason ? "Rejection reason" : "Note to the applicant"}</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">{app.rejectionReason ? "Rejection reason" : "Note to the applicant"}</h2></div>
           <p>{app.rejectionReason || app.adminNote}</p>
         </section>
       ) : null}
 
       <div className="two-column">
         <section className="panel">
-          <div className="panel__header"><h3>Business</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">Business</h2></div>
           <dl className="detail__grid">
             <Field label="Name">{app.businessName}</Field>
             <Field label="Category">{app.categoryName ?? app.categoryId}</Field>
@@ -216,7 +216,7 @@ export default function ApplicationDetailPage() {
 
         <section className="panel">
           <div className="panel__header">
-            <h3>Owner and contact</h3>
+            <h2 className="heading-sm">Owner and contact</h2>
             <Button size="sm" aria-pressed={revealed} onClick={() => setRevealed((value) => !value)}>
               {revealed ? "Hide ID numbers" : "Show ID numbers"}
             </Button>
@@ -239,7 +239,7 @@ export default function ApplicationDetailPage() {
 
       {templateEntries.length > 0 ? (
         <section className="panel">
-          <div className="panel__header"><h3>Category details</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">Category details</h2></div>
           <dl className="detail__grid">
             {templateEntries.map(([key, value]) => (
               <Field key={key} label={flagPathLabel(`templateValues.${key}`)}>{showValue(value)}</Field>
@@ -249,7 +249,7 @@ export default function ApplicationDetailPage() {
       ) : null}
 
       <section className="panel">
-        <div className="panel__header"><h3>Documents</h3></div>
+        <div className="panel__header"><h2 className="heading-sm">Documents</h2></div>
         {documents.length === 0 ? (
           <p className="muted">No documents were uploaded.</p>
         ) : (
@@ -279,7 +279,7 @@ export default function ApplicationDetailPage() {
 
       <div className="two-column">
         <section className="panel">
-          <div className="panel__header"><h3>Flags</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">Flags</h2></div>
           {flags.length === 0 ? (
             <p className="muted">Nothing is flagged.</p>
           ) : (
@@ -300,7 +300,7 @@ export default function ApplicationDetailPage() {
         </section>
 
         <section className="panel">
-          <div className="panel__header"><h3>Timeline</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">Timeline</h2></div>
           <ol className="detail__timeline">
             {events.map((event) => (
               <li key={event.id}>

@@ -5,7 +5,7 @@ function label(table) {
   const head = table.tHead?.rows[table.tHead.rows.length - 1];
   if (!head) return;
   table.dataset.cards = "";
-  const names = [...head.cells].map((th) => th.textContent.trim());
+  const names = [...head.cells].map((th) => (th.querySelector(".sr-only") ? "" : th.textContent.trim()));
   for (const body of table.tBodies) {
     for (const row of body.rows) {
       [...row.cells].forEach((td, i) => {

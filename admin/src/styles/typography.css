@@ -90,6 +90,8 @@ h1 { font-size: var(--fs-xl); line-height: var(--lh-xl); letter-spacing: var(--l
 h2 { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
 h3, h4, h5, h6 { font-size: var(--fs-md); line-height: var(--lh-md); }
 h1, h2, h3, h4, h5, h6, strong, b, th { font-weight: var(--fw-semibold); }
+/* A panel or section title: an <h2> in the outline, drawn at the size the old <h3> had. */
+.heading-sm { font-size: var(--fs-md); line-height: var(--lh-md); letter-spacing: inherit; }
 
 /* Table and data cells are 14px; 13px secondary lines inside them opt in with --fs-xs. */
 td,

@@ -29,7 +29,7 @@ export default function AnalyticsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Analytics</h3>
+          <h2 className="heading-sm">Analytics</h2>
           <label className="field">Period
             <select value={days} onChange={(e) => setDays(Number(e.target.value))}>{WINDOWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
           </label>
@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
             <h4>Live businesses by category</h4>
             <div className="table-shell">
               <table>
-                <thead><tr><th>Category</th><th>Live</th>{data.can_see_money && <th>Monthly value</th>}</tr></thead>
+                <thead><tr><th scope="col">Category</th><th scope="col">Live</th>{data.can_see_money && <th scope="col">Monthly value</th>}</tr></thead>
                 <tbody>{data.by_category.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.live}</td>{data.can_see_money && <td>{kes(c.monthly_kes)}</td>}</tr>)}</tbody>
               </table>
             </div>

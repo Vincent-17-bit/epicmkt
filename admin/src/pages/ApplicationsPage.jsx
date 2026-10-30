@@ -50,7 +50,7 @@ export default function ApplicationsPage() {
     return (
       <div className="page-shell">
         <section className="panel">
-          <div className="panel__header"><h3>Applications</h3></div>
+          <div className="panel__header"><h2 className="heading-sm">Applications</h2></div>
           <p className="muted">
             Applications hold ID numbers and documents, so only owners and reviewers can open them. Your role is {admin?.role ?? "unknown"}.
           </p>
@@ -73,7 +73,7 @@ export default function ApplicationsPage() {
 
       <section className="panel" id={`${ID_PREFIX}-panel`} role="tabpanel" aria-labelledby={`${ID_PREFIX}-tab-${tab}`}>
         <div className="panel__header applications__toolbar">
-          <h3>{tabById(tab).label}</h3>
+          <h2 className="heading-sm">{tabById(tab).label}</h2>
           <label className="applications__search">
             <span className="sr-only">Search applications</span>
             <input
@@ -91,13 +91,13 @@ export default function ApplicationsPage() {
           <table className="applications__table">
             <thead>
               <tr>
-                <th>Reference</th>
-                <th>Business</th>
-                <th>Owner</th>
+                <th scope="col">Reference</th>
+                <th scope="col">Business</th>
+                <th scope="col">Owner</th>
                 <th className="col-secondary">Town</th>
                 <th className="col-secondary">Plan</th>
-                <th>Status</th>
-                <th>Submitted</th>
+                <th scope="col">Status</th>
+                <th scope="col">Submitted</th>
               </tr>
             </thead>
             <tbody aria-busy={list.isFetching}>

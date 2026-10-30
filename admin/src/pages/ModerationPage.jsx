@@ -22,7 +22,7 @@ export default function ModerationPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Moderation</h3>
+          <h2 className="heading-sm">Moderation</h2>
           {counts?.flags_overdue > 0 ? <span className="status-pill status-pill--down">{counts.flags_overdue} overdue</span> : null}
         </div>
         <Tabs tabs={TABS} value={tab} onChange={(id) => setParams({ tab: id }, { replace: true })} counts={tabCounts} label="Moderation sections" idPrefix="moderation" />
