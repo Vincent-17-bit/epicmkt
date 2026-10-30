@@ -1040,6 +1040,30 @@ describe("item editor sections", () => {
     await waitFor(() => expect(made.imagePaths).toEqual([second, first]));
   });
 
+  it("keeps a file that failed to upload when a new item is saved, and uploads it on retry", async () => {
+    const user = userEvent.setup();
+    let n = 0;
+    URL.createObjectURL = vi.fn(() => `blob:keep-${++n}`);
+    URL.revokeObjectURL = vi.fn();
+    const dialog = await openForm(user);
+    await user.type(within(dialog).getByLabelText("Name"), "Keeper");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    await user.upload(screen.getByTestId("media-input"), [pngFile("a.png"), pngFile("b.png")]);
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(2));
+    const real = api.uploadItemPhoto;
+    const uploads = vi.spyOn(api, "uploadItemPhoto").mockImplementation((id, file, opts) => (file.name === "b.png" ? Promise.reject(Object.assign(new Error("x"), { code: "file_not_uploaded" })) : real(id, file, opts)));
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await editorPage("Edit item");
+    expect(await screen.findByText(/1 file did not upload\. Retry the failed files below\./)).toBeInTheDocument();
+    const made = M.state.items.at(-1);
+    expect(made.imageCount).toBe(1);
+    const retry = await screen.findByRole("button", { name: "Retry Photo 2" });
+    uploads.mockImplementation((id, file, opts) => real(id, file, opts));
+    await user.click(retry);
+    await waitFor(() => expect(made.imageCount).toBe(2));
+    expect(screen.queryByRole("button", { name: /^Retry/ })).toBeNull();
+  });
+
   it("adds a video to a new item, refuses other formats, and removes a saved video", async () => {
     const user = userEvent.setup();
     URL.createObjectURL = vi.fn(() => "blob:clip");

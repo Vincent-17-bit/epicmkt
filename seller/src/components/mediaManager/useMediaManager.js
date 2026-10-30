@@ -18,7 +18,7 @@ const savedTile = (m) => ({
 
 const labelAt = (tiles, index) => mediaLabel(tiles[index].kind, index + 1);
 
-export default function useMediaManager({ itemId = null, limits = null, fallbackPaths = [] }) {
+export default function useMediaManager({ itemId = null, limits = null, fallbackPaths = [], seed = [] }) {
   const [tiles, setTilesState] = useState([]);
   const [loading, setLoading] = useState(Boolean(itemId));
   const [loadError, setLoadError] = useState("");
@@ -66,6 +66,17 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
     };
   }, []);
 
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (!seed.length || seeded.current) return;
+    seeded.current = true;
+    const made = seed.map((entry) => ({
+      key: nextKey(), kind: entry.kind, source: "queued", status: "error", path: null, file: entry.file, url: makeUrl(entry.file),
+      durationSec: entry.durationSec ?? null, posterUrl: null, seeded: true, progress: null, error: "This file did not upload. Try again.", removing: false,
+    }));
+    setTiles((current) => [...current, ...made]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     idRef.current = itemId ?? idRef.current;
     if (!itemId) return undefined;
@@ -91,7 +102,7 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
   }, [itemId]);
 
   useEffect(() => {
-    const todo = tiles.find((t) => t.kind === "video" && t.source === "saved" && !t.posterUrl && !tried.current.has(t.key));
+    const todo = tiles.find((t) => t.kind === "video" && (t.source === "saved" || t.seeded) && !t.posterUrl && !tried.current.has(t.key));
     if (!todo) return undefined;
     tried.current.add(todo.key);
     let live = true;
@@ -230,6 +241,11 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
     return { failed: tilesRef.current.filter((t) => t.status === "error").length, orderError };
   }, [startUpload]);
 
+  const failedFiles = useCallback(
+    () => tilesRef.current.filter((t) => t.status === "error" && t.file).map((t) => ({ file: t.file, kind: t.kind, durationSec: t.durationSec })),
+    [],
+  );
+
   const usage = useMemo(() => mediaUsage(tiles, limits), [tiles, limits]);
   const visible = tiles;
   const inFlight = tiles.filter((t) => t.status === "uploading").length;
@@ -241,6 +257,6 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
   return {
     tiles: visible, loading, loadError, problems, setProblems, checking, announcement, focus, usage, limits,
     summary: mediaSummary(usage), cover: coverNote(tiles), inFlight, failed, dirty,
-    addFiles, move, moveTo, remove, cancel, retry, commit, whenIdle: () => poolRef.current.whenIdle(),
+    addFiles, move, moveTo, remove, cancel, retry, commit, failedFiles, whenIdle: () => poolRef.current.whenIdle(),
   };
 }

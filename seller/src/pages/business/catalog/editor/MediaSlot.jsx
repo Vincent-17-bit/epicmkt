@@ -8,7 +8,7 @@ import useMediaManager from "../../../../components/mediaManager/useMediaManager
 
 const capOf = (limit) => (limit && limit.max != null ? Number(limit.max) : null);
 
-export function useMediaSlot(item, { onPhotosChanged } = {}) {
+export function useMediaSlot(item, { onPhotosChanged, seed = [] } = {}) {
   const found = useQuery({
     queryKey: ["media-limits", item?.id ?? null],
     queryFn: () => (item ? api.getItemMediaLimits(item.id) : api.getMediaLimits()),
@@ -16,8 +16,8 @@ export function useMediaSlot(item, { onPhotosChanged } = {}) {
     staleTime: 0,
   });
   const limits = useMemo(() => (found.data ? { photos: capOf(found.data.photos), videos: capOf(found.data.videos) } : null), [found.data]);
-  const manager = useMediaManager({ itemId: item?.id ?? null, limits, fallbackPaths: item?.imagePaths ?? [] });
-  const { commit, tiles } = manager;
+  const manager = useMediaManager({ itemId: item?.id ?? null, limits, fallbackPaths: item?.imagePaths ?? [], seed });
+  const { commit, failedFiles, tiles } = manager;
 
   const flush = useCallback(async (itemId) => {
     const { failed, orderError } = await commit(itemId);
@@ -25,8 +25,8 @@ export function useMediaSlot(item, { onPhotosChanged } = {}) {
     if (failed) problems.push(`${failed} ${failed === 1 ? "file" : "files"} did not upload.`);
     if (orderError) problems.push(`The order could not be saved. ${orderError}`);
     onPhotosChanged?.();
-    return { problems };
-  }, [commit, onPhotosChanged]);
+    return { problems, leftover: failedFiles() };
+  }, [commit, failedFiles, onPhotosChanged]);
 
   const imageUrls = useMemo(() => tiles.filter((t) => t.kind === "image").map((t) => t.url ?? mediaUrl(t.path)).filter(Boolean), [tiles]);
   const preview = useMemo(
