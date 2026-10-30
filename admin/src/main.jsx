@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "@epicmkt/ui/reset.css";
 import "@epicmkt/ui/tokens.css";
+import "./styles/typography.css";
 import "./styles/theme.css";
 import "./styles/admin.css";
 import "./styles/responsive.css";
