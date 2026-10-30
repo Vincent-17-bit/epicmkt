@@ -434,8 +434,8 @@ export async function sendMessage({ parentId = null, businessId = null, subject 
 }
 
 // Opening a seller's messages turns the seller's ticks blue. This device receiving them gives two green ticks.
-export async function markMessagesRead({ businessId = null } = {}) {
-  const { data } = check(await client().rpc("admin_mark_messages_read", { p_business: businessId, p_ids: null }));
+export async function markMessagesRead({ businessId = null, ids = null } = {}) {
+  const { data } = check(await client().rpc("admin_mark_messages_read", { p_business: businessId, p_ids: ids }));
   return data;
 }
 export async function ackMessagesDelivered() {
