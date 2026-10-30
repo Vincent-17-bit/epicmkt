@@ -1,0 +1,19 @@
+/* styles/components/theme-toggle.css */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+
+@media (max-width: 47.99rem) {
+  .admin-theme-toggle.theme-toggle .theme-toggle__label {
+    display: none;
+  }
+
+  .admin-theme-toggle.theme-toggle {
+    min-width: 2.5rem;
+    justify-content: center;
+  }
+}
+

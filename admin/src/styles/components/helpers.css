@@ -1,0 +1,56 @@
+/* styles/components/helpers.css */
+/* Shared helpers used by the live-data pages. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+.banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.banner--error {
+  border-color: var(--danger);
+  background: var(--surface);
+}
+
+.kpi-card--link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+
+.kpi-card--link:hover,
+.kpi-card--link:focus-visible {
+  border-color: var(--primary);
+}
+
+/* A row in a list that links somewhere reads like the rows around it, with an underline on hover. */
+.stack-list a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.stack-list a:hover,
+.stack-list a:focus-visible {
+  text-decoration: underline;
+}
+

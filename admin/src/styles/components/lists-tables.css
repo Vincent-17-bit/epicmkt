@@ -1,0 +1,127 @@
+/* styles/components/lists-tables.css */
+.two-column {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-3);
+}
+
+.panel {
+  padding: var(--space-3) var(--space-4);
+}
+
+.panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2);
+}
+
+.panel__header h3 {
+  margin: 0;
+  font-size: var(--fs-md);
+  line-height: var(--lh-md);
+}
+
+.link-button {
+  color: var(--primary-text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-sm);
+}
+
+.stack-list,
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stack-list li,
+.activity-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.activity-list li {
+  justify-content: flex-start;
+  display: block;
+}
+
+.table-shell {
+  overflow: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 40rem;
+}
+
+th,
+td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  background: var(--table-head);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.4rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
+}
+
+.status-pill--live {
+  background: var(--primary-tint);
+  color: var(--text);
+}
+
+.status-pill--healthy {
+  background: var(--primary-tint);
+  color: var(--text);
+}
+
+.status-pill--checking {
+  background: var(--neutral-tint);
+  color: var(--text);
+}
+
+.status-pill--degraded {
+  background: var(--warning-tint);
+  color: var(--text);
+}
+
+.status-pill--down {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.status-pill--neutral {
+  background: var(--neutral-tint);
+  color: var(--text);
+}
+

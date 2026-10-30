@@ -1,0 +1,47 @@
+/* styles/layout-responsive.css */
+/* Short screens: tighter rows so the whole sidebar fits without scrolling. */
+@media (max-height: 58rem) {
+  :root {
+    --nav-item-h: 2rem;
+  }
+
+  .admin-sidebar__brand {
+    padding-bottom: var(--space-2);
+  }
+
+  .admin-nav-group + .admin-nav-group {
+    margin-top: var(--space-1);
+    padding-top: var(--space-1);
+  }
+
+  .admin-nav-group__label {
+    padding-block: 0;
+  }
+}
+
+.admin-header__right {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.admin-search {
+  flex: 0 1 17rem;
+  min-width: 0;
+}
+
+.admin-header__right > :not(.admin-search) {
+  flex: none;
+}
+
+/* Tablet and narrower: secondary columns and labels give way so the important ones stay in view. */
+@media (max-width: 63.99rem) {
+  .col-secondary {
+    display: none;
+  }
+
+  .admin-header .theme-toggle__label {
+    display: none;
+  }
+}
+

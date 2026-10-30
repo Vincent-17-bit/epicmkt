@@ -1,0 +1,52 @@
+/* styles/components/live-activity.css */
+/* Live activity: a row is its text plus a delete button. The button is hidden until the row is hovered or focused
+   on a mouse device; on touch screens (and anywhere hover is unavailable) it is always shown. 44px minimum target. */
+.activity-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.activity-list__main {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.activity-list__delete {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -0.5rem -0.4rem -0.5rem 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.activity-list__delete:hover {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .activity-list__delete {
+    opacity: 0;
+  }
+
+  .activity-list li:hover .activity-list__delete,
+  .activity-list li:focus-within .activity-list__delete,
+  .activity-list__delete:focus-visible {
+    opacity: 1;
+  }
+}
+
+.admin-button {
+  white-space: nowrap;
+}
+
