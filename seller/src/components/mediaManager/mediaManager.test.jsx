@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, within, waitFor, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -473,6 +474,22 @@ describe("queue and upload on save for a new item", () => {
     view.unmount();
     expect(aborted).toBe(true);
     expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+});
+
+describe("files carried over from a save that failed", () => {
+  it("shows each carried file once as a failed tile that can be retried, even under StrictMode", async () => {
+    const item = M.state.items.find((i) => i.imagePaths.length > 0);
+    const carried = [{ file: png("late.png"), kind: "image", durationSec: null }];
+    function Carried() {
+      manager = useMediaManager({ itemId: item.id, limits: { photos: 10, videos: 2 }, seed: carried });
+      return <MediaManager manager={manager} hasItem />;
+    }
+    render(<StrictMode><Carried /></StrictMode>);
+    await waitFor(() => expect(tiles().length).toBe(item.imagePaths.length + 1));
+    expect(tiles().filter((t) => t.dataset.status === "error")).toHaveLength(1);
+    await userEvent.setup().click(screen.getByRole("button", { name: /^Retry/ }));
+    await waitFor(() => expect(tiles().every((t) => t.dataset.status === "saved")).toBe(true));
   });
 });
 
