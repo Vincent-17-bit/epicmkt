@@ -5,9 +5,13 @@ import { api } from "../api/index.js";
 import { useAuth } from "../auth/AuthContext.jsx";
 import Button from "../components/Button.jsx";
 import Tabs from "../components/Tabs.jsx";
+import Skeleton from "../components/Skeleton.jsx";
+import EmptyState from "../components/EmptyState.jsx";
+import ErrorCard from "../components/ErrorCard.jsx";
+import { faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import {
-  APPLICATION_TABS, DEFAULT_TAB, PAGE_SIZE, canReview, describeError, formatKes, isOverdue, tabById, tabCounts,
+  APPLICATION_TABS, DEFAULT_TAB, PAGE_SIZE, canReview, formatKes, isOverdue, tabById, tabCounts,
 } from "../lib/applications.js";
 import { formatDateTime, timeAgo } from "../lib/time.js";
 import ApplicationStatus from "./applications/ApplicationStatus.jsx";
@@ -61,7 +65,7 @@ export default function ApplicationsPage() {
   const last = Math.min(total, (page + 1) * PAGE_SIZE);
   const hasNext = (page + 1) * PAGE_SIZE < total;
   const showSkeleton = list.isPending;
-  const emptyText = search ? "No applications match your search." : `No applications in "${tabById(tab).label}".`;
+  const emptyTitle = search ? "No applications match your search" : `No applications in “${tabById(tab).label}”`;
 
   return (
     <div className="page-shell">
@@ -81,12 +85,7 @@ export default function ApplicationsPage() {
           </label>
         </div>
 
-        {list.isError ? (
-          <div className="banner banner--error" role="alert">
-            <span>Could not load applications. {describeError(list.error)}</span>
-            <Button size="sm" onClick={() => list.refetch()} disabled={list.isFetching}>Try again</Button>
-          </div>
-        ) : null}
+        {list.isError ? <ErrorCard what="applications" error={list.error} onRetry={() => list.refetch()} retrying={list.isFetching} /> : null}
 
         <div className="table-shell">
           <table className="applications__table">
@@ -105,7 +104,7 @@ export default function ApplicationsPage() {
               {showSkeleton
                 ? Array.from({ length: 5 }).map((_, index) => (
                     <tr key={index}>
-                      {Array.from({ length: COLUMNS }).map((__, cell) => <td key={cell}><span className="skeleton" /></td>)}
+                      {Array.from({ length: COLUMNS }).map((__, cell) => <td key={cell}><Skeleton /></td>)}
                     </tr>
                   ))
                 : rows.map((row) => {
@@ -128,7 +127,17 @@ export default function ApplicationsPage() {
                     );
                   })}
               {!showSkeleton && rows.length === 0 && !list.isError ? (
-                <tr><td colSpan={COLUMNS} className="applications__empty">{emptyText}</td></tr>
+                <tr>
+                  <td colSpan={COLUMNS} className="applications__empty">
+                    <EmptyState
+                      icon={faFileSignature}
+                      title={emptyTitle}
+                      action={search ? { label: "Clear search", onClick: () => setSearchText("") } : tab !== DEFAULT_TAB ? { label: `Show ${tabById(DEFAULT_TAB).label.toLowerCase()}`, onClick: () => setTab(DEFAULT_TAB) } : undefined}
+                    >
+                      {search ? "Try a reference, a business name, an owner or a phone number." : "New applications show up here as sellers submit them."}
+                    </EmptyState>
+                  </td>
+                </tr>
               ) : null}
             </tbody>
           </table>
