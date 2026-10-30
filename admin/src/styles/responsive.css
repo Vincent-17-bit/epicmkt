@@ -348,9 +348,9 @@
   }
 
   .admin-tab__badge {
-    top: 0.1rem;
+    top: var(--space-1);
     right: 50%;
-    margin-right: -1.5rem;
+    margin-right: calc(-1 * var(--space-6));
   }
 }
 
