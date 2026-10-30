@@ -5,6 +5,10 @@ import { usePermissions } from "../hooks/usePermissions.js";
 import { api } from "../api/index.js";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { stampLong } from "../lib/time.js";
+import Skeleton from "../components/Skeleton.jsx";
+import EmptyState from "../components/EmptyState.jsx";
+import ErrorCard from "../components/ErrorCard.jsx";
+import { faCircleCheck, faCreditCard } from "@fortawesome/free-solid-svg-icons";
 
 // Payments arrive by themselves: Safaricom tells the pay-callback function, which records the M-Pesa code, the amount
 // and the account the payer typed. Nobody types a code here. Three things can need a person:
@@ -62,7 +66,7 @@ function AssignPanel({ row, onClose, onDone }) {
               {t.reason && t.reason !== "search" && t.reason !== "name" ? <div className="muted">Suggested: {t.reason}</div> : null}
             </div>
             <button type="button" className="secondary-button" disabled={assign.isPending} onClick={() => { setError(""); assign.mutate(t); }}>
-              Assign here
+              Assign to this business
             </button>
           </li>
         ))}
@@ -113,7 +117,7 @@ export default function PaymentsPage() {
   const [filter, setFilter] = useState("action");
   const [assigning, setAssigning] = useState(null);
 
-  const { data = [], isLoading, error } = useQuery({
+  const { data = [], isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-payments"],
     queryFn: () => api.getPayments(),
     refetchInterval: 30000,
@@ -184,7 +188,7 @@ export default function PaymentsPage() {
           {!ready && !unassigned ? "Nothing is waiting for you." : ""}
         </p>
 
-        {error ? <p role="alert">{error.message}</p> : null}
+        {error ? <ErrorCard what="payments" error={error} onRetry={() => refetch()} retrying={isFetching} /> : null}
         {notice ? <p role={notice.ok ? "status" : "alert"}>{notice.text}</p> : null}
 
         {stuck.length ? (
@@ -224,7 +228,7 @@ export default function PaymentsPage() {
             <tbody>
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
-                    <tr key={i}>{Array.from({ length: COLS }).map((__, j) => <td key={j}><span className="skeleton" /></td>)}</tr>
+                    <tr key={i}>{Array.from({ length: COLS }).map((__, j) => <td key={j}><Skeleton /></td>)}</tr>
                   ))
                 : rows.flatMap((row) => {
                     const st = STATUS[row.status] ?? { label: row.status, tone: "neutral" };
@@ -255,12 +259,12 @@ export default function PaymentsPage() {
                         <td>
                           {row.status === "awaiting_confirmation" && row.applicationId ? (
                             <button type="button" className="secondary-button" disabled={confirm.isPending || !canPay} title={whyPay} onClick={() => { setNotice(null); confirm.mutate(row); }}>
-                              Confirm {months ?? 1} month{(months ?? 1) === 1 ? "" : "s"}
+                              Confirm payment
                             </button>
                           ) : null}
                           {row.status === "needs_assignment" ? (
                             <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={() => setAssigning(assigning === row.key ? null : row.key)}>
-                              {assigning === row.key ? "Close" : "Assign…"}
+                              {assigning === row.key ? "Cancel" : "Choose business"}
                             </button>
                           ) : null}
                         </td>
@@ -274,7 +278,13 @@ export default function PaymentsPage() {
               {!isLoading && !rows.length && !error ? (
                 <tr>
                   <td colSpan={COLS}>
-                    {filter === "action" ? "Nothing needs your action. New payments appear here as soon as a seller pays your Paybill." : "No payments yet."}
+                    {filter === "action" ? (
+                      <EmptyState icon={faCircleCheck} title="No payments need your action" action={rowsAll.length ? { label: `Show all ${rowsAll.length} payments`, onClick: () => setFilter("all") } : undefined}>
+                        New payments appear here as soon as a seller pays your Paybill.
+                      </EmptyState>
+                    ) : (
+                      <EmptyState icon={faCreditCard} title="No payments yet">Payments show up here as soon as a seller pays your Paybill.</EmptyState>
+                    )}
                   </td>
                 </tr>
               ) : null}

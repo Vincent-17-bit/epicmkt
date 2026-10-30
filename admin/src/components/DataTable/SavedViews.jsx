@@ -33,7 +33,7 @@ export default function SavedViews({ views, onApply, onDelete, onSave }) {
       )}
       <form className="dt__save" onSubmit={submit}>
         <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Name this view" maxLength={40} aria-label="View name" />
-        <Button size="sm" variant="primary" type="submit" disabled={!name.trim()}>Save</Button>
+        <Button size="sm" variant="primary" type="submit" disabled={!name.trim()}>Save view</Button>
       </form>
     </Popover>
   );

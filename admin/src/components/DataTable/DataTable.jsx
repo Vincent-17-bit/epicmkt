@@ -1,3 +1,7 @@
+import Skeleton from "../Skeleton.jsx";
+import EmptyState from "../EmptyState.jsx";
+import ErrorCard from "../ErrorCard.jsx";
+import { faInbox } from "@fortawesome/free-solid-svg-icons";
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
@@ -46,6 +50,8 @@ export default function DataTable({
   searchPlaceholder = "Search",
   initialSearch = "",
   emptyText = "Nothing to show",
+  emptyState = null,
+  what = "this table",
 }) {
   const stored = useMemo(() => readStore(storageKey), [storageKey]);
   const uid = useId();
@@ -338,7 +344,7 @@ export default function DataTable({
 
           {isLoading
             ? Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="dt__skeleton"><span className="skeleton" /></div>
+                <div key={index} className="dt__skeleton"><Skeleton /></div>
               ))
             : null}
 
@@ -383,13 +389,8 @@ export default function DataTable({
             })}
           </div>
 
-          {!isLoading && !isError && !rows.length ? <p className="dt__state">{emptyText}</p> : null}
-          {isError ? (
-            <div className="dt__state" role="alert">
-              <p>{error?.message ?? "Could not load rows"}</p>
-              <Button size="sm" onClick={() => refetch()}>Retry</Button>
-            </div>
-          ) : null}
+          {!isLoading && !isError && !rows.length ? (emptyState ?? <EmptyState icon={faInbox} title={emptyText} />) : null}
+          {isError ? <ErrorCard what={what} error={error} onRetry={() => refetch()} retrying={isFetching} /> : null}
         </div>
       </div>
 

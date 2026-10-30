@@ -16,8 +16,8 @@
     height: auto;
     min-height: 0;
     flex-wrap: wrap;
-    gap: 0.5rem;
-    padding: 0.55rem 0.75rem;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
   }
 
   .admin-header__left {
@@ -33,7 +33,7 @@
     min-width: 0;
   }
 
-  .admin-breadcrumb {
+  .admin-breadcrumbs {
     display: none;
   }
 
@@ -67,7 +67,7 @@
   }
 
   .admin-content {
-    padding: 0.75rem;
+    padding: var(--space-3);
     scrollbar-width: none;
   }
 
@@ -144,17 +144,17 @@
 
   table[data-cards] tr {
     display: grid;
-    margin-top: 0.6rem;
-    padding: 0.5rem 0.8rem;
+    margin-top: var(--space-2);
+    padding: var(--space-2) var(--space-3);
     border: 1px solid var(--border);
-    border-radius: 0.8rem;
+    border-radius: var(--radius-md);
     background: var(--surface);
   }
 
   table[data-cards] td {
     position: relative;
     display: block;
-    padding: 0.4rem 0 0.4rem 38%;
+    padding: var(--space-2) 0 var(--space-2) 38%;
     border: 0;
     overflow-wrap: anywhere;
   }
@@ -166,8 +166,8 @@
     top: 0.55rem;
     width: 34%;
     font-size: var(--fs-xs);
-    line-height: var(--lh-xs);
     font-weight: var(--fw-semibold);
+    line-height: var(--lh-xs);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--text-muted);
@@ -190,13 +190,13 @@
 
   .modal-backdrop {
     align-items: end;
-    padding: 0.5rem;
+    padding: var(--space-2);
   }
 
   .modal {
     width: 100%;
     max-height: calc(100dvh - 1rem);
-    border-radius: 1rem;
+    border-radius: var(--radius-lg);
   }
 
   .modal__footer {
@@ -223,10 +223,10 @@
     display: block;
     max-height: 75dvh;
     overflow: auto;
-    padding: 0.9rem 0.75rem calc(4.75rem + env(safe-area-inset-bottom));
-    border-radius: 1.1rem 1.1rem 0 0;
+    padding: var(--space-4) var(--space-3) calc(4.75rem + env(safe-area-inset-bottom));
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     background: var(--surface);
-    box-shadow: var(--shadow);
+    box-shadow: var(--elevation-2);
     animation: sheet-in 200ms ease;
   }
 
@@ -234,11 +234,11 @@
   .admin-more__foot {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .admin-more__foot {
-    margin-top: 0.75rem;
+    margin-top: var(--space-3);
   }
 
   .admin-more__item {
@@ -247,17 +247,17 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.35rem;
+    gap: var(--space-1);
     min-height: 4.25rem;
-    padding: 0.6rem 0.3rem;
+    padding: var(--space-2) var(--space-1);
     border: 1px solid var(--border);
-    border-radius: 0.8rem;
+    border-radius: var(--radius-md);
     background: var(--bg);
     color: var(--text);
     font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
     line-height: var(--lh-xs);
     letter-spacing: var(--ls-xs);
-    font-weight: var(--fw-medium);
     text-align: center;
     text-decoration: none;
     cursor: pointer;
@@ -281,13 +281,13 @@
     right: 0.4rem;
     min-width: 1.1rem;
     height: 1.1rem;
-    padding: 0 0.3rem;
-    border-radius: 999px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-pill);
     background: var(--danger);
     color: var(--on-danger);
     font-size: var(--fs-xs);
-    letter-spacing: var(--ls-xs);
     font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-xs);
     line-height: 1.1rem;
     text-align: center;
   }
@@ -299,8 +299,8 @@
     /* Content-sized tabs that share the spare room. Equal 1fr columns cut "Applications" and
        "Businesses" at 13px; at their natural widths all five labels fit a 360px screen. */
     display: flex;
-    gap: 0.125rem;
-    padding: 0.3rem 0.25rem calc(0.3rem + env(safe-area-inset-bottom));
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-1) calc(var(--space-1) + env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--border);
   }
@@ -312,18 +312,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.2rem;
+    gap: var(--space-1);
     min-width: 0;
     min-height: 3.4rem;
-    padding: 0.3rem 0.2rem;
+    padding: var(--space-1) 0;
     border: 0;
-    border-radius: 0.7rem;
+    border-radius: var(--radius-md);
     background: transparent;
     color: var(--text-muted);
     font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
     line-height: var(--lh-xs);
     letter-spacing: var(--ls-xs);
-    font-weight: var(--fw-medium);
     text-decoration: none;
     cursor: pointer;
   }
@@ -344,6 +344,7 @@
   .admin-tab.is-active {
     background: var(--primary-tint);
     color: var(--primary-text);
+    font-weight: var(--fw-semibold);
   }
 
   .admin-tab__badge {
@@ -353,24 +354,13 @@
   }
 }
 
-@media (max-width: 40rem) {
-  .hero-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .hero-card__actions > * {
-    flex: 1 1 8rem;
-  }
-}
-
 @media (max-width: 30rem) {
   .admin-header {
-    padding: 0.5rem 0.6rem;
+    padding: var(--space-2) var(--space-2);
   }
 
   .admin-content {
-    padding: 0.6rem;
+    padding: var(--space-2);
   }
 
   .admin-more__grid,
@@ -385,7 +375,7 @@
 
 @media (max-width: 17rem) {
   .admin-header {
-    padding: 0.4rem 0.5rem;
+    padding: var(--space-2) var(--space-2);
   }
 
   .admin-content :where(div, section, form, fieldset, label, input, select, textarea, ul, li, a, span, p) {
@@ -397,7 +387,7 @@
     overflow-wrap: anywhere;
   }
 
-  .hero-card__actions {
+  .cc-actions {
     flex-direction: column;
   }
 
@@ -428,12 +418,12 @@
   }
 
   .admin-content {
-    padding: 0.4rem;
+    padding: var(--space-2);
   }
 
   .admin-tabbar {
-    gap: 0.1rem;
-    padding: 0.2rem;
+    gap: var(--space-1);
+    padding: var(--space-1);
   }
 
   .admin-tab {
@@ -479,7 +469,7 @@
     position: static;
     display: block;
     width: auto;
-    margin-bottom: 0.1rem;
+    margin-bottom: var(--space-1);
   }
 
   .modal-backdrop {
@@ -488,7 +478,7 @@
 
   .modal {
     max-height: 100dvh;
-    border-radius: 0.7rem 0.7rem 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 
   .field-group,
