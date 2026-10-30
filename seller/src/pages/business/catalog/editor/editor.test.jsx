@@ -86,7 +86,7 @@ describe("sections", () => {
     expect(within(section("Media")).getByText("Optional")).toBeInTheDocument();
     expect(within(section("Details")).getByText("Optional")).toBeInTheDocument();
     expect(within(section("Basics")).getByText(/what customers read first/i)).toBeInTheDocument();
-    expect(within(section("Media")).getByText("No photos yet")).toBeInTheDocument();
+    expect(within(section("Media")).getByText(/Drag photos and videos here/)).toBeInTheDocument();
     expect(within(section("Details")).getByText("No highlights yet")).toBeInTheDocument();
   });
 

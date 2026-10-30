@@ -41,6 +41,8 @@
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: var(--fs-lg);
+    line-height: var(--lh-lg);
+    letter-spacing: var(--ls-lg);
   }
 
   .admin-search {
@@ -164,7 +166,8 @@
     top: 0.55rem;
     width: 34%;
     font-size: var(--fs-xs);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-xs);
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: var(--text-muted);
@@ -251,8 +254,10 @@
     border-radius: var(--radius-md);
     background: var(--bg);
     color: var(--text);
-    font-size: var(--fs-sm);
-    font-weight: 600;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-xs);
+    letter-spacing: var(--ls-xs);
     text-align: center;
     text-decoration: none;
     cursor: pointer;
@@ -260,6 +265,8 @@
 
   .admin-more__item svg {
     font-size: var(--fs-lg);
+    line-height: var(--lh-lg);
+    letter-spacing: var(--ls-lg);
   }
 
   .admin-more__item.is-active {
@@ -279,7 +286,8 @@
     background: var(--danger);
     color: var(--on-danger);
     font-size: var(--fs-xs);
-    font-weight: 700;
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-xs);
     line-height: 1.1rem;
     text-align: center;
   }
@@ -288,16 +296,17 @@
     position: relative;
     z-index: 40;
     flex: none;
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: 1fr;
-    gap: 0;
+    /* Content-sized tabs that share the spare room. Equal 1fr columns cut "Applications" and
+       "Businesses" at 13px; at their natural widths all five labels fit a 360px screen. */
+    display: flex;
+    gap: var(--space-1);
     padding: var(--space-1) var(--space-1) calc(var(--space-1) + env(safe-area-inset-bottom));
     background: var(--surface);
     border-top: 1px solid var(--border);
   }
 
   .admin-tab {
+    flex: 1 1 auto;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -312,13 +321,17 @@
     background: transparent;
     color: var(--text-muted);
     font-size: var(--fs-xs);
-    font-weight: 500;
+    font-weight: var(--fw-medium);
+    line-height: var(--lh-xs);
+    letter-spacing: var(--ls-xs);
     text-decoration: none;
     cursor: pointer;
   }
 
   .admin-tab svg {
     font-size: var(--fs-lg);
+    line-height: var(--lh-lg);
+    letter-spacing: var(--ls-lg);
   }
 
   .admin-tab span {
@@ -331,7 +344,7 @@
   .admin-tab.is-active {
     background: var(--primary-tint);
     color: var(--primary-text);
-    font-weight: 600;
+    font-weight: var(--fw-semibold);
   }
 
   .admin-tab__badge {
@@ -396,6 +409,7 @@
 
   .admin-page-title {
     font-size: var(--fs-md);
+    line-height: var(--lh-md);
   }
 
   .admin-avatar {
@@ -428,6 +442,7 @@
     height: 0.9rem;
     line-height: 0.9rem;
     font-size: var(--fs-xs);
+    letter-spacing: var(--ls-xs);
   }
 
   .admin-more__grid,
@@ -438,6 +453,8 @@
   .admin-more__item {
     min-height: 3.5rem;
     font-size: var(--fs-xs);
+    line-height: var(--lh-xs);
+    letter-spacing: var(--ls-xs);
   }
 
   .tabs__count {

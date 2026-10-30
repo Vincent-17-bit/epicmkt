@@ -9,6 +9,11 @@ import * as api from "../../../api/index.js";
 import { M, signedInApp, setTime } from "../../../test/utils.jsx";
 import { cardItemOf } from "./cardItem.js";
 
+vi.mock("../../../lib/videoPoster.js", () => ({
+  readVideo: vi.fn(async () => ({ durationSec: 12, width: 640, height: 360, poster: new Blob(["p"], { type: "image/jpeg" }) })),
+  posterFromUrl: vi.fn(async () => null),
+}));
+
 const LABELS = { was: "Was", lowStock: "Low stock", onlyLeft: "Only {n} left" };
 const realMatchMedia = window.matchMedia;
 
@@ -524,24 +529,25 @@ describe("quick actions", () => {
     const dialog = await editorPage("Add item");
     await user.type(within(dialog).getByLabelText("Name"), "Photo item");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    const input = dialog.querySelector('input[type="file"]');
+    const input = screen.getByTestId("media-input");
     await user.upload(input, [pngFile("a.png"), pngFile("b.png")]);
-    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(2));
     expect(within(dialog).getByText("Cover")).toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Remove photo 2" }));
-    expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
+    await user.click(within(dialog).getByRole("button", { name: "Remove Photo 2" }));
+    expect(within(dialog).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(1);
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Photo item", imageCount: 1 }));
     const made = M.state.items.at(-1);
     await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
     const edit = await editorPage("Edit item");
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
-    await user.upload(edit.querySelector('input[type="file"]'), pngFile("c.png"));
+    await waitFor(() => expect(within(edit).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(1));
+    await user.upload(screen.getByTestId("media-input"), pngFile("c.png"));
     await waitFor(() => expect(made.imageCount).toBe(2));
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2);
-    await user.click(within(edit).getByRole("button", { name: "Remove photo 1" }));
+    await waitFor(() => expect(within(edit).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(2));
+    await user.click(within(edit).getByRole("button", { name: "Remove Photo 1" }));
+    await user.click(within(within(edit).getByRole("group", { name: "Remove Photo 1" })).getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(made.imageCount).toBe(1));
-    expect(within(edit).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(1);
+    await waitFor(() => expect(within(edit).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(1));
   });
 
   it("rejects a file that is not an image or is too small", async () => {
@@ -552,11 +558,11 @@ describe("quick actions", () => {
     await ready();
     await user.click(screen.getByRole("button", { name: "Add item" }));
     const dialog = await editorPage("Add item");
-    const input = dialog.querySelector('input[type="file"]');
+    const input = screen.getByTestId("media-input");
     fireEvent.change(input, { target: { files: [new File([new Uint8Array(40)], "x.png", { type: "image/png" }), pngFile("tiny.png", 50)] } });
     expect(await within(dialog).findByText(/x\.png: Use a JPG, PNG or WebP image/)).toBeInTheDocument();
     expect(within(dialog).getByText(/tiny\.png: Each image must be at least 200 pixels/)).toBeInTheDocument();
-    expect(within(dialog).queryAllByRole("button", { name: /^Remove photo/ })).toHaveLength(0);
+    expect(within(dialog).queryAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(0);
   });
 
   it("locks the price of an item in a flash sale but lets everything else save", async () => {
@@ -1016,20 +1022,46 @@ describe("item editor sections", () => {
     const dialog = await openForm(user);
     await user.type(within(dialog).getByLabelText("Name"), "Ordered");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    await user.upload(dialog.querySelector('input[type="file"]'), [pngFile("a.png"), pngFile("b.png")]);
-    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove photo/ })).toHaveLength(2));
-    expect(within(dialog).getByRole("button", { name: "Move photo 1 earlier" })).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Move photo 2 later" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: "Move photo 2 earlier" }));
-    expect(within(dialog).getByText("Cover").closest("li").querySelector("img")).toHaveAttribute("src", "blob:order-2");
+    await user.upload(screen.getByTestId("media-input"), [pngFile("a.png"), pngFile("b.png")]);
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(2));
+    expect(within(dialog).getByRole("button", { name: "Move Photo 1 earlier" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Move Photo 2 later" })).toBeDisabled();
+    await user.click(within(dialog).getByRole("button", { name: "Move Photo 2 earlier" }));
+    const uploads = vi.spyOn(api, "uploadItemPhoto");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Ordered", imageCount: 2 }));
+    expect(uploads.mock.calls.map((c) => c[1].name)).toEqual(["b.png", "a.png"]);
     const made = M.state.items.at(-1);
     const [first, second] = made.imagePaths;
     await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
     const edit = await editorPage("Edit item");
-    await user.click(within(edit).getByRole("button", { name: "Move photo 2 earlier" }));
+    await user.click(await within(edit).findByRole("button", { name: "Move Photo 2 earlier" }));
+    await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(made.imagePaths).toEqual([second, first]));
+  });
+
+  it("keeps a file that failed to upload when a new item is saved, and uploads it on retry", async () => {
+    const user = userEvent.setup();
+    let n = 0;
+    URL.createObjectURL = vi.fn(() => `blob:keep-${++n}`);
+    URL.revokeObjectURL = vi.fn();
+    const dialog = await openForm(user);
+    await user.type(within(dialog).getByLabelText("Name"), "Keeper");
+    await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
+    await user.upload(screen.getByTestId("media-input"), [pngFile("a.png"), pngFile("b.png")]);
+    await waitFor(() => expect(within(dialog).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(2));
+    const real = api.uploadItemPhoto;
+    const uploads = vi.spyOn(api, "uploadItemPhoto").mockImplementation((id, file, opts) => (file.name === "b.png" ? Promise.reject(Object.assign(new Error("x"), { code: "file_not_uploaded" })) : real(id, file, opts)));
+    await user.click(within(dialog).getByRole("button", { name: "Add item" }));
+    await editorPage("Edit item");
+    expect(await screen.findByText(/1 file did not upload\. Retry the failed files below\./)).toBeInTheDocument();
+    const made = M.state.items.at(-1);
+    expect(made.imageCount).toBe(1);
+    const retry = await screen.findByRole("button", { name: "Retry Photo 2" });
+    uploads.mockImplementation((id, file, opts) => real(id, file, opts));
+    await user.click(retry);
+    await waitFor(() => expect(made.imageCount).toBe(2));
+    expect(screen.queryByRole("button", { name: /^Retry/ })).toBeNull();
   });
 
   it("adds a video to a new item, refuses other formats, and removes a saved video", async () => {
@@ -1039,19 +1071,19 @@ describe("item editor sections", () => {
     const dialog = await openForm(user);
     await user.type(within(dialog).getByLabelText("Name"), "Clip");
     await user.type(within(dialog).getByLabelText("Price (KES)"), "100");
-    const input = dialog.querySelector('input[accept="video/mp4,video/webm"]');
-    expect(input).not.toBeNull();
+    const input = screen.getByTestId("media-input");
     await user.upload(input, new File([new Uint8Array(20)], "clip.mp4", { type: "video/mp4" }));
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Remove video 1" })).toBeInTheDocument());
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Remove Video 1" })).toBeInTheDocument());
     fireEvent.change(input, { target: { files: [new File(["x"], "clip.mov", { type: "video/quicktime" })] } });
-    expect(await within(dialog).findByText(/clip\.mov: Use an MP4 or WebM video/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/clip\.mov: This looks like an iPhone video/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Clip", hasVideo: true }));
     const made = M.state.items.at(-1);
     expect(await api.listItemVideos(made.id)).toHaveLength(1);
     await go(user, () => within(card(made.id)).getByRole("button", { name: /^Edit/ }));
     const edit = await editorPage("Edit item");
-    await user.click(await within(edit).findByRole("button", { name: "Remove video 1" }));
+    await user.click(await within(edit).findByRole("button", { name: "Remove Video 1" }));
+    await user.click(within(within(edit).getByRole("group", { name: "Remove Video 1" })).getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(made.hasVideo).toBe(false));
   });
 });

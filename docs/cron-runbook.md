@@ -20,10 +20,11 @@ The schedule is **not a migration** because it needs secrets that differ per pro
    select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
    select vault.create_secret('<the same CRON_SECRET>', 'cron_secret');
    ```
-4. Run `supabase/cron/schedule.sql` in the SQL editor. It is safe to run again.
-5. Open **Admin > Automation**. The two messaging jobs should read Active. Press **Run now** on each and confirm the last run succeeds.
-6. `proofs-purge` is not on that page. Check it in the SQL editor: `select jobname, schedule, active from cron.job;` should list
-   all three, and `select status, return_message, start_time from cron.job_run_details d join cron.job j using (jobid) where j.jobname = 'proofs-purge' order by start_time desc limit 5;`
+4. Run `supabase/cron/schedule.sql` in the SQL editor. It is safe to run again, and it stops with a plain message if an extension or a Vault secret is missing. Before it, make sure the function secrets put messaging in live mode (`APP_ENV=production` or `MESSAGING_MODE=live`, plus `AT_API_KEY`, `AT_USERNAME`, `RESEND_API_KEY`, `MAIL_FROM`); otherwise the dispatcher marks messages sent without sending them.
+5. Run `supabase/cron/verify.sql`. The last-run column on the Automation page only says the request was queued; `verify.sql` shows what the functions answered (200 is good, 401 is a secret mismatch, 404 is a function that is not deployed).
+6. Open **Admin > Automation**. The two messaging jobs should read Active. Press **Run now** on each and confirm the last run succeeds.
+7. `proofs-purge` is not on that page. Check it in the SQL editor: `select jobname, schedule, active from cron.job;` should list
+   all four, and `select status, return_message, start_time from cron.job_run_details d join cron.job j using (jobid) where j.jobname = 'proofs-purge' order by start_time desc limit 5;`
    should show a succeeded run the morning after.
 
 ## If the page says something is wrong

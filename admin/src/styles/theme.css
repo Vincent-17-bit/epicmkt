@@ -87,14 +87,6 @@
   --radius-pill: 999px;
   --radius-round: 50%;
 
-  /* Type scale: 16px is the base, 12px the smallest size used anywhere. */
-  --fs-xs: 0.75rem;
-  --fs-sm: 0.875rem;
-  --fs-md: 1rem;
-  --fs-lg: 1.125rem;
-  --fs-xl: 1.375rem;
-  --fs-2xl: 1.75rem;
-
   --indicator-w: 3px;
   --nav-item-h: 2.25rem;
 

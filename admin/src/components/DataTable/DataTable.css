@@ -55,6 +55,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
   color: var(--text-muted);
 }
 
@@ -113,7 +115,8 @@
   align-items: center;
   gap: var(--space-2);
   min-height: 2rem;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .dt__view {
@@ -150,6 +153,7 @@
 .dt__hint {
   margin: 0 0 var(--space-2);
   font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
   color: var(--text-muted);
 }
 
@@ -174,8 +178,9 @@
   background: transparent;
   padding: 0;
   color: var(--primary-text);
-  font-weight: 600;
+  font-weight: var(--fw-medium);
   font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
   cursor: pointer;
 }
 
@@ -187,7 +192,8 @@
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   background: var(--primary-tint);
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .dt__scroll {
@@ -224,7 +230,8 @@
   align-items: center;
   padding: 0 var(--space-3);
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -326,6 +333,7 @@
   justify-content: space-between;
   gap: var(--space-3);
   font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .dt__pager {
@@ -356,7 +364,8 @@
   content: attr(data-label);
   flex: none;
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-xs);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -404,7 +413,9 @@
 .dt__stack span {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
   color: var(--text-muted);
 }
 

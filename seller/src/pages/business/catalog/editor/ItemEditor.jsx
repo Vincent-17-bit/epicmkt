@@ -66,7 +66,8 @@ function EditorForm({ item, sections, category, business }) {
   const draftId = item?.id ?? null;
   const backTo = `${CATALOG}${location.state?.from ?? ""}`;
 
-  const media = useMediaSlot(item, { onPhotosChanged: () => qc.invalidateQueries({ queryKey: ["catalog"] }) });
+  const seedRef = useRef(location.state?.leftover ?? []);
+  const media = useMediaSlot(item, { onPhotosChanged: () => qc.invalidateQueries({ queryKey: ["catalog"] }), seed: seedRef.current });
 
   // The starting form is the saved item, or the draft kept on this device if it was made from this same item.
   const startRef = useRef(null);
@@ -204,19 +205,19 @@ function EditorForm({ item, sections, category, business }) {
     setBusy(true);
     try {
       const id = await api.saveItem(item?.id ?? null, check.value);
-      const { problems } = await media.flush(id);
+      const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       const base = isNew ? "Item added as a draft." : "Item saved.";
-      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Open Edit to add the rest.` } : { tone: "ok", text: base };
-      if (!stay) {
+      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : { tone: "ok", text: base };
+      if (!stay && problems.length === 0) {
         allow();
         navigate(backTo, { state: { notice: result } });
         return;
       }
       if (isNew) {
         allow();
-        navigate(`${CATALOG}/${id}/edit`, { replace: true, state: { from: location.state?.from, step, notice: result } });
+        navigate(`${CATALOG}/${id}/edit`, { replace: true, state: { from: location.state?.from, step, notice: result, leftover } });
         return;
       }
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
@@ -236,7 +237,7 @@ function EditorForm({ item, sections, category, business }) {
   useEffect(() => {
     if (location.state?.notice) {
       setNotice(location.state.notice);
-      navigate(location.pathname, { replace: true, state: { ...location.state, notice: undefined } });
+      navigate(location.pathname, { replace: true, state: { ...location.state, notice: undefined, leftover: undefined } });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -385,7 +386,7 @@ function EditorForm({ item, sections, category, business }) {
           </form>
         </div>
 
-        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} area={area} /></aside>}
+        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
             <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" />
