@@ -8,7 +8,7 @@ const to = join(root, "supabase", "functions", "_shared", "synced");
 // [path under shared/src, name under supabase/functions/_shared/synced]
 const files = [
   ["seller/password.js", "password.js"], ["seller/media.js", "media.js"], ["seller/images.js", "images.js"],
-  ["seller/cloudinarySign.js", "cloudinarySign.js"], ["time.js", "time.js"]
+  ["seller/cloudinarySign.js", "cloudinarySign.js"], ["time.js", "time.js"], ["seller/settings.js", "settings.js"]
 ];
 const check = process.argv.includes("--check");
 
