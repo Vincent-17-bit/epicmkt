@@ -49,12 +49,15 @@ describe("Subscription: summary, calendar months and grace", () => {
     expect(await screen.findByTestId("banner-expiring")).toHaveTextContent("ends in 2 days");
   });
 
-  it("a suspended seller is locked out and sees why; a paused seller keeps the page and sees the banner", async () => {
+  it("a suspended seller sees why and can still see their payments and pay; a paused seller keeps the page and sees the banner", async () => {
     const { unmount } = await signedInApp("/business/subscription", () => { M.state.business.status = "suspended"; M.state.business.statusReason = "Selling counterfeit goods"; });
     expect(await screen.findByTestId("suspended-banner")).toHaveTextContent("Selling counterfeit goods");
-    expect(await screen.findByTestId("locked")).toBeInTheDocument();
-    expect(screen.queryByTestId("payment-card")).toBeNull();
-    expect(screen.queryByRole("link", { name: "Subscription" })).toBeNull();
+    expect(await screen.findByTestId("payment-card")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Payment history" })).toBeInTheDocument();
+    expect(screen.queryByTestId("locked")).toBeNull();
+    expect(screen.queryByTestId("banner-suspended")).toBeNull(); // the layout banner already says it
+    expect(screen.getByRole("link", { name: "Subscription" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /upgrade/i })).toBeNull();
     unmount();
     await signedInApp("/business/subscription", () => M.state.business.status = "paused");
     expect(await screen.findByTestId("banner-paused")).toHaveTextContent("unlisted");

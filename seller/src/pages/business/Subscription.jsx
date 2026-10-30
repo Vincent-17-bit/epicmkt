@@ -87,6 +87,8 @@ export default function Subscription() {
   const view = subscriptionView(business, now());
   const open = (payments.data ?? []).find((p) => p.status === "submitted") ?? null;
   const left = daysLeft(business.paidUntil, now());
+  // Paying always works. Changing the plan or the category does not: the server refuses those for a suspended seller, so the page does not offer them.
+  const suspended = business.status === "suspended";
 
   return (
     <div className={ui.page}>
@@ -95,7 +97,7 @@ export default function Subscription() {
         <p className={ui.muted}>{business.name}</p>
       </div>
 
-      <Banners business={business} onAction={() => choose({ purpose: null })} />
+      <Banners business={business} onAction={() => choose({ purpose: null })} skip={suspended ? ["suspended"] : []} />
 
       <section className={ui.card} aria-labelledby="sum-title">
         <h2 id="sum-title" className={ui.srOnly}>Your subscription</h2>
@@ -126,8 +128,8 @@ export default function Subscription() {
         )}
       </div>
 
-      <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />
-      <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />
+      {suspended ? null : <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />}
+      {suspended ? null : <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />}
       <PaymentHistory payments={payments.data ?? []} />
       {sub.data.plans[business.planKey] && <p className={ui.muted}>{formatKes(sub.data.plans[business.planKey].price)} per month is your current price.</p>}
     </div>

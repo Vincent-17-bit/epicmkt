@@ -127,7 +127,7 @@ export async function undoBulkBusinessAction(undoToken) {
     ids: record.before.map((item) => item.id),
     undone: false,
   });
-  return { restored: record.before.length };
+  return { restored: record.before.length, skipped: 0 };
 }
 
 export async function listAuditEntries({ limit = 50 } = {}) {

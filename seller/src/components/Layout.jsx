@@ -88,7 +88,8 @@ export default function Layout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [more]);
-  const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname);
+  // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
+  const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname);
   const moreActive = /^\/business\/(exceptions|flash|offers|qr|account)/.test(pathname);
 
   const toggle = () => {
@@ -115,7 +116,7 @@ export default function Layout() {
         <nav className={styles.nav} aria-label="Business">
           <div className={styles.primary}>
             {!suspended && <Item to="/business/catalog" icon={faStore}>My listings</Item>}
-            {!suspended && <Item to="/business/subscription" icon={faCreditCard}>Subscription</Item>}
+            <Item to="/business/subscription" icon={faCreditCard}>Subscription</Item>
             <Bell count={unread.data ?? 0} />
             <Item to="/business/questions" icon={faCircleQuestion}>Questions</Item>
             {!suspended && (
@@ -151,7 +152,7 @@ export default function Layout() {
         {suspended && (
           <div className={`${ui.banner} ${ui.tone_danger} ${styles.suspended}`} role="alert" data-testid="suspended-banner">
             <h2>Your account is suspended</h2>
-            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can read your notifications and answer EpicMKT under Questions.</p>
+            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can still see your payments and pay under Subscription, read your notifications and answer EpicMKT under Questions.</p>
           </div>
         )}
         {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
