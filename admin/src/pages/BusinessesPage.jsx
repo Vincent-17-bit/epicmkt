@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
-import { faFilter } from "@fortawesome/free-solid-svg-icons";
+import { faFilter, faStore, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
 import DataTable from "../components/DataTable/index.js";
 import Tabs from "../components/Tabs.jsx";
+import EmptyState from "../components/EmptyState.jsx";
 import BulkBar from "./businesses/BulkBar.jsx";
 import Filters from "./businesses/Filters.jsx";
 import { columns } from "./businesses/columns.jsx";
@@ -36,6 +37,12 @@ export default function BusinessesPage() {
     placeholderData: (previous) => previous,
   });
 
+  const narrowed = tab !== "all" || activeFilters > 0;
+  const showAll = () => {
+    setTab("all");
+    setFilters(emptyFilters);
+  };
+
   const applyExtra = (state) => {
     setTab(state?.tab ?? "all");
     setFilters({ ...emptyFilters, ...(state?.filters ?? {}) });
@@ -60,7 +67,20 @@ export default function BusinessesPage() {
           exportName="businesses"
           searchPlaceholder="Search name, phone, seller ID, slug, owner"
           initialSearch={initialSearch}
-          emptyText={tab === "deleted" ? "The recycle bin is empty" : "No businesses match"}
+          what="businesses"
+          emptyState={
+            tab === "deleted" ? (
+              <EmptyState icon={faTrashCan} title="The recycle bin is empty">Businesses you delete wait here before they are removed for good.</EmptyState>
+            ) : narrowed ? (
+              <EmptyState icon={faStore} title="No businesses match" action={{ label: "Show all businesses", onClick: showAll }}>
+                Nothing fits this tab, these filters and your search.
+              </EmptyState>
+            ) : (
+              <EmptyState icon={faStore} title="No businesses match" action={{ label: "Review applications", to: "/admin/applications" }}>
+                A business appears here once its application is approved and paid, or when your search matches one.
+              </EmptyState>
+            )
+          }
           selectable
           toolbar={
             <Button size="sm" icon={faFilter} aria-expanded={filtersOpen} onClick={() => setFiltersOpen((open) => !open)}>

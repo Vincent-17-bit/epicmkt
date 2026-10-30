@@ -2,7 +2,7 @@
 
 .applications__toolbar {
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .applications__search {
@@ -13,9 +13,9 @@
 .applications__search input {
   width: 100%;
   box-sizing: border-box;
-  padding: 0.55rem 0.8rem;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--text);
 }
@@ -41,11 +41,11 @@
 }
 
 .applications__overdue {
-  margin-left: 0.5rem;
+  margin-left: var(--space-2);
 }
 
 .applications__empty {
-  padding: 2rem 1rem;
+  padding: var(--space-8) var(--space-4);
   text-align: center;
   color: var(--text-muted);
 }
@@ -54,20 +54,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  margin-top: 0.75rem;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .applications__pager-buttons {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .applications__channels {
   flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-4);
   border: 0;
   padding: 0;
   margin: 0;
@@ -75,17 +75,17 @@
 
 .applications__channels legend {
   float: left;
-  margin-right: 1rem;
+  margin-right: var(--space-4);
   padding: 0;
 }
 
 .applications__preview {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 0.8rem;
+  gap: var(--space-2);
+  padding: var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md);
   background: var(--primary-tint);
 }
 
@@ -99,15 +99,15 @@
 
 .applications__message figcaption {
   font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
   line-height: var(--lh-xs);
   letter-spacing: var(--ls-xs);
-  font-weight: var(--fw-semibold);
   color: var(--text-muted);
 }
 
 .applications__message blockquote {
-  margin: 0.25rem 0 0;
-  padding: 0.5rem 0.7rem;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
   border-left: 3px solid var(--primary);
   background: var(--surface);
   white-space: pre-wrap;
@@ -116,7 +116,7 @@
 .field--inline {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   font-weight: var(--fw-semibold);
 }
 
@@ -133,12 +133,12 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
 .detail__title {
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--space-1);
   font-size: var(--fs-xl);
   line-height: var(--lh-xl);
   letter-spacing: var(--ls-xl);
@@ -150,26 +150,26 @@
 
 .detail__chips {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .detail__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 .detail__grid {
   display: grid;
-  gap: 0.7rem;
+  gap: var(--space-3);
   margin: 0;
 }
 
 .detail__field {
   display: grid;
   grid-template-columns: minmax(8rem, 35%) 1fr;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .detail__field dt {
@@ -190,31 +190,31 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 .detail__list li {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 0.7rem 0.8rem;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-3);
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-md);
 }
 
 .detail__list-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-shrink: 0;
 }
 
 .detail__inline-chip {
-  margin-left: 0.5rem;
+  margin-left: var(--space-2);
 }
 
 .detail__hint {
-  margin: 0.75rem 0 0;
+  margin: var(--space-3) 0 0;
   font-size: var(--fs-sm);
   line-height: var(--lh-sm);
 }
@@ -225,20 +225,20 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: var(--space-2);
 }
 
 .detail__timeline li {
   display: flex;
   flex-direction: column;
-  padding-left: 0.8rem;
+  padding-left: var(--space-3);
   border-left: 3px solid var(--border);
 }
 
 @media (max-width: 40rem) {
   .detail__field {
     grid-template-columns: 1fr;
-    gap: 0.1rem;
+    gap: var(--space-1);
   }
 
   .detail__list li {
