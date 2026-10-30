@@ -1,4 +1,5 @@
 import { adminFn, audit, json, must, z, type AdminDeps } from "../_shared/adminKit.ts";
+import { autoActivate } from "../_shared/activate.ts";
 
 const Body = z.object({
   applicationId: z.string().uuid(),
@@ -42,7 +43,7 @@ export const adminDecideApplication = (d: AdminDeps) =>
     const now = d.now().toISOString();
 
     const found = await d.db.from("applications")
-      .select("id,status,reference_no,business_name,email,phone,price_at_submission,plan_snapshot,verification_level,admin_note,review_started_at")
+      .select("id,status,reference_no,business_name,email,phone,credit_kes,price_at_submission,plan_snapshot,verification_level,admin_note,review_started_at")
       .eq("id", applicationId).maybeSingle();
     const app = found.data;
     if (!app) return json({ error: "not_found" }, 404);
@@ -157,6 +158,11 @@ export const adminDecideApplication = (d: AdminDeps) =>
       after: { status: next, verification_level: (patch.verification_level as string | undefined) ?? app.verification_level, priceOverride: priceOverride ?? null },
       reason: reason ?? note ?? null,
     });
+
+    if (action === "approve" && next === "payment_confirming") {
+      const live = await autoActivate(d, applicationId);
+      return json({ ok: true, action, status: live.activated ? "activated" : next, queued: outbox.map((m) => m.channel), activated: live.activated });
+    }
 
     return json({ ok: true, action, status: next, queued: outbox.map((m) => m.channel) });
   });
