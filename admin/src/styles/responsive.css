@@ -84,7 +84,7 @@
   input,
   select,
   textarea {
-    font-size: 16px;
+    font-size: var(--fs-md);
   }
 
   .admin-content > *,
@@ -371,10 +371,6 @@
 }
 
 @media (max-width: 17rem) {
-  html {
-    font-size: 12px;
-  }
-
   .admin-header {
     padding: 0.4rem 0.5rem;
   }
