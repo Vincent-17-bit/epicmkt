@@ -122,7 +122,7 @@ export default function CropDialog({ spec, photo, onCancel, onSave }) {
   };
 
   const card = safeShare(spec, "card");
-  const what = spec.kind === "logo" ? "logo" : "cover photo";
+  const what = spec.noun ?? (spec.kind === "logo" ? "logo" : "cover photo");
 
   return (
     <Modal

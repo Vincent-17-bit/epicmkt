@@ -70,8 +70,8 @@ function CardView({ form, item, hl, device }) {
   );
 }
 
-function PageView({ form, item, images, hl }) {
-  const gallery = useMemo(() => images.map((url, i) => ({ id: `p${i}`, url })), [images]);
+function PageView({ form, item, images, media, hl }) {
+  const gallery = useMemo(() => (media?.length ? media : images.map((url, i) => ({ id: `p${i}`, kind: "image", url }))), [images, media]);
   const price = priceParts(form, item);
   const highlights = form.highlights.filter((h) => h.text.trim());
   const specs = form.specs.filter((s) => s.label.trim() && s.value.trim());
@@ -81,7 +81,7 @@ function PageView({ form, item, images, hl }) {
   return (
     <article className={styles.pg}>
       <div className={styles.pgGallery} data-hl={hl("media")}>
-        {gallery.length ? <ProductGallery images={gallery} name={item.name} /> : <div className={styles.pgNoPhoto}>No photo yet</div>}
+        {gallery.length ? <ProductGallery media={gallery} name={item.name} /> : <div className={styles.pgNoPhoto}>No photo yet</div>}
       </div>
       <div className={styles.pgInfo}>
         {form.brand.trim() && <p className={styles.pgBrand} data-hl={hl("brand")}>{form.brand.trim()}</p>}
@@ -130,7 +130,7 @@ function PageView({ form, item, images, hl }) {
   );
 }
 
-export default function LivePreview({ form, images, area }) {
+export default function LivePreview({ form, images, media, area }) {
   const [view, setView] = useState(() => readDevicePref("seller.editor.previewView", "card", VIEWS.map((v) => v[0])));
   const [device, setDevice] = useState(() => readDevicePref("seller.editor.previewDevice", "mobile", DEVICES.map((d) => d[0])));
   const pick = (setter, key) => (value) => { setter(value); storeDevicePref(key, value); };
@@ -162,7 +162,7 @@ export default function LivePreview({ form, images, area }) {
         <p className={styles.sr}>{item.name}. {priceSummary(form)}.</p>
         <ScaledFrame width={DESIGN_WIDTH[device]}>
           <div className={styles.device} data-device={device}>
-            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : <PageView form={form} item={item} images={images} hl={hl} />}
+            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : <PageView form={form} item={item} images={images} media={media} hl={hl} />}
           </div>
         </ScaledFrame>
       </div>

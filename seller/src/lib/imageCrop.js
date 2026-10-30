@@ -35,6 +35,17 @@ export const SHOP_IMAGES = {
   },
 };
 
+export const ITEM_PHOTO_SPEC = {
+  kind: "item",
+  noun: "photo",
+  title: "Item photo",
+  ratio: 4 / 3,
+  out: { w: 1600, h: 1200 },
+  minSource: { w: 267, h: 200 },
+  round: false,
+  tooSmall: "too_small",
+};
+
 export const SHOP_IMAGE_KINDS = Object.keys(SHOP_IMAGES);
 
 const clamp = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v)));
