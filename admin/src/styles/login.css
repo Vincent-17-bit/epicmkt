@@ -7,18 +7,18 @@
   display: grid;
   place-items: center;
   padding: 1.5rem 1rem;
-  background: var(--admin-bg);
-  color: var(--admin-text);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .admin-login__card {
   width: 100%;
   max-width: 24rem;
   padding: 2rem 1.75rem;
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 1.1rem;
-  box-shadow: var(--admin-shadow);
+  box-shadow: var(--shadow);
 }
 
 .admin-login__brand {
@@ -35,7 +35,7 @@
 
 .admin-login__brand span {
   font-size: 0.75rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .admin-login__title {
@@ -45,16 +45,16 @@
 
 .admin-login__lead {
   margin: 0 0 1.25rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
   font-size: 0.9rem;
 }
 
 .admin-login__error {
   margin: 0 0 1rem;
   padding: 0.65rem 0.8rem;
-  border: 1px solid var(--admin-danger);
+  border: 1px solid var(--danger);
   border-radius: 0.75rem;
-  color: var(--admin-danger);
+  color: var(--danger);
   font-size: 0.88rem;
 }
 
@@ -67,22 +67,22 @@
 .admin-login__field label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .admin-login__field input {
   height: 2.75rem;
   padding: 0 0.9rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--admin-bg);
-  color: var(--admin-text);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .admin-login__field input:focus-visible {
-  outline: 2px solid var(--admin-primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
-  border-color: var(--admin-primary);
+  border-color: var(--primary);
 }
 
 .admin-login__field input:disabled {
@@ -114,7 +114,7 @@
 .admin-gate p {
   margin: 0;
   max-width: 28rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .admin-gate__actions {
@@ -134,16 +134,16 @@
   padding-right: 2.9rem;
   height: 2.75rem;
   padding-left: 0.9rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--admin-bg);
-  color: var(--admin-text);
+  background: var(--bg);
+  color: var(--text);
 }
 
 .admin-password input:focus-visible {
-  outline: 2px solid var(--admin-primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 1px;
-  border-color: var(--admin-primary);
+  border-color: var(--primary);
 }
 
 .admin-password__toggle {
@@ -158,30 +158,30 @@
   border: 0;
   border-radius: 0.55rem;
   background: transparent;
-  color: var(--admin-muted);
+  color: var(--text-muted);
   cursor: pointer;
 }
 
 .admin-password__toggle:hover {
-  color: var(--admin-text);
+  color: var(--text);
 }
 
 .admin-password__toggle:focus-visible {
-  outline: 2px solid var(--admin-primary);
+  outline: 2px solid var(--primary-text);
 }
 
 .admin-login__hint {
-  color: var(--admin-muted);
+  color: var(--text-muted);
   font-size: 0.78rem;
 }
 
 .admin-login__success {
   margin: 0 0 1rem;
   padding: 0.65rem 0.8rem;
-  border: 1px solid var(--admin-primary);
+  border: 1px solid var(--primary);
   border-radius: 0.75rem;
-  background: var(--admin-primary-tint);
-  color: var(--admin-text);
+  background: var(--primary-tint);
+  color: var(--text);
   font-size: 0.88rem;
 }
 
@@ -192,7 +192,7 @@
   padding: 0.4rem;
   border: 0;
   background: transparent;
-  color: var(--admin-primary-strong);
+  color: var(--primary-text);
   font-size: 0.88rem;
   cursor: pointer;
 }
@@ -202,7 +202,7 @@
 }
 
 .admin-login__link:disabled {
-  color: var(--admin-muted);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
@@ -230,7 +230,7 @@
 
 .account-details dt {
   font-size: 0.75rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .account-details dd {
@@ -256,14 +256,14 @@
   max-width: calc(100vw - 2rem);
   padding: 0.8rem 1rem;
   border-radius: 0.9rem;
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
-  box-shadow: var(--admin-shadow);
-  color: var(--admin-text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  color: var(--text);
 }
 
 .admin-idle p { margin: 0; }
 .no-access h3 { margin-top: 0; }
 
 .session-list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
-.session-list li { padding: 0.6rem 0.75rem; border: 1px solid var(--admin-border); border-radius: 0.7rem; }
+.session-list li { padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: 0.7rem; }

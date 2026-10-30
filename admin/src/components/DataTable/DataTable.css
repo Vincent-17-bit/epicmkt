@@ -3,8 +3,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  background: var(--admin-surface);
-  border: 1px solid var(--admin-border);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 0.6rem;
   padding: 0.75rem;
 }
@@ -32,13 +32,13 @@
   max-width: 30rem;
   height: 2.25rem;
   padding: 0 0.7rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--admin-surface);
+  background: var(--surface);
 }
 
 .dt__search:focus-within {
-  border-color: var(--admin-primary);
+  border-color: var(--primary);
 }
 
 .dt__search input {
@@ -47,15 +47,15 @@
   border: none;
   outline: none;
   background: transparent;
-  color: var(--admin-text);
+  color: var(--text);
 }
 
 .dt__search kbd {
   padding: 0 0.4rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.4rem;
   font-size: 0.72rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .dt__tools {
@@ -74,10 +74,10 @@
 .dt select {
   height: 2.25rem;
   padding: 0 0.6rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--admin-surface);
-  color: var(--admin-text);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .dt__pop {
@@ -93,10 +93,10 @@
   max-height: 20rem;
   overflow: auto;
   padding: 0.75rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.9rem;
-  background: var(--admin-surface);
-  box-shadow: var(--admin-shadow);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .dt__list {
@@ -129,13 +129,13 @@
   border: none;
   border-radius: 0.5rem;
   background: transparent;
-  color: var(--admin-text);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
 }
 
 .dt__view-apply:hover {
-  background: var(--admin-primary-tint);
+  background: var(--primary-tint);
 }
 
 .dt__icon {
@@ -143,14 +143,14 @@
   height: 2rem;
   border: none;
   background: transparent;
-  color: var(--admin-text);
+  color: var(--text);
   cursor: pointer;
 }
 
 .dt__hint {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .dt__save {
@@ -163,17 +163,17 @@
   min-width: 0;
   height: 2.25rem;
   padding: 0 0.6rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--admin-surface);
-  color: var(--admin-text);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .dt__link {
   border: none;
   background: transparent;
   padding: 0;
-  color: var(--admin-primary-strong);
+  color: var(--primary-text);
   font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
@@ -186,7 +186,7 @@
   gap: 0.75rem;
   padding: 0.55rem 0.8rem;
   border-radius: 0.75rem;
-  background: var(--admin-primary-tint);
+  background: var(--primary-tint);
   font-size: 0.9rem;
 }
 
@@ -194,13 +194,13 @@
   position: relative;
   max-height: min(72dvh, 48rem);
   overflow: auto;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.8rem;
   overscroll-behavior: contain;
 }
 
 .dt__scroll:focus-visible {
-  outline: 2px solid var(--admin-primary);
+  outline: 2px solid var(--primary-text);
   outline-offset: 2px;
 }
 
@@ -215,8 +215,8 @@
   display: grid;
   align-items: center;
   height: 2.571rem;
-  background: var(--admin-surface);
-  border-bottom: 1px solid var(--admin-border);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
 }
 
 .dt__hcell {
@@ -261,12 +261,12 @@
   display: grid;
   align-items: center;
   min-height: var(--dt-row);
-  border-bottom: 1px solid var(--admin-border);
-  background: var(--admin-surface);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .dt__row:hover {
-  background: var(--admin-primary-tint);
+  background: var(--primary-tint);
 }
 
 .dt__row.is-clickable {
@@ -274,11 +274,11 @@
 }
 
 .dt__row.is-selected {
-  background: var(--admin-primary-tint);
+  background: var(--primary-tint);
 }
 
 .dt__row.is-active {
-  box-shadow: inset 3px 0 0 var(--admin-primary);
+  box-shadow: inset 3px 0 0 var(--primary);
 }
 
 .dt__cell {
@@ -301,12 +301,12 @@
 .dt__cell--check input {
   width: 1.1rem;
   height: 1.1rem;
-  accent-color: var(--admin-primary);
+  accent-color: var(--primary);
 }
 
 .dt__skeleton {
   padding: 1.1rem 1rem;
-  border-bottom: 1px solid var(--admin-border);
+  border-bottom: 1px solid var(--border);
 }
 
 .dt__state {
@@ -316,7 +316,7 @@
   margin: 0;
   padding: 3rem 1rem;
   text-align: center;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .dt__foot {
@@ -337,7 +337,7 @@
 .dt--mobile .dt__row {
   display: block;
   padding: 0.85rem 1rem;
-  border: 1px solid var(--admin-border);
+  border: 1px solid var(--border);
   border-radius: 0.9rem;
 }
 
@@ -359,7 +359,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .dt--mobile .dt__cell--check {
@@ -405,7 +405,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.78rem;
-  color: var(--admin-muted);
+  color: var(--text-muted);
 }
 
 .dt--mobile .dt__stack {
