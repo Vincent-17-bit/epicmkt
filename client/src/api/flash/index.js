@@ -62,7 +62,9 @@ export const getSimilarItems = async (itemId, opts) => {
     const rows = live.isLiveId(itemId) ? await live.getSimilarItems(itemId, opts) : await backend.getSimilarItems(itemId, opts);
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
-    // Still an empty row for the visitor, but a failed read is visible in the browser console instead of silent.
+    // A cancelled read (the visitor moved on) is expected. Any other failure is still an empty row for the visitor, but visible in
+    // the browser console instead of silent.
+    if (error?.name === "AbortError" || /abort/i.test(String(error?.message))) return [];
     console.warn("[similar-items] could not load:", error?.message ?? error);
     return [];
   }

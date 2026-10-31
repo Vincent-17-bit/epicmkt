@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, distanceKm, isListed, nameTokens, rankSimilar } from "@epicmkt/shared";
+import { PLAN_FEATURES, isListed, rankSimilar, similarTerms } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -192,76 +192,87 @@ const SIMILAR_STORES = 100;
 const SIMILAR_POOL = 120;
 const SIMILAR_FEATURED_POOL = 60;
 const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level,plan_key,hours,exceptions,timezone";
+// The card columns plus the brand, which the ranking strips from names. Never the heavy fields (specs, highlights, terms).
+const SIMILAR_ITEM_COLUMNS = `${CARD_COLUMNS},brand`;
+// The function is not deployed yet (migration 0065 not applied): Postgres 42883, or PostgREST PGRST202.
+const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
 const likeEscape = (value) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 const originOfPoint = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
 const pointOf = (b) => (Number.isFinite(b?.lat) && Number.isFinite(b?.lng) ? { lat: b.lat, lng: b.lng } : null);
 
-// Items like this one from ANY other store, whatever its category: a bread finds every bread. The database narrows the
-// pool (same section, a shared word in the name, and, only when that is thin, the same category) and the shared ranking
-// orders it, so the demo backend and live rank identically. Listed and public only (the views already hide the rest).
-// Throws on a failed read; the caller turns that into an empty row.
-export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}) {
-  if (!isLiveId(itemId)) return [];
-  const seed = unwrap(await supabase.from("public_items").select(CARD_COLUMNS).eq("id", itemId).maybeSingle());
-  if (!seed) return [];
-  const base = unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("id", seed.business_id).maybeSingle());
-  if (!base) return [];
-  const visitor = originOfPoint(origin);
-  const here = visitor ?? pointOf(base);
+// The database side of "similar", as one call (migration 0065): a full-text word match on the head-noun forms computed by the
+// shared module, plus the same section, at most three items per store, only listed and public ones. It is a coarse net: the
+// shared `rankSimilar` applies the real relevance gate and the order, exactly as it does for the demo backend. Returns null
+// when the function is not deployed, so the caller can fall back; any other failure throws.
+const similarViaRpc = async (itemId, terms, read) => {
+  const found = await read(supabase.rpc("similar_item_candidates", { p_item_id: itemId, p_terms: terms, p_limit: SIMILAR_POOL }));
+  if (found.error && MISSING_FUNCTION.has(found.error.code)) return null;
+  return unwrap(found) ?? [];
+};
 
-  const section = typeof seed.section === "string" ? seed.section.trim() : "";
-  // Only letters and digits reach the filter, so a name can never alter the query.
-  const words = [...nameTokens(seed.name)].map((w) => w.replace(/[^a-z0-9]/g, "")).filter((w) => w.length >= 3).sort((x, y) => y.length - x.length).slice(0, 3);
+// The same net built from several queries, for a database that does not have the function yet. It only ever feeds the shared
+// gate, so a looser net here cannot put an unrelated product in the row; it just fetches more rows to throw away.
+const similarViaQueries = async ({ seed, base, terms, section, read }) => {
+  // Letters and digits only reach the filter, so a name can never alter the query. A word already covered by a shorter one
+  // ("breads" by "bread") is left out: ilike matches substrings anyway.
+  const words = terms.filter((term, i) => !terms.some((other, j) => j !== i && other.length < term.length && term.startsWith(other))).slice(0, 6);
   const pool = (query, size = SIMILAR_POOL) => query.neq("business_id", base.id).order("created_at", { ascending: false }).limit(size);
   // The same search twice: across every store, and again across featured stores only, so a crowded marketplace of
   // recent items from other stores cannot push the featured stores that have this item out of the pool.
   const searches = (ids) => {
     const scope = () => {
-      const q = supabase.from("public_items").select(CARD_COLUMNS);
+      const q = supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS);
       return ids ? q.in("business_id", ids) : q;
     };
     const size = ids ? SIMILAR_FEATURED_POOL : SIMILAR_POOL;
     const out = [];
-    if (section) out.push(pool(scope().ilike("section", likeEscape(section)), size));
-    if (words.length) out.push(pool(scope().or(words.map((w) => `name.ilike.%${w}%`).join(",")), size));
+    if (section) out.push(read(pool(scope().ilike("section", likeEscape(section)), size)));
+    if (words.length) out.push(read(pool(scope().or(words.map((w) => `name.ilike.%${w}%`).join(",")), size)));
     return out;
   };
   const featuredKeys = Object.keys(PLAN_FEATURES).filter((key) => PLAN_FEATURES[key]?.featured === true);
   const featuredIds = featuredKeys.length
-    ? (unwrap(await supabase.from("public_businesses").select("id").in("plan_key", featuredKeys).neq("id", base.id).limit(SIMILAR_STORES)) ?? []).map((b) => b.id)
+    ? (unwrap(await read(supabase.from("public_businesses").select("id").in("plan_key", featuredKeys).neq("id", base.id).limit(SIMILAR_STORES))) ?? []).map((b) => b.id)
     : [];
   const reads = [...searches(null), ...(featuredIds.length ? searches(featuredIds) : [])];
-  const rows = new Map();
-  const take = (data) => {
-    for (const row of data ?? []) if (row.id !== seed.id && row.business_id !== base.id && !rows.has(row.id)) rows.set(row.id, row);
-  };
-  for (const result of await Promise.all(reads)) take(unwrap(result));
+  const out = [];
+  for (const result of await Promise.all(reads)) out.push(...(unwrap(result) ?? []));
+  return out;
+};
 
-  let stores = new Map();
+// Items of the same KIND as this one from any other store: a bread finds breads and loaves, never a cake, and a store being in
+// the same category is no reason to show its items. The database narrows the pool and the shared ranking decides what
+// qualifies and in what order, so the demo backend and live agree. Listed and public only (the views already hide the rest).
+// Throws on a failed read; the caller turns that into an empty row. `signal` cancels the reads.
+export async function getSimilarItems(itemId, { limit = 12, origin = null, signal = null } = {}) {
+  if (!isLiveId(itemId)) return [];
+  // abortSignal belongs before maybeSingle() / await: it is not available on the builder maybeSingle() returns.
+  const read = (query) => (signal ? query.abortSignal(signal) : query);
+  const seed = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).eq("id", itemId)).maybeSingle());
+  if (!seed) return [];
+  const base = unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("id", seed.business_id)).maybeSingle());
+  if (!base) return [];
+  const visitor = originOfPoint(origin);
+
+  const section = typeof seed.section === "string" ? seed.section.trim() : "";
+  const terms = similarTerms(seed.name, seed.brand);
+  // No head noun and no section: there is nothing to match on, and no row beats a random one.
+  if (!terms.length && !section) return [];
+  const fetched = (await similarViaRpc(itemId, terms, read)) ?? (await similarViaQueries({ seed, base, terms, section, read }));
+  const rows = new Map();
+  for (const row of fetched) if (row?.id && row.id !== seed.id && row.business_id !== base.id && !rows.has(row.id)) rows.set(row.id, row);
+
+  const stores = new Map();
   const loadStores = async (ids) => {
     const missing = ids.filter((id) => !stores.has(id)).slice(0, SIMILAR_STORES * 2);
     if (!missing.length) return;
-    for (const b of unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).in("id", missing)) ?? []) stores.set(b.id, b);
+    for (const b of unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).in("id", missing))) ?? []) stores.set(b.id, b);
   };
 
-  // Too few real matches: fill from stores of the same category, nearest first.
-  if (rows.size < limit && base.category_id) {
-    const siblings = (unwrap(await supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("category_id", base.category_id).neq("id", base.id).limit(500)) ?? [])
-      .map((b) => ({ b, km: here && pointOf(b) ? distanceKm(here, pointOf(b)) : Infinity, sameCounty: base.county && b.county === base.county ? 0 : 1 }))
-      .sort((x, y) => x.sameCounty - y.sameCounty || x.km - y.km)
-      .slice(0, SIMILAR_STORES)
-      .map(({ b }) => b);
-    for (const b of siblings) stores.set(b.id, b);
-    if (siblings.length) {
-      const price = seed.price === null ? NaN : Number(seed.price);
-      let near = supabase.from("public_items").select(CARD_COLUMNS).in("business_id", siblings.map((b) => b.id));
-      if (Number.isFinite(price) && price > 0) near = near.gte("price", Math.floor(price * 0.4)).lte("price", Math.ceil(price * 2.5));
-      take(unwrap(await pool(near)));
-    }
-  }
   const listed = [...rows.values()].filter(isListed);
   if (!listed.length) return [];
   await loadStores([...new Set(listed.map((row) => row.business_id))]);
+  if (signal?.aborted) return [];
   const usable = listed.filter((row) => stores.has(row.business_id));
   if (!usable.length) return [];
 
@@ -284,17 +295,18 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     const item = itemRow(row, business);
     const entry = sales.get(row.id);
     const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
-    return { item, business, entry, pricing };
+    return { item, business, entry, pricing, brand: row.brand };
   });
   const seedPrice = seed.price === null ? NaN : Number(seed.price);
   const ranked = rankSimilar({
-    current: { id: seed.id, businessId: base.id, categoryId: base.category_id, name: seed.name, section: seed.section, price: sales.get(seed.id)?.pricing?.salePrice ?? seedPrice, tags: base.tags, ...(pointOf(base) ?? {}) },
+    current: { id: seed.id, businessId: base.id, categoryId: base.category_id, name: seed.name, brand: seed.brand, section: seed.section, price: sales.get(seed.id)?.pricing?.salePrice ?? seedPrice, tags: base.tags, ...(pointOf(base) ?? {}) },
     candidates: shaped.map((s) => ({
       id: s.item.id,
       businessId: s.business.id,
       featured: PLAN_FEATURES[s.business.plan_key]?.featured === true,
       categoryId: s.business.category_id,
       name: s.item.name,
+      brand: s.brand,
       section: s.item.section,
       price: s.pricing?.salePrice ?? null,
       tags: s.business.tags,
