@@ -466,8 +466,6 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
                 )}
               </div>
 
-              <SimilarItems key={`similar-${current.id}`} itemId={current.id} businessId={business.id} />
-
               <section className={styles.sold} aria-label={t("item.soldBy")}>
                 <div className={styles.seller}>
                   <span className={styles.logo}>
@@ -543,6 +541,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
               </div>
               </div>
               </div>
+              {/* The last section of the page, after the details, description, highlights, specs and the seller card. Keyed by the item so
+                  one product's results can never show under another. */}
+              <SimilarItems key={`similar-${current.id}`} itemId={current.id} businessId={business.id} name={current.name} brand={current.brand ?? ""} className={styles.similar} />
             </>
           )}
         </div>

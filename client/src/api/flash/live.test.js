@@ -263,51 +263,71 @@ describe("live item and business pages", () => {
     const id = (n) => `20000000-0000-0000-0000-0000000002${String(n).padStart(2, "0")}`;
     const setup = () => {
       db().businesses = [
-        bizRow(),
-        bizRow({ id: B, slug: "shop-b", name: "Shop B", tags: ["fade"] }),
-        bizRow({ id: C, slug: "shop-c", name: "Shop C", lat: -0.4, lng: 34.9 }),
-        bizRow({ id: D, slug: "bakery", name: "Bakery", category_id: "bakeries" })
+        bizRow({ category_id: "bakeries" }),
+        bizRow({ id: B, slug: "shop-b", name: "Shop B", category_id: "bakeries", tags: ["fresh"] }),
+        bizRow({ id: C, slug: "shop-c", name: "Shop C", category_id: "supermarkets", lat: -0.4, lng: 34.9 }),
+        bizRow({ id: D, slug: "cake-house", name: "Cake House", category_id: "bakeries" })
       ];
     };
+    const seedItem = (over = {}) => itemRow({ name: "Brown Bread 400g", section: "Bakery", price: "70.00", ...over });
+    const at = (n, store, over = {}) => itemRow({ id: id(n), business_id: store, name: "Bread", section: "Bakery", price: "70.00", ...over });
+    // What the SQL function does, coarsely: a word match on the terms it is given, or the same section, from other stores.
+    const net = ({ p_terms }) =>
+      db().items.filter((r) => r.business_id !== A && (p_terms.some((t) => new RegExp(`\\b${t}\\b`, "i").test(r.name)) || String(r.section ?? "").toLowerCase() === "bakery"));
+    const heavy = (table) => db().calls.filter((c) => c === table).length;
 
-    it("finds the same kind of item in any other store, whatever its category, never the current store or item, and not unrelated ones", async () => {
+    it("finds the same kind of item in any other store, whatever its category, never the current store or item, and never a different kind", async () => {
       setup();
       db().items = [
-        itemRow(),
-        itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", section: "Cuts" }),
-        itemRow({ id: id(1), business_id: B, name: "Fade cut", section: "Cuts" }),
-        itemRow({ id: id(2), business_id: C, name: "Tonic", section: "Care", price: "1100.00" }),
-        itemRow({ id: id(3), business_id: D, name: "Fade cut loaf", section: "Bakery" }),
-        itemRow({ id: id(4), business_id: D, name: "Bread", section: "Bakery" })
+        seedItem(),
+        itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wholemeal loaf", section: "Bakery" }),
+        at(1, B, { name: "Wheat loaf" }),
+        at(2, C, { name: "White bread 800g", section: "Food" }),
+        at(3, D, { name: "Chocolate cake" }),
+        at(4, D, { name: "Cupcake" }),
+        at(5, C, { name: "Milk", section: "Dairy" })
       ];
       const rows = await live.getSimilarItems(SEED);
-      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
-      expect(rows.some((r) => r.id === id(4))).toBe(false);
+      expect(rows.map((r) => r.id)).toEqual([id(1), id(2)]);
       expect(rows[0].business).toMatchObject({ id: B, slug: "shop-b", name: "Shop B" });
     });
 
-    it("ranks a shared name word first, then the same section, then the closest price, and puts a running sale's price on the item", async () => {
+    it("does not fall back to other stores of the same category when there are few real matches", async () => {
+      setup();
+      db().items = [seedItem(), ...[1, 2, 3, 4, 5].map((n) => at(n, D, { name: `Cake ${n}`, section: "Cakes", price: "70.00" })), at(6, C, { name: "Sneakers", section: "Men" })];
+      expect(await live.getSimilarItems(SEED)).toEqual([]);
+    });
+
+    it("returns a short row rather than padding it with things of another kind", async () => {
+      setup();
+      db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, C, { name: "Chocolate cake" }), at(3, D, { name: "Tea", section: "Drinks" })];
+      expect((await live.getSimilarItems(SEED, { limit: 12 })).map((r) => r.id)).toEqual([id(1)]);
+    });
+
+    it("shows nothing for an item with no head noun and no section: no signal, no row", async () => {
+      setup();
+      db().items = [itemRow({ name: "Item", section: null }), at(1, B), at(2, C)];
+      expect(await live.getSimilarItems(SEED)).toEqual([]);
+    });
+
+    it("ranks the same product first, then the same section, then shared words and the closest price, and puts a running sale's price on the item", async () => {
       setup();
       db().items = [
-        itemRow(),
-        itemRow({ id: id(1), business_id: B, name: "Beard oil", section: "Care", price: "1000.00" }),
-        itemRow({ id: id(2), business_id: B, name: "Shave", section: "Cuts", price: "9000.00" }),
-        itemRow({ id: id(3), business_id: C, name: "Trim", section: "cuts", price: "1200.00" })
+        seedItem(),
+        at(1, B, { name: "Bread", section: "Care", price: "70.00" }),
+        at(2, B, { name: "Bread", section: "Bakery", price: "9000.00" }),
+        at(3, C, { name: "Brown bread", section: "bakery", price: "75.00" })
       ];
-      db().sales = [row(3, { item_id: id(3), business_id: C, regular_price: "1200.00", sale_price: "960.00" })];
+      db().sales = [row(3, { item_id: id(3), business_id: C, regular_price: "75.00", sale_price: "60.00" })];
       const rows = await live.getSimilarItems(SEED, { limit: 3 });
-      expect(rows.map((r) => r.id)).toEqual([id(1), id(3), id(2)]);
-      expect(rows[1].pricing.salePrice).toBe(960);
-      expect(rows[1].flash).not.toBeNull();
+      expect(rows.map((r) => r.id)).toEqual([id(3), id(2), id(1)]);
+      expect(rows[0].pricing.salePrice).toBe(60);
+      expect(rows[0].flash).not.toBeNull();
     });
 
     it("prefers a nearer store when everything else ties", async () => {
       setup();
-      db().items = [
-        itemRow(),
-        itemRow({ id: id(1), business_id: C, name: "Trim", section: "Cuts" }),
-        itemRow({ id: id(2), business_id: B, name: "Trim", section: "Cuts" })
-      ];
+      db().items = [seedItem(), at(1, C), at(2, B)];
       db().businesses[1].lat = -0.0059;
       db().businesses[1].lng = 34.6001;
       const rows = await live.getSimilarItems(SEED, { origin: { lat: -0.0058, lng: 34.6 } });
@@ -317,23 +337,22 @@ describe("live item and business pages", () => {
     it("gives about half the row to different featured stores that have the item, alternating with the rest", async () => {
       const shop = (n, over = {}) => ({ ...bizRow(), id: `10000000-0000-0000-0000-0000000001${n}`, slug: `shop-${n}`, name: `Shop ${n}`, ...over });
       db().businesses = [bizRow(), shop(1, { plan_key: "premium" }), shop(2, { plan_key: "premium" }), shop(3), shop(4), shop(5)];
-      const at = (n, k, over = {}) => itemRow({ id: id(10 * n + k), business_id: `10000000-0000-0000-0000-0000000001${n}`, name: "Fade cut", section: "Cuts", ...over });
-      db().items = [itemRow(), at(1, 1), at(1, 2), at(1, 3), at(2, 1), at(3, 1), at(4, 1), at(5, 1)];
+      const bread = (n, k, over = {}) => at(10 * n + k, `10000000-0000-0000-0000-0000000001${n}`, over);
+      db().items = [seedItem(), bread(1, 1), bread(1, 2), bread(1, 3), bread(2, 1), bread(3, 1), bread(4, 1), bread(5, 1)];
       const rows = await live.getSimilarItems(SEED, { limit: 4 });
-      const premium = (r) => r.business.featured;
       expect(rows).toHaveLength(4);
-      expect(rows.map(premium)).toEqual([true, false, true, false]);
+      expect(rows.map((r) => r.business.featured)).toEqual([true, false, true, false]);
       expect(new Set(rows.map((r) => r.business.id)).size).toBe(4);
     });
 
     it("is empty for unknown ids, a lone store, and non-live ids, and does not ask for the heavy fields", async () => {
       setup();
-      db().items = [itemRow()];
+      db().items = [seedItem()];
       expect(await live.getSimilarItems("fade-and-beard")).toEqual([]);
       expect(await live.getSimilarItems("20000000-0000-0000-0000-0000000009ff")).toEqual([]);
       db().selects = [];
       expect(await live.getSimilarItems(SEED)).toEqual([]);
-      db().items = [itemRow(), itemRow({ id: id(1), business_id: B, highlights: ["x"], specs: [{ label: "a", value: "b" }] })];
+      db().items = [seedItem(), at(1, B, { highlights: ["x"], specs: [{ label: "a", value: "b" }] })];
       db().selects = [];
       expect(await live.getSimilarItems(SEED)).toHaveLength(1);
       for (const [table, columns] of db().selects.filter(([t]) => t === "public_items")) for (const name of ["highlights", "specs", "includes", "terms"]) expect(columns, `${table} ${name}`).not.toContain(name);
@@ -341,9 +360,74 @@ describe("live item and business pages", () => {
 
     it("throws when the items cannot be read (the API entry turns that into an empty row)", async () => {
       setup();
-      db().items = [itemRow(), itemRow({ id: id(1), business_id: B })];
+      db().items = [seedItem(), at(1, B)];
       db().failing = { message: "down" };
       await expect(live.getSimilarItems(SEED)).rejects.toThrow();
+    });
+
+    describe("with the database function (migration 0068)", () => {
+      beforeEach(() => {
+        db().rpc = {};
+        db().calls = [];
+      });
+
+      it("asks once, with the head-noun forms, and takes no other item query", async () => {
+        setup();
+        db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, C, { name: "White bread", section: "Food" })];
+        const asked = [];
+        db().rpc.similar_item_candidates = (args) => (asked.push(args), net(args));
+        const rows = await live.getSimilarItems(SEED);
+        expect(rows.map((r) => r.id)).toEqual([id(1), id(2)]);
+        expect(asked).toHaveLength(1);
+        expect(asked[0].p_item_id).toBe(SEED);
+        for (const word of ["bread", "breads", "loaf", "loaves"]) expect(asked[0].p_terms).toContain(word);
+        expect(asked[0].p_limit).toBeGreaterThan(0);
+        expect(heavy("public_items")).toBe(1);
+      });
+
+      it("still applies the relevance gate to whatever the database returns", async () => {
+        setup();
+        db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, D, { name: "Chocolate cake" }), at(3, D, { name: "Cupcake" })];
+        db().rpc.similar_item_candidates = () => db().items.filter((r) => r.business_id !== A);
+        expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
+      });
+
+      it("never shows the current item or store, even if the function returned them", async () => {
+        setup();
+        db().items = [seedItem(), itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Bread", section: "Bakery" }), at(1, B), at(2, C)];
+        db().rpc.similar_item_candidates = () => db().items;
+        expect((await live.getSimilarItems(SEED)).map((r) => r.id).sort()).toEqual([id(1), id(2)]);
+      });
+
+      it("treats a database error other than a missing function as an error, not a reason to fall back", async () => {
+        setup();
+        db().items = [seedItem(), at(1, B)];
+        db().rpc.similar_item_candidates = () => ({ error: { code: "57014", message: "statement timeout" } });
+        await expect(live.getSimilarItems(SEED)).rejects.toThrow();
+        expect(heavy("public_items")).toBe(1);
+      });
+
+      it("carries the abort signal to every read", async () => {
+        setup();
+        db().items = [seedItem(), at(1, B)];
+        const controller = new AbortController();
+        db().rpc.similar_item_candidates = (args) => {
+          controller.abort();
+          return net(args);
+        };
+        await expect(live.getSimilarItems(SEED, { signal: controller.signal })).rejects.toThrow(/abort/i);
+        await expect(live.getSimilarItems(SEED, { signal: AbortSignal.abort() })).rejects.toThrow(/abort/i);
+      });
+    });
+
+    it("falls back to the item queries when the function is not deployed yet, and the gate still holds", async () => {
+      setup();
+      db().rpc = {};
+      db().calls = [];
+      db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, D, { name: "Chocolate cake" })];
+      expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
+      expect(db().calls).toContain("similar_item_candidates");
+      expect(heavy("public_items")).toBeGreaterThan(1);
     });
   });
 

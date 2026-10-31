@@ -61,8 +61,10 @@ export function createFakeSupabase() {
     const tests = [];
     let window = null;
     let wantCount = false;
+    let signal = null;
     const run = () => {
       state.calls.push(table);
+      if (signal?.aborted) return { data: null, error: { name: "AbortError", message: "AbortError: The user aborted a request." } };
       if (state.failing) return { data: null, error: state.failing };
       let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])) && tests.every((test) => test(row)));
       const total = data.length;
@@ -77,6 +79,11 @@ export function createFakeSupabase() {
       },
       order: () => query,
       limit: () => query,
+      // Like supabase-js: not available after maybeSingle(), so a call that chains it too late fails here as it would for real.
+      abortSignal: (value) => {
+        signal = value;
+        return query;
+      },
       range: (from, to) => {
         window = [from, to];
         return query;
@@ -147,15 +154,32 @@ export function createFakeSupabase() {
     removeChannel: () => {
       state.handlers.clear();
     },
-    rpc: async (name, args) => {
-      state.calls.push(name);
-      if (name.startsWith("search_")) {
-        if (state.failing) return { data: null, error: state.failing };
-        const handler = state.rpc[name];
-        return handler ? { data: handler(args), error: null } : { data: null, error: { code: "PGRST202", message: "function not found" } };
-      }
-      if (state.failing || state.offline) return { data: null, error: state.failing ?? { message: "offline" } };
-      return { data: iso(clock()), error: null };
+    rpc: (name, args) => {
+      let signal = null;
+      const run = async () => {
+        state.calls.push(name);
+        if (signal?.aborted) return { data: null, error: { name: "AbortError", message: "AbortError: The user aborted a request." } };
+        if (name.startsWith("search_") || name.startsWith("similar_")) {
+          if (state.failing) return { data: null, error: state.failing };
+          const handler = state.rpc[name];
+          if (!handler) return { data: null, error: { code: "PGRST202", message: "function not found" } };
+          // A handler answers with the data, or with { error } to simulate a failure other than "not deployed".
+          const out = handler(args);
+          return out && !Array.isArray(out) && out.error ? { data: null, error: out.error } : { data: out, error: null };
+        }
+        if (state.failing || state.offline) return { data: null, error: state.failing ?? { message: "offline" } };
+        return { data: iso(clock()), error: null };
+      };
+      const call = {
+        abortSignal: (value) => {
+          signal = value;
+          return call;
+        },
+        then: (resolve, reject) => Promise.resolve().then(run).then(resolve, reject),
+        catch: (reject) => call.then(undefined, reject),
+        finally: (done) => call.then((v) => (done?.(), v), (e) => { done?.(); throw e; })
+      };
+      return call;
     }
   };
 

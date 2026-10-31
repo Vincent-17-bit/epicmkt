@@ -150,3 +150,9 @@
 .frame[data-header="true"] .row {
   padding-top: var(--space-1);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav {
+    transition: none;
+  }
+}
