@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { ago, automationHealth, buildBroadcast, missingVariables, samePayload, segmentKey, smsInfo, templateVariables } from "./messaging.js";
+import { ago, automationHealth, buildBroadcast, cancelOutcome, isSystemTemplate, missingVariables, samePayload, segmentKey, smsInfo, templateVariables } from "./messaging.js";
 
 const NOW = Date.parse("2026-10-21T09:00:00Z");
 const iso = (minutesBack) => new Date(NOW - minutesBack * 60000).toISOString();
@@ -120,4 +120,15 @@ test("relative times", () => {
   assert.equal(ago(iso(5), NOW), "5 min ago");
   assert.equal(ago(iso(180), NOW), "3 h ago");
   assert.equal(ago(iso(60 * 24 * 5), NOW), "5 days ago");
+});
+
+test("cancelling a broadcast says how many were cancelled and how many had already gone", () => {
+  assert.equal(cancelOutcome({ cancelled: 6, sent: 2, inFlight: 0 }), "6 cancelled, 2 already sent.");
+  assert.equal(cancelOutcome({ cancelled: 4, sent: 0, inFlight: 3 }), "4 cancelled, 0 already sent, 3 on the way.");
+  assert.equal(cancelOutcome({ cancelled: 0, sent: 5, inFlight: 0 }), "Nothing left to cancel: 5 already sent.");
+});
+
+test("the templates the system writes are protected, ordinary ones are not", () => {
+  for (const key of ["welcome", "login_details", "application.approve", "billing_reminder"]) assert.equal(isSystemTemplate(key), true, key);
+  for (const key of ["renew_7d", "newsletter", "billing", "applications"]) assert.equal(isSystemTemplate(key), false, key);
 });

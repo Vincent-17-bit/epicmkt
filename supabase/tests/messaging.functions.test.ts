@@ -289,6 +289,29 @@ Deno.test("admin-message: the same idempotencyKey never queues twice", async () 
   assertEquals(w.tables.messages.length, 2);
 });
 
+Deno.test("admin-message: every row of one send shares a batch id, the idempotency key when it is a uuid, and the audit entry names it", async () => {
+  const w = world();
+  const key = "7c1f0e2a-3b4d-4f5a-8b6c-9d0e1f2a3b4c";
+  const out = await (await adminMessage(makeDeps(w))(post({ target: ids, channels: { sms: true, email: true }, body: "x", idempotencyKey: key }, bearer))).json();
+  assertEquals(out.batchId, key);
+  assert(w.tables.messages.every((r) => r.batch_id === key));
+  assertEquals(w.tables.audit_log[0].after.batchId, key);
+
+  const w2 = world();
+  const other = await (await adminMessage(makeDeps(w2))(post({ target: ids, channels: { sms: true }, body: "x", idempotencyKey: "retry-key-0002" }, bearer))).json();
+  assert(/^[0-9a-f-]{36}$/.test(other.batchId), "a key that is not a uuid gets a fresh batch id");
+  assertEquals(new Set(w2.tables.messages.map((r) => r.batch_id)).size, 1);
+});
+
+Deno.test("admin-message: a disabled template is refused and writes nothing", async () => {
+  const w = world();
+  w.tables.message_templates.push({ key: "paused", channel: null, subject: "Paused", body_en: "Hi", body_sw: null, transactional: false, disabled_at: "2026-10-30T08:00:00Z" });
+  const res = await adminMessage(makeDeps(w))(post({ target: ids, channels: { sms: true }, templateKey: "paused" }, bearer));
+  assertEquals(res.status, 422);
+  assertEquals((await res.json()).error, "template_disabled");
+  assertEquals(w.tables.messages.length, 0);
+});
+
 // ---------------------------------------------------------------------------
 // admin-export
 // ---------------------------------------------------------------------------

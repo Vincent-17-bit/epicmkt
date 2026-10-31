@@ -23,7 +23,9 @@ export default function ComposeTab() {
   const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setFormError(""); };
 
   const { data: templates = [] } = useQuery({ queryKey: ["admin-templates"], queryFn: () => api.listTemplates() });
-  const template = templates.find((t) => t.key === form.templateKey);
+  const { data: options, isLoading: optionsLoading, isError: optionsError } = useQuery({ queryKey: ["admin-filter-options"], queryFn: () => api.getBusinessFilterOptions(), staleTime: 5 * 60_000 });
+  const usable = templates.filter((t) => !t.disabled_at);
+  const template = usable.find((t) => t.key === form.templateKey);
   const body = template ? ((form.lang === "sw" && template.body_sw) || template.body_en) : form.body;
   const vars = useMemo(() => templateVariables(body, template?.subject ?? form.subject), [body, template, form.subject]);
   const needed = vars.filter((v) => !["business_name", "seller_id", "paid_until"].includes(v));
@@ -66,9 +68,24 @@ export default function ComposeTab() {
             {SEGMENTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
           </select>
         </label>
-        {(form.segment === "category" || form.segment === "town") && (
-          <label className="field">{form.segment === "category" ? "Category id (for example barber)" : "Town"}
-            <input value={form.segmentValue} onChange={(e) => set({ segmentValue: e.target.value })} />
+        {form.segment === "category" && (
+          <label className="field">Category
+            <select value={form.segmentValue} disabled={optionsLoading || optionsError} onChange={(e) => set({ segmentValue: e.target.value })}>
+              <option value="">{optionsLoading ? "Loading" : optionsError ? "Could not load categories" : "Choose a category"}</option>
+              {(options?.categories ?? []).map((name) => <option key={name} value={name}>{name}</option>)}
+            </select>
+          </label>
+        )}
+        {form.segment === "town" && (
+          <label className="field">Town
+            <select value={form.segmentValue} disabled={optionsLoading || optionsError} onChange={(e) => set({ segmentValue: e.target.value })}>
+              <option value="">{optionsLoading ? "Loading" : optionsError ? "Could not load towns" : "Choose a town"}</option>
+              {(options?.counties ?? []).filter((county) => county.towns?.length).map((county) => (
+                <optgroup key={county.name} label={county.name}>
+                  {county.towns.map((town) => <option key={`${county.name}-${town}`} value={town}>{town}</option>)}
+                </optgroup>
+              ))}
+            </select>
           </label>
         )}
 
@@ -79,9 +96,9 @@ export default function ComposeTab() {
         </fieldset>
 
         <label className="field">Template
-          <select value={form.templateKey} onChange={(e) => { const t = templates.find((x) => x.key === e.target.value); set({ templateKey: e.target.value, ...(t ? { transactional: t.transactional } : {}) }); }}>
+          <select value={form.templateKey} onChange={(e) => { const t = usable.find((x) => x.key === e.target.value); set({ templateKey: e.target.value, ...(t ? { transactional: t.transactional } : {}) }); }}>
             <option value="">Write my own message</option>
-            {templates.map((t) => <option key={t.key} value={t.key}>{t.key} ({t.channel})</option>)}
+            {usable.map((t) => <option key={t.key} value={t.key}>{t.key} ({t.channel})</option>)}
           </select>
         </label>
         {template?.body_sw ? (
