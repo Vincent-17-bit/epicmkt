@@ -238,6 +238,48 @@ Deno.test("media-finalize (hosted): a logo is confirmed but never attached to an
   assertEquals(s.rpcCalls.filter((c) => c.name === "attach_item_media").length, 0);
 });
 
+Deno.test("media-sign: gallery and team photos get their own folder; a full gallery is a 409 before any upload", async () => {
+  const s = setup();
+  const h = sellerMediaSign(s.deps);
+  s.rpcs["gallery_room"] = () => ({ data: true, error: null });
+  const g = await read(await h(authed({ purpose: "gallery" })));
+  assertEquals(g.status, 200);
+  assert(new RegExp(`^${BIZ}/gallery/[0-9a-f-]{36}$`).test(g.body.publicId));
+  assert(new RegExp(`^${BIZ}/staff/[0-9a-f-]{36}$`).test((await read(await h(authed({ purpose: "staff" })))).body.publicId));
+  s.rpcs["gallery_room"] = () => ({ data: false, error: null });
+  const before = s.rpcCalls.filter((c) => c.name === "media_register_upload").length;
+  assertEquals(await read(await h(authed({ purpose: "gallery" }))), { status: 409, body: { error: "limit_reached" } });
+  assertEquals(s.rpcCalls.filter((c) => c.name === "media_register_upload").length, before);
+});
+
+Deno.test("media-finalize (hosted): a gallery photo is attached with caption and pair; limit and category refusals are clean and queue the file", async () => {
+  const GAL = `${BIZ}/gallery/11111111-1111-4111-8111-111111111111`;
+  const PAIR = "30000000-0000-4000-8000-000000000001";
+  const s = setup();
+  s.rpcs["media_confirm_upload"] = () => ({ data: { purpose: "gallery", item_id: null }, error: null });
+  s.rpcs["attach_gallery_photo"] = () => ({ data: "g-1", error: null });
+  const h = sellerMediaFinalize(s.deps);
+  const r = await read(await h(authed({ path: GAL, caption: "Fresh", pairId: PAIR, pairRole: "before", cloudinary: hosted() })));
+  assertEquals(r, { status: 201, body: { id: "g-1", kind: "gallery", width: 3840, height: 2160, size: 910_000 } });
+  const a = s.rpcCalls.find((c) => c.name === "attach_gallery_photo")!.args;
+  assertEquals([a.p_business, a.p_path, a.p_caption, a.p_pair_id, a.p_pair_role], [BIZ, GAL, "Fresh", PAIR, "before"]);
+  assertEquals((await h(authed({ path: GAL, pairId: PAIR, cloudinary: hosted() }))).status, 400);
+
+  s.rpcs["attach_gallery_photo"] = () => ({ data: null, error: { message: "limit_reached:gallery_photos" } });
+  assertEquals((await read(await h(authed({ path: GAL, cloudinary: hosted() })))).body, { error: "limit_reached" });
+  s.rpcs["attach_gallery_photo"] = () => ({ data: null, error: { message: "pair_category" } });
+  assertEquals((await h(authed({ path: GAL, cloudinary: hosted() }))).status, 422);
+  assertEquals(s.rpcCalls.filter((c) => c.name === "media_gc_enqueue").length, 2);
+});
+
+Deno.test("media-finalize (hosted): a team photo is confirmed but never attached by the function", async () => {
+  const STAFF = `${BIZ}/staff/22222222-2222-4222-8222-222222222222`;
+  const s = setup();
+  s.rpcs["media_confirm_upload"] = () => ({ data: { purpose: "staff", item_id: null }, error: null });
+  const r = await read(await sellerMediaFinalize(s.deps)(authed({ path: STAFF, cloudinary: hosted({ width: 640, height: 640, bytes: 30_000, format: "jpg" }) })));
+  assertEquals(r, { status: 200, body: { path: STAFF, kind: "staff", width: 640, height: 640, size: 30_000 } });
+});
+
 // ---- media-gc ---------------------------------------------------------------------------------------------------------
 
 Deno.test("media-gc: only the cron secret may run it, and it needs Cloudinary", async () => {

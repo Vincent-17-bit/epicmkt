@@ -140,7 +140,7 @@
 
 .admin-password input {
   width: 100%;
-  padding-right: 2.9rem;
+  padding-right: calc(var(--space-10) + var(--space-2));
   height: 2.75rem;
   padding-left: var(--space-4);
   border: 1px solid var(--border-control);

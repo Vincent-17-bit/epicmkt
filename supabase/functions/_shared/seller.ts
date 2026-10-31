@@ -1,7 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { z } from "npm:zod@3";
-import { clientIp, corsHeaders, escapeHtml, isDbDown, isProduction, json, sendSms, serverError, sha256Hex } from "./http.ts";
+import { clientIp, corsHeaders, isDbDown, isProduction, json, sendSms, serverError, sha256Hex } from "./http.ts";
 import { HttpError } from "./errors.ts";
+import { emailHtml } from "./emailTemplate.ts";
+import { otpMail, otpSms } from "./messages.ts";
 import { deliverEmail } from "./providers.ts";
 import { cloudinaryConfigFromEnv, makeCloudinary, type CloudinaryClient } from "./cloudinary.ts";
 
@@ -118,12 +120,12 @@ export const maskPhone = (phone: string) => phone.replace(/^(\+254\d)\d{5}(\d{3}
 // "jane.doe@example.com" -> "j*******@example.com"
 export const maskEmail = (email: string) => email.replace(/^([^@])[^@]*(@.+)$/, (_m, a: string, rest: string) => `${a}*******${rest}`);
 
-export const otpMessage = (code: string) => `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`;
+export const otpMessage = (code: string) => otpSms(code, OTP_MINUTES);
 
-export const otpEmail = (code: string) => ({
-  subject: "Your EpicMKT code",
-  html: `<p>Your EpicMKT code is <b style="font-size:1.25em;letter-spacing:.1em">${escapeHtml(code)}</b>.</p><p>It expires in ${OTP_MINUTES} minutes. If you did not ask for it, you can ignore this email and nobody can use your account.</p>`,
-});
+export const otpEmail = (code: string) => {
+  const m = otpMail(code, OTP_MINUTES);
+  return { subject: m.subject, html: emailHtml(m.text) };
+};
 
 // Sends a code to the chosen place. The email channel needs an address; "sms" uses the phone on the listing.
 export async function sendOtp(d: Deps, channel: "sms" | "email", to: { phone: string; email?: string | null }, code: string): Promise<boolean> {

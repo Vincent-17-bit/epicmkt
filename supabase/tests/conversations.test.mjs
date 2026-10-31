@@ -236,7 +236,7 @@ test("tags, feature and extend work, with the right role", async () => {
   assert.equal((await bulk(asFinance, "extend", [ids.bizA], "Goodwill after outage", { days: 7 })).affected, 1);
   const after = (await sql(c, `select paid_until from public.businesses where id = '${ids.bizA}'`))[0].paid_until;
   assert.equal(Math.round((after - before) / 86400000), 7);
-  await rejects(asAdmin, `select public.admin_bulk_business_action('unlist', array['${ids.bizA}']::uuid[], 'not built', '{}')`, [], /not_supported/);
+  await rejects(c, asAdmin, `select public.admin_bulk_business_action('delete', array['${ids.bizA}']::uuid[], 'not a bulk action', '{}')`, [], /not_supported/);
   assert.equal((await bulk(asAdmin, "export", [ids.bizA, ids.bizB], "Monthly export")).affected, 2);
 });
 
@@ -298,4 +298,105 @@ test("realtime carries attachments", async () => {
   const rows = await sql(c, `select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'message_attachments'`).catch(() => []);
   // The publication only exists on Supabase; the migration must still apply without it.
   assert.ok(Array.isArray(rows));
+});
+
+const biz = async (id = ids.bizA) => (await sql(c, `select status, status_reason, strikes, tags, featured, paid_until, agent from public.businesses where id = '${id}'`))[0];
+const undo = (who, token) => call(who, `select public.admin_undo_bulk_business_action($1::uuid) as r`, [token]).then((x) => x.r);
+
+test("unlist hides a live business, tells the seller, skips the rest, and can be undone once", async () => {
+  await sql(c, `update public.businesses set status = 'live', status_reason = null where id in ('${ids.bizA}', '${ids.bizB}')`);
+  await sql(c, `update public.businesses set status = 'expired' where id = '${ids.bizB}'`);
+  const r = await bulk(asSupport, "unlist", [ids.bizA, ids.bizB], "Listing under review");
+  assert.deepEqual([r.affected, r.skipped], [1, 1], "only the live one");
+  assert.ok(r.undoToken);
+  assert.deepEqual([(await biz()).status, (await biz()).status_reason], ["paused", "Listing under review"]);
+  assert.equal((await biz(ids.bizB)).status, "expired");
+  const notice = await tx(c, asA, async (k) => sql(k, `select body from public.messages where subject = 'Your listing has been unlisted'`));
+  assert.match(notice[0].body, /Listing under review/);
+  const tab = await call(asAdmin, `select public.admin_business_tab_counts('{}') as r`);
+  assert.equal(tab.r.unlisted, 1);
+
+  await rejects(c, asAdmin, `select public.admin_undo_bulk_business_action('${r.undoToken}')`, [], /nothing_to_undo/); // someone else's token
+  const back = await undo(asSupport, r.undoToken);
+  assert.deepEqual([back.restored, back.skipped], [1, 0]);
+  assert.deepEqual([(await biz()).status, (await biz()).status_reason], ["live", null]);
+  await rejects(c, asSupport, `select public.admin_undo_bulk_business_action('${r.undoToken}')`, [], /nothing_to_undo/); // only once
+  const log = await sql(c, `select action from public.audit_log where business_id = '${ids.bizA}' order by created_at desc limit 2`);
+  assert.deepEqual(log.map((x) => x.action), ["business.undo", "business.unlist"]);
+});
+
+test("assign sets and clears an agent, only staff can be agents, and the table can filter by agent", async () => {
+  await sql(c, `update public.admins set display_name = 'Faith Achieng' where user_id = '${SUPPORT}'`);
+  const options = (await call(asSupport, `select public.admin_business_filter_options() as r`)).r;
+  assert.ok(options.agents.includes("Faith Achieng"));
+  await rejects(c, asSupport, `select public.admin_bulk_business_action('assign', array['${ids.bizA}']::uuid[], 'Balance the load', '{"agent":"Nobody Here"}')`, [], /unknown_agent/);
+
+  const set = await bulk(asSupport, "assign", [ids.bizA, ids.bizB], "Balance the load", { agent: "Faith Achieng" });
+  assert.deepEqual([set.affected, set.skipped], [2, 0]);
+  assert.equal((await bulk(asSupport, "assign", [ids.bizA], "Balance the load", { agent: "Faith Achieng" })).affected, 0, "already hers");
+  const rows = (await call(asAdmin, `select public.admin_businesses_query('all', null, 'name', 'asc', '{"agent":"Faith Achieng"}') as r`)).r;
+  assert.equal(rows.total, 2);
+  assert.ok(rows.rows.every((x) => x.agent === "Faith Achieng"));
+  assert.equal((await call(asAdmin, `select public.admin_businesses_query('all', null, 'name', 'asc', '{"agent":"__none__"}') as r`)).r.total, 0);
+
+  const cleared = await bulk(asSupport, "assign", [ids.bizA], "Back to the pool", { agent: null });
+  assert.equal(cleared.affected, 1);
+  assert.equal((await biz()).agent, null);
+  assert.equal((await undo(asSupport, cleared.undoToken)).restored, 1);
+  assert.equal((await biz()).agent, "Faith Achieng");
+  await undo(asSupport, set.undoToken);
+  assert.deepEqual([(await biz()).agent, (await biz(ids.bizB)).agent], [null, null]);
+});
+
+test("undo puts back strikes, tags, features, suspensions and extra days, and skips anything changed since", async () => {
+  await sql(c, `update public.businesses set status = 'live', status_reason = null, strikes = 0, tags = '{}', featured = false, paid_until = now() + interval '20 days' where id = '${ids.bizA}'`);
+
+  const strike = await bulk(asSupport, "strike", [ids.bizA], "Wrong prices on three items");
+  assert.equal((await biz()).strikes, 1);
+  await undo(asSupport, strike.undoToken);
+  assert.equal((await biz()).strikes, 0);
+
+  const tag = await bulk(asSupport, "tag", [ids.bizA], "Watch list", { tag: "watch", mode: "add" });
+  await undo(asSupport, tag.undoToken);
+  assert.deepEqual((await biz()).tags, []);
+
+  const feat = await bulk(asSupport, "feature", [ids.bizA], "Homepage slot", { featured: true });
+  await undo(asSupport, feat.undoToken);
+  assert.equal((await biz()).featured, false);
+
+  const sus = await bulk(asSupport, "suspend", [ids.bizA], "Selling counterfeit goods");
+  assert.equal((await biz()).status, "suspended");
+  await undo(asSupport, sus.undoToken);
+  assert.deepEqual([(await biz()).status, (await biz()).status_reason], ["live", null]);
+
+  const ext0 = (await biz()).paid_until;
+  const ext = await bulk(asFinance, "extend", [ids.bizA], "Goodwill after outage", { days: 7 });
+  await undo(asFinance, ext.undoToken);
+  assert.equal(+(await biz()).paid_until, +ext0);
+
+  // Changed since: a later change wins, the undo leaves that business alone and says so.
+  const again = await bulk(asFinance, "extend", [ids.bizA], "Goodwill after outage", { days: 7 });
+  await sql(c, `update public.businesses set paid_until = paid_until + interval '30 days' where id = '${ids.bizA}'`);
+  const kept = (await biz()).paid_until;
+  const out = await undo(asFinance, again.undoToken);
+  assert.deepEqual([out.restored, out.skipped], [0, 1]);
+  assert.equal(+(await biz()).paid_until, +kept);
+
+  // Messages and exports have nothing to undo.
+  assert.equal((await bulk(asSupport, "message", [ids.bizA], "Policy update", { channels: ["sms"], body: "We changed our policy" })).undoToken, null);
+  assert.equal((await bulk(asAdmin, "export", [ids.bizA], "Monthly export")).undoToken, null);
+  // Nobody undoes an action after its 15 minutes.
+  const late = await bulk(asSupport, "tag", [ids.bizA], "Watch list", { tag: "late", mode: "add" });
+  await sql(c, `update public.admin_bulk_undo set expires_at = now() - interval '1 minute' where token = '${late.undoToken}'`);
+  await rejects(c, asSupport, `select public.admin_undo_bulk_business_action('${late.undoToken}')`, [], /nothing_to_undo/);
+});
+
+test("a suspended seller can still see what to pay, pay, and read their payments", async () => {
+  await sql(c, `update public.businesses set status = 'suspended', status_reason = 'Selling counterfeit goods' where id = '${ids.bizA}'`);
+  const instr = (await call(asA, `select public.seller_payment_instructions('renewal', null, null) as r`)).r;
+  assert.equal(instr.purpose, "renewal");
+  assert.ok(Number(instr.amount_kes) > 0);
+  const paid = await tx(c, asA, async (k) => sql(k, `select count(*)::int as n from public.payments where business_id = '${ids.bizA}'`));
+  assert.ok(paid[0].n >= 0);
+  await sql(c, `update public.businesses set status = 'live', status_reason = null where id = '${ids.bizA}'`);
 });

@@ -21,7 +21,7 @@
   justify-content: center;
   min-width: 44px;
   min-height: 44px;
-  margin: -0.5rem -0.4rem -0.5rem 0;
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-1)) calc(-1 * var(--space-2)) 0;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;

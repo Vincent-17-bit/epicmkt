@@ -6,7 +6,7 @@
 .biz-head__name { margin: 0 0 var(--space-2); }
 .biz-head__badges { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-2); }
 .biz-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-.biz-more select { min-height: 2.25rem; border-radius: 999px; padding: 0 var(--space-3); border: 1px solid var(--border-control); background: var(--surface); color: var(--text); font: inherit; }
+.biz-more select { min-height: var(--space-10); border-radius: var(--radius-pill); padding: 0 var(--space-3); border: 1px solid var(--border-control); background: var(--surface); color: var(--text); font: inherit; }
 .biz-body { padding-top: var(--space-4); }
 .biz-stats { list-style: none; margin: 0 0 var(--space-5); padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: var(--space-3); }
 .biz-stats li { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-3); display: flex; flex-direction: column; gap: var(--space-1); }

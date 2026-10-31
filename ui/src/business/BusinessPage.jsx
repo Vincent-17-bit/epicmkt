@@ -11,6 +11,8 @@ import BottomBar from "./BottomBar.jsx";
 import BusinessHero from "./BusinessHero.jsx";
 import ActionRow from "./ActionRow.jsx";
 import ClosedBanner from "./ClosedBanner.jsx";
+import Team from "./Team.jsx";
+import Timetable from "./Timetable.jsx";
 import Details from "./Details.jsx";
 import Offers from "./Offers.jsx";
 import Follow from "./Follow.jsx";
@@ -96,7 +98,10 @@ export default function BusinessPage({
               <span className={styles.rating}>{productsLabel(productCount)}</span>
             </div>
 
-            <ClosedBanner status={business.openStatus} />
+            <ClosedBanner status={business.openStatus} showCloses={business.shopSettings?.showClosesChip !== false} />
+            {business.shopSettings?.partialClosureMessage && (
+              <p className={styles.partial} data-testid="partial-closure" role="status">{business.shopSettings.partialClosureMessage}</p>
+            )}
 
             <p className={styles.description}>{business.description}</p>
 
@@ -162,6 +167,9 @@ export default function BusinessPage({
             {business.gallery.length > 0 && (
               <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />
             )}
+
+            <Team team={business.team} />
+            <Timetable slots={business.timetable} />
 
             {details && (
               <Details title={detailsTitle}>{details}</Details>

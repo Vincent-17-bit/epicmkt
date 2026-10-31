@@ -3,12 +3,12 @@ import { faClock } from "@fortawesome/free-solid-svg-icons";
 import styles from "./ClosedBanner.module.css";
 
 // Says why the shop is closed or on special hours today, and when it next opens. The reason is the shop's own words.
-export default function ClosedBanner({ status }) {
+export default function ClosedBanner({ status, showCloses = true }) {
   if (!status) return null;
   const { isOpen, reasonText, reopens, closes } = status;
   if (isOpen && !reasonText) return null;
   const title = reasonText ?? "Closed right now";
-  const detail = isOpen ? closes : reopens;
+  const detail = isOpen ? (showCloses ? closes : null) : reopens;
   return (
     <div className={styles.banner} data-open={isOpen || undefined} data-testid="closed-banner" role="status">
       <span className={styles.badge} aria-hidden="true">

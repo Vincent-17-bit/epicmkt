@@ -16,6 +16,7 @@ import PriceSection from "./PriceSection.jsx";
 import QualityPanel from "./Quality.jsx";
 import ReviewSection from "./ReviewSection.jsx";
 import { SectionCard, IconBtn } from "./parts.jsx";
+import { useSettings } from "../../../../state/settings.js";
 import { clearDraft, loadDraft, prefersCalm, storeDraft, useBreakpoint, useUnsavedGuard } from "./hooks.js";
 import { firstErrorTarget, qualityChecks, STEPS, stepDone, stepIndex } from "./model.js";
 import styles from "./editor.module.css";
@@ -30,6 +31,10 @@ export default function ItemEditor() {
   const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
+  // The editor sits outside the main shell, so a page opened straight from a link has not loaded the seller's settings yet.
+  // A new item reads its starting values from them, so wait for them (a failure just means the built-in defaults).
+  const settingsLoaded = useSettings((st) => st.loaded);
+  const settings = useQuery({ queryKey: ["settings"], queryFn: async () => { const raw = await api.getSettings(); useSettings.getState().load(raw); return raw; }, retry: false, staleTime: Infinity, refetchOnWindowFocus: false, enabled: !settingsLoaded });
 
   if (business?.status === "suspended") return <Navigate to="/business/notifications" replace />;
   if (catalog.isError) {
@@ -41,7 +46,7 @@ export default function ItemEditor() {
       </div>
     );
   }
-  if (catalog.isLoading) return <p className={styles.standalone} role="status">Loading</p>;
+  if (catalog.isLoading || (!itemId && !settingsLoaded && settings.isLoading)) return <p className={styles.standalone} role="status">Loading</p>;
   const item = itemId ? catalog.data.items.find((i) => i.id === itemId && !i.removedByAdmin) ?? null : null;
   if (itemId && !item) {
     return (
@@ -64,6 +69,7 @@ function EditorForm({ item, sections, category, business }) {
   const phone = bp === "phone";
   const isNew = !item;
   const draftId = item?.id ?? null;
+  const catalogDefaults = useSettings((st) => st.settings.catalog);
   const backTo = `${CATALOG}${location.state?.from ?? ""}`;
 
   const seedRef = useRef(location.state?.leftover ?? []);
@@ -72,7 +78,9 @@ function EditorForm({ item, sections, category, business }) {
   // The starting form is the saved item, or the draft kept on this device if it was made from this same item.
   const startRef = useRef(null);
   if (startRef.current === null) {
-    const saved = item ? formFromItem(item) : emptyItemForm();
+    // A new item starts from the seller's saved catalog defaults (Settings, Catalog defaults).
+    const fresh = { ...emptyItemForm(), availability: catalogDefaults.default_availability === "unavailable" ? "out_of_stock" : catalogDefaults.default_availability, lowStockThreshold: String(catalogDefaults.low_stock_threshold), showStockCount: catalogDefaults.show_only_n_left };
+    const saved = item ? formFromItem(item) : fresh;
     const base = JSON.stringify(saved);
     const draft = loadDraft(draftId, base);
     startRef.current = { base, saved, form: draft ? { ...saved, ...draft.form } : saved, restoredAt: draft?.savedAt ?? null };
@@ -208,7 +216,17 @@ function EditorForm({ item, sections, category, business }) {
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
-      const base = isNew ? "Item added as a draft." : "Item saved.";
+      // "New items start as Visible": publish a brand-new item straight away, but only when it is complete enough to show:
+      // it has a picture and nothing went wrong while saving. Otherwise it stays a draft, exactly as before.
+      let published = false;
+      if (isNew && catalogDefaults.start_visible && media.photoCount > 0 && problems.length === 0) {
+        try {
+          await api.bulkItems("show", [id]);
+          published = true;
+        } catch { /* it stays a draft; the seller can show it from the list */ }
+      }
+      if (published) await qc.invalidateQueries({ queryKey: ["catalog"] });
+      const base = isNew ? (published ? "Item added and visible to customers." : "Item added as a draft.") : "Item saved.";
       const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : { tone: "ok", text: base };
       if (!stay && problems.length === 0) {
         allow();
@@ -231,7 +249,7 @@ function EditorForm({ item, sections, category, business }) {
       busyRef.current = false;
       setBusy(false);
     }
-  }, [form, item, media, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo]);
+  }, [form, item, media, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo, catalogDefaults]);
 
   // A save from the new-item route lands on the edit route; show what happened there.
   useEffect(() => {

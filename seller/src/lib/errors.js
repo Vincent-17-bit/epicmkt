@@ -125,6 +125,17 @@ const MESSAGES = {
   order_incomplete: "The order is missing some pictures or videos. Reload and try again.",
   duplicate_path: "A picture or video was listed twice. Reload and try again.",
   video_limit: "You have reached the video limit for this item on your plan. Remove one to add another.",
+  invalid_staff: "Check the name, role and specialties, then try again.",
+  invalid_slot: "Check the class name, day and times, then try again.",
+  pair_category: "Before and after photos are for barbershops and salons.",
+  premium_only: "This is a Premium feature. Upgrade your plan to use it.",
+  timetable_category: "A class timetable is for salons, beauty and gym or fitness shops.",
+  trainer_busy: "This trainer already has a class at that time.",
+  trainer_not_owned: "Choose a trainer from your team.",
+  item_not_owned: "Choose one of your own services.",
+  invalid_photo_path: "That photo could not be saved. Please upload it again.",
+  invalid_order: "The order was not valid. Reload and try again.",
+  account_suspended: "Your account is suspended, so you can only look at this page.",
   ...PROOF_ERRORS,
 };
 
@@ -132,6 +143,7 @@ const LIMITS = {
   items: "You have reached the number of items your plan allows. Delete one or upgrade your plan.",
   flash_concurrent: "You have reached the number of flash sales you can run at the same time on your plan.",
   offers: "You have reached the number of offers your plan allows at once. End one or upgrade your plan.",
+  gallery_photos: "You have used all the gallery photos your plan allows. Delete one to add another, or upgrade your plan.",
   flash_per_month: "You have used all the flash sales your plan allows this month.",
 };
 export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => {

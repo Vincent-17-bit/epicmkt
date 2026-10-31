@@ -16,7 +16,9 @@ const KNOWN = ["forbidden", "not_found", "invalid_status", "unauthorized", "rate
 export const ACTION_TEXT = {
   reason_required: "A reason of at least 5 characters is required.",
   invalid_input: "Check the form and try again.",
-  not_supported: "That action is not available yet.",
+  not_supported: "That action is not available.",
+  unknown_agent: "Choose an agent from the list.",
+  nothing_to_undo: "This can no longer be undone.",
   too_many_recipients: "Choose 500 businesses or fewer at a time.",
   body_required: "Write a message or attach a file.",
   body_too_long: "Keep the message to 4000 characters.",
