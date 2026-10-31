@@ -18,7 +18,7 @@ export type OutboundDeps = {
   db: Db;
   cronSecret?: string;
   // Dev mode (messaging mode "mock": the default outside production, or MESSAGING_MODE=mock) sends nothing:
-  // the dispatcher marks messages 'sent' with provider_id 'dev'.
+  // the dispatcher records messages as 'simulated' with provider_id 'dev'.
   dev: boolean;
   now: () => Date;
   sendSms: (to: string, message: string) => Promise<SendResult>;

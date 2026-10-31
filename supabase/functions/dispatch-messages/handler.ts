@@ -28,18 +28,19 @@ export const dispatchMessages = (d: OutboundDeps) => wrap(async (req) => {
   if (claim.error) return json({ error: "server_error" }, 500);
   const rows: Claimed[] = claim.data ?? [];
 
-  const tally = { claimed: rows.length, sent: 0, retried: 0, failed: 0, skipped: 0 };
+  const tally = { claimed: rows.length, sent: 0, simulated: 0, retried: 0, failed: 0, skipped: 0 };
   for (const m of rows) {
     let result: SendResult;
-    let finalStatus: "sent" | "delivered" = "sent";
+    let finalStatus: "sent" | "delivered" | "simulated" = "sent";
 
     if (m.channel === "in_app") {
       // Nothing to send: the message becomes visible in the seller's inbox once it is delivered.
       result = { ok: true, providerId: "in_app" };
       finalStatus = "delivered";
     } else if (d.dev) {
-      // Dev mode: send nothing, record it as sent.
+      // Mock mode: nothing is sent, so the row is recorded as 'simulated', never as 'sent'.
       result = { ok: true, providerId: "dev" };
+      finalStatus = "simulated";
     } else if (!m.to_address) {
       result = { ok: false, error: "no_recipient_address" };
     } else {
@@ -60,7 +61,7 @@ export const dispatchMessages = (d: OutboundDeps) => wrap(async (req) => {
       p_final_status: finalStatus,
     });
     switch (rec.data) {
-      case "sent": tally.sent++; break;
+      case "sent": if (finalStatus === "simulated") tally.simulated++; else tally.sent++; break;
       case "retry": tally.retried++; break;
       case "failed": tally.failed++; break;
       default: tally.skipped++;

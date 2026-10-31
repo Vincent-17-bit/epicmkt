@@ -11,7 +11,7 @@ export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
 export { getPlanHistory, listCategories, listPlans, saveCategory, savePlan } from "./mockCatalogue.js";
 export {
-  cancelBroadcast, deleteTemplate, getAutomationStatus, getMessageDetail, getMessageSummary, listMessageLog, listPendingBroadcasts, listTemplates, retryFailedMessages, retryMessage,
+  cancelBroadcast, deleteTemplate, getAutomationStatus, getMessageDetail, getMessageSummary, getMessagingMode, listMessageLog, listPendingBroadcasts, listTemplates, retryFailedMessages, retryMessage,
   runJob, saveTemplate, sendBroadcast, setJobActive, setTemplateEnabled,
 } from "./mockMessaging.js";
 export {

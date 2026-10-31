@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import LoadError from "../../components/LoadError.jsx";
+import MessagingModeBanner from "../../components/MessagingModeBanner.jsx";
 import Pager from "../../components/Pager.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
@@ -13,8 +14,8 @@ import PendingBroadcasts from "./PendingBroadcasts.jsx";
 
 const PAGE_SIZE = 25;
 const CHANNELS = [["all", "All channels"], ["sms", "SMS"], ["email", "Email"], ["in_app", "In-app"]];
-const STATUSES = [["all", "Any status"], ["queued", "Queued"], ["sent", "Sent"], ["delivered", "Delivered"], ["failed", "Failed"], ["cancelled", "Cancelled"]];
-const tone = { failed: "down", queued: "degraded", sent: "healthy", delivered: "healthy", cancelled: "neutral" };
+const STATUSES = [["all", "Any status"], ["queued", "Queued"], ["sent", "Sent"], ["delivered", "Delivered"], ["simulated", "Simulated (not sent)"], ["failed", "Failed"], ["cancelled", "Cancelled"]];
+const tone = { failed: "down", queued: "degraded", sent: "healthy", delivered: "healthy", simulated: "neutral", cancelled: "neutral" };
 
 export default function LogTab() {
   const { can, why } = usePermissions();
@@ -51,10 +52,11 @@ export default function LogTab() {
   const by = summary?.by_status ?? {};
   return (
     <div>
+      <MessagingModeBanner always />
       <PendingBroadcasts />
       {summary && (
         <p className="log-summary">
-          Last {summary.days} days: <strong>{(by.sent ?? 0) + (by.delivered ?? 0)}</strong> sent, <strong>{by.queued ?? 0}</strong> queued, <strong className={by.failed ? "text-danger" : ""}>{by.failed ?? 0}</strong> failed. SMS cost KES {Number(summary.cost_kes).toLocaleString("en-KE", { maximumFractionDigits: 2 })}.
+          Last {summary.days} days: <strong>{(by.sent ?? 0) + (by.delivered ?? 0)}</strong> sent, <strong>{by.queued ?? 0}</strong> queued, <strong className={by.failed ? "text-danger" : ""}>{by.failed ?? 0}</strong> failed.{by.simulated > 0 && <> <strong>{by.simulated}</strong> simulated (never sent, no cost).</>} Real SMS cost KES {Number(summary.cost_kes).toLocaleString("en-KE", { maximumFractionDigits: 2 })}.
           {by.failed > 0 && <> <Button size="sm" disabled={!canRetry || retryAll.isPending} title={why("messages.send")} onClick={() => retryAll.mutate()}>Retry all failed</Button></>}
         </p>
       )}
@@ -78,6 +80,7 @@ export default function LogTab() {
                     <td>{row.channel === "in_app" ? "In-app" : row.channel.toUpperCase()}</td>
                     <td>
                       <span className={`status-pill status-pill--${tone[row.status] ?? "neutral"}`}>{row.status}</span>
+                      {row.status === "simulated" ? <div className="muted">Not sent</div> : null}
                       {row.status === "failed" ? <div className="muted">{row.error ?? "send_failed"} after {row.attempts} {row.attempts === 1 ? "try" : "tries"}</div> : null}
                       {row.status === "queued" && Date.parse(row.scheduled_at) > Date.now() ? <div className="muted">Scheduled</div> : null}
                     </td>

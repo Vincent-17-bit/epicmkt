@@ -2,6 +2,7 @@ import nodeAssert from "node:assert/strict";
 import { dispatchMessages } from "../functions/dispatch-messages/handler.ts";
 import { dailyLifecycle } from "../functions/daily-lifecycle/handler.ts";
 import { adminMessage } from "../functions/admin-message/handler.ts";
+import { adminMessagingMode } from "../functions/admin-messaging-mode/handler.ts";
 import { adminExport } from "../functions/admin-export/handler.ts";
 import { csvCell, renderTemplate, type OutboundDeps, type SendResult } from "../functions/_shared/outbound.ts";
 
@@ -93,7 +94,7 @@ const claimed = (...rows: Partial<{ id: string; channel: string; to_address: str
 // ---------------------------------------------------------------------------
 // dispatch-messages
 // ---------------------------------------------------------------------------
-Deno.test("dispatch: dev mode sends nothing and marks sms/email 'sent' with provider_id 'dev'", async () => {
+Deno.test("dispatch: dev mode sends nothing and records sms/email as 'simulated' with provider_id 'dev'", async () => {
   const w = world();
   w.rpc.claim_due_messages = () => claimed({ id: "m1", channel: "sms" }, { id: "m2", channel: "email", to_address: "a@x.test" });
   w.rpc.record_message_result = () => ({ data: "sent", error: null });
@@ -101,11 +102,20 @@ Deno.test("dispatch: dev mode sends nothing and marks sms/email 'sent' with prov
   const out = await res.json();
   assertEquals(res.status, 200);
   assertEquals(out.dev, true);
-  assertEquals(out.sent, 2);
+  assertEquals([out.sent, out.simulated], [0, 2]);
   assertEquals(w.sms.length, 0);
   assertEquals(w.emails.length, 0);
   const recs = w.rpcCalls.filter((c) => c.name === "record_message_result").map((c) => c.args);
-  assertEquals(recs.map((r) => [r.p_ok, r.p_provider_id, r.p_final_status]), [[true, "dev", "sent"], [true, "dev", "sent"]]);
+  assertEquals(recs.map((r) => [r.p_ok, r.p_provider_id, r.p_final_status]), [[true, "dev", "simulated"], [true, "dev", "simulated"]]);
+});
+
+Deno.test("dispatch: live mode never records 'simulated'", async () => {
+  const w = world();
+  w.rpc.claim_due_messages = () => claimed({ id: "m1", channel: "sms" });
+  w.rpc.record_message_result = () => ({ data: "sent", error: null });
+  const out = await (await dispatchMessages(makeDeps(w, { dev: false }))(post({}, cron))).json();
+  assertEquals([out.sent, out.simulated], [1, 0]);
+  assertEquals(w.rpcCalls.find((c) => c.name === "record_message_result")!.args.p_final_status, "sent");
 });
 
 Deno.test("dispatch: in-app messages are recorded 'delivered' with no provider call", async () => {
@@ -426,7 +436,7 @@ Deno.test("dispatch audit: an admin run writes exactly one 'dispatch.run' row wi
   assertEquals(w.tables.audit_log.length, 1);
   const a = w.tables.audit_log[0];
   assertEquals([a.action, a.actor_role, a.actor_id, a.target_type], ["dispatch.run", "admin", "u-admin", "system"]);
-  assertEquals(a.after, { limit: 10, dev: false, claimed: 1, sent: 1, retried: 0, failed: 0, skipped: 0 });
+  assertEquals(a.after, { limit: 10, dev: false, claimed: 1, sent: 1, simulated: 0, retried: 0, failed: 0, skipped: 0 });
 });
 
 Deno.test("dispatch audit: a cron run writes no audit row, even when the audit table is broken", async () => {
@@ -510,4 +520,23 @@ Deno.test("rate limits: a broken limiter is a 500, never a free pass", async () 
     assertEquals(res.status, 500, c.name);
     assertEquals(w.tables.messages.length + w.tables.audit_log.length, 0, c.name);
   }
+});
+
+// ---------------------------------------------------------------------------
+// admin-messaging-mode
+// ---------------------------------------------------------------------------
+Deno.test("messaging mode: an admin sees 'mock' when the functions are in mock mode and 'live' otherwise", async () => {
+  for (const [dev, mode] of [[true, "mock"], [false, "live"]] as const) {
+    const w = world();
+    const res = await adminMessagingMode(makeDeps(w, { dev }))(post({}, bearer));
+    assertEquals(res.status, 200);
+    assertEquals(await res.json(), { mode });
+  }
+});
+
+Deno.test("messaging mode: a caller who is not an admin is refused", async () => {
+  const w = world();
+  w.role = null;
+  const res = await adminMessagingMode(makeDeps(w))(post({}, { authorization: `Bearer ${ADMIN}` }));
+  assert(res.status === 401 || res.status === 403, `status ${res.status}`);
 });

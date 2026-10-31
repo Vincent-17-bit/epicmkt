@@ -11,6 +11,7 @@ import { useAdminCounts, useLiveRefresh } from "../hooks/useAdminCounts.js";
 import { badgeText, navBadges } from "../lib/counts.js";
 import { initialsOf } from "../lib/initials.js";
 import { buildCrumbs, isItemActive } from "../lib/breadcrumbs.js";
+import MessagingModeBanner from "../components/MessagingModeBanner.jsx";
 import SystemStatusCard from "../components/SystemStatusCard.jsx";
 import GlobalSearch from "../components/GlobalSearch.jsx";
 import { usePermissions } from "../hooks/usePermissions.js";
@@ -197,6 +198,7 @@ export default function AdminLayout() {
         </header>
 
         <main className="admin-content" id="admin-content" tabIndex={-1} ref={contentRef}>
+          <MessagingModeBanner />
           <Outlet />
         </main>
       </div>

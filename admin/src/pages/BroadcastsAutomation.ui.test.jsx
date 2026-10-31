@@ -13,6 +13,7 @@ const api = {
   sendBroadcast: vi.fn(),
   listMessageLog: vi.fn(),
   getMessageSummary: vi.fn(),
+  getMessagingMode: vi.fn(),
   retryMessage: vi.fn(async () => true),
   retryFailedMessages: vi.fn(async () => 2),
   saveTemplate: vi.fn(async () => 4),
@@ -46,6 +47,7 @@ beforeEach(() => {
     { id: "m2", created_at: minutesBack(180), channel: "sms", status: "failed", subject: "Offer", business_id: "b2", business_name: "Fade Kings", to_address: "+254722000111", attempts: 3, error: "provider_unavailable", scheduled_at: minutesBack(180) },
   ] });
   api.getMessageSummary.mockResolvedValue({ days: 7, by_status: { sent: 1, failed: 1 }, cost_kes: 0.8 });
+  api.getMessagingMode.mockResolvedValue({ mode: "live" });
   api.getAutomationStatus.mockResolvedValue({
     cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle"],
     jobs: [
@@ -118,6 +120,27 @@ describe("Message log and templates", () => {
     await waitFor(() => expect(api.retryMessage).toHaveBeenCalledWith("m2"));
     fireEvent.click(screen.getByRole("button", { name: "Retry all failed" }));
     await waitFor(() => expect(api.retryFailedMessages).toHaveBeenCalled());
+  });
+
+  it("in mock mode it says nothing is being sent, and simulated rows are counted apart from sent ones", async () => {
+    api.getMessagingMode.mockResolvedValue({ mode: "mock" });
+    api.getMessageSummary.mockResolvedValue({ days: 7, by_status: { sent: 1, simulated: 4, failed: 1 }, cost_kes: 0.8 });
+    api.listMessageLog.mockResolvedValue({ total: 1, rows: [
+      { id: "m9", created_at: minutesBack(5), channel: "sms", status: "simulated", subject: "Weekend offer", business_id: "b1", business_name: "Lakeside Provisions", to_address: "+254712345678", attempts: 1, scheduled_at: minutesBack(5) },
+    ] });
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText(/Messaging is in test mode/)).toBeInTheDocument();
+    expect(screen.getByText(/not being sent/)).toBeInTheDocument();
+    expect(await screen.findByText(/simulated \(never sent, no cost\)/)).toBeInTheDocument();
+    expect(screen.getByText("Not sent")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Simulated/ })).toBeInTheDocument();
+    expect(screen.getByText("simulated", { selector: ".status-pill" })).toBeInTheDocument();
+  });
+
+  it("in live mode the log shows a Live badge and no warning", async () => {
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText("Live")).toBeInTheDocument();
+    expect(screen.queryByText(/test mode/)).not.toBeInTheDocument();
   });
 
   it("the owner edits a template; others see it disabled with the reason", async () => {

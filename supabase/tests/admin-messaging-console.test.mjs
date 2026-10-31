@@ -48,6 +48,29 @@ test("the log shows delivery records for owner, reviewer and support, never the 
   await rejects(c, asAdmin, `select admin_message_log_query('all', 'lost')`, [], /invalid_status/);
 });
 
+test("simulated messages are filterable, counted on their own, and carry no cost in the summary", async () => {
+  const id = "60000000-0000-0000-0000-0000000000f1";
+  await sql(c, `insert into messages (id, business_id, channel, kind, subject, body, status, to_address, attempts, cost_kes, sent_at, provider_id)
+                values ('${id}', '${ids.bizA}', 'sms', 'general', 'Never sent', 'Hi', 'simulated', '+254712345678', 1, 5, now(), 'dev')`);
+  try {
+    const log = await call(asAdmin, `select admin_message_log_query('all', 'simulated') as r`);
+    assert.deepEqual(log.rows.map((r) => r.id), [id]);
+    assert.equal(log.rows[0].status, "simulated");
+    assert.equal((await call(asAdmin, `select admin_message_log_query('all', 'sent') as r`)).rows.some((r) => r.id === id), false);
+
+    const s = await call(asSupport, `select admin_message_summary(7) as r`);
+    assert.equal(s.by_status.simulated, 1);
+    assert.equal(s.by_status.sent, 1, "a simulated message is not counted as sent");
+    assert.equal(Number(s.cost_kes), 0.8, "a simulated message costs nothing, even if a cost was written on the row");
+
+    const auto = await call(asAdmin, `select admin_automation_status() as r`);
+    assert.notEqual(new Date(auto.last_sent_at).getTime(), new Date((await sql(c, `select sent_at from messages where id = '${id}'`))[0].sent_at).getTime(),
+      "last_sent_at is the last real send, never a simulated one");
+  } finally {
+    await sql(c, `delete from messages where id = '${id}'`);
+  }
+});
+
 test("the summary counts statuses, cost, what is due now and what failed", async () => {
   const s = await call(asSupport, `select admin_message_summary(7) as r`);
   assert.deepEqual(s.by_status, { sent: 1, failed: 1, queued: 2 });

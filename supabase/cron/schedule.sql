@@ -10,7 +10,7 @@
 -- "not configured", both Vault secrets exist.
 --
 -- Messaging only really sends when the functions run live. Set these function secrets BEFORE running this file, or the
--- every-minute job would mark queued messages as sent without sending them (mock mode):
+-- every-minute job would record queued messages as 'simulated' without sending them (mock mode):
 --   APP_ENV=production        (or MESSAGING_MODE=live)
 --   AT_API_KEY, AT_USERNAME   (and AT_SENDER if you use a sender id)  for SMS
 --   RESEND_API_KEY, MAIL_FROM                                          for email

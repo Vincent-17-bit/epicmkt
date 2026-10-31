@@ -632,6 +632,8 @@ export const listPendingBroadcasts = () => detailRpc("admin_pending_broadcasts",
 export const cancelBroadcast = ({ batchId, reason = null }) => detailRpc("admin_cancel_broadcast", { p_batch: batchId, p_reason: reason });
 export const setTemplateEnabled = ({ key, enabled }) => detailRpc("admin_set_template_enabled", { p_key: key, p_enabled: enabled });
 export const deleteTemplate = (key) => detailRpc("admin_delete_template", { p_key: key });
+// Which mode the edge functions really run in: "live" sends SMS and email, "mock" sends nothing (rows become "simulated").
+export const getMessagingMode = () => callFunction("admin-messaging-mode", {});
 export const retryMessage = (id) => detailRpc("admin_retry_message", { p_id: id });
 export const retryFailedMessages = ({ days = 7 } = {}) => detailRpc("admin_retry_failed_messages", { p_days: days });
 export const listTemplates = () => detailRpc("admin_templates_list", {});

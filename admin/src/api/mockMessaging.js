@@ -41,6 +41,12 @@ export async function getMessageDetail(id) {
   return { provider_id: m.status === "sent" ? "demo-1" : null, created_by_email: "admin@epicmkt.test", seller_id: m.business_id ? "ES100001" : null, application_name: null, applicant_name: null, ...m };
 }
 
+// Local development never sends anything, so the mock API reports the same mode as a development edge function.
+export async function getMessagingMode() {
+  await latency();
+  return { mode: "mock" };
+}
+
 export async function getMessageSummary() {
   await latency();
   const by = {};
