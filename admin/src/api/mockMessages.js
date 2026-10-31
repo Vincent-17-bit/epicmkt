@@ -3,7 +3,7 @@ import { ApiError } from "./errors.js";
 
 // Demo mode only. Same shapes as the live API, kept in memory so the Messages page works without a server.
 const latency = (ms = 120) => new Promise((resolve) => setTimeout(resolve, ms));
-const store = { messages: [], seq: 0, seeded: false };
+const store = { messages: [], seq: 0, seeded: false, resolved: new Set() };
 const nowIso = () => new Date().toISOString();
 
 function seed() {
@@ -41,6 +41,7 @@ export function addMessage({ business, parentId = null, subject, body, needsRepl
     attachments: attachments.map((a, i) => ({ id: `${id}-f${i}`, name: a.name, mime: a.mime, size: a.size, path: a.path })),
   };
   store.messages.unshift(message);
+  if (sender === "seller") store.resolved.delete(business.id);
   return message;
 }
 
@@ -95,7 +96,23 @@ export async function deleteConversation({ businessId, threadId = null }) {
   store.messages = store.messages.filter((m) => !(m.businessId === businessId && (!threadId || m.threadId === threadId)));
   const removed = before - store.messages.length;
   if (!removed) throw new ApiError("message_not_found", "That message no longer exists.");
+  if (!store.messages.some((m) => m.businessId === businessId)) store.resolved.delete(businessId);
   return removed;
+}
+export async function listResolvedConversations() {
+  seed();
+  await latency();
+  return [...store.resolved];
+}
+export async function setConversationResolved({ businessId, resolved }) {
+  seed();
+  await latency();
+  if (!businessId || typeof resolved !== "boolean") throw new ApiError("invalid_input", "Check the form and try again.");
+  if (!store.messages.some((m) => m.businessId === businessId)) throw new ApiError("conversation_not_found", "That conversation no longer exists.");
+  const was = store.resolved.has(businessId);
+  if (resolved) store.resolved.add(businessId);
+  else store.resolved.delete(businessId);
+  return { resolved, changed: was !== resolved };
 }
 export async function getUnreadMessages() {
   seed();
