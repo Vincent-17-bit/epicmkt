@@ -19,6 +19,8 @@ const business = (over = {}) => ({
 
 const api = {
   getBusinessDetail: vi.fn(),
+  getLoginDelivery: vi.fn(async () => []),
+  resendLogin: vi.fn(async () => ({ ok: true })),
   getBusinessPayments: vi.fn(async () => [{ id: "p1", created_at: "2026-02-01T00:00:00Z", amount_kes: 1300, status: "confirmed", kind: "renewal", mpesa_code: "SGH4K9L2QW", receipt_no: "R-1", period_end: "2026-03-01", months: 1 }]),
   getBusinessItems: vi.fn(async () => [
     { id: "i1", name: "Chocolate cake", section: "Cakes", price: 1800, price_type: "fixed", visible: true, draft: false, hidden_by_admin: false },
@@ -61,6 +63,7 @@ beforeEach(() => {
   mockRole = "owner";
   Object.values(api).forEach((fn) => fn.mockClear?.());
   api.getBusinessDetail.mockImplementation(async () => business());
+  api.getLoginDelivery.mockImplementation(async () => []);
 });
 afterEach(cleanup);
 
@@ -174,5 +177,43 @@ describe("business detail page", () => {
     fireEvent.click(screen.getByLabelText("Pin to the top"));
     fireEvent.click(add);
     await waitFor(() => expect(api.addBusinessNote).toHaveBeenCalledWith({ id: "b1", body: "Called about renewal", pinned: true }));
+  });
+
+  it("shows which login channel failed and resends with a reason", async () => {
+    api.getLoginDelivery.mockImplementation(async () => [
+      { channel: "sms", status: "sent", created_at: "2026-02-01T00:00:00Z" },
+      { channel: "email", status: "failed", created_at: "2026-02-01T00:00:00Z" },
+    ]);
+    renderPage();
+    expect(await screen.findByText("Login sent: SMS ok / email failed")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Resend login" }));
+    const dialog = await screen.findByRole("dialog");
+    const confirm = within(dialog).getByRole("button", { name: "Resend login" });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: "Email bounced" } });
+    fireEvent.click(confirm);
+    await waitFor(() => expect(api.resendLogin).toHaveBeenCalledWith({ businessId: "b1", reason: "Email bounced" }));
+    await waitFor(() => expect(api.getLoginDelivery).toHaveBeenCalledTimes(2));
+  });
+
+  it("only the owner can resend; others see the button disabled", async () => {
+    mockRole = "support";
+    renderPage();
+    const resend = await screen.findByRole("button", { name: "Resend login" });
+    expect(resend).toBeDisabled();
+    expect(api.getLoginDelivery).toHaveBeenCalled();
+  });
+
+  it("a business with no recorded login send says so", async () => {
+    renderPage();
+    expect(await screen.findByText("Login not sent yet")).toBeInTheDocument();
+  });
+
+  it("finance, who cannot read messages, does not see the login status", async () => {
+    mockRole = "finance";
+    renderPage();
+    await screen.findByRole("heading", { name: "Lakeside Provisions" });
+    expect(screen.queryByRole("button", { name: "Resend login" })).not.toBeInTheDocument();
+    expect(api.getLoginDelivery).not.toHaveBeenCalled();
   });
 });

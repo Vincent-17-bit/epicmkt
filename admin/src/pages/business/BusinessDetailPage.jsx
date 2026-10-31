@@ -13,6 +13,7 @@ import { deriveState } from "../../lib/status.js";
 import { formatBusinessDate, formatDate } from "../../lib/time.js";
 import BulkDialog from "../businesses/BulkDialog.jsx";
 import { BULK, summarize } from "../businesses/bulk.js";
+import LoginDelivery from "./LoginDelivery.jsx";
 import { ActivityTab, FlagsTab, ItemsTab, NotesTab, OverviewTab, PaymentsTab } from "./BusinessTabs.jsx";
 
 export default function BusinessDetailPage() {
@@ -120,6 +121,7 @@ export default function BusinessDetailPage() {
           <p className="muted">
             {b.seller_id} · {b.town ?? "—"}{b.paid_until ? ` · paid until ${formatBusinessDate(b.paid_until)}` : " · no payment confirmed yet"}
           </p>
+          {b.deleted_at ? null : <LoginDelivery id={id} name={b.name} />}
         </div>
         <div className="biz-actions">
           {can("messages.view") ? <Link className="secondary-button admin-button" to={`/admin/messages?business=${id}`}>Open conversation</Link> : null}
