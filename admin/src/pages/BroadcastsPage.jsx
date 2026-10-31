@@ -12,7 +12,7 @@ export default function BroadcastsPage() {
   return (
     <div className="page-shell">
       <section className="panel">
-        <div className="panel__header"><h3>Broadcasts</h3></div>
+        <div className="panel__header"><h2 className="heading-sm">Broadcasts</h2></div>
         <Tabs tabs={TABS} value={tab} onChange={(id) => setParams({ tab: id }, { replace: true })} label="Broadcast sections" idPrefix="broadcasts" />
         <div role="tabpanel" id="broadcasts-panel" aria-labelledby={`broadcasts-tab-${tab}`}>
           {tab === "compose" ? <ComposeTab /> : tab === "log" ? <LogTab /> : <TemplatesTab />}

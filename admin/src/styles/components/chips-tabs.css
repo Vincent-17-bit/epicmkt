@@ -1,0 +1,108 @@
+/* styles/components/chips-tabs.css */
+.admin-button--danger {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--on-danger);
+  font-weight: var(--fw-semibold);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.4rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
+  white-space: nowrap;
+}
+
+.chip--live {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.chip--tint {
+  background: var(--primary-tint);
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.chip--black {
+  background: var(--text);
+  border-color: var(--border-strong);
+  color: var(--text-inverse);
+}
+
+.chip--neutral {
+  background: var(--neutral-tint);
+  color: var(--text);
+}
+
+.chip--danger {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.tabs__tab {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-sm);
+  cursor: pointer;
+}
+
+.tabs__tab:hover {
+  border-color: var(--primary);
+}
+
+.tabs__tab:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 2px;
+}
+
+.tabs__tab[aria-selected="true"] {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.tabs__count {
+  min-width: 1.5rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--primary-tint);
+  color: var(--text);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-xs);
+  letter-spacing: var(--ls-xs);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabs__tab[aria-selected="true"] .tabs__count {
+  background: var(--on-primary);
+  color: var(--primary);
+}
+

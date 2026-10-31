@@ -1,0 +1,90 @@
+/* styles/components/dialogs-forms.css */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--scrim);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(32rem, 100%);
+  max-height: calc(100dvh - 2rem);
+  overflow: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--elevation-3);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-lg);
+  letter-spacing: var(--ls-lg);
+}
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.modal__summary {
+  margin: 0;
+}
+
+.modal__error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-sm);
+}
+
+.modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-sm);
+}
+
+.field input,
+.field select,
+.field textarea {
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: var(--fw-regular);
+}
+
+.field textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--primary-text);
+  outline-offset: 1px;
+}
+

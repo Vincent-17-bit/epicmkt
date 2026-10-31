@@ -85,7 +85,7 @@ export default function AccountPage() {
     <div className="page-shell">
       <section className="panel account-panel">
         <div className="panel__header">
-          <h3>Your account</h3>
+          <h2 className="heading-sm">Your account</h2>
         </div>
         <dl className="account-details">
           <div><dt>Name</dt><dd>{admin?.displayName || "—"}</dd></div>
@@ -97,7 +97,7 @@ export default function AccountPage() {
       {demo ? null : (
         <section className="panel account-panel">
           <div className="panel__header">
-            <h3>Where you are signed in</h3>
+            <h2 className="heading-sm">Where you are signed in</h2>
             <button type="button" className="secondary-button" onClick={handleSignOutOthers} disabled={sessions.isFetching}>
               Sign out other devices
             </button>
@@ -125,7 +125,7 @@ export default function AccountPage() {
 
       <section className="panel account-panel">
         <div className="panel__header">
-          <h3>Change password</h3>
+          <h2 className="heading-sm">Change password</h2>
         </div>
 
         {demo ? (

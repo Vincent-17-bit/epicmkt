@@ -74,7 +74,7 @@ describe("Live activity: rows and permissions", () => {
     expect(await screen.findByRole("link", { name: "New application from Umoja Market" })).toHaveAttribute("href", "/admin/applications");
     for (const item of FEED) {
       const button = deleteButton(item.text);
-      expect(button).toHaveClass("activity-list__delete"); // 44px minimum, hover/focus/touch rules live in admin.css
+      expect(button).toHaveClass("activity-list__delete"); // 44px minimum, hover/focus/touch rules live in styles/components/live-activity.css
     }
     expect(screen.getAllByRole("button", { name: /^Delete: / })).toHaveLength(3);
   });

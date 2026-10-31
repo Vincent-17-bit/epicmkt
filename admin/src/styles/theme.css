@@ -4,9 +4,9 @@
  * Both themes are defined explicitly; :root falls back to light so an unthemed
  * page is still readable.
  *
- * Contrast (checked by src/styles/theme.contrast.ui.test.js):
- *   text on bg/surface/surface-raised >= 4.5:1, text-muted likewise,
- *   every *-text / on-* pairing >= 4.5:1.
+ * Contrast (checked by src/theme/contrast.ui.test.js, table in docs/admin-contrast.md):
+ *   every text pairing >= 4.5:1; focus ring, field borders and chart marks >= 3:1.
+ *   Re-run with: npm run check:a11y
  */
 
 :root,
@@ -19,6 +19,8 @@
   --surface-sunken: #f3f4f6;
   --border: #e5e7eb;
   --border-strong: #d1d5db;
+  /* Boundary of a form field: 3:1 on every surface (WCAG 1.4.11). Cards and dividers keep the quiet --border. */
+  --border-control: #85888d;
   --text: #111111;
   --text-muted: #4b5563;
   --text-inverse: #ffffff;
@@ -60,7 +62,7 @@
 
   --tick-green: #15803d;
   --tick-blue: #0369a1;
-  --chart-fill: #1ea3f0;
+  --chart-fill: #1b95dd;
 
   --sidebar-bg: #ffffff;
   --sidebar-text: #374151;
@@ -107,6 +109,7 @@
   --surface-sunken: #0d0d0d;
   --border: #333333;
   --border-strong: #4a4a4a;
+  --border-control: #747474;
   --text: #f3f4f6;
   --text-muted: #9ca3af;
   --text-inverse: #111111;

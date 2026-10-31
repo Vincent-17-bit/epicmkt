@@ -84,7 +84,7 @@ export default function BusinessDetailPage() {
     return (
       <div className="page-shell">
         <section className="panel" role="alert">
-          <h3>{missing ? "Business not found" : "We could not load this business"}</h3>
+          <h2 className="heading-sm">{missing ? "Business not found" : "We could not load this business"}</h2>
           <p>{missing ? "It may have been removed, or the link is wrong." : friendlyError(detail.error)}</p>
           <div className="biz-actions">
             {missing ? null : <Button onClick={() => detail.refetch()}>Try again</Button>}

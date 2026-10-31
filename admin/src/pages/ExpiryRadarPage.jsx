@@ -24,7 +24,7 @@ export default function ExpiryRadarPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Expiry Radar</h3>
+          <h2 className="heading-sm">Expiry Radar</h2>
           <label className="field">Look ahead
             <select value={days} onChange={(e) => setDays(Number(e.target.value))}>
               {WINDOWS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -39,12 +39,12 @@ export default function ExpiryRadarPage() {
             </p>
             {groups.map((group) => (
               <section key={group.id} className="radar-group" aria-labelledby={`radar-${group.id}`}>
-                <h4 id={`radar-${group.id}`}>{group.label} <span className="tabs__count">{group.rows.length}</span></h4>
+                <h3 className="heading-flow" id={`radar-${group.id}`}>{group.label} <span className="tabs__count">{group.rows.length}</span></h3>
                 <p className="muted">{group.hint}</p>
                 {group.rows.length === 0 ? <p className="muted">None.</p> : (
                   <div className="table-shell">
                     <table>
-                      <thead><tr><th>Business</th><th>Plan</th><th>Paid until</th><th>When</th><th>Last reminder</th><th>Payment</th><th /></tr></thead>
+                      <thead><tr><th scope="col">Business</th><th scope="col">Plan</th><th scope="col">Paid until</th><th scope="col">When</th><th scope="col">Last reminder</th><th scope="col">Payment</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                       <tbody>
                         {group.rows.map((row) => {
                           const link = whatsappLink(row.whatsapp || row.phone, `Hello ${row.name}, your EpicMKT listing needs renewing. Reply here if you need help paying.`);

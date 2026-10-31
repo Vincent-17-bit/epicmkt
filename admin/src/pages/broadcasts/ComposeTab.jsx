@@ -122,7 +122,7 @@ export default function ComposeTab() {
       </div>
 
       <aside className="compose__preview" aria-live="polite">
-        <h4>Preview</h4>
+        <h3 className="heading-flow">Preview</h3>
         {!result ? <p className="muted">Preview shows who will get this and exactly what they will read.</p> : (
           <>
             <p><strong>{result.recipients}</strong> {result.recipients === 1 ? "business" : "businesses"}: {result.rows.sms} SMS, {result.rows.email} email, {result.rows.inApp} in-app.</p>

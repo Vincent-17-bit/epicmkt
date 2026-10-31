@@ -1,0 +1,80 @@
+/* styles/components/panels.css */
+.admin-content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-4);
+  overscroll-behavior: contain;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.panel,
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.panel {
+  box-shadow: var(--elevation-1);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-1);
+}
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+}
+
+/* Secondary content: quiet. No shadow, a smaller number, muted context. */
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+}
+
+.kpi-card__label {
+  display: block;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+
+.kpi-card strong {
+  display: block;
+  font-size: var(--fs-xl);
+  line-height: 1.2;
+}
+
+.kpi-card__context {
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+
+.sparkline {
+  display: block;
+  width: 100%;
+  height: var(--space-6);
+}
+
+.sparkline polyline {
+  stroke: var(--primary-text);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+

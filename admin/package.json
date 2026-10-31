@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test src/lib/counts.test.js src/lib/applications.test.js src/api/errors.test.js src/api/messages.test.js src/lib/activity.test.js src/lib/activityDelete.test.js src/lib/systemStatus.test.js src/lib/flash.test.js src/lib/globalSearch.test.js src/auth/permissions.test.js src/auth/idle.test.js src/lib/businessDetail.test.js src/lib/moderation.test.js src/lib/messaging.test.js src/lib/catalogue.test.js src/lib/audit.test.js src/styles/typography.test.js src/lib/errorCopy.test.js src/lib/breadcrumbs.test.js src/lib/sidebar.test.js src/lib/commandCenter.test.js src/lib/bellMessages.test.js",
-    "test:ui": "vitest run"
+    "test:ui": "vitest run",
+    "check:a11y": "node scripts/contrast-audit.mjs && vitest run src/theme/contrast.ui.test.js src/theme/reducedMotion.ui.test.js src/a11y.axe.ui.test.jsx src/layouts/AdminShell.a11y.ui.test.jsx src/components/DataTable/DataTable.a11y.ui.test.jsx"
   },
   "dependencies": {
     "@epicmkt/admin-backend": "*",
@@ -29,7 +30,11 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/user-event": "^14.6.8",
     "@vitejs/plugin-react": "^4.3.3",
-    "vite": "^5.4.10"
+    "axe-core": "^4.14.0",
+    "vite": "^5.4.10",
+    "vitest-axe": "^0.1.0"
   }
 }

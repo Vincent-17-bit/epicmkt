@@ -1,0 +1,16 @@
+/* styles/pages/broadcasts-automation.css */
+/* Broadcasts and Automation */
+.compose { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-6); margin-top: var(--space-3); }
+.compose__form { display: flex; flex-direction: column; gap: var(--space-3); }
+.compose__actions { display: flex; gap: var(--space-2); }
+.compose__preview { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3) var(--space-5); align-self: start; }
+.compose__preview blockquote { margin: var(--space-2) 0; padding: var(--space-2) var(--space-3); border-left: 3px solid var(--border); }
+.compose__template { padding: var(--space-2) var(--space-3); border: 1px dashed var(--border); border-radius: var(--radius-md); }
+.field-group { display: flex; gap: var(--space-5); border: 0; padding: 0; }
+.log-summary { margin: var(--space-3) 0; }
+.automation-problems { list-style: none; padding: 0; margin: var(--space-3) 0; display: grid; gap: var(--space-2); }
+.automation-problem { padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); border-left: 4px solid; background: color-mix(in srgb, currentColor 6%, transparent); }
+.automation-problem--down { border-color: var(--danger); }
+.automation-problem--degraded { border-color: var(--warning); }
+@media (max-width: 50rem) { .compose { grid-template-columns: 1fr; } }
+

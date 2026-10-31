@@ -41,7 +41,7 @@ export default function FlashSalesPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Flash sales</h3>
+          <h2 className="heading-sm">Flash sales</h2>
           <label className="field">
             Status
             <select value={status} onChange={(event) => setStatus(event.target.value)}>
@@ -60,12 +60,12 @@ export default function FlashSalesPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Business</th>
-                  <th>Item</th>
-                  <th>Discount</th>
-                  <th>Ends</th>
-                  <th>Status</th>
-                  <th />
+                  <th scope="col">Business</th>
+                  <th scope="col">Item</th>
+                  <th scope="col">Discount</th>
+                  <th scope="col">Ends</th>
+                  <th scope="col">Status</th>
+                  <th scope="col"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -88,7 +88,7 @@ export default function FlashSalesPage() {
                       </td>
                       <td>
                         {["live", "scheduled"].includes(row.status) && (
-                          <Button size="sm" disabled={!can("flash.end")} title={why("flash.end")} onClick={() => { setError(""); setTarget(row); }} aria-label={`End ${row.itemName} flash sale`}>End sale</Button>
+                          <Button size="sm" disabled={!can("flash.end")} title={why("flash.end")} onClick={() => { setError(""); setTarget(row); }} aria-label={`End sale: ${row.itemName}`}>End sale</Button>
                         )}
                       </td>
                     </tr>

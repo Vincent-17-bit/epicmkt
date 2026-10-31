@@ -246,7 +246,7 @@ export default function MessagesPage() {
   return (
     <div className="msg-layout">
       <section className="msg-list" aria-label="Conversations">
-        <header className="msg-pane__head"><h3>Conversations</h3></header>
+        <header className="msg-pane__head"><h2 className="heading-sm">Conversations</h2></header>
         <div className="msg-list__scroll">
           {isLoading ? <p role="status" className="msg-empty">Loading</p> : null}
           {isError ? <p role="alert" className="msg-empty">Could not load messages. <Button size="sm" onClick={() => refetch()}>Try again</Button></p> : null}
@@ -287,7 +287,7 @@ export default function MessagesPage() {
             <header className="msg-pane__head msg-thread__head">
               <span className="msg-avatar msg-avatar--lg" aria-hidden="true">{initials(current.name)}</span>
               <div className="msg-thread__who">
-                <h3>{current.name}</h3>
+                <h2 className="heading-sm">{current.name}</h2>
                 <span className="muted">{current.sellerId}</span>
               </div>
               {canDelete ? (
@@ -300,7 +300,7 @@ export default function MessagesPage() {
             <div className="msg-stream">
               {flow.map((t) => (
                 <article key={t.id} className="msg-topic" data-testid="thread">
-                  <h4 className="msg-topic__title">{t.subject}</h4>
+                  <h3 className="msg-topic__title heading-flow">{t.subject}</h3>
                   <ul className="msg-bubbles">{t.messages.map((m) => <Bubble key={m.id} m={m} canDelete={canDelete} onDelete={askMessage} focused={m.id === focusId} />)}</ul>
                 </article>
               ))}

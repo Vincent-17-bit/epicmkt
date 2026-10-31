@@ -141,7 +141,7 @@ describe("Automation", () => {
     renderPage(<AutomationPage />);
     expect(await screen.findByText("Running normally")).toBeInTheDocument();
     expect(screen.queryByRole("list", { name: "Problems" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Run Send queued messages now" }));
+    fireEvent.click(screen.getByRole("button", { name: "Run now: Send queued messages" }));
     await waitFor(() => expect(api.runJob).toHaveBeenCalledWith("dispatch-messages"));
   });
 

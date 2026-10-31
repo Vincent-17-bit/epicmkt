@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { componentFiles, readAllStyles, readStyle } from "../styles/readStyles.js";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
@@ -134,7 +135,7 @@ describe("css", () => {
   };
 
   it("sidebar uses sidebar tokens", () => {
-    const css = read("admin.css");
+    const css = readAllStyles();
     expect(rule(css, ".admin-sidebar")).toMatch(/background:\s*var\(--sidebar-bg\)/);
     expect(rule(css, ".admin-sidebar")).toMatch(/color:\s*var\(--sidebar-text\)/);
     expect(rule(css, ".admin-nav-item:hover")).toMatch(/var\(--sidebar-hover\)/);
@@ -153,8 +154,8 @@ describe("css", () => {
   });
 
   it("has no hard-coded colours outside theme.css", () => {
-    for (const f of ["admin.css", "responsive.css", "login.css"]) {
-      expect(read(f).match(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g) || []).toEqual([]);
+    for (const f of componentFiles()) {
+      expect(readStyle(f).match(/#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(/g) || [], f).toEqual([]);
     }
   });
 });
