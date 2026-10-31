@@ -53,6 +53,8 @@ describe("Notification bell with messages", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent("Shop B");
     expect(rows[1]).toHaveTextContent("Shop A");
+    // It asks for the unread seller messages themselves, not "the newest 1000 of everything" (which hid older unread ones).
+    expect(api.listMessages).toHaveBeenCalledWith({ unreadOnly: true, limit: 20 });
   });
 
   it("clicking a message opens it in Messages on that business and marks it read", async () => {
