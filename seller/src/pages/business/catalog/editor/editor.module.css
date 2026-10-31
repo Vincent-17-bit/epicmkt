@@ -8,6 +8,7 @@
    query), not the screen, so they also work inside the narrower desktop form. */
 
 .editor {
+  --ed-brand: 3rem; /* height of the shop logo row at the top; every sticky offset below includes it */
   display: flex;
   flex-direction: column;
   min-block-size: 100dvh;
@@ -17,9 +18,9 @@
 }
 
 /* Where sticky bars end, so a section scrolled into view is not hidden under them. */
-.card { scroll-margin-block-start: calc(3.5rem + var(--safe-top) + var(--space-3)); }
-.editor[data-bp="tablet"] .card { scroll-margin-block-start: calc(7rem + var(--safe-top) + var(--space-3)); }
-.editor[data-bp="phone"] .card { scroll-margin-block-start: calc(10.25rem + var(--safe-top) + var(--space-3)); }
+.card { scroll-margin-block-start: calc(3.5rem + var(--ed-brand) + var(--safe-top) + var(--space-3)); }
+.editor[data-bp="tablet"] .card { scroll-margin-block-start: calc(7rem + var(--ed-brand) + var(--safe-top) + var(--space-3)); }
+.editor[data-bp="phone"] .card { scroll-margin-block-start: calc(10.25rem + var(--ed-brand) + var(--safe-top) + var(--space-3)); }
 
 .editor :focus-visible {
   outline: 2px solid var(--focus-ring);
@@ -46,13 +47,33 @@
   z-index: var(--z-header);
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: var(--ed-brand) minmax(3.5rem, auto);
   align-items: center;
-  gap: var(--space-2);
-  min-block-size: calc(3.5rem + var(--safe-top));
+  gap: 0 var(--space-2);
+  min-block-size: calc(3.5rem + var(--ed-brand) + var(--safe-top));
   padding: var(--safe-top) max(var(--space-3), var(--safe-right)) 0 max(var(--space-3), var(--safe-left));
   background: var(--header-bg);
   border-block-end: 1px solid var(--border);
 }
+
+/* ---- Shop logo row: the same mark and name as the app header ---- */
+
+.brand {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  color: var(--text);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.brandText { display: grid; min-inline-size: 0; line-height: 1.25; }
+.brandShop { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-md); font-weight: 700; }
+.brandApp { color: var(--text-muted); font-size: var(--text-xs); }
+@media (max-width: 19.99rem) { .brandApp { display: none; } }
 
 .headTitle { min-inline-size: 0; line-height: 1.25; }
 .headTitle h1 { margin: 0; font-size: var(--text-lg); }
@@ -115,7 +136,7 @@
 .stepper,
 .tabs {
   position: sticky;
-  inset-block-start: calc(3.5rem + var(--safe-top));
+  inset-block-start: calc(3.5rem + var(--ed-brand) + var(--safe-top));
   z-index: 6;
   background: var(--header-bg);
   border-block-end: 1px solid var(--border);
@@ -208,9 +229,9 @@
 .previewCol,
 .checkCol {
   position: sticky;
-  inset-block-start: calc(3.5rem + var(--safe-top) + var(--space-4));
+  inset-block-start: calc(3.5rem + var(--ed-brand) + var(--safe-top) + var(--space-4));
   align-self: start;
-  max-block-size: calc(100dvh - (3.5rem + var(--safe-top)) - var(--space-5));
+  max-block-size: calc(100dvh - (3.5rem + var(--ed-brand) + var(--safe-top)) - var(--space-5));
   overflow-y: auto;
 }
 
@@ -366,7 +387,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 .segment { display: inline-flex; padding: 2px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface-2); }
 .segment button { min-block-size: calc(var(--tap) - 4px); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
 .segment button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
-.previewBody { max-block-size: calc(100dvh - (3.5rem + var(--safe-top)) - 12rem); overflow: auto; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-3); }
+.previewBody { max-block-size: calc(100dvh - (3.5rem + var(--ed-brand) + var(--safe-top)) - 12rem); overflow: auto; padding: var(--space-3); border-radius: var(--radius-sm); background: var(--surface-3); }
 .previewNote { margin: 0; color: var(--text-muted); font-size: var(--text-xs); }
 
 .frameOuter { position: relative; inline-size: 100%; min-block-size: 8rem; overflow: hidden; }
@@ -440,7 +461,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 .editor[data-bp="phone"] .jump,
 .editor[data-bp="phone"] .chip { min-block-size: 3rem; }
 .editor[data-bp="phone"] .iconBtn { min-inline-size: 3rem; min-block-size: 3rem; }
-.editor[data-bp="phone"] .head { gap: var(--space-1); }
+.editor[data-bp="phone"] .head { gap: 0 var(--space-1); }
 .editor[data-bp="phone"] .headName { display: none; }
 .editor[data-bp="phone"] .tileActions { gap: 0; }
 .editor[data-bp="phone"] .photoGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

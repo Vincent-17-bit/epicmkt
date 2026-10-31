@@ -42,7 +42,7 @@ export const adminDecideApplication = (d: AdminDeps) =>
     const now = d.now().toISOString();
 
     const found = await d.db.from("applications")
-      .select("id,status,reference_no,business_name,email,phone,price_at_submission,plan_snapshot,verification_level,admin_note,review_started_at")
+      .select("id,status,reference_no,business_name,email,phone,price_at_submission,credit_kes,plan_snapshot,verification_level,admin_note,review_started_at")
       .eq("id", applicationId).maybeSingle();
     const app = found.data;
     if (!app) return json({ error: "not_found" }, 404);

@@ -6,6 +6,7 @@ import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/fr
 import { emptyItemForm, formFromItem, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
+import { ShopMark } from "../../../../components/Layout.jsx";
 import Modal from "../Modal.jsx";
 import BasicsSection from "./BasicsSection.jsx";
 import DetailsSection from "./DetailsSection.jsx";
@@ -57,10 +58,10 @@ export default function ItemEditor() {
     );
   }
   const sections = [...new Set(catalog.data.items.map((i) => i.section).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} />;
+  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} business={business} />;
 }
 
-function EditorForm({ item, sections, category }) {
+function EditorForm({ item, sections, category, business }) {
   const navigate = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
@@ -71,7 +72,8 @@ function EditorForm({ item, sections, category }) {
   const catalogDefaults = useSettings((st) => st.settings.catalog);
   const backTo = `${CATALOG}${location.state?.from ?? ""}`;
 
-  const media = useMediaSlot(item, { onPhotosChanged: () => qc.invalidateQueries({ queryKey: ["catalog"] }) });
+  const seedRef = useRef(location.state?.leftover ?? []);
+  const media = useMediaSlot(item, { onPhotosChanged: () => qc.invalidateQueries({ queryKey: ["catalog"] }), seed: seedRef.current });
 
   // The starting form is the saved item, or the draft kept on this device if it was made from this same item.
   const startRef = useRef(null);
@@ -211,7 +213,7 @@ function EditorForm({ item, sections, category }) {
     setBusy(true);
     try {
       const id = await api.saveItem(item?.id ?? null, check.value);
-      const { problems } = await media.flush(id);
+      const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       // "New items start as Visible": publish a brand-new item straight away, but only when it is complete enough to show:
@@ -225,15 +227,15 @@ function EditorForm({ item, sections, category }) {
       }
       if (published) await qc.invalidateQueries({ queryKey: ["catalog"] });
       const base = isNew ? (published ? "Item added and visible to customers." : "Item added as a draft.") : "Item saved.";
-      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Open Edit to add the rest.` } : { tone: "ok", text: base };
-      if (!stay) {
+      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : { tone: "ok", text: base };
+      if (!stay && problems.length === 0) {
         allow();
         navigate(backTo, { state: { notice: result } });
         return;
       }
       if (isNew) {
         allow();
-        navigate(`${CATALOG}/${id}/edit`, { replace: true, state: { from: location.state?.from, step, notice: result } });
+        navigate(`${CATALOG}/${id}/edit`, { replace: true, state: { from: location.state?.from, step, notice: result, leftover } });
         return;
       }
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
@@ -253,7 +255,7 @@ function EditorForm({ item, sections, category }) {
   useEffect(() => {
     if (location.state?.notice) {
       setNotice(location.state.notice);
-      navigate(location.pathname, { replace: true, state: { ...location.state, notice: undefined } });
+      navigate(location.pathname, { replace: true, state: { ...location.state, notice: undefined, leftover: undefined } });
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -343,6 +345,14 @@ function EditorForm({ item, sections, category }) {
   return (
     <div ref={root} className={styles.editor} data-bp={bp}>
       <header className={styles.head}>
+        {/* The shop logo stays in view here, as on every other screen, and opens My listings. Unsaved changes are still guarded. */}
+        <Link to={CATALOG} className={styles.brand} data-testid="editor-brand">
+          <ShopMark name={business?.name} logoPath={business?.logoPath} />
+          <span className={styles.brandText}>
+            <strong className={styles.brandShop}>{business?.name ?? "Your shop"}</strong>
+            <span className={styles.brandApp}>EpicMKT Seller</span>
+          </span>
+        </Link>
         <IconBtn icon={faChevronLeft} label="Back to your listings" onClick={leave} />
         <div className={styles.headTitle}>
           <h1>{isNew ? "Add item" : "Edit item"}</h1>
@@ -394,7 +404,7 @@ function EditorForm({ item, sections, category }) {
           </form>
         </div>
 
-        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} area={area} /></aside>}
+        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
             <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" />

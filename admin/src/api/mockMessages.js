@@ -66,11 +66,11 @@ export async function sendMessage({ parentId = null, businessId = null, subject 
   return { sent: 1, skipped: 0, ids: [message.id] };
 }
 
-export async function markMessagesRead({ businessId = null } = {}) {
+export async function markMessagesRead({ businessId = null, ids = null } = {}) {
   seed();
   let n = 0;
   for (const m of store.messages) {
-    if (m.sender === "seller" && !m.adminReadAt && (!businessId || m.businessId === businessId)) { m.adminReadAt = nowIso(); m.adminDeliveredAt ??= m.adminReadAt; n += 1; }
+    if (m.sender === "seller" && !m.adminReadAt && (!businessId || m.businessId === businessId) && (!ids || ids.includes(m.id))) { m.adminReadAt = nowIso(); m.adminDeliveredAt ??= m.adminReadAt; n += 1; }
   }
   return n;
 }

@@ -31,6 +31,7 @@ export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);
 export const listItemVideos = (...a) => impl.listItemVideos(...a);
 export const getItemMedia = (...a) => impl.getItemMedia(...a);
 export const listItemMedia = (...a) => impl.listItemMedia(...a);
+export const getMediaLimits = (...a) => impl.getMediaLimits(...a);
 export const getItemMediaLimits = (...a) => impl.getItemMediaLimits(...a);
 export const reorderItemMedia = (...a) => impl.reorderItemMedia(...a);
 export const uploadItemVideo = (...a) => impl.uploadItemVideo(...a);

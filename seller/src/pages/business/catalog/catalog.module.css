@@ -60,6 +60,16 @@
   background: var(--primary-hover);
 }
 
+/* Where the app's top bar (shop logo and name) is sticky, Add item and Import items stop short of it when they are scrolled or focused into view, so they never sit under the logo. Looks and size are unchanged. */
+@media (max-width: 47.99rem) {
+  .head,
+  .headActions,
+  .primary,
+  .ghost {
+    scroll-margin-block: calc(var(--header-h) + var(--space-3)) calc(4.5rem + var(--safe-bottom));
+  }
+}
+
 .ghost {
   border-color: var(--border-strong);
   background: transparent;

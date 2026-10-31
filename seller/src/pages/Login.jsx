@@ -26,7 +26,7 @@ export default function Login() {
     try {
       await api.login(identifier.trim(), password);
       await qc.invalidateQueries();
-      navigate(location.state?.from ?? "/business/subscription", { replace: true });
+      navigate(location.state?.from ?? "/business", { replace: true });
     } catch (err) {
       setError(errorText(err, "Seller ID or password is incorrect."));
     } finally {

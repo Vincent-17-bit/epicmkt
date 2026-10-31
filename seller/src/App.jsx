@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import * as api from "./api/index.js";
 import Layout from "./components/Layout.jsx";
 import RequireSeller from "./components/RequireSeller.jsx";
 import Login from "./pages/Login.jsx";
@@ -20,6 +22,12 @@ import Settings from "./settings/Settings.jsx";
 import Help from "./help/Help.jsx";
 import Onboarding from "./onboarding/Onboarding.jsx";
 
+// Where a seller lands when they open the seller site: My listings. A suspended seller cannot open My listings, so they land on Notifications.
+function Home() {
+  const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
+  return <Navigate to={me.data?.business?.status === "suspended" ? "notifications" : "catalog"} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -29,7 +37,7 @@ export default function App() {
         <Route path="/business/catalog/new" element={<ItemEditor />} />
         <Route path="/business/catalog/:itemId/edit" element={<ItemEditor />} />
         <Route path="/business" element={<Layout />}>
-          <Route index element={<Navigate to="subscription" replace />} />
+          <Route index element={<Home />} />
           <Route path="subscription" element={<Subscription />} />
           <Route path="subscription/receipts/:id" element={<Receipt />} />
           <Route path="notifications" element={<Notifications />} />
@@ -48,7 +56,7 @@ export default function App() {
           <Route path="onboarding" element={<Onboarding />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/business/subscription" replace />} />
+      <Route path="*" element={<Navigate to="/business" replace />} />
     </Routes>
   );
 }

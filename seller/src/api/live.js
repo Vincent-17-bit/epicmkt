@@ -79,18 +79,58 @@ const signUpload = (body) => fn("seller-media-sign", body);
 // Cloudinary's answer, reduced to what the server needs to check and record.
 const hostedFacts = (r) => ({ version: r.version, signature: r.signature, width: r.width, height: r.height, bytes: r.bytes, format: r.format === "jpeg" ? "jpg" : r.format });
 
-const sendToCloudinary = async ({ uploadUrl, fields, publicId }, file) => {
+const abortError = () => new ApiError("upload_cancelled");
+
+const raceAbort = (promise, signal) => {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(abortError());
+  return new Promise((resolve, reject) => {
+    const stop = () => reject(abortError());
+    signal.addEventListener("abort", stop, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", stop));
+  });
+};
+
+// fetch cannot report how much of a file has gone up, so an upload that wants a progress bar goes through XMLHttpRequest instead.
+const postWithProgress = (url, form, { signal, onProgress }) =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError());
+    const xhr = new XMLHttpRequest();
+    const stop = () => xhr.abort();
+    signal?.addEventListener("abort", stop, { once: true });
+    const done = () => signal?.removeEventListener("abort", stop);
+    xhr.open("POST", url);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable && e.total > 0) onProgress(e.loaded / e.total); };
+    xhr.onerror = () => { done(); reject(new ApiError("file_not_uploaded")); };
+    xhr.onabort = () => { done(); reject(abortError()); };
+    xhr.onload = () => {
+      done();
+      let data = null;
+      try { data = JSON.parse(xhr.responseText); } catch { data = null; }
+      resolve({ ok: xhr.status >= 200 && xhr.status < 300, data });
+    };
+    xhr.send(form);
+  });
+
+const sendToCloudinary = async ({ uploadUrl, fields, publicId }, file, { signal, onProgress } = {}) => {
   const form = new FormData();
   for (const [k, v] of Object.entries(fields)) form.append(k, v);
   form.append("file", file); // Cloudinary wants the file last
-  let res;
-  try {
-    res = await fetch(uploadUrl, { method: "POST", body: form });
-  } catch {
-    throw new ApiError("file_not_uploaded");
+  let ok;
+  let data;
+  if (onProgress) {
+    ({ ok, data } = await postWithProgress(uploadUrl, form, { signal, onProgress }));
+  } else {
+    let res;
+    try {
+      res = await fetch(uploadUrl, { method: "POST", body: form, signal });
+    } catch (e) {
+      throw e?.name === "AbortError" ? abortError() : new ApiError("file_not_uploaded");
+    }
+    ok = res.ok;
+    data = await res.json().catch(() => null);
   }
-  const data = await res.json().catch(() => null);
-  if (!res.ok || !data?.public_id || data.public_id !== publicId) {
+  if (!ok || !data?.public_id || data.public_id !== publicId) {
     throw new ApiError(/too large/i.test(data?.error?.message ?? "") ? "too_large" : "file_not_uploaded", data?.error?.message);
   }
   return data;
@@ -102,18 +142,21 @@ const purgeRemoved = () => fn("seller-media-purge", {}).catch(() => {});
 
 const asPhotoLimit = (e) => (e?.code === "limit_reached" ? new ApiError("photo_limit") : e);
 
-export const uploadItemPhoto = async (itemId, file) => {
+// `onProgress(fraction | null, stage)` and `signal` are optional. A cancelled upload stops before it is attached, so nothing is saved.
+export const uploadItemPhoto = async (itemId, file, { signal, onProgress } = {}) => {
   if (!PHOTO_EXT[file?.type]) throw new ApiError("unsupported_type");
-  const body = await shrinkIfHuge(file);
+  onProgress?.(null, "preparing");
+  const body = await raceAbort(shrinkIfHuge(file), signal);
   let signed;
   try {
-    signed = await signUpload({ purpose: "item_photo", itemId });
+    signed = await raceAbort(signUpload({ purpose: "item_photo", itemId }), signal);
   } catch (e) {
     throw asPhotoLimit(e);
   }
-  const hosted = await sendToCloudinary(signed, body);
+  const hosted = await sendToCloudinary(signed, body, { signal, onProgress: onProgress ? (f) => onProgress(f, "uploading") : undefined });
+  onProgress?.(1, "finishing");
   try {
-    await finalizeMedia({ itemId, path: signed.publicId, cloudinary: hostedFacts(hosted) });
+    await raceAbort(finalizeMedia({ itemId, path: signed.publicId, cloudinary: hostedFacts(hosted) }), signal);
   } catch (e) {
     throw asPhotoLimit(e);
   }
@@ -159,14 +202,16 @@ const logVideo = (stage, e) => console.error(`[video upload] ${stage} failed:`, 
 export const listItemVideos = async (itemId) =>
   (await rows(need().from("item_media").select("path").eq("item_id", itemId).eq("kind", "video").order("sort", { ascending: true }).order("created_at", { ascending: true }))).map((r) => r.path);
 
-export const uploadItemVideo = async (itemId, file) => {
+export const uploadItemVideo = async (itemId, file, { signal, onProgress } = {}) => {
   const type = VIDEO_EXT[file?.type];
   if (!type) throw new ApiError("video_unsupported");
   if (file.size > VIDEO_MAX_BYTES) throw new ApiError("video_too_large");
+  onProgress?.(null, "preparing");
   let ticket;
   try {
-    ticket = await signUpload({ purpose: "item_video", itemId, type });
+    ticket = await raceAbort(signUpload({ purpose: "item_video", itemId, type }), signal);
   } catch (e) {
+    if (e?.code === "upload_cancelled") throw e;
     logVideo("sign", e);
     throw asVideoError(e);
   }
@@ -174,10 +219,12 @@ export const uploadItemVideo = async (itemId, file) => {
     logVideo("sign", { code: "bad_ticket" });
     throw new ApiError("video_unavailable");
   }
+  onProgress?.(null, "uploading");
   let stored;
   try {
-    stored = await need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+    stored = await raceAbort(need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type }), signal);
   } catch (e) {
+    if (e?.code === "upload_cancelled") throw e;
     logVideo("storage", e);
     throw new ApiError("video_not_uploaded");
   }
@@ -185,9 +232,11 @@ export const uploadItemVideo = async (itemId, file) => {
     logVideo("storage", stored.error);
     throw new ApiError(videoStorageCode(stored.error), stored.error.message);
   }
+  onProgress?.(1, "finishing");
   try {
-    await finalizeMedia({ itemId, path: ticket.path });
+    await raceAbort(finalizeMedia({ itemId, path: ticket.path }), signal);
   } catch (e) {
+    if (e?.code === "upload_cancelled") throw e;
     // Finalize already ran once (the answer was lost on the way back): the video is attached, so this retry is a success.
     if (e?.code === "already_attached") return { path: ticket.path };
     logVideo("finalize", e);
@@ -208,6 +257,13 @@ export const reorderItemPhotos = (itemId, paths) => rpc("seller_reorder_item_pho
 export const getItemMedia = async (itemId) => shape.itemMedia(await rpc("seller_item_media", { p_item: itemId }));
 export const listItemMedia = async (itemId) => (await getItemMedia(itemId)).media;
 export const getItemMediaLimits = async (itemId) => (await getItemMedia(itemId)).limits;
+// What the plan allows per item, in the same shape as getItemMedia().limits, for an item that does not exist yet.
+export const getMediaLimits = async () => {
+  const sub = await getSubscription();
+  const l = sub.limits[sub.business.planKey] ?? {};
+  const cap = (n) => (n == null ? null : Number(n));
+  return { photos: { used: 0, max: cap(l.photosPerItem) }, videos: { used: 0, max: cap(l.videosPerItem) } };
+};
 // `paths` must be every path of the item, once each, in the new order. Anything else is refused and nothing changes.
 export const reorderItemMedia = async (itemId, paths) => {
   const r = await rpc("seller_reorder_item_media", { p_item: itemId, p_paths: paths });

@@ -71,6 +71,23 @@ function table(w: World, t: string) {
   let payload: any;
   let one = false;
   let strict = false;
+  // Columns named in .select("a,b,c"); null = "*" or no list. A real database only returns these, so the fake must too,
+  // otherwise a handler that reads a column it forgot to select passes here and breaks in production.
+  let cols: string[] | null = null;
+  const parseCols = (c?: string): string[] | null => {
+    if (!c || c.trim() === "*") return null;
+    const out: string[] = [];
+    let depth = 0, cur = "";
+    for (const ch of c) {
+      if (ch === "(") depth++;
+      if (ch === ")") depth--;
+      if (ch === "," && depth === 0) { out.push(cur); cur = ""; } else cur += ch;
+    }
+    out.push(cur);
+    const names = out.map((x) => x.split("(")[0].trim()).filter(Boolean);
+    return names.includes("*") ? null : names;
+  };
+  const project = (r: any) => (cols ? Object.fromEntries(cols.filter((k) => k in r).map((k) => [k, r[k]])) : r);
   const match = (r: any) => eqs.every(([c, v]) => r[c] === v) && nes.every(([c, v]) => r[c] !== v) && ins.every(([c, vs]) => vs.includes(r[c]));
   const exec = () => {
     const rows = (w.tables[t] ??= []);
@@ -98,12 +115,12 @@ function table(w: World, t: string) {
       w.tables[t] = rows.filter((r) => !match(r));
       return { data: null, error: null };
     }
-    const hit = rows.filter(match).map((r) => structuredClone(r));
+    const hit = rows.filter(match).map((r) => structuredClone(project(r)));
     if (one) return strict && !hit[0] ? { data: null, error: { message: "no rows" } } : { data: hit[0] ?? null, error: null };
     return { data: hit, error: null };
   };
   const api: any = {
-    select: () => api, limit: () => api, order: () => api,
+    select: (c?: string) => (mode === "select" && (cols = parseCols(c)), api), limit: () => api, order: () => api,
     eq: (c: string, v: unknown) => (eqs.push([c, v]), api),
     neq: (c: string, v: unknown) => (nes.push([c, v]), api),
     in: (c: string, vs: unknown[]) => (ins.push([c, vs]), api),

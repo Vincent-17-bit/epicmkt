@@ -1,25 +1,26 @@
 .filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 1px solid var(--admin-border);
-  border-radius: 0.6rem;
-  background: var(--admin-surface);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
 }
 
 .filters__check {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
   min-height: 2.5rem;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
 }
 
 .filters__check input {
   width: 1.1rem;
   height: 1.1rem;
-  accent-color: var(--admin-primary);
+  accent-color: var(--primary);
 }
 
 .filters__actions {
@@ -36,13 +37,13 @@
 
 .field--group legend {
   padding: 0;
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--space-1);
 }
 
 .biz-name {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -52,23 +53,24 @@
   place-items: center;
   width: 2rem;
   height: 2rem;
-  border: 1px solid var(--admin-primary);
-  border-radius: 50%;
-  background: var(--admin-primary-tint);
-  font-size: 0.85rem;
-  font-weight: 800;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-round);
+  background: var(--primary-tint);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: var(--lh-sm);
 }
 
 .biz-mark {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 
 .bulk {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 
 .dt--mobile .biz-name {

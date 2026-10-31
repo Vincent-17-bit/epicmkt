@@ -1,16 +1,57 @@
--- Cron schedule for the background jobs (messages, daily lifecycle, proof clean-up). Not a migration: pg_cron and pg_net are enabled per project,
--- and the secrets below differ between projects. Run it once in the SQL editor of each environment.
+-- Cron schedule for the background jobs (messages, daily lifecycle, proof clean-up, media clean-up). Not a migration: pg_cron and
+-- pg_net are enabled per project, and the secrets differ between projects. Run this whole file once in the SQL editor of each
+-- environment. It is safe to run again: scheduling an existing job name replaces it.
 --
--- Before running:
---   1. Database > Extensions: enable pg_cron and pg_net.
---   2. Set the function secret (the functions read it as CRON_SECRET):
---        supabase secrets set CRON_SECRET=<long random string>
---   3. Store the same values in Vault so the jobs can read them:
---        select vault.create_secret('https://<project-ref>.supabase.co', 'project_url');
---        select vault.create_secret('<the same CRON_SECRET>', 'cron_secret');
+-- It needs, and checks for, these (the guard below stops with a plain message if one is missing):
+--   * extensions pg_cron and pg_net (created below if the project allows it)
+--   * Vault secret 'project_url': the project URL, https://<ref>.supabase.co, no path
+--   * Vault secret 'cron_secret': the same value as the CRON_SECRET function secret
+-- Vault and the function secret are what "Run now" on Admin > Automation already uses, so if "Run now" did not say
+-- "not configured", both Vault secrets exist.
+--
+-- Messaging only really sends when the functions run live. Set these function secrets BEFORE running this file, or the
+-- every-minute job would mark queued messages as sent without sending them (mock mode):
+--   APP_ENV=production        (or MESSAGING_MODE=live)
+--   AT_API_KEY, AT_USERNAME   (and AT_SENDER if you use a sender id)  for SMS
+--   RESEND_API_KEY, MAIL_FROM                                          for email
 --
 -- pg_cron runs in UTC. Nairobi is UTC+3 all year (no daylight saving).
--- Scheduling an existing job name replaces it, so this file is safe to re-run.
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+
+do $guard$
+declare
+  v_id uuid;
+  v_url text;
+  v_secret text;
+begin
+  if to_regnamespace('cron') is null then
+    raise exception 'pg_cron is not enabled: Database > Extensions > pg_cron, then run this file again';
+  end if;
+  if to_regnamespace('net') is null then
+    raise exception 'pg_net is not enabled: Database > Extensions > pg_net, then run this file again';
+  end if;
+  if to_regclass('vault.decrypted_secrets') is null then
+    raise exception 'Vault is not available on this project';
+  end if;
+
+  select id, decrypted_secret into v_id, v_url
+    from vault.decrypted_secrets where name = 'project_url' order by created_at desc limit 1;
+  if v_url is null or v_url !~ '^https://[^/\s]+/?$' then
+    raise exception 'Vault secret project_url is missing or is not a bare https URL (https://<ref>.supabase.co)';
+  end if;
+  -- A trailing slash would make the job call https://ref.supabase.co//functions/v1/... and get a 404. Fix it once, here.
+  if right(v_url, 1) = '/' then
+    perform vault.update_secret(v_id, rtrim(v_url, '/'));
+  end if;
+
+  select decrypted_secret into v_secret
+    from vault.decrypted_secrets where name = 'cron_secret' order by created_at desc limit 1;
+  if v_secret is null or length(v_secret) < 16 then
+    raise exception 'Vault secret cron_secret is missing or shorter than 16 characters; it must equal the CRON_SECRET function secret';
+  end if;
+end $guard$;
 
 -- dispatch-messages: every minute. Sends queued SMS/email, applies retries and quiet hours.
 select cron.schedule(

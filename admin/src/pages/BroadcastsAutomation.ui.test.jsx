@@ -60,7 +60,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe("Broadcast composer", () => {
   it("will not send until the exact message has been previewed", async () => {
     renderPage(<BroadcastsPage />);
-    const send = await screen.findByRole("button", { name: "Send" });
+    const send = await screen.findByRole("button", { name: "Send broadcast" });
     expect(send).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Renew today {{business_name}}" } });
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
@@ -76,11 +76,11 @@ describe("Broadcast composer", () => {
     fireEvent.change(await screen.findByLabelText("Message"), { target: { value: "Renew today" } });
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     await screen.findByText(/Skipped for missing contact details/);
-    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send broadcast" }));
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("6 messages to 6 businesses");
     fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: "Renewal campaign" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Send" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send broadcast" }));
     await waitFor(() => expect(api.sendBroadcast).toHaveBeenCalledTimes(2));
     const sent = api.sendBroadcast.mock.calls[1][0];
     expect(sent).toMatchObject({ target: { segment: "expiring_7d" }, channels: { sms: true, email: false, inApp: false }, body: "Renew today", preview: false });
@@ -105,7 +105,7 @@ describe("Broadcast composer", () => {
     mockRole = "finance";
     renderPage(<BroadcastsPage />);
     expect(await screen.findByRole("button", { name: "Preview" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Send broadcast" })).toBeDisabled();
   });
 });
 

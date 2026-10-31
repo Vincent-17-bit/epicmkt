@@ -1,13 +1,6 @@
-import Button from "./Button.jsx";
-import { describeError } from "../lib/systemStatus.js";
+import ErrorCard from "./ErrorCard.jsx";
 
-/** The standard "could not load" block: what failed, the likely cause, and a way to retry. */
+/** The standard "could not load" block used across the admin. Same props as before, now backed by ErrorCard. */
 export default function LoadError({ what, error, onRetry }) {
-  const { title, cause } = describeError(error);
-  return (
-    <div role="alert" className="load-error">
-      <p>We could not load {what}. {onRetry ? <Button onClick={onRetry}>Try again</Button> : null}</p>
-      <p><strong>{title}.</strong> {cause}</p>
-    </div>
-  );
+  return <ErrorCard what={what} error={error} onRetry={onRetry} />;
 }

@@ -85,14 +85,36 @@ export async function getAdminCounts() {
 }
 
 // Demo mode only. The live API reads these from admin_activity(); the sample lines used to sit in the page itself.
-export async function getAdminActivity() {
+// Ids follow the live shape: "n:" rows are notifications (deleted for good), "a:" rows come from the audit log
+// (only hidden from this admin's feed, like admin_delete_activity() does).
+const demoActivity = [
+  { id: "n:demo-1", text: "New application from Umoja Market submitted 2 minutes ago", to: "/admin/applications" },
+  { id: "n:demo-2", text: "Payment code MPESA-1047 matched and awaiting confirmation", to: "/admin/payments" },
+  { id: "a:demo-3", text: "2 seller reports were flagged for review", to: null },
+  { id: "a:demo-4", text: "Reminder batch completed for 6 expiring sellers", to: null },
+];
+const mockActivityGone = new Set();
+
+export async function getAdminActivity({ limit = 15 } = {}) {
   await latency(80);
-  return [
-    { id: "demo-1", text: "New application from Umoja Market submitted 2 minutes ago", to: "/admin/applications" },
-    { id: "demo-2", text: "Payment code MPESA-1047 matched and awaiting confirmation", to: "/admin/payments" },
-    { id: "demo-3", text: "2 seller reports were flagged for review", to: null },
-    { id: "demo-4", text: "Reminder batch completed for 6 expiring sellers", to: null },
-  ];
+  return demoActivity.filter((row) => !mockActivityGone.has(row.id)).slice(0, limit).map((row) => ({ ...row }));
+}
+
+// Same answer shape as the live RPC: { deleted, dismissed, skipped }.
+export async function deleteAdminActivity({ ids } = {}) {
+  await latency(80);
+  const list = [...new Set((ids ?? []).filter(Boolean))];
+  if (!list.length) throw new ApiError("invalid_input", "invalid_input");
+  if (list.some((id) => !/^[na]:.+/.test(String(id)))) throw new ApiError("invalid_input", "invalid_input");
+  let deleted = 0;
+  let dismissed = 0;
+  for (const id of list) {
+    if (!demoActivity.some((row) => row.id === id) || mockActivityGone.has(id)) continue;
+    mockActivityGone.add(id);
+    if (id.startsWith("n:")) deleted += 1;
+    else dismissed += 1;
+  }
+  return { deleted, dismissed, skipped: list.length - deleted - dismissed };
 }
 
 export async function getBusinesses() {

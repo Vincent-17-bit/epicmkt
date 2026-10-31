@@ -136,11 +136,18 @@ function Composer({ threads, busy, onSend }) {
   );
 }
 
-function Bubble({ m, onDelete, canDelete }) {
+function Bubble({ m, onDelete, canDelete, focused }) {
   const mine = m.sender === "admin";
   const unread = m.sender === "seller" && !m.adminReadAt;
+  const ref = useRef(null);
+  // Arriving from the bell: bring this message into view and move focus to it so a screen reader reads it.
+  useEffect(() => {
+    if (!focused) return;
+    ref.current?.scrollIntoView({ block: "center" });
+    ref.current?.focus({ preventScroll: true });
+  }, [focused]);
   return (
-    <li className="msg-bubble" data-mine={mine} data-unread={unread} data-testid="thread-message" data-sender={m.sender} style={{ marginInlineStart: mine ? undefined : `${Math.min(m.depth, 4) * 0.75}rem` }}>
+    <li ref={ref} tabIndex={focused ? -1 : undefined} className="msg-bubble" data-mine={mine} data-unread={unread} data-focused={focused || undefined} data-testid="thread-message" data-sender={m.sender} style={{ marginInlineStart: mine ? undefined : `${Math.min(m.depth, 4) * 0.75}rem` }}>
       <div className="msg-bubble__who">
         <strong>{mine ? "EpicMKT" : m.businessName}</strong>
         <time dateTime={m.createdAt} title={stamp(m.createdAt)}>{clock(m.createdAt)}</time>
@@ -179,6 +186,7 @@ export default function MessagesPage() {
   const { can } = usePermissions();
   const [params, setParams] = useSearchParams();
   const selected = params.get("business");
+  const focusId = params.get("message");
   const [pending, setPending] = useState(null);
   const streamEnd = useRef(null);
   const canDelete = can("messages.delete");
@@ -215,7 +223,7 @@ export default function MessagesPage() {
   useEffect(() => {
     if (current && unreadHere) api.markMessagesRead({ businessId: current.id }).then(refresh).catch(() => {});
   }, [current?.id, unreadHere]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { streamEnd.current?.scrollIntoView({ block: "end" }); }, [current?.id, data.length]);
+  useEffect(() => { if (!focusId) streamEnd.current?.scrollIntoView({ block: "end" }); }, [current?.id, data.length, focusId]);
 
   const send = useMutation({
     mutationFn: (input) => api.sendMessage(input),
@@ -293,7 +301,7 @@ export default function MessagesPage() {
               {flow.map((t) => (
                 <article key={t.id} className="msg-topic" data-testid="thread">
                   <h4 className="msg-topic__title">{t.subject}</h4>
-                  <ul className="msg-bubbles">{t.messages.map((m) => <Bubble key={m.id} m={m} canDelete={canDelete} onDelete={askMessage} />)}</ul>
+                  <ul className="msg-bubbles">{t.messages.map((m) => <Bubble key={m.id} m={m} canDelete={canDelete} onDelete={askMessage} focused={m.id === focusId} />)}</ul>
                 </article>
               ))}
               <div ref={streamEnd} />

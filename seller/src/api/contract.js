@@ -24,6 +24,7 @@ export const SELLER_API = [
   "getItemMedia",
   "listItemMedia",
   "getItemMediaLimits",
+  "getMediaLimits",
   "reorderItemMedia",
   "uploadItemVideo",
   "removeItemVideo",

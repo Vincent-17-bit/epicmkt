@@ -32,6 +32,19 @@ test("the rules match what the database enforces", () => {
   assert.equal(roleCan("support", "activity.view"), false);
 });
 
+test("deleting from the live activity feed is for the owner and reviewers, like admin_delete_activity() in 0059", () => {
+  assert.equal(roleCan("owner", "activity.manage"), true);
+  assert.equal(roleCan("reviewer", "activity.manage"), true);
+  assert.equal(roleCan("finance", "activity.manage"), false);
+  assert.equal(roleCan("support", "activity.manage"), false);
+  assert.equal(roleCan(null, "activity.manage"), false);
+  assert.equal(explain("reviewer", "activity.manage"), "");
+  assert.equal(
+    explain("support", "activity.manage"),
+    "Only Owners and Reviewers can delete or clear items in the live activity feed. You are signed in as Support.",
+  );
+});
+
 test("settings, the catalogue and admin accounts are owner only", () => {
   for (const action of ["settings.view", "settings.edit", "catalogue.edit", "admins.manage"]) {
     for (const role of ROLES.filter((r) => r !== "owner")) assert.equal(roleCan(role, action), false, `${role} ${action}`);

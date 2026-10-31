@@ -117,7 +117,7 @@ export default function ComposeTab() {
         {formError ? <p className="modal__error" role="alert">{formError}</p> : null}
         <div className="compose__actions">
           <Button onClick={onPreview} disabled={!allowed || check.isPending} title={why("messages.send")}>{check.isPending ? "Checking" : "Preview"}</Button>
-          <Button variant="primary" disabled={!allowed || !previewIsCurrent} title={allowed ? (previewIsCurrent ? "" : "Preview the message first") : why("messages.send")} onClick={() => { send.reset(); setConfirming(true); }}>Send</Button>
+          <Button variant="primary" disabled={!allowed || !previewIsCurrent} title={allowed ? (previewIsCurrent ? "" : "Preview the message first") : why("messages.send")} onClick={() => { send.reset(); setConfirming(true); }}>Send broadcast</Button>
         </div>
       </div>
 
@@ -137,7 +137,7 @@ export default function ComposeTab() {
         <ConfirmDialog
           title="Send this message"
           summary={`${result.rows.sms + result.rows.email + result.rows.inApp} messages to ${result.recipients} businesses. This cannot be recalled once it is sent.`}
-          confirmLabel="Send"
+          confirmLabel="Send broadcast"
           busy={send.isPending}
           error={send.isError ? explain(send.error) : ""}
           onConfirm={() => send.mutate({ ...preview.payload, preview: false, idempotencyKey: sendKey.current })}

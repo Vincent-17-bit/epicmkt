@@ -199,13 +199,24 @@ export const catalogStats = async () => {
 };
 export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
-export const uploadItemPhoto = async (itemId, file) => {
+const demoDurations = new Map();
+const noteUpload = (item, path) => {
+  demoOrder.set(item.id, [...sequence(item).map((m) => m.path), path]);
+};
+const checkpoint = (signal) => { if (signal?.aborted) throw new ApiError("upload_cancelled"); };
+export const uploadItemPhoto = async (itemId, file, { signal, onProgress } = {}) => {
   signedIn();
+  checkpoint(signal);
+  onProgress?.(null, "preparing");
   await wait();
+  checkpoint(signal);
+  onProgress?.(0.5, "uploading");
+  onProgress?.(1, "finishing");
   const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
   if (!item) throw new ApiError("item_not_found");
   if (item.imagePaths.length >= (bill.business.planKey === "premium" ? 15 : 7)) throw new ApiError("photo_limit");
   const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.webp`;
+  noteUpload(item, path);
   item.imagePaths.push(path);
   item.imageCount = item.imagePaths.length;
   return { path };
@@ -222,9 +233,14 @@ export const removeItemPhoto = async (path) => {
 const demoVideos = new Map();
 // DEPRECATED: use listItemMedia.
 export const listItemVideos = async (itemId) => { signedIn(); await wait(); return [...(demoVideos.get(itemId) ?? [])]; };
-export const uploadItemVideo = async (itemId, file) => {
+export const uploadItemVideo = async (itemId, file, opts = {}) => {
+  const { signal, onProgress } = opts;
   signedIn();
+  checkpoint(signal);
+  onProgress?.(null, "preparing");
   await wait();
+  checkpoint(signal);
+  onProgress?.(1, "finishing");
   const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
   if (!item) throw new ApiError("item_not_found");
   if (!["video/mp4", "video/webm"].includes(file?.type)) throw new ApiError("video_unsupported");
@@ -232,7 +248,9 @@ export const uploadItemVideo = async (itemId, file) => {
   const list = demoVideos.get(itemId) ?? [];
   if (list.length >= (bill.business.planKey === "premium" ? 3 : 1)) throw new ApiError("video_limit");
   const path = typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : `mock/${itemId}/${++bill.seq}.mp4`;
+  noteUpload(item, path);
   demoVideos.set(itemId, [...list, path]);
+  if (opts?.durationSec > 0) demoDurations.set(path, opts.durationSec);
   item.hasVideo = true;
   return { path };
 };
@@ -278,7 +296,13 @@ export const getItemMedia = async (itemId) => {
   const item = bill.items.find((i) => i.id === itemId);
   if (!item) throw new ApiError("item_not_found");
   const seq = sequence(item);
-  return { media: seq.map((m) => ({ path: m.path, kind: m.kind, sort: m.sort })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
+  return { media: seq.map((m) => ({ path: m.path, kind: m.kind, sort: m.sort, ...(demoDurations.has(m.path) ? { duration: demoDurations.get(m.path) } : {}) })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
+};
+export const getMediaLimits = async () => {
+  signedIn();
+  await wait();
+  const premium = bill.business.planKey === "premium";
+  return { photos: { used: 0, max: premium ? 15 : 7 }, videos: { used: 0, max: premium ? 3 : 1 } };
 };
 export const listItemMedia = async (itemId) => (await getItemMedia(itemId)).media;
 export const getItemMediaLimits = async (itemId) => (await getItemMedia(itemId)).limits;
