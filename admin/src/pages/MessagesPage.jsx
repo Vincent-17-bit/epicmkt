@@ -300,7 +300,7 @@ export default function MessagesPage() {
             <div className="msg-stream">
               {flow.map((t) => (
                 <article key={t.id} className="msg-topic" data-testid="thread">
-                  <h4 className="msg-topic__title">{t.subject}</h4>
+                  <h3 className="msg-topic__title">{t.subject}</h3>
                   <ul className="msg-bubbles">{t.messages.map((m) => <Bubble key={m.id} m={m} canDelete={canDelete} onDelete={askMessage} focused={m.id === focusId} />)}</ul>
                 </article>
               ))}

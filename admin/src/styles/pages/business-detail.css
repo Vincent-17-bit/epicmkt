@@ -13,7 +13,7 @@
 .biz-stats strong { font-size: var(--fs-lg); line-height: var(--lh-lg); letter-spacing: var(--ls-lg); }
 .biz-stats span { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--ls-xs); color: var(--text-muted); }
 .biz-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-5); }
-.biz-columns h4, .biz-flags h4 { margin: 0 0 var(--space-2); }
+.biz-columns :is(h3, h4), .biz-flags :is(h3, h4) { margin: 0 0 var(--space-2); }
 .biz-fields { margin: 0; display: grid; gap: var(--space-2); }
 .biz-field { display: grid; gap: var(--space-1); }
 .biz-field dt { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--ls-xs); color: var(--text-muted); }

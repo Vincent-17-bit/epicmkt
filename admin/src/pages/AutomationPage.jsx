@@ -72,7 +72,7 @@ export default function AutomationPage() {
                           {job && (
                             <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); toggle.mutate({ name, active: !job.active }); }} aria-label={`${job.active ? "Pause" : "Resume"} ${info.label}`}>{job.active ? "Pause" : "Resume"}</Button>
                           )}
-                          <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); run.mutate(name); }} aria-label={`Run ${info.label} now`}>Run now</Button>
+                          <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); run.mutate(name); }} aria-label={`Run now: ${info.label}`}>Run now</Button>
                         </td>
                       </tr>
                     );
@@ -81,7 +81,7 @@ export default function AutomationPage() {
               </table>
             </div>
 
-            <h4>Message queue</h4>
+            <h3>Message queue</h3>
             <p>
               <strong>{status.queue.queued}</strong> queued, <strong>{status.queue.due_now}</strong> due now, <strong className={status.queue.failed_7d ? "text-danger" : ""}>{status.queue.failed_7d}</strong> failed in 7 days. Last sent {ago(status.last_sent_at)}; last reminder queued {ago(status.last_reminder_at)}.{" "}
               <Link to="/admin/broadcasts?tab=log">Open the message log</Link>

@@ -183,10 +183,10 @@ export default function AdminLayout() {
             <Link
               to="/admin/account"
               className="admin-avatar"
-              aria-label={`Account of ${displayName}`}
+              aria-label={`${initialsOf(displayName)}, account of ${displayName}`}
               title={admin?.role ? `${displayName} (${admin.role}): account and password` : displayName}
             >
-              <span aria-hidden="true">{initialsOf(displayName)}</span>
+              {initialsOf(displayName)}
             </Link>
             {demo ? null : (
               <button type="button" className="admin-theme-toggle admin-wide-only" onClick={signOut}>

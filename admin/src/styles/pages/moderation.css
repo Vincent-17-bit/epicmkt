@@ -9,5 +9,5 @@
 .load-error { padding: var(--space-3) 0; }
 .radar-summary { margin: var(--space-2) 0 var(--space-5); }
 .radar-group { margin-top: var(--space-6); }
-.radar-group h4 { margin: 0 0 var(--space-1); display: flex; gap: var(--space-2); align-items: center; }
+.radar-group :is(h3, h4) { margin: 0 0 var(--space-1); display: flex; gap: var(--space-2); align-items: center; }
 

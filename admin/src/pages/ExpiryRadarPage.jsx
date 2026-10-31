@@ -39,7 +39,7 @@ export default function ExpiryRadarPage() {
             </p>
             {groups.map((group) => (
               <section key={group.id} className="radar-group" aria-labelledby={`radar-${group.id}`}>
-                <h4 id={`radar-${group.id}`}>{group.label} <span className="tabs__count">{group.rows.length}</span></h4>
+                <h3 id={`radar-${group.id}`}>{group.label} <span className="tabs__count">{group.rows.length}</span></h3>
                 <p className="muted">{group.hint}</p>
                 {group.rows.length === 0 ? <p className="muted">None.</p> : (
                   <div className="table-shell">

@@ -88,7 +88,7 @@ export default function FlashSalesPage() {
                       </td>
                       <td>
                         {["live", "scheduled"].includes(row.status) && (
-                          <Button size="sm" disabled={!can("flash.end")} title={why("flash.end")} onClick={() => { setError(""); setTarget(row); }} aria-label={`End ${row.itemName} flash sale`}>End sale</Button>
+                          <Button size="sm" disabled={!can("flash.end")} title={why("flash.end")} onClick={() => { setError(""); setTarget(row); }} aria-label={`End sale: ${row.itemName}`}>End sale</Button>
                         )}
                       </td>
                     </tr>

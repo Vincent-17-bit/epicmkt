@@ -83,7 +83,7 @@ function AssignPanel({ row, onClose, onDone }) {
             <strong>{kes(row.amount)}</strong> arrived with the account <strong>“{row.account || "(empty)"}”</strong>. {NOTE[row.note] ?? ""}
             {" "}The money is recorded and safe. Choose the shop it belongs to.
           </p>
-          {row.candidates.length ? <>{<h4>Likely shops</h4>}{list(row.candidates, "")}</> : null}
+          {row.candidates.length ? <>{<h3>Likely shops</h3>}{list(row.candidates, "")}</> : null}
           <label>
             Search any shop by name, town, phone or reference
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type at least 2 letters" />

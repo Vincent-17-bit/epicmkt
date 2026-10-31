@@ -71,7 +71,7 @@ export function OverviewTab({ detail }) {
       </ul>
       <div className="biz-columns">
         <section>
-          <h4>Owner and contact</h4>
+          <h3>Owner and contact</h3>
           <dl className="biz-fields">
             <Field name="Owner">{b.owner_name}</Field>
             <Field name="Phone">{b.phone}</Field>
@@ -80,7 +80,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>Location</h4>
+          <h3>Location</h3>
           <dl className="biz-fields">
             <Field name="County">{b.county}</Field>
             <Field name="Town">{b.town}</Field>
@@ -89,7 +89,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>Subscription</h4>
+          <h3>Subscription</h3>
           <dl className="biz-fields">
             <Field name="Plan">{b.plan_key ? `${b.plan_key[0].toUpperCase()}${b.plan_key.slice(1)}` : ""}</Field>
             <Field name="Monthly price">{b.monthly_price ? kes(b.monthly_price) : ""}</Field>
@@ -114,7 +114,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>History</h4>
+          <h3>History</h3>
           <dl className="biz-fields">
             <Field name="Joined">{formatDate(b.created_at)}</Field>
             <Field name="Last sign-in">{b.last_login_at ? `${formatDateTime(b.last_login_at)} (${timeAgo(b.last_login_at)})` : ""}</Field>
@@ -278,7 +278,7 @@ export function FlagsTab({ id }) {
     <Query query={query} empty="">
       {(data) => (
         <div className="biz-flags">
-          <h4>Flags raised by EpicMKT</h4>
+          <h3>Flags raised by EpicMKT</h3>
           {data.flags.length === 0 ? <p className="muted">No flags.</p> : (
             <ul className="biz-list">
               {data.flags.map((f) => (
@@ -295,7 +295,7 @@ export function FlagsTab({ id }) {
               ))}
             </ul>
           )}
-          <h4>Reports from customers</h4>
+          <h3>Reports from customers</h3>
           {data.reports.length === 0 ? <p className="muted">No reports.</p> : (
             <ul className="biz-list">
               {data.reports.map((r) => (
