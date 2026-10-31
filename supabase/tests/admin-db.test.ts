@@ -81,7 +81,7 @@ Deno.test("real schema: first payment activates a business with every insert acc
   assertEquals([app.status, app.seller_id], ["activated", r.body.sellerId]);
 
   const msgs = await q(`select channel, status, kind, template_key, business_id, application_id, to_address, dedupe_key from public.messages order by channel`);
-  assertEquals(msgs.map((m) => [m.channel, m.status, m.template_key, m.to_address]), [["email", "queued", "welcome", "wanjiru@example.com"], ["sms", "queued", "welcome", "+254712345678"]]);
+  assertEquals(msgs.map((m) => [m.channel, m.status, m.template_key, m.to_address]), [["email", "queued", "welcome", "wanjiru@example.com"]]);
   assert(msgs.every((m) => m.business_id === biz.id && m.application_id === APP_B && m.dedupe_key.startsWith("welcome:")));
 
   const audit = await q(`select action, actor_role, actor_id, actor_email, target_type, target_id, business_id, after from public.audit_log order by id`);

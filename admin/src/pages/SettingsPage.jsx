@@ -58,7 +58,7 @@ export default function SettingsPage() {
     <div className="page-shell">
       <form className="panel" onSubmit={submit}>
         <div className="panel__header">
-          <h3>System settings</h3>
+          <h2 className="heading-sm">System settings</h2>
           <Button type="submit" variant="primary" disabled={!changed || save.isPending}>
             {save.isPending ? "Saving" : "Save changes"}
           </Button>

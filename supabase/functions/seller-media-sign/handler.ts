@@ -1,4 +1,4 @@
-import { itemPhotoId, shopImageId } from "../_shared/synced/images.js";
+import { galleryImageId, itemPhotoId, shopImageId, staffImageId } from "../_shared/synced/images.js";
 import { authenticate, json, rateLimited, rateOk, readJson, wrap, z, type Deps } from "../_shared/seller.ts";
 
 const BUCKET = "seller-media";
@@ -10,6 +10,8 @@ const Body = z.discriminatedUnion("purpose", [
   z.object({ purpose: z.literal("item_video"), itemId: z.string().uuid(), type: z.enum(["mp4", "webm"]) }),
   z.object({ purpose: z.literal("logo") }),
   z.object({ purpose: z.literal("cover") }),
+  z.object({ purpose: z.literal("gallery") }),
+  z.object({ purpose: z.literal("staff") }),
 ]);
 
 export const sellerMediaSign = (d: Deps) => wrap(async (req) => {
@@ -59,6 +61,14 @@ export const sellerMediaSign = (d: Deps) => wrap(async (req) => {
     if (room.error) return json({ error: "server_error" }, 500);
     if (room.data !== true) return json({ error: "limit_reached" }, 409);
     publicId = itemPhotoId(business, itemId, uuid);
+  } else if (body.purpose === "gallery") {
+    // Say "limit reached" before the seller waits on a big upload.
+    const room = await d.db.rpc("gallery_room", { p_business: business });
+    if (room.error) return json({ error: "server_error" }, 500);
+    if (room.data !== true) return json({ error: "limit_reached" }, 409);
+    publicId = galleryImageId(business, uuid);
+  } else if (body.purpose === "staff") {
+    publicId = staffImageId(business, uuid);
   } else {
     publicId = shopImageId(business, body.purpose, uuid);
   }

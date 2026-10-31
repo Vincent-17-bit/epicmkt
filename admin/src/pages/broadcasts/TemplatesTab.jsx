@@ -64,7 +64,7 @@ export default function TemplatesTab() {
       </div>
       <div className="table-shell">
         <table>
-          <thead><tr><th>Key</th><th>Channel</th><th>Text</th><th>Used (30 days)</th><th>Version</th><th /></tr></thead>
+          <thead><tr><th scope="col">Key</th><th scope="col">Channel</th><th scope="col">Text</th><th scope="col">Used (30 days)</th><th scope="col">Version</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
           <tbody>
             {isLoading ? <tr><td colSpan={6}><span className="skeleton" /></td></tr>
               : data.length === 0 ? <tr><td colSpan={6}>No templates yet.</td></tr>

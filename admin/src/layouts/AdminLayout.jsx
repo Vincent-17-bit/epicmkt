@@ -1,3 +1,4 @@
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { LogoMark } from "@epicmkt/ui";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +31,10 @@ export default function AdminLayout() {
   useLiveRefresh();
   const displayName = admin?.displayName || admin?.email || "Admin";
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef(null);
+  const moreButtonRef = useRef(null);
+  // The More sheet is a dialog: focus moves into it, Tab stays in it, Escape closes it and focus returns to the button.
+  useFocusTrap(moreRef, moreOpen, { onEscape: () => setMoreOpen(false), returnTo: moreButtonRef });
   const { collapsed, toggle: toggleSidebar } = useSidebar();
   const [tip, setTip] = useState(null);
   const contentRef = useRef(null);
@@ -147,7 +152,7 @@ export default function AdminLayout() {
         </aside>
       </div>
 
-      {tip ? <div className="admin-tooltip" role="presentation" style={{ top: tip.top, left: tip.left }}>{tip.label}</div> : null}
+      {tip ? <div className="admin-tooltip" role="presentation" style={{ "--tip-top": `${tip.top}px`, "--tip-left": `${tip.left}px` }}>{tip.label}</div> : null}
 
       <div className="admin-main">
         <header className="admin-header">
@@ -178,7 +183,7 @@ export default function AdminLayout() {
             <Link
               to="/admin/account"
               className="admin-avatar"
-              aria-label={`Account of ${displayName}`}
+              aria-label={`${initialsOf(displayName)}, account of ${displayName}`}
               title={admin?.role ? `${displayName} (${admin.role}): account and password` : displayName}
             >
               {initialsOf(displayName)}
@@ -196,10 +201,10 @@ export default function AdminLayout() {
         </main>
       </div>
 
-      {moreOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" onClick={() => setMoreOpen(false)} /> : null}
+      {moreOpen ? <button type="button" className="admin-backdrop" aria-label="Close menu" tabIndex={-1} onClick={() => setMoreOpen(false)} /> : null}
 
       {moreOpen ? (
-        <div className="admin-more" role="dialog" aria-label="More">
+        <div className="admin-more" id="admin-more-menu" ref={moreRef} role="dialog" aria-modal="true" aria-label="More">
           <div className="admin-more__grid">
             {moreItems.map((item) => {
               const text = badgeText(badges[item.to]);
@@ -240,7 +245,7 @@ export default function AdminLayout() {
           );
         })}
         {moreItems.length ? (
-          <button type="button" className={`admin-tab ${moreActive || moreOpen ? "is-active" : ""}`} aria-expanded={moreOpen} onClick={() => setMoreOpen((value) => !value)}>
+          <button type="button" className={`admin-tab ${moreActive || moreOpen ? "is-active" : ""}`} ref={moreButtonRef} aria-expanded={moreOpen} aria-haspopup="dialog" aria-controls={moreOpen ? "admin-more-menu" : undefined} onClick={() => setMoreOpen((value) => !value)}>
             <FontAwesomeIcon icon={faEllipsis} fixedWidth />
             <span>More</span>
             {moreBadge ? <b className="admin-tab__badge">{badgeText(moreBadge)}</b> : null}

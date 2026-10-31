@@ -57,7 +57,7 @@ export function ToastProvider({ children }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="toast-stack" aria-live="polite">
+      <div className="toast-stack" role="status" aria-live="polite" aria-atomic="false">
         {items.map((item) => <ToastItem key={item.id} item={item} onDismiss={dismiss} />)}
       </div>
     </ToastContext.Provider>

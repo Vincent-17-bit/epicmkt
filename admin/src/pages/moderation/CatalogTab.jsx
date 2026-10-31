@@ -118,8 +118,8 @@ export default function CatalogTab() {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" aria-label="Select all items on this page" checked={allOnPage} onChange={() => setSelected(allOnPage ? [] : rows.map((r) => r.id))} /></th>
-                <th>Item</th><th>Business</th><th>Price</th><th>State</th><th>Flags</th><th />
+                <th scope="col"><input type="checkbox" aria-label="Select all items on this page" checked={allOnPage} onChange={() => setSelected(allOnPage ? [] : rows.map((r) => r.id))} /></th>
+                <th scope="col">Item</th><th scope="col">Business</th><th scope="col">Price</th><th scope="col">State</th><th scope="col">Flags</th><th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>

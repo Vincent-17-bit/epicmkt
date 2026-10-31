@@ -257,7 +257,7 @@ The customer site and the seller Preview both use `isOpenOn`, `closingInfo` and 
 
 ## Weekly opening hours
 
-Migration `0060_seller_set_hours.sql` adds `seller_set_hours(p_hours jsonb) returns jsonb`, the only way a seller changes
+Migration `0065_seller_set_hours.sql` adds `seller_set_hours(p_hours jsonb) returns jsonb`, the only way a seller changes
 `businesses.hours` (the column is not writable directly and `seller_update_profile` refuses an `hours` field). It is
 `security definer`, runs for `authenticated` and `service_role` only, and refuses a suspended seller (`account_suspended`).
 

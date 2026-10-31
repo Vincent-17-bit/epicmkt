@@ -236,7 +236,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const shown = variant ?? current?.pricing ?? null;
   const seller = current?.business ?? null;
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
-  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing }) : "";
+  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
   const highlights = normalizeHighlights(current?.highlights);
   const fullDescription = current ? dedupeDescription(current.shortDescription, current.description) : "";

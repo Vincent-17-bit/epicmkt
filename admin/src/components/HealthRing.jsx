@@ -7,7 +7,7 @@ export default function HealthRing({ score, size = 44 }) {
   const tone = value >= 70 ? "var(--primary)" : value >= 40 ? "var(--text)" : "var(--danger)";
 
   return (
-    <span className="health-ring" style={{ width: size, height: size }} role="img" aria-label={`Health score ${value} out of 100`}>
+    <span className="health-ring" style={{ "--ring-size": `${size}px` }} role="img" aria-label={`Health score ${value} out of 100`}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--border)" strokeWidth={STROKE} />
         <circle

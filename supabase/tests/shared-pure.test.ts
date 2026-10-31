@@ -192,10 +192,11 @@ test("reference numbers, seller IDs and generated passwords have the expected sh
 // ---- One-time codes: when the fixed dev code is allowed, and when a real SMS must go out -------------------------
 
 const withEnv = async (vars: Record<string, string>, run: () => Promise<void> | void) => {
-  const g = globalThis as any;
-  const prior = g.Deno;
-  g.Deno = { ...(prior ?? {}), env: { get: (k: string) => vars[k] } };
-  try { await run(); } finally { g.Deno = prior; }
+  // Newer Deno versions make the global `Deno` read only, so swap just env.get (it is restored afterwards).
+  const env = (globalThis as any).Deno.env;
+  const prior = env.get;
+  Object.defineProperty(env, "get", { value: (k: string) => vars[k], configurable: true, writable: true });
+  try { await run(); } finally { Object.defineProperty(env, "get", { value: prior, configurable: true, writable: true }); }
 };
 
 test("dev OTP (fixed 123456, no SMS) only when not production AND messaging is mock", async () => {

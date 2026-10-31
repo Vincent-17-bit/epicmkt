@@ -1,0 +1,33 @@
+/*
+   Admin stylesheet entry point. Import order IS the cascade order, so do not reorder.
+   typography, theme  ->  base -> layout -> components/pages (as the original admin.css ran) -> responsive -> login.
+   Every colour comes from theme.css tokens; see docs/admin-contrast.md.
+*/
+@import "./typography.css";
+@import "./theme.css";
+@import "./base.css";
+@import "./layout.css";
+@import "./components/controls.css";
+@import "./components/panels.css";
+@import "./pages/command-center.css";
+@import "./components/lists-tables.css";
+@import "./components/chips-tabs.css";
+@import "./components/dialogs-forms.css";
+@import "./components/toast.css";
+@import "./components/health-ring.css";
+@import "./pages/settings.css";
+@import "./components/states.css";
+@import "./components/helpers.css";
+@import "./pages/payments.css";
+@import "./pages/messages.css";
+@import "./components/search-and-bell.css";
+@import "./pages/business-detail.css";
+@import "./pages/moderation.css";
+@import "./pages/broadcasts-automation.css";
+@import "./pages/plans.css";
+@import "./pages/audit-analytics.css";
+@import "./components/theme-toggle.css";
+@import "./components/live-activity.css";
+@import "./layout-responsive.css";
+@import "./responsive.css";
+@import "./login.css";

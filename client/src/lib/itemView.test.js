@@ -25,6 +25,20 @@ describe("chatMessage", () => {
   it("omits the price when there is none", () => {
     expect(chatMessage({ item, pricing: null })).toBe("Hi, I saw Fade and beard on EpicMKT");
   });
+
+  it("uses the seller's own greeting, filling in the item and the price they will pay", () => {
+    const greeting = "Hello! Is {item} ({price}) in stock?";
+    expect(chatMessage({ item, pricing: { regularPrice: 300, salePrice: 300, savings: 0 }, greeting })).toBe("Hello! Is Fade and beard (KES 300) in stock?");
+    expect(chatMessage({ item, pricing: { regularPrice: 300, salePrice: 240, savings: 60 }, greeting })).toBe("Hello! Is Fade and beard (KES 240) in stock?");
+    expect(chatMessage({ item, pricing: null, greeting })).toBe("Hello! Is Fade and beard in stock?");
+  });
+
+  it("ignores a greeting that is empty or unsafe and keeps the standard text", () => {
+    const pricing = { regularPrice: 300, salePrice: 300, savings: 0 };
+    for (const greeting of ["", "   ", null, "Call 0712 345 678 about {item}", "See https://x.example {item}", "Hi {name}"]) {
+      expect(chatMessage({ item, pricing, greeting })).toBe("Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    }
+  });
 });
 
 describe("defaultVariantId", () => {

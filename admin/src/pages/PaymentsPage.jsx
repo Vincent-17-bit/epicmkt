@@ -83,7 +83,7 @@ function AssignPanel({ row, onClose, onDone }) {
             <strong>{kes(row.amount)}</strong> arrived with the account <strong>“{row.account || "(empty)"}”</strong>. {NOTE[row.note] ?? ""}
             {" "}The money is recorded and safe. Choose the shop it belongs to.
           </p>
-          {row.candidates.length ? <>{<h4>Likely shops</h4>}{list(row.candidates, "")}</> : null}
+          {row.candidates.length ? <>{<h3 className="heading-flow">Likely shops</h3>}{list(row.candidates, "")}</> : null}
           <label>
             Search any shop by name, town, phone or reference
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Type at least 2 letters" />
@@ -166,7 +166,7 @@ export default function PaymentsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Payments</h3>
+          <h2 className="heading-sm">Payments</h2>
           {q ? (
             <p className="muted" role="status">
               Showing payments matching “{q}”.{" "}
@@ -215,14 +215,14 @@ export default function PaymentsPage() {
           <table>
             <thead>
               <tr>
-                <th>Business</th>
-                <th>Account typed</th>
-                <th>Amount</th>
-                <th>M-Pesa code</th>
-                <th>Paid by</th>
-                <th>Status</th>
-                <th>When</th>
-                <th aria-label="Actions" />
+                <th scope="col">Business</th>
+                <th scope="col">Account typed</th>
+                <th scope="col">Amount</th>
+                <th scope="col">M-Pesa code</th>
+                <th scope="col">Paid by</th>
+                <th scope="col">Status</th>
+                <th scope="col">When</th>
+                <th scope="col"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>

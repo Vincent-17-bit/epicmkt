@@ -122,7 +122,7 @@ test("a short payment is recorded as credit, tells the payer the balance, and a 
   assert.equal(first.balance, 700);
   assert.deepEqual(await row(`select status, credit_kes::int as credit from applications where id = '${uid(6)}'`), { status: "approved", credit: 300 });
   const sms = await row(`select body from messages where application_id = '${uid(6)}' and channel = 'sms' order by created_at desc limit 1`);
-  assert.match(sms.body, /KES 700 more/);
+  assert.match(sms.body, /Balance KES 700/);
   assert.match(sms.body, /EPM-2026-FFF666/);
   const second = await pay("EPM-2026-FFF666", 700);
   assert.equal(second.outcome, "ready");

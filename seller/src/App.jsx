@@ -16,7 +16,12 @@ import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
 import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
 import Preview from "./pages/business/Preview.jsx";
+import Gallery from "./pages/business/Gallery.jsx";
+import Team from "./pages/business/Team.jsx";
 import QrPoster from "./pages/business/QrPoster.jsx";
+import Settings from "./settings/Settings.jsx";
+import Help from "./help/Help.jsx";
+import Onboarding from "./onboarding/Onboarding.jsx";
 
 // Where a seller lands when they open the seller site: My listings. A suspended seller cannot open My listings, so they land on Notifications.
 function Home() {
@@ -46,6 +51,11 @@ export default function App() {
           <Route path="offers" element={<Offers />} />
           <Route path="preview" element={<Preview />} />
           <Route path="qr" element={<QrPoster />} />
+          <Route path="gallery" element={<Gallery />} />
+          <Route path="team" element={<Team />} />
+          <Route path="settings" element={<Settings />} />
+          <Route path="help" element={<Help />} />
+          <Route path="onboarding" element={<Onboarding />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/business" replace />} />

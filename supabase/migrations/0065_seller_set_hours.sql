@@ -1,4 +1,4 @@
--- 0060_seller_set_hours.sql
+-- 0065_seller_set_hours.sql
 -- Sellers can now set their weekly opening hours themselves. Until now nothing let them: seller_update_profile refuses an
 -- `hours` field and sellers cannot write the column directly, so only staff could change it.
 --

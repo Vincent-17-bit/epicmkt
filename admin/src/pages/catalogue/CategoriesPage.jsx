@@ -82,14 +82,14 @@ export default function CategoriesPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Categories</h3>
+          <h2 className="heading-sm">Categories</h2>
           <Button variant="primary" disabled={!canEdit} title={why("catalogue.edit")} onClick={() => setEditing(blank)}>New category</Button>
         </div>
         <p className="muted">Categories are switched off, never deleted: sellers already in one keep it. A new category stays off until both its plans have a price.</p>
         {isError ? <LoadError what="categories" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
-              <thead><tr><th>Category</th><th>Status</th><th>Sellers</th><th>Plans</th><th>Questions</th><th>Documents</th><th /></tr></thead>
+              <thead><tr><th scope="col">Category</th><th scope="col">Status</th><th scope="col">Sellers</th><th scope="col">Plans</th><th scope="col">Questions</th><th scope="col">Documents</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {isLoading ? <tr><td colSpan={7}><span className="skeleton" /></td></tr> : data.map((c) => (
                   <tr key={c.id}>

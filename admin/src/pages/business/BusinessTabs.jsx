@@ -71,7 +71,7 @@ export function OverviewTab({ detail }) {
       </ul>
       <div className="biz-columns">
         <section>
-          <h4>Owner and contact</h4>
+          <h3 className="heading-flow">Owner and contact</h3>
           <dl className="biz-fields">
             <Field name="Owner">{b.owner_name}</Field>
             <Field name="Phone">{b.phone}</Field>
@@ -80,7 +80,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>Location</h4>
+          <h3 className="heading-flow">Location</h3>
           <dl className="biz-fields">
             <Field name="County">{b.county}</Field>
             <Field name="Town">{b.town}</Field>
@@ -89,7 +89,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>Subscription</h4>
+          <h3 className="heading-flow">Subscription</h3>
           <dl className="biz-fields">
             <Field name="Plan">{b.plan_key ? `${b.plan_key[0].toUpperCase()}${b.plan_key.slice(1)}` : ""}</Field>
             <Field name="Monthly price">{b.monthly_price ? kes(b.monthly_price) : ""}</Field>
@@ -114,7 +114,7 @@ export function OverviewTab({ detail }) {
           </dl>
         </section>
         <section>
-          <h4>History</h4>
+          <h3 className="heading-flow">History</h3>
           <dl className="biz-fields">
             <Field name="Joined">{formatDate(b.created_at)}</Field>
             <Field name="Last sign-in">{b.last_login_at ? `${formatDateTime(b.last_login_at)} (${timeAgo(b.last_login_at)})` : ""}</Field>
@@ -155,7 +155,7 @@ export function PaymentsTab({ id }) {
       {(rows) => (
         <div className="biz-table-wrap">
           <table className="biz-table">
-            <thead><tr><th>Date</th><th>Amount</th><th>Status</th><th>Type</th><th>M-Pesa code</th><th>Receipt</th><th>Covers until</th></tr></thead>
+            <thead><tr><th scope="col">Date</th><th scope="col">Amount</th><th scope="col">Status</th><th scope="col">Type</th><th scope="col">M-Pesa code</th><th scope="col">Receipt</th><th scope="col">Covers until</th></tr></thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id}>
@@ -210,7 +210,7 @@ export function ItemsTab({ id }) {
         {(rows) => (
           <div className="biz-table-wrap">
             <table className="biz-table">
-              <thead><tr><th>Item</th><th>Section</th><th>Price</th><th>Customers see it?</th><th><span className="sr-only">Action</span></th></tr></thead>
+              <thead><tr><th scope="col">Item</th><th scope="col">Section</th><th scope="col">Price</th><th scope="col">Customers see it?</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
               <tbody>
                 {rows.map((i) => (
                   <tr key={i.id}>
@@ -278,7 +278,7 @@ export function FlagsTab({ id }) {
     <Query query={query} empty="">
       {(data) => (
         <div className="biz-flags">
-          <h4>Flags raised by EpicMKT</h4>
+          <h3 className="heading-flow">Flags raised by EpicMKT</h3>
           {data.flags.length === 0 ? <p className="muted">No flags.</p> : (
             <ul className="biz-list">
               {data.flags.map((f) => (
@@ -295,7 +295,7 @@ export function FlagsTab({ id }) {
               ))}
             </ul>
           )}
-          <h4>Reports from customers</h4>
+          <h3 className="heading-flow">Reports from customers</h3>
           {data.reports.length === 0 ? <p className="muted">No reports.</p> : (
             <ul className="biz-list">
               {data.reports.map((r) => (

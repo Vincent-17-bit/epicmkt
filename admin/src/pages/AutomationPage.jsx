@@ -35,7 +35,7 @@ export default function AutomationPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Automation</h3>
+          <h2 className="heading-sm">Automation</h2>
           {status ? <span className={`status-pill status-pill--${health.level === "healthy" ? "healthy" : health.level === "down" ? "down" : "degraded"}`}>{HEALTH_LABEL[health.level]}</span> : null}
         </div>
         <p className="muted">Two scheduled jobs keep messages and renewals moving. If they stop, nothing tells the sellers.</p>
@@ -55,7 +55,7 @@ export default function AutomationPage() {
 
             <div className="table-shell">
               <table>
-                <thead><tr><th>Job</th><th>Runs</th><th>State</th><th>Last run</th><th /></tr></thead>
+                <thead><tr><th scope="col">Job</th><th scope="col">Runs</th><th scope="col">State</th><th scope="col">Last run</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {(status.expected ?? []).map((name) => {
                     const job = status.jobs.find((j) => j.name === name);
@@ -72,7 +72,7 @@ export default function AutomationPage() {
                           {job && (
                             <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); toggle.mutate({ name, active: !job.active }); }} aria-label={`${job.active ? "Pause" : "Resume"} ${info.label}`}>{job.active ? "Pause" : "Resume"}</Button>
                           )}
-                          <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); run.mutate(name); }} aria-label={`Run ${info.label} now`}>Run now</Button>
+                          <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); run.mutate(name); }} aria-label={`Run now: ${info.label}`}>Run now</Button>
                         </td>
                       </tr>
                     );
@@ -81,7 +81,7 @@ export default function AutomationPage() {
               </table>
             </div>
 
-            <h4>Message queue</h4>
+            <h3 className="heading-flow">Message queue</h3>
             <p>
               <strong>{status.queue.queued}</strong> queued, <strong>{status.queue.due_now}</strong> due now, <strong className={status.queue.failed_7d ? "text-danger" : ""}>{status.queue.failed_7d}</strong> failed in 7 days. Last sent {ago(status.last_sent_at)}; last reminder queued {ago(status.last_reminder_at)}.{" "}
               <Link to="/admin/broadcasts?tab=log">Open the message log</Link>

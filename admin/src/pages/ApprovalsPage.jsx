@@ -67,7 +67,7 @@ export default function ApprovalsPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header">
-          <h3>Approvals</h3>
+          <h2 className="heading-sm">Approvals</h2>
           <label className="field">Status
             <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(0); }}>
               {STATUSES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -79,7 +79,7 @@ export default function ApprovalsPage() {
         {isError ? <LoadError what="change requests" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
-              <thead><tr><th>Business</th><th>Change</th><th>From</th><th>To</th><th>Asked</th><th>Status</th><th /></tr></thead>
+              <thead><tr><th scope="col">Business</th><th scope="col">Change</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Asked</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {isLoading ? Array.from({ length: 3 }).map((_, i) => <tr key={i}>{Array.from({ length: 7 }).map((__, c) => <td key={c}><span className="skeleton" /></td>)}</tr>)
                   : rows.length === 0 ? <tr><td colSpan={7}>{status === "pending" ? "Nothing is waiting for approval." : "No change requests here."}</td></tr>

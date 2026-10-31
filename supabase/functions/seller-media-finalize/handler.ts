@@ -14,7 +14,10 @@ const Hosted = z.object({
   bytes: z.number().int().min(1).max(60_000_000),
   format: z.enum(UPLOAD_FORMATS as [string, ...string[]]),
 });
-const Body = z.object({ itemId: z.string().uuid().optional(), path: z.string().min(3).max(300), cloudinary: Hosted.optional() });
+const Body = z.object({
+  itemId: z.string().uuid().optional(), path: z.string().min(3).max(300), cloudinary: Hosted.optional(),
+  caption: z.string().trim().max(120).optional(), pairId: z.string().uuid().optional(), pairRole: z.enum(["before", "after"]).optional(),
+}).refine((b) => (b.pairId === undefined) === (b.pairRole === undefined));
 
 const MIME: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 
@@ -24,16 +27,17 @@ export const sellerMediaFinalize = (d: Deps) => wrap(async (req) => {
   const ctx = await authenticate(req, d.db);
   if (ctx instanceof Response) return ctx;
   const { itemId, path, cloudinary } = parsed.data;
+  const gallery = { caption: parsed.data.caption, pairId: parsed.data.pairId, pairRole: parsed.data.pairRole };
   if (!path.startsWith(`${ctx.business.id}/`) || path.includes("..")) return json({ error: "forbidden" }, 403);
   if (!(await rateOk(d.db, `media:${ctx.business.id}`, 120, 3600))) return rateLimited();
 
-  if (isCloudinaryId(path)) return finalizeHosted(d, ctx.business.id, path, itemId, cloudinary);
+  if (isCloudinaryId(path)) return finalizeHosted(d, ctx.business.id, ctx.business.status, path, itemId, cloudinary, gallery);
   if (!itemId) return json({ error: "bad_request" }, 400);
   return finalizeStored(d, ctx.business.id, path, itemId);
 });
 
 // Pictures in Cloudinary: shop logo, shop cover and item photos.
-async function finalizeHosted(d: Deps, businessId: string, path: string, itemId: string | undefined, hosted: z.infer<typeof Hosted> | undefined) {
+async function finalizeHosted(d: Deps, businessId: string, status: string, path: string, itemId: string | undefined, hosted: z.infer<typeof Hosted> | undefined, gallery: { caption?: string; pairId?: string; pairRole?: string } = {}) {
   if (!d.cloudinary) return json({ error: "media_not_configured" }, 503);
   if (!hosted || !ownsImageId(businessId, path)) return json({ error: hosted ? "forbidden" : "bad_request" }, hosted ? 403 : 400);
   if (!(await d.cloudinary.verifyResponse({ publicId: path, version: hosted.version, signature: hosted.signature }))) return json({ error: "forbidden" }, 403);
@@ -42,7 +46,24 @@ async function finalizeHosted(d: Deps, businessId: string, path: string, itemId:
   if (confirmed.error) return json({ error: /upload_not_found/.test(String(confirmed.error.message)) ? "upload_not_found" : "server_error" }, /upload_not_found/.test(String(confirmed.error.message)) ? 404 : 500);
   const issued = confirmed.data as { purpose: string; item_id: string | null };
 
-  // Shop logo and cover: nothing to attach here. The browser saves the id on the profile next (seller_update_profile).
+  if (issued.purpose === "gallery") {
+    if (status === "suspended") return json({ error: "read_only" }, 403);
+    const taken = await d.db.from("gallery_photos").select("id").eq("path", path).maybeSingle();
+    if (taken.data) return json({ error: "already_attached" }, 409);
+    const attached = await d.db.rpc("attach_gallery_photo", {
+      p_business: businessId, p_path: path, p_mime: MIME[hosted.format], p_width: hosted.width, p_height: hosted.height, p_size: hosted.bytes,
+      p_caption: gallery.caption ?? null, p_pair_id: gallery.pairId ?? null, p_pair_role: gallery.pairRole ?? null,
+    });
+    if (attached.error) {
+      const msg = attached.error.message ?? "";
+      const code = /limit_reached/.test(msg) ? "limit_reached" : /pair_category/.test(msg) ? "pair_category" : /duplicate key/.test(msg) ? "already_attached" : null;
+      if (code !== "already_attached") await d.db.rpc("media_gc_enqueue", { p_ids: [path], p_reason: code ?? "attach_failed" });
+      return json({ error: code ?? "server_error" }, code ? (code === "pair_category" ? 422 : 409) : 500);
+    }
+    return json({ id: attached.data, kind: "gallery", width: hosted.width, height: hosted.height, size: hosted.bytes }, 201);
+  }
+
+  // Shop logo, cover and team photos: nothing to attach here. The browser saves the id on the profile next (seller_update_profile).
   if (issued.purpose !== "item_photo") return json({ path, kind: issued.purpose, width: hosted.width, height: hosted.height, size: hosted.bytes }, 200);
 
   if (!itemId || itemId !== issued.item_id) return json({ error: "bad_request" }, 400);

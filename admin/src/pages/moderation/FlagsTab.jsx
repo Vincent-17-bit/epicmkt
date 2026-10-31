@@ -55,7 +55,7 @@ export default function FlagsTab() {
       {isError ? <LoadError what="flags" error={error} onRetry={refetch} /> : (
         <div className="table-shell">
           <table>
-            <thead><tr><th>Business</th><th>Item</th><th>Question to seller</th><th>Seller reply</th><th>Due</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th scope="col">Business</th><th scope="col">Item</th><th scope="col">Question to seller</th><th scope="col">Seller reply</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {isLoading ? Array.from({ length: 4 }).map((_, i) => <tr key={i}>{Array.from({ length: 7 }).map((__, c) => <td key={c}><span className="skeleton" /></td>)}</tr>)
                 : rows.length === 0 ? <tr><td colSpan={7}>No flags here.</td></tr>

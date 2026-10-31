@@ -30,7 +30,7 @@ export default function AuditPage() {
   return (
     <div className="page-shell">
       <section className="panel">
-        <div className="panel__header"><h3>Audit log</h3></div>
+        <div className="panel__header"><h2 className="heading-sm">Audit log</h2></div>
         <p className="muted">Every change an admin makes, and what it was before. Entries cannot be edited or deleted.</p>
         <div className="toolbar">
           <label className="field">Search<input type="search" value={filters.search} placeholder="Action, id, reason, business" onChange={(e) => set({ search: e.target.value })} /></label>
@@ -49,7 +49,7 @@ export default function AuditPage() {
         {isError ? <LoadError what="the audit log" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
-              <thead><tr><th>When</th><th>Who</th><th>What</th><th>Business</th><th>Reason</th><th /></tr></thead>
+              <thead><tr><th scope="col">When</th><th scope="col">Who</th><th scope="col">What</th><th scope="col">Business</th><th scope="col">Reason</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
               <tbody>
                 {isLoading ? Array.from({ length: 5 }).map((_, i) => <tr key={i}>{Array.from({ length: 6 }).map((__, c) => <td key={c}><span className="skeleton" /></td>)}</tr>)
                   : rows.length === 0 ? <tr><td colSpan={6}>Nothing matches these filters.</td></tr>
@@ -69,7 +69,7 @@ export default function AuditPage() {
                         {isOpen && (
                           <tr className="audit-diff"><td colSpan={6}>
                             <table aria-label="Changes">
-                              <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+                              <thead><tr><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
                               <tbody>{changes.map((c) => <tr key={c.field}><td>{c.field}</td><td>{c.from}</td><td>{c.to}</td></tr>)}</tbody>
                             </table>
                           </td></tr>

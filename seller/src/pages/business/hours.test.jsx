@@ -7,6 +7,7 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as api from "../../api/index.js";
 import * as mock from "../../api/mock.js";
+import { errorText } from "../../lib/errors.js";
 import Hours from "./Hours.jsx";
 import { M, signedInApp, setTime } from "../../test/utils.jsx";
 
@@ -164,7 +165,7 @@ describe("errors", () => {
     M.state.business.status = "suspended";
     await user.click(sw("tue", "Tuesday"));
     await user.click(screen.getByRole("button", { name: "Save hours" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Your account is suspended, so you cannot do this.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(errorText({ code: "account_suspended" }));
     expect(M.state.business.hours).toEqual({ mon: OPEN });
   });
 });

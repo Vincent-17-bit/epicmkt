@@ -62,7 +62,7 @@ export default function LogTab() {
       {isError ? <LoadError what="the message log" error={error} onRetry={refetch} /> : (
         <div className="table-shell">
           <table>
-            <thead><tr><th>When</th><th>To</th><th>Message</th><th>Channel</th><th>Status</th><th /></tr></thead>
+            <thead><tr><th scope="col">When</th><th scope="col">To</th><th scope="col">Message</th><th scope="col">Channel</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
             <tbody>
               {isLoading ? Array.from({ length: 4 }).map((_, i) => <tr key={i}>{Array.from({ length: 6 }).map((__, c) => <td key={c}><span className="skeleton" /></td>)}</tr>)
                 : rows.length === 0 ? <tr><td colSpan={6}>No messages match.</td></tr>

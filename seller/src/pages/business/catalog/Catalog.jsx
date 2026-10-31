@@ -7,6 +7,7 @@ import {
 } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { errorText } from "../../../lib/errors.js";
+import { useSettings } from "../../../state/settings.js";
 import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
@@ -72,7 +73,9 @@ export default function Catalog() {
 
   const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
   const signals = useQuery({ queryKey: ["catalog", "signals"], queryFn: api.itemSignals });
-  const stats = useQuery({ queryKey: ["catalog", "stats"], queryFn: () => api.catalogStats() });
+  // How old a confirmed price may get before it is flagged: the seller's own Settings choice (14, 30 or 60 days).
+  const staleDays = useSettings((st) => st.settings.catalog.price_reminder_days);
+  const stats = useQuery({ queryKey: ["catalog", "stats", staleDays], queryFn: () => api.catalogStats(staleDays) });
   const views = useQuery({ queryKey: ["catalog", "views"], queryFn: api.getSavedViews });
 
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["catalog"] }), [qc]);

@@ -1,0 +1,28 @@
+.dialog {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  min-width: min(28rem, 90vw);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.head h2 {
+  font-size: var(--text-lg);
+}
+
+.close {
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

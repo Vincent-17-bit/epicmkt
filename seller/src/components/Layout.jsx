@@ -1,9 +1,13 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { faBell, faBolt, faCalendarXmark, faCircleQuestion, faClock, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faClock, faCreditCard, faEllipsis, faGear, faImages, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
-import { getTheme, setTheme } from "../lib/theme.js";
+import { getTheme, setTheme, watchSystemTheme } from "../lib/theme.js";
+import { useSettings } from "../state/settings.js";
+import { useToasts } from "../state/toast.js";
+import { DEFAULT_IDLE, idleMinutes, useIdle } from "../state/useIdle.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/shape.js";
@@ -70,6 +74,15 @@ export default function Layout() {
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
   const suspended = business?.status === "suspended";
+  // The seller's saved settings (appearance, inactivity timeout, defaults). Loaded once, then kept in the settings store.
+  const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
+  const loadSettings = useSettings((s) => s.load);
+  const settingsLoaded = useSettings((s) => s.loaded);
+  const storedIdle = useSettings((s) => s.settings.idle_minutes);
+  const toasts = useToasts((s) => s.toasts);
+  const dismissToast = useToasts((s) => s.dismiss);
+  useEffect(() => { if (settingsQuery.data) loadSettings(settingsQuery.data); }, [settingsQuery.data, loadSettings]);
+  useEffect(() => watchSystemTheme(), []);
   const ack = () => api.ackDelivered().then((n) => { if (n) qc.invalidateQueries({ queryKey: ["messages"] }); }).catch(() => {});
   useEffect(() => { ack(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useRealtime(["messages"], () => {
@@ -88,20 +101,28 @@ export default function Layout() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [more]);
+  // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
   // The bare /business address is allowed so it can send a suspended seller on to Notifications.
-  const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname) || /^\/business\/?$/.test(pathname);
-  const moreActive = /^\/business\/(hours|exceptions|flash|offers|qr|account)/.test(pathname);
+  const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname) || /^\/business\/?$/.test(pathname);
+  const moreActive = /^\/business\/(hours|exceptions|flash|offers|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
     setThemeState(next);
+    const st = useSettings.getState();
+    if (st.loaded && st.settings.appearance.theme !== next) st.update({ appearance: { theme: next } }, { quiet: true });
   };
+  // The saved choice can change from Settings (or arrive from another device), so follow it.
+  const savedTheme = useSettings((s) => (s.loaded ? s.settings.appearance.theme : null));
+  useEffect(() => { setThemeState(getTheme()); }, [savedTheme]);
   const signOut = async () => {
     await api.logout();
     qc.clear();
+    useSettings.getState().reset();
     navigate("/login");
   };
+  const idle = useIdle({ minutes: idleMinutes(settingsLoaded ? storedIdle : DEFAULT_IDLE), active: Boolean(business), onTimeout: signOut });
 
   return (
     <div className={styles.shell}>
@@ -117,7 +138,7 @@ export default function Layout() {
         <nav className={styles.nav} aria-label="Business">
           <div className={styles.primary}>
             {!suspended && <Item to="/business/catalog" icon={faStore}>My listings</Item>}
-            {!suspended && <Item to="/business/subscription" icon={faCreditCard}>Subscription</Item>}
+            <Item to="/business/subscription" icon={faCreditCard}>Subscription</Item>
             <Bell count={unread.data ?? 0} />
             <Item to="/business/questions" icon={faCircleQuestion}>Questions</Item>
             {!suspended && (
@@ -128,13 +149,17 @@ export default function Layout() {
             )}
           </div>
           {!suspended && (
-            <div id="more-links" className={styles.secondary} data-open={more}>
+            <div id="more-links" className={styles.moreLinks} data-open={more}>
               <Item to="/business/hours" icon={faClock}>Opening hours</Item>
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>
+              <Item to="/business/gallery" icon={faImages}>Gallery</Item>
+              <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
               <Item to="/business/account" icon={faUser}>Account</Item>
+              <Item to="/business/settings" icon={faGear}>Settings</Item>
+              <Item to="/business/help" icon={faCircleInfo}>Help</Item>
             </div>
           )}
         </nav>
@@ -154,12 +179,24 @@ export default function Layout() {
         {suspended && (
           <div className={`${ui.banner} ${ui.tone_danger} ${styles.suspended}`} role="alert" data-testid="suspended-banner">
             <h2>Your account is suspended</h2>
-            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can read your notifications and answer EpicMKT under Questions.</p>
+            <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can still see your payments and pay under Subscription, read your notifications and answer EpicMKT under Questions.</p>
           </div>
         )}
         {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
+      {/* Only mounted while there is a message, so it never adds a second status region to a page. */}
+      {toasts.length > 0 && <Toaster toasts={toasts} onDismiss={dismissToast} />}
+      <Modal open={idle.warning} onClose={idle.stay} labelledBy="idle-title">
+        <div className={styles.idle}>
+          <h2 id="idle-title">Are you still there?</h2>
+          <p>You will be signed out in {idle.remaining ?? 0} seconds because of inactivity.</p>
+          <div className={styles.idleActions}>
+            <Button onClick={idle.stay}>Stay signed in</Button>
+            <Button variant="secondary" onClick={signOut}>Sign out</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

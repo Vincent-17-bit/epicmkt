@@ -2,16 +2,15 @@ import { supabase } from "../lib/supabaseClient.js";
 import { normalizeCounts } from "../lib/counts.js";
 import { describeDiscount } from "../lib/flash.js";
 import { DEFAULT_TAB, PAGE_SIZE, searchFilter, tabById, tabSortAscending } from "../lib/applications.js";
-import { ApiError, toApiError } from "./errors.js";
+import { ACTION_TEXT, ApiError, toApiError } from "./errors.js";
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_TYPES } from "@epicmkt/shared";
 
 const notConfigured = () => {
   throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
 };
 
-// Still behind the "not connected" message so a page never shows made-up data: the bulk actions need their own
-// audited RPCs (suspend, extend, tag, message...). Everything else on
-// the Businesses page, the Payments page and the Command Center is live below.
+// Still behind the "not connected" message so a page never shows made-up data. Every bulk action on the Businesses page
+// and its undo are live below, as are the Payments page and the Command Center.
 export const getBusinesses = notConfigured;
 
 const client = () => {
@@ -386,7 +385,8 @@ export async function uploadMessageFiles(files = []) {
   return out;
 }
 
-// Suspend, unsuspend, strike, tag, feature, extend, message and export. Every change is audited on the server.
+// Suspend, unsuspend, strike, unlist, tag, feature, extend, assign, message and export. Every change is audited on the
+// server. Everything except message and export comes back with an undoToken that undoBulkBusinessAction accepts for 15 minutes.
 export async function bulkBusinessAction({ action, ids, reason, params = {} }) {
   const { files, ...rest } = params;
   const sent = action === "message" && files?.length ? { ...rest, attachments: await uploadMessageFiles(files) } : rest;
@@ -394,9 +394,12 @@ export async function bulkBusinessAction({ action, ids, reason, params = {} }) {
   return data;
 }
 
-// The server changes are audited and not reversible from here, so no undo token is ever returned.
-export async function undoBulkBusinessAction() {
-  throw new ApiError("nothing_to_undo", "This action can no longer be undone.");
+// Puts back what the action changed, for the person who ran it and only once. A business changed by someone else in the
+// meantime is left as it is and counted in `skipped`. The undo is audited too.
+export async function undoBulkBusinessAction(undoToken) {
+  if (!undoToken) throw new ApiError("nothing_to_undo", ACTION_TEXT.nothing_to_undo);
+  const { data } = check(await client().rpc("admin_undo_bulk_business_action", { p_token: undoToken }));
+  return { restored: data?.restored ?? 0, skipped: data?.skipped ?? 0 };
 }
 
 const toMessage = (m, files) => ({
