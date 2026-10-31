@@ -32,7 +32,7 @@ test("a text the seller switched off is never queued, one they kept is", async (
 
 test("critical events and messages with no matching event are never dropped or delayed", async () => {
   await clear();
-  await prefs({ events: { expiry: { sms: false }, payment: { sms: false } }, quiet_hours: { enabled: true, start: "00:00", end: "23:59" } });
+  await prefs({ events: { expiry: { sms: false }, payment: { sms: false } } });
   for (const kind of ["reminder", "grace", "expiry", "payment", "question", "strike"]) {
     const [m] = await put(kind, "sms", "2030-01-01T09:00:00Z");
     assert.equal(new Date(m.scheduled_at).toISOString(), "2030-01-01T09:00:00.000Z", kind);
@@ -44,18 +44,13 @@ test("critical events and messages with no matching event are never dropped or d
   assert.equal((await put("change", "sms", "2030-01-01T09:00:00Z", "true")).length, 1);
 });
 
-test("quiet hours hold a non-critical text until the seller's own morning, daytime is untouched", async () => {
+test("sellers have no quiet hours: a saved value is ignored and texts go out when they were scheduled", async () => {
   await clear();
   await prefs({ quiet_hours: { enabled: true, start: "21:00", end: "07:00" } });
-  const night = (await put("removal", "sms", "2030-01-01T19:30:00Z"))[0];       // 22:30 Nairobi
-  assert.equal(new Date(night.scheduled_at).toISOString(), "2030-01-02T04:00:00.000Z"); // 07:00 Nairobi next day
-  const early = (await put("removal", "sms", "2030-01-01T02:00:00Z"))[0];       // 05:00 Nairobi
-  assert.equal(new Date(early.scheduled_at).toISOString(), "2030-01-01T04:00:00.000Z");
-  const day = (await put("removal", "sms", "2030-01-01T09:00:00Z"))[0];           // 12:00 Nairobi
-  assert.equal(new Date(day.scheduled_at).toISOString(), "2030-01-01T09:00:00.000Z");
-  await prefs({ quiet_hours: { enabled: false, start: "21:00", end: "07:00" } });
-  const off = (await put("removal", "sms", "2030-01-01T19:30:00Z"))[0];
-  assert.equal(new Date(off.scheduled_at).toISOString(), "2030-01-01T19:30:00.000Z");
+  for (const at of ["2030-01-01T19:30:00Z", "2030-01-01T02:00:00Z", "2030-01-01T09:00:00Z"]) {  // 22:30, 05:00 and 12:00 Nairobi
+    const m = (await put("removal", "sms", at))[0];
+    assert.equal(new Date(m.scheduled_at).toISOString(), new Date(at).toISOString(), at);
+  }
 });
 
 test("an in-app message the seller switched off arrives already read; one they kept stays unread", async () => {

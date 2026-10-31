@@ -24,8 +24,6 @@ import {
   describeDevice,
   greetingFor,
   greetingProblems,
-  isQuietNow,
-  quietEndsAt,
   renderGreeting,
   resolveSettings,
   summarizeLogins
@@ -39,21 +37,15 @@ describe("resolveSettings", () => {
     for (const raw of [undefined, null, {}, "x", 5, [], { appearance: "dark" }]) {
       expect(resolveSettings(raw)).toEqual(resolveSettings({}));
     }
-    expect(resolveSettings({}).idle_minutes).toBe(60);
+    expect("idle_minutes" in resolveSettings({})).toBe(false);
     expect(resolveSettings({}).appearance.theme).toBe("system");
   });
 
   it("keeps valid values and replaces invalid ones one by one", () => {
-    const s = resolveSettings({ idle_minutes: 30, appearance: { theme: "dark", text_size: "huge", density: "compact" }, catalog: { price_reminder_days: 45, low_stock_threshold: 9 } });
-    expect(s.idle_minutes).toBe(30);
+    const s = resolveSettings({ appearance: { theme: "dark", text_size: "huge", density: "compact" }, catalog: { price_reminder_days: 45, low_stock_threshold: 9 } });
     expect(s.appearance).toMatchObject({ theme: "dark", text_size: "normal", density: "compact" });
     expect(s.catalog.price_reminder_days).toBe(30);
     expect(s.catalog.low_stock_threshold).toBe(9);
-  });
-
-  it("rejects idle values outside 15, 30, 60, 120", () => {
-    for (const v of [0, 10, 45, 90, 600, "60", null]) expect(resolveSettings({ idle_minutes: v }).idle_minutes).toBe(60);
-    for (const v of [15, 30, 60, 120]) expect(resolveSettings({ idle_minutes: v }).idle_minutes).toBe(v);
   });
 
   it("never lets a critical event turn in-app off", () => {
@@ -68,9 +60,8 @@ describe("resolveSettings", () => {
     expect(Object.keys(resolveSettings({ language: "sw", appearance: { language: "sw" } }))).not.toContain("language");
   });
 
-  it("repairs bad quiet hours and bad closure reasons", () => {
-    const s = resolveSettings({ notifications: { quiet_hours: { start: "25:00", end: "07:00" } }, messaging: { closure_reasons: [{ id: "a", label: "", message: "x" }, { id: "b", label: "Call 0712345678", message: "" }] } });
-    expect(s.notifications.quiet_hours.start).toBe("21:00");
+  it("repairs bad closure reasons", () => {
+    const s = resolveSettings({ messaging: { closure_reasons: [{ id: "a", label: "", message: "x" }, { id: "b", label: "Call 0712345678", message: "" }] } });
     expect(s.messaging.closure_reasons.length).toBeGreaterThan(0);
     expect(s.messaging.closure_reasons.some((r) => r.id === "b")).toBe(false);
   });
@@ -109,45 +100,19 @@ describe("greeting", () => {
   });
 });
 
-describe("quiet hours", () => {
-  const quiet = { enabled: true, start: "21:00", end: "07:00" };
-
-  it("handles a window that wraps midnight in Nairobi time", () => {
-    expect(isQuietNow(quiet, at(21, 0))).toBe(true);
-    expect(isQuietNow(quiet, at(23, 59))).toBe(true);
-    expect(isQuietNow(quiet, at(0, 30))).toBe(true);
-    expect(isQuietNow(quiet, at(6, 59))).toBe(true);
-    expect(isQuietNow(quiet, at(7, 0))).toBe(false);
-    expect(isQuietNow(quiet, at(12, 0))).toBe(false);
-    expect(isQuietNow(quiet, at(20, 59))).toBe(false);
-  });
-
-  it("handles a same-day window and a disabled window", () => {
-    expect(isQuietNow({ enabled: true, start: "13:00", end: "14:00" }, at(13, 30))).toBe(true);
-    expect(isQuietNow({ enabled: true, start: "13:00", end: "14:00" }, at(14, 0))).toBe(false);
-    expect(isQuietNow({ ...quiet, enabled: false }, at(23, 0))).toBe(false);
-  });
-
-  it("finds when quiet hours end", () => {
-    expect(quietEndsAt(quiet, at(22, 0)).toISOString()).toBe(at(7, 0).toISOString().replace("2026-10-11", "2026-10-12"));
-    expect(quietEndsAt(quiet, at(3, 0)).toISOString()).toBe(at(7, 0).toISOString());
-    expect(quietEndsAt(quiet, at(12, 0))).toBeNull();
-  });
-});
-
 describe("deliveryDecision", () => {
   const night = at(22, 0);
   const day = at(12, 0);
 
-  it("delays only non-critical SMS during quiet hours", () => {
-    expect(deliveryDecision({ event: "customer_report", channel: "sms", settings: { notifications: { events: { customer_report: { sms: true } } } }, now: night }).action).toBe("delay");
-    expect(deliveryDecision({ event: "change_decision", channel: "sms", now: night }).action).toBe("delay");
+  it("never holds a text back by the time of day", () => {
+    expect(deliveryDecision({ event: "customer_report", channel: "sms", settings: { notifications: { events: { customer_report: { sms: true } } } }, now: night }).action).toBe("send");
+    expect(deliveryDecision({ event: "change_decision", channel: "sms", now: night }).action).toBe("send");
     expect(deliveryDecision({ event: "change_decision", channel: "sms", now: day }).action).toBe("send");
     expect(deliveryDecision({ event: "change_decision", channel: "email", settings: { notifications: { events: { change_decision: { email: true } } } }, now: night }).action).toBe("send");
     expect(deliveryDecision({ event: "change_decision", channel: "in_app", now: night }).action).toBe("send");
   });
 
-  it("never delays critical or transactional SMS", () => {
+  it("sends critical and transactional SMS at any hour", () => {
     for (const event of CRITICAL_EVENTS) expect(deliveryDecision({ event, channel: "sms", now: night }).action).toBe("send");
     expect(deliveryDecision({ event: "removal", channel: "sms", kind: "transactional", now: night }).action).toBe("send");
     expect(deliveryDecision({ event: "removal", channel: "sms", kind: "critical", now: night }).action).toBe("send");
@@ -158,11 +123,6 @@ describe("deliveryDecision", () => {
     for (const key of CRITICAL_EVENTS) expect(deliveryDecision({ event: key, channel: "in_app", settings: { notifications: { events } }, now: day }).action).toBe("send");
     expect(deliveryDecision({ event: "expiry", channel: "sms", settings: { notifications: { events } }, now: day }).action).toBe("skip");
     expect(deliveryDecision({ event: "removal", channel: "in_app", settings: { notifications: { events } }, now: day }).action).toBe("skip");
-  });
-
-  it("honours a disabled quiet-hours switch", () => {
-    const settings = { notifications: { quiet_hours: { enabled: false } } };
-    expect(deliveryDecision({ event: "change_decision", channel: "sms", settings, now: night }).action).toBe("send");
   });
 });
 

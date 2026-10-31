@@ -383,7 +383,7 @@ export const getBusinessFacts = async () => {
 };
 export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
 
-const SETTINGS_KEYS = ["idle_minutes", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
+const SETTINGS_KEYS = ["appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
 export const saveSettings = async (patch) => {
   writer();
   await wait();

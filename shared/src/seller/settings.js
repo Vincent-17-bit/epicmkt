@@ -1,8 +1,6 @@
-import { BUSINESS_TIME_ZONE, zonedParts } from "../time.js";
 // Seller settings: defaults, sanitising, messaging rules and delivery policy.
 // Pure and dependency free so the portal, the mock API and the edge functions share one copy.
 
-export const IDLE_OPTIONS = [15, 30, 60, 120];
 export const THEMES = ["light", "dark", "system"];
 export const TEXT_SIZES = ["normal", "large", "xlarge"];
 export const DENSITIES = ["comfortable", "compact"];
@@ -58,10 +56,9 @@ const channelDefaults = {
 };
 
 export const DEFAULT_SETTINGS = Object.freeze({
-  idle_minutes: 60,
   saved_views: [],
   appearance: { theme: "system", text_size: "normal", density: "comfortable", reduce_motion: false, remember_card_view: true, card_view: null },
-  notifications: { events: channelDefaults, quiet_hours: { enabled: true, start: "21:00", end: "07:00" } },
+  notifications: { events: channelDefaults },
   catalog: { default_availability: "available", low_stock_threshold: 3, price_reminder_days: 30, start_visible: false, default_units: {}, show_only_n_left: false },
   messaging: { whatsapp_greeting: DEFAULT_GREETING, closure_reasons: DEFAULT_CLOSURE_REASONS },
   business: { show_closes_chip: true, partial_closure_message: "Some services are unavailable right now.", announcement: { enabled: false, text: "", days: 7 } },
@@ -75,10 +72,7 @@ const bool = (value, fallback) => (typeof value === "boolean" ? value : fallback
 const int = (value, min, max, fallback) => (Number.isInteger(value) && value >= min && value <= max ? value : fallback);
 const text = (value, max, fallback) => (typeof value === "string" && value.trim().length > 0 && value.trim().length <= max ? value.trim() : fallback);
 
-export const idleMinutes = (value) => (IDLE_OPTIONS.includes(value) ? value : DEFAULT_SETTINGS.idle_minutes);
 
-export const isClock = (v) => typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
-export const clockMinutes = (v) => Number(v.slice(0, 2)) * 60 + Number(v.slice(3));
 
 // ---- greeting ---------------------------------------------------------------------------------
 // A phone-like run is 7+ digits once separators (space, dash, dot, brackets, plus) are ignored.
@@ -145,14 +139,6 @@ const sanitizeEvents = (raw) => {
   return out;
 };
 
-const sanitizeQuiet = (raw) => {
-  const d = DEFAULT_SETTINGS.notifications.quiet_hours;
-  const q = isObj(raw) ? raw : {};
-  const start = isClock(q.start) ? q.start : d.start;
-  const end = isClock(q.end) && q.end !== start ? q.end : start === d.end ? "08:00" : d.end;
-  return { enabled: bool(q.enabled, d.enabled), start, end };
-};
-
 const sanitizeUnits = (raw) => {
   const out = {};
   if (!isObj(raw)) return out;
@@ -205,7 +191,6 @@ export function resolveSettings(raw) {
   const o = isObj(r.onboarding) ? r.onboarding : {};
   const partial = typeof b.partial_closure_message === "string" && b.partial_closure_message.trim() && !plainTextProblem(b.partial_closure_message, PARTIAL_MESSAGE_MAX) ? b.partial_closure_message.trim() : d.business.partial_closure_message;
   return {
-    idle_minutes: idleMinutes(r.idle_minutes),
     saved_views: Array.isArray(r.saved_views) ? r.saved_views : [],
     appearance: {
       theme: pick(a.theme, THEMES, d.appearance.theme),
@@ -215,7 +200,7 @@ export function resolveSettings(raw) {
       remember_card_view: bool(a.remember_card_view, d.appearance.remember_card_view),
       card_view: pick(a.card_view, CARD_VIEWS, null)
     },
-    notifications: { events: sanitizeEvents(n.events), quiet_hours: sanitizeQuiet(n.quiet_hours) },
+    notifications: { events: sanitizeEvents(n.events) },
     catalog: {
       default_availability: pick(c.default_availability, AVAILABILITY_DEFAULTS, d.catalog.default_availability),
       low_stock_threshold: int(c.low_stock_threshold, 0, THRESHOLD_MAX, d.catalog.low_stock_threshold),
@@ -257,39 +242,14 @@ const merge = (base, patch) => {
 export const applySettingsPatch = (raw, patch) => resolveSettings(merge(isObj(raw) ? raw : {}, patch));
 export const mergeSettings = merge;
 
-export const SETTINGS_KEYS = ["idle_minutes", "saved_views", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
+export const SETTINGS_KEYS = ["saved_views", "appearance", "notifications", "catalog", "messaging", "business", "onboarding"];
 
-// ---- quiet hours and delivery -----------------------------------------------------------------
-// Quiet hours are clock times in the business time zone, so the clock is read through the shared zone helpers.
-export const nairobiMinutes = (date) => {
-  const p = zonedParts(date, BUSINESS_TIME_ZONE);
-  return p.hour * 60 + p.minute;
-};
-
-export function isQuietNow(quiet, now = new Date()) {
-  if (!quiet?.enabled || !isClock(quiet.start) || !isClock(quiet.end)) return false;
-  const s = clockMinutes(quiet.start);
-  const e = clockMinutes(quiet.end);
-  if (s === e) return false;
-  const t = nairobiMinutes(now);
-  return s < e ? t >= s && t < e : t >= s || t < e;
-}
-
-// The next moment quiet hours end (in real time), or null when it is not quiet now.
-export function quietEndsAt(quiet, now = new Date()) {
-  if (!isQuietNow(quiet, now)) return null;
-  const e = clockMinutes(quiet.end);
-  const t = nairobiMinutes(now);
-  const wait = (e - t + 1440) % 1440 || 1440;
-  return new Date(Math.floor(new Date(now).getTime() / 60_000) * 60_000 + wait * 60_000);
-}
-
+// ---- delivery ---------------------------------------------------------------------------------
 export const MESSAGE_KINDS = ["critical", "transactional", "normal"];
 
 // Decides what to do with one message on one channel.
 //  - in-app is always delivered for critical events, otherwise it follows the preference
 //  - sms and email follow the preference
-//  - only non-critical, non-transactional SMS is held back during quiet hours
 export function deliveryDecision({ event, channel, kind = "normal", settings, now = new Date() }) {
   if (!EVENT_KEYS.includes(event) || !CHANNELS.includes(channel)) return { action: "skip", reason: "unknown" };
   const s = resolveSettings(settings);
@@ -297,11 +257,6 @@ export function deliveryDecision({ event, channel, kind = "normal", settings, no
   const pref = s.notifications.events[event][channel];
   if (channel === "in_app") return critical || pref ? { action: "send" } : { action: "skip", reason: "disabled" };
   if (!pref) return { action: "skip", reason: "disabled" };
-  const exempt = critical || kind === "critical" || kind === "transactional";
-  if (channel === "sms" && !exempt) {
-    const until = quietEndsAt(s.notifications.quiet_hours, now);
-    if (until) return { action: "delay", until, reason: "quiet_hours" };
-  }
   return { action: "send" };
 }
 

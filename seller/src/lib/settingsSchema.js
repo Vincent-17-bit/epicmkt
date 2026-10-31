@@ -9,7 +9,6 @@ import {
   EVENT_KEYS,
   GREETING_MAX,
   GREETING_MESSAGES,
-  IDLE_OPTIONS,
   PARTIAL_MESSAGE_MAX,
   PRICE_REMINDER_DAYS,
   TEXT_SIZES,
@@ -18,13 +17,11 @@ import {
   UNITS_PER_CATEGORY,
   UNIT_MAX,
   greetingProblems,
-  isClock,
   isCriticalEvent,
   plainTextProblem
 } from "@epicmkt/shared";
 
 const oneOf = (list) => z.custom((v) => list.includes(v), { message: "Choose one of the listed options." });
-const clock = z.string().refine(isClock, "Use the 24-hour format, for example 21:00.");
 
 export const PLAIN_MESSAGES = {
   empty: "This cannot be empty.",
@@ -66,7 +63,6 @@ export const phoneSchema = z.string().transform((v) => v.replace(/[\s().-]/g, ""
 const channels = z.object({ in_app: z.boolean(), sms: z.boolean(), email: z.boolean() }).partial();
 
 export const patchSchema = z.object({
-  idle_minutes: oneOf(IDLE_OPTIONS),
   appearance: z.object({
     theme: oneOf(THEMES),
     text_size: oneOf(TEXT_SIZES),
@@ -78,8 +74,7 @@ export const patchSchema = z.object({
   notifications: z.object({
     events: z.object(Object.fromEntries(EVENT_KEYS.map((k) => [k, channels.strict().superRefine((v, ctx) => {
       if (isCriticalEvent(k) && v.in_app === false) ctx.addIssue({ code: "custom", message: "In-app notifications are required for this event." });
-    }).optional()]))).strict().partial(),
-    quiet_hours: z.object({ enabled: z.boolean(), start: clock, end: clock }).partial().strict().refine((q) => !(q.start && q.end) || q.start !== q.end, "Start and end must be different.")
+    }).optional()]))).strict().partial()
   }).partial().strict(),
   catalog: z.object({
     default_availability: oneOf(AVAILABILITY_DEFAULTS),

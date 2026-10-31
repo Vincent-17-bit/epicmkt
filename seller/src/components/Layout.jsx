@@ -1,13 +1,12 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faImages, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { Button, Modal, Toaster } from "@epicmkt/ui";
+import { Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
 import { getTheme, setTheme, watchSystemTheme } from "../lib/theme.js";
 import { useSettings } from "../state/settings.js";
 import { useToasts } from "../state/toast.js";
-import { DEFAULT_IDLE, useIdle } from "../state/useIdle.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/shape.js";
@@ -120,7 +119,6 @@ export default function Layout() {
     useSettings.getState().reset();
     navigate("/login");
   };
-  const idle = useIdle({ minutes: DEFAULT_IDLE, active: Boolean(business), onTimeout: signOut });
 
   return (
     <div className={styles.shell}>
@@ -184,16 +182,6 @@ export default function Layout() {
       </main>
       {/* Only mounted while there is a message, so it never adds a second status region to a page. */}
       {toasts.length > 0 && <Toaster toasts={toasts} onDismiss={dismissToast} />}
-      <Modal open={idle.warning} onClose={idle.stay} labelledBy="idle-title">
-        <div className={styles.idle}>
-          <h2 id="idle-title">Are you still there?</h2>
-          <p>You will be signed out in {idle.remaining ?? 0} seconds because of inactivity.</p>
-          <div className={styles.idleActions}>
-            <Button onClick={idle.stay}>Stay signed in</Button>
-            <Button variant="secondary" onClick={signOut}>Sign out</Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }

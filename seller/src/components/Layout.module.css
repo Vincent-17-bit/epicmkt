@@ -413,20 +413,3 @@
     padding-bottom: 0;
   }
 }
-
-.idle {
-  display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  max-width: 24rem;
-}
-
-.idle h2 {
-  font-size: var(--text-lg);
-}
-
-.idleActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
