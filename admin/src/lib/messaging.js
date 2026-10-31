@@ -21,6 +21,16 @@ export function templateVariables(...texts) {
   return found;
 }
 
+export function cancelOutcome({ cancelled, sent, inFlight }) {
+  const gone = `${sent} already sent`;
+  const moving = inFlight ? `, ${inFlight} on the way` : "";
+  if (!cancelled) return `Nothing left to cancel: ${gone}${moving}.`;
+  return `${cancelled} cancelled, ${gone}${moving}.`;
+}
+
+// Templates the system itself writes into messages: they can be disabled but never deleted. Mirrors message_template_is_system() in migration 0069.
+export const isSystemTemplate = (key) => ["welcome", "login_details"].includes(key) || String(key).startsWith("application.") || String(key).startsWith("billing_");
+
 // What admin-message fills in itself for every recipient. Anything else must be supplied by the sender.
 export const BUILT_IN_VARIABLES = ["business_name", "seller_id", "paid_until"];
 export const missingVariables = (names, supplied = {}) => names.filter((n) => !BUILT_IN_VARIABLES.includes(n) && !String(supplied[n] ?? "").trim());
@@ -75,6 +85,7 @@ export const BROADCAST_ERRORS = {
   no_recipients: "No business matches that group right now.",
   unknown_segment: "That group is not recognised.",
   unknown_template: "That template no longer exists.",
+  template_disabled: "That template is disabled. Enable it on the Templates tab or choose another.",
   template_channel_mismatch: "That template belongs to a different channel.",
   missing_variables: "The message uses details that were not filled in.",
   sms_too_long: "The SMS is longer than four messages.",

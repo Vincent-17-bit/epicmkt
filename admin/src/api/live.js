@@ -625,6 +625,11 @@ export const setModerationFlag = setFlagStatus;
 export const listMessageLog = ({ channel = "all", status = "all", search = "", ...paging } = {}) =>
   detailRpc("admin_message_log_query", { p_channel: channel, p_status: status, p_search: search.trim() || null, ...pageArgs(paging) });
 export const getMessageSummary = ({ days = 7 } = {}) => detailRpc("admin_message_summary", { p_days: days });
+export const getMessageDetail = (id) => detailRpc("admin_message_detail", { p_id: id });
+export const listPendingBroadcasts = () => detailRpc("admin_pending_broadcasts", {});
+export const cancelBroadcast = ({ batchId, reason = null }) => detailRpc("admin_cancel_broadcast", { p_batch: batchId, p_reason: reason });
+export const setTemplateEnabled = ({ key, enabled }) => detailRpc("admin_set_template_enabled", { p_key: key, p_enabled: enabled });
+export const deleteTemplate = (key) => detailRpc("admin_delete_template", { p_key: key });
 export const retryMessage = (id) => detailRpc("admin_retry_message", { p_id: id });
 export const retryFailedMessages = ({ days = 7 } = {}) => detailRpc("admin_retry_failed_messages", { p_days: days });
 export const listTemplates = () => detailRpc("admin_templates_list", {});

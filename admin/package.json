@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/lib/counts.test.js src/lib/applications.test.js src/api/errors.test.js src/api/messages.test.js src/lib/activity.test.js src/lib/activityDelete.test.js src/lib/systemStatus.test.js src/lib/flash.test.js src/lib/globalSearch.test.js src/auth/permissions.test.js src/auth/idle.test.js src/lib/businessDetail.test.js src/lib/moderation.test.js src/lib/messaging.test.js src/lib/conversations.test.js src/lib/catalogue.test.js src/lib/audit.test.js src/styles/typography.test.js src/lib/errorCopy.test.js src/lib/breadcrumbs.test.js src/lib/sidebar.test.js src/lib/commandCenter.test.js src/lib/bellMessages.test.js src/lib/loginDelivery.test.js",
+    "test": "node --test src/lib/counts.test.js src/lib/applications.test.js src/api/errors.test.js src/api/messages.test.js src/lib/activity.test.js src/lib/activityDelete.test.js src/lib/systemStatus.test.js src/lib/flash.test.js src/lib/globalSearch.test.js src/auth/permissions.test.js src/auth/idle.test.js src/lib/businessDetail.test.js src/lib/moderation.test.js src/lib/messaging.test.js src/lib/conversations.test.js src/api/broadcasts.test.js src/lib/catalogue.test.js src/lib/audit.test.js src/styles/typography.test.js src/lib/errorCopy.test.js src/lib/breadcrumbs.test.js src/lib/sidebar.test.js src/lib/commandCenter.test.js src/lib/bellMessages.test.js src/lib/loginDelivery.test.js",
     "test:ui": "vitest run",
     "check:a11y": "node scripts/contrast-audit.mjs && vitest run src/theme/contrast.ui.test.js src/theme/reducedMotion.ui.test.js src/a11y.axe.ui.test.jsx src/layouts/AdminShell.a11y.ui.test.jsx src/components/DataTable/DataTable.a11y.ui.test.jsx"
   },

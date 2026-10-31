@@ -8,11 +8,13 @@ import Pager from "../../components/Pager.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { ago } from "../../lib/messaging.js";
+import MessageDetail from "./MessageDetail.jsx";
+import PendingBroadcasts from "./PendingBroadcasts.jsx";
 
 const PAGE_SIZE = 25;
 const CHANNELS = [["all", "All channels"], ["sms", "SMS"], ["email", "Email"], ["in_app", "In-app"]];
-const STATUSES = [["all", "Any status"], ["queued", "Queued"], ["sent", "Sent"], ["delivered", "Delivered"], ["failed", "Failed"]];
-const tone = { failed: "down", queued: "degraded", sent: "healthy", delivered: "healthy" };
+const STATUSES = [["all", "Any status"], ["queued", "Queued"], ["sent", "Sent"], ["delivered", "Delivered"], ["failed", "Failed"], ["cancelled", "Cancelled"]];
+const tone = { failed: "down", queued: "degraded", sent: "healthy", delivered: "healthy", cancelled: "neutral" };
 
 export default function LogTab() {
   const { can, why } = usePermissions();
@@ -22,6 +24,7 @@ export default function LogTab() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [openId, setOpenId] = useState(null);
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-message-log", channel, status, search, page],
@@ -48,6 +51,7 @@ export default function LogTab() {
   const by = summary?.by_status ?? {};
   return (
     <div>
+      <PendingBroadcasts />
       {summary && (
         <p className="log-summary">
           Last {summary.days} days: <strong>{(by.sent ?? 0) + (by.delivered ?? 0)}</strong> sent, <strong>{by.queued ?? 0}</strong> queued, <strong className={by.failed ? "text-danger" : ""}>{by.failed ?? 0}</strong> failed. SMS cost KES {Number(summary.cost_kes).toLocaleString("en-KE", { maximumFractionDigits: 2 })}.
@@ -69,7 +73,7 @@ export default function LogTab() {
                 : rows.map((row) => (
                   <tr key={row.id}>
                     <td>{ago(row.created_at)}</td>
-                    <td>{row.business_id ? <Link to={`/admin/businesses/${row.business_id}`}>{row.business_name}</Link> : "Applicant"}<div className="muted">{row.to_address ?? "In-app"}</div></td>
+                    <td>{row.business_id ? <Link to={`/admin/businesses/${row.business_id}`}>{row.business_name}</Link> : row.application_name ?? "Applicant"}<div className="muted">{row.business_id ? null : "Applicant · "}{row.to_address ?? "In-app"}</div></td>
                     <td><strong>{row.subject}</strong>{row.template_key ? <div className="muted">Template: {row.template_key}</div> : null}</td>
                     <td>{row.channel === "in_app" ? "In-app" : row.channel.toUpperCase()}</td>
                     <td>
@@ -77,7 +81,10 @@ export default function LogTab() {
                       {row.status === "failed" ? <div className="muted">{row.error ?? "send_failed"} after {row.attempts} {row.attempts === 1 ? "try" : "tries"}</div> : null}
                       {row.status === "queued" && Date.parse(row.scheduled_at) > Date.now() ? <div className="muted">Scheduled</div> : null}
                     </td>
-                    <td>{row.status === "failed" && <Button size="sm" disabled={!canRetry || retry.isPending} title={why("messages.send")} onClick={() => retry.mutate(row.id)} aria-label={`Retry message to ${row.business_name ?? "applicant"}`}>Retry</Button>}</td>
+                    <td>
+                      <Button size="sm" onClick={() => setOpenId(row.id)} aria-label={`View message ${row.subject}`}>View</Button>
+                      {row.status === "failed" && <Button size="sm" disabled={!canRetry || retry.isPending} title={why("messages.send")} onClick={() => retry.mutate(row.id)} aria-label={`Retry message to ${row.business_name ?? row.application_name ?? "applicant"}`}>Retry</Button>}
+                    </td>
                   </tr>
                 ))}
             </tbody>
@@ -85,6 +92,7 @@ export default function LogTab() {
         </div>
       )}
       <Pager page={page} pageSize={PAGE_SIZE} total={data?.total ?? 0} onPage={setPage} />
+      {openId ? <MessageDetail id={openId} onClose={() => setOpenId(null)} /> : null}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
+import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import LoadError from "../../components/LoadError.jsx";
 import Modal from "../../components/Modal.jsx";
 import { useToast } from "../../components/Toast.jsx";
@@ -51,9 +52,23 @@ function TemplateDialog({ initial, onClose }) {
 
 export default function TemplatesTab() {
   const { can, why } = usePermissions();
+  const queryClient = useQueryClient();
+  const toast = useToast();
   const [editing, setEditing] = useState(null);
+  const [deleting, setDeleting] = useState(null);
   const { data = [], isLoading, isError, error, refetch } = useQuery({ queryKey: ["admin-templates"], queryFn: () => api.listTemplates() });
   const canEdit = can("catalogue.edit");
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["admin-templates"] });
+
+  const toggle = useMutation({
+    mutationFn: ({ key, enabled }) => api.setTemplateEnabled({ key, enabled }),
+    onSuccess: (_, { key, enabled }) => { toast.push({ message: enabled ? `${key} is on again.` : `${key} is off. It can no longer be chosen for a broadcast.` }); refresh(); },
+    onError: (failure) => toast.push({ message: failure.message, tone: "error" }),
+  });
+  const remove = useMutation({
+    mutationFn: ({ key }) => api.deleteTemplate(key),
+    onSuccess: (_, { key }) => { toast.push({ message: `Deleted ${key}.` }); setDeleting(null); refresh(); },
+  });
 
   if (isError) return <LoadError what="templates" error={error} onRetry={refetch} />;
   return (
@@ -70,18 +85,34 @@ export default function TemplatesTab() {
               : data.length === 0 ? <tr><td colSpan={6}>No templates yet.</td></tr>
               : data.map((t) => (
                 <tr key={t.key}>
-                  <td><strong>{t.key}</strong>{t.transactional ? <div className="muted">Billing notice</div> : null}</td>
+                  <td><strong>{t.key}</strong>{t.disabled_at ? <div><span className="status-pill status-pill--neutral">Disabled</span></div> : null}{t.transactional ? <div className="muted">Billing notice</div> : null}{t.system ? <div className="muted">Used by the system</div> : null}</td>
                   <td>{t.channel === "in_app" ? "In-app" : t.channel.toUpperCase()}</td>
                   <td>{t.subject ? <strong>{t.subject}<br /></strong> : null}{t.body_en}{t.body_sw ? <div className="muted">Kiswahili: {t.body_sw}</div> : null}</td>
                   <td>{t.used_30d}</td>
                   <td>v{t.version}</td>
-                  <td><Button size="sm" disabled={!canEdit} title={why("catalogue.edit")} onClick={() => setEditing({ key: t.key, channel: t.channel, subject: t.subject ?? "", bodyEn: t.body_en, bodySw: t.body_sw ?? "", transactional: t.transactional, isNew: false })} aria-label={`Edit template ${t.key}`}>Edit</Button></td>
+                  <td>
+                    <Button size="sm" disabled={!canEdit} title={why("catalogue.edit")} onClick={() => setEditing({ key: t.key, channel: t.channel, subject: t.subject ?? "", bodyEn: t.body_en, bodySw: t.body_sw ?? "", transactional: t.transactional, isNew: false })} aria-label={`Edit template ${t.key}`}>Edit</Button>
+                    <Button size="sm" disabled={!canEdit || toggle.isPending} title={why("catalogue.edit")} onClick={() => toggle.mutate({ key: t.key, enabled: !!t.disabled_at })} aria-label={`${t.disabled_at ? "Enable" : "Disable"} template ${t.key}`}>{t.disabled_at ? "Enable" : "Disable"}</Button>
+                    <Button size="sm" className="admin-button--danger" disabled={!canEdit || t.system} title={t.system ? "The system uses this template. Disable it instead." : why("catalogue.edit")} onClick={() => { remove.reset(); setDeleting(t); }} aria-label={`Delete template ${t.key}`}>Delete</Button>
+                  </td>
                 </tr>
               ))}
           </tbody>
         </table>
       </div>
       {editing && <TemplateDialog initial={editing} onClose={() => setEditing(null)} />}
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete ${deleting.key}?`}
+          summary="The template is removed for good. Messages already sent with it keep their record."
+          confirmLabel="Delete template"
+          danger
+          busy={remove.isPending}
+          error={remove.isError ? remove.error.message : ""}
+          onConfirm={() => remove.mutate(deleting)}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
     </div>
   );
 }

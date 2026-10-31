@@ -53,6 +53,9 @@ export const formatDateTime = (value) => formatInstant(value, { locale: "en-KE",
 /** "25 Oct, 7:51 pm" */
 export const stamp = (value) => formatStamp(value);
 
+/** "25 Oct 2026, 7:51 pm" in Nairobi, whatever the viewer's zone. */
+export const stampNairobi = (value) => formatStamp(value, { timeZone: businessZone, year: "numeric" });
+
 /** "7:51 pm" */
 export const stampClock = (value) => formatTime(value);
 

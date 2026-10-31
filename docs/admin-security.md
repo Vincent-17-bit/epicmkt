@@ -21,9 +21,12 @@ The database and the edge functions enforce the rules (`has_role()` and `require
 | See payments | reviewer, finance, support |
 | Confirm, reject, assign payments, handle M-Pesa callbacks | finance |
 | Seller messages (read, send, start a conversation, mark resolved or reopen: `admin_set_conversation_resolved()`, migration 0067) | reviewer, support |
+| Cancel a broadcast that has not gone out yet (`admin_cancel_broadcast()`, migration 0068; it only takes messages the dispatcher has not claimed) | reviewer, support |
 | Flash sales (view, end) | reviewer, support |
 | Live activity feed on the Command Center | reviewer |
 | Delete or clear items in the live activity feed (`activity.manage`, `admin_delete_activity()`, migration 0059) | reviewer |
+| Message templates: edit, disable, enable, delete (`admin_set_template_enabled()`, `admin_delete_template()`, migration 0069; templates the system writes cannot be deleted) | owner only |
+| Read the message log and open one message in full (`admin_message_detail()`, migration 0070) | reviewer, support |
 | Settings, categories, plans, content, admin accounts | owner only |
 
 Deleting from the live activity feed never changes the audit log. A notification row is deleted for good; an audit row is only hidden from the feed of the admin who deleted it (`admin_activity_dismissals`, one private list per admin), so the Audit page and every other admin still see it.
