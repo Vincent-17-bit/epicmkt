@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayout.jsx";
 import CommandCenterPage from "./pages/CommandCenterPage.jsx";
@@ -9,7 +10,6 @@ import MessagesPage from "./pages/MessagesPage.jsx";
 import FlashSalesPage from "./pages/FlashSalesPage.jsx";
 import SettingsPage from "./pages/SettingsPage.jsx";
 import NotFoundPage from "./pages/NotFoundPage.jsx";
-import DataTableTestPage from "./pages/DataTableTestPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AccountPage from "./pages/AccountPage.jsx";
 import RequireAdmin from "./auth/RequireAdmin.jsx";
@@ -24,6 +24,11 @@ import CategoriesPage from "./pages/catalogue/CategoriesPage.jsx";
 import AuditPage from "./pages/AuditPage.jsx";
 import AnalyticsPage from "./pages/AnalyticsPage.jsx";
 import BusinessDetailPage from "./pages/business/BusinessDetailPage.jsx";
+
+// /admin/table-test is a developer page for the data table. It exists in `vite dev` only: in a production build
+// import.meta.env.DEV is false, so this is `null`, the route below is not registered, and the page and its chunk are
+// removed from the bundle (it is not just hidden behind a role). The URL then shows the normal "page not found".
+const DataTableTestPage = import.meta.env.DEV ? lazy(() => import("./pages/DataTableTestPage.jsx")) : null;
 
 export default function App() {
   return (
@@ -50,7 +55,7 @@ export default function App() {
           <Route path="flash-sales" element={<RoleGuard permission="flash.view"><FlashSalesPage /></RoleGuard>} />
           <Route path="settings" element={<RoleGuard permission="settings.view"><SettingsPage /></RoleGuard>} />
           <Route path="account" element={<AccountPage />} />
-          <Route path="table-test" element={<DataTableTestPage />} />
+          {DataTableTestPage ? <Route path="table-test" element={<Suspense fallback={null}><DataTableTestPage /></Suspense>} /> : null}
         </Route>
       </Route>
       <Route path="/" element={<Navigate to="/admin" replace />} />
