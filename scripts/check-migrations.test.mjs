@@ -45,6 +45,12 @@ test("a header that names another file is reported", () => {
   assert.deepEqual(run(["0001_a.sql"], { read: () => "-- Admin backend.\nselect 1;" }), []);
 });
 
+test("a split number (004200, 004201) is allowed, but not twice with the same part or mixed with a plain one", () => {
+  assert.deepEqual(run(["0001_a.sql", "000200_b.sql", "000201_c.sql", "0003_d.sql"]), []);
+  assert.match(run(["0001_a.sql", "000200_b.sql", "000200_c.sql"]).join("\n"), /already used by/);
+  assert.match(run(["0001_a.sql", "0002_b.sql", "000201_c.sql"]).join("\n"), /already used by/);
+});
+
 test("the README may not point at a migration that does not exist", () => {
   assert.match(run(["0001_a.sql"], { readme: "see 0002_gone.sql" }).join("\n"), /README\.md mentions 0002_gone\.sql/);
 });

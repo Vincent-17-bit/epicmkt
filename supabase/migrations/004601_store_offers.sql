@@ -1,4 +1,4 @@
--- 0046_store_offers.sql
+-- 004601_store_offers.sql
 -- Two kinds of offer, both controlled by the seller:
 --   product  an offer on chosen products (0045). Shows on those products and counts toward the store card's Offer chip.
 --   store    an offer on the whole shop: percent off, amount off or a free perk with the order, with its own settings

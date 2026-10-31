@@ -1,4 +1,4 @@
--- 0042_browse_snapshot.sql
+-- 004200_browse_snapshot.sql
 -- The browse endpoint (client/api/browse.js) needs the whole public catalog once, not once per visitor.
 -- Before this, building that snapshot meant paging through public_businesses (select *), public_items, public_flash_sales
 -- and public_offers, up to 20 requests of 1,000 rows each. This function returns the same information in ONE round trip
