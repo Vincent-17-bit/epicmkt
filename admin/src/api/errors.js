@@ -68,6 +68,10 @@ export const ACTION_TEXT = {
   invalid_strike_threshold: "The strike threshold must be a whole number from 1 to 20.",
   invalid_sms_sender: "The SMS sender must be 3 to 11 letters or numbers, with no spaces.",
   invalid_quiet_hours: "Quiet hours need a start and an end time that are different.",
+  invalid_health_config: "Check the health settings: each number must be a whole number inside its allowed range.",
+  invalid_health_weights: "At least one weight must be above 0.",
+  invalid_health_bands: "“Healthy from” must be higher than “Watch from”.",
+  invalid_health_activity: "Activity reaches 0 later than it starts to fall: set “Zero at” above “Full marks until”.",
   target_not_found: "That business no longer exists. Refresh the page.",
 };
 

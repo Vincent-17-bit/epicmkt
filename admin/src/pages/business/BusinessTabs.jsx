@@ -8,6 +8,7 @@ import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { auditLabel, friendlyError, kes } from "../../lib/businessDetail.js";
 import { daysLeft, formatBusinessDate, formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
+import HealthPanel from "./HealthPanel.jsx";
 
 const PAYMENT_STATUS = { confirmed: "Confirmed", submitted: "Submitted", awaiting_confirmation: "Awaiting confirmation", needs_assignment: "Needs assignment", rejected: "Rejected", ignored: "Ignored" };
 const label = (map, key) => map[key] ?? String(key ?? "").replace(/_/g, " ");
@@ -61,6 +62,7 @@ export function OverviewTab({ detail }) {
 
   return (
     <div className="biz-overview">
+      <HealthPanel businessId={b.id} />
       <ul className="biz-stats" aria-label="Summary">
         <li><strong>{s.items}</strong><span>Items listed</span></li>
         <li><strong>{s.items_hidden}</strong><span>Hidden by admin</span></li>

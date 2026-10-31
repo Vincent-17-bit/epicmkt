@@ -1,10 +1,12 @@
 import { ApiError } from "./errors.js";
+import { fixtureHistory } from "./mockHealth.js";
 import { businessFilterOptions, businessStore, countBusinessTabs, queryBusinesses } from "./mockBusinesses.js";
 import { mockApplicationCounts } from "./mockApplications.js";
 import { normalizeCounts } from "../lib/counts.js";
 
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
 export { getSettings, saveSettings, setBusinessGrace } from "./mockSettings.js";
+export { getHealthConfig, saveHealthConfig } from "./mockHealth.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
 export { getPlanHistory, listCategories, listPlans, saveCategory, savePlan } from "./mockCatalogue.js";
@@ -337,4 +339,11 @@ export async function deleteBusinessNote(noteId) {
     if (at >= 0) { d.notes.splice(at, 1); return true; }
   }
   throw new ApiError("not_found", "not_found");
+}
+
+export async function getBusinessHealth(id) {
+  await new Promise((resolve) => setTimeout(resolve, 120));
+  const row = businessStore.find((b) => b.id === id);
+  if (!row) throw new ApiError("not_found");
+  return { current: row.health, history: row.healthScore === null ? [] : fixtureHistory(id, row.healthScore) };
 }

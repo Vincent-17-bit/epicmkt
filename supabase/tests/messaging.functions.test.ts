@@ -197,6 +197,29 @@ Deno.test("daily-lifecycle: runs the billing notices once with the clock and aud
   assertEquals(w.tables.audit_log.map((a) => [a.action, a.actor_role]), [["lifecycle.daily", "system"], ["lifecycle.daily", "system"]]);
 });
 
+Deno.test("daily-lifecycle: stores the day's health snapshots after the notices and reports how many", async () => {
+  const w = world();
+  w.rpc.queue_billing_notices = () => ({ data: { inApp: 1, queued: 1 }, error: null });
+  w.rpc.snapshot_business_health = () => ({ data: 42, error: null });
+  const body = await (await dailyLifecycle(makeDeps(w))(post({}, cron))).json();
+  assertEquals(body.healthSnapshots, 42);
+  assertEquals(w.rpcCalls.map((c) => c.name).filter((n) => n !== "hit_rate_limit"), ["queue_billing_notices", "snapshot_business_health"]);
+  assertEquals(w.tables.audit_log[0].after.healthSnapshots, 42);
+});
+
+Deno.test("daily-lifecycle: a failing health snapshot never fails the billing run", async () => {
+  for (const snapshot of [() => ({ data: null, error: { message: "boom" } }), () => { throw new Error("down"); }]) {
+    const w = world();
+    w.rpc.queue_billing_notices = () => ({ data: { inApp: 2, queued: 3 }, error: null });
+    w.rpc.snapshot_business_health = snapshot;
+    const res = await dailyLifecycle(makeDeps(w))(post({}, cron));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals([body.inApp, body.queued, body.healthSnapshots], [2, 3, null]);
+    assertEquals(w.tables.audit_log.length, 1);
+  }
+});
+
 Deno.test("daily-lifecycle: a database error is a 500 and writes no audit row", async () => {
   const w = world();
   w.rpc.queue_billing_notices = () => ({ data: null, error: { message: "x" } });

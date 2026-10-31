@@ -6,6 +6,7 @@ export const emptyFilters = {
   verified: "",
   featured: "",
   status: "",
+  health: "",
   daysMin: "",
   daysMax: "",
   hasFlags: false,

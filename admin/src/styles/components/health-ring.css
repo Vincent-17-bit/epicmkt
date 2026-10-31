@@ -1,4 +1,26 @@
-/* styles/components/health-ring.css */
+/* styles/components/health-ring.css
+   The business health score: ring, band chip, trend, the breakdown card and its popover.
+   Colour comes only from the audited tokens in theme.css. Colour never carries meaning alone: every state also has words. */
+
+.health-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.health-trigger:hover { background: var(--neutral-tint); }
+.health-trigger:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.health-trigger--plain { cursor: default; }
+.health-trigger--plain:hover { background: none; }
+
 .health-ring {
   position: relative;
   display: inline-grid;
@@ -7,12 +29,12 @@
   width: var(--ring-size, 44px);
   height: var(--ring-size, 44px);
 }
-
-.health-ring svg {
-  position: absolute;
-  inset: 0;
-}
-
+.health-ring__svg { position: absolute; inset: 0; }
+.health-ring__arc { transition: stroke-dashoffset 0.5s ease; }
+.health-ring__arc--success { stroke: var(--success); }
+.health-ring__arc--warning { stroke: var(--warning); }
+.health-ring__arc--danger { stroke: var(--danger); }
+.health-ring__arc--neutral { stroke: var(--text-muted); }
 .health-ring__value {
   position: relative;
   font-size: var(--fs-xs);
@@ -21,3 +43,129 @@
   font-variant-numeric: tabular-nums;
 }
 
+.health-ring__text { display: inline-flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+
+.health-chip {
+  display: inline-block;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-xs);
+  font-weight: var(--fw-semibold);
+  white-space: nowrap;
+}
+.health-chip--success { background: var(--success-tint); color: var(--success); }
+.health-chip--warning { background: var(--warning-tint); color: var(--warning); }
+.health-chip--danger { background: var(--danger-tint); color: var(--danger); }
+.health-chip--neutral { background: var(--neutral-tint); color: var(--text-muted); }
+
+.health-trend { font-size: var(--fs-xs); line-height: var(--lh-xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.health-trend--up { color: var(--success); }
+.health-trend--down { color: var(--danger); }
+.health-trend--flat { color: var(--text-muted); }
+
+/* The breakdown card (tooltip and business page) */
+.health-card { display: grid; gap: var(--space-3); }
+.health-card__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+.health-card__score {
+  font-size: var(--fs-2xl);
+  line-height: var(--lh-2xl);
+  font-weight: var(--fw-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--ls-2xl);
+}
+.health-card__score small { font-size: var(--fs-sm); font-weight: var(--fw-regular); color: var(--text-muted); margin-inline-start: 2px; letter-spacing: 0; }
+.health-card__cap {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--danger-tint);
+  color: var(--text);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+.health-card__sub { margin: 0; font-size: var(--fs-xs); line-height: var(--lh-xs); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+.health-card__more, .health-card__clean { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+
+.health-parts { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.health-part {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 7rem) 1fr minmax(3.5rem, auto);
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+.health-part__name { display: flex; align-items: baseline; gap: var(--space-2); }
+.health-part__weight { font-size: var(--fs-xs); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.health-part__value { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); }
+.health-part__tag { padding: 0 var(--space-1); border: 1px solid currentColor; border-radius: var(--radius-sm); font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: var(--fw-semibold); color: var(--danger); text-transform: uppercase; letter-spacing: 0.04em; }
+.health-part--weakest .health-part__name { font-weight: var(--fw-semibold); }
+
+.health-bar { display: block; height: 0.5rem; border-radius: var(--radius-pill); background: var(--surface-sunken); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; }
+.health-bar__fill { display: block; height: 100%; border-radius: var(--radius-pill); transition: width 0.4s ease; }
+.health-bar__fill--success { background: var(--success-solid); }
+.health-bar__fill--warning { background: var(--warning-solid); }
+.health-bar__fill--danger { background: var(--danger); }
+.health-bar__fill--neutral { background: var(--text-muted); }
+
+.health-reasons { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.health-reason {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 3px solid var(--border-strong);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-sm);
+}
+.health-reason--bad { border-inline-start-color: var(--danger); }
+.health-reason--warn { border-inline-start-color: var(--warning-solid); }
+.health-reason--info { border-inline-start-color: var(--primary); }
+.health-reason__tone { font-size: var(--fs-xs); line-height: var(--lh-xs); font-weight: var(--fw-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); white-space: nowrap; }
+.health-reason__points { font-variant-numeric: tabular-nums; font-weight: var(--fw-semibold); color: var(--text-muted); }
+
+/* The floating breakdown. Fixed, so a scrolling table cannot clip it. */
+.health-pop {
+  position: fixed;
+  z-index: 60;
+  width: min(23rem, calc(100vw - 2 * var(--space-2)));
+  max-height: calc(100vh - 2 * var(--space-4));
+  overflow: auto;
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: var(--elevation-2);
+  text-align: start;
+}
+.health-pop .health-part { grid-template-columns: minmax(5rem, 6.25rem) 1fr minmax(3rem, auto); }
+
+/* The business page: a panel with the ring, the card and 30 days of history */
+.health-panel { display: grid; gap: var(--space-4); margin-bottom: var(--space-5); padding: var(--space-5); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); }
+.health-panel__top { display: grid; grid-template-columns: auto 1fr; gap: var(--space-5); align-items: start; }
+.health-panel__ring { display: grid; justify-items: center; gap: var(--space-2); }
+.health-panel__title { margin: 0; }
+.health-panel__note { margin: 0; font-size: var(--fs-sm); line-height: var(--lh-sm); color: var(--text-muted); }
+.health-history { display: grid; gap: var(--space-2); }
+.health-history__strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(30, 1fr); gap: 2px; height: 3.5rem; align-items: end; }
+.health-history__strip li { display: flex; align-items: flex-end; height: 100%; }
+.health-history__cell { display: block; width: 100%; min-height: 4px; border-radius: 2px 2px 0 0; background: var(--neutral-tint); }
+.health-history__cell--healthy { background: var(--success-solid); }
+.health-history__cell--watch { background: var(--warning-solid); }
+.health-history__cell--at_risk { background: var(--danger); }
+.health-history__axis { display: flex; justify-content: space-between; font-size: var(--fs-xs); line-height: var(--lh-xs); color: var(--text-muted); }
+
+@media (max-width: 40rem) {
+  .health-panel__top { grid-template-columns: 1fr; }
+  .health-panel__ring { justify-items: start; }
+  .health-part { grid-template-columns: minmax(4.5rem, 6rem) 1fr minmax(2.5rem, auto); gap: var(--space-2); }
+  .health-reason { grid-template-columns: 1fr auto; row-gap: 0; }
+  .health-reason__tone { grid-column: 1 / -1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .health-ring__arc, .health-bar__fill { transition: none; }
+}
