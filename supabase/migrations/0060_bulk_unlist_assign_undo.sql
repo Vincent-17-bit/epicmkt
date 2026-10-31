@@ -1,4 +1,4 @@
--- 0059_bulk_unlist_assign_undo.sql
+-- 0060_bulk_unlist_assign_undo.sql
 -- Bulk actions, part 2: Unlist and Assign agent are real, and bulk actions can be undone.
 -- Ported from feature/bulk-unlist-assign-undo (its 0017) onto main. It re-declares the business-list functions as they
 -- stand after 0014, 0016 and 0029, so it must run after them. Additive and safe to re-run.
