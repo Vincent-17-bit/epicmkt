@@ -224,7 +224,7 @@ Deno.test("confirm: first payment activates the business", async () => {
 
   const stored = JSON.stringify(w.tables);
   assert(!stored.includes(b.temporaryPassword), "password must not be stored in any table");
-  assertEquals(w.tables.messages.map((m) => [m.channel, m.template_key, m.status]), [["email", "welcome", "queued"]]);
+  assertEquals(w.tables.messages.map((m) => [m.channel, m.template_key, m.status]), [["email", "welcome", "queued"], ["sms", "login_details", "sent"], ["email", "login_details", "sent"]]);
   assertEquals(w.tables.application_events.at(-1).type, "activated");
   assertEquals(w.tables.audit_log.map((a) => a.action), ["payment.confirm", "business.activate"]);
   assertEquals(w.tables.audit_log[0].actor_email, "finance@epicmkt.test");

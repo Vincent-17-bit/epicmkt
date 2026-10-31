@@ -1,5 +1,5 @@
 import { adminFn, audit, json, must, z, type AdminDeps } from "../_shared/adminKit.ts";
-import { emailHtml } from "../_shared/emailTemplate.ts";
+import { deliverLogin } from "../_shared/loginDelivery.ts";
 import { passwordReset } from "../_shared/messages.ts";
 
 const Body = z.object({
@@ -25,12 +25,10 @@ export const adminResetSellerPassword = (d: AdminDeps) =>
       after: { sellerId: biz.seller_id, mustChangePassword: true }, reason,
     });
 
-    const msg = passwordReset({ sellerId: biz.seller_id, password });
-    let smsSent = false;
-    try {
-      smsSent = await d.sms(biz.phone, msg.sms);
-      await d.mail(biz.email, msg.subject, emailHtml(msg.email));
-    } catch (_) {}
+    const { smsSent } = await deliverLogin(d, {
+      businessId, applicationId: null, phone: biz.phone, email: biz.email, msg: passwordReset({ sellerId: biz.seller_id, password }),
+      password, actorId: c.admin.user.id,
+    });
 
     return json({ ok: true, businessId, sellerId: biz.seller_id, smsSent });
   });

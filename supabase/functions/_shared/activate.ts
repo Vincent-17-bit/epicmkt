@@ -2,8 +2,8 @@ import { must, queueMessages, type AdminDeps } from "./adminKit.ts";
 import { addCalendarMonth, eatToday, formatDay, nairobiMidnight } from "./dates.ts";
 import { uniqueSlug } from "./ids.ts";
 import { sellerEmail } from "./seller.ts";
-import { emailHtml } from "./emailTemplate.ts";
 import { loginDetails, welcome } from "./messages.ts";
+import { deliverLogin } from "./loginDelivery.ts";
 
 type Row = Record<string, any>;
 type AuditRow = { action: string; targetType: string; targetId: string; businessId?: string | null; before?: unknown; after?: unknown; reason?: string | null };
@@ -111,11 +111,9 @@ export async function activateApplication(d: AdminDeps, o: Activation) {
   });
 
   const login = loginDetails({ owner: a.owner_full_name, business: a.business_name, sellerId: created.sellerId, password: created.password });
-  let smsSent = false;
-  try {
-    smsSent = await d.sms(a.phone, login.sms);
-    await d.mail(a.email, login.subject, emailHtml(login.email));
-  } catch (_) {}
+  const { smsSent } = await deliverLogin(d, {
+    businessId: created.businessId, applicationId: a.id, phone: a.phone, email: a.email, msg: login, password: created.password, actorId,
+  });
 
   return {
     duplicate: false as const, businessId: created.businessId, slug: created.slug, sellerId: created.sellerId,

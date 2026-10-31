@@ -248,6 +248,17 @@ export async function getBusinessDetail(id) {
     },
   };
 }
+export async function getLoginDelivery() {
+  await latency(60);
+  return [
+    { channel: "sms", status: "sent", error: null, created_at: new Date().toISOString() },
+    { channel: "email", status: "failed", error: "mailbox_unavailable", created_at: new Date().toISOString() },
+  ];
+}
+export async function resendLogin() {
+  await latency();
+  return { ok: true };
+}
 export async function getBusinessPayments(id) {
   await latency(60);
   const row = demoRow(id);

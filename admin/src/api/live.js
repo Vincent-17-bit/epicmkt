@@ -558,6 +558,14 @@ export async function markNotificationsRead(ids) {
 const detailRpc = async (fn, args) => check(await client().rpc(fn, args)).data;
 
 export const getBusinessDetail = (id) => detailRpc("admin_business_detail", { p_id: id });
+export async function getLoginDelivery(businessId) {
+  const { data } = check(
+    await client().from("messages").select("channel,status,error,created_at").eq("business_id", businessId)
+      .eq("template_key", "login_details").in("channel", ["sms", "email"]).order("created_at", { ascending: false }).limit(10),
+  );
+  return data ?? [];
+}
+export const resendLogin = ({ businessId, reason }) => callFunction("admin-reset-seller-password", { businessId, reason });
 export const getBusinessPayments = (id) => detailRpc("admin_business_payments", { p_id: id });
 export const getBusinessActivity = (id) => detailRpc("admin_business_activity", { p_id: id, p_limit: 50 });
 export const getBusinessItems = (id) => detailRpc("admin_business_items", { p_id: id });

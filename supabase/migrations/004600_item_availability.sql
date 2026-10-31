@@ -1,4 +1,4 @@
--- 0046_item_availability.sql
+-- 004600_item_availability.sql
 -- Availability for a business directory (see docs/availability.md).
 --
 --   * Available / by appointment  -> listed, no marker.
