@@ -302,3 +302,12 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
+
+.partial {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-card);
+}

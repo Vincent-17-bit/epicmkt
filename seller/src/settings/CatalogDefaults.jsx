@@ -10,8 +10,7 @@ import styles from "./settings.module.css";
 const AVAILABILITY = [
   { value: "available", label: "Available" },
   { value: "limited_stock", label: "Limited stock" },
-  { value: "out_of_stock", label: "Out of stock" },
-  { value: "unavailable", label: "Unavailable" }
+  { value: "out_of_stock", label: "Out of stock" }
 ];
 
 export default function CatalogDefaults() {

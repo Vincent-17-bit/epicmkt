@@ -62,7 +62,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   saved_views: [],
   appearance: { theme: "system", text_size: "normal", density: "comfortable", reduce_motion: false, remember_card_view: true, card_view: null },
   notifications: { events: channelDefaults, quiet_hours: { enabled: true, start: "21:00", end: "07:00" } },
-  catalog: { default_availability: "available", low_stock_threshold: 3, price_reminder_days: 30, start_visible: true, default_units: {}, show_only_n_left: true },
+  catalog: { default_availability: "available", low_stock_threshold: 3, price_reminder_days: 30, start_visible: false, default_units: {}, show_only_n_left: false },
   messaging: { whatsapp_greeting: DEFAULT_GREETING, closure_reasons: DEFAULT_CLOSURE_REASONS },
   business: { show_closes_chip: true, partial_closure_message: "Some services are unavailable right now.", announcement: { enabled: false, text: "", days: 7 } },
   onboarding: { status: "active", dismissed_tips: [], completed_at: null, qr_seen: false }

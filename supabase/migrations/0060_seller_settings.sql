@@ -249,10 +249,10 @@ begin
   if p_rows is null or jsonb_typeof(p_rows) <> 'array' or jsonb_array_length(p_rows) = 0 then raise exception 'no_rows' using errcode = 'P0001'; end if;
   if jsonb_array_length(p_rows) > 500 then raise exception 'too_many_rows' using errcode = 'P0001'; end if;
   -- New items start from the seller's saved catalog defaults (settings.catalog).
-  select coalesce((st.settings #>> '{catalog,low_stock_threshold}')::integer, 3), coalesce((st.settings #>> '{catalog,show_only_n_left}')::boolean, true)
+  select coalesce((st.settings #>> '{catalog,low_stock_threshold}')::integer, 3), coalesce((st.settings #>> '{catalog,show_only_n_left}')::boolean, false)
     into v_thr, v_show from (select 1) x left join public.seller_settings st on st.business_id = v_id;
   v_thr := coalesce(v_thr, 3);
-  v_show := coalesce(v_show, true);
+  v_show := coalesce(v_show, false);
   select coalesce(max(sort), 0) into v_sort from public.items where business_id = v_id;
   for r in select * from jsonb_array_elements(p_rows) loop
     v_pos := v_pos + 1;

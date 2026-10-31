@@ -237,7 +237,30 @@ export const flashParts = (entry, now) => ({
   remainingMs: Math.max(0, Date.parse(entry.sale.endsAt) - now)
 });
 
-export const businessOf = (row, { category, services, origin = null }) => {
+// Gallery photos, team members and class slots come from their own public views (see getBusiness).
+export const galleryOf = (rows) =>
+  (rows ?? []).map((r) => {
+    const side = r.pair_role === "before" ? "Before" : r.pair_role === "after" ? "After" : null;
+    return { id: r.id, url: mediaUrl(r.path), caption: [r.caption, side].filter(Boolean).join(" · ") || "Shop photo", pairId: r.pair_id ?? null, pairRole: r.pair_role ?? null };
+  }).filter((p) => p.url);
+export const teamOf = (rows, services = []) =>
+  (rows ?? []).map((r) => ({
+    id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoUrl: mediaUrl(r.photo_path),
+    services: (r.item_ids ?? []).map((id) => services.find((svc) => svc.id === id)?.name).filter(Boolean)
+  }));
+export const timetableOf = (rows, team = []) =>
+  (rows ?? []).map((r) => ({
+    id: r.id, day: r.day_of_week, start: String(r.start_time).slice(0, 5), end: String(r.end_time).slice(0, 5), name: r.class_name,
+    trainer: team.find((t) => t.id === r.staff_id)?.name ?? null
+  }));
+// The few seller settings the public page honours. Anything missing means "use the default".
+export const shopSettingsOf = (value) => ({
+  whatsappGreeting: typeof value?.whatsapp_greeting === "string" ? value.whatsapp_greeting : null,
+  showClosesChip: value?.show_closes_chip !== false,
+  partialClosureMessage: typeof value?.partial_closure_message === "string" ? value.partial_closure_message : null
+});
+
+export const businessOf = (row, { category, services, origin = null, gallery = [], team = [], timetable = [] }) => {
   const hours = row.hours && typeof row.hours === "object" ? row.hours : {};
   const exceptions = exceptionsOf(row.exceptions);
   const timezone = row.timezone ?? BUSINESS_TIME_ZONE;
@@ -279,7 +302,10 @@ export const businessOf = (row, { category, services, origin = null }) => {
     productCount: Number.isInteger(row.product_count) && row.product_count >= 0 ? row.product_count : countOf(services?.length),
     coverUrl: mediaUrl(row.cover_path),
     logoUrl: mediaUrl(row.logo_path),
-    gallery: [],
+    gallery,
+    team,
+    timetable,
+    shopSettings: shopSettingsOf(row.shop_settings),
     offers: [],
     attributes: {},
     services,

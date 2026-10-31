@@ -3,7 +3,7 @@ import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { businessOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
+import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -439,22 +439,39 @@ export async function getShowcaseProducts(businessIds = [], { pool = 24, rng = M
   );
 }
 
+// The gallery, team and timetable are extras: if one cannot be read the page still opens without it.
+const optionalRows = async (view, businessId, order) => {
+  try {
+    return unwrap(await supabase.from(view).select("*").eq("business_id", businessId).order(order)) ?? [];
+  } catch {
+    return [];
+  }
+};
+
 let categoriesCache = null;
 
 export async function getBusiness(ref, origin = null) {
   const row = await findBusiness(ref);
   if (!row) throw new NotFoundError("Business not found");
   categoriesCache ??= getCategories();
-  const [categories, items, chips, deals] = await Promise.all([
+  const [categories, items, chips, deals, photos, staff, slots] = await Promise.all([
     categoriesCache,
     supabase.from("public_items").select(CARD_COLUMNS).eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap),
     chipsByItem(row.id),
-    dealsForStore(row.id)
+    dealsForStore(row.id),
+    optionalRows("public_gallery_photos", row.id, "sort"),
+    optionalRows("public_staff", row.id, "sort"),
+    optionalRows("public_timetable", row.id, "start_time")
   ]);
+  const services = (items ?? []).filter(isListed).map((item) => ({ ...serviceOf(item), offer: chips.get(item.id) ?? null }));
+  const team = teamOf(staff, services);
   const business = businessOf(row, {
     category: categories.find((c) => c.id === row.category_id) ?? null,
-    services: (items ?? []).filter(isListed).map((item) => ({ ...serviceOf(item), offer: chips.get(item.id) ?? null })),
-    origin
+    services,
+    origin,
+    gallery: galleryOf(photos),
+    team,
+    timetable: timetableOf(slots, team)
   });
   return { ...business, offers: deals };
 }

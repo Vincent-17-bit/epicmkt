@@ -181,3 +181,31 @@ describe("customer business shape for a shop outside Nairobi", () => {
     expect(toSummary(b, snap, null, Date.now()).timezone).toBe(sanJuan);
   });
 });
+
+describe("customer gallery, team, timetable and shop settings", () => {
+  it("maps photos with before and after labels, dropping any without a picture", async () => {
+    const { galleryOf } = await import("./shape.js");
+    const out = galleryOf([
+      { id: "1", path: "biz/gallery/a.webp", caption: "Fade", pair_id: "p", pair_role: "before" },
+      { id: "2", path: "biz/gallery/b.webp", caption: null, pair_id: "p", pair_role: "after" },
+      { id: "3", path: null, caption: "Broken" },
+      { id: "4", path: "biz/gallery/c.webp", caption: null }
+    ]);
+    expect(out.map((p) => [p.id, p.caption, p.pairRole])).toEqual([["1", "Fade · Before", "before"], ["2", "After", "after"], ["4", "Shop photo", null]]);
+  });
+
+  it("links team members to service names and timetable slots to trainers", async () => {
+    const { teamOf, timetableOf } = await import("./shape.js");
+    const team = teamOf([{ id: "t1", name: "Ken", role: "Coach", specialties: ["spin"], photo_path: null, item_ids: ["s1", "gone"] }], [{ id: "s1", name: "Spin class" }]);
+    expect(team).toEqual([{ id: "t1", name: "Ken", role: "Coach", specialties: ["spin"], photoUrl: null, services: ["Spin class"] }]);
+    expect(timetableOf([{ id: "x", day_of_week: 2, start_time: "07:00:00", end_time: "08:00:00", class_name: "Spin", staff_id: "t1" }, { id: "y", day_of_week: 3, start_time: "09:00", end_time: "10:00", class_name: "Yoga", staff_id: null }], team))
+      .toEqual([{ id: "x", day: 2, start: "07:00", end: "08:00", name: "Spin", trainer: "Ken" }, { id: "y", day: 3, start: "09:00", end: "10:00", name: "Yoga", trainer: null }]);
+  });
+
+  it("reads the seller's shop settings and falls back to defaults when they are missing", async () => {
+    const { shopSettingsOf } = await import("./shape.js");
+    expect(shopSettingsOf(null)).toEqual({ whatsappGreeting: null, showClosesChip: true, partialClosureMessage: null });
+    expect(shopSettingsOf({ whatsapp_greeting: "Hi {item}", show_closes_chip: false, partial_closure_message: "Some items are out." }))
+      .toEqual({ whatsappGreeting: "Hi {item}", showClosesChip: false, partialClosureMessage: "Some items are out." });
+  });
+});

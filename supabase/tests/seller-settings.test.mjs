@@ -113,14 +113,14 @@ test("login events are readable only by their owner", async () => {
 test("imports start from the saved catalog defaults", async () => {
   await reset();
   await sql(c, `delete from items where business_id = '${ids.bizB}'`);
-  await save(asB, { catalog: { low_stock_threshold: 8, show_only_n_left: false } }, { commit: true });
+  await save(asB, { catalog: { low_stock_threshold: 8, show_only_n_left: true } }, { commit: true });
   await tx(c, asB, (k) => sql(k, `select seller_import_items('[{"name":"Item One","price":100,"price_type":"fixed"}]'::jsonb)`), { commit: true });
   const [row] = await sql(c, `select low_stock_threshold, show_stock_count, visible, draft from items where business_id = '${ids.bizB}' and name = 'Item One'`);
-  assert.deepEqual(row, { low_stock_threshold: 8, show_stock_count: false, visible: false, draft: true });
+  assert.deepEqual(row, { low_stock_threshold: 8, show_stock_count: true, visible: false, draft: true });
   await reset();
   await tx(c, asB, (k) => sql(k, `select seller_import_items('[{"name":"Item Two","price":100,"price_type":"fixed"}]'::jsonb)`), { commit: true });
   const [d] = await sql(c, `select low_stock_threshold, show_stock_count from items where business_id = '${ids.bizB}' and name = 'Item Two'`);
-  assert.deepEqual(d, { low_stock_threshold: 3, show_stock_count: true });
+  assert.deepEqual(d, { low_stock_threshold: 3, show_stock_count: false });
 });
 
 test("a suspended seller cannot save settings", async () => {
