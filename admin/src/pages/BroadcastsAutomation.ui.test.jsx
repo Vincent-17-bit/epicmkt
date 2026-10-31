@@ -111,6 +111,19 @@ describe("Broadcast composer", () => {
   });
 });
 
+describe("Scheduling a broadcast", () => {
+  it("reads the Send at time as Nairobi time, says so, and sends it as UTC", async () => {
+    renderPage(<BroadcastsPage />);
+    const input = await screen.findByLabelText(/Send at \(optional, Nairobi time\)/);
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Renew today" } });
+    fireEvent.change(input, { target: { value: "2026-10-25T14:00" } });
+    expect(screen.getByTestId("send-at")).toHaveTextContent(/Sun, 25 Oct, 14:00 EAT/);
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await waitFor(() => expect(api.sendBroadcast).toHaveBeenCalled());
+    expect(api.sendBroadcast.mock.calls[0][0].scheduledAt).toBe("2026-10-25T11:00:00.000Z");
+  });
+});
+
 describe("Message log and templates", () => {
   it("shows failures with their cause and retries one", async () => {
     renderPage(<BroadcastsPage />, "/?tab=log");
@@ -135,6 +148,14 @@ describe("Message log and templates", () => {
     expect(screen.getByText("Not sent")).toBeInTheDocument();
     expect(screen.getByRole("option", { name: /Simulated/ })).toBeInTheDocument();
     expect(screen.getByText("simulated", { selector: ".status-pill" })).toBeInTheDocument();
+  });
+
+  it("a queued message shows when it will go, in Nairobi time, whatever the browser's zone", async () => {
+    api.listMessageLog.mockResolvedValue({ total: 1, rows: [
+      { id: "m7", created_at: minutesBack(5), channel: "sms", status: "queued", subject: "Later", business_id: "b1", business_name: "Lakeside Provisions", to_address: "+254712345678", attempts: 0, scheduled_at: "2099-10-25T11:00:00Z" },
+    ] });
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText(/Scheduled for .*14:00 EAT/)).toBeInTheDocument();
   });
 
   it("in live mode the log shows a Live badge and no warning", async () => {

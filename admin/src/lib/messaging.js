@@ -1,4 +1,5 @@
 // Pure helpers for broadcasts, templates and the Automation screen. No React, no network.
+import { nairobiInputToUtcIso } from "./time.js";
 
 export const SMS_SEGMENT = 160;
 export const SMS_MAX = 612; // four segments: the edge function refuses anything longer
@@ -65,9 +66,10 @@ export function buildBroadcast(form, { preview = false, idempotencyKey } = {}) {
   else { out.body = body; if (String(form.subject ?? "").trim()) out.subject = form.subject.trim(); }
   if (form.transactional !== undefined && form.transactional !== null) out.transactional = !!form.transactional;
   if (form.scheduledAt) {
-    const when = new Date(form.scheduledAt);
-    if (Number.isNaN(when.getTime())) return { error: "That send time is not valid." };
-    out.scheduledAt = when.toISOString();
+    // The input is a Nairobi wall-clock time whatever the browser's zone is; what is sent (and stored) is UTC.
+    const when = nairobiInputToUtcIso(form.scheduledAt);
+    if (!when) return { error: "That send time is not valid." };
+    out.scheduledAt = when;
   }
   if (idempotencyKey) out.idempotencyKey = idempotencyKey;
   return { payload: out };

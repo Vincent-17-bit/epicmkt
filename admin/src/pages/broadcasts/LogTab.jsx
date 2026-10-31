@@ -11,6 +11,7 @@ import { usePermissions } from "../../hooks/usePermissions.js";
 import { ago } from "../../lib/messaging.js";
 import MessageDetail from "./MessageDetail.jsx";
 import PendingBroadcasts from "./PendingBroadcasts.jsx";
+import { formatNairobiDateTime } from "../../lib/time.js";
 
 const PAGE_SIZE = 25;
 const CHANNELS = [["all", "All channels"], ["sms", "SMS"], ["email", "Email"], ["in_app", "In-app"]];
@@ -82,7 +83,7 @@ export default function LogTab() {
                       <span className={`status-pill status-pill--${tone[row.status] ?? "neutral"}`}>{row.status}</span>
                       {row.status === "simulated" ? <div className="muted">Not sent</div> : null}
                       {row.status === "failed" ? <div className="muted">{row.error ?? "send_failed"} after {row.attempts} {row.attempts === 1 ? "try" : "tries"}</div> : null}
-                      {row.status === "queued" && Date.parse(row.scheduled_at) > Date.now() ? <div className="muted">Scheduled</div> : null}
+                      {row.status === "queued" && Date.parse(row.scheduled_at) > Date.now() ? <div className="muted">Scheduled for {formatNairobiDateTime(row.scheduled_at)}</div> : null}
                     </td>
                     <td>
                       <Button size="sm" onClick={() => setOpenId(row.id)} aria-label={`View message ${row.subject}`}>View</Button>

@@ -41,12 +41,21 @@ test("a broadcast request is built only from a complete form", () => {
   assert.match(buildBroadcast({ ...ok, body: "a".repeat(613) }).error, /612/);
   assert.match(buildBroadcast({ ...ok, scheduledAt: "not a date" }).error, /not valid/);
 
-  const tpl = buildBroadcast({ segment: "all_live", email: true, templateKey: "newsletter", lang: "sw", transactional: false, scheduledAt: "2026-10-22T07:00:00Z" }).payload;
+  const tpl = buildBroadcast({ segment: "all_live", email: true, templateKey: "newsletter", lang: "sw", transactional: false, scheduledAt: "2026-10-22T10:00" }).payload;
   assert.equal(tpl.templateKey, "newsletter");
   assert.equal(tpl.body, undefined, "a template supplies its own text");
   assert.equal(tpl.lang, "sw");
   assert.equal(tpl.transactional, false);
-  assert.equal(tpl.scheduledAt, "2026-10-22T07:00:00.000Z");
+  assert.equal(tpl.scheduledAt, "2026-10-22T07:00:00.000Z", "10:00 typed in the form is 10:00 in Nairobi (UTC+3), stored as 07:00 UTC");
+});
+
+test("a scheduled time is read as Nairobi time whatever zone the browser is in, and is sent as UTC", () => {
+  const base = { segment: "all_live", sms: true, body: "Hi" };
+  const at = (v) => buildBroadcast({ ...base, scheduledAt: v }).payload.scheduledAt;
+  assert.equal(at("2026-10-22T00:30"), "2026-10-21T21:30:00.000Z", "just after midnight in Nairobi is still the evening before in UTC");
+  assert.equal(at("2026-12-31T23:59"), "2026-12-31T20:59:00.000Z");
+  assert.match(buildBroadcast({ ...base, scheduledAt: "2026-02-30T10:00" }).error, /not valid/, "30 February is not a day");
+  assert.equal(buildBroadcast({ ...base, scheduledAt: "" }).payload.scheduledAt, undefined, "no time means send now");
 });
 
 test("a send must match what was previewed", () => {
