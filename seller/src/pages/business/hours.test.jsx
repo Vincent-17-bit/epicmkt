@@ -264,8 +264,10 @@ describe("navigation and themes", () => {
   });
 
   const root = process.cwd();
-  const read = (p) => readFileSync(join(root, p), "utf8");
-  const sharedTokens = readFileSync(join(root, "..", "ui", "src", "styles", "tokens.css"), "utf8");
+  // Windows checkouts often turn line endings into CRLF; the block() search below looks for \n, so read everything with \n.
+  const lf = (text) => text.replace(/\r\n/g, "\n");
+  const read = (p) => lf(readFileSync(join(root, p), "utf8"));
+  const sharedTokens = lf(readFileSync(join(root, "..", "ui", "src", "styles", "tokens.css"), "utf8"));
   const sellerCss = read("src/styles/seller.css");
   const block = (css, selector) => {
     const start = css.indexOf(selector);
