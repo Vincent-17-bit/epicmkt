@@ -25,6 +25,8 @@ let templates = [
 let jobs = [
   { name: "dispatch-messages", schedule: "* * * * *", active: true, last_run: { status: "succeeded", started_at: at(-MIN), ended_at: at(-MIN + 800), message: "1 row" } },
   { name: "daily-lifecycle", schedule: "0 4 * * *", active: true, last_run: { status: "succeeded", started_at: at(-5 * 60 * MIN), ended_at: at(-5 * 60 * MIN + 4000), message: "1 row" } },
+  { name: "proofs-purge", schedule: "0 1 * * *", active: true, last_run: { status: "succeeded", started_at: at(-8 * 60 * MIN), ended_at: at(-8 * 60 * MIN + 2000), message: "1 row" } },
+  { name: "media-gc", schedule: "*/10 * * * *", active: true, last_run: { status: "succeeded", started_at: at(-4 * MIN), ended_at: at(-4 * MIN + 1500), message: "1 row" } },
 ];
 
 export async function listMessageLog({ channel = "all", status = "all", search = "", ...paging } = {}) {
@@ -147,7 +149,7 @@ export async function sendBroadcast(payload) {
 export async function getAutomationStatus() {
   await latency();
   return {
-    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle"], jobs: jobs.map((j) => ({ ...j })),
+    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"], jobs: jobs.map((j) => ({ ...j })),
     queue: { queued: 1, due_now: 1, oldest_due_at: at(-2 * MIN), failed_7d: log.filter((m) => m.status === "failed").length },
     last_sent_at: at(-19 * MIN), last_reminder_at: at(-20 * MIN),
   };

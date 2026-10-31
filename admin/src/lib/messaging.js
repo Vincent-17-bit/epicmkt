@@ -101,7 +101,9 @@ const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
 export const JOB_INFO = {
   "dispatch-messages": { label: "Send queued messages", every: "Every minute", what: "Sends queued SMS and email, retries failures and holds promotions back during quiet hours." },
-  "daily-lifecycle": { label: "Daily reminders and expiry", every: "07:00 Nairobi time", what: "Queues renewal reminders, moves listings into grace and expiry, and sends the notices." },
+  "daily-lifecycle": { label: "Daily reminders and expiry", every: "07:00 Nairobi time", what: "Queues renewal reminders, moves listings into grace and expiry, and sends the notices.", staleAfter: 26 * 60, firstRun: "07:00 Nairobi time" },
+  "proofs-purge": { label: "Clear old proof uploads", every: "04:00 Nairobi time", what: "Deletes proof files 90 days after their question was resolved, and uploads that were never finished.", staleAfter: 26 * 60, firstRun: "04:00 Nairobi time" },
+  "media-gc": { label: "Clean up unused pictures", every: "Every 10 minutes", what: "Deletes pictures nothing uses any more from the image store and settles uploads that were never attached.", staleAfter: 60, firstRun: "within 10 minutes of being scheduled" },
 };
 
 export function minutesAgo(iso, now = Date.now()) {
@@ -136,9 +138,11 @@ export function automationHealth(status, now = Date.now()) {
       if (!job) { add("down", name, `"${label}" is not scheduled.`, "Run supabase/cron/schedule.sql in the SQL editor."); continue; }
       if (!job.active) add("down", name, `"${label}" is paused.`, "Resume it below.");
       if (job.last_run?.status === "failed") add("degraded", name, `The last run of "${label}" failed${job.last_run.message ? `: ${job.last_run.message}` : "."}`, "Check the CRON_SECRET and project_url secrets match, then run it once.");
-      if (name === "daily-lifecycle" && job.active) {
-        if (!job.last_run) add("degraded", name, `"${label}" has not run yet.`, "It first runs at 07:00 Nairobi time. Use Run now to check it works.");
-        else if (minutesAgo(job.last_run.started_at, now) > 26 * 60) add("degraded", name, `"${label}" has not run for over a day.`, "Run it now and check the schedule is active.");
+      // Jobs that run on a clock (not the every-minute sender, which has its own queue check below) must have run lately.
+      const stale = JOB_INFO[name]?.staleAfter;
+      if (stale && job.active) {
+        if (!job.last_run) add("degraded", name, `"${label}" has not run yet.`, `It first runs ${JOB_INFO[name].firstRun}. Use Run now to check it works.`);
+        else if (minutesAgo(job.last_run.started_at, now) > stale) add("degraded", name, `"${label}" has not run for ${stale >= 24 * 60 ? "over a day" : "over an hour"}.`, "Run it now and check the schedule is active.");
       }
     }
   }

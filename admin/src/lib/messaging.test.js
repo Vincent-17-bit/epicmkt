@@ -141,3 +141,20 @@ test("the templates the system writes are protected, ordinary ones are not", () 
   for (const key of ["welcome", "login_details", "application.approve", "billing_reminder"]) assert.equal(isSystemTemplate(key), true, key);
   for (const key of ["renew_7d", "newsletter", "billing", "applications"]) assert.equal(isSystemTemplate(key), false, key);
 });
+
+test("every scheduled job is checked: a missing, paused or overdue clean-up job is a problem, a fresh one is not", () => {
+  const job = (name, extra = {}) => ({ name, schedule: "x", active: true, last_run: { status: "succeeded", started_at: new Date(NOW - 2 * 60000).toISOString() }, ...extra });
+  const four = (over = {}) => ({
+    ...healthyStatus(), expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"],
+    jobs: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"].map((n) => over[n] ?? job(n)),
+  });
+  assert.deepEqual(automationHealth(four(), NOW), { level: "healthy", problems: [] });
+  const gone = automationHealth({ ...four(), jobs: four().jobs.filter((j) => j.name !== "media-gc") }, NOW);
+  assert.match(gone.problems[0].text, /"Clean up unused pictures" is not scheduled/);
+  assert.equal(gone.level, "down");
+  assert.match(automationHealth(four({ "proofs-purge": job("proofs-purge", { active: false }) }), NOW).problems[0].text, /"Clear old proof uploads" is paused/);
+  const old = (mins) => ({ status: "succeeded", started_at: new Date(NOW - mins * 60000).toISOString() });
+  assert.match(automationHealth(four({ "media-gc": job("media-gc", { last_run: old(90) }) }), NOW).problems[0].text, /"Clean up unused pictures" has not run for over an hour/);
+  assert.match(automationHealth(four({ "proofs-purge": job("proofs-purge", { last_run: old(27 * 60) }) }), NOW).problems[0].text, /"Clear old proof uploads" has not run for over a day/);
+  assert.equal(automationHealth(four({ "proofs-purge": job("proofs-purge", { last_run: old(20 * 60) }) }), NOW).level, "healthy");
+});

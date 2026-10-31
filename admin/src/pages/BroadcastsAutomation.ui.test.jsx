@@ -199,6 +199,46 @@ describe("Automation", () => {
     expect(screen.getAllByText("Not scheduled")).toHaveLength(2);
   });
 
+  it("all four scheduled jobs are listed, each with Pause and Run now (proofs-purge and media-gc included)", async () => {
+    api.getAutomationStatus.mockResolvedValue({
+      cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"],
+      jobs: [
+        { name: "dispatch-messages", schedule: "* * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(1) } },
+        { name: "daily-lifecycle", schedule: "0 4 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(300) } },
+        { name: "proofs-purge", schedule: "0 1 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(600) } },
+        { name: "media-gc", schedule: "*/10 * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(4) } },
+      ],
+      queue: { queued: 0, due_now: 0, oldest_due_at: null, failed_7d: 0 }, last_sent_at: minutesBack(2), last_reminder_at: minutesBack(300),
+    });
+    renderPage(<AutomationPage />);
+    expect(await screen.findByText("Running normally")).toBeInTheDocument();
+    for (const label of ["Clear old proof uploads", "Clean up unused pictures"]) {
+      expect(screen.getByRole("button", { name: `Pause ${label}` })).toBeEnabled();
+      expect(screen.getByRole("button", { name: `Run now: ${label}` })).toBeEnabled();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Pause Clean up unused pictures" }));
+    await waitFor(() => expect(api.setJobActive).toHaveBeenCalledWith({ name: "media-gc", active: false }));
+    fireEvent.click(screen.getByRole("button", { name: "Run now: Clear old proof uploads" }));
+    await waitFor(() => expect(api.runJob).toHaveBeenCalledWith("proofs-purge"));
+  });
+
+  it("a paused or overdue clean-up job is reported like the other jobs", async () => {
+    api.getAutomationStatus.mockResolvedValue({
+      cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"],
+      jobs: [
+        { name: "dispatch-messages", schedule: "* * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(1) } },
+        { name: "daily-lifecycle", schedule: "0 4 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(300) } },
+        { name: "proofs-purge", schedule: "0 1 * * *", active: false, last_run: null },
+        { name: "media-gc", schedule: "*/10 * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(180) } },
+      ],
+      queue: { queued: 0, due_now: 0, oldest_due_at: null, failed_7d: 0 }, last_sent_at: minutesBack(2), last_reminder_at: minutesBack(300),
+    });
+    renderPage(<AutomationPage />);
+    const problems = await screen.findByRole("list", { name: "Problems" });
+    expect(within(problems).getByText(/"Clear old proof uploads" is paused/)).toBeInTheDocument();
+    expect(within(problems).getByText(/"Clean up unused pictures" has not run for over an hour/)).toBeInTheDocument();
+  });
+
   it("pauses a job, and non-owners cannot", async () => {
     renderPage(<AutomationPage />);
     fireEvent.click(await screen.findByRole("button", { name: "Pause Send queued messages" }));
