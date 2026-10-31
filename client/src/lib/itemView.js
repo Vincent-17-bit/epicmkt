@@ -1,10 +1,15 @@
-import { formatValue, slugify, visibleFields } from "@epicmkt/shared";
+import { formatValue, greetingProblems, renderGreeting, slugify, visibleFields } from "@epicmkt/shared";
 
 const kes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
-export function chatMessage({ item, variant, pricing }) {
+export function chatMessage({ item, variant, pricing, greeting }) {
   const name = variant ? `${item.name} (${variant.label})` : item.name;
   const shown = variant ?? pricing;
+  // The seller's own greeting wins when they saved a valid one. {item} and {price} are filled in; it never carries links or numbers.
+  if (typeof greeting === "string" && greeting.trim() && greetingProblems(greeting).length === 0) {
+    const live = shown && Number.isFinite(shown.regularPrice) ? (shown.savings > 0 ? shown.salePrice : shown.regularPrice) : null;
+    return renderGreeting(greeting, { item: name, price: live === null ? "" : kes(live) });
+  }
   if (!shown || !Number.isFinite(shown.regularPrice)) return `Hi, I saw ${name} on EpicMKT`;
   if (shown.savings > 0) {
     return `Hi, I saw the flash sale on ${name}: ${kes(shown.salePrice)} (was ${kes(shown.regularPrice)}) on EpicMKT`;

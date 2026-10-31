@@ -19,6 +19,8 @@
   --media-scrim: rgb(0 0 0 / 0.55);
   --media-label-bg: rgb(0 0 0 / 0.6);
   --on-media: #ffffff;
+  --danger-solid: #b91c1c;
+  --track: #e5e7eb;
 }
 
 [data-theme="dark"] {
@@ -40,6 +42,8 @@
   --media-scrim: rgb(0 0 0 / 0.55);
   --media-label-bg: rgb(0 0 0 / 0.6);
   --on-media: #ffffff;
+  --danger-solid: #ef4444;
+  --track: #2a2a2a;
 }
 
 html,
@@ -61,4 +65,40 @@ body {
     background: #fff;
     color: #000;
   }
+}
+
+/* Appearance preferences (Settings): text size, density and reduced motion apply to the whole portal. */
+html[data-text-size="large"] {
+  font-size: 112.5%;
+}
+
+html[data-text-size="xlarge"] {
+  font-size: 125%;
+}
+
+html[data-density="compact"] {
+  --space-2: 0.375rem;
+  --space-3: 0.5625rem;
+  --space-4: 0.75rem;
+  --space-5: 1.125rem;
+  --space-6: 1.5rem;
+  --space-7: 2.25rem;
+}
+
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }

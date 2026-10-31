@@ -37,11 +37,12 @@ describe("navigation", () => {
     expect(within(nav).getByRole("button", { name: "More" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("a suspended seller only has Notifications and Questions", async () => {
+  it("a suspended seller only has Subscription (to pay), Notifications and Questions", async () => {
     await signedInApp("/business/questions", () => { M.state.business.status = "suspended"; });
     const nav = await screen.findByRole("navigation", { name: "Business" });
     expect(within(nav).queryByRole("button", { name: "More" })).toBeNull();
     expect(within(nav).queryByRole("link", { name: "Account" })).toBeNull();
+    expect(within(nav).getByRole("link", { name: "Subscription" })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: /Notifications/ })).toBeInTheDocument();
     expect(within(nav).getByRole("link", { name: "Questions" })).toBeInTheDocument();
   });

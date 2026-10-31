@@ -146,6 +146,7 @@
             "npm:@epicmkt/backend@*",
             "npm:@epicmkt/shared@*",
             "npm:@epicmkt/ui@*",
+            "npm:@fontsource-variable/inter@^5.3.0",
             "npm:@fortawesome/fontawesome-svg-core@^6.6.0",
             "npm:@fortawesome/free-brands-svg-icons@^6.6.0",
             "npm:@fortawesome/free-solid-svg-icons@^6.6.0",
@@ -234,6 +235,7 @@
             "npm:react@^18.3.1",
             "npm:vite@^5.4.10",
             "npm:vitest@^2.1.9",
+            "npm:zod@^3.25.76",
             "npm:zustand@^4.5.5"
           ]
         }

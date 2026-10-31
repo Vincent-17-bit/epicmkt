@@ -1,0 +1,162 @@
+.page {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.head h1 {
+  font-size: var(--text-xl);
+  line-height: 1.2;
+}
+
+.head p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: var(--track);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--primary);
+  transition: width var(--dur) ease;
+}
+
+.count {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.mark {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--track);
+  font-weight: 700;
+}
+
+.step[data-done="true"] .mark {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.step[data-current="true"] {
+  outline: 2px solid var(--primary);
+}
+
+.body {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.body h2 {
+  font-size: var(--text-md);
+}
+
+.body p {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.ghost {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tip {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-sm);
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+  font-size: var(--text-sm);
+}
+
+.tip p {
+  flex: 1;
+  min-width: 0;
+}
+
+.tip button {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
