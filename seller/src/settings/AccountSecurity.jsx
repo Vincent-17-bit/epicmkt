@@ -1,25 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@epicmkt/ui";
-import { IDLE_OPTIONS, maskPhone } from "@epicmkt/shared";
+import { maskPhone } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { useBusinessFacts } from "../lib/useBusinessFacts.js";
-import { useSettings } from "../state/settings.js";
 import { showToast } from "../state/toast.js";
 import { phoneSchema, validateField } from "../lib/settingsSchema.js";
 import Dialog from "../components/Dialog.jsx";
-import { Row, Section, Select } from "./controls.jsx";
+import { Row, Section } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 // A sign-in is an instant, so it is shown in the viewer's own time zone.
 const when = new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" });
 
 // The sign-in email and password already have their own verified flows on the Account page, so this section links there
-// instead of repeating them. What lives here: the phone change request, the inactivity timeout, other devices and the sign-in history.
+// instead of repeating them. What lives here: the phone change request, other devices and the sign-in history.
 export default function AccountSecurity() {
   const facts = useBusinessFacts().data;
-  const idle = useSettings((s) => s.settings.idle_minutes);
-  const update = useSettings((s) => s.update);
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [pending, setPending] = useState(null);
@@ -54,9 +51,6 @@ export default function AccountSecurity() {
       </Row>
       <Row label="Sign-in email and password" hint="Add a verified email and change your password on the Account page, where each change is confirmed with a code.">
         <Link className={styles.linkBtn} to="/business/account">Go to Account</Link>
-      </Row>
-      <Row label="Sign out after inactivity" hint="You are warned a minute before.">
-        <Select label="Sign out after inactivity" value={String(idle)} onChange={(v) => update({ idle_minutes: Number(v) })} options={IDLE_OPTIONS.map((m) => ({ value: String(m), label: m === 60 ? "1 hour" : m === 120 ? "2 hours" : `${m} minutes` }))} />
       </Row>
       <Row label="Other devices" hint="Signs out every device except this one.">
         <Button variant="secondary" onClick={() => setSignOutOpen(true)}>Sign out other devices</Button>

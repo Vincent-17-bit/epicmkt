@@ -1,7 +1,6 @@
-import { NOTIFICATION_EVENTS, isClock } from "@epicmkt/shared";
+import { NOTIFICATION_EVENTS } from "@epicmkt/shared";
 import { useSettings } from "../state/settings.js";
-import Tip from "../onboarding/Tip.jsx";
-import { Row, Section, Switch } from "./controls.jsx";
+import { Section, Switch } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 const CHANNELS = [
@@ -13,20 +12,11 @@ const CHANNELS = [
 export default function NotificationPrefs() {
   const prefs = useSettings((s) => s.settings.notifications);
   const update = useSettings((s) => s.update);
-  const quiet = prefs.quiet_hours;
 
   const setChannel = (event, channel, value) => update({ notifications: { events: { [event]: { [channel]: value } } } });
-  const setQuiet = (patch) => update({ notifications: { quiet_hours: patch } });
-  const setTime = (key, value) => {
-    if (!isClock(value)) return;
-    const other = key === "start" ? quiet.end : quiet.start;
-    if (value === other) return;
-    setQuiet({ [key]: value });
-  };
 
   return (
     <Section id="notifications" title="Notifications" intro="Choose how you hear about each event. Critical events always reach you in the app.">
-      <Tip id="settings-quiet-hours">Quiet hours hold back non-critical text messages overnight. Expiry, payment and admin messages always come straight through.</Tip>
       <div className={styles.matrix} role="group" aria-label="Notification channels per event">
         <div className={styles.matrixHead} aria-hidden="true">
           <span>Event</span>
@@ -54,21 +44,6 @@ export default function NotificationPrefs() {
           );
         })}
       </div>
-      <Row label="Quiet hours" hint="Holds back non-critical SMS overnight and sends it when quiet hours end. Critical and transactional messages are always sent straight away. Times are Nairobi time.">
-        <Switch checked={quiet.enabled} label="Quiet hours" onChange={(next) => setQuiet({ enabled: next })} />
-      </Row>
-      {quiet.enabled && (
-        <div className={styles.timeRow}>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="quiet-start">From</label>
-            <input id="quiet-start" className={styles.time} type="time" step="900" value={quiet.start} onChange={(e) => setTime("start", e.target.value)} />
-          </div>
-          <div className={styles.field}>
-            <label className={styles.fieldLabel} htmlFor="quiet-end">Until</label>
-            <input id="quiet-end" className={styles.time} type="time" step="900" value={quiet.end} onChange={(e) => setTime("end", e.target.value)} />
-          </div>
-        </div>
-      )}
     </Section>
   );
 }
