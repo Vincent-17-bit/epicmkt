@@ -3,6 +3,7 @@ import { normalizePhone } from "../_shared/validate.ts";
 import { clientIp, corsHeaders, json, sha256Hex } from "../_shared/http.ts";
 import { deliverSms, useDevOtp } from "../_shared/providers.ts";
 import { OTP_MINUTES, nowPlus } from "../_shared/status.ts";
+import { otpSms } from "../_shared/messages.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
   auth: { persistSession: false },
@@ -43,7 +44,7 @@ Deno.serve(async (req) => {
   // SMS is recorded where staff can see it: the application's event log, and the function log. Never the code.
   let delivery: Record<string, unknown> = { sms: "skipped_dev_code" };
   if (!devOtp) {
-    const sent = await deliverSms(phone, `Your EpicMKT code is ${code}. It expires in ${OTP_MINUTES} minutes.`);
+    const sent = await deliverSms(phone, otpSms(code, OTP_MINUTES));
     delivery = sent.ok ? { sms: sent.mock ? "mock" : "sent", providerId: sent.providerId } : { sms: "failed", error: sent.error };
     if (!sent.ok) console.error("otp_sms_failed", sent.error);
     else if (sent.mock) console.error("otp_sms_mock", "a random code was issued but MESSAGING_MODE is mock, so nothing was sent");

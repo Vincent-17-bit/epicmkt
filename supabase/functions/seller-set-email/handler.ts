@@ -1,4 +1,6 @@
 import { auditInsert, authenticate, codeSchema, GENERIC_AUTH, GENERIC_CODE, json, maskEmail, passwordSchema, rateLimited, rateOk, readJson, sellerEmail, wrap, z, type Deps } from "../_shared/seller.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
+import { signInEmailChanged } from "../_shared/messages.ts";
 
 // Adds or changes the email a seller can sign in with. Needs BOTH the code that was sent to the new address (proof the
 // address is theirs) and the current password (proof the person holding this session is the owner). The address saved is
@@ -37,7 +39,7 @@ export const sellerSetEmail = (d: Deps) => wrap(async (req) => {
 
   // Tell the old address its sign-in email was changed, so a takeover cannot go unnoticed. Best effort.
   if (previous && previous !== email) {
-    try { await d.email(previous, "Your EpicMKT sign-in email was changed", `<p>The sign-in email on your EpicMKT account was changed to ${maskEmail(email)}.</p><p>If this was not you, contact EpicMKT support now.</p>`); } catch (_) { /* notice only */ }
+    try { const n = signInEmailChanged(maskEmail(email)); await d.email(previous, n.subject, emailHtml(n.text)); } catch (_) { /* notice only */ }
   }
   return json({ ok: true, loginEmail: email });
 });

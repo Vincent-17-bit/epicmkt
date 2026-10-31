@@ -1,7 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { MIME_BY_KIND, SLOT_LIMITS, requiredSlots } from "../_shared/validate.ts";
 import { pdfIsSafe, sniff } from "../_shared/files.ts";
-import { clientIp, corsHeaders, escapeHtml, json, randomToken, sendMail, sha256Hex } from "../_shared/http.ts";
+import { clientIp, corsHeaders, escapeHtml, json, randomToken, sendMail, sendSms, sha256Hex } from "../_shared/http.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
+import { applicationReceived } from "../_shared/messages.ts";
 import { REMEMBER_MINUTES, nowPlus } from "../_shared/status.ts";
 
 const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
@@ -78,12 +80,9 @@ Deno.serve(async (req) => {
      <p>Owner: ${escapeHtml(app.owner_full_name)}<br>Phone: ${escapeHtml(app.phone)}<br>Plan: ${escapeHtml(app.plan_key)} at KES ${escapeHtml(app.price_at_submission)}</p>
      <p>Reference: ${ref}</p>`,
   );
-  await sendMail(
-    app.email,
-    "We received your EpicMKT seller application",
-    `<p>Thank you, ${escapeHtml(app.owner_full_name)}.</p>
-     <p>Your reference number is <b>${ref}</b>. Keep it safe: you will use it with your phone number to check your application.</p>`,
-  );
+  const received = applicationReceived({ owner: app.owner_full_name, business: app.business_name, ref: app.reference_no });
+  await sendMail(app.email, received.subject, emailHtml(received.email));
+  try { await sendSms(app.phone, received.sms); } catch (_) {}
 
   const token = randomToken();
   const expiresAt = nowPlus(REMEMBER_MINUTES);

@@ -89,7 +89,7 @@ Deno.test("decide: reject needs a reason, approve queues payment instructions, o
   // The account number is the application reference, never the business name (two shops can share a name).
   assert(w2.tables.messages[0].body.includes("Paybill 400200, Account EPM-2026-ABC234"));
   assert(!w2.tables.messages[0].body.includes("Account Mama Pima"));
-  assert(w2.tables.messages[0].body.includes("no code needed"));
+  assert(w2.tables.messages[0].body.includes("Your login is sent"));
   assertEquals(pb.status, 200);
 
   // Paid before approval: the money is already credited, so approval goes straight to payment_confirming.
@@ -224,7 +224,7 @@ Deno.test("confirm: first payment activates the business", async () => {
 
   const stored = JSON.stringify(w.tables);
   assert(!stored.includes(b.temporaryPassword), "password must not be stored in any table");
-  assertEquals(w.tables.messages.map((m) => [m.channel, m.template_key, m.status]), [["sms", "welcome", "queued"], ["email", "welcome", "queued"]]);
+  assertEquals(w.tables.messages.map((m) => [m.channel, m.template_key, m.status]), [["email", "welcome", "queued"]]);
   assertEquals(w.tables.application_events.at(-1).type, "activated");
   assertEquals(w.tables.audit_log.map((a) => a.action), ["payment.confirm", "business.activate"]);
   assertEquals(w.tables.audit_log[0].actor_email, "finance@epicmkt.test");
@@ -289,7 +289,7 @@ Deno.test("confirm: renewal queues payment-received by SMS, email and in-app, id
   assertEquals(new Set(rows.map((m) => m.business_id)), new Set([BIZ_ID]));
   assertEquals(new Set(rows.map((m) => m.kind)), new Set(["payment"]));
   for (const m of rows) {
-    assert(m.body.includes("payment received") && m.body.includes("20 Dec 2026") && m.body.includes("RCT-000001"));
+    assert(m.body.includes("KES 500") && m.body.includes("20 Dec 2026") && m.body.includes("RCT-000001"));
     assertEquals(m.data.paid_until, "2026-12-20");
   }
   assertEquals(w.sms.length, 0);
