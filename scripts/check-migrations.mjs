@@ -5,7 +5,7 @@
 //   * renaming an applied file makes the old number "missing" and the new one "pending",
 //   * a number that is skipped without a reason hides a migration that was lost or never merged.
 // Every gap must therefore be written down in RESERVED with the reason, every file must keep its number forever, and
-// the only shared numbers allowed are the ones frozen in SHARED_NUMBERS below.
+// the only way two files may share a number is the split form below: 004200_a.sql, 004201_b.sql (number 0042, parts 00 and 01).
 //
 //   node scripts/check-migrations.mjs        exits 1 and lists every problem
 import { readdirSync, readFileSync } from "node:fs";
@@ -22,16 +22,13 @@ export const RESERVED = {
   34: "never used (see 0032)"
 };
 
-// Numbers that two files already share on main. They are frozen exactly as they are: renaming either file would make a
-// database that already applied it look as if it were missing a migration, and moving 0046_store_offers later would
-// re-run it after 0051 and undo the sold-out rule that 0051 restored. The files apply in name order, which is also the
-// order the tests run them in. Never add a number here; a new migration takes the next free number.
-export const SHARED_NUMBERS = {
-  42: ["0042_browse_snapshot.sql", "0042_search_postgis.sql"],
-  46: ["0046_item_availability.sql", "0046_store_offers.sql"]
-};
+// Two files used to share 0042 and two shared 0046, which the Supabase CLI cannot record (one history row per version). They
+// are now 004200/004201 and 004600/004601: the version sorts exactly where the old pair did, in file order and as text, so
+// nothing else moved. A split number is allowed only when every file with that number has a two-digit part and the parts
+// are all different. SHARED_NUMBERS stays as an (empty) hook for the unit tests; never add to it.
+export const SHARED_NUMBERS = {};
 
-const NAME = /^(\d{4})_([a-z0-9_]+)\.sql$/;
+const NAME = /^(\d{4})(\d{2})?_([a-z0-9_]+)\.sql$/;
 const pad = (n) => String(n).padStart(4, "0");
 
 export function checkMigrations(files, { reserved = RESERVED, shared = SHARED_NUMBERS, readme = "", read = () => "" } = {}) {
@@ -43,7 +40,7 @@ export function checkMigrations(files, { reserved = RESERVED, shared = SHARED_NU
       problems.push(`${file}: name must look like 0001_snake_case.sql`);
       continue;
     }
-    entries.push({ file, n: Number(m[1]) });
+    entries.push({ file, n: Number(m[1]), part: m[2] ?? null });
   }
   entries.sort((a, b) => a.n - b.n || a.file.localeCompare(b.file));
 
@@ -53,6 +50,8 @@ export function checkMigrations(files, { reserved = RESERVED, shared = SHARED_NU
   for (const [n, names] of byNumber) {
     if (names.length < 2) continue;
     const allowed = shared[n];
+    const parts = entries.filter((e) => e.n === n).map((e) => e.part);
+    if (!allowed && parts.every((p) => p !== null) && new Set(parts).size === parts.length) continue;   // split number: 004200, 004201
     if (!allowed) problems.push(`${names[1]}: number ${pad(n)} is already used by ${names[0]}`);
     else if (names.join("|") !== [...allowed].sort().join("|")) problems.push(`number ${pad(n)} is shared by ${names.join(", ")} but SHARED_NUMBERS allows only ${allowed.join(", ")}`);
   }
@@ -76,13 +75,13 @@ export function checkMigrations(files, { reserved = RESERVED, shared = SHARED_NU
   // The first comment line may name the file; it has to be this file.
   for (const e of entries) {
     const head = read(e.file).split("\n", 3).join("\n");
-    const named = /^--\s*(\d{4}_[a-z0-9_]+\.sql)\b/m.exec(head);
+    const named = /^--\s*(\d{4,6}_[a-z0-9_]+\.sql)\b/m.exec(head);
     if (named && named[1] !== e.file) problems.push(`${e.file}: header says ${named[1]}`);
   }
 
   // Docs may only point at migrations that exist.
   const present = new Set(entries.map((e) => e.file));
-  for (const ref of new Set(readme.match(/\b\d{4}_[a-z0-9_]+\.sql\b/g) ?? [])) {
+  for (const ref of new Set(readme.match(/\b\d{4,6}_[a-z0-9_]+\.sql\b/g) ?? [])) {
     if (!present.has(ref)) problems.push(`supabase/README.md mentions ${ref}, which does not exist`);
   }
   return problems;
@@ -98,5 +97,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.error(`Migration check failed:\n${problems.map((p) => `  - ${p}`).join("\n")}`);
     process.exit(1);
   }
-  console.log(`Migrations OK: ${files.length} files, 0001 to ${files.sort().at(-1).slice(0, 4)}, ${Object.keys(RESERVED).length} reserved numbers, ${Object.keys(SHARED_NUMBERS).length} frozen shared numbers.`);
+  console.log(`Migrations OK: ${files.length} files, 0001 to ${files.sort().at(-1).slice(0, 4)}, ${Object.keys(RESERVED).length} reserved numbers.`);
 }
