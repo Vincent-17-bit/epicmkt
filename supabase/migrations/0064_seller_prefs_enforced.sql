@@ -1,5 +1,5 @@
--- 0063_seller_prefs_enforced.sql
--- Makes the seller's saved preferences (0061) actually do something.
+-- 0064_seller_prefs_enforced.sql
+-- Makes the seller's saved preferences (0062) actually do something.
 --
 --   1. Notification preferences. A trigger on `messages` applies the seller's choices at the moment a message is queued:
 --        * critical events (expiry, payment, admin questions, suspension) are never held back or dropped;

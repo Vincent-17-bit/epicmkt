@@ -1,4 +1,4 @@
--- 0062_gallery_team_schedule.sql
+-- 0063_gallery_team_schedule.sql
 -- Gallery photos, team members (with the services they do) and the weekly class timetable (ported from s7).
 -- Offers, flash sales and the QR poster are already on main, so only these three parts are added.
 --

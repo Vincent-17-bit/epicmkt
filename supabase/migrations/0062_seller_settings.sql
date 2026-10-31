@@ -1,4 +1,4 @@
--- 0061_seller_settings.sql
+-- 0062_seller_settings.sql
 -- Seller settings (S8b), ported from feat/s8b-settings-help-onboarding onto main.
 --   * seller_settings (0005) already holds a seller's settings jsonb; this adds the server-side rules for what may be in it
 --     (a validation trigger) and seller_save_settings, the only way the portal writes it (a partial patch, merged deeply).
