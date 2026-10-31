@@ -167,6 +167,19 @@ export const setTimezone = async (timezone) => {
   bill.business.timezone = tz;
   return tz;
 };
+// Mirrors seller_set_location: the pin has to sit inside Kenya's box, the address is optional.
+export const setLocation = async ({ lat, lng, address } = {}) => {
+  writer();
+  await wait();
+  const ok = (n, lo, hi) => typeof n === "number" && Number.isFinite(n) && n >= lo && n <= hi;
+  if (!ok(lat, -5, 5.5) || !ok(lng, 33.5, 42)) throw new ApiError("invalid_location");
+  if (address != null && String(address).length > 200) throw new ApiError("invalid_address");
+  const round = (n) => Math.round(n * 1e6) / 1e6;
+  bill.business.lat = round(lat);
+  bill.business.lng = round(lng);
+  if (address != null) bill.business.address = String(address).trim() || null;
+  return { lat: bill.business.lat, lng: bill.business.lng, address: bill.business.address ?? null };
+};
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
   writer();
@@ -366,7 +379,7 @@ export const getBusinessFacts = async () => {
   signedIn();
   await wait();
   const b = bill.business;
-  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null };
+  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng ?? null };
 };
 export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
 
@@ -410,7 +423,7 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null, lat: -0.09, lng: 34.6, address: "Main Street" };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];

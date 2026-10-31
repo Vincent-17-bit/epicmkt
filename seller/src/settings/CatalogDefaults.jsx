@@ -4,7 +4,7 @@ import { PRICE_REMINDER_DAYS, THRESHOLD_MAX, UNITS_PER_CATEGORY, UNIT_MAX } from
 import { useBusinessFacts } from "../lib/useBusinessFacts.js";
 import { useSettings } from "../state/settings.js";
 import { categoryKey, suggestedUnits } from "../lib/defaults.js";
-import { CommitField, Row, Section, Segmented, Select, Switch } from "./controls.jsx";
+import { CommitField, Row, Section, Select } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 const AVAILABILITY = [
@@ -47,12 +47,6 @@ export default function CatalogDefaults() {
       </Row>
       <Row label="Price reminder" hint="How often we ask you to confirm your prices.">
         <Select label="Price reminder interval" value={String(c.price_reminder_days)} onChange={(v) => set({ price_reminder_days: Number(v) })} options={PRICE_REMINDER_DAYS.map((d) => ({ value: String(d), label: `Every ${d} days` }))} />
-      </Row>
-      <Row label="New items start as">
-        <Segmented label="New items start as" value={c.start_visible ? "visible" : "hidden"} onChange={(v) => set({ start_visible: v === "visible" })} options={[{ value: "visible", label: "Visible" }, { value: "hidden", label: "Hidden" }]} />
-      </Row>
-      <Row label="Show “Only N left”" hint="On limited-stock items that track their count.">
-        <Switch checked={c.show_only_n_left} label="Show Only N left" onChange={(v) => set({ show_only_n_left: v })} />
       </Row>
       <Row label="Default units" hint="Offered when you price an item. Tap × to remove." stack>
         <ul className={styles.chips} aria-label="Default units">

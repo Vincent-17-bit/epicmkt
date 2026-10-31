@@ -7,7 +7,7 @@ import * as api from "../api/index.js";
 import { getTheme, setTheme, watchSystemTheme } from "../lib/theme.js";
 import { useSettings } from "../state/settings.js";
 import { useToasts } from "../state/toast.js";
-import { DEFAULT_IDLE, idleMinutes, useIdle } from "../state/useIdle.js";
+import { DEFAULT_IDLE, useIdle } from "../state/useIdle.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/shape.js";
@@ -74,11 +74,9 @@ export default function Layout() {
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
   const suspended = business?.status === "suspended";
-  // The seller's saved settings (appearance, inactivity timeout, defaults). Loaded once, then kept in the settings store.
+  // The seller's saved settings (appearance, defaults). Loaded once, then kept in the settings store.
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
   const loadSettings = useSettings((s) => s.load);
-  const settingsLoaded = useSettings((s) => s.loaded);
-  const storedIdle = useSettings((s) => s.settings.idle_minutes);
   const toasts = useToasts((s) => s.toasts);
   const dismissToast = useToasts((s) => s.dismiss);
   useEffect(() => { if (settingsQuery.data) loadSettings(settingsQuery.data); }, [settingsQuery.data, loadSettings]);
@@ -122,7 +120,7 @@ export default function Layout() {
     useSettings.getState().reset();
     navigate("/login");
   };
-  const idle = useIdle({ minutes: idleMinutes(settingsLoaded ? storedIdle : DEFAULT_IDLE), active: Boolean(business), onTimeout: signOut });
+  const idle = useIdle({ minutes: DEFAULT_IDLE, active: Boolean(business), onTimeout: signOut });
 
   return (
     <div className={styles.shell}>

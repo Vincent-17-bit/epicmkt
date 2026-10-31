@@ -36,23 +36,50 @@ describe("navigation", () => {
 describe("settings page", () => {
   it("shows every section and points sign-in email and password to the Account page", async () => {
     await open();
-    for (const name of ["Account and security", "Notifications", "Appearance", "Catalog defaults", "Messaging defaults", "Business preferences", "Data and account"]) {
+    for (const name of ["Shop location", "Account and security", "Notifications", "Appearance", "Catalog defaults", "Messaging", "Data and account"]) {
       expect(screen.getByRole("heading", { level: 2, name })).toBeInTheDocument();
     }
     expect(await screen.findByText("ES100001")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to Account" })).toHaveAttribute("href", "/business/account");
   });
 
+  it("no longer offers quiet hours, an inactivity timeout or the other trimmed settings", async () => {
+    await open();
+    for (const gone of [/quiet hours/i, /sign out after inactivity/i, /^density$/i, /reduce motion/i, /announcement banner/i, /closes in n min/i, /closure reasons/i]) {
+      expect(screen.queryByText(gone)).toBeNull();
+    }
+    expect(screen.queryByRole("heading", { level: 2, name: "Business preferences" })).toBeNull();
+  });
+
+  it("shows the saved shop pin and area in Shop location", async () => {
+    await open();
+    expect(await screen.findByText("Maseno, Kisumu")).toBeInTheDocument();
+    expect(screen.getByTestId("pin-state")).toHaveTextContent("Pin at -0.09000, 34.60000");
+    expect(screen.getByRole("button", { name: "Save location" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Use my location" })).toBeInTheDocument();
+  });
+
+  it("saves a new landmark and keeps the pin, and refuses a pin outside Kenya", async () => {
+    const user = userEvent.setup();
+    await open();
+    const box = await screen.findByRole("textbox", { name: "Address or landmark" });
+    await user.clear(box);
+    await user.type(box, "Opposite the new stage");
+    await user.click(screen.getByRole("button", { name: "Save location" }));
+    await waitFor(() => expect(useToasts.getState().toasts.some((t) => t.message === "Shop location saved")).toBe(true));
+    const facts = await mock.getBusinessFacts();
+    expect(facts.address).toBe("Opposite the new stage");
+    await expect(mock.setLocation({ lat: 51.5, lng: -0.12 })).rejects.toMatchObject({ code: "invalid_location" });
+    await expect(mock.setLocation({ lat: 0.5, lng: 34.6, address: "x".repeat(201) })).rejects.toMatchObject({ code: "invalid_address" });
+  });
+
   it("saves appearance choices straight away and applies them to the whole portal", async () => {
     const user = userEvent.setup();
     await open();
-    const density = screen.getByRole("radiogroup", { name: "Density" });
-    await user.click(within(density).getByRole("radio", { name: "Compact" }));
-    expect(document.documentElement.dataset.density).toBe("compact");
-    await waitFor(() => expect(useToasts.getState().toasts.some((t) => t.message === "Saved")).toBe(true));
-    expect((await mock.getSettings()).appearance.density).toBe("compact");
     await user.click(within(screen.getByRole("radiogroup", { name: "Text size" })).getByRole("radio", { name: "Large" }));
     expect(document.documentElement.dataset.textSize).toBe("large");
+    await waitFor(() => expect(useToasts.getState().toasts.some((t) => t.message === "Saved")).toBe(true));
+    expect((await mock.getSettings()).appearance.text_size).toBe("large");
     await user.click(within(screen.getByRole("radiogroup", { name: "Theme" })).getByRole("radio", { name: "Dark" }));
     expect(document.documentElement.getAttribute("data-theme")).toBe("dark");
   });
@@ -62,12 +89,12 @@ describe("settings page", () => {
     await open();
     const original = mock.saveSettings;
     expect(typeof original).toBe("function");
-    const sw = screen.getByRole("switch", { name: "Reduce motion" });
-    expect(sw).toHaveAttribute("aria-checked", "false");
+    const sw = screen.getByRole("switch", { name: "Expiry reminders: SMS" });
+    expect(sw).toHaveAttribute("aria-checked", "true");
     M.state.business.status = "suspended";
     await user.click(sw);
-    await waitFor(() => expect(sw).toHaveAttribute("aria-checked", "false"));
-    expect(useToasts.getState().toasts.some((t) => /could not save/i.test(t.message))).toBe(true);
+    await waitFor(() => expect(useToasts.getState().toasts.some((t) => /could not save/i.test(t.message))).toBe(true));
+    expect(sw).toHaveAttribute("aria-checked", "true");
   });
 
   it("keeps in-app on for critical events and lets the rest be turned off", async () => {
@@ -96,12 +123,6 @@ describe("settings page", () => {
     await user.tab();
     await waitFor(() => expect(screen.getByTestId("greeting-preview")).toHaveTextContent("Hello, is Fade and beard at KES 300 still there?"));
     await waitFor(async () => expect((await mock.getSettings()).messaging.whatsapp_greeting).toBe("Hello, is {item} at {price} still there?"));
-  });
-
-  it("announcement defaults are for Premium sellers only", async () => {
-    await open();
-    expect(screen.getByRole("switch", { name: "Turn on announcement banners by default" })).toBeDisabled();
-    expect(screen.getByText(/part of the Premium plan/i)).toBeInTheDocument();
   });
 
   it("adds and removes default units, and refuses a duplicate", async () => {
@@ -212,11 +233,9 @@ describe("onboarding", () => {
     expect(within(card).getByRole("link", { name: "Continue setup" })).toHaveAttribute("href", "/business/onboarding");
   });
 
-  it("a tip stays gone once dismissed", async () => {
-    const user = userEvent.setup();
+  it("remembers a dismissed tip", async () => {
     await open();
-    await user.click(await screen.findByRole("button", { name: "Dismiss this tip for good" }));
-    await waitFor(() => expect(screen.queryByRole("complementary", { name: "Tip" })).toBeNull());
-    expect((await mock.getSettings()).onboarding.dismissed_tips).toContain("settings-quiet-hours");
+    await useSettings.getState().dismissTip("any-tip");
+    expect((await mock.getSettings()).onboarding.dismissed_tips).toContain("any-tip");
   });
 });

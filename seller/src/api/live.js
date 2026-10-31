@@ -46,6 +46,8 @@ export const changePassword = ({ code, newPassword }) => fn("seller-change-passw
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
+// Moves the shop pin on the map. `address` (the landmark text) is optional: leave it out to keep what is saved.
+export const setLocation = ({ lat, lng, address } = {}) => rpc("seller_set_location", { p_lat: lat, p_lng: lng, p_address: address ?? null });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });
 const rows = async (q) => {
@@ -548,7 +550,7 @@ export const deleteOffer = (id) => rpc("seller_delete_offer", { p_id: id });
 // ---- Settings, help and onboarding ----
 // The few business columns the settings and setup screens read that the shared business shape does not carry.
 export const getBusinessFacts = async () => {
-  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path").maybeSingle());
+  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path, county, town, address, lat, lng").maybeSingle());
   if (!b) throw new ApiError("not_a_seller");
   return b;
 };
