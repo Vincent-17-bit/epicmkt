@@ -45,13 +45,13 @@ export default function AnalyticsPage() {
               {data.can_see_money && data.renewals?.due > 0 && <div className="stat"><span className="muted">Renewal rate</span><strong>{percent(data.renewals.renewed, data.renewals.due)}%</strong><span className="muted">{data.renewals.renewed} of {data.renewals.due} that came due</span></div>}
             </div>
 
-            {data.can_see_money && <><h3>Revenue per day</h3><BarChart rows={data.revenue_by_day} valueKey="kes" label="Revenue per day" format={kes} /></>}
-            <h3>New businesses per day</h3>
+            {data.can_see_money && <><h3 className="heading-flow">Revenue per day</h3><BarChart rows={data.revenue_by_day} valueKey="kes" label="Revenue per day" format={kes} /></>}
+            <h3 className="heading-flow">New businesses per day</h3>
             <BarChart rows={data.new_businesses_by_day} valueKey="n" label="New businesses per day" />
 
             {data.can_see_applications && (
               <>
-                <h3>Application funnel</h3>
+                <h3 className="heading-flow">Application funnel</h3>
                 {data.funnel.submitted === 0 ? <p className="muted">No applications in this period.</p> : (
                   <table className="funnel"><tbody>
                     {funnelRows(data.funnel).map((r) => (
@@ -62,7 +62,7 @@ export default function AnalyticsPage() {
               </>
             )}
 
-            <h3>Live businesses by category</h3>
+            <h3 className="heading-flow">Live businesses by category</h3>
             <div className="table-shell">
               <table>
                 <thead><tr><th scope="col">Category</th><th scope="col">Live</th>{data.can_see_money && <th scope="col">Monthly value</th>}</tr></thead>

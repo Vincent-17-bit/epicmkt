@@ -92,6 +92,9 @@ h3, h4, h5, h6 { font-size: var(--fs-md); line-height: var(--lh-md); }
 h1, h2, h3, h4, h5, h6, strong, b, th { font-weight: var(--fw-semibold); }
 /* A panel or section title: an <h2> in the outline, drawn at the size the old <h3> had. */
 .heading-sm { font-size: var(--fs-md); line-height: var(--lh-md); letter-spacing: inherit; }
+/* An <h3> that sits in running content. The old <h4>s got the browser's default 1.33em vertical margin (the reset only
+   zeroes h1-h3), so they carry it explicitly now that they are <h3>s. Rules with their own margin still win. */
+.heading-flow { margin-block: 1.33em; }
 
 /* Table and data cells are 14px; 13px secondary lines inside them opt in with --fs-xs. */
 td,

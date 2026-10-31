@@ -81,7 +81,7 @@ export default function AutomationPage() {
               </table>
             </div>
 
-            <h3>Message queue</h3>
+            <h3 className="heading-flow">Message queue</h3>
             <p>
               <strong>{status.queue.queued}</strong> queued, <strong>{status.queue.due_now}</strong> due now, <strong className={status.queue.failed_7d ? "text-danger" : ""}>{status.queue.failed_7d}</strong> failed in 7 days. Last sent {ago(status.last_sent_at)}; last reminder queued {ago(status.last_reminder_at)}.{" "}
               <Link to="/admin/broadcasts?tab=log">Open the message log</Link>
