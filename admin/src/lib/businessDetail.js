@@ -34,6 +34,8 @@ export function friendlyError(error, fallback = "Something went wrong. Try again
       return "That record no longer exists. Refresh the page.";
     case "invalid_status":
       return "Only a live or paused business can be hidden or shown.";
+    case "no_login":
+      return "This business has no seller login to resend.";
     case "rate_limited":
       return "Too many requests. Wait a minute and try again.";
     case "reason_required":

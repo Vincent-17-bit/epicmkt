@@ -2,15 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faPaperPlane, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faPaperclip, faPaperPlane, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { PROOF_ACCEPT, PROOF_MAX_FILES, checkProofBatch, groupThreads, receiptOf } from "@epicmkt/shared";
 import { api } from "../api/index.js";
 import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";
+import Tabs from "../components/Tabs.jsx";
 import Ticks from "../components/Ticks.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { stamp, stampClock } from "../lib/time.js";
+import { CONVERSATION_FILTERS, countConversations, filterConversations } from "../lib/conversations.js";
+import NewConversation from "./messages/NewConversation.jsx";
 
 
 const clock = stampClock;
@@ -19,6 +22,7 @@ const size = (bytes) => (bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed
 const initials = (name = "") => name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "?";
 export const MESSAGES_KEY = ["admin-messages"];
 export const UNREAD_KEY = ["admin-unread-messages"];
+export const RESOLVED_KEY = ["admin-resolved-conversations"];
 
 function Files({ files }) {
   const toast = useToast();
@@ -188,10 +192,18 @@ export default function MessagesPage() {
   const selected = params.get("business");
   const focusId = params.get("message");
   const [pending, setPending] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
+  const [picking, setPicking] = useState(false);
+  const [draft, setDraft] = useState(null);
   const streamEnd = useRef(null);
   const canDelete = can("messages.delete");
+  const canSend = can("messages.send");
 
   const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: MESSAGES_KEY, queryFn: () => api.listMessages(), refetchInterval: 30_000 });
+
+  const { data: resolvedIds = [] } = useQuery({ queryKey: RESOLVED_KEY, queryFn: () => api.listResolvedConversations(), refetchInterval: 30_000 });
+  const resolved = useMemo(() => new Set(resolvedIds), [resolvedIds]);
 
   const businesses = useMemo(() => {
     const map = new Map();
@@ -210,12 +222,17 @@ export default function MessagesPage() {
       .sort((a, b) => (a.last?.createdAt < b.last?.createdAt ? 1 : -1));
   }, [data]);
 
-  const current = businesses.find((b) => b.id === selected) ?? null;
+  const shown = useMemo(() => filterConversations(businesses, { filter, search, resolved }), [businesses, filter, search, resolved]);
+  const counts = useMemo(() => countConversations(businesses, resolved, search), [businesses, resolved, search]);
+  const started = businesses.find((b) => b.id === selected) ?? null;
+  const current = started ?? (draft && draft.id === selected ? { ...draft, messages: [], threads: [], unread: 0, last: null, waiting: false } : null);
+  const isResolved = !!current && resolved.has(current.id);
   const flow = useMemo(() => (current ? [...current.threads].reverse() : []), [current]);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: MESSAGES_KEY });
     queryClient.invalidateQueries({ queryKey: UNREAD_KEY });
+    queryClient.invalidateQueries({ queryKey: RESOLVED_KEY });
   };
 
   useEffect(() => { api.ackMessagesDelivered().then(refresh).catch(() => {}); }, [data.length]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -229,6 +246,21 @@ export default function MessagesPage() {
     mutationFn: (input) => api.sendMessage(input),
     onSuccess: () => { toast.push({ message: "Sent" }); refresh(); },
   });
+
+  const resolve = useMutation({
+    mutationFn: ({ businessId, resolved: next }) => api.setConversationResolved({ businessId, resolved: next }),
+    onSuccess: (_, { resolved: next }) => {
+      toast.push({ message: next ? "Marked resolved" : "Reopened" });
+      queryClient.invalidateQueries({ queryKey: RESOLVED_KEY });
+    },
+    onError: (failure) => toast.push({ message: failure.message, tone: "error" }),
+  });
+
+  const pick = (business) => {
+    setPicking(false);
+    setDraft(business);
+    setParams({ business: business.id });
+  };
 
   const remove = useMutation({
     mutationFn: (target) => (target.kind === "message" ? api.deleteMessage(target.id) : api.deleteConversation({ businessId: target.businessId })),
@@ -246,15 +278,28 @@ export default function MessagesPage() {
   return (
     <div className="msg-layout">
       <section className="msg-list" aria-label="Conversations">
-        <header className="msg-pane__head"><h2 className="heading-sm">Conversations</h2></header>
-        <div className="msg-list__scroll">
+        <header className="msg-pane__head">
+          <h2 className="heading-sm">Conversations</h2>
+          {canSend ? (
+            <Button size="sm" className="msg-pane__action" onClick={() => setPicking(true)}>
+              <FontAwesomeIcon icon={faPlus} />
+              <span>New</span>
+            </Button>
+          ) : null}
+        </header>
+        <div className="msg-list__tools">
+          <input type="search" className="msg-list__search" value={search} placeholder="Search name, seller ID or text" aria-label="Search conversations" onChange={(event) => setSearch(event.target.value)} />
+          <Tabs tabs={CONVERSATION_FILTERS} value={filter} onChange={setFilter} counts={counts} label="Filter conversations" idPrefix="msg" />
+        </div>
+        <div className="msg-list__scroll" id="msg-panel" role="tabpanel" aria-labelledby={`msg-tab-${filter}`}>
           {isLoading ? <p role="status" className="msg-empty">Loading</p> : null}
           {isError ? <p role="alert" className="msg-empty">Could not load messages. <Button size="sm" onClick={() => refetch()}>Try again</Button></p> : null}
           {!isLoading && !isError && businesses.length === 0 ? (
             <p className="msg-empty" data-testid="empty">No conversations yet. Select businesses on the Businesses page and choose Message to start one.</p>
           ) : null}
+          {!isLoading && !isError && businesses.length > 0 && shown.length === 0 ? <p className="msg-empty" data-testid="no-match">No conversations match.</p> : null}
           <ul>
-            {businesses.map((b) => (
+            {shown.map((b) => (
               <li key={b.id} className="msg-list__row" data-active={b.id === selected}>
                 <button type="button" className="msg-list__item" data-active={b.id === selected} data-testid="conversation-row" onClick={() => setParams({ business: b.id })}>
                   <span className="msg-avatar" aria-hidden="true">{initials(b.name)}</span>
@@ -264,7 +309,7 @@ export default function MessagesPage() {
                       <time className="msg-list__time" dateTime={b.last?.createdAt}>{b.last ? stamp(b.last.createdAt) : ""}</time>
                     </span>
                     <span className="msg-list__sub">{b.last?.subject}</span>
-                    {b.waiting && !b.unread ? <span className="status-pill msg-list__wait">Waiting for reply</span> : null}
+                    {resolved.has(b.id) ? <span className="status-pill msg-list__wait">Resolved</span> : b.waiting && !b.unread ? <span className="status-pill msg-list__wait">Waiting for reply</span> : null}
                   </span>
                   {b.unread ? <span className="msg-badge" title={`${b.unread} unread`}>{b.unread}<span className="sr-only"> unread</span></span> : null}
                 </button>
@@ -290,7 +335,12 @@ export default function MessagesPage() {
                 <h2 className="heading-sm">{current.name}</h2>
                 <span className="muted">{current.sellerId}</span>
               </div>
-              {canDelete ? (
+              {canSend && current.messages.length ? (
+                <Button size="sm" className="msg-thread__resolve" disabled={resolve.isPending} onClick={() => resolve.mutate({ businessId: current.id, resolved: !isResolved })}>
+                  {isResolved ? "Reopen" : "Mark resolved"}
+                </Button>
+              ) : null}
+              {canDelete && current.messages.length ? (
                 <Button size="sm" className="msg-thread__delete" onClick={() => askConversation(current)} aria-label="Delete conversation">
                   <FontAwesomeIcon icon={faTrash} />
                   <span>Delete conversation</span>
@@ -317,6 +367,8 @@ export default function MessagesPage() {
           </>
         )}
       </section>
+
+      {picking ? <NewConversation onPick={pick} onClose={() => setPicking(false)} /> : null}
 
       {pending ? (
         <DeleteDialog target={pending} busy={remove.isPending} error={remove.isError ? remove.error.message : ""} onConfirm={() => remove.mutate(pending)} onCancel={() => { remove.reset(); setPending(null); }} />

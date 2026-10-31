@@ -24,6 +24,8 @@ const MESSAGES = {
   send_failed: "We could not send the code. Try again in a moment, or choose the other option.",
   invalid_date: "Choose a valid date.",
   invalid_timezone: "Choose a time zone from the list.",
+  invalid_location: "Place the pin on the map inside Kenya, then try again.",
+  invalid_address: "Keep the landmark under 200 characters.",
   date_in_past: "Choose today or a later date. Past dates cannot be added.",
   date_too_far: "Choose a date within the next 2 years.",
   date_taken: "You already have an exception on that date. Edit it instead.",

@@ -22,6 +22,7 @@ export const ACTIONS = {
   "businesses.view": { label: "see businesses", roles: ANY },
   "businesses.visibility": { label: "hide or show a business", roles: ["reviewer", "support"] },
   "businesses.bulk": { label: "suspend, tag, feature, message or export businesses in bulk", roles: ["reviewer", "support"] },
+  "sellers.resend_login": { label: "resend a seller's login with a new temporary password", roles: [] },
   "businesses.extend": { label: "extend subscriptions", roles: ["finance"] },
   "payments.view": { label: "see payments", roles: ANY },
   "payments.confirm": { label: "confirm, reject or assign payments", roles: ["finance"] },

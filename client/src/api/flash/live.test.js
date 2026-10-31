@@ -365,7 +365,7 @@ describe("live item and business pages", () => {
       await expect(live.getSimilarItems(SEED)).rejects.toThrow();
     });
 
-    describe("with the database function (migration 0065)", () => {
+    describe("with the database function (migration 0068)", () => {
       beforeEach(() => {
         db().rpc = {};
         db().calls = [];

@@ -194,13 +194,13 @@ const SIMILAR_FEATURED_POOL = 60;
 const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level,plan_key,hours,exceptions,timezone";
 // The card columns plus the brand, which the ranking strips from names. Never the heavy fields (specs, highlights, terms).
 const SIMILAR_ITEM_COLUMNS = `${CARD_COLUMNS},brand`;
-// The function is not deployed yet (migration 0065 not applied): Postgres 42883, or PostgREST PGRST202.
+// The function is not deployed yet (migration 0068 not applied): Postgres 42883, or PostgREST PGRST202.
 const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
 const likeEscape = (value) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
 const originOfPoint = (o) => (o && Number.isFinite(o.lat) && Number.isFinite(o.lng) ? { lat: o.lat, lng: o.lng } : null);
 const pointOf = (b) => (Number.isFinite(b?.lat) && Number.isFinite(b?.lng) ? { lat: b.lat, lng: b.lng } : null);
 
-// The database side of "similar", as one call (migration 0065): a full-text word match on the head-noun forms computed by the
+// The database side of "similar", as one call (migration 0068): a full-text word match on the head-noun forms computed by the
 // shared module, plus the same section, at most three items per store, only listed and public ones. It is a coarse net: the
 // shared `rankSimilar` applies the real relevance gate and the order, exactly as it does for the demo backend. Returns null
 // when the function is not deployed, so the caller can fall back; any other failure throws.

@@ -1,4 +1,4 @@
--- 0046_store_offers rebuilt public_offers from the 0045 text and lost the sold-out rule that 0046_item_availability added.
+-- 004601_store_offers rebuilt public_offers from the 0045 text and lost the sold-out rule that 004600_item_availability added.
 create or replace view public.public_offers with (security_barrier = true) as
 select
   o.id, o.business_id, o.title, o.description, o.starts_at, o.ends_at, o.created_at,

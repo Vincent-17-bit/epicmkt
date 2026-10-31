@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { toApiError } from "./errors.js";
 import { bulkBusinessAction } from "./mockBusinessActions.js";
 import { businessStore } from "./mockBusinesses.js";
-import { ackMessagesDelivered, getUnreadMessages, listMessages, markMessagesRead, sendMessage } from "./mockMessages.js";
+import { ackMessagesDelivered, addMessage, getUnreadMessages, listMessages, listResolvedConversations, markMessagesRead, sendMessage, setConversationResolved } from "./mockMessages.js";
 
 const biz = businessStore.find((b) => !b.deleted && b.status === "live");
 
@@ -62,4 +62,31 @@ test("a strike adds one to the business", async () => {
   const out = await bulkBusinessAction({ action: "strike", ids: [biz.id], reason: "Wrong prices on three items", params: {} });
   assert.equal(out.affected, 1);
   assert.equal(biz.strikes, before + 1);
+});
+
+test("a conversation can be marked resolved and reopened, and the list reports which are resolved", async () => {
+  const { businessId } = (await listMessages()).find((m) => m.id === "dm-1");
+  assert.deepEqual(await listResolvedConversations(), []);
+  assert.deepEqual(await setConversationResolved({ businessId, resolved: true }), { resolved: true, changed: true });
+  assert.deepEqual(await listResolvedConversations(), [businessId]);
+  assert.deepEqual(await setConversationResolved({ businessId, resolved: true }), { resolved: true, changed: false });
+  assert.deepEqual(await setConversationResolved({ businessId, resolved: false }), { resolved: false, changed: true });
+  assert.deepEqual(await listResolvedConversations(), []);
+});
+
+test("resolving needs a real conversation and a yes or no", async () => {
+  await assert.rejects(setConversationResolved({ businessId: "nope", resolved: true }), { code: "conversation_not_found" });
+  await assert.rejects(setConversationResolved({ businessId: null, resolved: true }), { code: "invalid_input" });
+  await assert.rejects(setConversationResolved({ businessId: biz.id, resolved: "yes" }), { code: "invalid_input" });
+  assert.match(toApiError({ message: "conversation_not_found" }).message, /no longer exists/);
+});
+
+test("a seller message reopens a resolved conversation and a staff message does not", async () => {
+  const root = (await listMessages()).find((m) => m.id === "dm-1");
+  const business = { id: root.businessId, name: root.businessName, sellerId: root.sellerId };
+  await setConversationResolved({ businessId: business.id, resolved: true });
+  await sendMessage({ businessId: business.id, body: "One more thing" });
+  assert.deepEqual(await listResolvedConversations(), [business.id]);
+  addMessage({ business, parentId: "dm-1", body: "Here is my number", sender: "seller" });
+  assert.deepEqual(await listResolvedConversations(), []);
 });

@@ -20,7 +20,7 @@ The database and the edge functions enforce the rules (`has_role()` and `require
 | Extend subscriptions in bulk | finance |
 | See payments | reviewer, finance, support |
 | Confirm, reject, assign payments, handle M-Pesa callbacks | finance |
-| Seller messages (read, send) | reviewer, support |
+| Seller messages (read, send, start a conversation, mark resolved or reopen: `admin_set_conversation_resolved()`, migration 0067) | reviewer, support |
 | Flash sales (view, end) | reviewer, support |
 | Live activity feed on the Command Center | reviewer |
 | Delete or clear items in the live activity feed (`activity.manage`, `admin_delete_activity()`, migration 0059) | reviewer |

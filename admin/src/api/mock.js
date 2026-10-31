@@ -16,7 +16,8 @@ export {
   raiseFlag, setModerationFlag, setReportStatus,
 } from "./mockModeration.js";
 export {
-  ackMessagesDelivered, deleteConversation, deleteMessage, getUnreadMessages, listMessages, markMessagesRead, openMessageFile, sendMessage, uploadMessageFiles,
+  ackMessagesDelivered, deleteConversation, deleteMessage, getUnreadMessages, listMessages, listResolvedConversations, markMessagesRead, openMessageFile, sendMessage,
+  setConversationResolved, uploadMessageFiles,
 } from "./mockMessages.js";
 
 import { searchMockApplications } from "./mockApplications.js";
@@ -247,6 +248,17 @@ export async function getBusinessDetail(id) {
       paid_total_kes: 2600, payments_waiting: row.unconfirmedPayment ? 1 : 0, last_payment_at: row.createdAt,
     },
   };
+}
+export async function getLoginDelivery() {
+  await latency(60);
+  return [
+    { channel: "sms", status: "sent", error: null, created_at: new Date().toISOString() },
+    { channel: "email", status: "failed", error: "mailbox_unavailable", created_at: new Date().toISOString() },
+  ];
+}
+export async function resendLogin() {
+  await latency();
+  return { ok: true };
 }
 export async function getBusinessPayments(id) {
   await latency(60);

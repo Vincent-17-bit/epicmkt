@@ -34,6 +34,20 @@ test("the mock enforces lockout, password rules and the allow-list", async () =>
   await assert.rejects(mock.pauseListing(true), { code: "invalid_status" });
 });
 
+test("the shop pin can be moved by the seller, but only inside Kenya", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const out = await mock.setLocation({ lat: -0.0917349, lng: 34.5995012, address: "  Next to the stage " });
+  assert.deepEqual(out, { lat: -0.091735, lng: 34.599501, address: "Next to the stage" });
+  assert.equal((await mock.getBusinessFacts()).lat, -0.091735);
+  const kept = await mock.setLocation({ lat: -0.1, lng: 34.6 });
+  assert.equal(kept.address, "Next to the stage", "no address sent keeps the saved one");
+  for (const bad of [{ lat: 51.5, lng: -0.12 }, { lat: 0, lng: 20 }, { lat: Number.NaN, lng: 34 }, { lat: null, lng: 34 }, {}]) {
+    await assert.rejects(mock.setLocation(bad), { code: "invalid_location" });
+  }
+  await assert.rejects(mock.setLocation({ lat: 0, lng: 34, address: "x".repeat(201) }), { code: "invalid_address" });
+});
+
 test("specs: the mock stores and returns them, and items without specs are unchanged", async () => {
   mock.resetMock();
   await mock.login("es100001", "Demo-Passw0rd");

@@ -12,7 +12,7 @@ browser ──GET /api/browse?op=search&...──▶ Vercel CDN ──(miss)─�
                                               └────────────────────────────────────────────┘
                                    snapshot refresh (every 30 s at most): ONE rpc browse_snapshot() ──▶ Supabase
 ```
-1. **One snapshot, shared.** `client/api/browse.js` builds the catalog snapshot with a single RPC (`0042_browse_snapshot.sql`,
+1. **One snapshot, shared.** `client/api/browse.js` builds the catalog snapshot with a single RPC (`004200_browse_snapshot.sql`,
    slim columns, one lowest price per business) and keeps it in the instance's memory. Simultaneous refreshes collapse into one.
    If a refresh fails, the last good snapshot is served (up to 10 minutes). If the RPC is missing it pages the views with narrow columns.
 2. **Pages, not catalogs.** The browser asks a question and gets one page (a few KB).
@@ -64,7 +64,7 @@ instance memory ──(older than 30/60 s)──▶ Redis copy ──(older than
   Vercel logs show `[redis] ... failed` warnings only when something is wrong.
 
 ## Deploy order
-1. Apply `supabase/migrations/0042_browse_snapshot.sql`, then `0043_products_snapshot.sql`.
+1. Apply `supabase/migrations/004200_browse_snapshot.sql`, then `0043_products_snapshot.sql`.
    (`0042` was `0041_browse_snapshot.sql`; it clashed with `0041_product_ids.sql`, and the Supabase CLI refuses two files with one version.
    The function is `create or replace`, so applying it again under the new number is harmless.)
 2. Deploy the client. The Vercel functions need `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` (or `SUPABASE_URL` / `SUPABASE_ANON_KEY`).

@@ -24,6 +24,7 @@ export const ACTION_TEXT = {
   body_too_long: "Keep the message to 4000 characters.",
   invalid_subject: "Keep the subject to 150 characters.",
   message_not_found: "That message no longer exists.",
+  conversation_not_found: "That conversation no longer exists. Refresh the page.",
   file_not_uploaded: "A file did not upload. Attach it again.",
   type_not_allowed: "Only JPG, PNG, WebP and PDF files can be sent.",
   file_too_large: "Each file must be 8 MB or smaller.",

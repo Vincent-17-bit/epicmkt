@@ -7,7 +7,7 @@ const ACTIONS = {
   "business.visibility": "Hid or showed a business", "business.extend": "Extended a subscription", "business.suspend": "Suspended a business",
   "item.hide": "Hid an item", "item.unhide": "Showed an item again", "flag.raise": "Asked a seller about something", "flag.status": "Changed a flag",
   "report.status": "Changed a report", "change.approve": "Approved a seller's change", "change.reject": "Rejected a seller's change",
-  "message.queue": "Sent a broadcast", "message.retry": "Retried a message", "message.retry_failed": "Retried failed messages",
+  "conversation.resolve": "Resolved a conversation", "conversation.reopen": "Reopened a conversation", "message.queue": "Sent a broadcast", "message.retry": "Retried a message", "message.retry_failed": "Retried failed messages",
   "template.create": "Created a message template", "template.update": "Edited a message template",
   "job.pause": "Paused an automation job", "job.resume": "Resumed an automation job", "job.run": "Ran an automation job",
   "plan.update": "Changed a plan", "business.grace": "Changed the grace period", "settings.update": "Changed system settings", "category.create": "Created a category", "category.update": "Edited a category",
