@@ -93,8 +93,29 @@ test("the name and section lookups are indexed", async () => {
   await sql(c, `set enable_seqscan = off`);
   const plan = (q) => sql(c, `explain ${q}`).then((r) => r.map((x) => x["QUERY PLAN"]).join("\n"));
   assert.match(await plan(`select id from items where to_tsvector('simple', coalesce(name, '')) @@ to_tsquery('simple', '''bread''')`), /items_name_words_idx/);
-  assert.match(await plan(`select id from items where lower(btrim(section)) = 'bakery'`), /items_section_norm_idx/);
+  assert.match(await plan(`select id from items where lower(btrim(section)) = 'bakery' order by created_at desc limit 5`), /items_section_recent_idx/);
   await sql(c, `reset enable_seqscan`);
+});
+
+test("never returns more than the limit, and still returns the best of each store first", async () => {
+  const out = await ask(["bread", "loaf"], { limit: 3 });
+  assert.ok(out.length <= 3 && out.length > 0);
+  assert.equal(new Set(out.map((r) => r.business_id)).size, out.length, "one item per store while there are stores to spare");
+});
+
+test("a very common word takes the bounded newest-first path and gives the same kind of answer as a rare one", async () => {
+  // Far more matches than the probe size, so the function treats "bread" as common.
+  await sql(c, `insert into items (business_id, name, section, price, created_at)
+                select '${store(4)}', 'Bread bulk ' || g, 'Bakery', 100, now() - (g || ' minutes')::interval from generate_series(1, 2600) g`);
+  await sql(c, `analyze items`);
+  const out = await ask(["bread", "breads", "loaf", "loaves"]);
+  assert.ok(out.length > 0 && out.length <= 50);
+  assert.equal(out.filter((r) => r.business_id === store(4)).length, 3, "still at most three per store");
+  const found = new Set(names(out));
+  assert.ok(found.has("Wheat Loaf") && found.has("Sliced bread loaf 800g"), "other stores are not crowded out by one store's 2,600 breads");
+  for (const hidden of ["Hidden bread", "Draft bread", "Sold out bread", "Removed bread", "Brown Bread 400g"]) assert.ok(!found.has(hidden), hidden);
+  assert.ok(out.every((r) => r.business_id !== store(1)));
+  await sql(c, `delete from items where name like 'Bread bulk %'`);
 });
 
 test("customers can run it and cannot read the table behind it", async () => {
