@@ -11,6 +11,7 @@ export * from "./seller/images.js";
 export * from "./seller/cloudinarySign.js";
 export * from "./seller/proofs.js";
 export * from "./seller/exceptions.js";
+export * from "./seller/hours.js";
 export * from "./seller/flash.js";
 export * from "./offers.js";
 export * from "./availability.js";

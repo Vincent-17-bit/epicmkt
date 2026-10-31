@@ -1,6 +1,6 @@
 import { passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
+import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateWeeklyHours, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -153,6 +153,16 @@ export const setTimezone = async (timezone) => {
   if (!tz) throw new ApiError("invalid_timezone");
   bill.business.timezone = tz;
   return tz;
+};
+// Same rules as seller_set_hours: the shared validator, open days only, and the stored hours come back.
+export const setHours = async (hours) => {
+  writer();
+  await wait();
+  const v = validateWeeklyHours(hours);
+  if (!v.ok) throw new ApiError(v.errors[0].error);
+  bill.business.hours = v.value;
+  emit("businesses", "UPDATE", bill.business);
+  return copy(v.value);
 };
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
@@ -355,7 +365,8 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null,
+    hours: Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["08:00", "18:00"]])) };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];
@@ -650,7 +661,7 @@ export const getShopPreview = async () => {
   await wait();
   settleFlash();
   const cat = await getCatalog();
-  const hours = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["08:00", "18:00"]]));
+  const hours = bill.business.hours ?? {};
   const shop = {
     timezone: bill.business.timezone ?? "Africa/Nairobi",
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",

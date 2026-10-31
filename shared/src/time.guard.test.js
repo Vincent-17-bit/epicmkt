@@ -40,7 +40,8 @@ const RULES = [
   { name: "a hard coded Nairobi zone (use BUSINESS_TIME_ZONE, or the viewer's zone for an instant)", re: /Africa\/Nairobi/ },
   { name: "a hand written +03:00 offset (use zonedTimeToUtc / localInputToUtcIso)", re: /["'`][^"'`\n]*[+]03:?00["'`]/ },
   { name: "a fixed 3 hour shift (use zonedParts / businessDay)", re: /[+]\s*3\s*\*\s*3_?600_?000|[+]\s*TIMEZONE_OFFSET_HOURS/ },
-  { name: "a device zone getter, which returns a different answer for every user (use zonedParts)", re: /\.(getHours|getMinutes|getSeconds|getDate|getDay|getMonth|getTimezoneOffset|setHours|setMinutes|setDate|setMonth)\s*\(/ },
+// api.setHours / impl.setHours is the seller API call that saves a week of opening hours, not a Date method.
+  { name: "a device zone getter, which returns a different answer for every user (use zonedParts)", re: /(?<!\b(?:api|impl))\.(getHours|getMinutes|getSeconds|getDate|getDay|getMonth|getTimezoneOffset|setHours|setMinutes|setDate|setMonth)\s*\(/ },
   { name: "toLocaleDateString/toLocaleTimeString with no zone (use formatInstant)", re: /\.toLocale(Date|Time)String\s*\((?![^)]*timeZone)/ },
   { name: "Intl.DateTimeFormat with no timeZone (use formatInstant)", re: /new Intl\.DateTimeFormat\s*\((?![^)]*timeZone)[^)]*\)\s*\.format/ },
   // "2026-10-25T04:00:00" with no Z or offset is read in the DEVICE zone by new Date().

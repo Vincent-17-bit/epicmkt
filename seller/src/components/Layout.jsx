@@ -1,5 +1,5 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { faBell, faBolt, faCalendarXmark, faCircleQuestion, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faCircleQuestion, faClock, faCreditCard, faEllipsis, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser } from "@fortawesome/free-solid-svg-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
@@ -90,7 +90,7 @@ export default function Layout() {
   }, [more]);
   // The bare /business address is allowed so it can send a suspended seller on to Notifications.
   const allowed = !suspended || /^\/business\/(notifications|questions)/.test(pathname) || /^\/business\/?$/.test(pathname);
-  const moreActive = /^\/business\/(exceptions|flash|offers|qr|account)/.test(pathname);
+  const moreActive = /^\/business\/(hours|exceptions|flash|offers|qr|account)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -129,6 +129,7 @@ export default function Layout() {
           </div>
           {!suspended && (
             <div id="more-links" className={styles.secondary} data-open={more}>
+              <Item to="/business/hours" icon={faClock}>Opening hours</Item>
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>

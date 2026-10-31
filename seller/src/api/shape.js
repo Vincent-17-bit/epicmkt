@@ -9,6 +9,8 @@ export const business = (b) => b && ({
   loginEmail: b.login_email ?? null, loginEmailVerified: !!b.login_email && !!b.login_email_verified_at,
   mustChangePassword: !!b.must_change_password, passwordChangedAt: b.password_changed_at ?? null,
   logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null,
+  // Weekly opening hours: { mon: ["08:00", "18:00"], ... }. A day that is missing is closed.
+  hours: b.hours && typeof b.hours === "object" && !Array.isArray(b.hours) ? b.hours : {},
 });
 
 export const payment = (p) => ({

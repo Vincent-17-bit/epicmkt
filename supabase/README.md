@@ -255,6 +255,21 @@ Error codes: `invalid_date`, `date_in_past`, `date_too_far`, `invalid_kind`, `in
 The customer site and the seller Preview both use `isOpenOn`, `closingInfo` and `hoursRowsFor` from
 `shared/src/utils.js`, so "open now", "opens at" and the hours table cannot disagree.
 
+## Weekly opening hours
+
+Migration `0060_seller_set_hours.sql` adds `seller_set_hours(p_hours jsonb) returns jsonb`, the only way a seller changes
+`businesses.hours` (the column is not writable directly and `seller_update_profile` refuses an `hours` field). It is
+`security definer`, runs for `authenticated` and `service_role` only, and refuses a suspended seller (`account_suspended`).
+
+`p_hours` is an object with keys `mon` to `sun`; each value is `null` (closed) or `["HH:MM", "HH:MM"]`. A day left out is
+closed. An end earlier than the start runs past midnight; start equal to end is refused, so a full day is `00:00` to
+`23:59`. The function stores the open days only and returns what it stored.
+
+Error codes: `invalid_hours` (not an object), `unknown_day`, `invalid_interval`, `invalid_time`, `zero_length`,
+`not_a_seller`, `account_suspended`. Each save is written to `audit_log` as `hours_updated` with the list of open days.
+`shared/src/seller/hours.js` has the same rules for instant feedback in the seller app, and
+`supabase/tests/hours.test.mjs` checks the two agree.
+
 ## Automatic M-Pesa payments (Paybill)
 
 Everyone pays the same Paybill with an account number and an amount. **Nobody types an M-Pesa code.** The account number is a

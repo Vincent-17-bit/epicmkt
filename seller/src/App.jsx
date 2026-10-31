@@ -9,6 +9,7 @@ import Receipt from "./pages/business/Receipt.jsx";
 import Notifications from "./pages/business/Notifications.jsx";
 import Questions from "./pages/business/Questions.jsx";
 import Exceptions from "./pages/business/Exceptions.jsx";
+import Hours from "./pages/business/Hours.jsx";
 import Flash from "./pages/business/Flash.jsx";
 import Offers from "./pages/business/Offers.jsx";
 import Account from "./pages/business/Account.jsx";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="subscription/receipts/:id" element={<Receipt />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="questions" element={<Questions />} />
+          <Route path="hours" element={<Hours />} />
           <Route path="exceptions" element={<Exceptions />} />
           <Route path="account" element={<Account />} />
           <Route path="catalog" element={<Catalog />} />

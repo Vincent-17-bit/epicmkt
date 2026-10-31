@@ -423,6 +423,10 @@ export const subscribe = (tables, onEvent) => {
   return () => { client.removeChannel(channel); };
 };
 
+// Weekly opening hours: { mon: ["08:00","18:00"], ... }. A day that is null or missing is closed; the database checks every rule
+// and returns the hours it stored (open days only).
+export const setHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
+
 // Opening-hours exceptions: [{ id, date: "YYYY-MM-DD", kind: "closed" | "special", intervals: [["09:00","13:00"]], note }]
 export const listExceptions = async () => {
   const b = await rows(need().from("businesses").select("exceptions").maybeSingle());

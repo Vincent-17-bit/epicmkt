@@ -198,3 +198,60 @@ test("details: the mock refuses what the database refuses, specs included, and k
   for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
   assert.deepEqual(await find("it-fade"), before);
 });
+
+const OPEN = ["08:00", "18:00"];
+const signedInHours = async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+};
+
+test("hours: getSubscription and getShopPreview both return the stored hours, in the same shape", async () => {
+  await signedInHours();
+  const week = { mon: OPEN, tue: OPEN, wed: OPEN, thu: OPEN, fri: OPEN, sat: OPEN };
+  assert.deepEqual((await mock.getSubscription()).business.hours, week);
+  assert.deepEqual((await mock.getShopPreview()).shop.hours, week);
+  assert.deepEqual(shape.business({ id: "b", hours: { mon: OPEN } }).hours, { mon: OPEN });
+  assert.deepEqual(shape.business({ id: "b" }).hours, {}, "no hours is an empty object");
+  assert.deepEqual(shape.business({ id: "b", hours: [] }).hours, {});
+  assert.deepEqual(shape.preview({ slug: "s", name: "N", plan_key: "standard", hours: { sun: OPEN } }, { catalog: { shop: { live: true }, items: [] }, flashSales: [], nowMs: 0 }).shop.hours, { sun: OPEN });
+});
+
+test("hours: setHours saves, drops closed days, returns what it stored and shows up everywhere", async () => {
+  await signedInHours();
+  const out = await mock.setHours({ sun: ["20:00", "02:00"], mon: OPEN, tue: null, sat: ["00:00", "23:59"] });
+  assert.deepEqual(out, { mon: OPEN, sat: ["00:00", "23:59"], sun: ["20:00", "02:00"] });
+  assert.deepEqual((await mock.getSubscription()).business.hours, out);
+  assert.deepEqual((await mock.getShopPreview()).shop.hours, out);
+  assert.deepEqual(await mock.setHours({}), {}, "an empty week closes every day");
+  assert.deepEqual((await mock.getSubscription()).business.hours, {});
+  // The caller's object is never kept: changing it afterwards changes nothing.
+  const mine = { mon: ["09:00", "10:00"] };
+  await mock.setHours(mine);
+  mine.mon[0] = "01:00";
+  assert.deepEqual((await mock.getSubscription()).business.hours, { mon: ["09:00", "10:00"] });
+});
+
+test("hours: the mock refuses what the database refuses, with the same codes, and keeps the old hours", async () => {
+  await signedInHours();
+  const before = (await mock.getSubscription()).business.hours;
+  const bad = [
+    [{ mon: ["25:00", "18:00"] }, "invalid_time"], [{ mon: ["8:00", "18:00"] }, "invalid_time"], [{ mon: ["08:00", ""] }, "invalid_time"],
+    [{ mon: ["09:00", "09:00"] }, "zero_length"], [{ mon: ["08:00"] }, "invalid_interval"], [{ mon: "08:00-18:00" }, "invalid_interval"],
+    [{ monday: OPEN }, "unknown_day"], [{ mon: OPEN, xyz: null }, "unknown_day"],
+    [[], "invalid_hours"], ["mon", "invalid_hours"], [null, "invalid_hours"],
+  ];
+  for (const [hours, code] of bad) await assert.rejects(mock.setHours(hours), { code }, JSON.stringify(hours));
+  assert.deepEqual((await mock.getSubscription()).business.hours, before);
+});
+
+test("hours: setHours needs a signed-in seller, and a suspended seller is locked out", async () => {
+  mock.resetMock();
+  await assert.rejects(mock.setHours({ mon: OPEN }), { code: "unauthorized" });
+  await signedInHours();
+  const before = (await mock.getSubscription()).business.hours;
+  mock.__mock.setBusiness({ status: "suspended" });
+  await assert.rejects(mock.setHours({ mon: OPEN }), { code: "account_suspended" });
+  mock.__mock.setBusiness({ status: "paused" });
+  assert.deepEqual(await mock.setHours({ mon: OPEN }), { mon: OPEN }, "paused sellers can still edit");
+  assert.notDeepEqual((await mock.getSubscription()).business.hours, before);
+});
