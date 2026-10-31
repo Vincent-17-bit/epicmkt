@@ -1,5 +1,6 @@
 import { adminFn, audit, json, must, z, type AdminDeps } from "../_shared/adminKit.ts";
-import { escapeHtml } from "../_shared/http.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
+import { passwordReset } from "../_shared/messages.ts";
 
 const Body = z.object({
   businessId: z.string().uuid(),
@@ -24,10 +25,11 @@ export const adminResetSellerPassword = (d: AdminDeps) =>
       after: { sellerId: biz.seller_id, mustChangePassword: true }, reason,
     });
 
+    const msg = passwordReset({ sellerId: biz.seller_id, password });
     let smsSent = false;
     try {
-      smsSent = await d.sms(biz.phone, `EpicMKT: your password was reset. Seller ID ${biz.seller_id}, temporary password ${password}. Log in and change it now.`);
-      await d.mail(biz.email, "Your EpicMKT password was reset", `<p>Seller ID: <b>${escapeHtml(biz.seller_id)}</b><br>Temporary password: <b>${escapeHtml(password)}</b></p><p>Log in and change your password now.</p>`);
+      smsSent = await d.sms(biz.phone, msg.sms);
+      await d.mail(biz.email, msg.subject, emailHtml(msg.email));
     } catch (_) {}
 
     return json({ ok: true, businessId, sellerId: biz.seller_id, smsSent });

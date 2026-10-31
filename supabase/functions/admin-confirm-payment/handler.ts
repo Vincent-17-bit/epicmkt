@@ -1,5 +1,6 @@
 import { adminFn, audit, json, must, queueMessages, z, type AdminDeps } from "../_shared/adminKit.ts";
 import { activateApplication } from "../_shared/activate.ts";
+import { paymentConfirmed } from "../_shared/messages.ts";
 import { addCalendarMonth, nairobiDay, nairobiMidnight, eatToday, formatDay, laterDate } from "../_shared/dates.ts";
 
 const Body = z.object({
@@ -86,12 +87,12 @@ export const adminConfirmPayment = (d: AdminDeps) =>
         await d.db.from("payments").delete().eq("id", pay.id);
         throw new Error("renewal_failed");
       }
-      const text = `EpicMKT: payment received (KES ${amount}). Your listing is paid until ${formatDay(paidUntil)}. Receipt ${pay.receipt_no}.`;
+      const note = paymentConfirmed({ business: biz.name, amount, until: formatDay(paidUntil), receipt: pay.receipt_no });
       await queueMessages(d, [
-        { channel: "sms", to_address: biz.phone, subject: null },
-        { channel: "email", to_address: biz.email, subject: "Payment received" },
-        { channel: "in_app", to_address: null, subject: "Payment received" },
-      ].map((m) => ({
+        { channel: "sms", to_address: biz.phone, subject: null, text: note.sms },
+        { channel: "email", to_address: biz.email, subject: note.subject, text: note.email },
+        { channel: "in_app", to_address: null, subject: note.subject, text: note.inApp },
+      ].map(({ text, ...m }) => ({
         ...m, business_id: biz!.id, application_id: biz!.application_id ?? null, kind: "payment", template_key: "payment_received",
         body: text, status: m.channel === "in_app" ? "delivered" : "queued", transactional: true, scheduled_at: now, created_by: c.admin.user.id,
         data: { payment_id: pay.id, receipt_no: pay.receipt_no, paid_until: paidUntil }, dedupe_key: `payment:${pay.id}:${m.channel}`,

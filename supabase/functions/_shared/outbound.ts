@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { formatDay, nairobiDay } from "./dates.ts";
-import { escapeHtml, json } from "./http.ts";
+import { json } from "./http.ts";
+import { emailHtml } from "./emailTemplate.ts";
 import { requireAdmin } from "./admin.ts";
 import { isHttpError } from "./errors.ts";
 import { deliverEmail, deliverSms, isMockMode } from "./providers.ts";
@@ -100,8 +101,7 @@ export async function sendSms(to: string, message: string): Promise<SendResult> 
 }
 
 export async function sendEmail(to: string, subject: string, body: string): Promise<SendResult> {
-  const html = `<p>${escapeHtml(body).replace(/\r?\n/g, "<br>")}</p>`;
-  return toResult(await deliverEmail(to, subject, html), "resend");
+  return toResult(await deliverEmail(to, subject, emailHtml(body)), "resend");
 }
 
 // ---------------------------------------------------------------------------

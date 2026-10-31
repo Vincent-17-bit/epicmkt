@@ -2,7 +2,8 @@ import { must, queueMessages, type AdminDeps } from "./adminKit.ts";
 import { addCalendarMonth, eatToday, formatDay, nairobiMidnight } from "./dates.ts";
 import { uniqueSlug } from "./ids.ts";
 import { sellerEmail } from "./seller.ts";
-import { escapeHtml } from "./http.ts";
+import { emailHtml } from "./emailTemplate.ts";
+import { loginDetails, welcome } from "./messages.ts";
 
 type Row = Record<string, any>;
 type AuditRow = { action: string; targetType: string; targetId: string; businessId?: string | null; before?: unknown; after?: unknown; reason?: string | null };
@@ -93,13 +94,13 @@ export async function activateApplication(d: AdminDeps, o: Activation) {
     application_id: a.id, actor: actorId ? "admin" : "system", type: "activated",
     data: { by: actorId, businessId: created.businessId, sellerId: created.sellerId, receiptNo, paidUntil, auto: !actorId },
   }));
-  await queueMessages(d, [{ channel: "sms", to: a.phone }, { channel: "email", to: a.email }].map((m) => ({
-    application_id: a.id, business_id: created!.businessId, channel: m.channel, kind: "general", template_key: "welcome", to_address: m.to,
-    subject: m.channel === "email" ? "Welcome to EpicMKT" : null,
-    body: `Welcome to EpicMKT, ${a.business_name}! Your business page is live until ${formatDay(paidUntil)}. Log in with your Seller ID to add your items. Then add your email and choose your own password under Account.`,
+  const hello = welcome({ owner: a.owner_full_name, business: a.business_name, until: formatDay(paidUntil) });
+  await queueMessages(d, [{
+    application_id: a.id, business_id: created.businessId, channel: "email", kind: "general", template_key: "welcome", to_address: a.email,
+    subject: hello.subject, body: hello.email,
     status: "queued", transactional: true, scheduled_at: now, created_by: actorId,
-    dedupe_key: `welcome:${created!.businessId}:${m.channel}`,
-  })));
+    dedupe_key: `welcome:${created.businessId}:email`,
+  }]);
   await o.audit({
     action: "payment.confirm", targetType: "payment", targetId: paymentId, businessId: created.businessId,
     after: { receiptNo, kind: "activation", paid_until: paidUntil, auto: !actorId }, reason: o.reason ?? null,
@@ -109,11 +110,11 @@ export async function activateApplication(d: AdminDeps, o: Activation) {
     after: { sellerId: created.sellerId, slug: created.slug, applicationId: a.id, auto: !actorId }, reason: null,
   });
 
-  const text = `EpicMKT: your shop is live. Seller ID ${created.sellerId}, temporary password ${created.password}. Log in and change it now.`;
+  const login = loginDetails({ owner: a.owner_full_name, business: a.business_name, sellerId: created.sellerId, password: created.password });
   let smsSent = false;
   try {
-    smsSent = await d.sms(a.phone, text);
-    await d.mail(a.email, "Your EpicMKT seller login", `<p>Your shop is live.</p><p>Seller ID: <b>${escapeHtml(created.sellerId)}</b><br>Temporary password: <b>${escapeHtml(created.password)}</b></p><p>Log in and change your password now.</p>`);
+    smsSent = await d.sms(a.phone, login.sms);
+    await d.mail(a.email, login.subject, emailHtml(login.email));
   } catch (_) {}
 
   return {
