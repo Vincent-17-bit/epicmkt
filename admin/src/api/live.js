@@ -5,14 +5,6 @@ import { DEFAULT_TAB, PAGE_SIZE, searchFilter, tabById, tabSortAscending } from 
 import { ACTION_TEXT, ApiError, toApiError } from "./errors.js";
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_TYPES } from "@epicmkt/shared";
 
-const notConfigured = () => {
-  throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
-};
-
-// Still behind the "not connected" message so a page never shows made-up data. Every bulk action on the Businesses page
-// and its undo are live below, as are the Payments page and the Command Center.
-export const getBusinesses = notConfigured;
-
 const client = () => {
   if (!supabase) throw new ApiError("unauthorized", "Supabase is not configured.");
   return supabase;
