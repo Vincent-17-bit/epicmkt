@@ -829,7 +829,10 @@ export const duplicateItem = async (id) => {
   const src = bill.items.find((i) => i.id === id && !i.removedByAdmin);
   if (!src) throw new ApiError("item_not_found");
   const now = clockNow().toISOString();
-  const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: 0, imagePaths: [], hasVideo: false, createdAt: now, updatedAt: now, priceConfirmedAt: now };
+  const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: src.imagePaths.length, imagePaths: src.imagePaths.map((p, n) => `${p}.copy${bill.seq}-${n}`), createdAt: now, updatedAt: now, priceConfirmedAt: now };
+  // Like the real thing, the copy has its own files (new paths), in the same order, and the original keeps its own.
+  const vids = demoVideos.get(src.id);
+  if (vids?.length) demoVideos.set(copyOf.id, vids.map((p, n) => `${p}.copy${bill.seq}-${n}`));
   bill.items.push(copyOf);
   return copyOf.id;
 };

@@ -490,7 +490,17 @@ export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { 
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
-export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
+// Makes the draft copy, then gives it its own copy of the pictures and videos. The draft is kept even if some files fail to copy;
+// the editor opens on the copy and shows exactly what it has.
+export const duplicateItem = async (id) => {
+  const copyId = await rpc("seller_duplicate_item", { p_id: id });
+  try {
+    await fn("seller-item-copy-media", { fromItemId: id, toItemId: copyId });
+  } catch {
+    /* the copy exists without (some of) its media */
+  }
+  return copyId;
+};
 // Performance: views and WhatsApp, call and directions taps from the daily rollup (log_business_event feeds it). Same for every plan.
 // Pass an item id to look at one item. Ranges: 7d, 1m, 6m, 12m, 24m, 36m, all.
 export const getPerformance = async (range = "1m", itemId = null) => normalizePerformance(await rpc("seller_performance", { p_range: range, p_item_id: itemId }));

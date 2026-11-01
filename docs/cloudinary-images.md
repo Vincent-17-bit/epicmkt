@@ -19,7 +19,7 @@ message attachments stay in Supabase Storage (they are private or not pictures).
 4. **Browser + Vercel**: set `VITE_CLOUDINARY_CLOUD_NAME=<cloud_name>` in `client/.env`, `seller/.env` and in the Vercel projects
    (the cloud name is public; it is in every picture URL). Redeploy: Vercel applies variables only to new deployments.
 5. **Database**: apply `supabase/migrations/0047_cloudinary_media.sql`.
-6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize seller-media-purge media-gc`.
+6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize seller-media-purge seller-item-copy-media media-gc`.
 7. **Cron**: run the `media-gc` block of `supabase/cron/schedule.sql` once (it is safe to re-run the whole file).
 8. **Move existing pictures** (optional, any time; old ones keep working from Supabase until then):
    ```
