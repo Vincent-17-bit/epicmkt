@@ -566,7 +566,7 @@ export async function markNotificationsRead(ids) {
 const detailRpc = async (fn, args) => check(await client().rpc(fn, args)).data;
 
 export const getBusinessDetail = (id) => detailRpc("admin_business_detail", { p_id: id });
-// The live breakdown plus 30 days of daily snapshots (migration 0075_business_health.sql).
+// The live breakdown plus 30 days of daily snapshots (migration 0078_business_health.sql).
 export const getBusinessHealth = (id) => detailRpc("admin_business_health", { p_business: id });
 export async function getLoginDelivery(businessId) {
   const { data } = check(
@@ -673,7 +673,7 @@ export const getSettings = async () => check(await client().rpc("admin_get_setti
 export const saveSettings = async (settings, reason = null) =>
   check(await client().rpc("admin_save_settings", { p_settings: settings, p_reason: reason })).data;
 
-// Business health weights and thresholds (owner only). site_settings 'health_config', migration 0075_business_health.sql.
+// Business health weights and thresholds (owner only). site_settings 'health_config', migration 0078_business_health.sql.
 export const getHealthConfig = async () => check(await client().rpc("admin_get_health_config")).data;
 export const saveHealthConfig = async (config, reason = null) =>
   check(await client().rpc("admin_save_health_config", { p_config: config, p_reason: reason })).data;

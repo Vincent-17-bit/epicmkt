@@ -1,4 +1,4 @@
--- 0075_business_health.sql
+-- 0078_business_health.sql
 -- One business health score, defined once, in SQL.
 --
 -- What the score is for: CHURN RISK. "How likely is this business to stop paying?" It is built from four parts, each 0 to 100:

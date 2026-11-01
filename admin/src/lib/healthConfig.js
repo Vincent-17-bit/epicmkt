@@ -1,5 +1,5 @@
 // The form behind Settings > Business health. Numbers are validated here only to give quick, specific feedback; the server
-// (admin_save_health_config, migration 0075) checks the same ranges again and is the authority. No scoring happens here.
+// (admin_save_health_config, migration 0078) checks the same ranges again and is the authority. No scoring happens here.
 
 export const RULES = {
   w_profile: { min: 0, max: 100, label: "Profile weight" },

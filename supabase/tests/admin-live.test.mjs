@@ -215,10 +215,10 @@ test("the migration can be re-run", async () => {
   const { join, dirname } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
   const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations");
-  // 0014 cannot be replayed on a finished database any more: 0075 reshaped admin_businesses_v (new columns, two old ones gone) and
+  // 0014 cannot be replayed on a finished database any more: 0078 reshaped admin_businesses_v (new columns, two old ones gone) and
   // Postgres will not drop view columns in a create or replace. So the idempotency check runs on the migration that owns the view
   // now, twice in a row.
-  const file = join(dir, "0075_business_health.sql");
+  const file = join(dir, "0078_business_health.sql");
   await c.query(readFileSync(file, "utf8"));
   await c.query(readFileSync(file, "utf8"));
 });

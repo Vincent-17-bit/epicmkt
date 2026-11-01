@@ -1,5 +1,5 @@
 // How a business health score is SHOWN. There is no formula here: the score, band, four parts, weights and reasons are all
-// computed once, in SQL (business_health(), migration 0075), and arrive on each row as `health`. This file only names things.
+// computed once, in SQL (business_health(), migration 0078), and arrive on each row as `health`. This file only names things.
 
 export const BANDS = {
   healthy: { label: "Healthy", tone: "success" },

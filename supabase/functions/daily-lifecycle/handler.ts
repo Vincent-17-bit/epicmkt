@@ -10,7 +10,7 @@ import { cronOrRole, isResponse, limitAdmin, type OutboundDeps } from "../_share
 // the paid_until day, so a notice is created once no matter how often this runs. The dispatcher sends the copies.
 //
 // Then snapshot_business_health() stores today's health score for every business (one row per business per day, see
-// migration 0075). That is history and the 7-day trend. It is best effort: billing notices matter more, so a failure
+// migration 0078). That is history and the 7-day trend. It is best effort: billing notices matter more, so a failure
 // here is reported in the response and the audit row but never turns the run into an error. Running it again the same
 // day refreshes that day's rows.
 export const dailyLifecycle = (d: OutboundDeps) => wrap(async (req) => {
