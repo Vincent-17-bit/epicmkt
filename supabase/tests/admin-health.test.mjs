@@ -1,4 +1,4 @@
-// Business health score (0069_business_health.sql): the formula, the bug fixes, the caps, tuning, snapshots and permissions.
+// Business health score (0075_business_health.sql): the formula, the bug fixes, the caps, tuning, snapshots and permissions.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asAdmin, asService } from "./db.mjs";
@@ -302,7 +302,7 @@ test("the migration can be re-run", async () => {
   const { readFileSync } = await import("node:fs");
   const { join, dirname } = await import("node:path");
   const { fileURLToPath } = await import("node:url");
-  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0069_business_health.sql");
+  const file = join(dirname(fileURLToPath(import.meta.url)), "..", "migrations", "0075_business_health.sql");
   await c.query(readFileSync(file, "utf8"));
   assert.equal((await health(ids.bizB)).band, "at_risk");   // reset() left Shop B bare and 60 days old
 });

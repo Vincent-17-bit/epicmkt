@@ -1,4 +1,4 @@
-// FIXTURE ONLY. The real health score is computed in SQL (business_health(), migration 0069) and the admin never calculates
+// FIXTURE ONLY. The real health score is computed in SQL (business_health(), migration 0075) and the admin never calculates
 // one. This file only produces rows with the same SHAPE the server sends, so the screens can be built and tested without a
 // database. Its numbers are plausible, not authoritative: do not copy anything from here into production code.
 import { ApiError } from "./errors.js";
