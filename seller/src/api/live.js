@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota } from "@epicmkt/shared";
+import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance } from "@epicmkt/shared";
 import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
@@ -491,6 +491,13 @@ export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { 
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
 export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
+// Performance: views and WhatsApp, call and directions taps from the daily rollup (log_business_event feeds it). Same for every plan.
+// Pass an item id to look at one item. Ranges: 7d, 1m, 6m, 12m, 24m, 36m, all.
+export const getPerformance = async (range = "1m", itemId = null) => normalizePerformance(await rpc("seller_performance", { p_range: range, p_item_id: itemId }));
+// History: { limit, total, locked, entries }. The server applies the plan gate (limit key historyEntries).
+export const getItemHistory = (itemId) => rpc("seller_item_history", { p_item_id: itemId });
+// Deals: per flash sale and offer numbers. Premium only (limit key flashAttribution); others get { locked: true } and no numbers.
+export const getItemDeals = (itemId) => rpc("seller_item_deals", { p_item_id: itemId });
 export const importItems = (rows) => rpc("seller_import_items", { p_rows: rows });
 export const getSavedViews = () => rpc("seller_get_views");
 export const saveSavedViews = (views) => rpc("seller_save_views", { p_views: views });

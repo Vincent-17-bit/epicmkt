@@ -12,6 +12,8 @@ import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
 import ImportDialog from "./ImportDialog.jsx";
+import ItemInsights from "./ItemInsights.jsx";
+import PerformancePanel from "../PerformancePanel.jsx";
 import ListRow from "./ListRow.jsx";
 import ListingCard from "./ListingCard.jsx";
 import Modal from "./Modal.jsx";
@@ -64,6 +66,7 @@ export default function Catalog() {
   const [sheet, setSheet] = useState(false);
   const [draft, setDraft] = useState(query);
   const [dialog, setDialog] = useState(null);
+  const [insightsFor, setInsightsFor] = useState(null);
   const [restocking, setRestocking] = useState(null);
   const [pending, setPending] = useState(() => new Set());
   const [undo, setUndo] = useState(null);
@@ -250,7 +253,12 @@ export default function Catalog() {
   const handlers = {
     select: toggleSelect,
     edit: openEditor,
-    duplicate: (item) => run(() => api.duplicateItem(item.id), "Copy added as a draft."),
+    insights: (item) => setInsightsFor(item),
+    // The copy is a draft named "<name> (copy)". A failure, including the plan's item limit, shows the same way Add item does.
+    duplicate: async (item) => {
+      const id = await run(() => api.duplicateItem(item.id));
+      if (id) navigate(`/business/catalog/${id}/edit`, { state: { from: location.search, step: "basics", notice: { tone: "ok", text: "Copy added as a draft. Check the details, then publish when ready." } } });
+    },
     toggle: (item) => run(() => api.bulkItems(item.visible && !item.draft ? "hide" : "show", [item.id]), item.visible && !item.draft ? "Item hidden." : "Item is now showing."),
     confirm: (item) => run(() => api.bulkItems("confirm_prices", [item.id]), "Price confirmed."),
     move,
@@ -316,6 +324,7 @@ export default function Catalog() {
         {summary.reasons.length > 0 && <span className={styles.summaryReasons}>{summary.reasons.map((r) => r.label).join(". ")}.</span>}
       </section>
 
+      {shop.live && <PerformancePanel title="How customers found you" />}
       {enriched.length > 0 && <Tracker stats={trackerStats} activeKey={activeTile} onPick={(key) => update({ ...trackerFilter(key), sort: query.sort })} />}
 
       {enriched.length === 0 ? (
@@ -474,6 +483,7 @@ export default function Catalog() {
       {dialog === "prices" && <PriceDialog open items={selectedItems} onClose={() => setDialog(null)} onApply={(percent) => applyBulk(() => api.bulkItems("price_percent", selectedIds, { percent }), (r) => `${r.affected} prices changed.`)} />}
       {dialog === "section" && <SectionDialog open sections={sections} onClose={() => setDialog(null)} onApply={(section) => applyBulk(() => api.bulkItems("move_section", selectedIds, { section }), (r) => `${r.affected} moved.`)} />}
       {dialog === "availability" && <AvailabilityDialog open onClose={() => setDialog(null)} onApply={(availability) => applyBulk(() => api.bulkItems("set_availability", selectedIds, { availability }), (r) => `${r.affected} updated.`)} />}
+      {insightsFor && <ItemInsights item={insightsFor} onClose={() => setInsightsFor(null)} />}
       {dialog === "import" && (
         <ImportDialog
           open

@@ -969,3 +969,4 @@
     font-size: 16px;
   }
 }
+.insightsBody { display: grid; gap: var(--space-3); min-width: 0; }

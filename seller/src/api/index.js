@@ -105,3 +105,6 @@ export const deleteStaff = (...a) => impl.deleteStaff(...a);
 export const listTimetable = (...a) => impl.listTimetable(...a);
 export const saveSlot = (...a) => impl.saveSlot(...a);
 export const deleteSlot = (...a) => impl.deleteSlot(...a);
+export const getPerformance = (...a) => impl.getPerformance(...a);
+export const getItemHistory = (...a) => impl.getItemHistory(...a);
+export const getItemDeals = (...a) => impl.getItemDeals(...a);
