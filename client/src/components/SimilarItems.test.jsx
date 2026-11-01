@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -21,12 +21,12 @@ const similar = (n) =>
   }));
 
 const Where = () => <p data-testid="where">{useLocation().pathname}</p>;
-const mount = () =>
+const mount = (props = {}) =>
   render(
     <MemoryRouter>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <Routes>
-          <Route path="*" element={<><SimilarItems itemId="cur" businessId="b-cur" /><Where /></>} />
+          <Route path="*" element={<><SimilarItems itemId="cur" businessId="b-cur" {...props} /><Where /></>} />
         </Routes>
       </QueryClientProvider>
     </MemoryRouter>
@@ -100,5 +100,113 @@ describe("SimilarItems", () => {
     mount();
     await screen.findByText("Other 0");
     expect(screen.queryByText("No store")).toBeNull();
+  });
+
+  it("says why the items are here, but only for a product the vocabulary knows", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(3));
+    const { unmount } = mount({ name: "Brown Bread 400g" });
+    expect(await screen.findByText("Other stores selling bread")).toBeInTheDocument();
+    unmount();
+    mount({ name: "Samsung Galaxy A15", brand: "Samsung" });
+    await screen.findByText("Other 0");
+    expect(screen.queryByText(/Other stores selling/)).toBeNull();
+  });
+
+  it("passes an abort signal that fires when the visitor moves on", async () => {
+    let signal;
+    mocks.getSimilar.mockImplementation((_id, opts) => {
+      signal = opts.signal;
+      return new Promise(() => {});
+    });
+    const { unmount } = mount();
+    await waitFor(() => expect(signal).toBeInstanceOf(AbortSignal));
+    expect(signal.aborted).toBe(false);
+    unmount();
+    await waitFor(() => expect(signal.aborted).toBe(true));
+  });
+
+  it("holds the height of the cards while loading, in the same shape as a card", async () => {
+    mocks.getSimilar.mockImplementation(() => new Promise(() => {}));
+    const { container } = mount();
+    const section = await waitFor(() => {
+      const el = container.querySelector("[data-similar]");
+      expect(el).not.toBeNull();
+      return el;
+    });
+    expect(section).toHaveAttribute("data-state", "loading");
+    expect(section.querySelectorAll("[class*='skeleton']").length).toBe(4);
+  });
+
+  it("is a heading with an accessible name tied to its section", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(3));
+    mount();
+    await screen.findByText("Other 0");
+    expect(screen.getByRole("region", { name: "Similar items" })).toHaveAttribute("data-state", "ready");
+  });
+});
+
+describe("SimilarItems, lazy", () => {
+  let observers;
+  beforeEach(() => {
+    observers = [];
+    globalThis.IntersectionObserver = class {
+      constructor(callback, options) {
+        this.callback = callback;
+        this.options = options;
+        this.disconnect = vi.fn();
+        observers.push(this);
+      }
+      observe(node) {
+        this.node = node;
+      }
+    };
+  });
+  afterEach(() => {
+    delete globalThis.IntersectionObserver;
+  });
+
+  it("fetches nothing and takes no room until the section is near the screen, then fetches once", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(3));
+    const { container } = mount();
+    expect(mocks.getSimilar).not.toHaveBeenCalled();
+    expect(container.querySelector("[data-similar]")).toBeNull();
+    expect(container.querySelector("[data-similar-marker]")).not.toBeNull();
+    expect(observers).toHaveLength(1);
+    expect(observers[0].options.rootMargin).toMatch(/^\d+px/);
+
+    act(() => observers[0].callback([{ isIntersecting: false }]));
+    expect(mocks.getSimilar).not.toHaveBeenCalled();
+
+    act(() => observers[0].callback([{ isIntersecting: true }]));
+    expect(await screen.findByText("Other 0")).toBeInTheDocument();
+    expect(mocks.getSimilar).toHaveBeenCalledTimes(1);
+    expect(observers[0].disconnect).toHaveBeenCalled();
+    expect(container.querySelector("[data-similar-marker]")).toBeNull();
+  });
+
+  it("leaves no trace at all when it turns out there is nothing to show", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(1));
+    const { container } = mount();
+    act(() => observers[0].callback([{ isIntersecting: true }]));
+    await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
+    await waitFor(() => expect(container.querySelector("[data-similar]")).toBeNull());
+    expect(container.querySelector("[data-similar-marker]")).toBeNull();
+  });
+
+  it("never shows the previous product's results under the next one", async () => {
+    mocks.getSimilar.mockImplementation((id) => Promise.resolve(id === "first" ? similar(3) : new Promise(() => {})));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = (id) => (
+      <MemoryRouter>
+        <QueryClientProvider client={client}>
+          <SimilarItems key={id} itemId={id} businessId="b" />
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const { rerender } = render(ui("first"));
+    act(() => observers[0].callback([{ isIntersecting: true }]));
+    expect(await screen.findByText("Other 0")).toBeInTheDocument();
+    rerender(ui("second"));
+    expect(screen.queryByText("Other 0")).toBeNull();
   });
 });

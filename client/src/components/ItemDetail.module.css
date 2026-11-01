@@ -909,3 +909,24 @@
     align-self: start;
   }
 }
+
+/* ---- Similar items: the last section, a full-width card after the specs and above the sticky action bar ---- */
+.similar {
+  margin-bottom: var(--space-3);
+}
+
+.root[data-variant="page"] .body > .similar {
+  max-width: 48rem;
+  margin: var(--space-3) auto var(--space-4);
+  overflow: hidden;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+@media (min-width: 64rem) {
+  .root[data-variant="page"] .body > .similar {
+    max-width: none;
+    margin-inline: 0;
+  }
+}

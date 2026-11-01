@@ -10,6 +10,7 @@ import { chunk, fmtDay, isResponse, limitAdmin, renderTemplate, requireRole, typ
 
 export const MAX_RECIPIENTS = 500;
 export const SMS_MAX = 612; // four SMS segments
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const Body = z.object({
   target: z.object({
@@ -52,8 +53,9 @@ export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
   // Template
   let tpl: { subject: string | null; body: string; channel: string | null; transactional: boolean } | null = null;
   if (b.templateKey) {
-    const { data } = await d.db.from("message_templates").select("key, channel, subject, body_en, body_sw, transactional").eq("key", b.templateKey).maybeSingle();
+    const { data } = await d.db.from("message_templates").select("key, channel, subject, body_en, body_sw, transactional, disabled_at").eq("key", b.templateKey).maybeSingle();
     if (!data) return json({ error: "unknown_template" }, 422);
+    if (data.disabled_at) return json({ error: "template_disabled" }, 422);
     if (data.channel && channels.some((c) => c !== data.channel)) return json({ error: "template_channel_mismatch", channel: data.channel }, 422);
     tpl = { subject: data.subject, body: (b.lang === "sw" && data.body_sw) || data.body_en, channel: data.channel, transactional: data.transactional };
   }
@@ -96,6 +98,7 @@ export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
   const scheduled = b.scheduledAt && new Date(b.scheduledAt) > now ? new Date(b.scheduledAt) : now;
   const immediate = scheduled.getTime() <= now.getTime();
   const skipped = { sms: 0, email: 0, inApp: 0 };
+  const batchId = b.idempotencyKey && UUID.test(b.idempotencyKey) ? b.idempotencyKey : crypto.randomUUID();
   const rows: Record<string, unknown>[] = [];
 
   for (const r of recipients) {
@@ -130,6 +133,7 @@ export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
         read_at: channel === "in_app" ? null : now.toISOString(),
         dedupe_key: b.idempotencyKey ? `admin:${b.idempotencyKey}:${r.id}:${channel}` : null,
         created_by: actor.userId,
+        batch_id: batchId,
       });
     }
   }
@@ -158,10 +162,10 @@ export const adminMessage = (d: OutboundDeps) => wrap(async (req) => {
     after: {
       target: b.target.applicationId ? "application" : b.target.segment ? `segment:${b.target.segment}` : "businesses",
       recipients: recipients.length, rows: perChannel, skipped, templateKey: b.templateKey ?? null,
-      transactional, scheduledAt: scheduled.toISOString(),
+      transactional, scheduledAt: scheduled.toISOString(), batchId,
     },
     req,
   });
 
-  return json({ ok: true, queued: rows.length, rows: perChannel, skipped, notFound, transactional, scheduledAt: scheduled.toISOString() });
+  return json({ ok: true, queued: rows.length, batchId, rows: perChannel, skipped, notFound, transactional, scheduledAt: scheduled.toISOString() });
 });

@@ -90,22 +90,43 @@ describe("ItemPage", () => {
     expect(await screen.findByText(/not found|couldn.t find|doesn.t exist/i)).toBeInTheDocument();
   });
 
-  it("puts Similar items right after the description and before the seller card", async () => {
+  const similarRows = (n) =>
+    Array.from({ length: n }, (_, i) => ({ id: `s${i + 1}`, name: `Other ${i + 1}`, imageUrl: "b.png", availability: "available", pricing: detail.pricing, business: { id: `b${i + 1}`, slug: `shop-${i + 1}`, name: `Shop ${i + 1}`, verified: false } }));
+
+  it("puts Similar items last: after the description, the specs and the seller card, and just before the action bar", async () => {
     mocks.getBusiness.mockResolvedValue(biz);
-    mocks.getDetail.mockResolvedValue(detail);
+    mocks.getDetail.mockResolvedValue({ ...detail, highlights: ["Fast"], specs: [{ label: "Time", value: "30 min" }] });
     mocks.getStoreSelective.mockResolvedValue([]);
-    mocks.getSimilar.mockResolvedValue(
-      [1, 2, 3].map((n) => ({ id: `s${n}`, name: `Other ${n}`, imageUrl: "b.png", availability: "available", pricing: detail.pricing, business: { id: `b${n}`, slug: `shop-${n}`, name: `Shop ${n}`, verified: false } }))
-    );
+    mocks.getSimilar.mockResolvedValue(similarRows(3));
     const { container } = mount();
     const similar = await waitFor(() => {
       const el = container.querySelector("[data-similar]");
       expect(el).not.toBeNull();
       return el;
     });
-    const description = screen.getAllByText("Sharp.")[0];
-    const sold = container.querySelector("section[aria-label]:not([data-similar])[class*='sold']");
-    expect(description.compareDocumentPosition(similar) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    if (sold) expect(similar.compareDocumentPosition(sold) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const follows = (a, b) => expect(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING, "order").toBeTruthy();
+    follows(screen.getAllByText("Sharp.")[0], similar);
+    follows(screen.getByRole("region", { name: "Sold by" }), similar);
+    follows(screen.getByRole("heading", { level: 1, name: "Fade and beard" }), similar);
+    const specs = container.querySelector("[class*='panels']");
+    if (specs) follows(specs, similar);
+    follows(similar, container.querySelector("footer"));
+    // Nothing of the item page comes after it except the sticky action bar.
+    const body = similar.parentElement;
+    expect(body.lastElementChild).toBe(similar);
+    expect(similar).toHaveAttribute("aria-labelledby", "similar-items-title");
+    expect(document.getElementById("similar-items-title")).toHaveTextContent("Similar items");
+  });
+
+  it("leaves nothing behind when there are fewer than two similar items: no section, no gap", async () => {
+    mocks.getBusiness.mockResolvedValue(biz);
+    mocks.getDetail.mockResolvedValue(detail);
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getSimilar.mockResolvedValue(similarRows(1));
+    const { container } = mount();
+    await screen.findByRole("heading", { level: 1, name: "Fade and beard" });
+    await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
+    await waitFor(() => expect(container.querySelector("[data-similar]")).toBeNull());
+    expect(container.querySelector("[data-similar-marker]")).toBeNull();
   });
 });

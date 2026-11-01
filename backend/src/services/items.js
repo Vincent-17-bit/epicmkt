@@ -245,10 +245,12 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
   return rows.slice(0, limit);
 }
 
-// Items like this one from any other store, whatever its category (a bread finds every bread). Listed items of active stores only; the ranking itself
-// lives in @epicmkt/shared so the live adapter orders them identically. Anything that goes wrong returns [].
-export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}) {
+// Items of the same kind as this one (head noun, not store category) from any other store: a bread finds breads and loaves, never a
+// cake. Listed items of active stores only; the relevance gate and the ranking live in @epicmkt/shared so the live adapter orders them
+// identically. Anything that goes wrong, or a request that was aborted, returns [].
+export async function getSimilarItems(itemId, { limit = 12, origin = null, signal = null } = {}) {
   await delay();
+  if (signal?.aborted) return [];
   runSweep();
   try {
     const found = locate(itemId);
@@ -271,13 +273,14 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null } = {}
     }
     const point = (row) => ({ lat: row.business.lat, lng: row.business.lng });
     const ranked = rankSimilar({
-      current: { id: seed.id, businessId: base.id, categoryId: base.categoryId, name: seed.name, section: seed.section, price: current.price, tags: base.tags, ...point(current) },
+      current: { id: seed.id, businessId: base.id, categoryId: base.categoryId, name: seed.name, brand: seed.brand, section: seed.section, price: current.price, tags: base.tags, ...point(current) },
       candidates: pool.map((row) => ({
         id: row.item.id,
         businessId: row.business.id,
         featured: PLAN_FEATURES[row.business.plan]?.featured === true,
         categoryId: row.business.categoryId,
         name: row.item.name,
+        brand: row.item.brand,
         section: row.item.section,
         price: row.price,
         tags: row.business.tags,

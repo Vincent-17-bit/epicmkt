@@ -5,6 +5,9 @@ import styles from "./HScroller.module.css";
 
 const DRAG_THRESHOLD = 5;
 
+// Scrolling by a page or to a focused card animates unless the visitor asked for less motion.
+const scrollBehavior = () => (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth");
+
 export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "", alwaysNav = false, header = null }) {
   const rowRef = useRef(null);
   const drag = useRef({ active: false, moved: false, startX: 0, startLeft: 0 });
@@ -30,7 +33,7 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
 
   const page = (dir) => () => {
     const row = rowRef.current;
-    row?.scrollBy({ left: dir * row.clientWidth, behavior: "smooth" });
+    row?.scrollBy({ left: dir * row.clientWidth, behavior: scrollBehavior() });
   };
 
   const onPointerDown = (event) => {
@@ -72,7 +75,7 @@ export default function HScroller({ children, leftLabel, rightLabel, busy = fals
     const next = event.key === "Home" ? 0 : event.key === "End" ? focusables.length - 1 : index + (event.key === "ArrowRight" ? 1 : -1);
     const target = focusables[Math.min(focusables.length - 1, Math.max(0, next))];
     target.focus({ preventScroll: true });
-    target.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+    target.scrollIntoView({ inline: "nearest", block: "nearest", behavior: scrollBehavior() });
   };
 
   return (

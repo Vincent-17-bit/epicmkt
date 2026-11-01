@@ -14,3 +14,9 @@
 .automation-problem--degraded { border-color: var(--warning); }
 @media (max-width: 50rem) { .compose { grid-template-columns: 1fr; } }
 
+.pending { margin: var(--space-3) 0 var(--space-4); }
+.log-detail__body { margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md); white-space: pre-wrap; overflow-wrap: anywhere; }
+.log-detail { display: grid; gap: var(--space-1); margin: 0; }
+.log-detail > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: var(--space-3); }
+.log-detail dt { color: var(--text-muted); }
+.log-detail dd { margin: 0; overflow-wrap: anywhere; }

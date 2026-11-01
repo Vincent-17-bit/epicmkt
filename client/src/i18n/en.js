@@ -191,6 +191,7 @@ export default {
   "item.storeSelective": "Store Selective",
   "item.seeAll": "See all in store",
   "item.similar": "Similar items",
+  "item.similarWhy": "Other stores selling {what}",
   "item.scrollLeft": "Scroll left",
   "item.scrollRight": "Scroll right",
   "home.products": "Products",
