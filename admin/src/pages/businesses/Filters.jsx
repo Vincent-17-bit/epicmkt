@@ -54,6 +54,12 @@ export default function Filters({ value, onChange, options }) {
         <option value="">Any status</option>
         {STATUS_STATES.map(([id, meta]) => <option key={id} value={id}>{meta.label}</option>)}
       </Select>
+      <Select label="Health" value={value.health} onChange={(health) => set({ health })}>
+        <option value="">Any health</option>
+        <option value="healthy">Healthy</option>
+        <option value="watch">Watch</option>
+        <option value="at_risk">At risk</option>
+      </Select>
       <Select label="Agent" value={value.agent} onChange={(agent) => set({ agent })}>
         <option value="">Any agent</option>
         <option value="__none__">Unassigned</option>

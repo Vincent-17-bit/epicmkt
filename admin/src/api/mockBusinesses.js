@@ -1,5 +1,5 @@
 import { addDays, daysLeft, todayEat } from "../lib/time.js";
-import { healthScore } from "../lib/health.js";
+import { fixtureHealth } from "./mockHealth.js";
 import { deriveState } from "../lib/status.js";
 
 const categories = ["Groceries", "Hardware", "Fashion", "Electronics", "Beauty", "Furniture", "Pharmacy", "Auto parts", "Stationery", "Bakery"];
@@ -76,7 +76,6 @@ function build() {
       priceAgeDays,
       loginAgeDays,
       openReports,
-      healthScore: healthScore({ completeness, priceAgeDays, loginAgeDays, openReports }),
       lastLogin: new Date(Date.parse(`${addDays(today, -loginAgeDays)}T08:00:00+03:00`) + between(0, 36000000)).toISOString(),
       lastEdit: new Date(Date.parse(`${addDays(today, -between(0, 45))}T09:00:00+03:00`) + between(0, 36000000)).toISOString(),
       createdAt: `${created}T10:00:00+03:00`,
@@ -85,6 +84,17 @@ function build() {
       deleted: random() < 0.03,
       unconfirmedPayment: random() < 0.08,
     });
+
+    // Last, so the seeded random sequence above is unchanged. Fixture shape only: the real score is computed in SQL.
+    const row = list[list.length - 1];
+    row.health = fixtureHealth({
+      completeness, items: row.items, priceAgeDays, loginAgeDays, openFlags, openReports, strikes: row.strikes,
+      state: deriveState(row), ageDays: Math.round((Date.parse(`${today}T12:00:00+03:00`) - Date.parse(row.createdAt)) / 86400000),
+      serious: openFlags > 1,
+    });
+    row.healthScore = row.health.score;
+    row.healthBand = row.health.band;
+    row.healthTrend = random() < 0.75 ? between(-9, 9) : null;
   }
 
   return list;
@@ -126,6 +136,7 @@ function matchesFilters(row, state, filters) {
   if (filters.status && state !== filters.status) return false;
   if (isSet(filters.daysMin) && days < Number(filters.daysMin)) return false;
   if (isSet(filters.daysMax) && days > Number(filters.daysMax)) return false;
+  if (filters.health && row.healthBand !== filters.health) return false;
   if (filters.hasFlags && row.openFlags === 0) return false;
   if (filters.hasUnconfirmed && !row.unconfirmedPayment) return false;
   if (filters.agent === "__none__" && row.agent) return false;

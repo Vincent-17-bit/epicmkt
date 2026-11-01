@@ -97,11 +97,11 @@ export const columns = [
   {
     key: "health",
     header: "Health",
-    min: 90,
-    align: "end",
+    min: 170,
     sortKey: "healthScore",
-    render: (row) => <HealthRing score={row.healthScore} />,
+    render: (row) => <HealthRing health={row.health} score={row.healthScore} trend={row.healthTrend} showLabel />,
     accessor: (row) => row.healthScore,
+    csv: (row) => (row.healthScore === null || row.healthScore === undefined ? "" : `${row.healthScore} ${row.health?.label ?? ""}`.trim()),
   },
   {
     key: "lastLogin",
