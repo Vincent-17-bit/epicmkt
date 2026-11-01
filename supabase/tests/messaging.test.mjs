@@ -177,6 +177,29 @@ test("dev-mode result shape: in-app delivery records 'delivered', external sends
   assert.equal(m.provider_id, "dev");
 });
 
+test("the status list keeps every state: 'simulated' was added without dropping 'cancelled' (0072)", async () => {
+  const id = await queue("sms");
+  for (const status of ["queued", "sent", "delivered", "simulated", "failed", "cancelled"]) {
+    await sql(c, `update messages set status = $2 where id = $1`, [id, status]);
+    assert.equal((await row(id)).status, status);
+  }
+});
+
+test("mock-mode result: a message that was never sent is recorded 'simulated', and only that status is added", async () => {
+  const sms = await queue("sms");
+  await claim(MIDDAY);
+  assert.equal((await sql(c, `select record_message_result($1, true, 'dev', null, null, $2::timestamptz, 3, 'simulated') as r`, [sms, MIDDAY]))[0].r, "sent");
+  const m = await row(sms);
+  assert.equal(m.status, "simulated");
+  assert.equal(m.provider_id, "dev");
+  assert.ok(m.sent_at, "the attempt time is still recorded");
+
+  const other = await queue("sms");
+  await claim(MIDDAY);
+  await assert.rejects(() => sql(c, `select record_message_result($1, true, 'dev', null, null, $2::timestamptz, 3, 'bogus')`, [other, MIDDAY]), /bad_final_status/);
+  await assert.rejects(() => sql(c, `update messages set status = 'bogus' where id = $1`, [other]), /messages_status_check/);
+});
+
 // ---------------------------------------------------------------------------
 // Reminders (7 / 3 / 1 days) are idempotent through dedupe_key
 // ---------------------------------------------------------------------------

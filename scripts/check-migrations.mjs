@@ -19,7 +19,12 @@ import { fileURLToPath } from "node:url";
 export const RESERVED = {
   32: "never used (public-exception migrations were renumbered from 0024-0026 straight to 0035-0037)",
   33: "never used (see 0032)",
-  34: "never used (see 0032)"
+  34: "never used (see 0032)",
+  // 0075 briefly existed on main as 0075_business_health.sql (c852da7, merged in e9a36ce) before it was renamed to 0078
+  // (59cff62). A database may have recorded that version, so the numbers are left empty and never reused.
+  75: "left empty: the business-health migration was renamed 0075 -> 0078 after briefly being 0075 on main",
+  76: "left empty: skipped when business health moved from 0075 to 0078 (see 0075)",
+  77: "left empty: skipped when business health moved from 0075 to 0078 (see 0075)"
 };
 
 // Two files used to share 0042 and two shared 0046, which the Supabase CLI cannot record (one history row per version). They

@@ -1,7 +1,7 @@
 // Admin time display. Instants (a login, a payment, a message) are drawn in the VIEWER's time zone. Business days
 // (the day a subscription is paid until, an analytics day bucket) are Nairobi calendar days and read the same for
 // everyone. See shared/src/time.js for the rules.
-import { BUSINESS_TIME_ZONE, addCalendarDays, businessDay, calendarDaysBetween, formatBusinessDay, formatCalendarDay, formatInstant, formatTime, isCalendarDay, formatDateTime as formatStamp } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, addCalendarDays, businessDay, calendarDaysBetween, formatBusinessDay, formatCalendarDay, formatInstant, formatTime, isCalendarDay, localInputToUtcIso, zoneLabel, formatDateTime as formatStamp } from "@epicmkt/shared";
 
 export const businessZone = BUSINESS_TIME_ZONE;
 
@@ -78,3 +78,14 @@ export const businessDayShort = (value) => formatBusinessDay(value, { locale: "e
 
 /** A "YYYY-MM-DD" bucket from an analytics query: "25 Oct". */
 export const calendarDayShort = (day) => formatCalendarDay(day, { locale: "en-GB", day: "numeric", month: "short", year: undefined });
+
+// ---- Nairobi wall-clock times (anything an admin schedules for sellers) -----------------------------------------------------------
+
+/** A datetime-local value ("2026-10-25T14:00") read as Nairobi time, as a UTC ISO string. "" when empty or not a real time. */
+export const nairobiInputToUtcIso = (value) => localInputToUtcIso(value, businessZone);
+
+/** An instant drawn in Nairobi time with the zone named: "Sun, 25 Oct, 14:00 EAT". The same for every viewer. */
+export function formatNairobiDateTime(value) {
+  const text = formatInstant(value, { timeZone: businessZone, locale: "en-KE", weekday: "short", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+  return text ? `${text} ${zoneLabel(value, businessZone)}` : "";
+}

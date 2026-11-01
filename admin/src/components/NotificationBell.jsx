@@ -32,7 +32,7 @@ export default function NotificationBell() {
   const list = useQuery({ queryKey: LIST_KEY, queryFn: () => api.getNotifications({ limit: 50, unreadOnly: true }), refetchInterval: open ? 30_000 : 60_000, retry: false });
 
   const messageCount = useQuery({ queryKey: UNREAD_MESSAGES_KEY, queryFn: () => api.getUnreadMessages(), refetchInterval: 60_000, retry: false });
-  const messageList = useQuery({ queryKey: MESSAGES_KEY, queryFn: () => api.listMessages(), refetchInterval: open ? 30_000 : 60_000, retry: false, enabled: open || (messageCount.data ?? 0) > 0 });
+  const messageList = useQuery({ queryKey: MESSAGES_KEY, queryFn: () => api.listMessages({ unreadOnly: true, limit: 20 }), refetchInterval: open ? 30_000 : 60_000, retry: false, enabled: open || (messageCount.data ?? 0) > 0 });
 
   const close = useCallback(() => setOpen(false), []);
   useDismiss(boxRef, open, close, buttonRef);

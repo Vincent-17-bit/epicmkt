@@ -131,14 +131,14 @@ Deno.test("real schema: quiet hours delay promotional SMS but not transactional 
   assertEquals(sentSms.length, 2);
 });
 
-Deno.test("real schema: dev mode sends nothing and records provider_id 'dev'", async () => {
+Deno.test("real schema: dev mode sends nothing, records 'simulated' and provider_id 'dev'", async () => {
   await seed();
   await adminMessage(deps())(post({ target: { businessIds: [BIZ_A] }, channels: { sms: true, email: true }, body: "Hello", subject: "S", transactional: true }, as("owner")));
   const res = await (await dispatchMessages(deps({ dev: true }))(post({}, cron))).json();
-  assertEquals([res.dev, res.sent], [true, 2]);
+  assertEquals([res.dev, res.sent, res.simulated], [true, 0, 2]);
   assertEquals([sentSms.length, sentEmail.length], [0, 0]);
   const rows = await q(`select status, provider_id, attempts from public.messages order by channel`);
-  assertEquals(rows.map((r) => [r.status, r.provider_id, r.attempts]), [["sent", "dev", 1], ["sent", "dev", 1]]);
+  assertEquals(rows.map((r) => [r.status, r.provider_id, r.attempts]), [["simulated", "dev", 1], ["simulated", "dev", 1]]);
 });
 
 Deno.test("real schema: a failing message gets 3 attempts, then 'failed' and one admin notification", async () => {

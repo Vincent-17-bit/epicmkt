@@ -27,3 +27,15 @@ for (const name of cronFunctions) {
     assert.ok(runbook.includes(`\`${name}\``), `docs/cron-runbook.md must describe ${name}`);
   });
 }
+
+// Admin > Automation watches, pauses and runs exactly the jobs in admin_job_names(). A job that is scheduled but missing
+// from that list cannot be seen or stopped from the admin (this was true of proofs-purge and media-gc).
+test("the admin's job list (admin_job_names) is exactly the set of jobs schedule.sql schedules", () => {
+  const dir = join(root, "migrations");
+  const latest = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()
+    .map((f) => readFileSync(join(dir, f), "utf8"))
+    .filter((text) => /function public\.admin_job_names\(\)/.test(text)).pop();
+  const listed = [...latest.match(/select array\[([^\]]+)\]/)[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+  const scheduled = [...schedule.matchAll(/cron\.schedule\(\s*'([a-z-]+)'/g)].map((m) => m[1]);
+  assert.deepEqual([...listed].sort(), [...scheduled].sort());
+});

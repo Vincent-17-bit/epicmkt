@@ -5,14 +5,6 @@ import { DEFAULT_TAB, PAGE_SIZE, searchFilter, tabById, tabSortAscending } from 
 import { ACTION_TEXT, ApiError, toApiError } from "./errors.js";
 import { PROOF_MAX_BYTES, PROOF_MAX_FILES, PROOF_TYPES } from "@epicmkt/shared";
 
-const notConfigured = () => {
-  throw new Error("Live data for this page is not connected yet. You are signed in; the queries for this page have not been built.");
-};
-
-// Still behind the "not connected" message so a page never shows made-up data. Every bulk action on the Businesses page
-// and its undo are live below, as are the Payments page and the Command Center.
-export const getBusinesses = notConfigured;
-
 const client = () => {
   if (!supabase) throw new ApiError("unauthorized", "Supabase is not configured.");
   return supabase;
@@ -410,12 +402,32 @@ const toMessage = (m, files) => ({
   attachments: files.filter((f) => f.message_id === m.id).map((f) => ({ id: f.id, name: f.original_name, mime: f.mime, size: f.size_bytes, path: f.path })),
 });
 
-export async function listMessages({ businessId = null } = {}) {
+// One page of conversations (one row per business, newest activity first) from migration 0080. The server applies the tab
+// (`filter`: all | unread | waiting | resolved) and the search (name, seller ID, subject or body), and returns the size of
+// every tab for that search in `counts`. `unread` per row and `unreadTotal` use the same rule as the sidebar badge
+// (admin_unread_messages), so they always agree with it.
+export async function listConversations({ page = 0, pageSize = 30, filter = "all", search = "" } = {}) {
+  const data = (await detailRpc("admin_conversations_page", { ...pageArgs({ page, pageSize }), p_filter: filter, p_search: search.trim() || null })) ?? {};
+  return {
+    total: data.total ?? 0,
+    unreadTotal: data.unread_total ?? 0,
+    counts: { all: 0, unread: 0, waiting: 0, resolved: 0, ...(data.counts ?? {}) },
+    rows: (data.rows ?? []).map((r) => ({
+      id: r.business_id, name: r.business_name ?? "Business", sellerId: r.seller_id ?? "", lastAt: r.last_at, lastSubject: r.last_subject ?? "Message",
+      messageCount: r.message_count ?? 0, unread: r.unread ?? 0, waiting: !!r.waiting, resolved: !!r.resolved,
+    })),
+  };
+}
+
+// Messages are loaded for ONE business (the open conversation), or, with unreadOnly, just the unread seller messages
+// across businesses (what the bell lists). There is no "everything, newest 1000" any more.
+export async function listMessages({ businessId = null, unreadOnly = false, limit = 1000 } = {}) {
   const db = client();
   const build = (hidden) => {
     let q = db.from("messages").select("*, businesses(name, seller_id)").eq("channel", "in_app").not("business_id", "is", null);
     if (hidden) q = q.is("admin_hidden_at", null);
-    q = q.order("created_at", { ascending: false }).limit(1000);
+    if (unreadOnly) q = q.eq("sender", "seller").is("admin_read_at", null);
+    q = q.order("created_at", { ascending: false }).limit(limit);
     return businessId ? q.eq("business_id", businessId) : q;
   };
   let fq = db.from("message_attachments").select("*").order("created_at", { ascending: false }).limit(1000);
@@ -632,6 +644,8 @@ export const listPendingBroadcasts = () => detailRpc("admin_pending_broadcasts",
 export const cancelBroadcast = ({ batchId, reason = null }) => detailRpc("admin_cancel_broadcast", { p_batch: batchId, p_reason: reason });
 export const setTemplateEnabled = ({ key, enabled }) => detailRpc("admin_set_template_enabled", { p_key: key, p_enabled: enabled });
 export const deleteTemplate = (key) => detailRpc("admin_delete_template", { p_key: key });
+// Which mode the edge functions really run in: "live" sends SMS and email, "mock" sends nothing (rows become "simulated").
+export const getMessagingMode = () => callFunction("admin-messaging-mode", {});
 export const retryMessage = (id) => detailRpc("admin_retry_message", { p_id: id });
 export const retryFailedMessages = ({ days = 7 } = {}) => detailRpc("admin_retry_failed_messages", { p_days: days });
 export const listTemplates = () => detailRpc("admin_templates_list", {});

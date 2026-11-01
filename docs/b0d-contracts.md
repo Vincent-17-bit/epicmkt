@@ -49,7 +49,7 @@ setting means no quiet hours (nothing is held back).
 lease simply expires.
 
 **Dev mode**: when the messaging mode is `mock` (default whenever `APP_ENV` is not `production`, or `MESSAGING_MODE=mock`)
-`dispatch-messages` sends nothing and marks SMS/email rows `sent` with `provider_id = 'dev'`. In `live` mode (the
+`dispatch-messages` sends nothing and records SMS/email rows as `simulated` (never `sent`) with `provider_id = 'dev'` (migration 0079). In `live` mode (the
 default in production) it calls Africa's Talking (SMS) and Resend (email); a missing provider secret is a failed
 attempt (`sms_not_configured` / `email_not_configured`), never a fake success.
 In-app rows are always recorded `delivered` with `provider_id = 'in_app'` (no provider involved).

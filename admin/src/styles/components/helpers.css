@@ -32,6 +32,13 @@
   background: var(--surface);
 }
 
+.banner--warning {
+  border-color: var(--warning);
+  background: var(--warning-tint);
+  color: var(--text);
+  margin-bottom: var(--space-3);
+}
+
 .kpi-card--link {
   display: block;
   color: inherit;
