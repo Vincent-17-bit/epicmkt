@@ -19,6 +19,9 @@ export interface CloudinaryClient {
   signUpload(publicId: string): Promise<SignedUpload>;
   verifyResponse(args: { publicId: string; version: number | string; signature: string }): Promise<boolean>;
   destroy(publicIds: string[]): Promise<Destroyed>;
+  // A second, independent copy of a stored picture under a new id (Duplicate item). It copies the stored master as it is, with no
+  // transformation, and never overwrites. Resolves false rather than throwing, so one bad picture cannot stop the others.
+  copy(fromPublicId: string, toPublicId: string): Promise<boolean>;
 }
 
 const API = "https://api.cloudinary.com/v1_1";
@@ -52,6 +55,23 @@ export function makeCloudinary(cfg: CloudinaryConfig, doFetch: typeof fetch = fe
       };
       const signature = await signParams(params, cfg.apiSecret);
       return { uploadUrl: `${API}/${cfg.cloudName}/image/upload`, fields: { ...params, api_key: cfg.apiKey, signature } };
+    },
+    async copy(fromPublicId, toPublicId) {
+      try {
+        // Cloudinary fetches the source from its own delivery URL; `file` is never part of the signature.
+        const params: Record<string, string> = { overwrite: "false", public_id: toPublicId, timestamp: String(Math.floor(now() / 1000)) };
+        const body = new URLSearchParams({
+          ...params,
+          file: `https://res.cloudinary.com/${cfg.cloudName}/image/upload/${fromPublicId}`,
+          api_key: cfg.apiKey,
+          signature: await signParams(params, cfg.apiSecret),
+        });
+        const res = await doFetch(`${API}/${cfg.cloudName}/image/upload`, { method: "POST", body, signal: AbortSignal.timeout(30_000) });
+        const data = await res.json().catch(() => ({}));
+        return res.ok && data?.public_id === toPublicId;
+      } catch {
+        return false;
+      }
     },
     verifyResponse: ({ publicId, version, signature }) => verifyResponseSignature({ publicId, version, signature }, cfg.apiSecret),
     async destroy(publicIds) {

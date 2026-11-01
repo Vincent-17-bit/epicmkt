@@ -200,6 +200,17 @@ test("details: a duplicate copies the new fields", async () => {
   assert.deepEqual([copy.brand, copy.highlights, copy.includes], ["Nike", [{ title: "A", text: "B" }], ["Tag"]]);
 });
 
+test("a duplicate gets its own copies of the photos and videos, in the same order, and the original keeps its own", async () => {
+  const { find } = await signedInMock();
+  const before = await find("it-fade");
+  assert.ok(before.imagePaths.length > 0);
+  const copy = await find(await mock.duplicateItem("it-fade"));
+  assert.equal(copy.imagePaths.length, before.imagePaths.length);
+  assert.equal(copy.imageCount, before.imageCount);
+  for (const p of copy.imagePaths) assert.ok(!before.imagePaths.includes(p), `${p} is shared`);
+  assert.deepEqual(await find("it-fade"), before);
+});
+
 test("details: the mock refuses what the database refuses, specs included, and keeps the item as it was", async () => {
   const { find, form } = await signedInMock();
   const before = await find("it-fade");
