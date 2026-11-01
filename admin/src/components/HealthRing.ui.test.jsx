@@ -68,6 +68,37 @@ describe("HealthRing", () => {
     await waitFor(() => expect(trigger).toHaveAttribute("aria-expanded", "false"));
   });
 
+  it("says why in the row without hovering: the weakest part beside the chip", () => {
+    render(<HealthRing health={{ ...health, score: 66, band: "watch", label: "Watch", capped: false, subs: { profile: 88, freshness: 60, activity: 12, trust: 100 } }} trend={null} showLabel />);
+    const trigger = screen.getByRole("button");
+    expect(trigger).toHaveTextContent("Watch");
+    expect(trigger).toHaveTextContent("Activity 12");
+  });
+
+  it("says Capped instead of a part when a hard cap holds the score down", () => {
+    render(<HealthRing health={health} trend={-6} showLabel />);
+    expect(screen.getByRole("button")).toHaveTextContent("Capped");
+    expect(screen.getByRole("button")).not.toHaveTextContent("Activity 0");
+  });
+
+  it("says No trend yet when there is no week-old snapshot, and not when there is one", () => {
+    const { rerender } = render(<HealthRing health={health} trend={null} showLabel />);
+    expect(screen.getByRole("button")).toHaveTextContent("No trend yet");
+    rerender(<HealthRing health={health} trend={0} showLabel />);
+    expect(screen.getByRole("button")).toHaveTextContent("Steady");
+    expect(screen.getByRole("button")).not.toHaveTextContent("No trend yet");
+    rerender(<HealthRing health={health} trend={-6} showLabel />);
+    expect(screen.getByRole("button")).toHaveTextContent("−6");
+    expect(screen.getByRole("button")).not.toHaveTextContent("No trend yet");
+  });
+
+  it("shows no hint and no trend line for an unscored business, and no hint for a Healthy one", () => {
+    const { rerender } = render(<HealthRing score={null} showLabel />);
+    expect(screen.getByRole("img")).not.toHaveTextContent("No trend yet");
+    rerender(<HealthRing health={{ ...health, score: 90, band: "healthy", label: "Healthy", capped: false, weakest: null }} trend={2} showLabel />);
+    expect(screen.getByRole("button")).not.toHaveTextContent(/Capped|Activity|Prices|Profile|Trust/);
+  });
+
   it("is a portal on the body, so a scrolling table cannot clip it", () => {
     const { container } = render(<div style={{ overflow: "auto" }}><HealthRing health={health} /></div>);
     fireEvent.mouseEnter(screen.getByRole("button"));

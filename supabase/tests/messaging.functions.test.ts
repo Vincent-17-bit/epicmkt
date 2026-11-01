@@ -230,6 +230,33 @@ Deno.test("daily-lifecycle: a failing health snapshot never fails the billing ru
   }
 });
 
+Deno.test("daily-lifecycle: a failing health snapshot is reported with its reason, in the response and the audit row", async () => {
+  const cases: [() => unknown, string][] = [
+    [() => ({ data: null, error: { message: "permission denied for function snapshot_business_health" } }), "permission denied for function snapshot_business_health"],
+    [() => { throw new Error("fetch failed"); }, "fetch failed"],
+    [() => ({ data: null, error: null }), "unexpected_result"],
+    [() => ({ data: null, error: { message: "x".repeat(1000) } }), "x".repeat(300)],
+  ];
+  for (const [snapshot, reason] of cases) {
+    const w = world();
+    w.rpc.queue_billing_notices = () => ({ data: { inApp: 1, queued: 1 }, error: null });
+    w.rpc.snapshot_business_health = snapshot as never;
+    const res = await dailyLifecycle(makeDeps(w))(post({}, cron));
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals([body.ok, body.healthSnapshots, body.healthSnapshotError], [true, null, reason]);
+    assertEquals(w.tables.audit_log[0].after.healthSnapshotError, reason);
+  }
+});
+
+Deno.test("daily-lifecycle: a healthy snapshot reports no error", async () => {
+  const w = world();
+  w.rpc.queue_billing_notices = () => ({ data: { inApp: 1, queued: 1 }, error: null });
+  w.rpc.snapshot_business_health = () => ({ data: 7, error: null });
+  const body = await (await dailyLifecycle(makeDeps(w))(post({}, cron))).json();
+  assertEquals([body.healthSnapshots, body.healthSnapshotError], [7, null]);
+});
+
 Deno.test("daily-lifecycle: a database error is a 500 and writes no audit row", async () => {
   const w = world();
   w.rpc.queue_billing_notices = () => ({ data: null, error: { message: "x" } });

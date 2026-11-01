@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { BANDS, describeHealth, readHealth, trendInfo } from "../lib/healthView.js";
+import { BANDS, NO_TREND, describeHealth, readHealth, trendInfo, weakHint } from "../lib/healthView.js";
 import HealthCard from "./HealthCard.jsx";
 
 const STROKE = 4;
@@ -37,6 +37,7 @@ export default function HealthRing({ health: given, score, trend = null, size = 
   const band = BANDS[health.band] ?? BANDS.none;
   const rich = interactive && Boolean(health.subs) && value !== null;
   const t = trendInfo(trend);
+  const hint = weakHint(health);
 
   const id = useId();
   const button = useRef(null);
@@ -103,11 +104,14 @@ export default function HealthRing({ health: given, score, trend = null, size = 
       </span>
       {showLabel ? (
         <span className="health-ring__text">
-          <span className={`health-chip health-chip--${band.tone}`}>{health.label}</span>
-          {t.dir !== "none" ? (
-            <span className={`health-trend health-trend--${t.dir}`}>
-              <span aria-hidden="true">{t.dir === "up" ? "▲" : t.dir === "down" ? "▼" : "●"} </span>
-              {t.text}
+          <span className="health-ring__line">
+            <span className={`health-chip health-chip--${band.tone}`}>{health.label}</span>
+            {hint ? <span className="health-hint" title={hint.title}>{hint.text}</span> : null}
+          </span>
+          {value !== null ? (
+            <span className={`health-trend health-trend--${t.dir}`} title={t.dir === "none" ? NO_TREND.title : undefined}>
+              {t.dir !== "none" ? <span aria-hidden="true">{t.dir === "up" ? "▲" : t.dir === "down" ? "▼" : "●"} </span> : null}
+              {t.dir === "none" ? NO_TREND.text : t.text}
             </span>
           ) : null}
         </span>

@@ -39,6 +39,19 @@ export function weakestPart(health) {
   return part ? { ...part, value: health.subs[part.id] } : null;
 }
 
+/**
+ * The short reason shown beside the band chip in a table row, so nobody has to hover to learn why a business is not Healthy.
+ * A hard cap (suspended, expired, unanswered flag, strikes) is the real reason when there is one; otherwise the weakest part
+ * with its 0 to 100 value ("Activity 12"). Healthy, unscored and part-less (older server) rows have nothing to say: null.
+ */
+export function weakHint(health) {
+  if (!health || health.score === null || health.score === undefined || health.band === "healthy" || health.band === "none") return null;
+  if (health.capped) return { text: "Capped", title: "A hard cap holds this score down; open the breakdown for the reason" };
+  const weak = weakestPart(health);
+  if (!weak || !Number.isFinite(weak.value)) return null;
+  return { text: `${weak.label} ${weak.value}`, title: `Weakest part: ${weak.label.toLowerCase()} at ${weak.value} out of 100` };
+}
+
 /** Change against about a week ago. `trend` is a number of points, or null while there is no snapshot that old. */
 export function trendInfo(trend) {
   if (!Number.isFinite(trend)) return { dir: "none", text: "", label: "No trend yet" };
@@ -49,6 +62,9 @@ export function trendInfo(trend) {
     ? { dir: "up", text: `+${points}`, label: `Up ${points} ${unit} on a week ago` }
     : { dir: "down", text: `−${points}`, label: `Down ${points} ${unit} on a week ago` };
 }
+
+/** What the table row says when there is no trend: absent is not the same as steady, so it says so. */
+export const NO_TREND = { text: "No trend yet", title: "No trend yet: there is no health snapshot from about a week ago to compare with" };
 
 /** One sentence for screen readers and the title of the ring. */
 export function describeHealth(health, trend) {

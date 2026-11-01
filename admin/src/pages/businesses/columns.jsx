@@ -97,7 +97,7 @@ export const columns = [
   {
     key: "health",
     header: "Health",
-    min: 170,
+    min: 210,
     sortKey: "healthScore",
     render: (row) => <HealthRing health={row.health} score={row.healthScore} trend={row.healthTrend} showLabel />,
     accessor: (row) => row.healthScore,
