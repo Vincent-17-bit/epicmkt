@@ -157,7 +157,7 @@ function Menu({ label, children }) {
   );
 }
 
-export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggle, onConfirm, onMove, onSoldOut, onRestock, canMove, isFirst, isLast, busy }) {
+export function Actions({ item, selected, onSelect, onEdit, onInsights, onDuplicate, onToggle, onConfirm, onMove, onSoldOut, onRestock, canMove, isFirst, isLast, busy }) {
   const locked = item.removed;
   const adminHidden = item.visibility === "hidden_admin";
   const priced = ["fixed", "from", "range"].includes(item.priceType) && typeof item.price === "number";
@@ -177,6 +177,7 @@ export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggl
           {(close) => (
             <>
               {!item.soldOut && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onSoldOut(item); }} disabled={locked || busy}>Mark out of stock</button>}
+              {onInsights && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onInsights(item); }} disabled={locked}>Views, deals and history</button>}
               <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onDuplicate(item); }} disabled={locked || busy}>Duplicate</button>
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
@@ -66,6 +66,13 @@ export default function Business() {
     const timer = setTimeout(() => setHit(null), 2500);
     return () => clearTimeout(timer);
   }, [data, sectionId]);
+
+  const viewedBusiness = useRef(null);
+  useEffect(() => {
+    if (!data?.id || viewedBusiness.current === data.id) return;
+    viewedBusiness.current = data.id;
+    logContactEvent({ businessId: data.id, type: "view" });
+  }, [data?.id]);
 
   useEffect(() => {
     if (data && location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();

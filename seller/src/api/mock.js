@@ -1,4 +1,4 @@
-import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
+import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -832,6 +832,70 @@ export const duplicateItem = async (id) => {
   const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: 0, imagePaths: [], hasVideo: false, createdAt: now, updatedAt: now, priceConfirmedAt: now };
   bill.items.push(copyOf);
   return copyOf.id;
+};
+// ---- Performance, History, Deals (demo data; the real numbers come from the rollup tables in Supabase) ----
+const METRICS = ["view", "whatsapp", "call", "directions"];
+const WEIGHT = { view: 9, whatsapp: 3, call: 2, directions: 1 };
+const dayStamp = (d) => d.toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
+// A fixed pattern per day so charts and totals are stable between renders.
+const demoCount = (type, dayIndex, salt) => Math.max(0, Math.round(WEIGHT[type] * (1 + Math.sin(dayIndex / 5 + salt)) * (1 + (dayIndex % 7 === 5 ? 0.6 : 0))));
+const rangeStart = (range, today, first) => {
+  const months = { "1m": 1, "6m": 6, "12m": 12, "24m": 24, "36m": 36 }[range];
+  if (range === "7d") return addDays(today, -6);
+  if (range === "all") return first;
+  const d = new Date(today);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return addDays(d, 1);
+};
+export const getPerformance = async (range = "1m", itemId = null) => {
+  signedIn();
+  await wait();
+  if (!isPerformanceRange(range)) throw new ApiError("invalid_range");
+  if (itemId && !bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  const today = new Date(`${dayStamp(clockNow())}T00:00:00Z`);
+  const first = addDays(today, -120);
+  const from = rangeStart(range, today, first);
+  const salt = itemId ? [...itemId].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 7 : 0;
+  const span = Math.round((today - from) / 86400000);
+  const grain = span <= 62 ? "day" : span <= 400 ? "week" : "month";
+  const totals = { view: 0, whatsapp: 0, call: 0, directions: 0 };
+  const buckets = new Map();
+  for (let d = new Date(from); d <= today; d = addDays(d, 1)) {
+    const idx = Math.round((d - first) / 86400000);
+    const key = grain === "day" ? dayStamp(d) : grain === "week" ? dayStamp(addDays(d, -((d.getUTCDay() + 6) % 7))) : `${d.toISOString().slice(0, 7)}-01`;
+    const b = buckets.get(key) ?? { bucket: key, view: 0, whatsapp: 0, call: 0, directions: 0 };
+    for (const m of METRICS) {
+      const n = idx < 0 ? 0 : Math.round(demoCount(m, idx, salt) / (itemId ? 3 : 1));
+      b[m] += n;
+      totals[m] += n;
+    }
+    buckets.set(key, b);
+  }
+  return normalizePerformance({ range, grain, from: dayStamp(from), to: dayStamp(today), totals, series: [...buckets.values()] });
+};
+const demoHistory = (item) => {
+  const fields = [["price", "450", "500"], ["name", "Fade", item.name], ["availability", "available", "limited_stock"], ["price", "500", "550"], ["description", "", "Fresh and clean."], ["price", "550", "600"], ["section", "", item.section ?? "General"], ["visible", "false", "true"]];
+  const base = new Date(item.updatedAt ?? clockNow()).getTime();
+  return fields.map(([field, oldValue, newValue], n) => ({ id: n + 1, field, old_value: oldValue, new_value: newValue, actor_role: "seller", created_at: new Date(base - n * 86400000 * 3).toISOString() }));
+};
+export const getItemHistory = async (itemId) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId);
+  if (!item) throw new ApiError("item_not_found");
+  const limit = limitsFor(bill.business.planKey, null).historyEntries;
+  const all = demoHistory(item);
+  const entries = limit == null ? all : all.slice(0, limit);
+  return { limit, total: all.length, locked: limit != null && all.length > limit, entries };
+};
+export const getItemDeals = async (itemId) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  if (!limitsFor(bill.business.planKey, null).flashAttribution) return { locked: true, flash: [], offers: [] };
+  const flash = bill.flash.filter((f) => f.itemId === itemId || f.item_id === itemId).map((f, n) => ({ id: f.id, headline: f.headline ?? null, status: f.status, starts_at: f.startsAt ?? f.starts_at, ends_at: f.endsAt ?? f.ends_at, view: 12 + n, whatsapp: 4, call: 2, directions: 1 }));
+  return { locked: false, flash, offers: [] };
 };
 export const importItems = async (rows) => {
   signedIn();

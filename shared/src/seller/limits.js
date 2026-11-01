@@ -1,6 +1,8 @@
 export const PLAN_LIMIT_DEFAULTS = {
-  standard: { galleryPhotos: 5, activeOffers: 8, flashSalesPerMonth: 3, flashSalesConcurrent: 1 },
-  premium: { galleryPhotos: 20, activeOffers: null, flashSalesPerMonth: 10, flashSalesConcurrent: 5 },
+  // historyEntries: how many item History entries are shown (null = all). flashAttribution: whether the panel attributes
+  // views and taps to flash sales and offers. Read both through limitsFor(), never with an inline plan check.
+  standard: { galleryPhotos: 5, activeOffers: 8, flashSalesPerMonth: 3, flashSalesConcurrent: 1, historyEntries: 5, flashAttribution: false },
+  premium: { galleryPhotos: 20, activeOffers: null, flashSalesPerMonth: 10, flashSalesConcurrent: 5, historyEntries: null, flashAttribution: true },
 };
 
 export const planOf = (plan) => (plan === "premium" ? "premium" : "standard");

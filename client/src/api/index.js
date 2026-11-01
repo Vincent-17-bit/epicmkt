@@ -4,6 +4,7 @@ import * as flashApi from "./flash/index.js";
 import * as browse from "./browse/index.js";
 import * as offersApi from "./offers/index.js";
 import * as products from "./products/index.js";
+import { isLive } from "./flash/mode.js";
 
 export const getCategories = () => browse.getCategories();
 export const getCounties = () => browse.getCounties();
@@ -26,7 +27,8 @@ const quiet = (fn) => {
     return { ok: false };
   }
 };
-export const logContactEvent = (event) => quiet(() => backend.logContactEvent(event));
+// Live: stored in Supabase (log_business_event), which feeds the seller Performance panel. Otherwise the in-memory backend.
+export const logContactEvent = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logBusinessEvent(event)) : backend.logContactEvent(event)));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => browse.getTowns();
