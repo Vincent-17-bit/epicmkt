@@ -1,4 +1,4 @@
--- 0079_business_events.sql
+-- 0082_business_events.sql
 -- Views and contact taps, stored for real, so the seller Performance panel reads numbers that survive a restart.
 --
 -- Until now logContactEvent only bumped an in-memory mock. This adds:
