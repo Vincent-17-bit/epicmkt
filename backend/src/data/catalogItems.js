@@ -92,7 +92,59 @@ const kitchen = [
   item("Kitchen knife set 6 pcs", 1600, "Utensils", "Six knives with a block.", [["Pieces", "6"], ["Blade", "Stainless steel"], ["Handle", "Plastic"], ["Block", "Included"], ["Care", "Hand wash"], ["Warranty", "3 months"]])
 ];
 
-const PACKS = { barbershops: barber, salons: salon, gyms: gym, chemists: chemist, agrovets: agro, hardware: kitchen };
+
+const phonesPack = [
+  item("Tecno Spark 20 128GB", 15500, "Phones", "Dual SIM smartphone with a large display and all-day battery.", [["Storage", "128 GB"], ["RAM", "8 GB"], ["Screen", "6.6 inch HD+"], ["Battery", "5000 mAh"], ["Warranty", "1 year"], ["Condition", "New, sealed"]], { brand: "Tecno" }),
+  item("Samsung Galaxy A15 128GB", 21500, "Phones", "Mid-range Samsung with AMOLED screen and 50MP camera.", [["Storage", "128 GB"], ["RAM", "4 GB"], ["Screen", "6.5 inch Super AMOLED"], ["Camera", "50 MP main"], ["Warranty", "1 year"], ["Condition", "New, sealed"]], { brand: "Samsung" }),
+  item("Infinix Hot 40i 128GB", 13200, "Phones", "Budget phone with a 90Hz screen and fast charging.", [["Storage", "128 GB"], ["RAM", "4 GB"], ["Screen", "6.56 inch 90Hz"], ["Battery", "5000 mAh"], ["Warranty", "1 year"]], { brand: "Infinix" }),
+  item("Refurbished iPhone 11 64GB", 32000, "Phones", "Tested iPhone 11, battery health above 85 percent.", [["Storage", "64 GB"], ["Condition", "Refurbished, grade A"], ["Battery health", "85 percent or more"], ["Warranty", "3 months"], ["Includes", "Charger and cable"]], { brand: "Apple", availability: "limited" }),
+  item("Fast charger 25W with cable", 1200, "Chargers and cables", "USB-C wall charger with a braided cable.", [["Power", "25 W"], ["Port", "USB-C"], ["Cable length", "1 metre"], ["Compatible", "Most Android phones"], ["Warranty", "6 months"]]),
+  item("Power bank 20000mAh", 2800, "Chargers and cables", "Two-port power bank with a battery level display.", [["Capacity", "20000 mAh"], ["Ports", "2 USB, 1 USB-C"], ["Charging", "Fast charge 18 W"], ["Display", "Digital level"], ["Warranty", "6 months"]]),
+  item("Tempered glass screen protector", 300, "Cases and protectors", "9H glass protector, fitted free in the shop.", [["Hardness", "9H"], ["Fitting", "Free in shop"], ["Finish", "Clear"], ["Compatible", "Most popular models"], ["Replacement", "Ask the seller"]]),
+  item("Silicone phone case", 450, "Cases and protectors", "Soft shock-absorbing case in assorted colours.", [["Material", "Silicone"], ["Colours", "Assorted"], ["Protection", "Edge and corner"], ["Compatible", "Choose your model"], ["Fit", "Snug"]]),
+  item("Wireless earbuds", 2200, "Audio", "Bluetooth earbuds with a charging case.", [["Bluetooth", "5.3"], ["Battery", "6 hours plus case"], ["Case", "Charging case included"], ["Microphone", "Built in"], ["Warranty", "6 months"]]),
+  item("Screen replacement fitting", 1500, "Repairs", "Screen fitting for most common models, ready in hours.", [["Time", "1 to 3 hours"], ["Parts", "Quality replacement screens"], ["Warranty", "30 days"], ["Price", "Fitting only, screen extra"], ["Booking", "Walk-in"]], { kind: "service" })
+];
+
+const electronicsPack = [
+  item("HP 15 laptop Core i5 8GB 512GB", 62000, "Laptops", "Everyday laptop for work and study.", [["Processor", "Intel Core i5"], ["RAM", "8 GB"], ["Storage", "512 GB SSD"], ["Screen", "15.6 inch"], ["Warranty", "1 year"], ["Condition", "New"]], { brand: "HP" }),
+  item("Dell Latitude refurbished Core i5", 38000, "Laptops", "Business laptop, tested and cleaned.", [["Processor", "Intel Core i5"], ["RAM", "8 GB"], ["Storage", "256 GB SSD"], ["Condition", "Refurbished, grade A"], ["Warranty", "6 months"]], { brand: "Dell" }),
+  item("Lenovo IdeaPad Celeron 4GB", 29500, "Laptops", "Light laptop for browsing, typing and online classes.", [["Processor", "Intel Celeron"], ["RAM", "4 GB"], ["Storage", "256 GB SSD"], ["Screen", "14 inch"], ["Warranty", "1 year"]], { brand: "Lenovo" }),
+  item("24 inch LED monitor", 14500, "Monitors", "Full HD monitor with HDMI and VGA.", [["Size", "24 inch"], ["Resolution", "1920 x 1080"], ["Ports", "HDMI, VGA"], ["Panel", "IPS"], ["Warranty", "1 year"]]),
+  item("Epson EcoTank L3250 printer", 28500, "Printers", "Refillable ink printer, scanner and copier with Wi-Fi.", [["Functions", "Print, scan, copy"], ["Wi-Fi", "Yes"], ["Ink", "Refillable tanks"], ["Warranty", "1 year"], ["Includes", "Starter ink set"]], { brand: "Epson" }),
+  item("Wireless keyboard and mouse combo", 1900, "Accessories", "Compact wireless set with a USB receiver.", [["Connection", "2.4 GHz USB"], ["Battery", "AA, included"], ["Layout", "Full size"], ["Compatible", "Windows and Mac"], ["Warranty", "6 months"]]),
+  item("Flash disk 64GB", 900, "Accessories", "USB 3.0 flash disk.", [["Capacity", "64 GB"], ["Interface", "USB 3.0"], ["Speed", "Up to 100 MB/s"], ["Warranty", "6 months"]]),
+  item("43 inch smart TV", 32500, "TVs", "Full HD smart TV with apps and Wi-Fi.", [["Size", "43 inch"], ["Resolution", "Full HD"], ["Smart", "Android TV"], ["Ports", "3 HDMI, 2 USB"], ["Warranty", "1 year"], ["Delivery", "Available"]]),
+  item("Wi-Fi router dual band", 4200, "Networking", "Dual-band router for home and small offices.", [["Bands", "2.4 and 5 GHz"], ["Speed", "AC1200"], ["Ports", "4 LAN"], ["Setup", "Free in town"], ["Warranty", "1 year"]]),
+  item("Laptop service and cleaning", 1500, "Repairs", "Dust clean, thermal paste and software check.", [["Time", "1 day"], ["Includes", "Cleaning and thermal paste"], ["Checks", "Disk and battery"], ["Warranty", "14 days"], ["Booking", "Walk-in"]], { kind: "service" })
+];
+
+const fashionPack = [
+  item("Ladies Ankara dress", 2200, "Dresses and tops", "Knee-length Ankara dress in bright prints.", [["Fabric", "Cotton Ankara"], ["Sizes", "S to XXL"], ["Length", "Knee length"], ["Care", "Hand wash"], ["Condition", "New"]]),
+  item("Ladies office blouse", 1200, "Dresses and tops", "Smart blouse for the office.", [["Fabric", "Polyester blend"], ["Sizes", "S to XL"], ["Colours", "White, blue, black"], ["Care", "Machine wash"], ["Condition", "New"]]),
+  item("Men's slim fit jeans", 1800, "Trousers and jeans", "Stretch denim jeans.", [["Fabric", "Stretch denim"], ["Waist sizes", "28 to 40"], ["Fit", "Slim"], ["Colours", "Blue, black"], ["Condition", "New"]]),
+  item("Men's official shoes leather", 3800, "Footwear", "Lace-up leather shoes for work and events.", [["Material", "Leather"], ["Sizes", "39 to 46"], ["Colours", "Black, brown"], ["Sole", "Rubber"], ["Condition", "New"]]),
+  item("Women's sandals", 1300, "Footwear", "Flat comfortable sandals.", [["Material", "Synthetic leather"], ["Sizes", "36 to 42"], ["Colours", "Black, tan, gold"], ["Sole", "Non-slip"], ["Condition", "New"]]),
+  item("Canvas sneakers", 2000, "Footwear", "Everyday canvas sneakers for men and women.", [["Material", "Canvas"], ["Sizes", "36 to 45"], ["Colours", "White, black, navy"], ["Sole", "Rubber"], ["Condition", "New"]]),
+  item("Kids school shoes", 1500, "Footwear", "Hard-wearing black school shoes.", [["Sizes", "28 to 38"], ["Colour", "Black"], ["Material", "Synthetic leather"], ["Sole", "Non-slip"], ["Condition", "New"]]),
+  item("Ladies handbag", 1600, "Bags and accessories", "Medium handbag with shoulder strap.", [["Material", "Synthetic leather"], ["Size", "Medium"], ["Colours", "Black, brown, red"], ["Pockets", "Inside zip pocket"], ["Condition", "New"]]),
+  item("Mitumba jackets", 600, "Mitumba", "Sorted second-hand jackets and sweaters.", [["Condition", "Second-hand, sorted"], ["Sizes", "Mixed"], ["Types", "Jackets and sweaters"], ["New stock", "Tuesday and Friday"]], { availability: "limited" })
+];
+
+const homeKitchenPack = [
+  item("Non-stick sufuria set 5 pcs", 3200, "Cookware", "Five non-stick sufurias with glass lids.", [["Pieces", "5 with lids"], ["Material", "Aluminium, non-stick"], ["Sizes", "16 to 28 cm"], ["Use", "Gas and electric"], ["Warranty", "3 months"]]),
+  item("Electric kettle 1.8L", 1600, "Appliances", "Cordless kettle with auto shut-off.", [["Capacity", "1.8 litres"], ["Power", "1800 W"], ["Safety", "Auto shut-off"], ["Body", "Stainless steel"], ["Warranty", "1 year"]], { brand: "Ramtons" }),
+  item("Blender 1.5L", 4500, "Appliances", "Strong blender with two speeds and a pulse button.", [["Capacity", "1.5 litres"], ["Power", "500 W"], ["Jar", "Glass"], ["Speeds", "2 plus pulse"], ["Warranty", "1 year"]]),
+  item("Dinner set 24 pcs", 4800, "Dinnerware", "Plates, bowls and cups for six people.", [["Pieces", "24"], ["Serves", "6 people"], ["Material", "Ceramic"], ["Care", "Dishwasher safe"], ["Gift box", "Available"]]),
+  item("Cutlery set 24 pcs", 1900, "Dinnerware", "Stainless steel spoons, forks and knives.", [["Pieces", "24"], ["Material", "Stainless steel"], ["Includes", "Forks, knives, spoons, teaspoons"], ["Case", "Storage tray"]]),
+  item("Storage containers 10 pcs", 1400, "Storage", "Airtight food containers with lids.", [["Pieces", "10"], ["Material", "Food-grade plastic"], ["Use", "Fridge and pantry"], ["Lids", "Airtight"], ["Microwave", "Safe without lid"]]),
+  item("Cotton bedsheet set double", 2400, "Bedding", "Bedsheet with two pillowcases.", [["Size", "Double, 6 x 6"], ["Fabric", "Cotton blend"], ["Includes", "Fitted sheet and 2 pillowcases"], ["Colours", "Assorted"], ["Care", "Machine wash"]]),
+  item("Curtains pair 2 metres", 2800, "Curtains and rugs", "Ready-made curtains with hooks.", [["Size", "2 metres drop"], ["Fabric", "Polyester"], ["Includes", "Pair with hooks"], ["Colours", "Assorted"], ["Care", "Machine wash"]]),
+  item("Bathroom mat and towel set", 1500, "Bathroom", "Soft towels with a non-slip mat.", [["Pieces", "3 towels and 1 mat"], ["Fabric", "Cotton"], ["Colours", "Assorted"], ["Care", "Machine wash"]]),
+  item("Gift basket for a new home", 5500, "Gift sets", "Cookware, towels and a dinner set in one hamper.", [["Contents", "Sufuria, set of plates, towels"], ["Packaging", "Gift wrapped"], ["Occasion", "Wedding or housewarming"], ["Delivery", "Available"]])
+];
+
+const PACKS = { barbershops: barber, salons: salon, gyms: gym, chemists: chemist, agrovets: agro, hardware: kitchen, "phones-accessories": phonesPack, "electronics-computers": electronicsPack, "fashion-boutiques": fashionPack, "home-kitchen": homeKitchenPack };
 const SERVICE_CATEGORIES = new Set(["barbershops", "salons", "gyms", "car-wash", "tailors", "mpesa", "mechanics", "phone-repair"]);
 const PADDING = [["Availability", "Ask the seller"], ["Payment", "M-Pesa or cash"], ["Contact", "WhatsApp or call"], ["Prices", "Confirm with the seller"]];
 

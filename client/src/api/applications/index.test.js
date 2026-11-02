@@ -10,7 +10,7 @@ describe('applications api entry', () => {
     vi.stubEnv('VITE_SUPABASE_URL', '');
     const api = await import('./index');
     const { categories } = await api.getCatalogPricing();
-    expect(categories.length).toBe(32);
+    expect(categories.length).toBe(36);
     expect(Object.keys(await api.getLegalDocs())).toEqual(['terms', 'privacy']);
   });
 

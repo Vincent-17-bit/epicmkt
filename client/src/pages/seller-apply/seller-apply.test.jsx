@@ -188,7 +188,7 @@ describe("page", () => {
     const user = userEvent.setup();
     mountPage();
     const group = await screen.findByRole("radiogroup", { name: "Business type" });
-    expect(within(group).getAllByRole("radio")).toHaveLength(32);
+    expect(within(group).getAllByRole("radio")).toHaveLength(36);
     await user.click(within(group).getByRole("radio", { name: "Chemist or pharmacy" }));
     expect(await screen.findByText(/Documents you will need/)).toBeInTheDocument();
     expect(screen.queryByRole("radiogroup", { name: "Business type" })).not.toBeInTheDocument();

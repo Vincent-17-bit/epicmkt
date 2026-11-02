@@ -149,6 +149,7 @@ export const firstSentence = (text, max = SHORT_MAX) => {
 
 const EXAMPLES = [
   [/barber|salon|beauty|spa|hair|nail|massage/i, "A classic fade finished with a hot towel and a sharp line-up, about 30 minutes."],
+  [/home and kitchen|kitchen and home|household|cookware|homeware/i, "Set of 3 aluminium sufurias with lids, gas and charcoal safe, 6 month warranty."],
   [/food|restaurant|bakery|cafe|coffee|cater|kitchen|cake/i, "Soft vanilla sponge with buttercream frosting, serves 10 people."],
   [/electronic|phone|computer|laptop|tech|gadget|appliance/i, "Dual SIM phone with a 6.5 inch screen, 128 GB storage and a 2 year warranty."],
   [/fashion|cloth|shoe|boutique|tailor|wear|apparel/i, "Breathable cotton shirt in three colours, sizes S to XL."],
