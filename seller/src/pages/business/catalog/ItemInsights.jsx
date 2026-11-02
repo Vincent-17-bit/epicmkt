@@ -6,14 +6,12 @@ import * as api from "../../../api/index.js";
 import { errorText } from "../../../lib/errors.js";
 import ui from "../../../styles/ui.module.css";
 import PerformancePanel from "../PerformancePanel.jsx";
+import HistoryList from "./HistoryList.jsx";
 import Modal from "./Modal.jsx";
 import styles from "./catalog.module.css";
 import perf from "../performance.module.css";
 
 const TABS = [["overview", "Overview"], ["deals", "Deals"], ["history", "History"]];
-const FIELD = { price: "Price", name: "Name", availability: "Availability", description: "Description", section: "Section", visible: "Showing", sale_price: "Sale price", stock_count: "Stock" };
-const WHO = { seller: "You", admin: "EpicMKT", system: "System" };
-const show = (v) => (v === null || v === undefined || v === "" ? "empty" : String(v));
 
 export function History({ itemId, onLeave }) {
   const q = useQuery({ queryKey: ["item-history", itemId], queryFn: () => api.getItemHistory(itemId), retry: false });
@@ -23,16 +21,7 @@ export function History({ itemId, onLeave }) {
   const hidden = historyHiddenCount(q.data);
   return (
     <div data-testid="history">
-      {entries.length === 0 ? <p className={perf.muted}>No changes yet.</p> : (
-        <ol className={perf.list}>
-          {entries.map((e) => (
-            <li key={e.id}>
-              <strong>{FIELD[e.field] ?? e.field}</strong>: {show(e.old_value)} to {show(e.new_value)}
-              <span className={perf.meta}> {WHO[e.actor_role] ?? e.actor_role}, <time dateTime={e.created_at}>{formatDateTime(e.created_at)}</time></span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {entries.length === 0 ? <p className={perf.muted}>No changes yet.</p> : <HistoryList entries={entries} />}
       {locked && (
         <p data-testid="history-locked" className={perf.lock}>
           {HISTORY_LOCK_TEXT} {hidden} more {hidden === 1 ? "entry is" : "entries are"} hidden. <Link className={ui.link} to="/business/subscription" onClick={onLeave}>See plans and upgrade</Link>
