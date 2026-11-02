@@ -3,13 +3,15 @@ import { priceText } from "./cardItem.js";
 import { Actions, Chips, Ribbon, Signals } from "./parts.jsx";
 import styles from "./catalog.module.css";
 
-export default function ListRow({ item, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
+export default function ListRow({ item, selected, current, handlers, canMove, isFirst, isLast, busy, drag }) {
   const src = mediaUrl(item.imagePaths?.[0]);
   return (
     <li
-      className={`${styles.row} ${item.visibility !== "showing" || item.soldOut ? styles.rowDim : ""} ${selected ? styles.rowSelected : ""}`}
+      className={`${styles.row} ${item.visibility !== "showing" || item.soldOut ? styles.rowDim : ""} ${selected ? styles.rowSelected : ""} ${current ? styles.rowCurrent : ""}`}
       data-testid="listing"
       data-id={item.id}
+      aria-current={current ? "true" : undefined}
+      onClick={(e) => { if (!e.target.closest("button, a, input, label, select")) handlers.open(item.id); }}
       draggable={drag.enabled}
       onDragStart={(e) => drag.start(e, item.id)}
       onDragOver={(e) => drag.over(e, item.id)}
@@ -17,7 +19,7 @@ export default function ListRow({ item, selected, handlers, canMove, isFirst, is
     >
       <span className={styles.thumb}>{src && <img src={src} alt="" loading="lazy" />}</span>
       <span className={styles.rowMain}>
-        <span className={styles.rowName}>{item.name}</span>
+        <button type="button" className={styles.rowName} onClick={() => handlers.open(item.id)} aria-haspopup="dialog">{item.name}</button>
         {item.shortDescription && <span className={styles.rowBlurb} data-testid="row-blurb">{item.shortDescription}</span>}
         <span className={styles.rowMeta}>
           <span>{priceText(item)}</span>

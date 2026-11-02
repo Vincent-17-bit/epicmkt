@@ -30,6 +30,8 @@ export const SELLER_API = [
   "uploadItemVideo",
   "removeItemVideo",
   "getShopPreview",
+  "getItemStats",
+  "getItemHistory",
   "removeItemPhoto",
   "reorderItemPhotos",
   "uploadShopImage",

@@ -3,7 +3,7 @@ import { cardItemOf } from "./cardItem.js";
 import { Actions, Chips, Ribbon, Signals } from "./parts.jsx";
 import styles from "./catalog.module.css";
 
-export default function ListingCard({ item, selected, handlers, canMove, isFirst, isLast, busy, drag }) {
+export default function ListingCard({ item, selected, current, handlers, canMove, isFirst, isLast, busy, drag }) {
   const overlay = (
     <>
       <span className={styles.overlayTop}><span /><Signals item={item} /></span>
@@ -36,6 +36,7 @@ export default function ListingCard({ item, selected, handlers, canMove, isFirst
       className={styles.cell}
       data-testid="listing"
       data-id={item.id}
+      aria-current={current ? "true" : undefined}
       draggable={drag.enabled}
       onDragStart={(e) => drag.start(e, item.id)}
       onDragOver={(e) => drag.over(e, item.id)}
@@ -43,7 +44,7 @@ export default function ListingCard({ item, selected, handlers, canMove, isFirst
     >
       <ItemCard
         item={cardItemOf(item)}
-        onSelect={() => handlers.select(item.id)}
+        onSelect={() => handlers.open(item.id)}
         overlay={overlay}
         quickActions={quickActions}
         dimmed={item.visibility !== "showing" || item.soldOut}

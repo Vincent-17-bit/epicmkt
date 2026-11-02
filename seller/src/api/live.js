@@ -413,10 +413,11 @@ export const uploadProofs = async (flagId, files, { alreadyAttached = 0 } = {}) 
 };
 
 const TABLES = ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"];
+const ON_REQUEST = ["items", "item_history"];
 /** Row-level security applies to realtime, so a seller only ever receives their own rows. */
 export const subscribe = (tables, onEvent) => {
   const client = need();
-  const list = (tables?.length ? tables : TABLES).filter((t) => TABLES.includes(t));
+  const list = (tables?.length ? tables : TABLES).filter((t) => TABLES.includes(t) || ON_REQUEST.includes(t));
   const channel = client.channel(`seller-${list.join("-")}-${Math.random().toString(36).slice(2, 8)}`);
   for (const table of list) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, (p) => onEvent({ table, type: p.eventType, row: p.new && Object.keys(p.new).length ? p.new : p.old }));
@@ -486,6 +487,8 @@ export const getShopPreview = async () => {
   return shape.preview(b, { categoryName: category?.name, catalog, flashSales, offers, nowMs: Date.parse(server.now) });
 };
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
+export const getItemStats = async (id, days = 30) => shape.itemStats(await rpc("seller_item_stats", { p_item: id, p_days: days }));
+export const getItemHistory = async (id) => (await rpc("seller_item_history", { p_item: id })).map(shape.itemHistoryRow);
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });

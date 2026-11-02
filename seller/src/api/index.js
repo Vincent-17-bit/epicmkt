@@ -28,6 +28,8 @@ export const catalogStats = (...a) => impl.catalogStats(...a);
 export const itemSignals = (...a) => impl.itemSignals(...a);
 export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
 export const getShopPreview = (...a) => impl.getShopPreview(...a);
+export const getItemStats = (...a) => impl.getItemStats(...a);
+export const getItemHistory = (...a) => impl.getItemHistory(...a);
 export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);
 export const listItemVideos = (...a) => impl.listItemVideos(...a);
 export const getItemMedia = (...a) => impl.getItemMedia(...a);

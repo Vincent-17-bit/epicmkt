@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
@@ -245,14 +246,16 @@ export default function Flash() {
   const refresh = () => Promise.all(["flash-sales", "flash-items", "flash-quota"].map((key) => qc.invalidateQueries({ queryKey: [key] })));
   useRealtime(["flash_sales", "businesses"], refresh);
 
-  const list = sales.data ?? [];
+  const onlyItem = useSearchParams()[0].get("item");
+  const everySale = sales.data ?? [];
+  const list = onlyItem ? everySale.filter((s) => s.itemId === onlyItem) : everySale;
   const running = useMemo(() => new Set(list.filter((s) => ["live", "scheduled"].includes(flashPhase(s, now))).map((s) => s.itemId)), [list, now]);
   const choices = (items.data ?? []).filter((i) => i.visible && !i.hiddenByAdmin && !["out_of_stock", "unavailable"].includes(i.availability) && i.price > 0 && ["fixed", "from"].includes(i.priceType) && !running.has(i.id));
   const current = list.filter((s) => ["live", "scheduled"].includes(flashPhase(s, now))).sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt));
   const past = list.filter((s) => !["live", "scheduled"].includes(flashPhase(s, now)));
   const q = quota.data;
 
-  const stale = list.some((s) => ["live", "scheduled"].includes(s.status) && Date.parse(s.endsAt) <= now);
+  const stale = everySale.some((s) => ["live", "scheduled"].includes(s.status) && Date.parse(s.endsAt) <= now);
   useEffect(() => {
     if (!stale) return undefined;
     refresh();
@@ -286,6 +289,7 @@ export default function Flash() {
         <p className={ui.error} role="alert">We could not load your flash sales. Check your connection and refresh.</p>
       ) : (
         <>
+          {onlyItem && <p className={ui.muted} data-testid="flash-item-filter">Showing sales for {list[0]?.itemName ?? "one item"}. <Link className={ui.link} to="/business/flash">Show all</Link></p>}
           <section aria-labelledby="fs-current">
             <h2 id="fs-current">Running and scheduled</h2>
             {current.length === 0 ? <p className={ui.muted} data-testid="empty">No flash sales running.</p> : (
