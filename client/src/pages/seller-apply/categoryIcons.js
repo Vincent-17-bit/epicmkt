@@ -1,6 +1,7 @@
-import { faStore, faBlender, faBreadSlice, faCamera, faCar, faCarrot, faCartShopping, faComputer, faCouch, faDroplet, faDrumstickBite, faDumbbell, faFireFlameCurved, faGears, faGlasses, faGraduationCap, faHammer, faMobileScreenButton, faMoneyBillTransfer, faPills, faPlug, faPrint, faScissors, faScrewdriverWrench, faSeedling, faShirt, faShoePrints, faSoap, faSpa, faStethoscope, faUtensils, faWandMagicSparkles, faWrench } from "@fortawesome/free-solid-svg-icons";
+import { faStore, faBagShopping, faBlender, faBreadSlice, faCamera, faCar, faCarrot, faCartShopping, faComputer, faCouch, faDroplet, faDrumstickBite, faDumbbell, faFireFlameCurved, faGears, faGlasses, faGraduationCap, faHammer, faKitchenSet, faLaptop, faMobileScreenButton, faMoneyBillTransfer, faPills, faPlug, faPrint, faScissors, faScrewdriverWrench, faSeedling, faShirt, faShoePrints, faSoap, faSpa, faStethoscope, faUtensils, faWandMagicSparkles, faWrench } from "@fortawesome/free-solid-svg-icons";
 
 const ICONS = {
+  "bag-shopping": faBagShopping,
   "blender": faBlender,
   "bread-slice": faBreadSlice,
   "camera": faCamera,
@@ -17,6 +18,8 @@ const ICONS = {
   "glasses": faGlasses,
   "graduation-cap": faGraduationCap,
   "hammer": faHammer,
+  "kitchen-set": faKitchenSet,
+  "laptop": faLaptop,
   "mobile-screen-button": faMobileScreenButton,
   "money-bill-transfer": faMoneyBillTransfer,
   "pills": faPills,

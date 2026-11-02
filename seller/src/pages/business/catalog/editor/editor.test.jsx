@@ -74,6 +74,11 @@ describe("editor rules", () => {
   it("gives an example for the shop's category, and a generic one otherwise", () => {
     expect(exampleShortFor("Barbershop")).toMatch(/fade/i);
     expect(exampleShortFor("Something else")).toBe(GENERIC_EXAMPLE);
+    expect(exampleShortFor("Phones and Accessories")).toMatch(/phone/i);
+    expect(exampleShortFor("Electronics and Computers")).toMatch(/phone|screen/i);
+    expect(exampleShortFor("Fashion and Boutiques")).toMatch(/shirt/i);
+    expect(exampleShortFor("Home and Kitchen")).toMatch(/sufuria/i);
+    expect(exampleShortFor("Tailors and Boutiques")).toMatch(/shirt/i);
   });
 });
 

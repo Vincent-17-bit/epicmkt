@@ -401,6 +401,72 @@ export const categories = [
       doc('good_conduct_cert', 'Staff certificate of good conduct', 'optional', 'Reassures parents about staff vetting.'),
     ],
   },
+  {
+    id: 'phones-accessories', name: 'Phones and Accessories', group: 'Tech and office', icon: 'mobile-screen-button', tier: 'C',
+    keyFields: [
+      multi('sells', 'Products', ['New phones', 'Used and refurbished phones', 'Feature phones', 'Phone cases and covers', 'Screen protectors', 'Chargers and cables', 'Power banks', 'Earphones and headphones', 'Memory cards', 'SIM cards and airtime'], { required: true, filterable: true, showOnCard: true }),
+      multi('brands', 'Phone brands', ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Oppo', 'Huawei', 'Nokia', 'itel', 'Other'], { filterable: true }),
+      multi('condition', 'Condition', ['New', 'Refurbished', 'Used'], { filterable: true, showOnCard: true }),
+      select('warranty', 'Warranty on phones', WARRANTY),
+      bool('genuineAccessories', 'Original accessories sold', { filterable: true }),
+      bool('installments', 'Pay in instalments', { filterable: true }),
+      bool('tradeIn', 'Trade-in or swap accepted'),
+      bool('repairs', 'Repairs and screen fitting'),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [
+      doc('dealer_authorisation', 'Authorised dealer or distributor letter', 'optional', 'Shows customers you sell genuine stock.'),
+    ],
+  },
+  {
+    id: 'electronics-computers', name: 'Electronics and Computers', group: 'Tech and office', icon: 'laptop', tier: 'C',
+    keyFields: [
+      multi('sells', 'Products', ['Laptops', 'Desktop computers', 'Monitors', 'Printers and scanners', 'Keyboards and mice', 'Flash disks and hard drives', 'Routers and networking', 'TVs and decoders', 'Speakers and audio', 'Cameras and CCTV', 'Gaming consoles', 'Solar and power backup'], { required: true, filterable: true, showOnCard: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      multi('condition', 'Condition', ['New', 'Refurbished', 'Used'], { filterable: true, showOnCard: true }),
+      select('warranty', 'Warranty', WARRANTY),
+      bool('installation', 'Installation and setup'),
+      bool('repairs', 'Repairs and servicing', { filterable: true }),
+      bool('installments', 'Pay in instalments', { filterable: true }),
+      bool('bulkOrders', 'Bulk and office orders'),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [
+      doc('dealer_authorisation', 'Authorised dealer or distributor letter', 'optional', 'Shows customers you sell genuine stock.'),
+    ],
+  },
+  {
+    id: 'fashion-boutiques', name: 'Fashion and Boutiques', group: 'Fashion', icon: 'bag-shopping', tier: 'C',
+    keyFields: [
+      multi('sells', 'Sells', ['Dresses and tops', 'Trousers and jeans', 'Suits and formal wear', 'Kitenge and African print', 'Shoes and sandals', 'Sneakers', 'Bags and accessories', 'Underwear and socks', 'Kids wear', 'Sportswear', 'Uniforms'], { required: true, filterable: true, showOnCard: true }),
+      multi('for', 'Clothing for', ['Women', 'Men', 'Kids'], { filterable: true, showOnCard: true }),
+      multi('condition', 'Condition', ['New', 'Mitumba (second-hand)'], { filterable: true, showOnCard: true }),
+      bool('footwear', 'Footwear sold', { filterable: true }),
+      multi('footwearTypes', 'Footwear', ['Sneakers', 'Sandals', 'Formal shoes', 'Boots', 'Heels', 'School shoes'], { filterable: true, showIf: { field: 'footwear', equals: true } }),
+      text('sizes', 'Sizes stocked'),
+      bool('fittingRoom', 'Fitting room'),
+      bool('exchanges', 'Exchanges allowed'),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'home-kitchen', name: 'Home and Kitchen', group: 'Home and construction', icon: 'kitchen-set', tier: 'C',
+    keyFields: [
+      multi('sells', 'Products', ['Cookware and sufurias', 'Dinnerware and cutlery', 'Kitchen appliances', 'Storage and containers', 'Bedding and linen', 'Curtains and rugs', 'Cleaning supplies', 'Home decor', 'Bathroom items', 'Lighting', 'Gas cookers and jikos'], { required: true, filterable: true, showOnCard: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      multi('condition', 'Condition', ['New', 'Refurbished'], { filterable: true }),
+      select('warranty', 'Warranty on appliances', WARRANTY),
+      bool('giftSets', 'Gift and wedding sets', { filterable: true }),
+      bool('wholesale', 'Wholesale prices', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
 ];
 
 export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c]));
