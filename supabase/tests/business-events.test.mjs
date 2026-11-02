@@ -195,3 +195,20 @@ test("Deals: premium sees per-deal numbers, standard gets a locked answer with n
 
   await rejects(c, asA, `select seller_item_deals($1)`, [B_ITEM], /item_not_found/);
 });
+
+test("a suspended seller is refused the Performance panel, item history and item deals; an active one still reads them", async () => {
+  const reads = [
+    [`select seller_performance('7d')`, []],
+    [`select seller_item_history($1)`, [ITEM]],
+    [`select seller_item_deals($1)`, [ITEM]],
+  ];
+  for (const [q, p] of reads) await tx(c, asA, async (k) => { await sql(k, q, p); });   // active: no error
+  await sql(c, `update businesses set status = 'suspended', status_reason = 'test' where id = '${ids.bizA}'`);
+  try {
+    for (const [q, p] of reads) await rejects(c, asA, q, p, /account_suspended/);
+    await rejects(c, asB, `select seller_performance('forever')`, [], /invalid_range/);   // another seller is unaffected
+  } finally {
+    await sql(c, `update businesses set status = 'live', status_reason = null where id = '${ids.bizA}'`);
+  }
+  for (const [q, p] of reads) await tx(c, asA, async (k) => { await sql(k, q, p); });   // reinstated: reads work again
+});
