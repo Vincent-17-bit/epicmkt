@@ -181,6 +181,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     if (!current || viewed.current === current.id) return;
     viewed.current = current.id;
     logEvent("item_view", { businessId: business.id, itemId: current.id, kind: current.kind, flash: Boolean(current.flash) });
+    logContactEvent({ businessId: business.id, itemId: current.id, type: "view" });
   }, [current?.id]);
 
   useEffect(() => {

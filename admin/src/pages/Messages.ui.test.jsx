@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import "@testing-library/jest-dom/vitest";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { groupThreads } from "@epicmkt/shared";
+import { countConversations, filterConversations } from "../lib/conversations.js";
 
 let mockRole = "support";
 vi.mock("../auth/AuthContext.jsx", () => ({ useAuth: () => ({ admin: { role: mockRole }, status: "admin", demo: false }) }));
@@ -14,6 +16,7 @@ const msg = (id, businessId, businessName, sellerId, extra) => ({
 });
 
 const api = {
+  listConversations: vi.fn(),
   listMessages: vi.fn(),
   listResolvedConversations: vi.fn(),
   setConversationResolved: vi.fn(async () => ({ resolved: true, changed: true })),
@@ -39,16 +42,41 @@ function renderPage(path = "/") {
   );
 }
 
+// What the server does for the conversation list (migration 0080), done here on the fixture with the same rules.
+function serverList(messages, resolvedIds) {
+  const resolved = new Set(resolvedIds);
+  const byBusiness = new Map();
+  for (const m of messages) byBusiness.set(m.businessId, [...(byBusiness.get(m.businessId) ?? []), m]);
+  const all = [...byBusiness.entries()].map(([id, list]) => {
+    const threads = groupThreads(list);
+    const last = threads[0].last;
+    return {
+      id, name: list[0].businessName, sellerId: list[0].sellerId, lastAt: last.createdAt, lastSubject: last.subject, messageCount: list.length,
+      unread: list.filter((m) => m.sender === "seller" && !m.adminReadAt).length,
+      waiting: threads.some((t) => t.needsReply && t.last.sender === "admin"), resolved: resolved.has(id), messages: list,
+    };
+  }).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+  return ({ page = 0, pageSize = 30, filter = "all", search = "" } = {}) => {
+    const hit = filterConversations(all, { filter, search, resolved });
+    return {
+      total: hit.length, unreadTotal: all.reduce((n, c) => n + c.unread, 0), counts: countConversations(all, resolved, search),
+      rows: hit.slice(page * pageSize, (page + 1) * pageSize).map(({ messages: _messages, ...row }) => row),
+    };
+  };
+}
+
 const rows = () => screen.queryAllByTestId("conversation-row").map((r) => r.textContent);
 
 beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   mockRole = "support";
-  api.listMessages.mockResolvedValue([
+  const fixture = [
     msg("m1", "b1", "Lakeside Provisions", "ES100001", { sender: "seller", subject: "Prices", body: "Unga is now 180", adminReadAt: null, createdAt: at(5) }),
     msg("m2", "b2", "Fade Kings", "ES100002", { subject: "Contact", body: "Send your number", needsReply: true, createdAt: at(20) }),
     msg("m3", "b3", "Rafiki Tools", "ES100003", { subject: "Done", body: "All sorted", createdAt: at(60) }),
-  ]);
+  ];
+  api.listMessages.mockImplementation(async ({ businessId } = {}) => fixture.filter((m) => !businessId || m.businessId === businessId));
+  api.listConversations.mockImplementation(async (args) => serverList(fixture, ["b3"])(args));
   api.listResolvedConversations.mockResolvedValue(["b3"]);
   api.listBusinesses.mockResolvedValue({ rows: [
     { id: "b3", name: "Rafiki Tools", sellerId: "ES100003", town: "Kisumu" },
@@ -68,14 +96,14 @@ describe("Messages: search and filters", () => {
     renderPage();
     await waitFor(() => expect(rows()).toHaveLength(3));
     fireEvent.click(screen.getByRole("tab", { name: /Unread/ }));
-    expect(rows()).toHaveLength(1);
+    await waitFor(() => expect(rows()).toHaveLength(1));
     expect(rows()[0]).toMatch(/Lakeside/);
     fireEvent.click(screen.getByRole("tab", { name: /Waiting for reply/ }));
+    await waitFor(() => expect(rows()[0]).toMatch(/Fade Kings/));
     expect(rows()).toHaveLength(1);
-    expect(rows()[0]).toMatch(/Fade Kings/);
     fireEvent.click(screen.getByRole("tab", { name: /Resolved/ }));
+    await waitFor(() => expect(rows()[0]).toMatch(/Rafiki/));
     expect(rows()).toHaveLength(1);
-    expect(rows()[0]).toMatch(/Rafiki/);
   });
 
   it("searches by business name, seller ID and message text", async () => {
@@ -83,11 +111,12 @@ describe("Messages: search and filters", () => {
     await waitFor(() => expect(rows()).toHaveLength(3));
     const box = screen.getByLabelText("Search conversations");
     fireEvent.change(box, { target: { value: "es100002" } });
-    expect(rows()).toHaveLength(1);
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(rows()[0]).toMatch(/Fade Kings/);
     fireEvent.change(box, { target: { value: "unga" } });
-    expect(rows()[0]).toMatch(/Lakeside/);
+    await waitFor(() => expect(rows()[0]).toMatch(/Lakeside/));
     fireEvent.change(box, { target: { value: "zzz" } });
-    expect(screen.getByTestId("no-match")).toBeInTheDocument();
+    expect(await screen.findByTestId("no-match")).toBeInTheDocument();
   });
 });
 

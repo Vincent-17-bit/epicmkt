@@ -48,6 +48,29 @@ test("the log shows delivery records for owner, reviewer and support, never the 
   await rejects(c, asAdmin, `select admin_message_log_query('all', 'lost')`, [], /invalid_status/);
 });
 
+test("simulated messages are filterable, counted on their own, and carry no cost in the summary", async () => {
+  const id = "60000000-0000-0000-0000-0000000000f1";
+  await sql(c, `insert into messages (id, business_id, channel, kind, subject, body, status, to_address, attempts, cost_kes, sent_at, provider_id)
+                values ('${id}', '${ids.bizA}', 'sms', 'general', 'Never sent', 'Hi', 'simulated', '+254712345678', 1, 5, now(), 'dev')`);
+  try {
+    const log = await call(asAdmin, `select admin_message_log_query('all', 'simulated') as r`);
+    assert.deepEqual(log.rows.map((r) => r.id), [id]);
+    assert.equal(log.rows[0].status, "simulated");
+    assert.equal((await call(asAdmin, `select admin_message_log_query('all', 'sent') as r`)).rows.some((r) => r.id === id), false);
+
+    const s = await call(asSupport, `select admin_message_summary(7) as r`);
+    assert.equal(s.by_status.simulated, 1);
+    assert.equal(s.by_status.sent, 1, "a simulated message is not counted as sent");
+    assert.equal(Number(s.cost_kes), 0.8, "a simulated message costs nothing, even if a cost was written on the row");
+
+    const auto = await call(asAdmin, `select admin_automation_status() as r`);
+    assert.notEqual(new Date(auto.last_sent_at).getTime(), new Date((await sql(c, `select sent_at from messages where id = '${id}'`))[0].sent_at).getTime(),
+      "last_sent_at is the last real send, never a simulated one");
+  } finally {
+    await sql(c, `delete from messages where id = '${id}'`);
+  }
+});
+
 test("the summary counts statuses, cost, what is due now and what failed", async () => {
   const s = await call(asSupport, `select admin_message_summary(7) as r`);
   assert.deepEqual(s.by_status, { sent: 1, failed: 1, queued: 2 });
@@ -105,7 +128,7 @@ test("automation status says plainly when pg_cron is not installed, and the cont
   const s = await call(asSupport, `select admin_automation_status() as r`);
   assert.equal(s.cron_installed, false);
   assert.deepEqual(s.jobs, []);
-  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle"]);
+  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"], "all four scheduled jobs are watched");
   assert.equal(typeof s.queue.queued, "number");
   await rejects(c, asAdmin, `select admin_set_job_active('dispatch-messages', false)`, [], /cron_not_installed/);
   await rejects(c, asAdmin, `select admin_run_job('dispatch-messages')`, [], /automation_not_configured/);
@@ -118,13 +141,14 @@ test("with pg_cron present the status lists the jobs and their last run; pausing
     create table cron.job (jobid bigserial primary key, jobname text unique, schedule text, active boolean default true);
     create table cron.job_run_details (runid bigserial primary key, jobid bigint, status text, start_time timestamptz, end_time timestamptz, return_message text);
     create function cron.alter_job(job_id bigint, active boolean default null) returns void language sql as $$ update cron.job set active = coalesce(alter_job.active, job.active) where jobid = job_id $$;
-    insert into cron.job (jobname, schedule) values ('dispatch-messages', '* * * * *'), ('daily-lifecycle', '0 4 * * *'), ('unrelated', '0 0 * * *');
+    insert into cron.job (jobname, schedule) values ('dispatch-messages', '* * * * *'), ('daily-lifecycle', '0 4 * * *'),
+      ('proofs-purge', '0 1 * * *'), ('media-gc', '*/10 * * * *'), ('unrelated', '0 0 * * *');
     insert into cron.job_run_details (jobid, status, start_time, end_time, return_message) values
       (1, 'failed', now() - interval '5 minutes', now() - interval '5 minutes', 'old'), (1, 'succeeded', now() - interval '1 minute', now(), '1 row');
   `);
   const s = await call(asReviewer, `select admin_automation_status() as r`);
   assert.equal(s.cron_installed, true);
-  assert.deepEqual(s.jobs.map((j) => j.name), ["daily-lifecycle", "dispatch-messages"], "only this app's jobs are shown");
+  assert.deepEqual(s.jobs.map((j) => j.name), ["daily-lifecycle", "dispatch-messages", "media-gc", "proofs-purge"], "all four of this app's jobs are shown, and nothing else");
   const dispatch = s.jobs.find((j) => j.name === "dispatch-messages");
   assert.equal(dispatch.active, true);
   assert.equal(dispatch.last_run.status, "succeeded", "the latest run, not the first");
@@ -138,6 +162,17 @@ test("with pg_cron present the status lists the jobs and their last run; pausing
   await call(asAdmin, `select admin_set_job_active('dispatch-messages', true) as r`);
   const rows = await sql(c, `select action from audit_log where target_type = 'job' order by id`);
   assert.deepEqual(rows.map((r) => r.action), ["job.pause", "job.resume"]);
+  // proofs-purge and media-gc get the same pause / resume, owner-only and audited like the others.
+  for (const name of ["proofs-purge", "media-gc"]) {
+    await rejects(c, asReviewer, `select admin_set_job_active('${name}', false)`, [], /forbidden/);
+    await call(asAdmin, `select admin_set_job_active('${name}', false) as r`);
+    assert.equal((await sql(c, `select active from cron.job where jobname = '${name}'`))[0].active, false, `${name} is paused`);
+    assert.equal((await call(asReviewer, `select admin_automation_status() as r`)).jobs.find((j) => j.name === name).active, false);
+    await call(asAdmin, `select admin_set_job_active('${name}', true) as r`);
+    assert.equal((await sql(c, `select active from cron.job where jobname = '${name}'`))[0].active, true, `${name} is running again`);
+  }
+  assert.deepEqual((await sql(c, `select action, target_id from audit_log where target_type = 'job' order by id`)).map((r) => `${r.action}:${r.target_id}`),
+    ["job.pause:dispatch-messages", "job.resume:dispatch-messages", "job.pause:proofs-purge", "job.resume:proofs-purge", "job.pause:media-gc", "job.resume:media-gc"]);
   await sql(c, `delete from cron.job where jobname = 'daily-lifecycle'`);
   await rejects(c, asAdmin, `select admin_set_job_active('daily-lifecycle', true)`, [], /job_not_scheduled/);
 });
@@ -157,6 +192,14 @@ test("run now posts to the function URL with the cron secret, and only the owner
   const [call1] = await sql(c, `select url, headers from net.calls`);
   assert.equal(call1.url, "https://abc.supabase.co/functions/v1/dispatch-messages");
   assert.equal(call1.headers["x-cron-secret"], "s3cret");
+  for (const name of ["proofs-purge", "media-gc"]) {
+    await call(asAdmin, `select admin_run_job('${name}') as r`);
+    const [last] = await sql(c, `select url, headers from net.calls order by id desc limit 1`);
+    assert.equal(last.url, `https://abc.supabase.co/functions/v1/${name}`);
+    assert.equal(last.headers["x-cron-secret"], "s3cret");
+  }
+  assert.deepEqual((await sql(c, `select action, target_id from audit_log where action = 'job.run' order by id`)).map((r) => r.target_id), ["dispatch-messages", "proofs-purge", "media-gc"]);
   await rejects(c, asReviewer, `select admin_run_job('dispatch-messages')`, [], /forbidden/);
+  await rejects(c, asReviewer, `select admin_run_job('media-gc')`, [], /forbidden/);
   await rejects(c, asAdmin, `select admin_run_job('drop-everything')`, [], /unknown_job/);
 });

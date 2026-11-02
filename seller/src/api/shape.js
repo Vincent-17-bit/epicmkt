@@ -118,11 +118,3 @@ export const catalog = (r) => ({
 });
 
 export const signal = (s) => ({ itemId: s.item_id, openFlags: s.open_flags ?? 0, reports30d: s.reports_30d ?? 0 });
-
-export const itemStats = (r) => ({
-  days: r.days, views: r.views ?? 0, whatsapp: r.whatsapp ?? 0, calls: r.calls ?? 0, taps: (r.whatsapp ?? 0) + (r.calls ?? 0),
-  flashViews: r.flash_views ?? 0, flashTaps: r.flash_taps ?? 0, offerViews: r.offer_views ?? 0, offerTaps: r.offer_taps ?? 0,
-  series: (r.series ?? []).map((d) => ({ day: d.day, views: d.views ?? 0, taps: d.taps ?? 0 })),
-});
-
-export const itemHistoryRow = (h) => ({ id: h.id, field: h.field, oldValue: h.old_value ?? null, newValue: h.new_value ?? null, actor: h.actor, at: h.at });

@@ -8,14 +8,14 @@ import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend
 setLatency(0);
 
 const cats = await getCategories();
-assert.equal(cats.length, 16);
+assert.equal(cats.length, 20);
 for (const c of templates) assert.deepEqual(validateTemplate(c.fields), [], c.id);
 for (const b of seeded) {
   const template = templates.find((c) => c.id === b.categoryId);
   assert.ok(template, b.id);
   assert.deepEqual(validateAttributes(template.fields, b.attributes), {}, b.id);
 }
-for (const id of ["car-wash", "tailors", "mpesa", "groceries", "butchery", "bakery"]) {
+for (const id of ["car-wash", "tailors", "mpesa", "groceries", "butchery", "bakery", "phones-accessories", "electronics-computers", "fashion-boutiques", "home-kitchen"]) {
   assert.ok(seeded.some((b) => b.categoryId === id), id);
 }
 assert.ok(FIELD_TYPES.every((type) => templates.some((c) => c.fields.some((f) => f.type === type))), "every field type is used");
@@ -25,6 +25,12 @@ assert.deepEqual(washes.items.map((b) => b.id), ["b_025"]);
 assert.equal((await searchBusinesses({ categoryId: "water-refill", attrs: { "price-20l": "-30" } })).total, 2);
 assert.equal((await searchBusinesses({ categoryId: "tailors", attrs: { condition: "mitumba" } })).total, 1);
 assert.equal((await searchBusinesses({ query: "nyama choma" })).items[0].categoryId, "butchery");
+assert.equal((await searchBusinesses({ categoryId: "phones-accessories" })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "electronics-computers" })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "fashion-boutiques" })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "home-kitchen" })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "fashion-boutiques", attrs: { footwear: "true" } })).total, 2);
+assert.equal((await searchBusinesses({ categoryId: "tailors" })).total, 2, "Tailors and Boutiques is untouched");
 assert.ok((await searchBusinesses({ categoryId: "butchery" })).items.every((b) => Array.isArray(b.highlights) && b.highlights.length > 0));
 const facets = await getSearchFacets({ categoryId: "mpesa" });
 assert.ok(facets.fields.some((f) => f.key === "networks"));
@@ -116,11 +122,11 @@ await assert.rejects(() => updateSellerBusiness("s_002", { plan: "premium" }), V
 assert.equal((await updateSellerBusiness("s_002", { tagline: "Updated" })).tagline, "Updated");
 
 const overview = await getOverview();
-assert.equal(overview.totalBusinesses, 36);
+assert.equal(overview.totalBusinesses, 44);
 assert.equal(overview.byStatus.pending, 1);
 await setBusinessStatus("b_023", "active");
 assert.equal((await listBusinesses({ status: "pending" })).total, 0);
-assert.equal((await searchBusinesses({ query: "phone" })).total, 1);
+{ const phoneHits = await searchBusinesses({ query: "phone" }); assert.equal(phoneHits.total, 3); assert.ok(phoneHits.items.some((b) => b.id === "b_023"), "approved QuickFix Phones is listed"); }
 
 {
   // Demo product ids are globally unique, like live database ids: the same product name in
@@ -233,7 +239,7 @@ console.log("all checks passed");
   resetClock();
 }
 
-for (const b of seeded.filter((x) => ["barbershops", "salons", "gyms", "chemists", "agrovets", "hardware"].includes(x.categoryId))) {
+for (const b of seeded.filter((x) => ["barbershops", "salons", "gyms", "chemists", "agrovets", "hardware", "phones-accessories", "electronics-computers", "fashion-boutiques", "home-kitchen"].includes(x.categoryId))) {
   assert.ok(b.services.length >= 8, b.id);
   assert.ok(b.services.every((svc) => svc.specs.length >= 4 && svc.specs.length <= 10), b.id);
   assert.ok(b.services.every((svc) => svc.description), b.id);

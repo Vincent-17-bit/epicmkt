@@ -245,5 +245,63 @@ export const categories = [
       flag("same-day", "Same-day repair"),
       flag("warranty", "Repair warranty")
     ]
+  },
+  {
+    id: "phones-accessories", name: "Phones and Accessories", singular: "Phone shop", icon: "mobile-screen-button", hue: 262, blurb: "New and used phones, chargers and cases",
+    fields: [
+      multi("sells", "Products", [["new-phones", "New phones"], ["used-phones", "Used and refurbished phones"], ["feature-phones", "Feature phones"], ["cases", "Cases and covers"], ["screen-protectors", "Screen protectors"], ["chargers", "Chargers and cables"], ["power-banks", "Power banks"], ["audio", "Earphones and headphones"], ["memory", "Memory cards"], ["sim-airtime", "SIM cards and airtime"]], { required: true, showOnCard: true, searchable: true, group: "Products" }),
+      multi("brands", "Phone brands", [["apple", "Apple"], ["samsung", "Samsung"], ["tecno", "Tecno"], ["infinix", "Infinix"], ["xiaomi", "Xiaomi"], ["oppo", "Oppo"], ["huawei", "Huawei"], ["nokia", "Nokia"], ["itel", "itel"]], { group: "Products", searchable: true }),
+      multi("condition", "Condition", [["new", "New"], ["refurbished", "Refurbished"], ["used", "Used"]], { showOnCard: true, group: "Products" }),
+      choice("warranty", "Warranty on phones", [["none", "None"], ["30-days", "30 days"], ["3-months", "3 months"], ["6-months", "6 months"], ["1-year", "1 year or more"]], { group: "Terms" }),
+      flag("genuine-accessories", "Original accessories", { group: "Products" }),
+      flag("installments", "Pay in instalments", { group: "Terms", showOnCard: true }),
+      flag("trade-in", "Trade-in or swap accepted", { group: "Terms" }),
+      flag("repairs", "Repairs and screen fitting", { group: "Services" }),
+      ...deliveryBlock(),
+      payment()
+    ]
+  },
+  {
+    id: "electronics-computers", name: "Electronics and Computers", singular: "Electronics shop", icon: "laptop", hue: 225, blurb: "Laptops, TVs, printers and gadgets",
+    fields: [
+      multi("sells", "Products", [["laptops", "Laptops"], ["desktops", "Desktop computers"], ["monitors", "Monitors"], ["printers", "Printers and scanners"], ["peripherals", "Keyboards and mice"], ["storage", "Flash disks and hard drives"], ["networking", "Routers and networking"], ["tvs", "TVs and decoders"], ["audio", "Speakers and audio"], ["cameras", "Cameras and CCTV"], ["gaming", "Gaming consoles"], ["solar", "Solar and power backup"]], { required: true, showOnCard: true, searchable: true, group: "Products" }),
+      text("brands", "Main brands", { group: "Products", searchable: true }),
+      multi("condition", "Condition", [["new", "New"], ["refurbished", "Refurbished"], ["used", "Used"]], { showOnCard: true, group: "Products" }),
+      choice("warranty", "Warranty", [["none", "None"], ["30-days", "30 days"], ["3-months", "3 months"], ["6-months", "6 months"], ["1-year", "1 year or more"]], { group: "Terms" }),
+      flag("installation", "Installation and setup", { group: "Services" }),
+      flag("repairs", "Repairs and servicing", { group: "Services", showOnCard: true }),
+      flag("installments", "Pay in instalments", { group: "Terms" }),
+      flag("bulk", "Bulk and office orders", { group: "Terms" }),
+      ...deliveryBlock(),
+      payment()
+    ]
+  },
+  {
+    id: "fashion-boutiques", name: "Fashion and Boutiques", singular: "Fashion shop", icon: "bag-shopping", hue: 335, blurb: "Clothes, shoes, bags and accessories",
+    fields: [
+      multi("sells", "Sells", [["dresses-tops", "Dresses and tops"], ["trousers-jeans", "Trousers and jeans"], ["formal", "Suits and formal wear"], ["african-print", "Kitenge and African print"], ["shoes", "Shoes and sandals"], ["sneakers", "Sneakers"], ["bags", "Bags and accessories"], ["innerwear", "Underwear and socks"], ["kids", "Kids wear"], ["sportswear", "Sportswear"], ["uniforms", "Uniforms"]], { required: true, showOnCard: true, searchable: true, group: "Shop" }),
+      multi("for", "Clothing for", [["women", "Women"], ["men", "Men"], ["kids", "Kids"]], { showOnCard: true, group: "Shop" }),
+      choice("condition", "Clothes sold", [["new", "New"], ["mitumba", "Mitumba (second-hand)"], ["both", "New and mitumba"]], { showOnCard: true, group: "Shop" }),
+      flag("footwear", "Footwear sold", { group: "Footwear", showOnCard: true }),
+      multi("footwear-types", "Footwear", [["sneakers", "Sneakers"], ["sandals", "Sandals"], ["formal", "Formal shoes"], ["boots", "Boots"], ["heels", "Heels"], ["school", "School shoes"]], { group: "Footwear", searchable: true, showIf: { key: "footwear", equals: true } }),
+      text("sizes", "Sizes stocked", { group: "Shop" }),
+      flag("fitting", "Fitting room", { group: "Shop" }),
+      flag("exchanges", "Exchanges allowed", { group: "Terms" }),
+      ...deliveryBlock(),
+      payment()
+    ]
+  },
+  {
+    id: "home-kitchen", name: "Home and Kitchen", singular: "Home and kitchen shop", icon: "kitchen-set", hue: 175, blurb: "Cookware, appliances, bedding and home goods",
+    fields: [
+      multi("sells", "Products", [["cookware", "Cookware and sufurias"], ["dinnerware", "Dinnerware and cutlery"], ["appliances", "Kitchen appliances"], ["storage", "Storage and containers"], ["bedding", "Bedding and linen"], ["curtains", "Curtains and rugs"], ["cleaning", "Cleaning supplies"], ["decor", "Home decor"], ["bathroom", "Bathroom items"], ["lighting", "Lighting"], ["cookers", "Gas cookers and jikos"]], { required: true, showOnCard: true, searchable: true, group: "Products" }),
+      text("brands", "Main brands", { group: "Products", searchable: true }),
+      multi("condition", "Condition", [["new", "New"], ["refurbished", "Refurbished"]], { group: "Products" }),
+      choice("warranty", "Warranty on appliances", [["none", "None"], ["30-days", "30 days"], ["3-months", "3 months"], ["6-months", "6 months"], ["1-year", "1 year or more"]], { group: "Terms" }),
+      flag("gift-sets", "Gift and wedding sets", { group: "Products", showOnCard: true }),
+      flag("wholesale", "Wholesale prices", { group: "Terms" }),
+      ...deliveryBlock(),
+      payment()
+    ]
   }
 ];

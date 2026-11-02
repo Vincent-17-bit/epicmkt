@@ -5,9 +5,9 @@ import { categories, FIELD_TYPES } from './categories';
 const iconExport = (name) => 'fa' + name.split('-').map((p) => p[0].toUpperCase() + p.slice(1)).join('');
 
 describe('categories', () => {
-  it('has 32 unique, well-formed ids', () => {
-    expect(categories).toHaveLength(32);
-    expect(new Set(categories.map((c) => c.id)).size).toBe(32);
+  it('has 36 unique, well-formed ids', () => {
+    expect(categories).toHaveLength(36);
+    expect(new Set(categories.map((c) => c.id)).size).toBe(36);
     categories.forEach((c) => expect(c.id).toMatch(/^[a-z0-9-]{2,50}$/));
   });
 
@@ -54,5 +54,31 @@ describe('categories', () => {
     expect(docs('water-refill')).toEqual(['public_health_cert:required', 'kebs_mark:conditional']);
     expect(docs('supermarket-minimart')).toEqual([]);
     expect(docs('mpesa-airtime-agent')).toEqual(['agent_authorisation:required']);
+  });
+  it('adds Phones, Electronics, Fashion and Home categories with full details', () => {
+    const by = (id) => categories.find((c) => c.id === id);
+    const expected = {
+      'phones-accessories': 'Phones and Accessories',
+      'electronics-computers': 'Electronics and Computers',
+      'fashion-boutiques': 'Fashion and Boutiques',
+      'home-kitchen': 'Home and Kitchen',
+    };
+    Object.entries(expected).forEach(([id, name]) => {
+      const c = by(id);
+      expect(c, id).toBeDefined();
+      expect(c.name).toBe(name);
+      expect(c.keyFields.some((f) => f.required), `${id} has a required field`).toBe(true);
+      expect(c.keyFields.some((f) => f.showOnCard), `${id} shows a field on the card`).toBe(true);
+      expect(c.keyFields.some((f) => f.filterable), `${id} has a filter`).toBe(true);
+      expect(c.keyFields.some((f) => f.key === 'delivery')).toBe(true);
+    });
+    // Footwear lives in Fashion and Boutiques, separate from tailors
+    expect(by('fashion-boutiques').keyFields.map((f) => f.key)).toEqual(expect.arrayContaining(['footwear', 'footwearTypes']));
+  });
+
+  it('leaves Tailor and boutique exactly as it was', () => {
+    const t = categories.find((c) => c.id === 'tailor-boutique');
+    expect(t.name).toBe('Tailor and boutique');
+    expect(t.keyFields.map((f) => f.key)).toEqual(['tailoring', 'alterations', 'readyMade', 'turnaround']);
   });
 });

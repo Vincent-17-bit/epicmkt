@@ -23,4 +23,5 @@ export * from "./shopLink.js";
 export * from "./similar.js";
 export * from "./seller/settings.js";
 export * from "./seller/limits.js";
+export * from "./seller/performance.js";
 export * from "./seller/team.js";

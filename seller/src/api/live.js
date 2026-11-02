@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota } from "@epicmkt/shared";
+import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance } from "@epicmkt/shared";
 import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
@@ -412,8 +412,8 @@ export const uploadProofs = async (flagId, files, { alreadyAttached = 0 } = {}) 
   return attachments;
 };
 
-const TABLES = ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"];
 const ON_REQUEST = ["items", "item_history"];
+const TABLES = ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"];
 /** Row-level security applies to realtime, so a seller only ever receives their own rows. */
 export const subscribe = (tables, onEvent) => {
   const client = need();
@@ -487,13 +487,28 @@ export const getShopPreview = async () => {
   return shape.preview(b, { categoryName: category?.name, catalog, flashSales, offers, nowMs: Date.parse(server.now) });
 };
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
-export const getItemStats = async (id, days = 30) => shape.itemStats(await rpc("seller_item_stats", { p_item: id, p_days: days }));
-export const getItemHistory = async (id) => (await rpc("seller_item_history", { p_item: id })).map(shape.itemHistoryRow);
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });
-export const duplicateItem = (id) => rpc("seller_duplicate_item", { p_id: id });
+// Makes the draft copy, then gives it its own copy of the pictures and videos. The draft is kept even if some files fail to copy;
+// the editor opens on the copy and shows exactly what it has.
+export const duplicateItem = async (id) => {
+  const copyId = await rpc("seller_duplicate_item", { p_id: id });
+  try {
+    await fn("seller-item-copy-media", { fromItemId: id, toItemId: copyId });
+  } catch {
+    /* the copy exists without (some of) its media */
+  }
+  return copyId;
+};
+// Performance: views and WhatsApp, call and directions taps from the daily rollup (log_business_event feeds it). Same for every plan.
+// Pass an item id to look at one item. Ranges: 7d, 1m, 6m, 12m, 24m, 36m, all.
+export const getPerformance = async (range = "1m", itemId = null) => normalizePerformance(await rpc("seller_performance", { p_range: range, p_item_id: itemId }));
+// History: { limit, total, locked, entries }. The server applies the plan gate (limit key historyEntries).
+export const getItemHistory = (itemId) => rpc("seller_item_history", { p_item_id: itemId });
+// Deals: per flash sale and offer numbers. Premium only (limit key flashAttribution); others get { locked: true } and no numbers.
+export const getItemDeals = (itemId) => rpc("seller_item_deals", { p_item_id: itemId });
 export const importItems = (rows) => rpc("seller_import_items", { p_rows: rows });
 export const getSavedViews = () => rpc("seller_get_views");
 export const saveSavedViews = (views) => rpc("seller_save_views", { p_views: views });

@@ -5,6 +5,7 @@ import Button from "../../components/Button.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
+import { formatNairobiDateTime, nairobiInputToUtcIso } from "../../lib/time.js";
 import { BROADCAST_ERRORS, SEGMENTS, buildBroadcast, missingVariables, samePayload, smsInfo, templateVariables } from "../../lib/messaging.js";
 
 const blank = { segment: "expiring_7d", segmentValue: "", sms: true, email: false, inApp: false, templateKey: "", lang: "en", subject: "", body: "", variables: {}, transactional: false, scheduledAt: "" };
@@ -20,6 +21,7 @@ export default function ComposeTab() {
   const [confirming, setConfirming] = useState(false);
   const [formError, setFormError] = useState("");
   const sendKey = useRef(newKey());
+  const sendAt = nairobiInputToUtcIso(form.scheduledAt); // "" when nothing valid is typed
   const set = (patch) => { setForm((f) => ({ ...f, ...patch })); setFormError(""); };
 
   const { data: templates = [] } = useQuery({ queryKey: ["admin-templates"], queryFn: () => api.listTemplates() });
@@ -126,9 +128,10 @@ export default function ComposeTab() {
         ))}
         <p className="muted">{`{{business_name}}`}, {`{{seller_id}}`} and {`{{paid_until}}`} are filled in for each seller.</p>
 
-        <label className="field">Send at (optional)
+        <label className="field">Send at (optional, Nairobi time)
           <input type="datetime-local" value={form.scheduledAt} onChange={(e) => set({ scheduledAt: e.target.value })} />
         </label>
+        {sendAt ? <p className="muted" data-testid="send-at">Will send {formatNairobiDateTime(sendAt)}.</p> : null}
         <label><input type="checkbox" checked={form.transactional} onChange={(e) => set({ transactional: e.target.checked })} /> This is a billing or account notice (sends even in quiet hours)</label>
 
         {formError ? <p className="modal__error" role="alert">{formError}</p> : null}

@@ -23,6 +23,7 @@ export default function ListingCard({ item, selected, current, handlers, canMove
       isLast={isLast}
       onSelect={handlers.select}
       onEdit={handlers.edit}
+        onInsights={handlers.insights}
       onDuplicate={handlers.duplicate}
       onToggle={handlers.toggle}
       onConfirm={handlers.confirm}

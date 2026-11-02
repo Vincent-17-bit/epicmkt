@@ -1,10 +1,10 @@
 import * as backend from "@epicmkt/backend";
-import { isLive } from "./flash/mode.js";
 import { looksLikeCoordinates, scrubPayload } from "@epicmkt/backend";
 import * as flashApi from "./flash/index.js";
 import * as browse from "./browse/index.js";
 import * as offersApi from "./offers/index.js";
 import * as products from "./products/index.js";
+import { isLive } from "./flash/mode.js";
 
 export const getCategories = () => browse.getCategories();
 export const getCounties = () => browse.getCounties();
@@ -27,22 +27,12 @@ const quiet = (fn) => {
     return { ok: false };
   }
 };
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const itemEvent = (itemId, kind, flash, offer) => {
-  if (!isLive() || !UUID.test(String(itemId ?? ""))) return;
-  quiet(() => import("./applications/supabaseClient").then(({ supabase }) => supabase.rpc("log_item_event", { p_item: itemId, p_kind: kind, p_flash: Boolean(flash), p_offer: Boolean(offer) })));
-};
-export const logContactEvent = (event) => {
-  itemEvent(event?.itemId, event?.type, event?.flash, event?.offer);
-  return quiet(() => backend.logContactEvent(event));
-};
+// Live: stored in Supabase (log_business_event), which feeds the seller Performance panel. Otherwise the in-memory backend.
+export const logContactEvent = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logBusinessEvent(event)) : backend.logContactEvent(event)));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => browse.getTowns();
-export const logEvent = (name, payload) => {
-  if (name === "item_view") itemEvent(payload?.itemId, "view", payload?.flash, payload?.offer);
-  return quiet(() => backend.logEvent(name, scrubPayload(payload)));
-};
+export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, scrubPayload(payload)));
 export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),

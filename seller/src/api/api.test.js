@@ -200,6 +200,17 @@ test("details: a duplicate copies the new fields", async () => {
   assert.deepEqual([copy.brand, copy.highlights, copy.includes], ["Nike", [{ title: "A", text: "B" }], ["Tag"]]);
 });
 
+test("a duplicate gets its own copies of the photos and videos, in the same order, and the original keeps its own", async () => {
+  const { find } = await signedInMock();
+  const before = await find("it-fade");
+  assert.ok(before.imagePaths.length > 0);
+  const copy = await find(await mock.duplicateItem("it-fade"));
+  assert.equal(copy.imagePaths.length, before.imagePaths.length);
+  assert.equal(copy.imageCount, before.imageCount);
+  for (const p of copy.imagePaths) assert.ok(!before.imagePaths.includes(p), `${p} is shared`);
+  assert.deepEqual(await find("it-fade"), before);
+});
+
 test("details: the mock refuses what the database refuses, specs included, and keeps the item as it was", async () => {
   const { find, form } = await signedInMock();
   const before = await find("it-fade");
@@ -211,25 +222,4 @@ test("details: the mock refuses what the database refuses, specs included, and k
   ];
   for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
   assert.deepEqual(await find("it-fade"), before);
-});
-
-test("item stats and history have the same shape in the mock", async () => {
-  mock.resetMock();
-  await mock.login("es100001", "Demo-Passw0rd");
-  const [first] = (await mock.getCatalog()).items;
-  const stats = await mock.getItemStats(first.id, 7);
-  assert.equal(stats.days, 7);
-  assert.equal(stats.series.length, 7);
-  assert.equal(stats.taps, stats.whatsapp + stats.calls);
-  assert.deepEqual(Object.keys(stats).sort(), Object.keys(shape.itemStats({ days: 7, series: [] })).sort());
-  assert.equal((await mock.getItemStats(first.id, 11)).days, 30);
-  await assert.rejects(mock.getItemStats("nope", 7), { code: "not_found" });
-  assert.deepEqual(await mock.getItemHistory(first.id), []);
-  await mock.bulkItems("hide", [first.id]);
-  await mock.itemStock(first.id, "sold_out");
-  const rows = await mock.getItemHistory(first.id);
-  assert.ok(rows.some((r) => r.field === "visible" && r.oldValue === "true" && r.newValue === "false" && r.actor === "seller"));
-  assert.ok(rows.every((r) => Object.keys(r).sort().join() === "actor,at,field,id,newValue,oldValue"));
-  const hidden = await mock.getItemStats(first.id, 7);
-  assert.equal(hidden.views, 0);
 });

@@ -13,6 +13,7 @@ const api = {
   sendBroadcast: vi.fn(),
   listMessageLog: vi.fn(),
   getMessageSummary: vi.fn(),
+  getMessagingMode: vi.fn(),
   retryMessage: vi.fn(async () => true),
   retryFailedMessages: vi.fn(async () => 2),
   saveTemplate: vi.fn(async () => 4),
@@ -46,6 +47,7 @@ beforeEach(() => {
     { id: "m2", created_at: minutesBack(180), channel: "sms", status: "failed", subject: "Offer", business_id: "b2", business_name: "Fade Kings", to_address: "+254722000111", attempts: 3, error: "provider_unavailable", scheduled_at: minutesBack(180) },
   ] });
   api.getMessageSummary.mockResolvedValue({ days: 7, by_status: { sent: 1, failed: 1 }, cost_kes: 0.8 });
+  api.getMessagingMode.mockResolvedValue({ mode: "live" });
   api.getAutomationStatus.mockResolvedValue({
     cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle"],
     jobs: [
@@ -109,6 +111,19 @@ describe("Broadcast composer", () => {
   });
 });
 
+describe("Scheduling a broadcast", () => {
+  it("reads the Send at time as Nairobi time, says so, and sends it as UTC", async () => {
+    renderPage(<BroadcastsPage />);
+    const input = await screen.findByLabelText(/Send at \(optional, Nairobi time\)/);
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Renew today" } });
+    fireEvent.change(input, { target: { value: "2026-10-25T14:00" } });
+    expect(screen.getByTestId("send-at")).toHaveTextContent(/Sun, 25 Oct, 14:00 EAT/);
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    await waitFor(() => expect(api.sendBroadcast).toHaveBeenCalled());
+    expect(api.sendBroadcast.mock.calls[0][0].scheduledAt).toBe("2026-10-25T11:00:00.000Z");
+  });
+});
+
 describe("Message log and templates", () => {
   it("shows failures with their cause and retries one", async () => {
     renderPage(<BroadcastsPage />, "/?tab=log");
@@ -118,6 +133,35 @@ describe("Message log and templates", () => {
     await waitFor(() => expect(api.retryMessage).toHaveBeenCalledWith("m2"));
     fireEvent.click(screen.getByRole("button", { name: "Retry all failed" }));
     await waitFor(() => expect(api.retryFailedMessages).toHaveBeenCalled());
+  });
+
+  it("in mock mode it says nothing is being sent, and simulated rows are counted apart from sent ones", async () => {
+    api.getMessagingMode.mockResolvedValue({ mode: "mock" });
+    api.getMessageSummary.mockResolvedValue({ days: 7, by_status: { sent: 1, simulated: 4, failed: 1 }, cost_kes: 0.8 });
+    api.listMessageLog.mockResolvedValue({ total: 1, rows: [
+      { id: "m9", created_at: minutesBack(5), channel: "sms", status: "simulated", subject: "Weekend offer", business_id: "b1", business_name: "Lakeside Provisions", to_address: "+254712345678", attempts: 1, scheduled_at: minutesBack(5) },
+    ] });
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText(/Messaging is in test mode/)).toBeInTheDocument();
+    expect(screen.getByText(/not being sent/)).toBeInTheDocument();
+    expect(await screen.findByText(/simulated \(never sent, no cost\)/)).toBeInTheDocument();
+    expect(screen.getByText("Not sent")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Simulated/ })).toBeInTheDocument();
+    expect(screen.getByText("simulated", { selector: ".status-pill" })).toBeInTheDocument();
+  });
+
+  it("a queued message shows when it will go, in Nairobi time, whatever the browser's zone", async () => {
+    api.listMessageLog.mockResolvedValue({ total: 1, rows: [
+      { id: "m7", created_at: minutesBack(5), channel: "sms", status: "queued", subject: "Later", business_id: "b1", business_name: "Lakeside Provisions", to_address: "+254712345678", attempts: 0, scheduled_at: "2099-10-25T11:00:00Z" },
+    ] });
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText(/Scheduled for .*14:00 EAT/)).toBeInTheDocument();
+  });
+
+  it("in live mode the log shows a Live badge and no warning", async () => {
+    renderPage(<BroadcastsPage />, "/?tab=log");
+    expect(await screen.findByText("Live")).toBeInTheDocument();
+    expect(screen.queryByText(/test mode/)).not.toBeInTheDocument();
   });
 
   it("the owner edits a template; others see it disabled with the reason", async () => {
@@ -153,6 +197,46 @@ describe("Automation", () => {
     expect(within(problems).getByText(/scheduler \(pg_cron\) is not installed/)).toBeInTheDocument();
     expect(within(problems).getByText(/9 messages have been waiting to send for 1 hours|9 messages have been waiting/)).toBeInTheDocument();
     expect(screen.getAllByText("Not scheduled")).toHaveLength(2);
+  });
+
+  it("all four scheduled jobs are listed, each with Pause and Run now (proofs-purge and media-gc included)", async () => {
+    api.getAutomationStatus.mockResolvedValue({
+      cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"],
+      jobs: [
+        { name: "dispatch-messages", schedule: "* * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(1) } },
+        { name: "daily-lifecycle", schedule: "0 4 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(300) } },
+        { name: "proofs-purge", schedule: "0 1 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(600) } },
+        { name: "media-gc", schedule: "*/10 * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(4) } },
+      ],
+      queue: { queued: 0, due_now: 0, oldest_due_at: null, failed_7d: 0 }, last_sent_at: minutesBack(2), last_reminder_at: minutesBack(300),
+    });
+    renderPage(<AutomationPage />);
+    expect(await screen.findByText("Running normally")).toBeInTheDocument();
+    for (const label of ["Clear old proof uploads", "Clean up unused pictures"]) {
+      expect(screen.getByRole("button", { name: `Pause ${label}` })).toBeEnabled();
+      expect(screen.getByRole("button", { name: `Run now: ${label}` })).toBeEnabled();
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Pause Clean up unused pictures" }));
+    await waitFor(() => expect(api.setJobActive).toHaveBeenCalledWith({ name: "media-gc", active: false }));
+    fireEvent.click(screen.getByRole("button", { name: "Run now: Clear old proof uploads" }));
+    await waitFor(() => expect(api.runJob).toHaveBeenCalledWith("proofs-purge"));
+  });
+
+  it("a paused or overdue clean-up job is reported like the other jobs", async () => {
+    api.getAutomationStatus.mockResolvedValue({
+      cron_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"],
+      jobs: [
+        { name: "dispatch-messages", schedule: "* * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(1) } },
+        { name: "daily-lifecycle", schedule: "0 4 * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(300) } },
+        { name: "proofs-purge", schedule: "0 1 * * *", active: false, last_run: null },
+        { name: "media-gc", schedule: "*/10 * * * *", active: true, last_run: { status: "succeeded", started_at: minutesBack(180) } },
+      ],
+      queue: { queued: 0, due_now: 0, oldest_due_at: null, failed_7d: 0 }, last_sent_at: minutesBack(2), last_reminder_at: minutesBack(300),
+    });
+    renderPage(<AutomationPage />);
+    const problems = await screen.findByRole("list", { name: "Problems" });
+    expect(within(problems).getByText(/"Clear old proof uploads" is paused/)).toBeInTheDocument();
+    expect(within(problems).getByText(/"Clean up unused pictures" has not run for over an hour/)).toBeInTheDocument();
   });
 
   it("pauses a job, and non-owners cannot", async () => {

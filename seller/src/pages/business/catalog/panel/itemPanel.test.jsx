@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { configureAxe } from "vitest-axe";
 import { M, signedInApp } from "../../../../test/utils.jsx";
 import ActionBar from "./ActionBar.jsx";
-import { sentenceOf } from "./History.jsx";
 
 vi.mock("../../../../lib/videoPoster.js", () => ({
   readVideo: vi.fn(async () => null),
@@ -197,14 +196,6 @@ describe("read-only", () => {
     await signedInApp("/business/catalog/it-fade", async () => { M.setBusiness({ status: "suspended", live: false }); });
     expect(await screen.findByTestId("locked")).toBeInTheDocument();
     expect(screen.queryByTestId("panel-status")).toBeNull();
-  });
-});
-
-describe("history sentences", () => {
-  it("reads a price change in plain words", () => {
-    const s = sentenceOf({ field: "price", oldValue: "100.00", newValue: "150.00", actor: "seller", at: "2026-01-01T00:00:00Z" });
-    expect(s).toMatch(/100/);
-    expect(s).toMatch(/150/);
   });
 });
 

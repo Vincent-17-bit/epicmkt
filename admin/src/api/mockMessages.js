@@ -1,5 +1,6 @@
 import { businessStore } from "./mockBusinesses.js";
 import { ApiError } from "./errors.js";
+import { countConversations, filterConversations } from "../lib/conversations.js";
 
 // Demo mode only. Same shapes as the live API, kept in memory so the Messages page works without a server.
 const latency = (ms = 120) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -45,13 +46,42 @@ export function addMessage({ business, parentId = null, subject, body, needsRepl
   return message;
 }
 
-export async function listMessages({ businessId = null } = {}) {
+// Same shape as the live API: one row per business, newest activity first. The tab and the search are applied with the same
+// rules as the server (lib/conversations.js), and unread is counted the way the sidebar badge counts it.
+export async function listConversations({ page = 0, pageSize = 30, filter = "all", search = "" } = {}) {
+  seed();
+  await latency();
+  const byBusiness = new Map();
+  for (const m of store.messages) {
+    if (!byBusiness.has(m.businessId)) byBusiness.set(m.businessId, []);
+    byBusiness.get(m.businessId).push(m);
+  }
+  const all = [...byBusiness.entries()].map(([id, list]) => {
+    const sorted = [...list].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    const threads = new Map();
+    for (const m of list) threads.set(m.threadId ?? m.id, [...(threads.get(m.threadId ?? m.id) ?? []), m]);
+    const waiting = [...threads.values()].some((t) => t.some((m) => m.sender === "admin" && m.needsReply) && [...t].sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0].sender === "admin");
+    return {
+      id, name: sorted[0].businessName, sellerId: sorted[0].sellerId, lastAt: sorted[0].createdAt, lastSubject: sorted[0].subject,
+      messageCount: list.length, unread: list.filter((m) => m.sender === "seller" && !m.adminReadAt).length, waiting, resolved: store.resolved.has(id),
+      messages: list,
+    };
+  }).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+  const shown = filterConversations(all, { filter, search, resolved: store.resolved });
+  const strip = ({ messages, ...row }) => row;
+  return {
+    total: shown.length, unreadTotal: all.reduce((n, r) => n + r.unread, 0), counts: countConversations(all, store.resolved, search),
+    rows: copy(shown.slice(page * pageSize, (page + 1) * pageSize).map(strip)),
+  };
+}
+
+export async function listMessages({ businessId = null, unreadOnly = false, limit = 1000 } = {}) {
   seed();
   await latency();
   // The demo seller's device receives staff messages a moment later; show that as the ticks changing.
   const now = nowIso();
   for (const m of store.messages) if (m.sender === "admin" && !m.deliveredAt && Date.parse(now) - Date.parse(m.createdAt) > 2_000) m.deliveredAt = now;
-  return copy(store.messages.filter((m) => !businessId || m.businessId === businessId));
+  return copy(store.messages.filter((m) => (!businessId || m.businessId === businessId) && (!unreadOnly || (m.sender === "seller" && !m.adminReadAt))).slice(0, limit));
 }
 
 export async function sendMessage({ parentId = null, businessId = null, subject = null, body = "", needsReply = false, files = [] }) {

@@ -38,7 +38,7 @@ export default function AutomationPage() {
           <h2 className="heading-sm">Automation</h2>
           {status ? <span className={`status-pill status-pill--${health.level === "healthy" ? "healthy" : health.level === "down" ? "down" : "degraded"}`}>{HEALTH_LABEL[health.level]}</span> : null}
         </div>
-        <p className="muted">Two scheduled jobs keep messages and renewals moving. If they stop, nothing tells the sellers.</p>
+        <p className="muted">Scheduled jobs keep messages, renewals and clean-up moving. If the message or reminder jobs stop, nothing tells the sellers.</p>
 
         {isError ? <LoadError what="the automation status" error={error} onRetry={refetch} /> : isLoading ? <p>Loading…</p> : (
           <>

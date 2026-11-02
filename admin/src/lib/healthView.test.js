@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BANDS, describeHealth, historyStrip, readHealth, toneOfScore, trendInfo, weakestPart } from "./healthView.js";
+import { BANDS, NO_TREND, describeHealth, historyStrip, readHealth, toneOfScore, trendInfo, weakHint, weakestPart } from "./healthView.js";
 
 const health = {
   score: 41, band: "watch", label: "Watch", capped: false, weakest: "activity", grace: false,
@@ -62,4 +62,30 @@ test("historyStrip is 30 days ending today, with gaps where there is no snapshot
 
 test("every band has a label", () => {
   for (const key of ["healthy", "watch", "at_risk", "none"]) assert.ok(BANDS[key].label);
+});
+
+test("weakHint names the weakest part and its value for a Watch or At risk row", () => {
+  assert.deepEqual(weakHint({ ...health, score: 66, subs: { profile: 88, freshness: 60, activity: 12, trust: 100 } }), {
+    text: "Activity 12", title: "Weakest part: activity at 12 out of 100",
+  });
+  assert.equal(weakHint({ ...health, band: "at_risk", weakest: "freshness" }).text, "Prices 50");
+});
+
+test("weakHint says Capped when a hard cap is the real reason, whatever the weakest part is", () => {
+  assert.equal(weakHint({ ...health, band: "at_risk", capped: true }).text, "Capped");
+});
+
+test("weakHint is null when there is nothing to say: Healthy, no score, no parts, no weakest part", () => {
+  assert.equal(weakHint({ ...health, band: "healthy", score: 90 }), null);
+  assert.equal(weakHint({ ...health, band: "none", score: null }), null);
+  assert.equal(weakHint(readHealth({ healthScore: 55 })), null);   // an older server sends only a number
+  assert.equal(weakHint({ ...health, weakest: null }), null);
+  assert.equal(weakHint(null), null);
+  assert.equal(weakHint(undefined), null);
+});
+
+test("an absent trend is worded differently from a steady one", () => {
+  assert.equal(trendInfo(null).dir, "none");
+  assert.equal(trendInfo(0).text, "Steady");
+  assert.notEqual(NO_TREND.text, trendInfo(0).text);
 });

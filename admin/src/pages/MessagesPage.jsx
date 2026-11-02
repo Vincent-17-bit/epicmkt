@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPaperclip, faPaperPlane, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { usePermissions } from "../hooks/usePermissions.js";
@@ -12,7 +12,7 @@ import Tabs from "../components/Tabs.jsx";
 import Ticks from "../components/Ticks.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { stamp, stampClock } from "../lib/time.js";
-import { CONVERSATION_FILTERS, countConversations, filterConversations } from "../lib/conversations.js";
+import { CONVERSATION_FILTERS } from "../lib/conversations.js";
 import NewConversation from "./messages/NewConversation.jsx";
 
 
@@ -23,6 +23,9 @@ const initials = (name = "") => name.split(/\s+/).filter(Boolean).slice(0, 2).ma
 export const MESSAGES_KEY = ["admin-messages"];
 export const UNREAD_KEY = ["admin-unread-messages"];
 export const RESOLVED_KEY = ["admin-resolved-conversations"];
+const CONVERSATIONS_KEY = [...MESSAGES_KEY, "conversations"];
+const CONVERSATION_PAGE = 30;
+const NO_COUNTS = { all: 0, unread: 0, waiting: 0, resolved: 0 };
 
 function Files({ files }) {
   const toast = useToast();
@@ -200,31 +203,45 @@ export default function MessagesPage() {
   const canDelete = can("messages.delete");
   const canSend = can("messages.send");
 
-  const { data = [], isLoading, isError, refetch } = useQuery({ queryKey: MESSAGES_KEY, queryFn: () => api.listMessages(), refetchInterval: 30_000 });
+  // The conversation list is paged, filtered and searched on the server (30 at a time), and its unread counts come from the
+  // same SQL rule as the sidebar badge. The messages themselves are loaded only for the open conversation.
+  const [term, setTerm] = useState("");
+  useEffect(() => {
+    const timer = setTimeout(() => setTerm(search.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const list = useInfiniteQuery({
+    queryKey: [...CONVERSATIONS_KEY, filter, term],
+    queryFn: ({ pageParam }) => api.listConversations({ page: pageParam, pageSize: CONVERSATION_PAGE, filter, search: term }),
+    initialPageParam: 0,
+    getNextPageParam: (last, all) => (all.length * CONVERSATION_PAGE < last.total ? all.length : undefined),
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+  const { isLoading, isError, refetch } = list;
+  const shown = useMemo(() => (list.data?.pages ?? []).flatMap((p) => p.rows), [list.data]);
+  const counts = list.data?.pages[0]?.counts ?? NO_COUNTS;
+
+  const thread = useQuery({
+    queryKey: [...MESSAGES_KEY, "business", selected],
+    queryFn: () => api.listMessages({ businessId: selected }),
+    enabled: Boolean(selected),
+    refetchInterval: 30_000,
+  });
+  const data = thread.data ?? [];
 
   const { data: resolvedIds = [] } = useQuery({ queryKey: RESOLVED_KEY, queryFn: () => api.listResolvedConversations(), refetchInterval: 30_000 });
   const resolved = useMemo(() => new Set(resolvedIds), [resolvedIds]);
 
-  const businesses = useMemo(() => {
-    const map = new Map();
-    for (const m of data) {
-      if (!map.has(m.businessId)) map.set(m.businessId, { id: m.businessId, name: m.businessName, sellerId: m.sellerId, messages: [] });
-      map.get(m.businessId).messages.push(m);
-    }
-    return [...map.values()]
-      .map((b) => {
-        const threads = groupThreads(b.messages);
-        return {
-          ...b, threads, unread: b.messages.filter((m) => m.sender === "seller" && !m.adminReadAt).length,
-          last: threads[0]?.last, waiting: threads.some((t) => t.needsReply && t.last.sender === "admin"),
-        };
-      })
-      .sort((a, b) => (a.last?.createdAt < b.last?.createdAt ? 1 : -1));
-  }, [data]);
-
-  const shown = useMemo(() => filterConversations(businesses, { filter, search, resolved }), [businesses, filter, search, resolved]);
-  const counts = useMemo(() => countConversations(businesses, resolved, search), [businesses, resolved, search]);
-  const started = businesses.find((b) => b.id === selected) ?? null;
+  const started = useMemo(() => {
+    if (!selected || data.length === 0) return null;
+    const threads = groupThreads(data);
+    return {
+      id: selected, name: data[0].businessName, sellerId: data[0].sellerId, messages: data, threads,
+      unread: data.filter((m) => m.sender === "seller" && !m.adminReadAt).length,
+      last: threads[0]?.last, waiting: threads.some((t) => t.needsReply && t.last.sender === "admin"),
+    };
+  }, [selected, data]);
   const current = started ?? (draft && draft.id === selected ? { ...draft, messages: [], threads: [], unread: 0, last: null, waiting: false } : null);
   const isResolved = !!current && resolved.has(current.id);
   const flow = useMemo(() => (current ? [...current.threads].reverse() : []), [current]);
@@ -235,7 +252,7 @@ export default function MessagesPage() {
     queryClient.invalidateQueries({ queryKey: RESOLVED_KEY });
   };
 
-  useEffect(() => { api.ackMessagesDelivered().then(refresh).catch(() => {}); }, [data.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { api.ackMessagesDelivered().then(refresh).catch(() => {}); }, [shown.length, data.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const unreadHere = current?.unread ?? 0;
   useEffect(() => {
     if (current && unreadHere) api.markMessagesRead({ businessId: current.id }).then(refresh).catch(() => {});
@@ -273,7 +290,7 @@ export default function MessagesPage() {
   });
 
   const askMessage = (m) => setPending({ kind: "message", id: m.id, title: "Delete this message?", summary: "It is removed from the admin app. The seller keeps their copy." });
-  const askConversation = (b) => setPending({ kind: "conversation", businessId: b.id, title: `Delete the conversation with ${b.name}?`, summary: `All ${b.messages.length} ${b.messages.length === 1 ? "message" : "messages"} are removed from the admin app. The seller keeps their copy.` });
+  const askConversation = (b) => { const count = b.messages?.length ?? b.messageCount ?? 0; setPending({ kind: "conversation", businessId: b.id, title: `Delete the conversation with ${b.name}?`, summary: `All ${count} ${count === 1 ? "message" : "messages"} are removed from the admin app. The seller keeps their copy.` }); };
 
   return (
     <div className="msg-layout">
@@ -294,10 +311,10 @@ export default function MessagesPage() {
         <div className="msg-list__scroll" id="msg-panel" role="tabpanel" aria-labelledby={`msg-tab-${filter}`}>
           {isLoading ? <p role="status" className="msg-empty">Loading</p> : null}
           {isError ? <p role="alert" className="msg-empty">Could not load messages. <Button size="sm" onClick={() => refetch()}>Try again</Button></p> : null}
-          {!isLoading && !isError && businesses.length === 0 ? (
+          {!isLoading && !isError && shown.length === 0 && !term && filter === "all" ? (
             <p className="msg-empty" data-testid="empty">No conversations yet. Select businesses on the Businesses page and choose Message to start one.</p>
           ) : null}
-          {!isLoading && !isError && businesses.length > 0 && shown.length === 0 ? <p className="msg-empty" data-testid="no-match">No conversations match.</p> : null}
+          {!isLoading && !isError && shown.length === 0 && (term || filter !== "all") ? <p className="msg-empty" data-testid="no-match">No conversations match.</p> : null}
           <ul>
             {shown.map((b) => (
               <li key={b.id} className="msg-list__row" data-active={b.id === selected}>
@@ -306,10 +323,10 @@ export default function MessagesPage() {
                   <span className="msg-list__body">
                     <span className="msg-list__top">
                       <span className="msg-list__name">{b.name}</span>
-                      <time className="msg-list__time" dateTime={b.last?.createdAt}>{b.last ? stamp(b.last.createdAt) : ""}</time>
+                      <time className="msg-list__time" dateTime={b.lastAt}>{b.lastAt ? stamp(b.lastAt) : ""}</time>
                     </span>
-                    <span className="msg-list__sub">{b.last?.subject}</span>
-                    {resolved.has(b.id) ? <span className="status-pill msg-list__wait">Resolved</span> : b.waiting && !b.unread ? <span className="status-pill msg-list__wait">Waiting for reply</span> : null}
+                    <span className="msg-list__sub">{b.lastSubject}</span>
+                    {b.resolved ? <span className="status-pill msg-list__wait">Resolved</span> : b.waiting && !b.unread ? <span className="status-pill msg-list__wait">Waiting for reply</span> : null}
                   </span>
                   {b.unread ? <span className="msg-badge" title={`${b.unread} unread`}>{b.unread}<span className="sr-only"> unread</span></span> : null}
                 </button>
@@ -321,12 +338,19 @@ export default function MessagesPage() {
               </li>
             ))}
           </ul>
+          {list.hasNextPage ? (
+            <p className="msg-empty"><Button size="sm" disabled={list.isFetchingNextPage} onClick={() => list.fetchNextPage()}>{list.isFetchingNextPage ? "Loading" : `Load older conversations (${shown.length} of ${list.data.pages[0].total})`}</Button></p>
+          ) : null}
         </div>
       </section>
 
       <section className="msg-thread" aria-label="Messages">
-        {!current ? (
+        {!selected ? (
           <p className="msg-empty msg-empty--center">Choose a conversation.</p>
+        ) : thread.isError ? (
+          <p role="alert" className="msg-empty msg-empty--center">Could not load this conversation. <Button size="sm" onClick={() => thread.refetch()}>Try again</Button></p>
+        ) : !current ? (
+          <p role="status" className="msg-empty msg-empty--center">{thread.isLoading ? "Loading" : "No messages in this conversation."}</p>
         ) : (
           <>
             <header className="msg-pane__head msg-thread__head">

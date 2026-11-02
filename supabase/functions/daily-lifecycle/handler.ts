@@ -12,7 +12,13 @@ import { cronOrRole, isResponse, limitAdmin, type OutboundDeps } from "../_share
 // Then snapshot_business_health() stores today's health score for every business (one row per business per day, see
 // migration 0078). That is history and the 7-day trend. It is best effort: billing notices matter more, so a failure
 // here is reported in the response and the audit row but never turns the run into an error. Running it again the same
-// day refreshes that day's rows.
+// day refreshes that day's rows. When it does fail, the reason is kept (healthSnapshotError, short) in the response and the
+// audit row, so a missing trend in the admin list can be traced here instead of failing silently.
+const describeFailure = (e: unknown): string => {
+  const m = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : String(e);
+  return (m || "unknown_error").slice(0, 300);
+};
+
 export const dailyLifecycle = (d: OutboundDeps) => wrap(async (req) => {
   const actor = await cronOrRole(req, d, ["owner"]);
   if (isResponse(actor)) return actor;
@@ -24,18 +30,21 @@ export const dailyLifecycle = (d: OutboundDeps) => wrap(async (req) => {
   const result = (r.data ?? { inApp: 0, queued: 0 }) as { inApp: number; queued: number };
 
   let health: number | null = null;
+  let healthError: string | null = null;
   try {
     const h = await d.db.rpc("snapshot_business_health", {});
-    if (!h.error && typeof h.data === "number") health = h.data;
-  } catch (_) { /* the snapshot is best effort */ }
+    if (h.error) healthError = describeFailure(h.error);
+    else if (typeof h.data === "number") health = h.data;
+    else healthError = "unexpected_result";
+  } catch (e) { healthError = describeFailure(e); }   // best effort, but never silent
 
   await writeAudit(d.db, {
     actor: actor.kind === "admin" ? { id: actor.userId, email: actor.email } : null,
     actorRole: actor.kind === "admin" ? "admin" : "system",
     action: "lifecycle.daily",
     targetType: "system",
-    after: { inApp: result.inApp, queued: result.queued, healthSnapshots: health },
+    after: { inApp: result.inApp, queued: result.queued, healthSnapshots: health, healthSnapshotError: healthError },
   });
 
-  return json({ ok: true, inApp: result.inApp, queued: result.queued, healthSnapshots: health });
+  return json({ ok: true, inApp: result.inApp, queued: result.queued, healthSnapshots: health, healthSnapshotError: healthError });
 });

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { flashPhase, flashPrice, offerHeadline, offerLabel, offerPhase } from "@epicmkt/shared";
+import { Deals as DealResults } from "../ItemInsights.jsx";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { useServerNow } from "../../../../lib/useServerNow.js";
@@ -76,6 +77,9 @@ export default function Deals({ item }) {
         <Link className={ui.link} to={`/business/flash?item=${encodeURIComponent(item.id)}`}>Flash sales for this item</Link>
         <Link className={ui.link} to={`/business/offers?item=${encodeURIComponent(item.id)}`}>Offers for this item</Link>
       </div>
+
+      <h3 className={styles.h3}>How past deals did</h3>
+      <DealResults itemId={item.id} />
     </section>
   );
 }

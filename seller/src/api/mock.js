@@ -1,6 +1,5 @@
-import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
+import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import * as shape from "./shape.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
@@ -374,7 +373,7 @@ const FEATURES = {
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { history: [], items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 // ---- Settings, help and onboarding (mirror the live functions) ----
 export const getBusinessFacts = async () => {
   signedIn();
@@ -456,7 +455,6 @@ function resetBilling() {
     mk(6, "it-quote", "Wedding package", null, "contact", "available", true),
   ];
   bill.signals = [];
-  bill.history = [];
   bill.views = [];
   bill.flash = [];
   bill.offers = [];
@@ -705,20 +703,6 @@ const flashCheckItem = (item) => {
   if (!(item.price > 0) || !["fixed", "from"].includes(item.priceType)) throw new ApiError("item_not_discountable");
 };
 
-const HISTORY_FIELDS = { price: "price", priceMax: "price_max", salePrice: "sale_price", stockCount: "stock_count", availability: "availability", visible: "visible", draft: "draft", hiddenByAdmin: "hidden_by_admin", removedByAdmin: "removed_by_admin" };
-const markItems = (list) => new Map(list.map((i) => [i.id, Object.fromEntries(Object.keys(HISTORY_FIELDS).map((k) => [k, i[k]]))]));
-const logItems = (list, before) => {
-  const at = clockNow().toISOString();
-  list.forEach((i) => {
-    const was = before.get(i.id);
-    if (!was) return;
-    Object.entries(HISTORY_FIELDS).forEach(([k, field]) => {
-      if (was[k] === i[k] || (was[k] ?? null) === (i[k] ?? null)) return;
-      bill.history.push({ id: ++bill.seq, item_id: i.id, field, old_value: was[k] == null ? null : String(was[k]), new_value: i[k] == null ? null : String(i[k]), actor: "seller", at });
-    });
-  });
-  if (list.length) emit("items", "UPDATE", {});
-};
 export const getServerTime = async () => ({ now: clockNow().toISOString() });
 export const listItems = async () => { signedIn(); await wait(); return copy(bill.items); };
 const shopLive = () => bill.business.status === "live" && Boolean(bill.business.paidUntil) && Date.parse(bill.business.paidUntil) > clockNow().getTime();
@@ -761,46 +745,12 @@ export const saveItem = async (id, f) => {
     if (!item) throw new ApiError("item_not_found");
     const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
     if (priceChanged && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
-    const before = markItems([item]);
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
-    logItems([item], before);
     return id;
   }
   const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
-};
-const spread = (id, n) => [...`${id}:${n}`].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
-export const getItemStats = async (id, days = 30) => {
-  signedIn();
-  await wait();
-  const item = bill.items.find((i) => i.id === id);
-  if (!item) throw new ApiError("not_found");
-  const span = [7, 30, 90].includes(days) ? days : 30;
-  const showing = item.visible && !item.draft && !item.hiddenByAdmin && !item.removedByAdmin;
-  const flashOn = inFlashSale(id);
-  const offerOn = bill.offers.some((o) => o.active && o.items?.some((e) => e.itemId === id));
-  const today = new Date(`${todayNairobi()}T00:00:00Z`);
-  const series = Array.from({ length: span }, (_, n) => {
-    const day = new Date(today.getTime() - (span - 1 - n) * 86400000).toISOString().slice(0, 10);
-    const views = showing ? 2 + (spread(id, n) % 9) : 0;
-    return { day, views, taps: showing ? Math.floor(views / 4) : 0 };
-  });
-  const views = series.reduce((sum, d) => sum + d.views, 0);
-  const taps = series.reduce((sum, d) => sum + d.taps, 0);
-  const whatsapp = Math.ceil(taps * 0.7);
-  return shape.itemStats({
-    days: span, views, whatsapp, calls: taps - whatsapp,
-    flash_views: flashOn ? Math.floor(views / 4) : 0, flash_taps: flashOn ? Math.floor(taps / 3) : 0,
-    offer_views: offerOn ? Math.floor(views / 5) : 0, offer_taps: offerOn ? Math.floor(taps / 4) : 0,
-    series,
-  });
-};
-export const getItemHistory = async (id) => {
-  signedIn();
-  await wait();
-  if (!bill.items.some((i) => i.id === id)) throw new ApiError("not_found");
-  return bill.history.filter((h) => h.item_id === id).sort((a, b) => (a.at === b.at ? b.id - a.id : a.at < b.at ? 1 : -1)).map(shape.itemHistoryRow);
 };
 export const bulkItems = async (action, ids, args = {}) => {
   signedIn();
@@ -812,14 +762,12 @@ export const bulkItems = async (action, ids, args = {}) => {
   let skipped = ids.length - targets.length;
   let affected = 0;
   const now = clockNow().toISOString();
-  const before = markItems(targets);
   if (action === "hide") targets.forEach((i) => { if (i.visible) { i.visible = false; affected += 1; } });
   else if (action === "show") targets.forEach((i) => { if (!i.visible || i.draft) { i.visible = true; i.draft = false; affected += 1; } });
   else if (action === "delete") {
     const gone = new Set(targets.map((i) => i.id));
     bill.items = bill.items.filter((i) => !gone.has(i.id));
     affected = gone.size;
-    emit("items", "DELETE", {});
   } else if (action === "move_section") {
     const section = String(args.section ?? "").trim() || null;
     if (section && section.length > 60) throw new ApiError("invalid_section");
@@ -846,7 +794,6 @@ export const bulkItems = async (action, ids, args = {}) => {
     skipped += preview.skipped;
   } else targets.forEach((i) => { i.priceConfirmedAt = now; affected += 1; });
   targets.forEach((i) => { i.updatedAt = now; });
-  if (action !== "delete") logItems(targets, before);
   return { affected, skipped };
 };
 export const itemStock = async (id, action, count = null) => {
@@ -855,7 +802,6 @@ export const itemStock = async (id, action, count = null) => {
   if (!["sold_out", "restock"].includes(action)) throw new ApiError("invalid_action");
   const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
   if (!item) throw new ApiError("item_not_found");
-  const before = markItems([item]);
   if (action === "sold_out") {
     if (item.trackStock) { item.stockCount = 0; item.availability = "out_of_stock"; } else item.availability = "out_of_stock";
   } else if (item.trackStock) {
@@ -864,7 +810,6 @@ export const itemStock = async (id, action, count = null) => {
     item.availability = statusFromCount(count, item.lowStockThreshold);
   } else item.availability = "available";
   item.updatedAt = clockNow().toISOString();
-  logItems([item], before);
   return { availability: item.availability, stockCount: item.stockCount };
 };
 export const reorderItems = async (ids) => {
@@ -884,10 +829,76 @@ export const duplicateItem = async (id) => {
   const src = bill.items.find((i) => i.id === id && !i.removedByAdmin);
   if (!src) throw new ApiError("item_not_found");
   const now = clockNow().toISOString();
-  const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: 0, imagePaths: [], hasVideo: false, createdAt: now, updatedAt: now, priceConfirmedAt: now };
+  const copyOf = { ...copy(src), id: `it-copy-${++bill.seq}`, name: `${src.name.slice(0, 111)} (copy)`, visible: false, draft: true, sort: src.sort + 1, imageCount: src.imagePaths.length, imagePaths: src.imagePaths.map((p, n) => `${p}.copy${bill.seq}-${n}`), createdAt: now, updatedAt: now, priceConfirmedAt: now };
+  // Like the real thing, the copy has its own files (new paths), in the same order, and the original keeps its own.
+  const vids = demoVideos.get(src.id);
+  if (vids?.length) demoVideos.set(copyOf.id, vids.map((p, n) => `${p}.copy${bill.seq}-${n}`));
   bill.items.push(copyOf);
-  emit("items", "INSERT", {});
   return copyOf.id;
+};
+// ---- Performance, History, Deals (demo data; the real numbers come from the rollup tables in Supabase) ----
+const METRICS = ["view", "whatsapp", "call", "directions"];
+const WEIGHT = { view: 9, whatsapp: 3, call: 2, directions: 1 };
+const dayStamp = (d) => d.toISOString().slice(0, 10);
+const addDays = (d, n) => new Date(d.getTime() + n * 86400000);
+// A fixed pattern per day so charts and totals are stable between renders.
+const demoCount = (type, dayIndex, salt) => Math.max(0, Math.round(WEIGHT[type] * (1 + Math.sin(dayIndex / 5 + salt)) * (1 + (dayIndex % 7 === 5 ? 0.6 : 0))));
+const rangeStart = (range, today, first) => {
+  const months = { "1m": 1, "6m": 6, "12m": 12, "24m": 24, "36m": 36 }[range];
+  if (range === "7d") return addDays(today, -6);
+  if (range === "all") return first;
+  const d = new Date(today);
+  d.setUTCMonth(d.getUTCMonth() - months);
+  return addDays(d, 1);
+};
+export const getPerformance = async (range = "1m", itemId = null) => {
+  signedIn();
+  await wait();
+  if (!isPerformanceRange(range)) throw new ApiError("invalid_range");
+  if (itemId && !bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  const today = new Date(`${dayStamp(clockNow())}T00:00:00Z`);
+  const first = addDays(today, -120);
+  const from = rangeStart(range, today, first);
+  const salt = itemId ? [...itemId].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 7 : 0;
+  const span = Math.round((today - from) / 86400000);
+  const grain = span <= 62 ? "day" : span <= 400 ? "week" : "month";
+  const totals = { view: 0, whatsapp: 0, call: 0, directions: 0 };
+  const buckets = new Map();
+  for (let d = new Date(from); d <= today; d = addDays(d, 1)) {
+    const idx = Math.round((d - first) / 86400000);
+    const key = grain === "day" ? dayStamp(d) : grain === "week" ? dayStamp(addDays(d, -((d.getUTCDay() + 6) % 7))) : `${d.toISOString().slice(0, 7)}-01`;
+    const b = buckets.get(key) ?? { bucket: key, view: 0, whatsapp: 0, call: 0, directions: 0 };
+    for (const m of METRICS) {
+      const n = idx < 0 ? 0 : Math.round(demoCount(m, idx, salt) / (itemId ? 3 : 1));
+      b[m] += n;
+      totals[m] += n;
+    }
+    buckets.set(key, b);
+  }
+  return normalizePerformance({ range, grain, from: dayStamp(from), to: dayStamp(today), totals, series: [...buckets.values()] });
+};
+const demoHistory = (item) => {
+  const fields = [["price", "450", "500"], ["name", "Fade", item.name], ["availability", "available", "limited_stock"], ["price", "500", "550"], ["description", "", "Fresh and clean."], ["price", "550", "600"], ["section", "", item.section ?? "General"], ["visible", "false", "true"]];
+  const base = new Date(item.updatedAt ?? clockNow()).getTime();
+  return fields.map(([field, oldValue, newValue], n) => ({ id: n + 1, field, old_value: oldValue, new_value: newValue, actor_role: "seller", created_at: new Date(base - n * 86400000 * 3).toISOString() }));
+};
+export const getItemHistory = async (itemId) => {
+  signedIn();
+  await wait();
+  const item = bill.items.find((i) => i.id === itemId);
+  if (!item) throw new ApiError("item_not_found");
+  const limit = limitsFor(bill.business.planKey, null).historyEntries;
+  const all = demoHistory(item);
+  const entries = limit == null ? all : all.slice(0, limit);
+  return { limit, total: all.length, locked: limit != null && all.length > limit, entries };
+};
+export const getItemDeals = async (itemId) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  if (!limitsFor(bill.business.planKey, null).flashAttribution) return { locked: true, flash: [], offers: [] };
+  const flash = bill.flash.filter((f) => f.itemId === itemId || f.item_id === itemId).map((f, n) => ({ id: f.id, headline: f.headline ?? null, status: f.status, starts_at: f.startsAt ?? f.starts_at, ends_at: f.endsAt ?? f.ends_at, view: 12 + n, whatsapp: 4, call: 2, directions: 1 }));
+  return { locked: false, flash, offers: [] };
 };
 export const importItems = async (rows) => {
   signedIn();
