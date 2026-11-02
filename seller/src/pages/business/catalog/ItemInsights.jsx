@@ -15,7 +15,7 @@ const FIELD = { price: "Price", name: "Name", availability: "Availability", desc
 const WHO = { seller: "You", admin: "EpicMKT", system: "System" };
 const show = (v) => (v === null || v === undefined || v === "" ? "empty" : String(v));
 
-function History({ itemId, onLeave }) {
+export function History({ itemId, onLeave }) {
   const q = useQuery({ queryKey: ["item-history", itemId], queryFn: () => api.getItemHistory(itemId), retry: false });
   if (q.isLoading) return <p className={perf.muted}>Loading…</p>;
   if (q.isError) return <p role="alert" className={perf.error}>{errorText(q.error)}</p>;
@@ -57,7 +57,7 @@ function DealRows({ rows, name }) {
   );
 }
 
-function Deals({ itemId, onLeave }) {
+export function Deals({ itemId, onLeave }) {
   const q = useQuery({ queryKey: ["item-deals", itemId], queryFn: () => api.getItemDeals(itemId), retry: false });
   if (q.isLoading) return <p className={perf.muted}>Loading…</p>;
   if (q.isError) return <p role="alert" className={perf.error}>{errorText(q.error)}</p>;

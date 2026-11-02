@@ -412,11 +412,12 @@ export const uploadProofs = async (flagId, files, { alreadyAttached = 0 } = {}) 
   return attachments;
 };
 
+const ON_REQUEST = ["items", "item_history"];
 const TABLES = ["payments", "businesses", "messages", "message_attachments", "flags", "flag_attachments", "flash_sales"];
 /** Row-level security applies to realtime, so a seller only ever receives their own rows. */
 export const subscribe = (tables, onEvent) => {
   const client = need();
-  const list = (tables?.length ? tables : TABLES).filter((t) => TABLES.includes(t));
+  const list = (tables?.length ? tables : TABLES).filter((t) => TABLES.includes(t) || ON_REQUEST.includes(t));
   const channel = client.channel(`seller-${list.join("-")}-${Math.random().toString(36).slice(2, 8)}`);
   for (const table of list) {
     channel.on("postgres_changes", { event: "*", schema: "public", table }, (p) => onEvent({ table, type: p.eventType, row: p.new && Object.keys(p.new).length ? p.new : p.old }));

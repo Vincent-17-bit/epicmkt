@@ -147,6 +147,11 @@ function EditorForm({ item, sections, category, business }) {
     if (focus) focusOn(focus);
   }, [phone, focusOn, step]);
 
+  useEffect(() => {
+    const want = location.state?.focus;
+    if (want) goTo(location.state.step ?? "media", want);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // A phone shows one step at a time: when it changes, start at the top of the new one and name it for screen readers.
   useEffect(() => {
     if (!phone) return;

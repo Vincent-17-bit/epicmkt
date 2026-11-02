@@ -12,7 +12,7 @@ const DESIGN_WIDTH = { mobile: 375, desktop: 1040 };
 
 // The preview is drawn at a real phone or laptop width and then scaled to fit the pane, so what you see is the layout a
 // customer gets, not a squeezed one. It is inert: nothing in it can be tapped or tabbed to, so it never competes with the form.
-function ScaledFrame({ width, children }) {
+export function ScaledFrame({ width, children }) {
   const outer = useRef(null);
   const inner = useRef(null);
   const [fit, setFit] = useState({ scale: 1, height: null });

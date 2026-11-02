@@ -38,7 +38,7 @@ function FileList({ files, onRemove }) {
   );
 }
 
-function ReplyForm({ q, onDone }) {
+export function ReplyForm({ q, onDone }) {
   const [text, setText] = useState("");
   const [files, setFiles] = useState([]);
   const [error, setError] = useState("");

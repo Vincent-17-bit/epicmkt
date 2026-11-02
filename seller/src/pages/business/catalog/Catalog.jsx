@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, Outlet, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   SORT_OPTIONS, TRACKER, activeChips, buildCatalogQuery, clearFilters, computeStats, enrichItems, filterCount, hasActiveFilters, parseCatalogQuery,
@@ -41,7 +41,7 @@ const useMedia = (query) => {
   return matches;
 };
 
-const NOT_LIVE = {
+export const NOT_LIVE = {
   paused: "You paused your listing.",
   pending: "Your listing is waiting for approval.",
   expired: "Your subscription has expired.",
@@ -54,6 +54,7 @@ export default function Catalog() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { itemId: openId } = useParams();
   const query = useMemo(() => parseCatalogQuery(params.toString()), [params]);
   const desktop = useMedia("(min-width: 1024px)");
   const searchRef = useRef(null);
@@ -108,7 +109,7 @@ export default function Catalog() {
     const onKey = (e) => {
       if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey) return;
       const el = e.target;
-      if (el && (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || el.isContentEditable)) return;
+      if (el && (["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName) || el.isContentEditable || el.closest?.("[data-item-panel]"))) return;
       e.preventDefault();
       searchRef.current?.focus();
     };
@@ -229,6 +230,26 @@ export default function Catalog() {
     return next;
   }), []);
 
+  const lastOpener = useRef(null);
+  const goPanel = useCallback((id, replace = false) => navigate({ pathname: `/business/catalog/${id}`, search: location.search }, { replace }), [navigate, location.search]);
+  const closePanel = useCallback(() => navigate({ pathname: "/business/catalog", search: location.search }), [navigate, location.search]);
+  const openPanel = useCallback((id) => {
+    lastOpener.current = id;
+    goPanel(id);
+  }, [goPanel]);
+  const pickCard = useCallback((id) => (selected.size > 0 ? toggleSelect(id) : openPanel(id)), [selected.size, toggleSelect, openPanel]);
+
+  useEffect(() => {
+    if (selected.size > 0 && openId) closePanel();
+  }, [selected.size]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (openId || !lastOpener.current) return;
+    const id = lastOpener.current;
+    lastOpener.current = null;
+    document.querySelector(`[data-id="${CSS.escape(id)}"] [data-card], [data-id="${CSS.escape(id)}"] button`)?.focus({ preventScroll: true });
+  }, [openId]);
+
   const move = useCallback((id, dir) => {
     const next = reorderLive(id, null, dir);
     if (next) run(() => api.reorderItems(next));
@@ -252,6 +273,7 @@ export default function Catalog() {
 
   const handlers = {
     select: toggleSelect,
+    open: pickCard,
     edit: openEditor,
     insights: (item) => setInsightsFor(item),
     // The copy is a draft named "<name> (copy)". A failure, including the plan's item limit, shows the same way Add item does.
@@ -267,6 +289,24 @@ export default function Catalog() {
       if (item.trackStock) setRestocking(item);
       else run(() => api.itemStock(item.id, "restock"), `${item.name} is back in stock. Customers can see it again.`);
     },
+  };
+
+  const panelItem = openId ? enriched.find((i) => i.id === openId) ?? null : null;
+  const navIds = useMemo(() => [...liveItems, ...goneItems].map((i) => i.id), [liveItems, goneItems]);
+  const panelCtx = {
+    item: panelItem,
+    shop,
+    navIds,
+    busy,
+    notice,
+    handlers,
+    startDelete,
+    onClose: closePanel,
+    onStep: (id) => goPanel(id, true),
+    suspendedText: NOT_LIVE.suspended,
+    loading: false,
+    error: "",
+    retry: () => catalog.refetch(),
   };
 
   const selectedIds = [...selected];
@@ -299,7 +339,7 @@ export default function Catalog() {
   if (catalog.isError) return <div className={styles.page}><div className={`${ui.banner} ${ui.tone_danger}`} role="alert"><h2>We could not load your listings</h2><p>{errorText(catalog.error)}</p></div></div>;
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-panel={openId ? "open" : undefined}>
       <header className={styles.head}>
         <div>
           <h1>My listings</h1>
@@ -429,6 +469,7 @@ export default function Catalog() {
                             selected={selected.has(item.id)}
                             handlers={handlers}
                             canMove={canMove}
+                            current={item.id === openId}
                             isFirst={i === 0}
                             isLast={i === liveItems.length - 1}
                             busy={busy}
@@ -453,7 +494,7 @@ export default function Catalog() {
                     <ul className={`${cards ? styles.grid : styles.list} ${mode === "compact" ? styles.compact : ""}`} data-mode={mode} data-testid="out-of-stock-grid">
                       {goneItems.map((item) => {
                         const Row = cards ? ListingCard : ListRow;
-                        return <Row key={item.id} item={item} selected={selected.has(item.id)} handlers={handlers} canMove={false} isFirst isLast busy={busy} drag={{ ...drag, enabled: false }} />;
+                        return <Row key={item.id} item={item} current={item.id === openId} selected={selected.has(item.id)} handlers={handlers} canMove={false} isFirst isLast busy={busy} drag={{ ...drag, enabled: false }} />;
                       })}
                     </ul>
                   </section>
@@ -514,6 +555,7 @@ export default function Catalog() {
           setRestocking(null);
         }}
       />
+      <Outlet context={panelCtx} />
     </div>
   );
 }
