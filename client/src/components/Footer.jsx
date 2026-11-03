@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faChevronDown, faClock, faEnvelope, faLocationDot, faPhone } from "@fortawesome/free-solid-svg-icons";
@@ -7,6 +7,8 @@ import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
 import { businessLinks, links } from "../config/nav.js";
 import { t } from "../i18n/index.js";
+import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { scrollToTop } from "../lib/scrollToTop.js";
 import Container from "./Container.jsx";
 import { Logo } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
@@ -60,17 +62,6 @@ const contactRows = [
 // Below this width the link groups collapse into an accordion.
 const WIDE = "(min-width: 40rem)";
 
-function useDesktop() {
-  const [desktop, setDesktop] = useState(() => window.matchMedia(WIDE).matches);
-  useEffect(() => {
-    const query = window.matchMedia(WIDE);
-    const sync = () => setDesktop(query.matches);
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-  return desktop;
-}
-
 function Section({ id, title, area, desktop, children }) {
   const [open, setOpen] = useState(false);
   const expanded = desktop || open;
@@ -96,17 +87,11 @@ function Section({ id, title, area, desktop, children }) {
 }
 
 export default function Footer() {
-  const desktop = useDesktop();
-  const toTop = () => {
-    const main = document.getElementById("main");
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    main?.focus({ preventScroll: true });
-  };
+  const desktop = useMediaQuery(WIDE);
 
   return (
     <footer className={styles.footer} data-theme="light">
-      <button type="button" className={styles.topBar} onClick={toTop}>
+      <button type="button" className={styles.topBar} onClick={scrollToTop}>
         <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
         {t("footer.backToTop")}
       </button>
