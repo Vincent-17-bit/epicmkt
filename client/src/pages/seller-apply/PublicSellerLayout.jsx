@@ -3,6 +3,7 @@ import { Link, Outlet } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleQuestion, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "@epicmkt/ui";
+import { routes } from "../../config/routes.js";
 import Skeleton from "../../components/Skeleton.jsx";
 import { useSelectedTheme } from "./useSelectedTheme.js";
 import { useRouteSeo } from "../../hooks/useRouteSeo.js";
@@ -20,7 +21,7 @@ export default function PublicSellerLayout() {
             <span className={styles.label}>Seller application</span>
           </Link>
           <nav className={styles.nav} aria-label="Seller application">
-            <Link to="/become-a-seller/status" className={styles.navLink}>
+            <Link to={routes.applyStatus} className={styles.navLink}>
               <FontAwesomeIcon icon={faClipboardCheck} />
               <span className={styles.long}>Check my application</span>
               <span className={styles.short}>Check status</span>

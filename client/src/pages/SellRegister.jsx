@@ -3,6 +3,7 @@ import { faArrowLeft, faEnvelope, faStore } from "@fortawesome/free-solid-svg-ic
 import StatusPage from "../components/StatusPage.jsx";
 import Button from "../components/Button.jsx";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { routes } from "../config/routes.js";
 
 export default function SellRegister() {
   usePageTitle("Register your business");
@@ -16,7 +17,7 @@ export default function SellRegister() {
       <Button as={Link} to="/contact" icon={faEnvelope}>
         Contact us
       </Button>
-      <Button as={Link} to="/sell" variant="secondary" icon={faArrowLeft}>
+      <Button as={Link} to={routes.sell} variant="secondary" icon={faArrowLeft}>
         Back to plans
       </Button>
     </StatusPage>

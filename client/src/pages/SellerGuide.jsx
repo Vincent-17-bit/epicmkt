@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import LegalPage from "../components/LegalPage.jsx";
 import ListBusinessBanner from "../components/ListBusinessBanner.jsx";
 import { APPLY_PATH, PLANS_PDF_PATH } from "../components/SellBlocks.jsx";
+import { routes } from "../config/routes.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
 const highlights = [
@@ -44,7 +45,7 @@ const sections = [
           </li>
         </ul>
         <p>
-          Your monthly fee depends on your type of business. See <Link to="/pricing">pricing</Link>, or ask EpicMKT support for the{" "}
+          Your monthly fee depends on your type of business. See <Link to={routes.pricing}>pricing</Link>, or ask EpicMKT support for the{" "}
           <Link to={PLANS_PDF_PATH}>plans PDF</Link>.
         </p>
       </>
@@ -86,7 +87,7 @@ const sections = [
       <>
         <p>
           We review every application so customers can trust what they see. We may ask you to fix or add something. You can follow your application
-          on the <Link to="/become-a-seller/status">application status</Link> page.
+          on the <Link to={routes.applyStatus}>application status</Link> page.
         </p>
         <p>
           Businesses whose details we have checked can carry a <strong>Verified</strong> badge. It shows that we checked those details. It is not a
@@ -168,7 +169,7 @@ const contact = {
 const related = {
   label: "Related pages",
   docs: [
-    { to: "/pricing", label: "Pricing", blurb: "Plans and prices for every type of business." },
+    { to: routes.pricing, label: "Pricing", blurb: "Plans and prices for every type of business." },
     { to: "/faq", label: "FAQs", blurb: "Answers to common questions." },
     { to: "/terms", label: "Terms of Service", blurb: "The rules for using EpicMKT." }
   ]

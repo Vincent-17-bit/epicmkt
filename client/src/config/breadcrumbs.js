@@ -1,3 +1,5 @@
+import { routes } from "./routes.js";
+
 export const SITE_URL = (import.meta.env?.VITE_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")).replace(/\/$/, "");
 
 export const SEARCH_QUERY_MAX = 24;
@@ -8,10 +10,10 @@ export const STATIC_TRAILS = {
   "/flash": [{ key: "breadcrumbs.flashSales" }],
   "/offers": [{ key: "breadcrumbs.offers" }],
   "/featured": [{ key: "breadcrumbs.featured" }],
-  "/sell": [{ key: "breadcrumb.sell" }],
-  "/sell/register": [{ key: "breadcrumb.sell", to: "/sell" }, { key: "breadcrumb.register" }],
-  "/pricing": [{ key: "breadcrumb.pricing" }],
-  "/seller-guide": [{ key: "breadcrumb.sellerGuide" }],
+  [routes.sell]: [{ key: "breadcrumb.sell" }],
+  [routes.sellRegister]: [{ key: "breadcrumb.sell", to: routes.sell }, { key: "breadcrumb.register" }],
+  [routes.pricing]: [{ key: "breadcrumb.pricing" }],
+  [routes.sellerGuide]: [{ key: "breadcrumb.sellerGuide" }],
   "/about": [{ key: "breadcrumb.about" }],
   "/contact": [{ key: "breadcrumb.contact" }],
   "/faq": [{ key: "breadcrumb.faq" }],

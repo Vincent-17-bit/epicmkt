@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { routes } from "../../../config/routes.js";
 import Button from "../../../components/Button.jsx";
 import { formatKes } from "../../../shared/billing.js";
 import { docSlot, isDocPath } from "../../../shared/statusPaths.js";
@@ -137,7 +138,7 @@ export default function ApplicationView({ app, session, onRefresh, onExpired, on
         <section className={styles.card} aria-labelledby="rej-title">
           <h2 id="rej-title">Why it was not approved</h2>
           <p>{app.rejectionReason ?? "No reason was given."}</p>
-          <Button as={Link} to="/become-a-seller">
+          <Button as={Link} to={routes.apply}>
             Start a new application
           </Button>
         </section>

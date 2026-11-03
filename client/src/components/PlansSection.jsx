@@ -6,7 +6,8 @@ import { useCatalog } from "../pages/seller-apply/useCatalog.js";
 import { CatalogError, CatalogLoading } from "../pages/seller-apply/CatalogState.jsx";
 import Button from "./Button.jsx";
 import Container from "./Container.jsx";
-import { APPLY_PATH, PLANS_PDF_PATH } from "./SellBlocks.jsx";
+import { routes } from "../config/routes.js";
+import { PLANS_PDF_PATH } from "./SellBlocks.jsx";
 import styles from "./PlansSection.module.css";
 
 // A plan's text for a feature, shown only where the two plans differ ("Up to 7 photos" against "Up to 15 photos").
@@ -91,12 +92,12 @@ export default function PlansSection({ id = "plans", children }) {
               <tr>
                 <td className={styles.corner} />
                 <td className={styles.cta}>
-                  <Button as={Link} to={APPLY_PATH} variant="secondary" size="sm">
+                  <Button as={Link} to={routes.apply} variant="secondary" size="sm">
                     Apply for Standard
                   </Button>
                 </td>
                 <td className={`${styles.cta} ${styles.premiumCell}`}>
-                  <Button as={Link} to={APPLY_PATH} size="sm">
+                  <Button as={Link} to={routes.apply} size="sm">
                     Apply for Premium
                   </Button>
                 </td>
