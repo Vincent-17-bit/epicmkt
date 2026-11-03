@@ -161,7 +161,7 @@
 }
 
 .empty {
-  padding: var(--space-5) var(--space-4);
+  padding: var(--space-3) var(--space-4);
   border: 1px dashed var(--border);
   border-radius: var(--radius-card);
   color: var(--text-muted);
@@ -305,7 +305,7 @@
 .form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 16rem;
-  gap: var(--space-5);
+  gap: var(--space-3);
   align-items: start;
 }
 

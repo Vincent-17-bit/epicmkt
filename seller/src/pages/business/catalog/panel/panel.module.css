@@ -227,7 +227,7 @@
 }
 
 .pad {
-  padding: var(--space-3) var(--space-4) var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-3);
 }
 
 .pad:focus {
