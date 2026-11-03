@@ -177,7 +177,13 @@ describe("styles", () => {
     expect(status).toMatch(/\[data-flag="open"\][^}]*color: var\(--danger-fg\)/);
     const layout = css("../layout.module.css");
     expect(layout).toMatch(/--danger-fg: #b91c1c;[\s\S]*--danger-bg: #fef2f2;[\s\S]*--danger-border: #fca5a5;/);
-    expect(layout).toMatch(/prefers-color-scheme: dark\)[\s\S]*--danger-fg: #fca5a5;[\s\S]*--danger-bg: #3b0a0a;[\s\S]*--danger-border: #b91c1c;/);
+    expect(layout).toMatch(/:global\(\[data-theme="dark"\]\) \.root \{[\s\S]*--danger-fg: #fca5a5;[\s\S]*--danger-bg: #3b0a0a;[\s\S]*--danger-border: #b91c1c;/);
+  });
+
+  it("takes its colours from the chosen theme, never from the device setting", () => {
+    const layout = css("../layout.module.css");
+    expect(layout).not.toMatch(/prefers-color-scheme/);
+    expect(layout).not.toMatch(/color-scheme:/);
   });
 
   it("keeps the header sticky and opaque and prevents sideways scroll", () => {

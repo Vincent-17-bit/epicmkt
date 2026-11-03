@@ -3,6 +3,7 @@ import { mergeSettings, resolveSettings } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { validatePatch } from "../lib/settingsSchema.js";
 import { applyAppearance, writeDeviceAppearance } from "./appearance.js";
+import { getThemeMode, isThemePending, setThemePending } from "../lib/theme.js";
 import { showToast } from "./toast.js";
 
 let chain = Promise.resolve();
@@ -20,11 +21,15 @@ export const useSettings = create((set, get) => ({
   sellerId: null,
 
   // Takes the settings that came with /me. Applies appearance straight away.
+  // A theme picked on this device that the server has not stored yet beats the server's older copy, then is sent again.
   load(raw, sellerId) {
-    const settings = resolveSettings(raw);
+    let settings = resolveSettings(raw);
+    const pendingTheme = isThemePending() ? getThemeMode() : null;
+    if (pendingTheme) settings = { ...settings, appearance: { ...settings.appearance, theme: pendingTheme } };
     applyAppearance(settings.appearance);
     writeDeviceAppearance(settings.appearance);
     set({ settings, loaded: true, sellerId });
+    if (pendingTheme) get().update({ appearance: { theme: pendingTheme } }, { quiet: true });
   },
 
   reset() {
@@ -40,6 +45,7 @@ export const useSettings = create((set, get) => ({
     }
     const previous = get().settings;
     const next = resolveSettings(mergeSettings(previous, patch));
+    const themeChange = Boolean(patch.appearance && "theme" in patch.appearance);
     version += 1;
     const mine = version;
     set({ settings: next });
@@ -47,16 +53,21 @@ export const useSettings = create((set, get) => ({
       applyAppearance(next.appearance);
       writeDeviceAppearance(next.appearance);
     }
+    // The choice is now on this device. It stays marked until the server has it too (see load above).
+    if (themeChange) setThemePending(true);
     const run = chain.then(() => api.saveSettings(patch));
     chain = run.catch(() => undefined);
     try {
       await run;
+      if (themeChange && version === mine) setThemePending(false);
       if (!quiet) showToast(message);
       return { ok: true };
     } catch (err) {
       if (version === mine) {
-        set({ settings: previous });
-        applyAppearance(previous.appearance);
+        // A theme the seller picked stays on screen even when the save failed; it is sent again on the next load.
+        const kept = themeChange ? { ...previous, appearance: { ...previous.appearance, theme: next.appearance.theme } } : previous;
+        set({ settings: kept });
+        applyAppearance(previous.appearance, { keepTheme: themeChange });
         writeDeviceAppearance(previous.appearance);
       }
       const text = explain(err);

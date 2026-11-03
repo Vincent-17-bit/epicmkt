@@ -1,4 +1,7 @@
 const KEY = "seller-theme";
+// Set while a choice made on this device has not reached the server yet. Until it has, this device's choice wins,
+// so a refresh (or a slow or failed save) can never swap it for the older value the server still holds.
+const PENDING_KEY = "seller-theme-pending";
 const MODES = ["light", "dark", "system"];
 
 const systemDark = () => typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
@@ -14,6 +17,17 @@ export const getThemeMode = () => {
   } catch {
     return "system";
   }
+};
+
+export const isThemePending = () => {
+  try { return localStorage.getItem(PENDING_KEY) === "1"; } catch { return false; }
+};
+
+export const setThemePending = (pending) => {
+  try {
+    if (pending) localStorage.setItem(PENDING_KEY, "1");
+    else localStorage.removeItem(PENDING_KEY);
+  } catch { /* private mode */ }
 };
 
 const resolve = (mode) => (mode === "dark" || (mode === "system" && systemDark()) ? "dark" : "light");
