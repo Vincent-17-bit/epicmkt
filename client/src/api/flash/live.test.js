@@ -461,6 +461,102 @@ describe("live item and business pages", () => {
       expect(bad).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [] });
     });
 
+    describe("options, variants, option availability and size chart (migration 0084)", () => {
+      const ID = "20000000-0000-0000-0000-000000000101";
+      const payload = {
+        options: [{ key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }, { id: "m", label: "M" }] }],
+        variants: [{ id: "v1", label: "S", choice: { size: "s" }, price: 1200, salePrice: null, status: "available", sku: null, mediaIds: [], stockLeft: null }],
+        optionAvailability: { axes: ["size"], missing: "unavailable", cells: [{ key: "size=s", choice: { size: "s" }, status: "available", variantId: "v1" }], values: { size: { s: "available", m: "unavailable" } } },
+        sizeChart: { id: "c1", name: "Tops", category: null, unit: "cm", columns: ["Size"], rows: [["S"]], overridden: false }
+      };
+      const setup = () => {
+        db().items = [itemRow()];
+        db().businesses = [bizRow()];
+      };
+
+      it("adds options, variants, availability and sizeChart, and keeps every existing field", async () => {
+        setup();
+        const before = await live.getItemDetail(ID);
+        db().rpc.public_item_options = () => payload;
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject(payload);
+        for (const key of Object.keys(before)) expect(item, key).toHaveProperty(key);
+        expect(db().calls).toContain("public_item_options");
+      });
+
+      it("the item's own availability status stays a string, with or without options (pages read it)", async () => {
+        setup();
+        const plain = await live.getItemDetail(ID);
+        expect(typeof plain.availability).toBe("string");
+        db().rpc.public_item_options = () => payload;
+        const withOptions = await live.getItemDetail(ID);
+        expect(withOptions.availability).toBe(plain.availability);
+        expect(withOptions.optionAvailability.missing).toBe("unavailable");
+        const { getAllProducts, getItemDetail: demoDetail } = await import("@epicmkt/backend");
+        const sandals = (await getAllProducts()).find((p) => p.item?.name === "Women's sandals" || p.name === "Women's sandals");
+        const demo = await demoDetail((sandals.item ?? sandals).id);
+        expect(typeof demo.availability).toBe("string");
+        expect(demo.optionAvailability.cells.length).toBeGreaterThan(0);
+      });
+
+      it("lists the variants in pricing.variants with their label and regular price", async () => {
+        setup();
+        db().rpc.public_item_options = () => payload;
+        const item = await live.getItemDetail(ID);
+        expect(item.pricing.variants).toEqual([{ id: "v1", label: "S", regularPrice: 1200, salePrice: 1200, savings: 0, discountPercent: 0 }]);
+        expect(item.pricing).toMatchObject({ regularPrice: 1000 });
+      });
+
+      it("an item without options gets empty arrays, an empty matrix and no chart; its pricing is untouched", async () => {
+        setup();
+        db().rpc.public_item_options = () => ({ options: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChart: null });
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject({ options: [], variants: [], sizeChart: null, optionAvailability: { axes: [], cells: [], values: {} } });
+        expect(item.pricing.variants).toEqual([]);
+      });
+
+      it("a database without the function yet (not deployed) shows no options instead of failing", async () => {
+        setup();
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject({ options: [], variants: [], sizeChart: null });
+        expect(item.optionAvailability).toEqual({ axes: [], missing: "unavailable", cells: [], values: {} });
+        expect(typeof item.availability).toBe("string");
+      });
+
+      it("any other failure throws, so an item with options is never shown as if it had none", async () => {
+        setup();
+        db().rpc.public_item_options = () => ({ error: { code: "XX000", message: "boom" } });
+        await expect(live.getItemDetail(ID)).rejects.toBeTruthy();
+      });
+
+      it("a malformed answer is treated as no options, never spread into the item", async () => {
+        setup();
+        for (const bad of ["2026-10-01T00:00:00Z", [], null, { options: "x" }]) {
+          db().rpc.public_item_options = () => bad;
+          const item = await live.getItemDetail(ID);
+          expect(item.options, JSON.stringify(bad)).toEqual([]);
+          expect(item).not.toHaveProperty("0");
+        }
+      });
+
+      it("the demo backend's detail has the same option keys as the live detail, with the same matrix shape", async () => {
+        setup();
+        db().rpc.public_item_options = () => payload;
+        const liveItem = await live.getItemDetail(ID);
+        const { getAllProducts, getItemDetail: demoDetail } = await import("@epicmkt/backend");
+        const sandals = (await getAllProducts()).find((p) => p.item?.name === "Women's sandals" || p.name === "Women's sandals");
+        const demo = await demoDetail((sandals.item ?? sandals).id);
+        for (const key of ["options", "variants", "optionAvailability", "sizeChart"]) {
+          expect(liveItem, `live ${key}`).toHaveProperty(key);
+          expect(demo, `demo ${key}`).toHaveProperty(key);
+        }
+        expect(Object.keys(demo.optionAvailability).sort()).toEqual(Object.keys(liveItem.optionAvailability).sort());
+        expect(Object.keys(demo.variants[0]).sort()).toEqual(Object.keys(liveItem.variants[0]).sort());
+        expect(Object.keys(demo.options[0]).sort()).toEqual(Object.keys(liveItem.options[0]).sort());
+        expect(Object.keys(demo.sizeChart).sort()).toEqual(Object.keys(liveItem.sizeChart).sort());
+      });
+    });
+
     it("store selective and the business page do not ask for the heavy fields", async () => {
       db().items = [itemRow(), itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", ...full })];
       db().businesses = [bizRow()];

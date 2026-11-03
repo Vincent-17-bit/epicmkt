@@ -55,6 +55,66 @@ describe("live saveItem with the new fields", () => {
   });
 });
 
+describe("live options, variants and size charts (migration 0084)", () => {
+  const OPTION_KEYS = ["options", "size_chart_id", "size_chart_override"];
+  const options = { axes: [{ key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }] }], variants: [{ choice: { size: "s" }, price: 1200 }] };
+
+  it("sends nothing new for an item without options, so its save is exactly what it was", async () => {
+    await live.saveItem("it-1", base);
+    for (const key of OPTION_KEYS) expect(sent()).not.toHaveProperty(key);
+  });
+
+  it("passes options, the size chart and its override through as database columns", async () => {
+    await live.saveItem("it-1", { ...base, options, sizeChartId: "c-1", sizeChartOverride: { rows: [["S", "90"]] } });
+    expect(sent()).toMatchObject({ options, size_chart_id: "c-1", size_chart_override: { rows: [["S", "90"]] } });
+  });
+
+  it("sends null so a save can clear them, and leaves out a key that is undefined", async () => {
+    await live.saveItem("it-1", { ...base, options: null, sizeChartId: null, sizeChartOverride: undefined });
+    expect(sent()).toHaveProperty("options", null);
+    expect(sent()).toHaveProperty("size_chart_id", null);
+    expect(sent()).not.toHaveProperty("size_chart_override");
+  });
+
+  it("reads an item's options with seller_item_options", async () => {
+    const payload = { axes: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChartId: null, sizeChartOverride: null };
+    rpc.mockResolvedValue({ data: payload, error: null });
+    expect(await live.getItemOptions("it-1")).toEqual(payload);
+    expect(rpc).toHaveBeenCalledWith("seller_item_options", { p_id: "it-1" });
+  });
+
+  it("turns each database error into a seller error with that code, the same codes the mock raises", async () => {
+    mock.resetMock();
+    await mock.login("es100001", "Demo-Passw0rd");
+    const bad = {
+      invalid_options: { axes: [{ ...options.axes[0], display: "grid" }], variants: [] },
+      invalid_variant: { axes: options.axes, variants: [{ choice: { size: "xl" } }] },
+      duplicate_variant: { axes: options.axes, variants: [{ choice: { size: "s" } }, { choice: { size: "s" } }] },
+      duplicate_sku: { axes: [{ ...options.axes[0], values: [{ id: "s", label: "S" }, { id: "m", label: "M" }] }], variants: [{ choice: { size: "s" }, sku: "A" }, { choice: { size: "m" }, sku: "a" }] },
+    };
+    for (const [code, opts] of Object.entries(bad)) {
+      rpc.mockResolvedValue({ data: null, error: { message: code } });
+      await expect(live.saveItem("it-1", { ...base, options: opts }), `live ${code}`).rejects.toMatchObject({ code });
+      await expect(mock.saveItem("it-fade", { ...base, options: opts }), `mock ${code}`).rejects.toMatchObject({ code });
+    }
+    for (const code of ["too_many_variants", "invalid_size_chart"]) {
+      rpc.mockResolvedValue({ data: null, error: { message: code } });
+      await expect(live.saveItem("it-1", { ...base, options })).rejects.toMatchObject({ code });
+    }
+  });
+
+  it("every new error code has its own readable message for the seller", async () => {
+    const { errorText } = await import("../lib/errors.js");
+    const codes = ["invalid_options", "invalid_variant", "duplicate_variant", "duplicate_sku", "too_many_variants", "invalid_size_chart"];
+    const texts = codes.map((code) => errorText({ code }));
+    for (const [n, text] of texts.entries()) {
+      expect(text, codes[n]).not.toMatch(/something went wrong/i);
+      expect(text.length, codes[n]).toBeGreaterThan(20);
+    }
+    expect(new Set(texts).size).toBe(codes.length);
+  });
+});
+
 describe("live reorderItemPhotos", () => {
   it("sends the item and the paths in order", async () => {
     rpc.mockResolvedValue({ data: 2, error: null });

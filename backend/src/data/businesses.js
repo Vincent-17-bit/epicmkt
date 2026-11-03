@@ -567,7 +567,22 @@ export const businesses = [
     rating: 4.8, reviewCount: 96, hue: 335,
     tags: ["boutique", "dresses", "shoes", "handbags", "ankara", "kids wear"],
     socials: { instagram: "urbanthreadskisumu", tiktok: "urbanthreads.ke" },
-    services: [{ name: "Ladies Ankara dress", priceKes: 2200 }, { name: "Women's sandals", priceKes: 1300 }],
+    services: [
+      { name: "Ladies Ankara dress", priceKes: 2200, sizeChartId: "chart-tops" },
+      {
+        name: "Women's sandals", priceKes: 1300, sizeChartId: "chart-shoes-eu", showStockCount: true,
+        optionAxes: [
+          { key: "color", label: "Colour", display: "swatch", values: [{ id: "tan", label: "Tan", color: "#c8a27a" }, { id: "black", label: "Black", color: "#1b1b1b" }] },
+          { key: "size", label: "Size", display: "button", values: [{ id: "38", label: "38" }, { id: "39", label: "39" }, { id: "40", label: "40" }] }
+        ],
+        optionVariants: [
+          { choice: { color: "tan", size: "38" }, price: 1300, stock: 4, status: "limited_stock", sku: "SAN-TAN-38" },
+          { choice: { color: "tan", size: "39" }, price: 1300, stock: 12, sku: "SAN-TAN-39" },
+          { choice: { color: "black", size: "39" }, price: 1400, salePrice: 1250, stock: 0, status: "out_of_stock", sku: "SAN-BLK-39" },
+          { choice: { color: "black", size: "40" }, price: 1400, stock: 7, sku: "SAN-BLK-40" }
+        ]
+      }
+    ],
     gallery: gallery(335, ["Shop floor", "Dresses", "Shoe wall", "Fitting room"])
   }),
   make(42, {

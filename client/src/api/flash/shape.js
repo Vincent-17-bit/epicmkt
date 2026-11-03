@@ -98,6 +98,13 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
+// pricing.variants for an item with options: one entry per variant with its label and regular price (flash and offers are not
+// applied here), the same list the demo backend builds. No variants: the empty list the page has always had.
+export const variantPricing = (variants) =>
+  (Array.isArray(variants) ? variants : [])
+    .filter((v) => Number.isFinite(v?.price))
+    .map((v) => ({ id: v.id, label: v.label, regularPrice: v.price, salePrice: v.price, savings: 0, discountPercent: 0 }));
+
 export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   regularPrice,
   salePrice,

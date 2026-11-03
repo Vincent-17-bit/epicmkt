@@ -4,11 +4,12 @@ import { authenticate, json, rateLimited, rateOk, readJson, wrap, z, type Deps }
 const BUCKET = "seller-media";
 
 // Duplicate item, step 2. seller_duplicate_item has made the draft; this gives it its own copy of the original's pictures and
-// videos, in the same order. Every file is a NEW file under the new item (never shared), so deleting one item's media can never
+// videos, in the same order. Variants and option values that pointed at the original's pictures are re-pointed at the copies
+// (item_remap_copied_media, migration 0084), because the copies only get their ids here. Every file is a NEW file under the new item (never shared), so deleting one item's media can never
 // remove the other's. A file that fails is skipped and reported; the draft and the files that did copy are kept.
 const Body = z.object({ fromItemId: z.string().uuid(), toItemId: z.string().uuid() });
 
-type Row = { kind: "image" | "video"; path: string; mime: string; width: number | null; height: number | null; duration_sec: number | null; size_bytes: number | null };
+type Row = { id?: string; kind: "image" | "video"; path: string; mime: string; width: number | null; height: number | null; duration_sec: number | null; size_bytes: number | null };
 
 export const sellerItemCopyMedia = (d: Deps) => wrap(async (req) => {
   const parsed = Body.safeParse(await readJson(req));
@@ -30,13 +31,14 @@ export const sellerItemCopyMedia = (d: Deps) => wrap(async (req) => {
   if ((existing.data ?? []).length > 0) return json({ error: "target_not_empty" }, 409);
 
   const source = await d.db.from("item_media")
-    .select("kind, path, mime, width, height, duration_sec, size_bytes")
+    .select("id, kind, path, mime, width, height, duration_sec, size_bytes")
     .eq("item_id", fromItemId).eq("business_id", business)
     .order("sort", { ascending: true });
   if (source.error) return json({ error: "server_error" }, 500);
   const rows = (source.data ?? []) as Row[];
 
   let copied = 0;
+  const idMap: Record<string, string> = {};   // original media id -> its copy
   const failed: { path: string; reason: string }[] = [];
   const store = d.db.storage.from(BUCKET);
 
@@ -75,7 +77,12 @@ export const sellerItemCopyMedia = (d: Deps) => wrap(async (req) => {
     });
     if (attached.error) { await discard(/limit_reached/.test(attached.error.message ?? "") ? "limit_reached" : "server_error"); continue; }
     copied += 1;
+    if (row.id && typeof attached.data === "string") idMap[row.id] = attached.data;
   }
+
+  // Always called, even with an empty map: ids of files that did not copy are dropped from variants rather than left pointing at the
+  // original item. A failure here must not turn a finished copy into an error; the draft keeps its pictures and the seller can re-pick.
+  await d.db.rpc("item_remap_copied_media", { p_item: toItemId, p_map: idMap });   // functions never log: the outcome is not reported
 
   return json({ copied, failed, total: rows.length });
 });

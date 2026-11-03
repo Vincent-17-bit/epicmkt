@@ -472,6 +472,9 @@ const itemRow = (f) => ({
   ...(f.brand !== undefined && { brand: f.brand }), ...(f.shortDescription !== undefined && { short_description: f.shortDescription }),
   ...(f.packSize !== undefined && { pack_size: f.packSize }), ...(f.terms !== undefined && { terms: f.terms }),
   ...(Array.isArray(f.includes) && { includes: f.includes }), ...(Array.isArray(f.highlights) && { highlights: f.highlights }),
+  // Options and the size chart (migration 0084): same rule, a missing key keeps what is stored. options: null clears them.
+  ...(f.options !== undefined && { options: f.options }), ...(f.sizeChartId !== undefined && { size_chart_id: f.sizeChartId }),
+  ...(f.sizeChartOverride !== undefined && { size_chart_override: f.sizeChartOverride }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([
@@ -486,6 +489,10 @@ export const getShopPreview = async () => {
   return shape.preview(b, { categoryName: category?.name, catalog, flashSales, offers, nowMs: Date.parse(server.now) });
 };
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
+// The editor's read of an item's options: { axes, variants (with stock counts), availability, sizeChartId, sizeChartOverride }.
+export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
+// The size chart library (active charts), for the picker. Admin owns it.
+export const listSizeCharts = async () => rows(need().from("public_size_charts").select("id, name, category, unit, columns, rows").order("name"));
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
