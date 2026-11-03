@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, within, waitFor, act } from "@testing-library/react";
+import { render, screen, within, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { configureAxe } from "vitest-axe";
 import { M, signedInApp } from "../../../../test/utils.jsx";
@@ -180,6 +180,34 @@ describe("sections", () => {
     const open = screen.getByRole("button", { name: /Open live page/ });
     expect(open).toBeDisabled();
     expect(screen.getAllByText(/paused/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe("preview", () => {
+  it("shows one hero image first and the full page on request", async () => {
+    media(true);
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog/it-fade");
+    await screen.findByTestId("panel-status");
+    expect(screen.getByTestId("item-hero")).toBeInTheDocument();
+    expect(screen.queryByTestId("item-preview")).toBeNull();
+    expect(screen.queryByRole("group", { name: "Device" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Show full preview" }));
+    expect(screen.getByTestId("item-preview")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Device" })).toBeInTheDocument();
+    expect(screen.queryByTestId("item-hero")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Hide full preview" }));
+    expect(screen.getByTestId("item-hero")).toBeInTheDocument();
+  });
+});
+
+describe("hero photo", () => {
+  it("falls back to a plain message when the photo cannot load", async () => {
+    media(true);
+    await signedInApp("/business/catalog/it-fade", async () => { M.setItems(M.state.items.map((i) => (i.id === "it-fade" ? { ...i, imagePaths: ["p/x.webp"], imageCount: 1 } : i))); });
+    const hero = await screen.findByTestId("item-hero");
+    fireEvent.error(within(hero).getByRole("img"));
+    expect(await within(hero).findByText("The photo could not load")).toBeInTheDocument();
   });
 });
 
