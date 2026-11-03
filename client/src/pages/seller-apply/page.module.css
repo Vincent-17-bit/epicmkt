@@ -208,7 +208,7 @@
 
 .actions > * {
   flex: 1;
-  min-height: 3.25rem;
+  min-height: var(--tap);
 }
 
 .actions > button:first-child:not(:last-child) {
@@ -295,7 +295,7 @@
 /* Laptops and desktops: progress rail on the left, form on the right */
 @media (min-width: 64rem) {
   .shell {
-    grid-template-columns: 17.5rem minmax(0, 1fr);
+    grid-template-columns: 15rem minmax(0, 1fr);
     gap: var(--space-6);
     align-items: start;
   }
@@ -306,7 +306,7 @@
   }
 
   .formCol {
-    max-width: 50rem;
+    max-width: 46rem;
   }
 
   .card {
