@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, isListed, rankSimilar, similarTerms } from "@epicmkt/shared";
+import { PLAN_FEATURES, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -127,6 +127,7 @@ const itemRow = (row, business) =>
     includes: row.includes,
     terms: row.terms,
     packSize: row.pack_size,
+    variants: row.variants,
     price: row.price === null ? NaN : Number(row.price),
     priceType: row.price_type,
     unit: row.unit,
@@ -148,7 +149,12 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const item = itemRow(row, business);
   const { now, entries } = await liveEntries();
   const entry = entries.find((e) => e.item.id === itemId);
-  const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+  const { discount } = entry?.sale ?? {};
+  const pricing = entry
+    ? { ...entry.pricing, variants: variantPricing(item.variants, (price) => flashPrice(discount.type, discount.value, price)) }
+    : Number.isFinite(item.regularPrice)
+      ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit, item.variants)
+      : null;
   const card = cardOfBusiness(business, origin);
   return {
     ...item,

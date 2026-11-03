@@ -28,11 +28,11 @@ const galleryLabels = (t) => ({
   carousel: t("item.carousel")
 });
 
-function Highlights({ items, onMore, t }) {
+function Highlights({ items, onMore, t, dataHl }) {
   const [all, setAll] = useState(false);
   const shown = all ? items : items.slice(0, HIGHLIGHT_LIMIT);
   return (
-    <section className={styles.about} aria-labelledby="item-about">
+    <section className={styles.about} aria-labelledby="item-about" data-hl={dataHl}>
       <h3 id="item-about" className={styles.aboutTitle}>
         {t("item.highlights")}
       </h3>
@@ -78,7 +78,8 @@ export default function ItemView({
   offers = null,
   seller = null,
   after = null,
-  className = ""
+  className = "",
+  marks
 }) {
   const variants = item.pricing?.variants ?? [];
   const highlights = normalizeHighlights(item.highlights);
@@ -86,9 +87,10 @@ export default function ItemView({
   const hasSpecs = buildSpecGroups({ item, category, attributes }).length > 0;
   const [pinged, setPinged] = useState(0);
   const reveal = pinged;
+  const mark = (part) => marks?.(part);
   return (
     <div className={`${styles.layout} ${className}`} data-variant={layout}>
-      <div className={styles.media}>
+      <div className={styles.media} data-hl={mark("media")}>
         <MediaGallery key={`gallery-${item.id}`} media={item.media} images={item.images} videos={item.videos} name={item.name} labels={galleryLabels(t)} />
       </div>
       <div className={styles.content}>
@@ -96,14 +98,14 @@ export default function ItemView({
           {flash}
 
           <div className={styles.info}>
-            {item.brand && <p className={styles.brand}>{item.brand}</p>}
-            <Heading id={headingId} ref={headingRef} tabIndex={-1} className={styles.title}>
+            {item.brand && <p className={styles.brand} data-hl={mark("brand")}>{item.brand}</p>}
+            <Heading id={headingId} ref={headingRef} tabIndex={-1} className={styles.title} data-hl={mark("name")}>
               {item.name}
             </Heading>
-            {item.shortDescription && <p className={styles.description}>{item.shortDescription}</p>}
+            {item.shortDescription && <p className={styles.description} data-hl={mark("short")}>{item.shortDescription}</p>}
 
             {shown && !item.flash && (
-              <div className={styles.priceBlock}>
+              <div className={styles.priceBlock} data-hl={mark("price")}>
                 {shown.savings > 0 ? (
                   <>
                     <p className={styles.salePrice}>
@@ -177,15 +179,15 @@ export default function ItemView({
           {seller}
 
           {highlights.length > 0 && (
-            <Highlights key={`highlights-${item.id}`} items={highlights} onMore={hasSpecs ? () => setPinged((n) => n + 1) : undefined} t={t} />
+            <Highlights key={`highlights-${item.id}`} dataHl={mark("highlights")} items={highlights} onMore={hasSpecs ? () => setPinged((n) => n + 1) : undefined} t={t} />
           )}
 
-          {fullDescription && <ItemDescription key={`description-${item.id}`} text={fullDescription} t={t} />}
+          {fullDescription && <ItemDescription key={`description-${item.id}`} text={fullDescription} t={t} dataHl={mark("description")} />}
 
           {after}
         </div>
 
-        <div className={styles.panels}>
+        <div className={styles.panels} data-hl={mark("specs")}>
           <ItemSpecs key={`specs-${item.id}`} item={item} category={category} attributes={attributes} reveal={reveal} onExpand={onExpandSpec} t={t} />
         </div>
       </div>

@@ -451,6 +451,29 @@ describe("live item and business pages", () => {
       expect(item.specs).toEqual([{ label: "Weight", value: "1 kg" }]);
     });
 
+    it("shows the options with their own prices, and the flash discount on every option", async () => {
+      const id = "20000000-0000-0000-0000-000000000101";
+      const variants = [{ id: "s", label: "Small", price: 500 }, { id: "l", label: "Large", price: 800 }];
+      db().items = [itemRow({ variants })];
+      db().businesses = [bizRow()];
+      const plain = await live.getItemDetail(id);
+      expect(plain.variants).toEqual(variants);
+      expect(plain.pricing.variants.map((v) => [v.id, v.label, v.regularPrice, v.salePrice])).toEqual([["s", "Small", 500, 500], ["l", "Large", 800, 800]]);
+      db().sales = [row(1, { item_id: id, business_id: A })];
+      invalidateSnapshot();
+      const during = await live.getItemDetail(id);
+      expect(during.pricing).toMatchObject({ regularPrice: 1000, salePrice: 800 });
+      expect(during.pricing.variants.map((v) => [v.label, v.salePrice, v.discountPercent])).toEqual([["Small", 400, 20], ["Large", 640, 20]]);
+    });
+
+    it("an item whose options column holds anything else has none", async () => {
+      db().items = [itemRow({ variants: {} })];
+      db().businesses = [bizRow()];
+      const item = await live.getItemDetail("20000000-0000-0000-0000-000000000101");
+      expect(item.variants).toEqual([]);
+      expect(item.pricing.variants).toEqual([]);
+    });
+
     it("an item without them gets the defaults, and bad values never throw", async () => {
       db().items = [itemRow()];
       db().businesses = [bizRow()];

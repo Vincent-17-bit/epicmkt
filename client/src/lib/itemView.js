@@ -22,12 +22,6 @@ export function chatMessage({ item, variant, pricing, greeting }) {
   return `Hi, I saw ${name} (${kes(shown.regularPrice)}) on EpicMKT`;
 }
 
-export function defaultVariantId(pricing) {
-  const variants = pricing?.variants ?? [];
-  if (!variants.length) return null;
-  return (variants.find((v) => v.regularPrice === pricing.regularPrice) ?? variants[0]).id;
-}
-
 export function offerTarget(offer, business) {
   const base = `/b/${business.slug}`;
   let sectionId = null;
@@ -112,3 +106,5 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
   }
   return data;
 }
+
+export { defaultVariantId } from "@epicmkt/shared";

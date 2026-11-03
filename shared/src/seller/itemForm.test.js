@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS, SPEC_DEFAULT_GROUP, storedItemDetails } from "./itemForm.js";
+import { validateItemForm, emptyItemForm, formFromItem, SPEC_LIMITS, ITEM_DETAIL_LIMITS, SPEC_DEFAULT_GROUP, storedItemDetails, storedVariants, cleanVariants, VARIANT_LIMITS } from "./itemForm.js";
 
 const base = { ...emptyItemForm(), name: "Fade cut", price: "500" };
 
@@ -205,4 +205,51 @@ test("storedItemDetails: accepts everything validateItemForm lets through", () =
   assert.deepEqual(stored.value.highlights, v.highlights);
   assert.deepEqual(stored.value.includes, v.includes);
   assert.deepEqual(stored.value.specs.map(({ label, value }) => ({ label, value })), v.specs.map(({ label, value }) => ({ label, value })));
+});
+
+const rows = (...r) => r.map(([id, label, price, stock = ""]) => ({ id, label, price, stock }));
+
+test("variant rows from the form become stored variants, in order, with stock or null", () => {
+  const r = validateItemForm({ ...base, variants: rows(["a", " Small ", "500", "4"], ["b", "Large", "800.50", ""]) });
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.value.variants, [{ id: "a", label: "Small", price: 500, stock: 4 }, { id: "b", label: "Large", price: 800.5, stock: null }]);
+});
+
+test("a form without variants leaves them out, so saving never wipes stored ones", () => {
+  const { variants, ...form } = base;
+  const r = validateItemForm(form);
+  assert.equal(r.ok, true);
+  assert.equal("variants" in r.value, false);
+});
+
+test("variant mistakes are reported per row", () => {
+  const r = validateItemForm({ ...base, variants: rows(["a", "", "x"], ["b", "Big", "", "1.5"], ["c", "BIG", "5"]) });
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.errors.variants[0], { label: "Enter a name.", price: "Enter a number such as 1200." });
+  assert.deepEqual(r.errors.variants[1], { price: "Enter a price.", stock: "Enter a whole number, or leave it empty." });
+  assert.deepEqual(r.errors.variants[2], { label: "Two options cannot share a name." });
+});
+
+test("options need a fixed or starting price and at most ten", () => {
+  assert.ok(validateItemForm({ ...base, priceType: "contact", variants: rows(["a", "S", "5"]) }).errors.variantsCount);
+  assert.ok(validateItemForm({ ...base, variants: Array.from({ length: VARIANT_LIMITS.rows + 1 }, (_, i) => ({ id: `v${i}`, label: `L${i}`, price: "5", stock: "" })) }).errors.variantsCount);
+  assert.equal(validateItemForm({ ...base, priceType: "from", variants: rows(["a", "S", "5"]) }).ok, true);
+});
+
+test("stored variants are checked the way the database checks them", () => {
+  assert.deepEqual(storedVariants(null), { ok: true, value: [] });
+  assert.deepEqual(storedVariants([{ id: "a", label: " S ", price: 5, stock: 0 }]).value, [{ id: "a", label: "S", price: 5, stock: 0 }]);
+  for (const bad of [
+    "x", [{ id: "A", label: "S", price: 5 }], [{ id: "a", label: "", price: 5 }], [{ id: "a", label: "S", price: -1 }], [{ id: "a", label: "S", price: 1.234 }],
+    [{ id: "a", label: "S", price: 5, stock: 1.5 }], [{ id: "a", label: "S", price: 5, stock: -1 }], [{ id: "a", label: "S", price: 5, extra: 1 }],
+    [{ id: "a", label: "S", price: 5 }, { id: "a", label: "T", price: 5 }], [{ id: "a", label: "S", price: 5 }, { id: "b", label: "s", price: 5 }],
+    Array.from({ length: 11 }, (_, i) => ({ id: `v${i}`, label: `L${i}`, price: 1 }))
+  ]) assert.equal(storedVariants(bad).ok, false, JSON.stringify(bad));
+  assert.equal(storedItemDetails({ variants: [{ id: "a", label: "S", price: 5 }] }).ok, true);
+  assert.equal(storedItemDetails({ variants: [{ id: "a" }] }).ok, false);
+});
+
+test("the form is filled from stored variants as text", () => {
+  const form = formFromItem({ name: "x", priceType: "fixed", price: 5, availability: "available", variants: [{ id: "a", label: "S", price: 5, stock: 3 }, { id: "b", label: "L", price: 9 }] });
+  assert.deepEqual(form.variants, rows(["a", "S", "5", "3"], ["b", "L", "9", ""]));
 });

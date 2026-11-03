@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -98,17 +98,17 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
-export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
+export const pricingOf = (regularPrice, salePrice, priceType, unit, variants = [], priceFor) => ({
   regularPrice,
   salePrice,
   savings: regularPrice - salePrice,
   discountPercent: regularPrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0,
   unit: unit ?? null,
   priceType: priceType ?? "fixed",
-  variants: []
+  variants: variantPricing(variants, priceFor)
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, mediaPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
   // One ordered list of photos and videos, as the seller arranged them (the database's shared sequence). The ids match images[] and
@@ -147,7 +147,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     availability: availability ?? "available",
     // How many are left, only when the seller counts stock, it is running low, and they chose to say so.
     stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
-    variants: [],
+    variants: variantsOf(variants),
     specs: specsOf(specs),
     createdAt
   };

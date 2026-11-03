@@ -5,7 +5,7 @@ import styles from "./ItemDescription.module.css";
 
 // The full description. Paragraph breaks are kept. Below 768 px it is clamped to a few lines with a Read more / Read less
 // toggle (the clamp is CSS, so wide screens show everything); the button only appears when the text really overflows.
-export default function ItemDescription({ text, t = itemT }) {
+export default function ItemDescription({ text, t = itemT, dataHl }) {
   const id = useId();
   const bodyRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -30,7 +30,7 @@ export default function ItemDescription({ text, t = itemT }) {
 
   if (!parts.length) return null;
   return (
-    <section className={styles.section} aria-labelledby={`${id}-title`} data-description="">
+    <section className={styles.section} aria-labelledby={`${id}-title`} data-description="" data-hl={dataHl}>
       <h3 id={`${id}-title`} className={styles.title}>
         {t("item.description")}
       </h3>

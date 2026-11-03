@@ -473,6 +473,7 @@ const itemRow = (f) => ({
   ...(f.brand !== undefined && { brand: f.brand }), ...(f.shortDescription !== undefined && { short_description: f.shortDescription }),
   ...(f.packSize !== undefined && { pack_size: f.packSize }), ...(f.terms !== undefined && { terms: f.terms }),
   ...(Array.isArray(f.includes) && { includes: f.includes }), ...(Array.isArray(f.highlights) && { highlights: f.highlights }),
+  ...(Array.isArray(f.variants) && { variants: f.variants }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([

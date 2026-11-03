@@ -1,4 +1,4 @@
-import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
+import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -739,16 +739,23 @@ export const saveItem = async (id, f) => {
   const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
   if (!details.ok) throw new ApiError("invalid_details");
   Object.assign(fields, details.value);
+  if (f.variants !== undefined) {
+    const options = storedVariants(f.variants);
+    if (!options.ok) throw new ApiError("invalid_variants");
+    fields.variants = options.value;
+  }
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
+  if (fields.variants?.length && !["fixed", "from"].includes(fields.priceType)) throw new ApiError("invalid_variants");
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
     if (!item) throw new ApiError("item_not_found");
     const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
-    if (priceChanged && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
+    const optionsChanged = fields.variants !== undefined && JSON.stringify(fields.variants) !== JSON.stringify(item.variants ?? []);
+    if ((priceChanged || optionsChanged) && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], variants: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };

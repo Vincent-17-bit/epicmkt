@@ -1,14 +1,22 @@
+import { variantPricing, variantsOf } from "@epicmkt/shared";
 import { mediaUrl } from "../../../../api/shape.js";
 
 const PRICED = ["fixed", "from", "range"];
 
-export const publicItemOf = (item) => {
+const withGallery = (base, gallery) => {
+  let photo = 0;
+  let video = 0;
+  const media = gallery.map((m) => ({ id: m.kind === "video" ? `v${++video}` : `i${++photo}`, kind: m.kind, url: m.url, caption: "" }));
+  return { ...base, images: media.filter((m) => m.kind === "image"), videos: media.filter((m) => m.kind === "video"), media };
+};
+
+export const publicItemOf = (item, { gallery = null } = {}) => {
   const priced = PRICED.includes(item.priceType) && typeof item.price === "number";
   const sale = priced && typeof item.salePrice === "number" && item.salePrice < item.price ? item.salePrice : item.price;
   const pricing = priced
-    ? { regularPrice: item.price, salePrice: sale, savings: item.price - sale, discountPercent: item.price > 0 ? Math.round(((item.price - sale) / item.price) * 100) : 0, unit: item.unit || null, variants: [] }
+    ? { regularPrice: item.price, salePrice: sale, savings: item.price - sale, discountPercent: item.price > 0 ? Math.round(((item.price - sale) / item.price) * 100) : 0, unit: item.unit || null, variants: variantPricing(variantsOf(item.variants)) }
     : null;
-  return {
+  const base = {
     id: item.id,
     name: item.name,
     brand: item.brand ?? "",
@@ -29,6 +37,7 @@ export const publicItemOf = (item) => {
     stockLeft: item.trackStock && item.showStockCount && item.stockCount > 0 ? item.stockCount : null,
     pricing,
   };
+  return gallery ? withGallery(base, gallery) : base;
 };
 
 export const clientBase = () => String(import.meta.env?.VITE_CLIENT_URL ?? "").replace(/\/+$/, "");

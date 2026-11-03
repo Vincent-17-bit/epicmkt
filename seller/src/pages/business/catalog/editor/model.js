@@ -1,4 +1,4 @@
-import { ITEM_DETAIL_LIMITS, SPEC_LIMITS, statusFromCount } from "@epicmkt/shared";
+import { ITEM_DETAIL_LIMITS, SPEC_LIMITS, VARIANT_LIMITS, statusFromCount } from "@epicmkt/shared";
 
 // The pure rules of the item editor: which step a field lives in, what is still missing, and how a form reads to a customer.
 // Nothing here touches React or the network, so it is tested on its own.
@@ -15,14 +15,14 @@ export const stepIndex = (id) => STEPS.findIndex((s) => s.id === id);
 
 export const STEP_OF = {
   name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics",
-  priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", availability: "price", stockCount: "price", lowStockThreshold: "price",
+  priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", availability: "price", stockCount: "price", lowStockThreshold: "price", variants: "price", variantsCount: "price",
   highlights: "details", highlightsCount: "details", specs: "details", specsCount: "details", includes: "details", includesCount: "details", packSize: "details", terms: "details",
 };
 
 // The order errors are looked for in, the same order the fields appear on screen.
 const ERROR_ORDER = [
   "name", "brand", "section", "shortDescription", "description",
-  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold",
+  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants",
   "highlightsCount", "highlights", "specsCount", "specs", "includesCount", "includes", "packSize", "terms",
 ];
 
@@ -42,6 +42,11 @@ export const firstErrorTarget = (errors) => {
     const row = errors.specs[i];
     return { key, step, focus: `spec-${i}-${row.label ? "label" : row.value ? "value" : "group"}` };
   }
+  if (key === "variants") {
+    const i = firstIndex(errors.variants);
+    const row = errors.variants[i];
+    return { key, step, focus: `var-${i}-${row.label ? "label" : row.price ? "price" : "stock"}` };
+  }
   if (key === "includes") return { key, step, focus: `inc-${firstIndex(errors.includes)}` };
   if (key.endsWith("Count")) return { key, step, focus: `${key}` };
   return { key, step, focus: key };
@@ -51,7 +56,7 @@ export const firstErrorTarget = (errors) => {
 const FIELD_NAMES = {
   name: "Name", brand: "Brand", section: "Section", shortDescription: "Short description", description: "Description",
   priceType: "Price type", price: "Price", priceMax: "Highest price", salePrice: "Sale price", unit: "Unit", availability: "Availability",
-  stockCount: "Stock count", lowStockThreshold: "Low stock level", highlightsCount: "Highlights", specsCount: "Specifications", includesCount: "What is included",
+  stockCount: "Stock count", lowStockThreshold: "Low stock level", variantsCount: "Options", highlightsCount: "Highlights", specsCount: "Specifications", includesCount: "What is included",
   packSize: "Pack size", terms: "Terms",
 };
 
@@ -65,6 +70,8 @@ export const errorList = (errors) => {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `hl-${i}-${f}`, step: "details", focus: `hl-${i}-${f}`, label: `Highlight ${i + 1}`, message })));
     } else if (key === "specs") {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `spec-${i}-${f}`, step: "details", focus: `spec-${i}-${f}`, label: `Specification ${i + 1}`, message })));
+    } else if (key === "variants") {
+      Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `var-${i}-${f}`, step: "price", focus: `var-${i}-${f}`, label: `Option ${i + 1}`, message })));
     } else if (key === "includes") {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => out.push({ key: `inc-${i}`, step: "details", focus: `inc-${i}`, label: `Included item ${i + 1}`, message: value[i] }));
     } else {
@@ -223,7 +230,37 @@ export const previewItemOf = (form, images = []) => {
   };
 };
 
-export const LIMITS = { ...ITEM_DETAIL_LIMITS, spec: SPEC_LIMITS, name: 120, section: 60, unit: 30, description: 2000 };
+export const previewFieldsOf = (form) => {
+  const count = Number(String(form.stockCount ?? "").trim());
+  return {
+    id: "preview",
+    name: String(form.name ?? "").trim() || "Item name",
+    description: form.description,
+    shortDescription: form.shortDescription,
+    brand: form.brand,
+    highlights: form.highlights,
+    specs: form.specs,
+    includes: form.includes,
+    variants: (form.variants ?? []).flatMap((v) => {
+      const price = parseKes(v.price);
+      const stock = String(v.stock ?? "").trim();
+      return v.label.trim() && price !== null ? [{ id: v.id, label: v.label, price, stock: /^\d{1,6}$/.test(stock) ? Number(stock) : null }] : [];
+    }),
+    terms: form.terms,
+    packSize: form.packSize,
+    price: PRICED.includes(form.priceType) ? parseKes(form.price) : null,
+    salePrice: PRICED.includes(form.priceType) ? parseKes(form.salePrice) : null,
+    priceType: form.priceType,
+    unit: form.unit.trim() || null,
+    section: form.section?.trim() || null,
+    availability: stockStatusOf(form) ?? "available",
+    trackStock: Boolean(form.trackStock),
+    showStockCount: Boolean(form.showStockCount),
+    stockCount: Number.isInteger(count) ? count : 0
+  };
+};
+
+export const LIMITS = { ...ITEM_DETAIL_LIMITS, spec: SPEC_LIMITS, variants: VARIANT_LIMITS, name: 120, section: 60, unit: 30, description: 2000 };
 
 export const SPEC_PRESETS = [
   { label: "Material", group: "Features & Specs" },

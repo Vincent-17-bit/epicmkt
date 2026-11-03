@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { ITEM_PRICE_TYPES, STATUS_CHOICES } from "@epicmkt/shared";
 import { PRICED, priceSummary, stockStatusOf } from "./model.js";
-import { CheckRow, Field, SectionCard } from "./parts.jsx";
+import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
+import { LIMITS } from "./model.js";
+import { CheckRow, Field, RowList, SectionCard } from "./parts.jsx";
 import styles from "./editor.module.css";
 
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
@@ -14,7 +16,10 @@ const TYPE_HELP = {
 };
 const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
 
-export default function PriceSection({ form, patch, errors }) {
+const newOptionId = () => `v${Math.random().toString(36).slice(2, 10)}`;
+const OPTION_TYPES = ["fixed", "from"];
+
+export default function PriceSection({ form, patch, errors, focusOn }) {
   const priced = PRICED.includes(form.priceType);
   const range = form.priceType === "range";
   const hasSale = form.salePrice !== "" || Boolean(errors.salePrice);
@@ -41,6 +46,25 @@ export default function PriceSection({ form, patch, errors }) {
               <button type="button" className={styles.linkBtn} onClick={() => { patch("salePrice", ""); setSaleOpen(false); }}>Remove sale price</button>
             </div>
           )}
+        </div>
+      )}
+      {OPTION_TYPES.includes(form.priceType) && (
+        <div className={styles.subBlock} data-area="variants">
+          <h3 className={styles.subTitle}>Options (optional)</h3>
+          <p className={styles.hint}>Sizes or types that have their own price, like Small and Large. Customers pick one. Leave a stock number empty if you do not count that option; at 0 it is hidden from customers.</p>
+          <RowList
+            noun={{ key: "var", label: "Option", name: "option" }} rows={form.variants ?? []} max={LIMITS.variants.rows} onChange={(v) => patch("variants", v)} focusOn={focusOn}
+            blank={() => ({ id: newOptionId(), label: "", price: "", stock: "" })} focusFirst={(i) => `var-${i}-label`} addLabel="Add an option" addKey="add-variant" icon={faLayerGroup}
+            empty={{ title: "No options yet", body: "Add up to 10, for example Small, Medium and Large." }}
+            error={errors.variantsCount} errorKey="variantsCount"
+            renderRow={(v, i, edit) => (
+              <>
+                <Field name={`var-${i}-label`} label={`Option ${i + 1} name`} area="variants" max={LIMITS.variants.label} value={v.label} error={errors.variants?.[i]?.label} onChange={(e) => edit((r) => ({ ...r, label: e.target.value }))} autoComplete="off" />
+                <Field name={`var-${i}-price`} label={`Option ${i + 1} price (KES)`} area="variants" inputMode="decimal" autoComplete="off" value={v.price} error={errors.variants?.[i]?.price} onChange={(e) => edit((r) => ({ ...r, price: e.target.value }))} />
+                <Field name={`var-${i}-stock`} label={`Option ${i + 1} in stock (optional)`} area="variants" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="off" value={v.stock} error={errors.variants?.[i]?.stock} onChange={(e) => edit((r) => ({ ...r, stock: e.target.value }))} />
+              </>
+            )}
+          />
         </div>
       )}
       {priced && !showSale && (
