@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { searchBusinesses } from "../api/index.js";
 import { t } from "../i18n/index.js";
-import { Button, Skeleton } from "@epicmkt/ui";
+import { Button, Skeleton, StateCard } from "@epicmkt/ui";
 import Carousel from "./Carousel.jsx";
 import HomeSection from "./HomeSection.jsx";
 import StoreTileCard from "./StoreTileCard.jsx";
@@ -29,10 +29,9 @@ export default function RecentlyAdded() {
   if (isError) {
     return (
       <HomeSection>
-        <div className={styles.error} role="alert">
-          <p>{t("home.recentFailed")}</p>
+        <StateCard role="alert" message={t("home.recentFailed")}>
           <Button onClick={() => refetch()}>{t("home.retry")}</Button>
-        </div>
+        </StateCard>
       </HomeSection>
     );
   }

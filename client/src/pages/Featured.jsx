@@ -8,7 +8,7 @@ import { seenMemory } from "../lib/seen.js";
 import { PRODUCT_POOL, createShowcasePicker } from "../lib/showcase.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { t } from "../i18n/index.js";
-import { Button, Container, Skeleton } from "@epicmkt/ui";
+import { Button, Container, Skeleton, StateCard } from "@epicmkt/ui";
 import PageBanner from "../components/PageBanner.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import StoreShowcaseCard from "../components/StoreShowcaseCard.jsx";
@@ -87,12 +87,11 @@ export default function Featured() {
           )}
 
           {isError ? (
-            <div className={styles.message} role="alert">
-              <p>{t("featured.failed")}</p>
+            <StateCard role="alert" message={t("featured.failed")}>
               <Button icon={faRotateRight} onClick={() => refetch()}>
                 {t("home.retry")}
               </Button>
-            </div>
+            </StateCard>
           ) : isPending ? (
             <ul className={styles.grid} aria-busy="true">
               {Array.from({ length: 4 }, (_, i) => (
@@ -102,12 +101,11 @@ export default function Featured() {
               ))}
             </ul>
           ) : cards.length === 0 ? (
-            <div className={styles.message}>
-              <p>{t("featured.empty")}</p>
+            <StateCard message={t("featured.empty")}>
               <Button as={Link} to="/search" variant="secondary">
                 {t("featured.browse")}
               </Button>
-            </div>
+            </StateCard>
           ) : (
             <>
               <ul className={styles.grid}>

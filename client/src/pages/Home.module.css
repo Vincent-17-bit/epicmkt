@@ -200,16 +200,6 @@ a.card:active {
   box-shadow: var(--shadow-sm);
 }
 
-.error {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
 /* Hero search: the bar keeps a solid surface on hover so text and
    placeholder stay readable on the blue hero. Only the action lights up. */
 .searchEntry {

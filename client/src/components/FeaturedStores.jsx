@@ -1,10 +1,9 @@
 import { useFeaturedShowcase } from "../hooks/useFeaturedShowcase.js";
 import { t } from "../i18n/index.js";
-import { Button, Skeleton } from "@epicmkt/ui";
+import { Button, Skeleton, StateCard } from "@epicmkt/ui";
 import Carousel from "./Carousel.jsx";
 import HomeSection from "./HomeSection.jsx";
 import StoreShowcaseCard from "./StoreShowcaseCard.jsx";
-import styles from "./FeaturedStores.module.css";
 
 export const FEATURED_PATH = "/featured";
 
@@ -17,10 +16,9 @@ export default function FeaturedStores() {
   if (isError) {
     return (
       <HomeSection>
-        <div className={styles.error} role="alert">
-          <p>{t("home.featuredFailed")}</p>
+        <StateCard role="alert" size="snug" message={t("home.featuredFailed")}>
           <Button onClick={() => refetch()}>{t("home.retry")}</Button>
-        </div>
+        </StateCard>
       </HomeSection>
     );
   }
