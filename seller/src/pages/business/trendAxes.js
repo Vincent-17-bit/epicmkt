@@ -11,14 +11,14 @@ export const niceMax = (max) => {
 };
 
 export const bucketLabel = (bucket, grain, withYear) => {
-  const [y, m, d] = String(bucket).split("-").map(Number);
+  const [y, m, d] = String(bucket).slice(0, 10).split("-").map(Number);
   if (!y || !m) return String(bucket);
   if (grain === "month") return `${MONTHS[m - 1]} ${y}`;
   return `${d} ${MONTHS[m - 1]}${withYear ? ` ${String(y).slice(2)}` : ""}`;
 };
 
 export const fullLabel = (bucket, grain) => {
-  const [y, m, d] = String(bucket).split("-").map(Number);
+  const [y, m, d] = String(bucket).slice(0, 10).split("-").map(Number);
   if (!y || !m) return String(bucket);
   if (grain === "month") return `${MONTHS[m - 1]} ${y}`;
   const text = `${d} ${MONTHS[m - 1]} ${y}`;
