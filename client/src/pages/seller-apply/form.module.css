@@ -63,13 +63,13 @@
 .input {
   width: 100%;
   min-height: var(--ap-input-h);
-  padding: 0.7rem 1rem;
+  padding: 0.5rem 0.85rem;
   border: 1.5px solid var(--input-border);
   border-radius: var(--ap-r);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  /* 16px or more stops iOS from zooming the page when a box is focused */
+  /* 16px or more stops iOS from zooming the page when a box is focused; mouse devices can go smaller */
   font-size: max(16px, var(--text-md));
   line-height: 1.35;
   transition: border-color var(--dur) ease, box-shadow var(--dur) ease, background-color var(--dur) ease;
@@ -103,8 +103,14 @@
   cursor: not-allowed;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .input {
+    font-size: var(--text-md);
+  }
+}
+
 textarea.input {
-  min-height: 5.5rem;
+  min-height: 4.5rem;
   resize: vertical;
 }
 
@@ -293,8 +299,8 @@ input[type="date"].input {
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
-  min-height: 4.25rem;
-  padding: 0.8rem 1rem;
+  min-height: 3.25rem;
+  padding: 0.5rem 0.75rem;
   border: 1.5px solid var(--input-border);
   border-radius: var(--ap-r);
   background: var(--surface);
@@ -337,11 +343,11 @@ input[type="date"].input {
   display: grid;
   place-items: center;
   flex: none;
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 12px;
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: var(--radius-pill);
   background: var(--surface-2);
-  font-size: 1.1rem;
+  font-size: 0.9375rem;
   transition: background-color var(--dur) ease, color var(--dur) ease;
 }
 
@@ -421,7 +427,7 @@ input[type="date"].input {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 3.25rem;
+  min-height: var(--tap);
   padding: 0 1rem;
   list-style: none;
   cursor: pointer;

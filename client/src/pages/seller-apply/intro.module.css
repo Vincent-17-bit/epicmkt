@@ -85,7 +85,7 @@
 .before summary {
   display: flex;
   align-items: center;
-  min-height: 3.25rem;
+  min-height: var(--tap);
   padding: 0 var(--space-4);
   font-weight: 700;
   cursor: pointer;
