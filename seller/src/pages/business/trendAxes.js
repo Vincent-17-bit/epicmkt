@@ -5,7 +5,8 @@ export const GRAIN_UNIT = { day: "day", week: "week", month: "month" };
 export const niceMax = (max) => {
   const raw = Math.max(1, max);
   const mag = 10 ** Math.floor(Math.log10(raw));
-  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s * 4 >= raw) ?? 10 * mag;
+  const steps = mag >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10];
+  const step = steps.map((m) => m * mag).find((s) => s * 4 >= raw) ?? 10 * mag;
   const top = Math.ceil(raw / step) * step;
   return { top, ticks: Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step) };
 };

@@ -563,7 +563,14 @@
 .links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-1) var(--space-4);
+}
+
+.links a,
+.moreLink {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--tap);
 }
 
 .quote,
