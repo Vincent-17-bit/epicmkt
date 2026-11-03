@@ -8,11 +8,9 @@ import { seenMemory } from "../lib/seen.js";
 import { PRODUCT_POOL, createShowcasePicker } from "../lib/showcase.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { t } from "../i18n/index.js";
-import Button from "../components/Button.jsx";
-import Container from "../components/Container.jsx";
+import { Button, Container, Skeleton } from "@epicmkt/ui";
 import PageBanner from "../components/PageBanner.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import Skeleton from "../components/Skeleton.jsx";
 import StoreShowcaseCard from "../components/StoreShowcaseCard.jsx";
 import styles from "./Featured.module.css";
 

@@ -9,8 +9,7 @@ import { businessLinks, links } from "../config/nav.js";
 import { t } from "../i18n/index.js";
 import { useMediaQuery } from "../hooks/useMediaQuery.js";
 import { scrollToTop } from "../lib/scrollToTop.js";
-import Container from "./Container.jsx";
-import { Logo } from "@epicmkt/ui";
+import { Logo, Container } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./Footer.module.css";
 

@@ -21,8 +21,7 @@ import { chatMessage, defaultVariantId } from "../lib/itemView.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
-import Skeleton from "./Skeleton.jsx";
-import { ItemView, coverUrl, metaDescription } from "@epicmkt/ui";
+import { ItemView, coverUrl, metaDescription, Skeleton } from "@epicmkt/ui";
 
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";

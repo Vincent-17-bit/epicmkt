@@ -3,8 +3,7 @@ import { faLocationCrosshairs, faRotateLeft, faXmark } from "@fortawesome/free-s
 import { TOWNS } from "@epicmkt/shared";
 import { useGeoStore } from "../stores/geo.js";
 import { showToast } from "../stores/toast.js";
-import Button from "./Button.jsx";
-import IconButton from "./IconButton.jsx";
+import { Button, IconButton } from "@epicmkt/ui";
 import styles from "./LocationDialog.module.css";
 
 export default function LocationDialog() {

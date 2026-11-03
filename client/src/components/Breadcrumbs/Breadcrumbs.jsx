@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faChevronRight, faEllipsis, faHouse } from "@fortawesome/free-solid-svg-icons";
 import { t } from "../../i18n/index.js";
 import { useMediaQuery } from "../../hooks/useMediaQuery.js";
-import Skeleton from "../Skeleton.jsx";
+import { Skeleton } from "@epicmkt/ui";
 import styles from "./Breadcrumbs.module.css";
 
 const MOBILE = "(max-width: 767.98px)";

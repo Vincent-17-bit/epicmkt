@@ -7,10 +7,7 @@ import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { routes } from "../config/routes.js";
 import { infoLinks } from "../config/nav.js";
-import Container from "./Container.jsx";
-import Button from "./Button.jsx";
-import IconButton from "./IconButton.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Container, Button, IconButton, Skeleton } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./MenuPanel.module.css";
 

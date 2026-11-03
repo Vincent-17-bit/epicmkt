@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { scrollBehavior } from "../lib/motion.js";
-import Container from "./Container.jsx";
+import { Container } from "@epicmkt/ui";
 import PageBreadcrumbs from "./PageBreadcrumbs.jsx";
 import styles from "./LegalPage.module.css";
 

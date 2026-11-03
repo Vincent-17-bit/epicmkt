@@ -1,8 +1,7 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faStore } from "@fortawesome/free-solid-svg-icons";
-import Container from "./Container.jsx";
-import Button from "./Button.jsx";
+import { Container, Button } from "@epicmkt/ui";
 import { routes } from "../config/routes.js";
 import styles from "./SellBlocks.module.css";
 

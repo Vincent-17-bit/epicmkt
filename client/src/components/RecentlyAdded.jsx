@@ -4,10 +4,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
 import { searchBusinesses } from "../api/index.js";
 import { t } from "../i18n/index.js";
-import Button from "./Button.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import Carousel from "./Carousel.jsx";
 import HomeSection from "./HomeSection.jsx";
-import Skeleton from "./Skeleton.jsx";
 import StoreTileCard from "./StoreTileCard.jsx";
 import styles from "./RecentlyAdded.module.css";
 

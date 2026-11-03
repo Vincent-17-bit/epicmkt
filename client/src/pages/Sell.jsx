@@ -1,10 +1,8 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChartSimple, faLocationDot, faPhone, faQrcode } from "@fortawesome/free-solid-svg-icons";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
+import { Container, Button, Accordion } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import Accordion from "../components/Accordion.jsx";
 import PlansSection from "../components/PlansSection.jsx";
 import { APPLY_PATH, FinalCta, SellHero } from "../components/SellBlocks.jsx";
 import { routes } from "../config/routes.js";

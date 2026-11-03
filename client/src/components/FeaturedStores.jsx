@@ -1,9 +1,8 @@
 import { useFeaturedShowcase } from "../hooks/useFeaturedShowcase.js";
 import { t } from "../i18n/index.js";
-import Button from "./Button.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import Carousel from "./Carousel.jsx";
 import HomeSection from "./HomeSection.jsx";
-import Skeleton from "./Skeleton.jsx";
 import StoreShowcaseCard from "./StoreShowcaseCard.jsx";
 import styles from "./FeaturedStores.module.css";
 

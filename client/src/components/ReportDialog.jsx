@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { REPORT_REASONS } from "@epicmkt/shared";
 import { reportBusiness } from "../api/index.js";
-import { Modal } from "@epicmkt/ui";
-import Button from "./Button.jsx";
+import { Modal, Button } from "@epicmkt/ui";
 import styles from "./ReportDialog.module.css";
 
 export default function ReportDialog({ business, open, onClose }) {

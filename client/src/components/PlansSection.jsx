@@ -4,8 +4,7 @@ import { faCheck, faMinus, faShieldHalved, faStar } from "@fortawesome/free-soli
 import { compareFeatureRows, formatKes, priceBands } from "../shared/billing.js";
 import { useCatalog } from "../pages/seller-apply/useCatalog.js";
 import { CatalogError, CatalogLoading } from "../pages/seller-apply/CatalogState.jsx";
-import Button from "./Button.jsx";
-import Container from "./Container.jsx";
+import { Button, Container } from "@epicmkt/ui";
 import { routes } from "../config/routes.js";
 import { PLANS_PDF_PATH } from "./SellBlocks.jsx";
 import styles from "./PlansSection.module.css";

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faStore } from "@fortawesome/free-solid-svg-icons";
 import { t } from "../i18n/index.js";
-import Button from "./Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { routes } from "../config/routes.js";
 import styles from "./ListBusinessBanner.module.css";
 
