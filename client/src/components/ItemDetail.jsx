@@ -28,6 +28,7 @@ import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
 import { useUrgency } from "../hooks/useCountdown.js";
 import { kesText } from "../lib/flash.js";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { useInView } from "../hooks/useInView.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
@@ -36,7 +37,6 @@ import SimilarItems from "./SimilarItems.jsx";
 import StoreSelective from "./StoreSelective.jsx";
 import styles from "./ItemDetail.module.css";
 
-const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 const external = { target: "_blank", rel: "noopener noreferrer" };
 const MAX_TIMEOUT = 2147483647;
 const HOLD_MS = 6000;
@@ -142,32 +142,19 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     document.body.style.overflow = "hidden";
     sheetRef.current?.focus({ preventScroll: true });
 
-    const onKey = (event) => {
-      if (event.key === "Escape" && !document.querySelector("dialog[open]")) {
-        closeRef.current();
-        return;
-      }
-      if (event.key !== "Tab" || document.querySelector("dialog[open]")) return;
-      const nodes = [...sheetRef.current.querySelectorAll(FOCUSABLE)].filter((node) => node.getClientRects().length > 0);
-      if (!nodes.length) return;
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      const inside = sheetRef.current.contains(document.activeElement);
-      if (event.shiftKey && (document.activeElement === first || !inside)) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && (document.activeElement === last || !inside)) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("keydown", onKey);
       document.body.style.overflow = previous;
       if (opener?.isConnected) opener.focus({ preventScroll: true });
     };
   }, []);
+
+  useFocusTrap({
+    active: !isPage,
+    getContainer: () => sheetRef.current,
+    onEscape: () => closeRef.current(),
+    wrapFromOutside: true,
+    paused: () => Boolean(document.querySelector("dialog[open]"))
+  });
 
   useEffect(() => {
     if (!isPage && bodyRef.current) bodyRef.current.scrollTop = 0;
