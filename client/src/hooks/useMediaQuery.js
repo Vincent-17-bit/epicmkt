@@ -1,14 +1,16 @@
 import { useSyncExternalStore } from "react";
 
+const match = (query) => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(query) : null);
+
 export function useMediaQuery(query) {
   const subscribe = (notify) => {
-    const list = window.matchMedia(query);
-    list.addEventListener?.("change", notify);
-    return () => list.removeEventListener?.("change", notify);
+    const list = match(query);
+    list?.addEventListener?.("change", notify);
+    return () => list?.removeEventListener?.("change", notify);
   };
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(query).matches,
+    () => match(query)?.matches ?? false,
     () => false
   );
 }
