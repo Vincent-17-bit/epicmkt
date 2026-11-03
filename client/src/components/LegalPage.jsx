@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { scrollBehavior } from "../lib/motion.js";
 import Container from "./Container.jsx";
 import PageBreadcrumbs from "./PageBreadcrumbs.jsx";
 import styles from "./LegalPage.module.css";
@@ -84,8 +85,7 @@ export default function LegalPage({ title, eyebrow, intro, highlights = [], sect
     const node = document.getElementById(id);
     if (!node) return;
     event.preventDefault();
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    node.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    node.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     node.focus({ preventScroll: true });
     setActive(id);
   };
