@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shopQrSpec, shopUrl, shopQrUrl, shopDisplayUrl, whatsappShareUrl, isValidSlug, siteBase } from "./shopLink.js";
+import { shopQrSpec, itemUrl, shopUrl, shopQrUrl, shopDisplayUrl, whatsappShareUrl, isValidSlug, siteBase } from "./shopLink.js";
 
 test("link is <site>/s/<slug> and the QR adds only the source tag", () => {
   assert.equal(shopUrl("mama-oliech-bakery"), "https://epicmkt.app/s/mama-oliech-bakery");
@@ -43,4 +43,10 @@ test("one recipe for every screen: same business, same code; category, town or p
   assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: true }).ecl, "H");
   assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: false }).ecl, "M");
   assert.equal(shopQrSpec("shop-a", { planKey: "premium", hasLogo: true }).text, a.text);
+});
+
+test("an item link is <site>/b/<slug>/i/<id> with the id encoded", () => {
+  assert.equal(itemUrl("mama-oliech", "it-1"), "https://epicmkt.app/b/mama-oliech/i/it-1");
+  assert.equal(itemUrl("mama-oliech", "a b/c", "https://x.test/"), "https://x.test/b/mama-oliech/i/a%20b%2Fc");
+  assert.throws(() => itemUrl("Bad Slug", "it-1"), /invalid_slug/);
 });

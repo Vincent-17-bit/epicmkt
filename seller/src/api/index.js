@@ -26,6 +26,7 @@ export const pauseListing = (...a) => impl.pauseListing(...a);
 export const requestDeletion = (...a) => impl.requestDeletion(...a);
 export const catalogStats = (...a) => impl.catalogStats(...a);
 export const itemSignals = (...a) => impl.itemSignals(...a);
+export const getItemStats = (...a) => impl.getItemStats(...a);
 export const finalizeMedia = (...a) => impl.finalizeMedia(...a);
 export const getShopPreview = (...a) => impl.getShopPreview(...a);
 export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);

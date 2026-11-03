@@ -249,6 +249,7 @@ export default function Catalog() {
 
   const handlers = {
     select: toggleSelect,
+    open: (item) => navigate(`/business/catalog/${item.id}`),
     edit: openEditor,
     duplicate: (item) => run(() => api.duplicateItem(item.id), "Copy added as a draft."),
     toggle: (item) => run(() => api.bulkItems(item.visible && !item.draft ? "hide" : "show", [item.id]), item.visible && !item.draft ? "Item hidden." : "Item is now showing."),

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { mediaUrl } from "../../../api/shape.js";
 import { priceText } from "./cardItem.js";
 import { Actions, Chips, Ribbon, Signals } from "./parts.jsx";
@@ -17,7 +18,7 @@ export default function ListRow({ item, selected, handlers, canMove, isFirst, is
     >
       <span className={styles.thumb}>{src && <img src={src} alt="" loading="lazy" />}</span>
       <span className={styles.rowMain}>
-        <span className={styles.rowName}>{item.name}</span>
+        <Link to={`/business/catalog/${item.id}`} className={styles.rowName}>{item.name}</Link>
         {item.shortDescription && <span className={styles.rowBlurb} data-testid="row-blurb">{item.shortDescription}</span>}
         <span className={styles.rowMeta}>
           <span>{priceText(item)}</span>

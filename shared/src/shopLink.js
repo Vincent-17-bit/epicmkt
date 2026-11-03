@@ -19,6 +19,8 @@ const need = (slug) => {
 // The link customers see, share and read aloud.
 export const shopUrl = (slug, site) => `${siteBase(site)}/s/${need(slug)}`;
 
+export const itemUrl = (slug, itemId, site) => `${siteBase(site)}/b/${need(slug)}/i/${encodeURIComponent(String(itemId))}`;
+
 // What the QR code encodes: the public link plus a source tag, nothing else. Never a name, phone or id.
 export const shopQrUrl = (slug, site) => `${shopUrl(slug, site)}?src=qr`;
 

@@ -1,11 +1,12 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { paragraphs } from "@epicmkt/ui";
-import { t } from "../i18n/index.js";
+import { paragraphs } from "../lib/media.js";
+import { useItemT } from "./labels.js";
 import styles from "./ItemDescription.module.css";
 
 // The full description. Paragraph breaks are kept. Below 768 px it is clamped to a few lines with a Read more / Read less
 // toggle (the clamp is CSS, so wide screens show everything); the button only appears when the text really overflows.
-export default function ItemDescription({ text }) {
+export default function ItemDescription({ text, dataHl }) {
+  const t = useItemT();
   const id = useId();
   const bodyRef = useRef(null);
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function ItemDescription({ text }) {
 
   if (!parts.length) return null;
   return (
-    <section className={styles.section} aria-labelledby={`${id}-title`} data-description="">
+    <section className={styles.section} aria-labelledby={`${id}-title`} data-description="" data-hl={dataHl}>
       <h3 id={`${id}-title`} className={styles.title}>
         {t("item.description")}
       </h3>

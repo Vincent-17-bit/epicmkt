@@ -1,9 +1,10 @@
-import { MediaGallery } from "@epicmkt/ui";
-import { t } from "../i18n/index.js";
+import MediaGallery from "../components/MediaGallery.jsx";
+import { useItemT } from "./labels.js";
 
 // Photos and videos in one gallery, in the seller's order. `item` is the public item; media[] is used when the payload
 // has it, otherwise images[] and videos[] are adapted (photos first).
 export default function ItemGallery({ item }) {
+  const t = useItemT();
   const labels = {
     gallery: t("item.gallery"),
     choose: t("item.chooseMedia"),

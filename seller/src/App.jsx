@@ -12,6 +12,7 @@ import Exceptions from "./pages/business/Exceptions.jsx";
 import Flash from "./pages/business/Flash.jsx";
 import Offers from "./pages/business/Offers.jsx";
 import Account from "./pages/business/Account.jsx";
+import ItemPage from "./pages/business/catalog/ItemPage.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
 import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
 import Preview from "./pages/business/Preview.jsx";
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="exceptions" element={<Exceptions />} />
           <Route path="account" element={<Account />} />
           <Route path="catalog" element={<Catalog />} />
+          <Route path="catalog/:itemId" element={<ItemPage />} />
           <Route path="flash" element={<Flash />} />
           <Route path="offers" element={<Offers />} />
           <Route path="preview" element={<Preview />} />

@@ -76,3 +76,5 @@ export const getAllProducts = async () => (isLive() ? (await liveAdapter()).getA
 // A random window of each store's products for the featured cards: { [businessId]: { items, total } }.
 export const getShowcaseProducts = async (businessIds, opts) =>
   isLive() ? (await liveAdapter()).getShowcaseProducts(businessIds, opts) : backend.getStoreShowcase(businessIds, opts);
+
+export const logItemEvent = async (itemId, kind) => (isLive() ? (await liveAdapter()).logItemEvent(itemId, kind) : { ok: false });

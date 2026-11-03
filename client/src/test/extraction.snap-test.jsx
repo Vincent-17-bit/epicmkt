@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import BusinessCard from "../components/BusinessCard.jsx";
 import ItemCard from "../components/ItemCard.jsx";
-import ItemGallery from "../components/ItemGallery.jsx";
+import { ItemGallery } from "@epicmkt/ui";
 import Business from "../pages/Business.jsx";
 
 const biz = {

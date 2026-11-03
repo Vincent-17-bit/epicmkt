@@ -1,7 +1,8 @@
 import { useId } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye } from "@fortawesome/free-solid-svg-icons";
-import { useAutosize } from "./hooks.js";
+import { faArrowDown, faArrowUp, faEye, faGripVertical, faPlus, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { useAutosize, useDragReorder } from "./hooks.js";
+import { moved } from "./model.js";
 import styles from "./editor.module.css";
 
 // A button that is only an icon. It always carries its name (aria-label and a tooltip) and a 44px target.
@@ -93,5 +94,51 @@ export function CheckRow({ checked, onChange, children, ...rest }) {
       <input type="checkbox" checked={checked} onChange={onChange} {...rest} />
       <span>{children}</span>
     </label>
+  );
+}
+
+export function RowList({ noun, rows, max, onChange, focusOn, blank, renderRow, focusFirst, addLabel, addKey, empty, icon, error, errorKey }) {
+  const drag = useDragReorder((from, to) => onChange(moved(rows, from, to)));
+  const move = (i, dir) => () => {
+    const to = i + dir;
+    focusOn(`${noun.key}-${to}-${dir < 0 ? (to === 0 ? "down" : "up") : (to === rows.length - 1 ? "up" : "down")}`);
+    onChange(moved(rows, i, to));
+  };
+  const add = () => {
+    if (rows.length >= max) return;
+    focusOn(focusFirst(rows.length));
+    onChange([...rows, typeof blank === "function" ? blank() : blank]);
+  };
+  const full = rows.length >= max;
+  return (
+    <div className={styles.subBlock}>
+      {rows.length === 0 ? (
+        <EmptyState icon={icon} title={empty.title}>{empty.body}</EmptyState>
+      ) : (
+        <ul className={styles.rowList}>
+          {rows.map((row, i) => (
+            <li key={i} className={`${styles.rowCard} ${drag.over === i ? styles.rowOver : ""}`} {...drag.rowProps(i)}>
+              <div className={styles.rowHead}>
+                <span className={styles.rowNum}>{noun.label} {i + 1}</span>
+                <span className={styles.rowTools}>
+                  <span className={styles.grip} title="Drag to reorder" aria-hidden="true" {...drag.handleProps(i)}><FontAwesomeIcon icon={faGripVertical} /></span>
+                  <IconBtn icon={faArrowUp} label={`Move ${noun.name} ${i + 1} up`} data-focus={`${noun.key}-${i}-up`} onClick={move(i, -1)} disabled={i === 0} />
+                  <IconBtn icon={faArrowDown} label={`Move ${noun.name} ${i + 1} down`} data-focus={`${noun.key}-${i}-down`} onClick={move(i, 1)} disabled={i === rows.length - 1} />
+                  <IconBtn icon={faTrashCan} label={`Remove ${noun.name} ${i + 1}`} tone="danger" onClick={() => onChange(rows.filter((_, n) => n !== i))} />
+                </span>
+              </div>
+              <div className={styles.rowFields}>{renderRow(row, i, (patch) => onChange(rows.map((r, n) => (n === i ? patch(r) : r))))}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className={styles.error} role="alert" tabIndex={-1} data-count-error data-focus={errorKey}>{error}</p>}
+      <div className={styles.addRow}>
+        <button type="button" className={styles.btnGhost} data-focus={addKey} onClick={add} disabled={full}>
+          <FontAwesomeIcon icon={faPlus} aria-hidden="true" /> {addLabel}
+        </button>
+        <span className={styles.counter} aria-live="polite">{rows.length} of {max}</span>
+      </div>
+    </div>
   );
 }

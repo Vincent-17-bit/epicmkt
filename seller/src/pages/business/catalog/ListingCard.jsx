@@ -43,7 +43,7 @@ export default function ListingCard({ item, selected, handlers, canMove, isFirst
     >
       <ItemCard
         item={cardItemOf(item)}
-        onSelect={() => handlers.select(item.id)}
+        onSelect={() => handlers.open(item)}
         overlay={overlay}
         quickActions={quickActions}
         dimmed={item.visibility !== "showing" || item.soldOut}

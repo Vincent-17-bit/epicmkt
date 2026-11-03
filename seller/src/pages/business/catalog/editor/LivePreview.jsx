@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ItemCard, ProductGallery, StockTag } from "@epicmkt/ui";
-import { formatKes } from "@epicmkt/shared";
+import { useQuery } from "@tanstack/react-query";
+import { BUSINESS_TIME_ZONE } from "@epicmkt/shared";
+import { ItemCard, ItemView } from "@epicmkt/ui";
+import * as api from "../../../../api/index.js";
+import { detailBusiness, itemDetailOf } from "../../../../lib/itemDetail.js";
 import { readDevicePref, storeDevicePref } from "../cardItem.js";
 import { prefersCalm } from "./hooks.js";
-import { previewItemOf, priceSummary } from "./model.js";
+import { previewFieldsOf, previewItemOf, priceSummary } from "./model.js";
 import styles from "./editor.module.css";
 
 const VIEWS = [["card", "Card"], ["page", "Page"]];
@@ -38,17 +41,6 @@ function ScaledFrame({ width, children }) {
   );
 }
 
-const priceParts = (form, item) => {
-  if (form.priceType === "free") return { main: "Free" };
-  if (form.priceType === "contact" || !item.pricing) return { main: "Contact for price" };
-  const { regularPrice, salePrice, savings, discountPercent } = item.pricing;
-  const unit = form.unit.trim() ? ` ${form.unit.trim()}` : "";
-  let main = formatKes(salePrice);
-  if (form.priceType === "from") main = `From ${main}`;
-  if (form.priceType === "range" && item.priceMax) main = `${formatKes(regularPrice)} to ${formatKes(item.priceMax)}`;
-  return { main: `${main}${unit}`, was: savings > 0 ? formatKes(regularPrice) : null, off: savings > 0 ? discountPercent : 0 };
-};
-
 function CardView({ form, item, hl, device }) {
   return (
     <div className={styles.cardView} data-device={device}>
@@ -70,63 +62,24 @@ function CardView({ form, item, hl, device }) {
   );
 }
 
-function PageView({ form, item, images, media, hl }) {
+const PART_AREAS = { price: ["price", "stock", "variants"], specs: ["specs", "includes", "terms", "pack"] };
+
+const NO_SHOP = { slug: "your-shop", name: "Your shop", categoryName: "", hours: {}, exceptions: [], timezone: BUSINESS_TIME_ZONE, verified: false };
+
+function PageView({ form, images, media, hl }) {
+  const shop = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false }).data?.shop ?? NO_SHOP;
   const gallery = useMemo(() => (media?.length ? media : images.map((url, i) => ({ id: `p${i}`, kind: "image", url }))), [images, media]);
-  const price = priceParts(form, item);
-  const highlights = form.highlights.filter((h) => h.text.trim());
-  const specs = form.specs.filter((s) => s.label.trim() && s.value.trim());
-  const includes = form.includes.filter((t) => t.trim());
-  const paragraphs = form.description.split(/\n{1,}/).map((p) => p.trim()).filter(Boolean);
-  const groups = [...new Set(specs.map((s) => s.group || "Features & Specs"))];
+  const item = useMemo(() => itemDetailOf({ item: previewFieldsOf(form), shop, gallery }), [form, shop, gallery]);
   return (
-    <article className={styles.pg}>
-      <div className={styles.pgGallery} data-hl={hl("media")}>
-        {gallery.length ? <ProductGallery media={gallery} name={item.name} /> : <div className={styles.pgNoPhoto}>No photo yet</div>}
-      </div>
-      <div className={styles.pgInfo}>
-        {form.brand.trim() && <p className={styles.pgBrand} data-hl={hl("brand")}>{form.brand.trim()}</p>}
-        <h3 className={styles.pgName} data-hl={hl("name")}>{item.name}</h3>
-        {form.shortDescription.trim() && <p className={styles.pgShort} data-hl={hl("short")}>{form.shortDescription.trim()}</p>}
-        <p className={styles.pgPrice} data-hl={hl("price", "stock")}>
-          <strong>{price.main}</strong>
-          {price.was && <s>{price.was}</s>}
-          {price.off > 0 && <span className={styles.pgOff}>-{price.off}%</span>}
-          <StockTag item={item} />
-        </p>
-        {highlights.length > 0 && (
-          <ul className={styles.pgBullets} data-hl={hl("highlights")}>
-            {highlights.map((h, i) => <li key={i}>{h.title.trim() && <strong>{h.title.trim()} </strong>}{h.text.trim()}</li>)}
-          </ul>
-        )}
-        {paragraphs.length > 0 && (
-          <div className={styles.pgDesc} data-hl={hl("description")}>{paragraphs.map((p, i) => <p key={i}>{p}</p>)}</div>
-        )}
-        {includes.length > 0 && (
-          <div data-hl={hl("includes")}>
-            <h4 className={styles.pgH}>What is included</h4>
-            <ul className={styles.pgBullets}>{includes.map((t, i) => <li key={i}>{t.trim()}</li>)}</ul>
-          </div>
-        )}
-        {specs.length > 0 && (
-          <div data-hl={hl("specs")}>
-            {groups.map((g) => (
-              <div key={g}>
-                <h4 className={styles.pgH}>{g}</h4>
-                <dl className={styles.pgSpecs}>
-                  {specs.filter((s) => (s.group || "Features & Specs") === g).map((s, i) => <div key={i}><dt>{s.label.trim()}</dt><dd>{s.value.trim()}</dd></div>)}
-                </dl>
-              </div>
-            ))}
-          </div>
-        )}
-        {(form.packSize.trim() || form.terms.trim()) && (
-          <div data-hl={hl("pack", "terms")}>
-            {form.packSize.trim() && <p><strong>Pack size:</strong> {form.packSize.trim()}</p>}
-            {form.terms.trim() && <p className={styles.pgTerms}>{form.terms.trim()}</p>}
-          </div>
-        )}
-      </div>
-    </article>
+    <ItemView
+      layout="page"
+      mode="preview"
+      state="ready"
+      item={item}
+      itemId="preview"
+      business={detailBusiness(shop)}
+      marks={(part) => hl(...(PART_AREAS[part] ?? [part]))}
+    />
   );
 }
 
@@ -162,7 +115,7 @@ export default function LivePreview({ form, images, media, area }) {
         <p className={styles.sr}>{item.name}. {priceSummary(form)}.</p>
         <ScaledFrame width={DESIGN_WIDTH[device]}>
           <div className={styles.device} data-device={device}>
-            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : <PageView form={form} item={item} images={images} media={media} hl={hl} />}
+            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : <PageView form={form} images={images} media={media} hl={hl} />}
           </div>
         </ScaledFrame>
       </div>

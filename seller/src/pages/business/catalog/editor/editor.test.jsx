@@ -1,7 +1,8 @@
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { emptyItemForm, validateItemForm } from "@epicmkt/shared";
+import * as api from "../../../../api/index.js";
 import { M, signedInApp } from "../../../../test/utils.jsx";
 import { errorList, exampleShortFor, firstErrorTarget, firstSentence, GENERIC_EXAMPLE, priceSummary, qualityChecks, qualityScore, stockStatusOf } from "./model.js";
 
@@ -484,5 +485,78 @@ describe("the shop logo on the item page", () => {
     await openNew();
     expect(headerButton("Add item")).toBeInTheDocument();
     expect(headerButton("Save as draft")).toBeInTheDocument();
+  });
+});
+
+describe("options (variants)", () => {
+  const addOption = async (user, n, { label, price, stock }) => {
+    await user.click(screen.getByRole("button", { name: "Add an option" }));
+    await user.type(screen.getByLabelText(`Option ${n} name`), label);
+    await user.type(screen.getByLabelText(`Option ${n} price (KES)`), price);
+    if (stock) await user.type(screen.getByLabelText(`Option ${n} in stock (optional)`), stock);
+  };
+
+  it("offers options for a fixed or starting price only", async () => {
+    const user = userEvent.setup();
+    await openNew();
+    expect(screen.getByRole("heading", { name: "Options (optional)" })).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Price type"), "range");
+    expect(screen.queryByRole("heading", { name: "Options (optional)" })).not.toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Price type"), "from");
+    expect(screen.getByRole("heading", { name: "Options (optional)" })).toBeInTheDocument();
+  });
+
+  it("adds, reorders and removes options, and shows them in the page preview", async () => {
+    const user = userEvent.setup();
+    await openNew(1280);
+    await user.type(screen.getByLabelText("Name"), "Fade cut");
+    await user.type(screen.getByLabelText("Price (KES)"), "500");
+    expect(screen.getByText("No options yet")).toBeInTheDocument();
+    await addOption(user, 1, { label: "Small", price: "500" });
+    await addOption(user, 2, { label: "Large", price: "800", stock: "3" });
+    const preview = screen.getByRole("region", { name: "Live preview" });
+    await user.click(within(preview).getByRole("button", { name: "Page" }));
+    const group = within(preview).getByRole("radiogroup", { name: "Options" });
+    expect(within(group).getAllByRole("radio").map((r) => r.textContent)).toEqual(["Small", "Large"]);
+    await user.click(screen.getByRole("button", { name: "Move option 2 up" }));
+    expect(screen.getByLabelText("Option 1 name")).toHaveValue("Large");
+    expect(within(preview).getByRole("radiogroup", { name: "Options" }).querySelector("[role=radio]")).toHaveTextContent("Large");
+    await user.click(screen.getByRole("button", { name: "Remove option 1" }));
+    expect(screen.getByLabelText("Option 1 name")).toHaveValue("Small");
+    expect(screen.getByText("1 of 10")).toBeInTheDocument();
+  });
+
+  it("stops at ten options", async () => {
+    await openNew();
+    for (let i = 0; i < 10; i += 1) fireEvent.click(screen.getByRole("button", { name: "Add an option" }));
+    expect(screen.getByRole("button", { name: "Add an option" })).toBeDisabled();
+    expect(screen.getByText("10 of 10")).toBeInTheDocument();
+  });
+
+  it("points at the first option mistake when saving", async () => {
+    const user = userEvent.setup();
+    await openNew();
+    await user.type(screen.getByLabelText("Name"), "Fade cut");
+    await user.type(screen.getByLabelText("Price (KES)"), "500");
+    await user.click(screen.getByRole("button", { name: "Add an option" }));
+    await user.type(screen.getByLabelText("Option 1 price (KES)"), "800");
+    await user.click(headerButton("Save as draft"));
+    expect((await screen.findAllByText("Enter a name.")).length).toBeGreaterThan(0);
+    await waitFor(() => expect(screen.getByLabelText("Option 1 name")).toHaveFocus());
+  });
+
+  it("saves options with the item and loads them back", async () => {
+    const user = userEvent.setup();
+    await openNew();
+    await user.type(screen.getByLabelText("Name"), "Fade cut");
+    await user.type(screen.getByLabelText("Price (KES)"), "500");
+    await addOption(user, 1, { label: "Small", price: "500", stock: "4" });
+    await addOption(user, 2, { label: "Large", price: "800" });
+    await user.click(headerButton("Save as draft"));
+    await waitFor(async () => {
+      const saved = (await api.getCatalog()).items.find((i) => i.name === "Fade cut" && i.variants.length);
+      expect(saved.variants.map(({ label, price, stock }) => [label, price, stock])).toEqual([["Small", 500, 4], ["Large", 800, null]]);
+      expect(new Set(saved.variants.map((v) => v.id)).size).toBe(2);
+    });
   });
 });

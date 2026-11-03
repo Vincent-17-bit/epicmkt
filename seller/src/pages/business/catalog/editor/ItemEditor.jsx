@@ -314,7 +314,7 @@ function EditorForm({ item, sections, category, business }) {
       );
     }
     if (id === "basics") return <BasicsSection key={id} form={form} patch={patch} errors={errors} category={category} sections={sections} focusOn={focusOn} />;
-    if (id === "price") return <PriceSection key={id} form={form} patch={patch} errors={errors} />;
+    if (id === "price") return <PriceSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
     if (id === "details") return <DetailsSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
     return <ReviewSection key={id} form={form} checks={checks} isNew={isNew} onJump={goTo} />;
   };

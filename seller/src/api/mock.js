@@ -1,4 +1,4 @@
-import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails } from "@epicmkt/shared";
+import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -211,6 +211,30 @@ export const catalogStats = async () => {
   };
 };
 export const itemSignals = async () => { signedIn(); await wait(); return copy(bill.signals); };
+const STAT_DAYS = [7, 30, 90];
+const seededNumber = (text) => {
+  let h = 2166136261;
+  for (const ch of text) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return h >>> 0;
+};
+const dayShift = (day, n) => nairobiDay(new Date(Date.parse(`${day}T12:00:00+03:00`) + n * DAY));
+export const getItemStats = async (itemId, days = 30) => {
+  signedIn();
+  await wait();
+  if (!STAT_DAYS.includes(days)) throw new ApiError("invalid_days");
+  const item = bill.items.find((i) => i.id === itemId && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  const showing = item.visible && !item.draft && !item.hiddenByAdmin && !["out_of_stock", "unavailable"].includes(item.availability);
+  const rowOf = (day) => {
+    const views = showing ? seededNumber(`${itemId}:${day}`) % 9 : 0;
+    return { day, views, whatsapp: Math.floor(views / 3), call: Math.floor(views / 5) };
+  };
+  const rangeOf = (from, n) => Array.from({ length: n }, (_, i) => rowOf(dayShift(from, i)));
+  const sum = (rows) => rows.reduce((t, r) => ({ views: t.views + r.views, whatsapp: t.whatsapp + r.whatsapp, call: t.call + r.call }), { views: 0, whatsapp: 0, call: 0 });
+  const start = dayShift(todayNairobi(), -(days - 1));
+  const daily = rangeOf(start, days);
+  return { days, totals: sum(daily), previous: sum(rangeOf(dayShift(start, -days), days)), daily };
+};
 export const finalizeMedia = async () => { signedIn(); throw new ApiError("not_implemented"); };
 const demoDurations = new Map();
 const noteUpload = (item, path) => {
@@ -739,16 +763,23 @@ export const saveItem = async (id, f) => {
   const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
   if (!details.ok) throw new ApiError("invalid_details");
   Object.assign(fields, details.value);
+  if (f.variants !== undefined) {
+    const options = storedVariants(f.variants);
+    if (!options.ok) throw new ApiError("invalid_variants");
+    fields.variants = options.value;
+  }
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
+  if (fields.variants?.length && !["fixed", "from"].includes(fields.priceType)) throw new ApiError("invalid_variants");
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
     if (!item) throw new ApiError("item_not_found");
     const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
-    if (priceChanged && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
+    const optionsChanged = fields.variants !== undefined && JSON.stringify(fields.variants) !== JSON.stringify(item.variants ?? []);
+    if ((priceChanged || optionsChanged) && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     return id;
   }
-  const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
+  const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], variants: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   return made.id;
 };

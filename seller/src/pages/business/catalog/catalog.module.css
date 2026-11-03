@@ -452,7 +452,13 @@
 }
 
 .rowName {
+  color: inherit;
   font-weight: 600;
+  text-decoration: none;
+}
+
+.rowName:hover {
+  text-decoration: underline;
 }
 
 .rowBlurb {

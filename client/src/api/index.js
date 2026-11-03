@@ -26,11 +26,19 @@ const quiet = (fn) => {
     return { ok: false };
   }
 };
-export const logContactEvent = (event) => quiet(() => backend.logContactEvent(event));
+const ITEM_EVENT = { item_view: "view" };
+const trackItem = (itemId, kind) => quiet(() => flashApi.logItemEvent(itemId, kind));
+export const logContactEvent = (event) => {
+  if (event?.type === "whatsapp" || event?.type === "call") trackItem(event.itemId, event.type);
+  return quiet(() => backend.logContactEvent(event));
+};
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => browse.getTowns();
-export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, scrubPayload(payload)));
+export const logEvent = (name, payload) => {
+  if (ITEM_EVENT[name]) trackItem(payload?.itemId, ITEM_EVENT[name]);
+  return quiet(() => backend.logEvent(name, scrubPayload(payload)));
+};
 export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),

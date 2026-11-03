@@ -1,6 +1,6 @@
-import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { makeItemOf, pricingOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
-const SHORT_MAX = 140;
+export { pricingOf };
 
 // Where stored pictures come from. New pictures live in Cloudinary: a stored value with no file extension is a Cloudinary public id
 // and becomes https://res.cloudinary.com/<VITE_CLOUDINARY_CLOUD_NAME>/image/upload/<transform>/<id> (see shared/src/seller/images.js).
@@ -27,53 +27,9 @@ export const mediaUrl = (path) => {
   return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
 };
 
-const MAX_LIST = 20;
-const MAX_SPECS = 20;
-
-const textOf = (value) => (typeof value === "string" ? value.trim() : "");
-
-const listOf = (value) => (Array.isArray(value) ? value.map(textOf).filter(Boolean).slice(0, MAX_LIST) : []);
-
-const highlightsOf = (value) => {
-  if (!Array.isArray(value)) return [];
-  const out = [];
-  for (const entry of value) {
-    if (typeof entry === "string") {
-      const text = textOf(entry);
-      if (text) out.push(text);
-    } else if (entry && typeof entry === "object") {
-      const text = textOf(entry.text);
-      const title = textOf(entry.title);
-      if (text) out.push({ ...(title ? { title } : {}), text });
-    }
-    if (out.length >= MAX_LIST) break;
-  }
-  return out;
-};
-
-const specsOf = (value) => {
-  if (!Array.isArray(value)) return [];
-  const rows = [];
-  for (const spec of value) {
-    if (!spec || typeof spec !== "object") continue;
-    const label = textOf(spec.label);
-    const val = typeof spec.value === "number" && Number.isFinite(spec.value) ? String(spec.value) : textOf(spec.value);
-    const group = textOf(spec.group);
-    if (label && val) rows.push({ label, value: val, ...(group ? { group } : {}) });
-    if (rows.length >= MAX_SPECS) break;
-  }
-  return rows;
-};
-
 const countOf = (value) => (Number.isInteger(value) && value >= 0 ? value : 0);
 
 const num = (value) => (value === null || value === undefined ? null : Number(value));
-
-const shorten = (text) => {
-  if (text.length <= SHORT_MAX) return text;
-  const cut = text.slice(0, SHORT_MAX);
-  return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
-};
 
 // Exceptions (closed days, special hours) override the weekly hours for their date. A missing list means none.
 const statusFor = (hours, exceptions, timeZone, viewerZone) => {
@@ -98,60 +54,7 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
-export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
-  regularPrice,
-  salePrice,
-  savings: regularPrice - salePrice,
-  discountPercent: regularPrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0,
-  unit: unit ?? null,
-  priceType: priceType ?? "fixed",
-  variants: []
-});
-
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, mediaPaths, createdAt }) => {
-  const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
-  const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
-  // One ordered list of photos and videos, as the seller arranged them (the database's shared sequence). The ids match images[] and
-  // videos[]. Without it (older cards) the photos come first, then the videos. A video has no poster picture yet, so none is set.
-  const sequence = Array.isArray(mediaPaths) ? mediaPaths : [...(imagePaths ?? []).map((path) => ({ path, kind: "image" })), ...(videoPaths ?? []).map((path) => ({ path, kind: "video" }))];
-  let photoN = 0;
-  let videoN = 0;
-  const media = sequence
-    .filter((m) => m?.path && (m.kind === "image" || m.kind === "video"))
-    .map((m) => ({ id: m.kind === "video" ? `v${++videoN}` : `i${++photoN}`, kind: m.kind, url: mediaUrl(m.path), caption: name }));
-  return {
-    id,
-    businessId,
-    businessSlug,
-    name,
-    description: description ?? "",
-    shortDescription: textOf(shortDescription) || shorten(typeof description === "string" ? description : ""),
-    brand: textOf(brand) || null,
-    highlights: highlightsOf(highlights),
-    includes: listOf(includes),
-    terms: textOf(terms),
-    duration: null,
-    term: null,
-    packSize: textOf(packSize) || null,
-    imageUrl: images[0]?.url ?? null,
-    images,
-    videos,
-    media,
-    regularPrice: Number.isFinite(price) ? price : null,
-    priceType: priceType ?? "fixed",
-    unit: unit ?? null,
-    status: "listed",
-    unlistReason: null,
-    kind: "product",
-    section: section ?? null,
-    availability: availability ?? "available",
-    // How many are left, only when the seller counts stock, it is running low, and they chose to say so.
-    stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
-    variants: [],
-    specs: specsOf(specs),
-    createdAt
-  };
-};
+export const itemOf = makeItemOf(mediaUrl);
 
 export const cardOfFlash = (row, origin) => ({
   id: row.business_id,

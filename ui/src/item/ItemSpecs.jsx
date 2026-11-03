@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown } from "@fortawesome/free-solid-svg-icons";
-import { buildSpecGroups } from "../lib/itemView.js";
-import { t } from "../i18n/index.js";
+import { buildSpecGroups } from "@epicmkt/shared";
+import { useItemT } from "./labels.js";
 import styles from "./ItemSpecs.module.css";
 
 // The nearest ancestor that scrolls (the sheet's body, or null when the whole page scrolls).
@@ -55,6 +55,7 @@ function Panel({ id, title, open, onToggle, panelRef, children }) {
 }
 
 export default function ItemSpecs({ item, category, attributes, onExpand, reveal = 0 }) {
+  const t = useItemT();
   const uid = useId();
   const groups = buildSpecGroups({ item, category, attributes });
   const firstKey = groups.length ? GROUP_PANELS[groups[0].name].key : null;

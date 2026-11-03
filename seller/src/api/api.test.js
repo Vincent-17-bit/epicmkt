@@ -212,3 +212,20 @@ test("details: the mock refuses what the database refuses, specs included, and k
   for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
   assert.deepEqual(await find("it-fade"), before);
 });
+
+test("the mock reports item stats in the shape of the database function", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const week = await mock.getItemStats("it-fade", 7);
+  assert.deepEqual(Object.keys(week).sort(), ["daily", "days", "previous", "totals"]);
+  assert.equal(week.days, 7);
+  assert.equal(week.daily.length, 7);
+  assert.deepEqual(Object.keys(week.daily[0]).sort(), ["call", "day", "views", "whatsapp"]);
+  assert.equal(week.totals.views, week.daily.reduce((n, r) => n + r.views, 0));
+  assert.deepEqual(await mock.getItemStats("it-fade", 7), week);
+  assert.equal((await mock.getItemStats("it-fade", 90)).daily.length, 90);
+  const hidden = await mock.getItemStats("it-old", 30);
+  assert.deepEqual(hidden.totals, { views: 0, whatsapp: 0, call: 0 });
+  await assert.rejects(mock.getItemStats("it-fade", 12), { code: "invalid_days" });
+  await assert.rejects(mock.getItemStats("nope", 7), { code: "item_not_found" });
+});

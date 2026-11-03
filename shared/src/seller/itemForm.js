@@ -94,6 +94,54 @@ const filled = (v, max) => typeof v === "string" && v.trim() !== "" && v.length 
 // What seller_save_item keeps for the detail fields a save sends, or { ok: false } where it refuses them (invalid_details).
 // Only keys that are present come back, because a save that leaves a key out leaves the stored value alone.
 // Like the database, it trims the four text fields and the included lines, and keeps spec and highlight text as sent.
+export const VARIANT_LIMITS = { rows: 10, label: 40, stock: 999999, price: 9999999999.99 };
+const VARIANT_ID = /^[a-z0-9_-]{1,20}$/;
+const moneyOk = (n) => typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= VARIANT_LIMITS.price && Math.round(n * 100) === n * 100;
+
+export const storedVariants = (list) => {
+  const bad = { ok: false };
+  if (list === null || list === undefined) return { ok: true, value: [] };
+  if (!Array.isArray(list) || list.length > VARIANT_LIMITS.rows) return bad;
+  const ids = new Set();
+  const labels = new Set();
+  const value = [];
+  for (const row of list) {
+    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "label", "price", "stock"].includes(k))) return bad;
+    if (typeof row.id !== "string" || !VARIANT_ID.test(row.id) || ids.has(row.id)) return bad;
+    if (typeof row.label !== "string" || !filled(row.label.trim(), VARIANT_LIMITS.label)) return bad;
+    const label = row.label.trim();
+    if (labels.has(label.toLowerCase()) || !moneyOk(row.price)) return bad;
+    const stock = row.stock ?? null;
+    if (stock !== null && (!Number.isInteger(stock) || stock < 0 || stock > VARIANT_LIMITS.stock)) return bad;
+    ids.add(row.id);
+    labels.add(label.toLowerCase());
+    value.push({ id: row.id, label, price: row.price, stock });
+  }
+  return { ok: true, value };
+};
+
+export const cleanVariants = (rows) => {
+  const errors = {};
+  const out = [];
+  const labels = new Map();
+  (rows ?? []).forEach((row, index) => {
+    const label = String(row.label ?? "").trim();
+    const price = money(row.price);
+    const stockText = String(row.stock ?? "").trim();
+    const rowErrors = {};
+    if (!label) rowErrors.label = "Enter a name.";
+    else if (label.length > VARIANT_LIMITS.label) rowErrors.label = `Use ${VARIANT_LIMITS.label} characters or fewer.`;
+    else if (labels.has(label.toLowerCase())) rowErrors.label = "Two options cannot share a name.";
+    if (price.empty) rowErrors.price = "Enter a price.";
+    else if (price.error) rowErrors.price = "Enter a number such as 1200.";
+    if (stockText !== "" && !/^\d{1,6}$/.test(stockText)) rowErrors.stock = "Enter a whole number, or leave it empty.";
+    if (label) labels.set(label.toLowerCase(), index);
+    if (Object.keys(rowErrors).length) errors[index] = rowErrors;
+    else out.push({ id: row.id, label, price: price.value, stock: stockText === "" ? null : Number(stockText) });
+  });
+  return { variants: out, errors };
+};
+
 export const storedItemDetails = (f) => {
   const value = {};
   const bad = { ok: false };
@@ -122,6 +170,11 @@ export const storedItemDetails = (f) => {
     const max = ITEM_DETAIL_LIMITS.includes;
     if (!Array.isArray(list) || list.length > max.rows || !list.every((t) => typeof t === "string" && filled(t.trim(), max.text))) return bad;
     value.includes = list.map((t) => t.trim());
+  }
+  if ("variants" in f) {
+    const checked = storedVariants(f.variants);
+    if (!checked.ok) return bad;
+    value.variants = checked.value;
   }
   if ("specs" in f) {
     const list = f.specs ?? [];
@@ -209,11 +262,18 @@ export const validateItemForm = (f) => {
     if (hl.highlights.length > ITEM_DETAIL_LIMITS.highlights.rows) errors.highlightsCount = `Use ${ITEM_DETAIL_LIMITS.highlights.rows} highlights or fewer.`;
     details.highlights = hl.highlights;
   }
+  if (Array.isArray(f.variants)) {
+    const vr = cleanVariants(f.variants);
+    if (f.variants.length > VARIANT_LIMITS.rows) errors.variantsCount = `Use ${VARIANT_LIMITS.rows} options or fewer.`;
+    if (f.variants.length && !["fixed", "from"].includes(f.priceType)) errors.variantsCount = "Options need a fixed or a starting price.";
+    if (Object.keys(vr.errors).length) errors.variants = vr.errors;
+    details.variants = vr.variants;
+  }
   if (Object.keys(errors).length) return { ok: false, errors };
   return { ok: true, value: { name, description, section, unit, priceType: f.priceType, price: priceValue, priceMax: maxValue, salePrice: saleValue, availability: f.availability, trackStock, stockCount, lowStockThreshold, showStockCount: trackStock && Boolean(f.showStockCount), ...(Array.isArray(f.specs) && { specs: cleaned.specs }), ...details } };
 };
 
-export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false, specs: [], brand: "", shortDescription: "", packSize: "", terms: "", includes: [], highlights: [] });
+export const emptyItemForm = () => ({ name: "", description: "", section: "", unit: "", priceType: "fixed", price: "", priceMax: "", salePrice: "", availability: "available", trackStock: false, stockCount: "", lowStockThreshold: "3", showStockCount: false, specs: [], brand: "", shortDescription: "", packSize: "", terms: "", includes: [], highlights: [], variants: [] });
 
 export const formFromItem = (i) => ({
   name: i.name, description: i.description ?? "", section: i.section ?? "", unit: i.unit ?? "", priceType: i.priceType,
@@ -226,4 +286,5 @@ export const formFromItem = (i) => ({
   brand: i.brand ?? "", shortDescription: i.shortDescription ?? "", packSize: i.packSize ?? "", terms: i.terms ?? "",
   includes: (Array.isArray(i.includes) ? i.includes : []).map((t) => String(t ?? "")),
   highlights: (Array.isArray(i.highlights) ? i.highlights : []).map((h) => ({ title: h?.title ?? "", text: h?.text ?? "" })),
+  variants: (Array.isArray(i.variants) ? i.variants : []).map((v) => ({ id: String(v?.id ?? ""), label: v?.label ?? "", price: v?.price === null || v?.price === undefined ? "" : String(v.price), stock: v?.stock === null || v?.stock === undefined ? "" : String(v.stock) })),
 });

@@ -189,7 +189,7 @@ export function Actions({ item, selected, onSelect, onEdit, onDuplicate, onToggl
                 {canShow}
               </button>
               {priced && <button type="button" role="menuitem" className={styles.menuItem} onClick={() => { close(); onConfirm(item); }} disabled={locked || busy}>Confirm price</button>}
-              <a role="menuitem" className={styles.menuItem} href="/business/preview" target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
+              <a role="menuitem" className={styles.menuItem} href={`/business/catalog/${item.id}`} target="_blank" rel="noreferrer" onClick={close}>View as customer</a>
               {canMove && (
                 <>
                   <button type="button" role="menuitem" className={styles.menuItem} onClick={() => onMove(item.id, -1)} disabled={isFirst || busy} aria-label={`Move ${item.name} up`}>Move up</button>

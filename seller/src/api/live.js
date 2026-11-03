@@ -67,6 +67,7 @@ export const pauseListing = (pause) => rpc("seller_pause_listing", { p_pause: pa
 export const requestDeletion = (name) => rpc("seller_request_deletion", { p_name: name });
 export const catalogStats = (staleDays = 90) => rpc("seller_catalog_stats", { p_stale_days: staleDays });
 export const itemSignals = async () => (await rpc("seller_item_signals")).map(shape.signal);
+export const getItemStats = (itemId, days = 30) => rpc("seller_item_stats", { p_item_id: itemId, p_days: days });
 // Pictures live in Cloudinary, not Supabase. An upload is three steps, and the browser never holds the Cloudinary secret:
 //   1. seller-media-sign   the server picks the id (under this shop's own prefix), records it, and signs ONE upload for it.
 //   2. the browser posts the file straight to Cloudinary with that signature. Cloudinary scales it to a 4K master (up or down) on arrival.
@@ -472,6 +473,7 @@ const itemRow = (f) => ({
   ...(f.brand !== undefined && { brand: f.brand }), ...(f.shortDescription !== undefined && { short_description: f.shortDescription }),
   ...(f.packSize !== undefined && { pack_size: f.packSize }), ...(f.terms !== undefined && { terms: f.terms }),
   ...(Array.isArray(f.includes) && { includes: f.includes }), ...(Array.isArray(f.highlights) && { highlights: f.highlights }),
+  ...(Array.isArray(f.variants) && { variants: f.variants }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([

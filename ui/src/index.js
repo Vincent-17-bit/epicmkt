@@ -37,3 +37,8 @@ export { isPreview } from "./preview.js";
 export { default as ItemCard } from "./ItemCard.jsx";
 export { default as ProductTile } from "./ProductTile.jsx";
 export { default as Logo, LogoMark } from "./components/Logo.jsx";
+export { default as ItemView } from "./item/ItemView.jsx";
+export { default as ItemGallery } from "./item/ItemGallery.jsx";
+export { default as ItemSpecs } from "./item/ItemSpecs.jsx";
+export { default as ItemDescription } from "./item/ItemDescription.jsx";
+export { ITEM_LABELS, ItemLabelsProvider, useItemT } from "./item/labels.js";

@@ -209,7 +209,7 @@ describe("MediaVideo: stacking", () => {
       const token = /^var\((--[\w-]+)\)$/.exec(raw ?? "")?.[1];
       return Number(token ? new RegExp(`${token}:\\s*(\\d+)`).exec(tokens)?.[1] : raw);
     };
-    const sheet = zOf(cssText("ItemDetail.module.css"), "\\.root");
+    const sheet = zOf(cssText("../../../ui/src/item/ItemView.module.css"), "\\.root");
     const scrim = zOf(cssText("MediaVideo.module.css"), "\\.scrim");
     expect(Number.isFinite(sheet) && Number.isFinite(scrim)).toBe(true);
     expect(scrim).toBeGreaterThan(sheet);
