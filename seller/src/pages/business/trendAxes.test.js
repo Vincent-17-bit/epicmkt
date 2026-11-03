@@ -7,6 +7,8 @@ describe("trend chart axes", () => {
     expect(niceMax(29)).toEqual({ top: 30, ticks: [0, 10, 20, 30] });
     expect(niceMax(132)).toEqual({ top: 150, ticks: [0, 50, 100, 150] });
     expect(niceMax(0)).toEqual({ top: 1, ticks: [0, 1] });
+    expect(niceMax(9)).toEqual({ top: 10, ticks: [0, 5, 10] });
+    expect(niceMax(7).ticks.every(Number.isInteger)).toBe(true);
   });
 
   it("labels days, weeks and months", () => {

@@ -42,7 +42,7 @@ export default function ItemQuestions({ item, readOnly }) {
           );
         })}
       </ul>
-      <Link className={ui.link} to="/business/questions">Open all questions</Link>
+      <Link className={`${ui.link} ${styles.moreLink}`} to="/business/questions">Open all questions</Link>
     </section>
   );
 }
