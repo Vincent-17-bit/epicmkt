@@ -34,4 +34,10 @@ describe("trend chart axes", () => {
     expect(indexAt(0.4, 1)).toBe(0);
     expect(peakIndex([1, 9, 3, 9])).toBe(1);
   });
+
+  it("reads timestamps from the database as dates", () => {
+    expect(bucketLabel("2026-10-28T00:00:00", "day")).toBe("28 Oct");
+    expect(fullLabel("2026-10-26T00:00:00+03:00", "week")).toBe("Week of 26 Oct 2026");
+    expect(bucketLabel("2026-10-01T00:00:00", "month")).toBe("Oct 2026");
+  });
 });
