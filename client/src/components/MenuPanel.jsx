@@ -5,6 +5,8 @@ import { faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/
 import { flash, getCategories } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
+import { routes } from "../config/routes.js";
+import { infoLinks } from "../config/nav.js";
 import Container from "./Container.jsx";
 import Button from "./Button.jsx";
 import IconButton from "./IconButton.jsx";
@@ -13,12 +15,6 @@ import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./MenuPanel.module.css";
 
 export const MENU_ID = "site-menu";
-
-const smallLinks = [
-  { to: "/about", label: "About" },
-  { to: "/contact", label: "Contact" },
-  { to: "/faq", label: "FAQs" }
-];
 
 export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searchRef, quietRef }) {
   const activeSlug = useMatch("/c/:slug")?.params.slug;
@@ -49,7 +45,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
         id={MENU_ID}
         ref={panelRef}
         role="region"
-        aria-label="Menu"
+        aria-label={t("menu.label")}
         tabIndex={-1}
         data-open={open}
         inert={hidden}
@@ -59,7 +55,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
         <Container className={styles.inner}>
           <form role="search" className={`${styles.search} ${styles.areaSearch}`} onSubmit={submit}>
             <label htmlFor="menu-search" className={styles.srOnly}>
-              Search businesses
+              {t("menu.searchLabel")}
             </label>
             <input
               id="menu-search"
@@ -68,19 +64,19 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
               readOnly
               inputMode="none"
               autoComplete="off"
-              placeholder="Search businesses"
+              placeholder={t("menu.searchPlaceholder")}
               onFocus={() => {
                 if (!quietRef.current) onOpenSearch();
               }}
               onClick={onOpenSearch}
               className={styles.input}
             />
-            <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
+            <IconButton type="submit" icon={faMagnifyingGlass} label={t("menu.searchButton")} className={styles.submit} />
           </form>
 
           <div className={`${styles.sellerStack} ${styles.areaSeller}`}>
-            <Button as={Link} to="/become-a-seller" size="lg" icon={faStore} className={styles.seller}>
-              Become a seller
+            <Button as={Link} to={routes.apply} size="lg" icon={faStore} className={styles.seller}>
+              {t("nav.becomeASeller")}
             </Button>
             <Link to="/flash" replace className={styles.flashLink}>
               <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
@@ -91,13 +87,13 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
 
           <section aria-labelledby="menu-categories" className={styles.areaCats}>
             <h2 id="menu-categories" className={styles.label}>
-              Categories
+              {t("menu.categories")}
             </h2>
             {isError ? (
               <div className={styles.error}>
-                <p>Categories could not be loaded.</p>
+                <p>{t("menu.categoriesError")}</p>
                 <Button size="sm" variant="secondary" icon={faRotateRight} onClick={() => refetch()}>
-                  Try again
+                  {t("menu.retry")}
                 </Button>
               </div>
             ) : (
@@ -127,10 +123,10 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             )}
           </section>
 
-          <nav aria-label="More" className={`${styles.links} ${styles.areaLinks}`}>
-            {smallLinks.map((link) => (
+          <nav aria-label={t("menu.more")} className={`${styles.links} ${styles.areaLinks}`}>
+            {infoLinks.map((link) => (
               <Link key={link.to} to={link.to} replace className={styles.small}>
-                {link.label}
+                {t(link.labelKey)}
               </Link>
             ))}
           </nav>
