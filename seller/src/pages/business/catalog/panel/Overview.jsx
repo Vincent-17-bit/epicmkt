@@ -19,6 +19,8 @@ export default function Overview({ item, shop, reason, ctx }) {
   const location = useLocation();
   const [device, setDevice] = useState(() => readDevicePref(KEY, "phone", DEVICES.map((d) => d[0])));
   const [copied, setCopied] = useState("");
+  const [full, setFull] = useState(false);
+  const [heroFailed, setHeroFailed] = useState(false);
   const pub = useMemo(() => publicItemOf(item), [item]);
   const checks = useMemo(() => qualityChecks(formFromItem(item), item.imageCount ?? 0), [item]);
   const url = liveLinkOf(shop.slug, item.id);
@@ -63,18 +65,30 @@ export default function Overview({ item, shop, reason, ctx }) {
       <section className={styles.stack} aria-labelledby="panel-preview">
         <div className={styles.rowBetween}>
           <h3 id="panel-preview" className={styles.h3}>How customers see it</h3>
-          <div className={styles.segment} role="group" aria-label="Device">
-            {DEVICES.map(([id, label]) => <button key={id} type="button" aria-pressed={device === id} onClick={() => pick(id)}>{label}</button>)}
-          </div>
-        </div>
-        <div className={styles.preview} data-testid="item-preview" data-device={device}>
-          <ScaledFrame width={WIDTH[device]}>
-            <div className={styles.previewSurface}>
-              <ItemView item={pub} shown={pub.pricing} layout={device === "desktop" ? "page" : "sheet"} headingId="preview-title" Heading="h4" />
+          {full && (
+            <div className={styles.segment} role="group" aria-label="Device">
+              {DEVICES.map(([id, label]) => <button key={id} type="button" aria-pressed={device === id} onClick={() => pick(id)}>{label}</button>)}
             </div>
-          </ScaledFrame>
+          )}
         </div>
-        <p className={styles.axisNote}>Same page customers get, without buttons. Flash sales, offers and similar items are not drawn here.</p>
+        {full ? (
+          <>
+            <div className={styles.preview} data-testid="item-preview" data-device={device}>
+              <ScaledFrame width={WIDTH[device]}>
+                <div className={styles.previewSurface}>
+                  <ItemView item={pub} shown={pub.pricing} layout={device === "desktop" ? "page" : "sheet"} headingId="preview-title" Heading="h4" />
+                </div>
+              </ScaledFrame>
+            </div>
+            <p className={styles.axisNote}>Same page customers get, without buttons. Flash sales, offers and similar items are not drawn here.</p>
+          </>
+        ) : (
+          <div className={styles.hero} data-testid="item-hero">
+            {pub.images[0] && !heroFailed ? <img src={pub.images[0].url} alt={`Main photo of ${item.name}`} onError={() => setHeroFailed(true)} /> : <span className={styles.heroEmpty}>{pub.images[0] ? "The photo could not load" : "No photo yet"}</span>}
+            {pub.images.length > 1 && <span className={styles.heroCount}>{pub.images.length} photos</span>}
+          </div>
+        )}
+        <button type="button" className={`${ui.btn} ${ui.btnGhost} ${styles.fit}`} aria-expanded={full} onClick={() => setFull((v) => !v)}>{full ? "Hide full preview" : "Show full preview"}</button>
       </section>
 
       <section aria-labelledby="panel-quality">

@@ -337,6 +337,41 @@
   user-select: none;
 }
 
+.hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  max-block-size: 14rem;
+  inline-size: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--surface-3);
+}
+
+.hero img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.heroEmpty {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.heroCount {
+  position: absolute;
+  inset-block-end: var(--space-2);
+  inset-inline-end: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
 .axisNote {
   margin: 0;
   color: var(--text-muted);

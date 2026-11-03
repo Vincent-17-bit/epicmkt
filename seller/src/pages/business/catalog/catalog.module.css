@@ -388,6 +388,13 @@
   }
 }
 
+@media (min-width: 64rem) {
+  .page[data-panel="open"] .grid,
+  .page[data-panel="open"] .grid.compact {
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+}
+
 .cell {
   min-width: 0;
 }
@@ -588,6 +595,7 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
