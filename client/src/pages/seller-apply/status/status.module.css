@@ -86,7 +86,7 @@
   padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--primary);
-  color: #111111;
+  color: var(--on-primary);
 }
 
 .banner[data-status="rejected"] {

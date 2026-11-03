@@ -4,7 +4,7 @@ import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
-import { getTheme, setTheme, watchSystemTheme } from "../lib/theme.js";
+import { getTheme, setTheme, setThemePending, watchSystemTheme } from "../lib/theme.js";
 import { useSettings } from "../state/settings.js";
 import { useToasts } from "../state/toast.js";
 import { DEFAULT_IDLE, useIdle } from "../state/useIdle.js";
@@ -107,9 +107,11 @@ export default function Layout() {
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
+    // Marked even before the settings have loaded, so the choice is not lost when they arrive.
+    setThemePending(true);
     setThemeState(next);
     const st = useSettings.getState();
-    if (st.loaded && st.settings.appearance.theme !== next) st.update({ appearance: { theme: next } }, { quiet: true });
+    if (st.loaded) st.update({ appearance: { theme: next } }, { quiet: true });
   };
   // The saved choice can change from Settings (or arrive from another device), so follow it.
   const savedTheme = useSettings((s) => (s.loaded ? s.settings.appearance.theme : null));

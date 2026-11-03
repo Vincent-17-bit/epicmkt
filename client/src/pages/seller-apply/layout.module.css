@@ -15,19 +15,17 @@
   overscroll-behavior-y: contain;
   background: var(--bg);
   color: var(--text);
-  color-scheme: light dark;
   padding-bottom: var(--safe-bottom);
 }
 
-@media (prefers-color-scheme: dark) {
-  .root {
-    --danger-fg: #fca5a5;
-    --danger-bg: #3b0a0a;
-    --danger-border: #b91c1c;
-    --ok-fg: #86efac;
-    --ok-bg: #052e16;
-    --ap-halo-danger: rgb(252 165 165 / 0.3);
-  }
+/* Follows the theme the visitor chose (data-theme on <html>), not the device setting. */
+:global([data-theme="dark"]) .root {
+  --danger-fg: #fca5a5;
+  --danger-bg: #3b0a0a;
+  --danger-border: #b91c1c;
+  --ok-fg: #86efac;
+  --ok-bg: #052e16;
+  --ap-halo-danger: rgb(252 165 165 / 0.3);
 }
 
 .header {
