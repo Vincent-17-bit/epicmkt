@@ -280,9 +280,9 @@
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    gap: var(--space-5);
+    gap: var(--space-3);
     height: 100dvh;
-    padding: calc(var(--safe-top) + var(--space-5)) var(--space-3) calc(var(--safe-bottom) + var(--space-4)) max(var(--space-3), var(--safe-left));
+    padding: calc(var(--safe-top) + var(--space-3)) var(--space-3) calc(var(--safe-bottom) + var(--space-4)) max(var(--space-3), var(--safe-left));
     border-right: 1px solid var(--border);
     border-bottom: 0;
   }
@@ -381,7 +381,7 @@
   }
 
   .suspended {
-    margin-top: var(--space-5);
+    margin-top: var(--space-3);
   }
 }
 

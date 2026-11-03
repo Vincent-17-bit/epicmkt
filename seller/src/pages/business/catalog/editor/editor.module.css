@@ -202,7 +202,7 @@
   inline-size: 100%;
   max-inline-size: 56rem;
   margin-inline: auto;
-  padding: var(--space-4) max(var(--space-4), var(--safe-right)) var(--space-7) max(var(--space-4), var(--safe-left));
+  padding: var(--space-3) max(var(--space-4), var(--safe-right)) var(--space-5) max(var(--space-4), var(--safe-left));
 }
 
 .formCol { min-inline-size: 0; container: editor / inline-size; }
@@ -212,9 +212,9 @@
 .editor[data-bp="wide"] .body {
   display: grid;
   align-items: start;
-  gap: var(--space-5);
+  gap: var(--space-3);
   max-inline-size: none;
-  padding-inline: var(--space-5);
+  padding-inline: var(--space-4);
 }
 
 .editor[data-bp="desktop"] .body { grid-template-columns: 11rem minmax(0, 1fr) minmax(22rem, 28rem); }
@@ -222,7 +222,7 @@
   grid-template-columns: 13rem minmax(0, 45rem) minmax(26rem, 1fr) 17rem;
   max-inline-size: 130rem;
   margin-inline: auto;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
 
 .sideNav,
@@ -240,7 +240,7 @@
 .card {
   display: grid;
   gap: var(--space-4);
-  padding: clamp(var(--space-4), 2.5vw, var(--space-5));
+  padding: clamp(var(--space-3), 2vw, var(--space-4));
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
@@ -347,7 +347,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 
 /* ---- Media slot (step 4 replaces this block with the new manager's styles) ---- */
 
-.mediaSlot { display: grid; gap: var(--space-5); }
+.mediaSlot { display: grid; gap: var(--space-3); }
 .photoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .photoTile { position: relative; display: grid; gap: var(--space-1); min-inline-size: 0; }
 .photoTile img,
@@ -400,7 +400,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 
 [data-hl] { outline: 3px solid var(--primary-pressed); outline-offset: 3px; border-radius: 6px; box-shadow: 0 0 0 7px rgb(56 182 255 / 0.2); }
 
-.cardView { display: grid; gap: var(--space-5); justify-items: start; padding: var(--space-5); }
+.cardView { display: grid; gap: var(--space-3); justify-items: start; padding: var(--space-3); }
 .cardView[data-device="desktop"] { grid-template-columns: 17rem minmax(0, 1fr); align-items: start; }
 .cardFigure,
 .snippetFigure { display: grid; gap: var(--space-2); margin: 0; min-inline-size: 0; }
@@ -437,7 +437,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 .pgTerms { color: var(--text-muted); font-size: var(--text-sm); white-space: pre-line; }
 
 @container (min-width: 40rem) {
-  .pg { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); padding: var(--space-6); }
+  .pg { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-4); padding: var(--space-4); }
 }
 
 /* ---- Phone bottom bar ---- */
@@ -469,7 +469,7 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 
 .leaveBtns { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
 
-.standalone { display: grid; gap: var(--space-3); justify-items: start; max-inline-size: 36rem; margin: var(--space-7) auto; padding: var(--space-4); }
+.standalone { display: grid; gap: var(--space-3); justify-items: start; max-inline-size: 36rem; margin: var(--space-5) auto; padding: var(--space-4); }
 
 @media (prefers-reduced-motion: no-preference) {
   .fill { transition: inline-size 240ms ease; }
