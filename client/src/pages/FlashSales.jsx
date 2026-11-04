@@ -1,18 +1,16 @@
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faBolt } from "@fortawesome/free-solid-svg-icons";
 import { flash, getCategories } from "../api/index.js";
 import { useLiveSales } from "../hooks/useCountdown.js";
+import { useListingParams } from "../hooks/useListingParams.js";
 import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
-import Container from "../components/Container.jsx";
 import FlashSaleCard from "../components/FlashSaleCard.jsx";
 import FlashSkeleton from "../components/FlashSkeleton.jsx";
-import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
+import ListingPage from "../components/ListingPage.jsx";
 import CardGrid from "../components/CardGrid.jsx";
 import styles from "./FlashSales.module.css";
 
@@ -27,7 +25,7 @@ const number = (value) => {
 
 export default function FlashSales() {
   usePageTitle(t("flash.title"));
-  const [params, setParams] = useSearchParams();
+  const [params, set] = useListingParams();
   const coords = useGeoStore((s) => s.coords);
   const online = useOnlineStatus();
 
@@ -39,16 +37,6 @@ export default function FlashSales() {
   const openNow = params.get("open") === "1";
   const sort = SORTS.includes(params.get("sort")) ? params.get("sort") : "ending";
   const active = Boolean(category || town || endsWithin || min || max || openNow);
-
-  const set = (patch) =>
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        Object.entries(patch).forEach(([key, value]) => (value ? next.set(key, value) : next.delete(key)));
-        return next;
-      },
-      { replace: true }
-    );
 
   const { data: categories } = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000 });
   const { data: facets } = useQuery({ queryKey: ["flash-facets"], queryFn: flash.facets, staleTime: 30_000, refetchInterval: 60_000 });
@@ -84,153 +72,85 @@ export default function FlashSales() {
   const categoryName = (id) => categories?.find((c) => c.id === id)?.name ?? id;
 
   return (
-    <>
-      <Container className={styles.crumbRow}>
-        <PageBreadcrumbs />
-      </Container>
-      <section className={styles.hero}>
-        <Container>
-          <div className={styles.heroInner}>
-            <h1 className={styles.title}>
-              <FontAwesomeIcon icon={faBolt} className={styles.bolt} aria-hidden="true" />
-              {t("flash.title")}
-              {facets && <span className={styles.count}>{facets.total} {t("flash.count")}</span>}
-            </h1>
-            <span className={styles.underline} aria-hidden="true" />
-            <p className={styles.lead}>{t("flash.page.subtitle")}</p>
-          </div>
-        </Container>
-      </section>
-
-      <section className={styles.body}>
-        <Container>
-          <div className={styles.controls}>
-            <label className={styles.field}>
-              <span>{t("flash.filter.category")}</span>
-              <select className={styles.control} value={category} onChange={(e) => set({ category: e.target.value })}>
-                <option value="">{t("flash.filter.all")}</option>
-                {facets?.categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {categoryName(c.id)} ({c.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className={styles.field}>
-              <span>{t("flash.filter.town")}</span>
-              <select className={styles.control} value={town} onChange={(e) => set({ town: e.target.value })}>
-                <option value="">{t("flash.filter.all")}</option>
-                {facets?.towns.map((tw) => (
-                  <option key={tw.slug} value={tw.slug}>
-                    {tw.name} ({tw.count})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <fieldset className={styles.field}>
-              <legend>{t("flash.filter.ending")}</legend>
-              <div className={styles.segment}>
-                {[
-                  ["", t("flash.filter.any")],
-                  ["1h", t("flash.filter.hour")],
-                  ["24h", t("flash.filter.day")]
-                ].map(([value, label]) => (
-                  <button key={value} type="button" className={styles.seg} aria-pressed={endsWithin === value} onClick={() => set({ within: value })}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.field}>
-              <legend>{t("flash.filter.shop")}</legend>
-              <div className={styles.segment}>
-                {[
-                  ["", t("flash.filter.any")],
-                  ["1", t("flash.filter.openNow")]
-                ].map(([value, label]) => (
-                  <button key={value} type="button" className={styles.seg} aria-pressed={(openNow ? "1" : "") === value} onClick={() => set({ open: value })}>
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-            <fieldset className={styles.field}>
-              <legend>{t("flash.filter.price")}</legend>
-              <div className={styles.range}>
-                <input className={styles.control} type="number" inputMode="numeric" min="0" placeholder={t("flash.filter.min")} aria-label={t("flash.filter.min")} value={min} onChange={(e) => set({ min: e.target.value })} />
-                <input className={styles.control} type="number" inputMode="numeric" min="0" placeholder={t("flash.filter.max")} aria-label={t("flash.filter.max")} value={max} onChange={(e) => set({ max: e.target.value })} />
-              </div>
-            </fieldset>
-            <label className={styles.field}>
-              <span>{t("flash.sort")}</span>
-              <select className={styles.control} value={sort} onChange={(e) => set({ sort: e.target.value === "ending" ? "" : e.target.value })}>
-                {SORTS.map((value) => (
-                  <option key={value} value={value}>
-                    {t(`flash.sort.${value}`)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {active && (
-            <button type="button" className={styles.clear} onClick={() => set({ category: "", town: "", within: "", min: "", max: "", open: "" })}>
-              {t("flash.filter.clear")}
-            </button>
-          )}
-
-          {query.isPending && !online ? (
-            <div className={styles.message} role="status">
-              <p>{t("flash.offline")}</p>
-            </div>
-          ) : query.isPending ? (
-            <CardGrid aria-busy="true">
-              {Array.from({ length: 8 }, (_, i) => (
-                <li key={i}>
-                  <FlashSkeleton />
-                </li>
+    <ListingPage
+      tone="flash"
+      icon={faBolt}
+      title={t("flash.title")}
+      count={facets && `${facets.total} ${t("flash.count")}`}
+      subtitle={t("flash.page.subtitle")}
+      facets={facets}
+      categoryName={categoryName}
+      category={category}
+      town={town}
+      sort={sort}
+      sorts={SORTS}
+      onChange={set}
+      extraFilters={
+        <>
+          <fieldset className={styles.field}>
+            <legend>{t("flash.filter.ending")}</legend>
+            <div className={styles.segment}>
+              {[
+                ["", t("flash.filter.any")],
+                ["1h", t("flash.filter.hour")],
+                ["24h", t("flash.filter.day")]
+              ].map(([value, label]) => (
+                <button key={value} type="button" className={styles.seg} aria-pressed={endsWithin === value} onClick={() => set({ within: value })}>
+                  {label}
+                </button>
               ))}
-            </CardGrid>
-          ) : query.isError && entries.length === 0 ? (
-            <div className={styles.message} role="alert">
-              <p>{t("flash.loadFailed")}</p>
-              <button type="button" className={styles.action} onClick={() => query.refetch()}>
-                {t("flash.retry")}
-              </button>
             </div>
-          ) : entries.length === 0 ? (
-            <div className={styles.message}>
-              <p>{active ? t("flash.noMatch") : t("flash.empty")}</p>
+          </fieldset>
+          <fieldset className={styles.field}>
+            <legend>{t("flash.filter.shop")}</legend>
+            <div className={styles.segment}>
+              {[
+                ["", t("flash.filter.any")],
+                ["1", t("flash.filter.openNow")]
+              ].map(([value, label]) => (
+                <button key={value} type="button" className={styles.seg} aria-pressed={(openNow ? "1" : "") === value} onClick={() => set({ open: value })}>
+                  {label}
+                </button>
+              ))}
             </div>
-          ) : (
-            <>
-              {!online && (
-                <p className={styles.offline} role="status">
-                  {t("flash.offline")}
-                </p>
-              )}
-              <p className={styles.shown} aria-live="polite">
-                {t("flash.shown")} {entries.length} {t("flash.of")} {total}
-              </p>
-              <CardGrid>
-                {entries.map((entry) => (
-                  <li key={entry.sale.id}>
-                    <FlashSaleCard entry={entry} />
-                  </li>
-                ))}
-              </CardGrid>
-              {query.hasNextPage && (
-                <div className={styles.more}>
-                  {query.isFetchNextPageError && <p role="alert">{t("flash.loadFailed")}</p>}
-                  <button type="button" className={styles.action} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-                    {query.isFetchingNextPage ? t("flash.loading") : query.isFetchNextPageError ? t("flash.retry") : t("flash.loadMore")}
-                  </button>
-                </div>
-              )}
-            </>
-          )}
-        </Container>
-      </section>
-    </>
+          </fieldset>
+          <fieldset className={styles.field}>
+            <legend>{t("flash.filter.price")}</legend>
+            <div className={styles.range}>
+              <input className={styles.control} type="number" inputMode="numeric" min="0" placeholder={t("flash.filter.min")} aria-label={t("flash.filter.min")} value={min} onChange={(e) => set({ min: e.target.value })} />
+              <input className={styles.control} type="number" inputMode="numeric" min="0" placeholder={t("flash.filter.max")} aria-label={t("flash.filter.max")} value={max} onChange={(e) => set({ max: e.target.value })} />
+            </div>
+          </fieldset>
+        </>
+      }
+      active={active}
+      onClear={() => set({ category: "", town: "", within: "", min: "", max: "", open: "" })}
+      query={query}
+      entries={entries}
+      total={total}
+      online={online}
+      offlineText={t("flash.offline")}
+      pending={
+        <CardGrid aria-busy="true">
+          {Array.from({ length: 8 }, (_, i) => (
+            <li key={i}>
+              <FlashSkeleton />
+            </li>
+          ))}
+        </CardGrid>
+      }
+      list={
+        <CardGrid>
+          {entries.map((entry) => (
+            <li key={entry.sale.id}>
+              <FlashSaleCard entry={entry} />
+            </li>
+          ))}
+        </CardGrid>
+      }
+      failedText={t("flash.loadFailed")}
+      noMatchText={t("flash.noMatch")}
+      emptyText={t("flash.empty")}
+    />
   );
 }

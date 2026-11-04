@@ -1,0 +1,27 @@
+.select {
+  width: 100%;
+  min-height: var(--tap);
+  border: 2px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.select[aria-invalid="true"] {
+  border-color: var(--text);
+}
+
+.form {
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+}
+
+.filter {
+  padding: 0 var(--space-3);
+  font-weight: 500;
+}
+
+.filter:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}

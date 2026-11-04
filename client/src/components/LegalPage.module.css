@@ -92,7 +92,7 @@
   min-width: 0;
 }
 
-@media (min-width: 62rem) {
+@media (min-width: 64rem) {
   .layout {
     grid-template-columns: 16rem minmax(0, 1fr);
     gap: var(--space-7);
@@ -320,14 +320,14 @@
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-pill);
-  background: #111111;
-  color: #ffffff;
+  background: var(--text);
+  color: var(--text-inverse);
   font-weight: 800;
   text-decoration: none;
 }
 
 .contactLink:focus-visible {
-  outline: 3px solid #111111;
+  outline: 3px solid var(--text);
   outline-offset: 3px;
 }
 

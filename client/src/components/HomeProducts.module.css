@@ -51,13 +51,13 @@
   }
 }
 
-@media (min-width: 56.25rem) {
+@media (min-width: 64rem) {
   .grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 75rem) {
+@media (min-width: 80rem) {
   .grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }

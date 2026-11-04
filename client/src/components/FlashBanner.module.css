@@ -58,7 +58,7 @@
 
 .price {
   color: var(--flash-price-sale);
-  font-size: 32px;
+  font-size: 2rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
@@ -98,14 +98,6 @@
   font-weight: 700;
 }
 
-.sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 
 .wrap {
   animation: enter 220ms ease-out;

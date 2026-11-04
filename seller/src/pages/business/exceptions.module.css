@@ -279,11 +279,6 @@
   cursor: pointer;
 }
 
-.toastBtn:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 @media (max-width: 40rem) {
   .actions > button {
     flex: 1;
@@ -345,7 +340,6 @@
   font-weight: 700;
 }
 
-.chip:focus-visible,
 .choice:focus-within {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;

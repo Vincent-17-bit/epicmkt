@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { flashPhase, flashPrice, offerHeadline, offerLabel, offerPhase } from "@epicmkt/shared";
+import { flashPhase, flashPrice, formatKes, offerHeadline, offerLabel, offerPhase } from "@epicmkt/shared";
 import { Deals as DealResults } from "../ItemInsights.jsx";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
@@ -9,7 +9,6 @@ import ui from "../../../../styles/ui.module.css";
 import styles from "./panel.module.css";
 import { timeLeft } from "./timeLeft.js";
 
-const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 const PHASE = { live: "Live", scheduled: "Scheduled", paused: "Paused" };
 
 export default function Deals({ item }) {
@@ -47,7 +46,7 @@ export default function Deals({ item }) {
                   <strong>Flash sale{s.headline ? `: ${s.headline}` : ""}</strong>
                   <span className={styles.chip}>{PHASE[phase]}</span>
                 </div>
-                {sale !== null && <span>{kes(item.price)} down to {kes(sale)}</span>}
+                {sale !== null && <span>{formatKes(item.price)} down to {formatKes(sale)}</span>}
                 <span className={styles.muted}>{phase === "scheduled" ? "Starts soon. " : ""}{timeLeft(s.endsAt, now)}</span>
               </li>
             );

@@ -4,9 +4,9 @@ import { faCheck, faMinus, faShieldHalved, faStar } from "@fortawesome/free-soli
 import { compareFeatureRows, formatKes, priceBands } from "../shared/billing.js";
 import { useCatalog } from "../pages/seller-apply/useCatalog.js";
 import { CatalogError, CatalogLoading } from "../pages/seller-apply/CatalogState.jsx";
-import Button from "./Button.jsx";
-import Container from "./Container.jsx";
-import { APPLY_PATH, PLANS_PDF_PATH } from "./SellBlocks.jsx";
+import { Button, Container } from "@epicmkt/ui";
+import { routes } from "../config/routes.js";
+import { PLANS_PDF_PATH } from "./SellBlocks.jsx";
 import styles from "./PlansSection.module.css";
 
 // A plan's text for a feature, shown only where the two plans differ ("Up to 7 photos" against "Up to 15 photos").
@@ -15,7 +15,7 @@ function Cell({ text, other, label }) {
     return (
       <>
         <FontAwesomeIcon icon={faMinus} className={styles.no} aria-hidden="true" />
-        <span className={styles.srOnly}>{label}: not included</span>
+        <span className="sr-only">{label}: not included</span>
       </>
     );
   }
@@ -23,7 +23,7 @@ function Cell({ text, other, label }) {
   return (
     <>
       <FontAwesomeIcon icon={faCheck} className={styles.yes} aria-hidden="true" />
-      <span className={styles.srOnly}>{label}: included</span>
+      <span className="sr-only">{label}: included</span>
     </>
   );
 }
@@ -58,7 +58,7 @@ export default function PlansSection({ id = "plans", children }) {
       <>
         <div className={styles.tableWrap}>
           <table className={styles.table}>
-            <caption className={styles.srOnly}>Comparison of Standard and Premium plans</caption>
+            <caption className="sr-only">Comparison of Standard and Premium plans</caption>
             <thead>
               <tr>
                 <td className={styles.corner} />
@@ -91,12 +91,12 @@ export default function PlansSection({ id = "plans", children }) {
               <tr>
                 <td className={styles.corner} />
                 <td className={styles.cta}>
-                  <Button as={Link} to={APPLY_PATH} variant="secondary" size="sm">
+                  <Button as={Link} to={routes.apply} variant="secondary" size="sm">
                     Apply for Standard
                   </Button>
                 </td>
                 <td className={`${styles.cta} ${styles.premiumCell}`}>
-                  <Button as={Link} to={APPLY_PATH} size="sm">
+                  <Button as={Link} to={routes.apply} size="sm">
                     Apply for Premium
                   </Button>
                 </td>

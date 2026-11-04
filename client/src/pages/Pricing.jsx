@@ -1,9 +1,7 @@
 import { Link } from "react-router-dom";
 import { faArrowRight, faFilePdf } from "@fortawesome/free-solid-svg-icons";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
+import { Container, Button, Accordion } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import Accordion from "../components/Accordion.jsx";
 import PlansSection from "../components/PlansSection.jsx";
 import { ContactCard } from "../components/LegalPage.jsx";
 import { APPLY_PATH, FinalCta, PLANS_PDF_PATH, SellHero } from "../components/SellBlocks.jsx";

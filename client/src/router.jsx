@@ -4,10 +4,11 @@ import Home from "./pages/Home.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import RouteError from "./pages/RouteError.jsx";
 import { trackResults } from "./lib/resultsMemory.js";
+import { routes } from "./config/routes.js";
 
 export const router = createBrowserRouter([
   {
-    path: "/become-a-seller",
+    path: routes.apply,
     lazy: async () => ({ Component: (await import("./pages/seller-apply/PublicSellerLayout.jsx")).default }),
     errorElement: <RouteError />,
     children: [

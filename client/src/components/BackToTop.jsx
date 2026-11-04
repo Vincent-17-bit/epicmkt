@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp } from "@fortawesome/free-solid-svg-icons";
+import { scrollToTop } from "../lib/scrollToTop.js";
 import styles from "./BackToTop.module.css";
 
 const MIN_DEPTH = 600;
@@ -38,19 +39,13 @@ export default function BackToTop({ hidden = false, lifted = false }) {
     };
   }, []);
 
-  const toTop = () => {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    document.getElementById("main")?.focus({ preventScroll: true });
-  };
-
   const visible = shown && !hidden;
 
   return (
     <button
       type="button"
       className={`${styles.btn} ${visible ? styles.visible : ""} ${lifted ? styles.lifted : ""}`}
-      onClick={toTop}
+      onClick={scrollToTop}
       tabIndex={visible ? 0 : -1}
       aria-hidden={visible ? undefined : true}
     >

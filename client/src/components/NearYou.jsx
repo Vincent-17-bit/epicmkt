@@ -3,10 +3,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLocationCrosshairs, faLocationDot, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { getNearbyBusinesses } from "../api/index.js";
 import { useGeoStore } from "../stores/geo.js";
-import Button from "./Button.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import BusinessCard from "./BusinessCard.jsx";
 import CardGrid from "./CardGrid.jsx";
-import Skeleton from "./Skeleton.jsx";
 import styles from "./NearYou.module.css";
 
 const RADIUS_KM = 25;

@@ -109,7 +109,7 @@ export default function TrendChart({ series, metric, label, grain = "day" }) {
               <span key={i} style={{ left: `${pct(i)}%` }} data-edge={k === 0 ? "start" : k === marks.length - 1 && marks.length > 1 ? "end" : "mid"}>{bucketLabel(series[i].bucket, grain, withYear)}</span>
             ))}
           </div>
-          <span className={styles.srOnly} role="status" aria-live="polite">{active !== null ? `${fullLabel(series[active].bucket, grain)}: ${values[active]} ${label.toLowerCase()}` : ""}</span>
+          <span className="sr-only" role="status" aria-live="polite">{active !== null ? `${fullLabel(series[active].bucket, grain)}: ${values[active]} ${label.toLowerCase()}` : ""}</span>
         </>
       )}
       <figcaption className={styles.peak}>Highest: {max}</figcaption>

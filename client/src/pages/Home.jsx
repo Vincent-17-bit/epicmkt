@@ -7,9 +7,7 @@ import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
 import { useNoindex } from "../hooks/useRouteSeo.js";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
-import Skeleton from "../components/Skeleton.jsx";
+import { Container, Button, Skeleton, StateCard } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
@@ -168,12 +166,11 @@ export default function Home() {
           </h2>
 
           {isError ? (
-            <div className={styles.error} role="alert">
-              <p>We could not load the categories.</p>
+            <StateCard role="alert" size="snug" message="We could not load the categories.">
               <Button icon={faRotateRight} onClick={() => refetch()}>
                 Try again
               </Button>
-            </div>
+            </StateCard>
           ) : (
             <ul className={styles.categoryGrid} aria-busy={isPending}>
               {isPending

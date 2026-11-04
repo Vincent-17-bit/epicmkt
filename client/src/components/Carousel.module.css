@@ -14,7 +14,7 @@
   --gap: 12px;
 }
 
-@media (min-width: 35rem) {
+@media (min-width: 40rem) {
   .wrap {
     --cols: 3.25;
     --gaps: 3;
@@ -34,7 +34,7 @@
   }
 }
 
-@media (min-width: 56.25rem) {
+@media (min-width: 64rem) {
   .wrap {
     --cols: 4;
     --gaps: 3;
@@ -48,7 +48,7 @@
   }
 }
 
-@media (min-width: 75rem) {
+@media (min-width: 80rem) {
   .wrap {
     --cols: 5;
     --gaps: 4;
@@ -220,7 +220,7 @@
 }
 
 /* On wide screens the row stops at the content edge and fades where more is hidden. */
-@media (min-width: 56.25rem) {
+@media (min-width: 64rem) {
   .track {
     margin-inline: 0;
     padding-inline: 0;

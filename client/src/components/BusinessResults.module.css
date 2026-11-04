@@ -9,16 +9,6 @@
   margin-top: var(--space-6);
 }
 
-.state {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-}
-
 .skeleton {
   display: grid;
   gap: var(--space-3);

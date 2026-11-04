@@ -46,7 +46,7 @@ export default function PapersStep({ category, docs, showErrors }) {
         <Field name="business.registered">
           {(aria) => (
             <fieldset className={form.seg} {...aria}>
-              <legend className={form.srOnly}>Is the business registered?</legend>
+              <legend className="sr-only">Is the business registered?</legend>
               {CHOICES.map((c) => (
                 <label key={c.title} className={form.segOption}>
                   <input

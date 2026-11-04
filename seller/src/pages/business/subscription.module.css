@@ -60,11 +60,6 @@
   cursor: pointer;
 }
 
-.copy:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 .steps {
   margin: 0;
   padding-left: var(--space-5);

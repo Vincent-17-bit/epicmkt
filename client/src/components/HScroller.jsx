@@ -1,12 +1,10 @@
 import { Children, useCallback, useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { scrollBehavior } from "../lib/motion.js";
 import styles from "./HScroller.module.css";
 
 const DRAG_THRESHOLD = 5;
-
-// Scrolling by a page or to a focused card animates unless the visitor asked for less motion.
-const scrollBehavior = () => (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth");
 
 export default function HScroller({ children, leftLabel, rightLabel, busy = false, cellWidth, className = "", alwaysNav = false, header = null }) {
   const rowRef = useRef(null);

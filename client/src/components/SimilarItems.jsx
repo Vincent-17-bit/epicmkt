@@ -6,7 +6,7 @@ import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
 import HScroller from "./HScroller.jsx";
 import ProductTile from "./ProductTile.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Skeleton } from "@epicmkt/ui";
 import styles from "./SimilarItems.module.css";
 
 const LIMIT = 12;

@@ -102,7 +102,7 @@ export default function Subscription() {
       <Banners business={business} onAction={() => choose({ purpose: null })} skip={suspended ? ["suspended"] : []} />
 
       <section className={ui.card} aria-labelledby="sum-title">
-        <h2 id="sum-title" className={ui.srOnly}>Your subscription</h2>
+        <h2 id="sum-title" className="sr-only">Your subscription</h2>
         <dl className={styles.summary}>
           <div><dt>Plan</dt><dd data-testid="sum-plan">{planLabel(business.planKey)} · {business.categoryName}</dd></div>
           <div><dt>Listing</dt><dd data-testid="sum-status">{STATUS_LABEL[business.status] ?? business.status}</dd></div>

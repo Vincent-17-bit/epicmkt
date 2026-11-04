@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft, faChevronRight, faEllipsis, faHouse } from "@fortawesome/free-solid-svg-icons";
 import { t } from "../../i18n/index.js";
-import Skeleton from "../Skeleton.jsx";
+import { useMediaQuery } from "../../hooks/useMediaQuery.js";
+import { Skeleton } from "@epicmkt/ui";
 import styles from "./Breadcrumbs.module.css";
 
 const MOBILE = "(max-width: 767.98px)";
@@ -11,15 +12,7 @@ const ANCESTOR_MAX = 24;
 const CURRENT_MAX = 40;
 
 function useMobile(force) {
-  const [mobile, setMobile] = useState(() => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(MOBILE).matches : false));
-  useEffect(() => {
-    if (force !== undefined || typeof window === "undefined" || !window.matchMedia) return undefined;
-    const query = window.matchMedia(MOBILE);
-    const sync = () => setMobile(query.matches);
-    sync();
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, [force]);
+  const mobile = useMediaQuery(MOBILE);
   return force ?? mobile;
 }
 

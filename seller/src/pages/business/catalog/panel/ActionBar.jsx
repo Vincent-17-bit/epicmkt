@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { copyText } from "../../../../lib/copy.js";
 import ShopQr from "../../../../components/ShopQr.jsx";
 import ui from "../../../../styles/ui.module.css";
 import Modal from "../Modal.jsx";
@@ -13,12 +14,7 @@ export default function ActionBar({ item, shop, ctx, reason, logo }) {
   const hides = item.visible && !item.draft;
   const url = liveLinkOf(shop.slug, item.id);
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied("Link copied.");
-    } catch {
-      setCopied("Could not copy. Select the link and copy it.");
-    }
+    setCopied((await copyText(url)) ? "Link copied." : "Could not copy. Select the link and copy it.");
   };
   return (
     <>

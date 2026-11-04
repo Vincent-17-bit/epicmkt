@@ -1,12 +1,11 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChartSimple, faLocationDot, faPhone, faQrcode } from "@fortawesome/free-solid-svg-icons";
-import Container from "../components/Container.jsx";
-import Button from "../components/Button.jsx";
+import { Container, Button, Accordion } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
-import Accordion from "../components/Accordion.jsx";
 import PlansSection from "../components/PlansSection.jsx";
 import { APPLY_PATH, FinalCta, SellHero } from "../components/SellBlocks.jsx";
+import { routes } from "../config/routes.js";
 import { formatKes, priceRange } from "../shared/billing.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useCatalog } from "./seller-apply/useCatalog.js";
@@ -89,7 +88,7 @@ export default function Sell() {
             <Button as={Link} to={APPLY_PATH} size="lg" iconRight={faArrowRight}>
               List my business
             </Button>
-            <Button as={Link} to="/sell#plans" variant="secondary" size="lg">
+            <Button as={Link} to={`${routes.sell}#plans`} variant="secondary" size="lg">
               Compare plans
             </Button>
           </>
@@ -143,7 +142,7 @@ export default function Sell() {
 
       <PlansSection>
         <p className={styles.more}>
-          Want the details? See <Link to="/pricing">pricing</Link> and how to get the plans PDF.
+          Want the details? See <Link to={routes.pricing}>pricing</Link> and how to get the plans PDF.
         </p>
       </PlansSection>
 

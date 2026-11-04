@@ -46,8 +46,8 @@
 }
 
 .slot[data-invalid="true"] {
-  outline: 2px solid var(--danger-border);
-  background: var(--danger-bg);
+  outline: 2px solid var(--status-bad-border);
+  background: var(--status-bad-bg);
 }
 
 .slotHead {

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCopy } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
+import { routes } from "../../config/routes.js";
 import styles from "./success.module.css";
 
 export default function SuccessScreen({ referenceNo, email, remembered }) {
@@ -36,7 +37,7 @@ export default function SuccessScreen({ referenceNo, email, remembered }) {
         <li>After payment is confirmed, we send your login details by SMS or WhatsApp.</li>
       </ol>
       <div className={styles.links}>
-        <Button as={Link} to="/become-a-seller/status">
+        <Button as={Link} to={routes.applyStatus}>
           Check my application
         </Button>
         <Button as={Link} to="/" variant="secondary">

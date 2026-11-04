@@ -35,7 +35,7 @@ export function Field({ name, label, hint, optional, className = "", aside, chil
       )}
       {children({ id, "aria-invalid": error ? true : undefined, "aria-describedby": describedBy })}
       {hint && (
-        <p id={`${id}-hint`} className={error ? styles.srOnly : styles.hint}>
+        <p id={`${id}-hint`} className={error ? "sr-only" : styles.hint}>
           {hint}
         </p>
       )}

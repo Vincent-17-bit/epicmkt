@@ -2,15 +2,12 @@ import { useCallback, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUiStore } from "../stores/ui.js";
-import Container from "./Container.jsx";
-import { Logo } from "@epicmkt/ui";
-import IconButton from "./IconButton.jsx";
+import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../hooks/useFocusTrap.js";
+import { Logo, Container, IconButton } from "@epicmkt/ui";
 import LocationButton from "./LocationButton.jsx";
 import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import styles from "./Header.module.css";
-
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function Header() {
   const location = useLocation();
@@ -105,32 +102,13 @@ export default function Header() {
     }
   }, [searchOpen]);
 
-  useEffect(() => {
-    if (!menuOpen && !searchOpen) return undefined;
-    const onKey = (event) => {
-      if (event.key === "Escape") {
-        if (searchOpen) closeSearch();
-        else closeMenu();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const layer = searchOpen ? searchPanelRef.current : rootRef.current;
-      const nodes = [...layer.querySelectorAll(FOCUSABLE)].filter(
-        (node) => node.tabIndex >= 0 && node.getClientRects().length > 0
-      );
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [menuOpen, searchOpen, closeMenu, closeSearch]);
+  useFocusTrap({
+    active: menuOpen || searchOpen,
+    getContainer: () => (searchOpen ? searchPanelRef.current : rootRef.current),
+    onEscape: () => (searchOpen ? closeSearch() : closeMenu()),
+    selector: FOCUSABLE_WITH_FIELDS,
+    skipNegativeTabIndex: true
+  });
 
   return (
     <>

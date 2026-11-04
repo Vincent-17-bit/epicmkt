@@ -7,6 +7,7 @@ import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { isValidSlug, shopDisplayUrl, shopUrl, whatsappShareUrl } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
+import { copyText } from "../../lib/copy.js";
 import { errorText } from "../../lib/errors.js";
 import { SIZES, TAGLINE, downloadPdf, downloadPng, posterStyle, renderPoster } from "../../lib/poster.js";
 import ui from "../../styles/ui.module.css";
@@ -52,12 +53,8 @@ export default function QrPoster() {
   };
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(shopUrl(shop.slug, SITE));
-      say("ok", "Link copied.");
-    } catch {
-      say("error", "Could not copy. Select the link and copy it by hand.");
-    }
+    if (await copyText(shopUrl(shop.slug, SITE))) say("ok", "Link copied.");
+    else say("error", "Could not copy. Select the link and copy it by hand.");
   };
 
   const save = async (kind) => {

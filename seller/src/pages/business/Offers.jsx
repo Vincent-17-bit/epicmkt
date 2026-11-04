@@ -3,7 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OfferChip, Offers as OfferTickets } from "@epicmkt/ui";
 import {
-  OFFER_DAYS, OFFER_DAY_NAMES, conditionsText, dealOf, formatDateTime, getUserTimeZone, kindsFor, localInputToUtcIso, offerHeadline, offerLabel, offerPhase, offerQuota, offerScope, recipesFor, utcToLocalInput, validateOffer, zoneLabel,
+  OFFER_DAYS, OFFER_DAY_NAMES, conditionsText, dealOf, formatDateTime, formatKes, getUserTimeZone, kindsFor, localInputToUtcIso, offerHeadline, offerLabel, offerPhase, offerQuota, offerScope, recipesFor, utcToLocalInput, validateOffer, zoneLabel,
 } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
@@ -14,7 +14,6 @@ import { useServerClock, useServerNow } from "../../lib/useServerNow.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./offers.module.css";
 
-const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 // Stored and sent as UTC. The seller types and reads times in their own time zone (same as the flash sale form).
 const stamp = (iso) => `${formatDateTime(iso)} ${zoneLabel(iso)}`;
 const toLocalInput = (ms) => utcToLocalInput(ms, getUserTimeZone());
@@ -197,7 +196,7 @@ function OfferForm({ initial, id, items, quota, now, onDone, onCancel }) {
               const entry = form.items.find((e) => e.itemId === i.id);
               return (
                 <li key={i.id} className={styles.pick}>
-                  <label className={styles.radio}><input type="checkbox" checked={Boolean(entry)} onChange={() => toggleItem(i.id)} />{i.name}<span className={ui.muted}>{i.price > 0 ? kes(i.price) : ""}</span></label>
+                  <label className={styles.radio}><input type="checkbox" checked={Boolean(entry)} onChange={() => toggleItem(i.id)} />{i.name}<span className={ui.muted}>{i.price > 0 ? formatKes(i.price) : ""}</span></label>
                   {entry && form.kind === "bundle" && (
                     <select className={ui.input} aria-label={`Role of ${i.name}`} value={entry.role} onChange={(e) => setRole(i.id, e.target.value)}>
                       <option value="main">Main product</option>

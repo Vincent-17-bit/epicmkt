@@ -12,7 +12,7 @@ export function FeaturedMark({ label = "Featured store", className = "" }) {
   return (
     <span className={`${styles.star} ${className}`} title={label}>
       <FontAwesomeIcon icon={faStar} aria-hidden="true" />
-      <span className={styles.sr}>{label}. </span>
+      <span className="sr-only">{label}. </span>
     </span>
   );
 }
@@ -21,7 +21,7 @@ export function VerifiedMark({ label = "Verified store", className = "" }) {
   return (
     <span className={`${styles.tick} ${className}`} title={label}>
       <FontAwesomeIcon icon={faCircleCheck} aria-hidden="true" />
-      <span className={styles.sr}>{label}</span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }
