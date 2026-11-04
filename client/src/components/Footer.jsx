@@ -5,7 +5,7 @@ import { faArrowUp, faChevronDown, faClock, faEnvelope, faLocationDot, faPhone }
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
-import { businessLinks, links } from "../config/nav.js";
+import { businessLinks, helpLinks, links } from "../config/nav.js";
 import { t } from "../i18n/index.js";
 import { useMediaQuery } from "../hooks/useMediaQuery.js";
 import { scrollToTop } from "../lib/scrollToTop.js";
@@ -32,12 +32,7 @@ const columns = [
   {
     area: "help",
     titleKey: "footer.help",
-    links: [
-      links.faq,
-      { to: links.about.to, labelKey: "footer.howItWorks" },
-      { to: links.contact.to, labelKey: "footer.reportProblem" },
-      { to: links.contact.to, labelKey: "footer.suggestBusiness" }
-    ]
+    links: helpLinks
   },
   {
     area: "legal",

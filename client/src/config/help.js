@@ -5,7 +5,7 @@ import { t } from "../i18n/index.js";
 // Cards are { to, label, blurb }, the shape SiblingLinks takes.
 
 export const HELP_RELATED_LABEL = "More help";
-export const BUSINESS_RELATED_LABEL = "For businesses";
+export const BUSINESS_RELATED_LABEL = "Related pages";
 
 const helpPages = [
   { to: routes.faq, labelKey: "nav.faq", blurb: "Answers to common questions." },

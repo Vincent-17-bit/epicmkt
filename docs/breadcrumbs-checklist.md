@@ -19,7 +19,7 @@ For each case, confirm the trail text, that every crumb except the last is a lin
 6. Town and category pages
    - `/c/<slug>` shows Home > Category. `/c/<slug>?town=<town>` shows Home > Category > Town, and the Category crumb clears the town.
 7. Static pages
-   - `/sell`, `/sell/register`, `/about`, `/contact`, `/faq`, `/privacy`, `/terms`, `/cookies` each show Home > page name.
+   - `/sell`, `/sell/register`, `/about`, `/contact`, `/help`, `/privacy`, `/terms`, `/cookies` each show Home > page name. `/faq`, `/how-it-works`, `/report-a-problem` and `/suggest-a-business` show Home > Help > page name, and the Help crumb links to `/help`.
 8. No trail
    - Home, the 404 page and the offline page show none. An unknown business slug shows the 404 page.
 9. Phones (under 768px)
