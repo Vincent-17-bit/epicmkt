@@ -172,13 +172,13 @@ describe("check my application", () => {
 describe("styles", () => {
   it("uses the danger tokens for flags and defines them for light and dark", () => {
     const status = css("./status.module.css");
-    expect(status).toMatch(/\[data-flag="open"\][^}]*border: 2px solid var\(--danger-border\)/);
-    expect(status).toMatch(/\[data-flag="open"\][^}]*background: var\(--danger-bg\)/);
-    expect(status).toMatch(/\[data-flag="open"\][^}]*color: var\(--danger-fg\)/);
+    expect(status).toMatch(/\[data-flag="open"\][^}]*border: 2px solid var\(--status-bad-border\)/);
+    expect(status).toMatch(/\[data-flag="open"\][^}]*background: var\(--status-bad-bg\)/);
+    expect(status).toMatch(/\[data-flag="open"\][^}]*color: var\(--status-bad-fg\)/);
     // The tokens live in the shared token sheet now, one set for light and one for dark.
     const tokens = css("../../../../../ui/src/styles/tokens.css");
-    expect(tokens).toMatch(/\[data-theme="light"\] \{[\s\S]*--danger-fg: #b91c1c;[\s\S]*--danger-bg: #fef2f2;[\s\S]*--danger-border: #fca5a5;/);
-    expect(tokens).toMatch(/\[data-theme="dark"\] \{[\s\S]*--danger-fg: #fca5a5;[\s\S]*--danger-bg: #3b0a0a;[\s\S]*--danger-border: #b91c1c;/);
+    expect(tokens).toMatch(/\[data-theme="light"\] \{[\s\S]*--status-bad-fg: #b91c1c;[\s\S]*--status-bad-bg: #fef2f2;[\s\S]*--status-bad-border: #fca5a5;/);
+    expect(tokens).toMatch(/\[data-theme="dark"\] \{[\s\S]*--status-bad-fg: #fca5a5;[\s\S]*--status-bad-bg: #3b0a0a;[\s\S]*--status-bad-border: #b91c1c;/);
   });
 
   it("takes its colours from the chosen theme, never from the device setting", () => {

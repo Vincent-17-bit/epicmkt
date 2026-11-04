@@ -114,7 +114,7 @@
 
 .before li svg {
   margin-top: 0.2em;
-  color: var(--ok-fg);
+  color: var(--status-ok-fg);
 }
 
 @media (min-width: 64rem) {

@@ -300,8 +300,8 @@
 }
 
 :global([data-theme="dark"]) .open {
-  background: var(--ok-bg);
-  color: var(--ok-fg);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .closed {

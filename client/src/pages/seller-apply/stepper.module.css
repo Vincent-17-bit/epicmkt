@@ -118,9 +118,9 @@
   }
 
   .list li[data-state="done"] .dot {
-    border-color: var(--ok-fg);
-    background: var(--ok-bg);
-    color: var(--ok-fg);
+    border-color: var(--status-ok-fg);
+    background: var(--status-ok-bg);
+    color: var(--status-ok-fg);
   }
 
   .eta,

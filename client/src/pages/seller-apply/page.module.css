@@ -100,10 +100,10 @@
 .banner,
 .summary {
   display: block;
-  border: 1.5px solid var(--danger-border);
+  border: 1.5px solid var(--status-bad-border);
   border-left-width: 4px;
-  background: var(--danger-bg);
-  color: var(--danger-fg);
+  background: var(--status-bad-bg);
+  color: var(--status-bad-fg);
 }
 
 .summary:focus {
@@ -174,7 +174,7 @@
 
 .indeterminate[data-state="failed"]::after {
   width: 100%;
-  background: var(--danger-border);
+  background: var(--status-bad-border);
 }
 
 @keyframes slide {
