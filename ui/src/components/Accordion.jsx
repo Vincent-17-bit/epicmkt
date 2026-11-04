@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMinus, faPlus } from "@fortawesome/free-solid-svg-icons";
 import styles from "./Accordion.module.css";
 
+/** items: [{ q, a }] where a is plain text, or any node (for example text with a link). */
 export default function Accordion({ items, idPrefix = "faq", level = 2 }) {
   const [openIndex, setOpenIndex] = useState(null);
   const Heading = `h${level}`;
@@ -27,7 +28,7 @@ export default function Accordion({ items, idPrefix = "faq", level = 2 }) {
             </Heading>
             <div id={`${idPrefix}-a-${i}`} role="region" aria-labelledby={`${idPrefix}-q-${i}`} className={styles.panel}>
               <div className={styles.clip}>
-                <p className={styles.answer}>{item.a}</p>
+                {typeof item.a === "string" ? <p className={styles.answer}>{item.a}</p> : <div className={styles.answer}>{item.a}</div>}
               </div>
             </div>
           </div>
