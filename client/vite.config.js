@@ -103,7 +103,6 @@ export default defineConfig(({ mode }) => {
           scope: "/",
           display: "standalone",
           display_override: ["standalone", "minimal-ui"],
-          orientation: "portrait",
           theme_color: "#FFFFFF",
           background_color: "#F3F4F6",
           categories: ["business", "lifestyle", "shopping"],
