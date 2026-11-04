@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { REPORT_REASONS } from "@epicmkt/shared";
 import { reportBusiness } from "../api/index.js";
-import { Modal, Button } from "@epicmkt/ui";
+import { Modal, Button, Field, Select } from "@epicmkt/ui";
 import styles from "./ReportDialog.module.css";
 
 export default function ReportDialog({ business, open, onClose }) {
@@ -40,18 +40,17 @@ export default function ReportDialog({ business, open, onClose }) {
           </h2>
           <p className={styles.sub}>{business.name}</p>
 
-          <label className={styles.field}>
-            <span className={styles.label}>What is wrong?</span>
-            <select className={styles.input} value={form.reason} onChange={set("reason")} aria-invalid={Boolean(fields.reason)}>
+          <Field label="What is wrong?">
+            <Select value={form.reason} onChange={set("reason")} aria-invalid={Boolean(fields.reason)}>
               <option value="">Choose a reason</option>
               {REPORT_REASONS.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {fields.reason && <span className={styles.error}>{fields.reason}</span>}
-          </label>
+          </Field>
 
           <label className={styles.field}>
             <span className={styles.label}>Details (optional)</span>
