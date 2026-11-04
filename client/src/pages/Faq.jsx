@@ -1,43 +1,37 @@
-import InfoPage from "../components/InfoPage.jsx";
-import { Accordion } from "@epicmkt/ui";
+import LegalPage from "../components/LegalPage.jsx";
+import FaqList from "../components/FaqList.jsx";
+import { HELP_CONTACT, helpRelated } from "../config/help.js";
+import { routes } from "../config/routes.js";
+import { allFaqs, faqGroups } from "../data/faqs.js";
+import { useFaqJsonLd } from "../hooks/useFaqJsonLd.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
-const faqs = [
-  {
-    q: "How do I buy from a business?",
-    a: "Contact the business using the Call, WhatsApp or Directions buttons on its listing. You agree the order, price and payment directly with them."
-  },
-  {
-    q: "How do I contact a business?",
-    a: "Each listing has Call, WhatsApp and Directions buttons. Tap one to phone the business, message it on WhatsApp or open the route in your maps app."
-  },
-  {
-    q: "What does Featured mean?",
-    a: "Featured businesses are on the Premium plan. They carry a Featured badge and are shown first in results."
-  },
-  {
-    q: "What does Verified mean?",
-    a: "A Verified badge shows a business whose details have been checked by EpicMKT."
-  },
-  {
-    q: "Why does a business show as Closed?",
-    a: "Open or Closed is based on the opening hours the business has set, in East Africa Time. Hours can change, so call ahead if you are unsure."
-  },
-  {
-    q: "How can my business be listed?",
-    a: "Choose Become a seller in the menu. Businesses pay a monthly fee for a Standard or Premium listing."
-  },
-  {
-    q: "Is EpicMKT free to use?",
-    a: "Yes. Searching and contacting businesses costs you nothing."
-  }
+const highlights = [
+  { title: "Free to search", text: "Searching and contacting businesses costs you nothing." },
+  { title: "Contact directly", text: "Call, WhatsApp or get directions from any listing." },
+  { title: "No commission", text: "Businesses pay one flat monthly fee, and every sale is theirs." }
 ];
+
+const sections = faqGroups.map((group) => ({
+  id: group.id,
+  title: group.title,
+  body: <FaqList items={group.items} idPrefix={`faq-${group.id}`} />
+}));
+
+const related = helpRelated(routes.faq);
 
 export default function Faq() {
   usePageTitle("FAQs");
+  useFaqJsonLd(allFaqs);
   return (
-    <InfoPage title="Frequently asked questions">
-      <Accordion items={faqs} idPrefix="faq" />
-    </InfoPage>
+    <LegalPage
+      eyebrow="Help"
+      title="Frequently asked questions"
+      intro="Answers about finding businesses, listing your own, pricing and staying safe."
+      highlights={highlights}
+      sections={sections}
+      contact={HELP_CONTACT}
+      related={related}
+    />
   );
 }
