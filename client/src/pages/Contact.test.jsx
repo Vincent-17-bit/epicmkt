@@ -49,4 +49,20 @@ describe("Contact page", () => {
     expect(mail).toContain("subject=Listing%20suggestion");
     expect(decodeURIComponent(mail)).toContain('Please add "Maseno Gym" to EpicMKT.');
   });
+
+  it("adds the category, town and phone from the Suggest a business page to the same message", () => {
+    view("?suggest=Maseno%20Gym&category=barbershop&town=Maseno&phone=0712%20345%20678");
+    const mail = screen.getByRole("link", { name: "hello@epicmkt.test" }).getAttribute("href");
+    const body = decodeURIComponent(mail);
+    expect(body).toContain('Please add "Maseno Gym" to EpicMKT.');
+    expect(body).toContain("Category: Barbershop.");
+    expect(body).toContain("Town: Maseno.");
+    expect(body).toContain("Phone or WhatsApp: 0712 345 678.");
+  });
+
+  it("ignores a category it does not know", () => {
+    view("?suggest=Maseno%20Gym&category=%3Cscript%3E");
+    const mail = decodeURIComponent(screen.getByRole("link", { name: "hello@epicmkt.test" }).getAttribute("href"));
+    expect(mail).not.toContain("Category:");
+  });
 });

@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import LegalPage from "../components/LegalPage.jsx";
 import ListBusinessBanner from "../components/ListBusinessBanner.jsx";
 import { APPLY_PATH, PLANS_PDF_PATH } from "../components/SellBlocks.jsx";
+import { businessRelated } from "../config/help.js";
 import { routes } from "../config/routes.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
@@ -163,17 +164,10 @@ const contact = {
   title: "Need help getting listed?",
   text: "Ask the EpicMKT team about your application, your plan or a payment.",
   label: "Contact EpicMKT",
-  to: "/contact"
+  to: routes.contact
 };
 
-const related = {
-  label: "Related pages",
-  docs: [
-    { to: routes.pricing, label: "Pricing", blurb: "Plans and prices for every type of business." },
-    { to: "/faq", label: "FAQs", blurb: "Answers to common questions." },
-    { to: "/terms", label: "Terms of Service", blurb: "The rules for using EpicMKT." }
-  ]
-};
+const related = businessRelated(routes.sellerGuide);
 
 export default function SellerGuide() {
   usePageTitle("Seller guide");

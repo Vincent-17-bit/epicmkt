@@ -116,7 +116,11 @@ describe("getTrail", () => {
     ["/seller-guide", ["Home", "Seller guide"]],
     ["/about", ["Home", "About"]],
     ["/contact", ["Home", "Contact"]],
-    ["/faq", ["Home", "FAQs"]],
+    ["/help", ["Home", "Help"]],
+    ["/faq", ["Home", "Help", "FAQs"]],
+    ["/how-it-works", ["Home", "Help", "How it works"]],
+    ["/report-a-problem", ["Home", "Help", "Report a problem"]],
+    ["/suggest-a-business", ["Home", "Help", "Suggest a business"]],
     ["/privacy", ["Home", "Privacy Policy"]],
     ["/terms", ["Home", "Terms of Service"]],
     ["/cookies", ["Home", "Cookie notice"]]

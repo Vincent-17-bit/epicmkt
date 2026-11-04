@@ -6,6 +6,7 @@ import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import InfoPage from "../components/InfoPage.jsx";
 import { Button } from "@epicmkt/ui";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { readSuggestion } from "../lib/suggestion.js";
 import styles from "./Contact.module.css";
 
 const email = import.meta.env.VITE_CONTACT_EMAIL;
@@ -43,10 +44,10 @@ const buildChannels = (message, requesting) =>
 export default function Contact() {
   usePageTitle("Contact");
   const [params] = useSearchParams();
-  const suggestion = (params.get("suggest") ?? "").trim().slice(0, 60);
+  const suggestion = readSuggestion(params);
   const topicKey = params.get("topic") ?? "";
   const topic = !suggestion && Object.prototype.hasOwnProperty.call(TOPICS, topicKey) ? TOPICS[topicKey] : null;
-  const message = suggestion ? { subject: "Listing suggestion", note: `Please add "${suggestion}" to EpicMKT.` } : topic;
+  const message = suggestion ? { subject: "Listing suggestion", note: suggestion.note } : topic;
   const channels = buildChannels(message, Boolean(topic));
   // WhatsApp leads on the request card: it is how most visitors will reach us and the message is already written.
   const ordered = topic ? [...channels].sort((x, y) => Number(y.key === "whatsapp") - Number(x.key === "whatsapp")) : channels;
@@ -93,7 +94,7 @@ export default function Contact() {
       title="Contact us"
       intro="Questions about a listing, feedback, or want your business listed? Get in touch with the EpicMKT team."
     >
-      {suggestion && <p>Suggesting &ldquo;{suggestion}&rdquo;. Send it to us by email or WhatsApp and we will look into it.</p>}
+      {suggestion && <p>Suggesting &ldquo;{suggestion.name}&rdquo;. Send it to us by email or WhatsApp and we will look into it.</p>}
       {buttons}
     </InfoPage>
   );

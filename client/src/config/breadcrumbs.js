@@ -16,7 +16,11 @@ export const STATIC_TRAILS = {
   [routes.sellerGuide]: [{ key: "breadcrumb.sellerGuide" }],
   "/about": [{ key: "breadcrumb.about" }],
   "/contact": [{ key: "breadcrumb.contact" }],
-  "/faq": [{ key: "breadcrumb.faq" }],
+  [routes.help]: [{ key: "breadcrumb.help" }],
+  [routes.faq]: [{ key: "breadcrumb.help", to: routes.help }, { key: "breadcrumb.faq" }],
+  [routes.howItWorks]: [{ key: "breadcrumb.help", to: routes.help }, { key: "breadcrumb.howItWorks" }],
+  [routes.reportProblem]: [{ key: "breadcrumb.help", to: routes.help }, { key: "breadcrumb.reportProblem" }],
+  [routes.suggestBusiness]: [{ key: "breadcrumb.help", to: routes.help }, { key: "breadcrumb.suggestBusiness" }],
   "/privacy": [{ key: "breadcrumb.privacy" }],
   "/terms": [{ key: "breadcrumb.terms" }],
   "/cookies": [{ key: "breadcrumb.cookies" }]
