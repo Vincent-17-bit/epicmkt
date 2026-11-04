@@ -36,7 +36,7 @@
   position: absolute;
   inset: -2px;
   border: 2px solid var(--flash-tile-urgent-text);
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   opacity: 0;
   pointer-events: none;
 }
@@ -48,7 +48,7 @@
 }
 
 .card .tile {
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 .card .tile::after {
@@ -57,12 +57,12 @@
 
 .card .unit {
   margin-top: 2px;
-  font-size: 9px;
+  font-size: 0.5625rem;
 }
 
 .card .colon {
   width: 6px;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .banner {
@@ -92,7 +92,7 @@
 .unit {
   margin-top: 4px;
   color: var(--flash-tile-label);
-  font-size: 10px;
+  font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -101,7 +101,7 @@
 .colon {
   width: 8px;
   color: inherit;
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 800;
   text-align: center;
   animation: blink 1s steps(1, end) infinite;
@@ -109,7 +109,7 @@
 
 .banner .colon {
   width: 12px;
-  font-size: 28px;
+  font-size: 1.75rem;
 }
 
 .chip {
