@@ -5,43 +5,9 @@ import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import PlansSection from "../components/PlansSection.jsx";
 import { ContactCard } from "../components/LegalPage.jsx";
 import { APPLY_PATH, FinalCta, PLANS_PDF_PATH, SellHero } from "../components/SellBlocks.jsx";
+import { pricingFaqs } from "../data/faqs.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import styles from "./Sell.module.css";
-
-const faqs = [
-  {
-    q: "Does EpicMKT take a cut of my sales?",
-    a: "No. You pay a flat monthly fee for your plan and every sale stays with you."
-  },
-  {
-    q: "Why does the price depend on my type of business?",
-    a: "Each type of business has its own monthly price. The prices above start at the lowest, and your exact price is shown before you send your application. For the full list, ask for the plans PDF."
-  },
-  {
-    q: "When do I pay?",
-    a: "Applying is free. You pay only after we approve your application, and your listing goes live once your first payment is confirmed."
-  },
-  {
-    q: "How do I pay?",
-    a: "By M-Pesa Paybill. Use the reference in your approval message as the account number. Once you are live, use your Seller ID to renew."
-  },
-  {
-    q: "Can I pay for more than one month?",
-    a: "Yes. You can pay several months ahead, and any amount left over is kept as credit towards your next payment."
-  },
-  {
-    q: "What if I pay late?",
-    a: "There is a short grace period after your paid date. If you have not renewed by then, your listing may be taken down until you pay."
-  },
-  {
-    q: "Can I change my plan later?",
-    a: "Yes. You can upgrade from Standard to Premium from the Subscription page in your seller dashboard."
-  },
-  {
-    q: "How do I get the plans PDF?",
-    a: "Contact EpicMKT support and we will send it to you. It lists the plans and prices for every type of business."
-  }
-];
 
 export default function Pricing() {
   usePageTitle("Pricing");
@@ -87,7 +53,7 @@ export default function Pricing() {
               Questions about pricing
             </h2>
           </div>
-          <Accordion items={faqs} idPrefix="pricing-faq" level={3} />
+          <Accordion items={pricingFaqs} idPrefix="pricing-faq" level={3} />
         </Container>
       </section>
 
