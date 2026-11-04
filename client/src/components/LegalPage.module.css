@@ -92,7 +92,7 @@
   min-width: 0;
 }
 
-@media (min-width: 62rem) {
+@media (min-width: 64rem) {
   .layout {
     grid-template-columns: 16rem minmax(0, 1fr);
     gap: var(--space-7);

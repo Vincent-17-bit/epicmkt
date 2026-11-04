@@ -164,13 +164,13 @@
   }
 }
 
-@media (min-width: 56.25rem) {
+@media (min-width: 64rem) {
   .categoryGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 75rem) {
+@media (min-width: 80rem) {
   .categoryGrid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
