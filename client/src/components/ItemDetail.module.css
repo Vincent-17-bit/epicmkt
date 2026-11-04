@@ -299,6 +299,11 @@
   color: #14532d;
 }
 
+:global([data-theme="dark"]) .open {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+
 .closed {
   background: var(--surface-3);
   color: var(--text-muted);

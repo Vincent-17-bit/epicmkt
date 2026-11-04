@@ -230,7 +230,7 @@
 }
 
 .open .dot {
-  background: #16a34a;
+  background: var(--status-ok-dot);
 }
 
 .prices {
