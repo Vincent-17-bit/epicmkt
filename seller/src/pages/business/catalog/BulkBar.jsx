@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
-import { AVAILABILITY_OPTIONS, DB_AVAILABILITY, previewPriceChange, ROUNDING_RULE, validatePercent } from "@epicmkt/shared";
+import { AVAILABILITY_OPTIONS, DB_AVAILABILITY, formatKes, previewPriceChange, ROUNDING_RULE, validatePercent } from "@epicmkt/shared";
 import Modal from "./Modal.jsx";
 import { priceText } from "./cardItem.js";
 import styles from "./catalog.module.css";
 
 const DB_OPTIONS = AVAILABILITY_OPTIONS.filter((o) => DB_AVAILABILITY.includes(o.key));
-const kes = (n) => (n === null || n === undefined ? "none" : `KES ${Number(n).toLocaleString("en-KE")}`);
+const kes = (n) => (n === null || n === undefined ? "none" : formatKes(n));
 
 export function PriceDialog({ open, items, onClose, onApply }) {
   const [percent, setPercent] = useState("");

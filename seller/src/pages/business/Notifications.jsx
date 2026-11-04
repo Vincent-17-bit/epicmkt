@@ -71,7 +71,7 @@ export default function Notifications() {
               <div className={styles.meta}>
                 <span className={`${ui.pill} ${ui.tone_info}`}>{KIND_LABEL[m.kind] ?? m.kind}</span>
                 <time dateTime={m.createdAt}>{formatDateTime(m.createdAt)}</time>
-                {!m.readAt && <span className={ui.srOnly}>Unread</span>}
+                {!m.readAt && <span className="sr-only">Unread</span>}
               </div>
               <h2>{m.subject}</h2>
               <p>{m.body}</p>

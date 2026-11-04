@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
+import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, formatKes, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { serverNow } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
@@ -10,7 +10,6 @@ import { useServerClock, useServerNow } from "../../lib/useServerNow.js";
 import ui from "../../styles/ui.module.css";
 import styles from "./flash.module.css";
 
-const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 // Times are stored and sent as UTC. A seller types and reads them in their own time zone, so a sale set for 09:00 starts
 // at 09:00 wherever they are, and daylight saving is handled by the zone rules, not by us.
 const stamp = (iso) => `${formatDateTime(iso)} ${zoneLabel(iso)}`;
@@ -72,7 +71,7 @@ function SaleForm({ items, quota, onDone, onCancel }) {
         <label className={ui.label} htmlFor="fs-item">Item</label>
         <select id="fs-item" className={ui.input} value={itemId} onChange={(e) => setItemId(e.target.value)}>
           <option value="">Choose an item</option>
-          {items.map((i) => <option key={i.id} value={i.id}>{i.name} ({kes(i.price)})</option>)}
+          {items.map((i) => <option key={i.id} value={i.id}>{i.name} ({formatKes(i.price)})</option>)}
         </select>
       </div>
 
@@ -87,7 +86,7 @@ function SaleForm({ items, quota, onDone, onCancel }) {
           <label className={ui.label} htmlFor="fs-value">{type === "percent" ? "Percent (1 to 99)" : type === "amount_off" ? "Amount off (KES)" : "Sale price (KES)"}</label>
           <input id="fs-value" className={ui.input} type="number" inputMode="numeric" min="1" value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
-        {price !== null && <p className={styles.preview} data-testid="fs-preview">Customers pay {kes(price)} instead of {kes(item.price)}</p>}
+        {price !== null && <p className={styles.preview} data-testid="fs-preview">Customers pay {formatKes(price)} instead of {formatKes(item.price)}</p>}
       </fieldset>
 
       <fieldset className={styles.fieldset}>
@@ -167,7 +166,7 @@ function SaleRow({ sale, now, onChanged }) {
     setBusy(false);
   };
 
-  const discount = sale.discountType === "percent" ? `${sale.discountValue}% off` : sale.discountType === "amount_off" ? `${kes(sale.discountValue)} off` : `Sale price ${kes(sale.discountValue)}`;
+  const discount = sale.discountType === "percent" ? `${sale.discountValue}% off` : sale.discountType === "amount_off" ? `${formatKes(sale.discountValue)} off` : `Sale price ${formatKes(sale.discountValue)}`;
   const price = sale.regularPrice ? flashPrice(sale.discountType, sale.discountValue, sale.regularPrice) : null;
 
   return (
@@ -177,7 +176,7 @@ function SaleRow({ sale, now, onChanged }) {
           <span>{sale.itemName}</span>
           <span className={`${ui.pill} ${phase === "live" ? ui.tone_ok : phase === "scheduled" ? ui.tone_info : ui.tone_warning}`}>{phase === "live" ? "Live" : phase === "scheduled" ? "Scheduled" : phase === "cancelled" ? "Cancelled" : "Ended"}</span>
         </h2>
-        <p>{discount}{price !== null && ` (${kes(price)})`}{sale.headline && `, ${sale.headline}`}</p>
+        <p>{discount}{price !== null && ` (${formatKes(price)})`}{sale.headline && `, ${sale.headline}`}</p>
         {sale.quantityNote && <p className={styles.note}>{sale.quantityNote}</p>}
         {phase === "live" && <p>Ends in <span className={styles.timer} data-testid="flash-timer">{remainingText(Date.parse(sale.endsAt) - now)}</span></p>}
         {phase === "scheduled" && <p>Starts {stamp(sale.startsAt)} and runs until {stamp(sale.endsAt)}</p>}

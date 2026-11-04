@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 import { mediaUrl } from "../../../api/shape.js";
 
 const PRICED = ["fixed", "from", "range"];
@@ -13,12 +14,11 @@ export const cardItemOf = (item) => {
 };
 
 export const priceText = (item) => {
-  const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
   if (item.priceType === "free") return "Free";
   if (item.priceType === "contact" || typeof item.price !== "number") return "Contact for price";
-  if (item.priceType === "from") return `From ${kes(item.price)}`;
-  if (item.priceType === "range") return `${kes(item.price)} to ${kes(item.priceMax ?? item.price)}`;
-  return kes(item.price);
+  if (item.priceType === "from") return `From ${formatKes(item.price)}`;
+  if (item.priceType === "range") return `${formatKes(item.price)} to ${formatKes(item.priceMax ?? item.price)}`;
+  return formatKes(item.price);
 };
 
 export const readDevicePref = (key, fallback, allowed) => {

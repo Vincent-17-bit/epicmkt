@@ -91,21 +91,12 @@
   background: var(--link-hover-bg);
 }
 
-.iconBtn span {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 .nav {
   position: fixed;
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 2;
+  z-index: var(--z-menu);
   background: var(--header-bg);
   border-top: 1px solid var(--border);
   padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
@@ -223,7 +214,7 @@
 .scrim {
   position: fixed;
   inset: 0;
-  z-index: 1;
+  z-index: var(--z-menu-scrim);
   border: 0;
   background: var(--scrim);
 }

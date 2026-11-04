@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
+import { useMedia } from "../../../../lib/useMedia.js";
 
 // ---- Breakpoint -----------------------------------------------------------------------------------------------------
 // phone 320-767 (a stepper), tablet 768-1099 (tabs, all sections), desktop 1100-1599 (nav + live preview), wide 1600+.
@@ -8,25 +9,13 @@ const PHONE = "(max-width: 47.99rem)";
 const WIDE = "(min-width: 100rem)";
 const DESKTOP = "(min-width: 68.75rem)";
 
-const readBreakpoint = () => {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return "tablet";
-  const on = (q) => window.matchMedia(q).matches;
-  if (on(PHONE)) return "phone";
-  if (on(WIDE)) return "wide";
-  return on(DESKTOP) ? "desktop" : "tablet";
-};
-
 export const useBreakpoint = () => {
-  const [bp, setBp] = useState(readBreakpoint);
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return undefined;
-    const lists = [PHONE, WIDE, DESKTOP].map((q) => window.matchMedia(q));
-    const on = () => setBp(readBreakpoint());
-    on();
-    lists.forEach((l) => l.addEventListener?.("change", on));
-    return () => lists.forEach((l) => l.removeEventListener?.("change", on));
-  }, []);
-  return bp;
+  const phone = useMedia(PHONE);
+  const wide = useMedia(WIDE);
+  const desktop = useMedia(DESKTOP);
+  if (phone) return "phone";
+  if (wide) return "wide";
+  return desktop ? "desktop" : "tablet";
 };
 
 export const prefersCalm = () => typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;

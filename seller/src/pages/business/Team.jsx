@@ -65,7 +65,7 @@ function StaffDialog({ open, member, items, premium, onClose, onSaved }) {
       <form className={styles.form} onSubmit={submit} noValidate>
         <div className={styles.photoRow}>
           {photoPath ? <img className={styles.avatar} src={mediaUrl(photoPath)} alt="" /> : <span className={styles.initials} aria-hidden="true">{initials(name || "?")}</span>}
-          <input ref={fileRef} className={ui.srOnly} type="file" accept={ACCEPT} aria-label="Choose photo" tabIndex={-1} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
+          <input ref={fileRef} className="sr-only" type="file" accept={ACCEPT} aria-label="Choose photo" tabIndex={-1} onChange={(e) => { pick(e.target.files?.[0]); e.target.value = ""; }} />
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => fileRef.current?.click()}>{photoPath ? "Change photo" : "Add photo"}</button>
           {photoPath && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setPhotoPath(null)}>Remove photo</button>}
         </div>

@@ -100,14 +100,6 @@
   cursor: pointer;
 }
 
-.previewBtn:focus-visible,
-.action:focus-visible,
-.danger:focus-visible,
-.add:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 .blank {
   display: grid;
   width: 100%;
