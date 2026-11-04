@@ -4,30 +4,42 @@
   --danger-border: #fca5a5;
   --ok-fg: #15803d;
   --ok-bg: #ecfdf3;
-  --ap-r: 14px;
-  --ap-r-lg: 20px;
-  --ap-input-h: 3.25rem;
+  --ap-r: 12px;
+  --ap-r-lg: 16px;
+  --ap-input-h: 2.75rem;
   --ap-halo: rgb(56 182 255 / 0.32);
   --ap-halo-danger: rgb(185 28 28 / 0.22);
+  /* A compact scale for the application: smaller type and tighter spacing than the main site.
+     Everything below reads these tokens, so the whole flow follows. Tap targets stay at 44px. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 2rem;
+  --space-8: 3rem;
+  font-size: var(--text-md);
   height: 100dvh;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   background: var(--bg);
   color: var(--text);
-  color-scheme: light dark;
   padding-bottom: var(--safe-bottom);
 }
 
-@media (prefers-color-scheme: dark) {
-  .root {
-    --danger-fg: #fca5a5;
-    --danger-bg: #3b0a0a;
-    --danger-border: #b91c1c;
-    --ok-fg: #86efac;
-    --ok-bg: #052e16;
-    --ap-halo-danger: rgb(252 165 165 / 0.3);
-  }
+/* Follows the theme the visitor chose (data-theme on <html>), not the device setting. */
+:global([data-theme="dark"]) .root {
+  --danger-fg: #fca5a5;
+  --danger-bg: #3b0a0a;
+  --danger-border: #b91c1c;
+  --ok-fg: #86efac;
+  --ok-bg: #052e16;
+  --ap-halo-danger: rgb(252 165 165 / 0.3);
 }
 
 .header {

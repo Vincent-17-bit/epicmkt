@@ -1,4 +1,4 @@
--- 0084_item_options.sql
+-- 0086_item_options.sql
 -- Product options (up to 3 axes), variants (one row per sellable combination), an availability matrix, and an admin-owned size chart library.
 --
 --   * items.option_axes   jsonb  [{key,label,display,values:[{id,label,color?,mediaId?}]}], max 3 axes, 1..40 values per axis.
@@ -307,59 +307,71 @@ revoke all on function public.item_options_media_removed() from public, anon, au
 -- 3. Legacy items.variants -> one "option" axis
 -- ---------------------------------------------------------------------------------------------------------------------
 
--- Old entries look like {id, label, price}. They become one axis (key 'option', label 'Option', buttons) and one variant row per entry,
--- so the buyer sees the same labels and prices. Entries without a label are skipped. Returns true when the item was converted.
-create or replace function public.item_options_convert_legacy(p_item uuid) returns boolean
-language plpgsql security definer set search_path = public as $$
+-- items.variants (0017) holds [{id, label, price, stock?}], up to 10, written by the seller editor since 0085. Those entries stay the
+-- source for any item that has no option_axes: the public and seller reads below turn them into ONE "option" axis on the fly, so
+-- nothing visible changes and an edit made in the old editor shows at once. (A one-time copy into item_variants would go stale the
+-- moment the old editor saved again.) Saving real options supersedes the old list: item_options_apply empties it.
+-- Returns { axes: [ the one axis, or none ], rows: [{ slug, label, price, stock }] }. Entries without a label are skipped; ids become
+-- unique slugs (the old id when it has one, so selections keep working); a numeric stock is kept, 0 meaning out of stock.
+create or replace function public.item_options_from_legacy(p_variants jsonb) returns jsonb
+language plpgsql immutable set search_path = public as $$
 declare
-  r public.items;
   e jsonb;
   n integer := 0;
+  v_i integer := 0;
   v_slug text;
   v_used text[] := '{}';
   v_vals jsonb := '[]'::jsonb;
   v_rows jsonb := '[]'::jsonb;
-  v_price numeric;
-  v_i integer := 0;
+  v_label text;
 begin
-  select * into r from public.items where id = p_item for update;
-  if not found or r.option_axes <> '[]'::jsonb or jsonb_typeof(r.variants) <> 'array' or jsonb_array_length(r.variants) = 0 then return false; end if;
-  for e in select jsonb_array_elements(r.variants) loop
+  if p_variants is null or jsonb_typeof(p_variants) <> 'array' then return jsonb_build_object('axes', '[]'::jsonb, 'rows', '[]'::jsonb); end if;
+  for e in select jsonb_array_elements(p_variants) loop
     v_i := v_i + 1;
     exit when n >= 40;
-    if jsonb_typeof(e) <> 'object' or not public.item_detail_text_ok(to_jsonb(btrim(coalesce(e ->> 'label', ''))), 40) then continue; end if;
-    v_slug := regexp_replace(lower(coalesce(nullif(btrim(e ->> 'id'), ''), btrim(e ->> 'label'))), '[^a-z0-9_-]+', '-', 'g');
+    if jsonb_typeof(e) <> 'object' then continue; end if;
+    v_label := btrim(coalesce(e ->> 'label', ''));
+    if not public.item_detail_text_ok(to_jsonb(v_label), 40) then continue; end if;
+    v_slug := regexp_replace(lower(coalesce(nullif(btrim(e ->> 'id'), ''), v_label)), '[^a-z0-9_-]+', '-', 'g');
     v_slug := left(regexp_replace(v_slug, '^[^a-z0-9]+', ''), 40);
     if v_slug = '' then v_slug := 'option-' || v_i; end if;
     if v_slug = any (v_used) then v_slug := left(v_slug, 36) || '-' || v_i; end if;
     if v_slug = any (v_used) then continue; end if;
     v_used := v_used || v_slug;
     n := n + 1;
-    v_price := case when coalesce(e ->> 'price', '') ~ '^\d{1,10}(\.\d{1,2})?$' then (e ->> 'price')::numeric end;
-    v_vals := v_vals || jsonb_build_array(jsonb_build_object('id', v_slug, 'label', btrim(e ->> 'label')));
-    v_rows := v_rows || jsonb_build_array(jsonb_build_object('slug', v_slug, 'price', v_price));
+    v_vals := v_vals || jsonb_build_array(jsonb_build_object('id', v_slug, 'label', v_label));
+    v_rows := v_rows || jsonb_build_array(jsonb_build_object(
+      'slug', v_slug, 'label', v_label,
+      'price', case when coalesce(e ->> 'price', '') ~ '^\d{1,10}(\.\d{1,2})?$' then (e ->> 'price')::numeric end,
+      'stock', case when coalesce(e ->> 'stock', '') ~ '^\d{1,6}$' then (e ->> 'stock')::integer end));
   end loop;
-  if n = 0 then return false; end if;
-  update public.items set option_axes = jsonb_build_array(jsonb_build_object('key', 'option', 'label', 'Option', 'display', 'button', 'values', v_vals)) where id = p_item;
-  insert into public.item_variants (item_id, business_id, combo_key, choice, price, status, sort)
-  select p_item, r.business_id, 'option=' || (x.e ->> 'slug'), jsonb_build_object('option', x.e ->> 'slug'), (x.e ->> 'price')::numeric, 'available', (x.n - 1)::integer
-    from jsonb_array_elements(v_rows) with ordinality as x(e, n);
+  if n = 0 then return jsonb_build_object('axes', '[]'::jsonb, 'rows', '[]'::jsonb); end if;
+  return jsonb_build_object('axes', jsonb_build_array(jsonb_build_object('key', 'option', 'label', 'Option', 'display', 'button', 'values', v_vals)), 'rows', v_rows);
+end $$;
+revoke all on function public.item_options_from_legacy(jsonb) from public;
+grant execute on function public.item_options_from_legacy(jsonb) to anon, authenticated, service_role;
+
+-- For the editor task's one-time move to stored options (not run by this migration): copies an item's old list into option_axes and
+-- item_variants and empties the old list. Returns true when it converted something.
+create or replace function public.item_options_convert_legacy(p_item uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare
+  r public.items;
+  c jsonb;
+begin
+  select * into r from public.items where id = p_item for update;
+  if not found or r.option_axes <> '[]'::jsonb then return false; end if;
+  c := public.item_options_from_legacy(r.variants);
+  if jsonb_array_length(c -> 'axes') = 0 then return false; end if;
+  update public.items set option_axes = c -> 'axes', variants = '[]'::jsonb where id = p_item;
+  insert into public.item_variants (item_id, business_id, combo_key, choice, price, stock_count, status, sort)
+  select p_item, r.business_id, 'option=' || (x.e ->> 'slug'), jsonb_build_object('option', x.e ->> 'slug'), (x.e ->> 'price')::numeric,
+         (x.e ->> 'stock')::integer, case when (x.e ->> 'stock') = '0' then 'out_of_stock' else 'available' end, (x.n - 1)::integer
+    from jsonb_array_elements(c -> 'rows') with ordinality as x(e, n);
   return true;
 end $$;
 revoke all on function public.item_options_convert_legacy(uuid) from public, anon, authenticated;
 grant execute on function public.item_options_convert_legacy(uuid) to service_role;
-
-do $$
-declare v_id uuid;
-begin
-  for v_id in select id from public.items where jsonb_typeof(variants) = 'array' and jsonb_array_length(variants) > 0 and option_axes = '[]'::jsonb loop
-    begin
-      perform public.item_options_convert_legacy(v_id);
-    exception when others then
-      raise notice 'legacy variants of item % not converted: %', v_id, sqlerrm;
-    end;
-  end loop;
-end $$;
 
 -- ---------------------------------------------------------------------------------------------------------------------
 -- 4. Saving options (called by seller_save_item)
@@ -497,7 +509,8 @@ begin
     on conflict (item_id, combo_key) do update set
       choice = excluded.choice, price = excluded.price, sale_price = excluded.sale_price, stock_count = excluded.stock_count, status = excluded.status,
       sku = excluded.sku, media_ids = excluded.media_ids, copy_media_ids = '{}', sort = excluded.sort, updated_at = now();
-    update public.items set option_axes = v_axes where id = p_item;
+    -- Real options supersede the old single-list variants (still written by the old editor); leaving both would show two lists.
+    update public.items set option_axes = v_axes, variants = case when jsonb_array_length(v_axes) > 0 then '[]'::jsonb else variants end where id = p_item;
   end if;
 
   if f ? 'size_chart_id' then
@@ -541,10 +554,11 @@ language sql immutable parallel safe as
 $$ select case p when 'available' then 4 when 'limited_stock' then 3 when 'out_of_stock' then 2 else 1 end $$;
 
 -- { axes: [key], missing: 'unavailable', cells: [{ key, choice, status, variantId }], values: { axisKey: { valueId: status } } }
--- A combination with no cell is unavailable; `missing` says so. `values` gives every option value its best status across the cells
--- that contain it, so a picker can grey out a value without enumerating combinations.
-create or replace function public.item_options_matrix(p_item uuid, p_axes jsonb) returns jsonb
-language plpgsql stable security definer set search_path = public as $$
+-- p_cells: [{ id, key, choice, status }] in display order (stored variants, or the old list read as one axis). A combination with no
+-- cell is unavailable: `missing` says so. `values` gives every option value its best status across the cells that contain it, so a
+-- picker can grey out a value without enumerating combinations.
+create or replace function public.item_options_matrix(p_axes jsonb, p_cells jsonb) returns jsonb
+language plpgsql immutable set search_path = public as $$
 declare
   a jsonb;
   v jsonb;
@@ -555,9 +569,9 @@ begin
   for a in select jsonb_array_elements(coalesce(p_axes, '[]'::jsonb)) loop
     v_axis := '{}'::jsonb;
     for v in select jsonb_array_elements(a -> 'values') loop
-      select s.status into v_best from public.item_variants s
-        where s.item_id = p_item and s.choice ->> (a ->> 'key') = v ->> 'id'
-        order by public.option_status_rank(s.status) desc limit 1;
+      select c ->> 'status' into v_best from jsonb_array_elements(coalesce(p_cells, '[]'::jsonb)) c
+        where c -> 'choice' ->> (a ->> 'key') = v ->> 'id'
+        order by public.option_status_rank(c ->> 'status') desc limit 1;
       v_axis := v_axis || jsonb_build_object(v ->> 'id', coalesce(v_best, 'unavailable'));
     end loop;
     v_values := v_values || jsonb_build_object(a ->> 'key', v_axis);
@@ -565,12 +579,12 @@ begin
   return jsonb_build_object(
     'axes', coalesce((select jsonb_agg(x ->> 'key') from jsonb_array_elements(coalesce(p_axes, '[]'::jsonb)) x), '[]'::jsonb),
     'missing', 'unavailable',
-    'cells', coalesce((select jsonb_agg(jsonb_build_object('key', s.combo_key, 'choice', s.choice, 'status', s.status, 'variantId', s.id) order by s.sort, s.id)
-                       from public.item_variants s where s.item_id = p_item), '[]'::jsonb),
+    'cells', coalesce((select jsonb_agg(jsonb_build_object('key', c ->> 'key', 'choice', c -> 'choice', 'status', c ->> 'status', 'variantId', c -> 'id') order by n)
+                       from jsonb_array_elements(coalesce(p_cells, '[]'::jsonb)) with ordinality as t(c, n)), '[]'::jsonb),
     'values', v_values);
 end $$;
-revoke all on function public.item_options_matrix(uuid, jsonb), public.option_status_rank(text) from public;
-grant execute on function public.item_options_matrix(uuid, jsonb), public.option_status_rank(text) to service_role;
+revoke all on function public.item_options_matrix(jsonb, jsonb), public.option_status_rank(text) from public;
+grant execute on function public.item_options_matrix(jsonb, jsonb), public.option_status_rank(text) to service_role;
 
 create or replace function public.item_size_chart_payload(p_item public.items) returns jsonb
 language sql stable security definer set search_path = public as $$
@@ -584,8 +598,7 @@ $$;
 revoke all on function public.item_size_chart_payload(public.items) from public;
 grant execute on function public.item_size_chart_payload(public.items) to service_role;
 
--- "Red / S": the chosen values' labels in axis order. Every public variant carries it, so the payload stays a superset of the old
--- {id, label, price} entries that pages already read.
+-- "Red / S": the chosen values' labels in axis order. Every option variant carries it, as the old {id, label, price} entries did.
 create or replace function public.item_variant_label(p_axes jsonb, p_choice jsonb) returns text
 language sql immutable parallel safe as $$
   select string_agg(v.e ->> 'label', ' / ' order by a.n)
@@ -595,28 +608,57 @@ $$;
 revoke all on function public.item_variant_label(jsonb, jsonb) from public;
 grant execute on function public.item_variant_label(jsonb, jsonb) to anon, authenticated, service_role;
 
+-- The axes, the variants (id, label, choice, price, sale price, status, sku, media, stock) and the cells for one item: stored options,
+-- or, when the item has none, its old variants list read as one "option" axis. `legacy` says which. Internal to the two reads below.
+create or replace function public.item_options_source(i public.items) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  c jsonb;
+  v_axes jsonb;
+  v_vars jsonb;
+begin
+  if i.option_axes <> '[]'::jsonb then
+    return jsonb_build_object('legacy', false, 'axes', i.option_axes, 'variants', coalesce((
+      select jsonb_agg(jsonb_build_object('id', s.id, 'label', public.item_variant_label(i.option_axes, s.choice), 'key', s.combo_key, 'choice', s.choice,
+        'price', s.price, 'salePrice', s.sale_price, 'stock', s.stock_count, 'status', s.status, 'sku', s.sku, 'mediaIds', to_jsonb(s.media_ids)) order by s.sort, s.id)
+      from public.item_variants s where s.item_id = i.id), '[]'::jsonb));
+  end if;
+  c := public.item_options_from_legacy(case when jsonb_typeof(i.variants) = 'array' then i.variants else '[]'::jsonb end);
+  v_axes := c -> 'axes';
+  select coalesce(jsonb_agg(jsonb_build_object('id', x.e ->> 'slug', 'label', x.e ->> 'label', 'key', 'option=' || (x.e ->> 'slug'),
+      'choice', jsonb_build_object('option', x.e ->> 'slug'), 'price', x.e -> 'price', 'salePrice', null, 'stock', x.e -> 'stock',
+      'status', case when (x.e ->> 'stock') = '0' then 'out_of_stock' else 'available' end, 'sku', null, 'mediaIds', '[]'::jsonb) order by x.n), '[]'::jsonb)
+    into v_vars from jsonb_array_elements(c -> 'rows') with ordinality as x(e, n);
+  return jsonb_build_object('legacy', jsonb_array_length(v_axes) > 0, 'axes', v_axes, 'variants', v_vars);
+end $$;
+revoke all on function public.item_options_source(public.items) from public;
+grant execute on function public.item_options_source(public.items) to service_role;
+
 -- The public read. null when the item is not public (hidden, draft, removed, sold out, shop not visible).
--- The matrix is `optionAvailability` because the item already has an `availability` field (its own status string, which pages read).
+-- New keys on purpose: the item already has `availability` (its own status string) and `variants` (the old list, which pricing is built
+-- from), and pages read both. options / optionVariants / optionAvailability / sizeChart sit beside them.
 create or replace function public.public_item_options(p_item uuid) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare
   i public.items;
+  src jsonb;
 begin
   if not exists (select 1 from public.public_items pi where pi.id = p_item) then return null; end if;
   select * into i from public.items where id = p_item;
+  src := public.item_options_source(i);
   return jsonb_build_object(
-    'options', public.item_option_axes_public(i.option_axes),
-    'variants', coalesce((
-      select jsonb_agg(
-        jsonb_build_object(
-          'id', s.id, 'label', public.item_variant_label(i.option_axes, s.choice), 'choice', s.choice,
-          'price', coalesce(s.price, i.price),
-          'salePrice', case when s.price is null then i.sale_price else s.sale_price end,
-          'status', s.status, 'sku', s.sku, 'mediaIds', to_jsonb(s.media_ids),
-          'stockLeft', case when i.show_stock_count and s.status = 'limited_stock' and s.stock_count > 0 then s.stock_count end)
-        order by s.sort, s.id)
-      from public.item_variants s where s.item_id = p_item), '[]'::jsonb),
-    'optionAvailability', public.item_options_matrix(p_item, i.option_axes),
+    'options', public.item_option_axes_public(src -> 'axes'),
+    'optionVariants', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', x.e -> 'id', 'label', x.e -> 'label', 'choice', x.e -> 'choice',
+        'price', coalesce(nullif(x.e -> 'price', 'null'::jsonb), to_jsonb(i.price)),
+        'salePrice', case when jsonb_typeof(x.e -> 'price') = 'null' then to_jsonb(i.sale_price) else x.e -> 'salePrice' end,
+        'status', x.e -> 'status', 'sku', x.e -> 'sku', 'mediaIds', x.e -> 'mediaIds',
+        'stockLeft', case when i.show_stock_count and x.e ->> 'status' = 'limited_stock' and (x.e ->> 'stock')::integer > 0 then x.e -> 'stock' end) order by x.n)
+      from jsonb_array_elements(src -> 'variants') with ordinality as x(e, n)), '[]'::jsonb),
+    'optionAvailability', public.item_options_matrix(src -> 'axes', (
+      select coalesce(jsonb_agg(jsonb_build_object('id', x.e -> 'id', 'key', x.e -> 'key', 'choice', x.e -> 'choice', 'status', x.e -> 'status') order by x.n), '[]'::jsonb)
+      from jsonb_array_elements(src -> 'variants') with ordinality as x(e, n))),
     'sizeChart', public.item_size_chart_payload(i));
 end $$;
 
@@ -625,18 +667,23 @@ language plpgsql stable security definer set search_path = public as $$
 declare
   v_id uuid := public.my_business_id();
   i public.items;
+  src jsonb;
 begin
   perform public.assert_seller_active();
   if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   select * into i from public.items where id = p_id and business_id = v_id and not removed_by_admin;
   if not found then raise exception 'item_not_found' using errcode = 'P0001'; end if;
+  src := public.item_options_source(i);
   return jsonb_build_object(
-    'axes', public.item_option_axes_public(i.option_axes),
+    'fromLegacy', src -> 'legacy',
+    'axes', public.item_option_axes_public(src -> 'axes'),
     'variants', coalesce((
-      select jsonb_agg(jsonb_build_object('id', s.id, 'choice', s.choice, 'price', s.price, 'salePrice', s.sale_price, 'stock', s.stock_count,
-                                          'status', s.status, 'sku', s.sku, 'mediaIds', to_jsonb(s.media_ids)) order by s.sort, s.id)
-      from public.item_variants s where s.item_id = p_id), '[]'::jsonb),
-    'optionAvailability', public.item_options_matrix(p_id, i.option_axes),
+      select jsonb_agg(jsonb_build_object('id', x.e -> 'id', 'choice', x.e -> 'choice', 'price', x.e -> 'price', 'salePrice', x.e -> 'salePrice', 'stock', x.e -> 'stock',
+                                          'status', x.e -> 'status', 'sku', x.e -> 'sku', 'mediaIds', x.e -> 'mediaIds') order by x.n)
+      from jsonb_array_elements(src -> 'variants') with ordinality as x(e, n)), '[]'::jsonb),
+    'optionAvailability', public.item_options_matrix(src -> 'axes', (
+      select coalesce(jsonb_agg(jsonb_build_object('id', x.e -> 'id', 'key', x.e -> 'key', 'choice', x.e -> 'choice', 'status', x.e -> 'status') order by x.n), '[]'::jsonb)
+      from jsonb_array_elements(src -> 'variants') with ordinality as x(e, n))),
     'sizeChartId', i.size_chart_id,
     'sizeChartOverride', i.size_chart_override);
 end $$;
@@ -740,7 +787,7 @@ revoke all on function public.admin_size_charts_list(), public.admin_save_size_c
 grant execute on function public.admin_size_charts_list(), public.admin_save_size_chart(uuid, jsonb), public.admin_delete_size_chart(uuid) to authenticated, service_role;
 
 -- ---------------------------------------------------------------------------------------------------------------------
--- 7. seller_save_item, seller_duplicate_item, seller_bulk_items (latest definitions: 0050, 0050, 004600; changes marked "0084")
+-- 7. seller_save_item, seller_duplicate_item, seller_bulk_items (latest definitions: 0085, 0050, 004600; changes marked "0086")
 -- ---------------------------------------------------------------------------------------------------------------------
 
 create or replace function public.seller_save_item(p_id uuid, p_fields jsonb) returns uuid
@@ -772,6 +819,7 @@ declare
   v_hl jsonb;
   v_specs jsonb;
   v_inc text[];
+  v_var jsonb;
   c_money constant text := '^\d{1,10}(\.\d{1,2})?$';
 begin
   perform public.assert_seller_active();
@@ -815,7 +863,8 @@ begin
      or (f ? 'pack_size' and jsonb_typeof(f -> 'pack_size') not in ('string', 'null'))
      or (f ? 'highlights' and jsonb_typeof(f -> 'highlights') not in ('array', 'null'))
      or (f ? 'specs' and jsonb_typeof(f -> 'specs') not in ('array', 'null'))
-     or (f ? 'includes' and jsonb_typeof(f -> 'includes') not in ('array', 'null')) then
+     or (f ? 'includes' and jsonb_typeof(f -> 'includes') not in ('array', 'null'))
+     or (f ? 'variants' and jsonb_typeof(f -> 'variants') not in ('array', 'null')) then
     raise exception 'invalid_details' using errcode = 'P0001';
   end if;
   v_brand := case when f ? 'brand' then nullif(btrim(coalesce(f ->> 'brand', '')), '') else v_old_item.brand end;
@@ -847,6 +896,21 @@ begin
   else
     v_inc := coalesce(v_old_item.includes, '{}');
   end if;
+  v_var := case when f ? 'variants' then coalesce(nullif(f -> 'variants', 'null'::jsonb), '[]'::jsonb) else case when jsonb_typeof(v_old_item.variants) = 'array' then v_old_item.variants else '[]'::jsonb end end;
+  if f ? 'variants' and not public.item_variants_valid(v_var) then
+    raise exception 'invalid_variants' using errcode = 'P0001';
+  end if;
+  if f ? 'variants' then
+    select coalesce(jsonb_agg(
+      case when jsonb_typeof(x.e) = 'object'
+        then jsonb_build_object('id', x.e -> 'id', 'label', to_jsonb(btrim(coalesce(x.e ->> 'label', ''))), 'price', x.e -> 'price', 'stock', coalesce(x.e -> 'stock', 'null'::jsonb))
+        else x.e end
+      order by x.n), '[]'::jsonb) into v_var
+      from jsonb_array_elements(v_var) with ordinality as x(e, n);
+  end if;
+  if not public.item_variants_valid(v_var) or (jsonb_array_length(v_var) > 0 and v_type not in ('fixed', 'from')) then
+    raise exception 'invalid_variants' using errcode = 'P0001';
+  end if;
   if char_length(coalesce(v_brand, '')) > 60 or char_length(coalesce(v_short, '')) > 140
      or char_length(coalesce(v_terms, '')) > 500 or char_length(coalesce(v_pack, '')) > 40
      or not public.item_highlights_valid(v_hl) or not public.item_specs_valid(v_specs) or not public.item_includes_valid(v_inc) then
@@ -871,11 +935,11 @@ begin
   if p_id is null then
     select coalesce(max(sort), 0) + 1 into v_sort from public.items where business_id = v_id;
     insert into public.items (business_id, name, description, section, price_type, price, price_max, sale_price, unit, availability, track_stock, stock_count, low_stock_threshold, show_stock_count, visible, draft, sort,
-      brand, short_description, highlights, specs, includes, terms, pack_size)
+      brand, short_description, highlights, specs, includes, terms, pack_size, variants)
     values (v_id, v_name, v_desc, v_section, v_type, v_price, v_max, v_sale, v_unit, v_avail, v_track, v_count, v_low, v_show, false, true, v_sort,
-      v_brand, v_short, v_hl, v_specs, v_inc, v_terms, v_pack)
+      v_brand, v_short, v_hl, v_specs, v_inc, v_terms, v_pack, v_var)
     returning id into v_new;
-    perform public.item_options_apply(v_new, v_id, f);   -- 0084
+    perform public.item_options_apply(v_new, v_id, f);   -- 0086
     return v_new;
   end if;
 
@@ -887,13 +951,18 @@ begin
     raise exception 'item_in_flash_sale' using errcode = 'P0001';
   end if;
 
+  if v_var is distinct from (case when jsonb_typeof(v_old.variants) = 'array' then v_old.variants else '[]'::jsonb end)
+     and exists (select 1 from public.flash_sales s where s.item_id = p_id and s.status in ('scheduled','live')) then
+    raise exception 'item_in_flash_sale' using errcode = 'P0001';
+  end if;
+
   update public.items set
     name = v_name, description = v_desc, section = v_section, price_type = v_type, price = v_price, price_max = v_max,
     sale_price = v_sale, unit = v_unit, availability = v_avail,
     track_stock = v_track, stock_count = v_count, low_stock_threshold = v_low, show_stock_count = v_show,
-    brand = v_brand, short_description = v_short, highlights = v_hl, specs = v_specs, includes = v_inc, terms = v_terms, pack_size = v_pack
+    brand = v_brand, short_description = v_short, highlights = v_hl, specs = v_specs, includes = v_inc, terms = v_terms, pack_size = v_pack, variants = v_var
   where id = p_id;
-  perform public.item_options_apply(p_id, v_id, f);   -- 0084
+  perform public.item_options_apply(p_id, v_id, f);   -- 0086
   return p_id;
 end $$;
 
@@ -915,9 +984,9 @@ begin
     v_src.sale_price, v_src.availability, v_src.stock_count, v_src.track_stock, v_src.low_stock_threshold, v_src.show_stock_count, v_src.season,
     v_src.tags, v_src.badge, v_src.variants, false, true, v_src.sort + 1,
     v_src.brand, v_src.short_description, v_src.highlights, v_src.specs, v_src.includes, v_src.terms, v_src.pack_size,
-    public.item_option_axes_for_copy(v_src.option_axes), v_src.size_chart_id, v_src.size_chart_override)   -- 0084
+    public.item_option_axes_for_copy(v_src.option_axes), v_src.size_chart_id, v_src.size_chart_override)   -- 0086
   returning id into v_new;
-  -- 0084: variants are copied with their media ids parked in copy_media_ids; item_remap_copied_media resolves them after the files are copied.
+  -- 0086: variants are copied with their media ids parked in copy_media_ids; item_remap_copied_media resolves them after the files are copied.
   insert into public.item_variants (item_id, business_id, combo_key, choice, price, sale_price, stock_count, status, sku, media_ids, copy_media_ids, sort)
   select v_new, v_id, s.combo_key, s.choice, s.price, s.sale_price, s.stock_count, s.status, s.sku, '{}', case when cardinality(s.media_ids) > 0 then s.media_ids else s.copy_media_ids end, s.sort
     from public.item_variants s where s.item_id = p_id;
@@ -992,7 +1061,7 @@ begin
       where i.id = any (v_ids) and i.price_type in ('fixed','from','range') and not exists (select 1 from public.flash_sales s where s.item_id = i.id and s.status in ('scheduled','live'))
         and greatest(public.seller_scale_price(i.price, v_tenths), coalesce(public.seller_scale_price(i.price_max, v_tenths), 0)) > 9999999999.99
     ) then raise exception 'price_too_large' using errcode = 'P0001'; end if;
-    -- 0084: variant prices follow the item's percent change, for the same items.
+    -- 0086: variant prices follow the item's percent change, for the same items.
     if exists (
       select 1 from public.item_variants x join public.items i on i.id = x.item_id
       where i.id = any (v_ids) and i.price_type in ('fixed','from','range') and x.price is not null and not exists (select 1 from public.flash_sales s where s.item_id = i.id and s.status in ('scheduled','live'))
@@ -1020,7 +1089,7 @@ begin
       updated_at = now()
     where x.item_id = any (v_ids) and x.price is not null
       and exists (select 1 from public.items i where i.id = x.item_id and i.price_type in ('fixed','from','range')
-                  and not exists (select 1 from public.flash_sales s where s.item_id = i.id and s.status in ('scheduled','live')));   -- 0084
+                  and not exists (select 1 from public.flash_sales s where s.item_id = i.id and s.status in ('scheduled','live')));   -- 0086
   else
     update public.items set price_confirmed_at = now() where id = any (v_ids);
     get diagnostics v_n = row_count;

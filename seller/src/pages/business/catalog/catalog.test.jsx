@@ -133,11 +133,11 @@ describe("listing cards and summary", () => {
     expect(screen.getByTestId("showing-summary")).toHaveTextContent("4 not showing because your shop is not live");
   });
 
-  it("opens the shop preview from View as customer", async () => {
+  it("opens that item's page from View as customer", async () => {
     await open();
     await ready();
     const link = within(await openMenu(userEvent.setup(), "it-fade")).getByRole("menuitem", { name: /^View as customer/ });
-    expect(link).toHaveAttribute("href", "/business/preview");
+    expect(link).toHaveAttribute("href", "/business/catalog/it-fade");
     expect(link).toHaveAttribute("target", "_blank");
   });
 });

@@ -78,8 +78,8 @@ test("save stores axes and variants; seller and public reads show them; an absen
   assert.ok(!pub.optionAvailability.cells.some((x) => x.key === "color=blue|size=s"), "blue/s has no row and so no cell");
   assert.deepEqual(pub.optionAvailability.values.color, { red: "limited_stock", blue: "available" });
   assert.deepEqual(pub.optionAvailability.values.size, { s: "limited_stock", m: "available", l: "unavailable" });
-  assert.equal(pub.variants[1].price, 1000, "no variant price: the item's price");
-  assert.equal(pub.variants[0].stockLeft, null, "stock counts stay hidden unless the item shows them");
+  assert.equal(pub.optionVariants[1].price, 1000, "no variant price: the item's price");
+  assert.equal(pub.optionVariants[0].stockLeft, null, "stock counts stay hidden unless the item shows them");
   assert.equal(pub.sizeChart, null);
 });
 
@@ -189,8 +189,8 @@ test("stock counts reach buyers only for limited stock on items that show them",
   const id = await newItem(ids.bizA, { show_stock_count: true });
   await save(asA, id, withOptions([v("red", "s", { stock: 3, status: "limited_stock" }), v("red", "m", { stock: 40 })]));
   const pub = await publicRead(id);
-  assert.equal(pub.variants[0].stockLeft, 3);
-  assert.equal(pub.variants[1].stockLeft, null);
+  assert.equal(pub.optionVariants[0].stockLeft, 3);
+  assert.equal(pub.optionVariants[1].stockLeft, null);
 });
 
 test("the item's flash sale blocks changing variant prices, but not stock or other fields", async () => {
@@ -203,28 +203,90 @@ test("the item's flash sale blocks changing variant prices, but not stock or oth
   assert.equal((await sellerRead(id)).variants[0].stock, 7);
 });
 
-test("legacy items.variants becomes one 'option' axis with the same labels and prices", async () => {
+// ---- the old variants list (items.variants, written by the seller editor since 0085) ----
+
+// The old editor's save stores every entry with a stock key (null when none was given).
+const stored = (list) => list.map((e) => ({ ...e, stock: e.stock ?? null }));
+const oldList = (...labels) => labels.map(([id, label, price, stock]) => ({ id, label, price, ...(stock !== undefined && { stock }) }));
+const saveOld = (id, list, extra = {}) => save(asA, id, base({ variants: list, ...extra }));
+
+test("an item's old variants list reads as one 'option' axis, with ids, labels, prices and stock; nothing is converted or stored", async () => {
   const id = await newItem();
-  const legacy = [{ id: "small", label: "Small", price: 3500 }, { id: "medium", label: "Medium", price: 2500 }, { label: "" }, { id: "small", label: "Small again" }];
-  await sql(c, `update items set variants = $2::jsonb where id = $1`, [id, JSON.stringify(legacy)]);
-  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [id]))[0].ok, true);
-  const r = await sellerRead(id);
-  const expected = legacyVariantsToOptions(legacy);
-  assert.deepEqual(r.axes, expected.axes, "SQL and JS convert the same way");
-  assert.deepEqual(r.variants.map((x) => [x.choice.option, x.price]), expected.variants.map((x) => [x.choice.option, x.price]));
-  assert.deepEqual((await sql(c, `select variants from items where id = $1`, [id]))[0].variants, legacy, "the old column is left as it was");
-  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [id]))[0].ok, false, "converting twice does nothing");
-  assert.equal((await variantRows(id)).length, 3);
-  assert.equal((await publicRead(id)).variants[0].price, 3500);
+  const list = oldList(["small", "Small", 3500, 4], ["medium", "Medium", 2500], ["large", "Large", 4500, 0]);
+  await saveOld(id, list);
+  const pub = await publicRead(id);
+  assert.deepEqual(pub.options, [{ key: "option", label: "Option", display: "button", values: [{ id: "small", label: "Small" }, { id: "medium", label: "Medium" }, { id: "large", label: "Large" }] }]);
+  assert.deepEqual(pub.optionVariants.map((x) => [x.id, x.label, x.choice.option, x.price, x.status]), [
+    ["small", "Small", "small", 3500, "available"], ["medium", "Medium", "medium", 2500, "available"], ["large", "Large", "large", 4500, "out_of_stock"]]);
+  assert.deepEqual(pub.optionAvailability.values.option, { small: "available", medium: "available", large: "out_of_stock" });
+  assert.equal(pub.optionAvailability.cells.length, 3);
+  assert.deepEqual((await sql(c, `select option_axes, variants from items where id = $1`, [id]))[0], { option_axes: [], variants: stored(list) }, "the old list stays the source");
+  assert.equal((await variantRows(id)).length, 0);
+  // SQL and JS read it the same way
+  const js = legacyVariantsToOptions(list);
+  const built = publicOptions({ axes: js.axes, variants: js.variants.map((v) => ({ ...v, id: v.choice.option })), item: { price: 1000, salePrice: null, showStockCount: false } });
+  assert.deepEqual(JSON.parse(JSON.stringify(pub)), JSON.parse(JSON.stringify(built)));
+  const mine = await sellerRead(id);
+  assert.equal(mine.fromLegacy, true);
+  assert.deepEqual(mine.variants.map((x) => [x.id, x.price, x.stock, x.status]), [["small", 3500, 4, "available"], ["medium", 2500, null, "available"], ["large", 4500, 0, "out_of_stock"]]);
 });
 
-test("empty or unusable legacy variants convert to nothing", async () => {
-  const empty = await newItem();
-  const junk = await newItem();
-  await sql(c, `update items set variants = '[{\"label\":\"\"}, 5]'::jsonb where id = $1`, [junk]);
-  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [empty]))[0].ok, false);
-  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [junk]))[0].ok, false);
-  assert.deepEqual((await sql(c, `select option_axes from items where id = $1`, [junk]))[0].option_axes, []);
+test("an edit made through the old editor shows at once; an item with no old list and no options is empty", async () => {
+  const id = await newItem();
+  await saveOld(id, oldList(["a", "A", 100]));
+  assert.equal((await publicRead(id)).optionVariants.length, 1);
+  await saveOld(id, oldList(["a", "A", 150], ["b", "B", 200]));
+  const pub = await publicRead(id);
+  assert.deepEqual(pub.optionVariants.map((x) => [x.id, x.price]), [["a", 150], ["b", 200]]);
+  await saveOld(id, []);
+  assert.deepEqual(await publicRead(id), emptyOptions());
+  assert.equal((await sellerRead(id)).fromLegacy, false);
+});
+
+test("saving real options supersedes the old list and empties it; clearing them does not bring it back", async () => {
+  const id = await newItem();
+  await saveOld(id, oldList(["a", "A", 100], ["b", "B", 200]));
+  await save(asA, id, withOptions([v("red", "s", { price: 1500 })]));
+  assert.deepEqual((await sql(c, `select variants from items where id = $1`, [id]))[0].variants, []);
+  const pub = await publicRead(id);
+  assert.deepEqual(pub.options.map((a) => a.key), ["color", "size"]);
+  assert.equal((await sellerRead(id)).fromLegacy, false);
+  await save(asA, id, base({ options: null }));
+  assert.deepEqual(await publicRead(id), emptyOptions());
+});
+
+test("entries the old list cannot express are skipped, and a list with none usable reads as no options", async () => {
+  const id = await newItem();
+  await sql(c, `update items set variants = '[{"label":""}, 5, {"id":"x","label":"Ok","price":10}]'::jsonb where id = $1`, [id]);
+  assert.deepEqual((await publicRead(id)).optionVariants.map((x) => x.id), ["x"]);
+  await sql(c, `update items set variants = '[{"label":""}, 5]'::jsonb where id = $1`, [id]);
+  assert.deepEqual(await publicRead(id), emptyOptions());
+  await sql(c, `update items set variants = '{}'::jsonb where id = $1`, [id]);
+  assert.deepEqual(await publicRead(id), emptyOptions());
+});
+
+test("the public payload leaves the item's own fields to the item: availability string and old variants list are untouched", async () => {
+  const id = await newItem();
+  await saveOld(id, oldList(["a", "A", 100]));
+  const row = (await as({ role: "anon" }, `select availability, variants from public_items where id = $1`, [id]))[0];
+  assert.equal(row.availability, "available");
+  assert.deepEqual(row.variants, [{ id: "a", label: "A", price: 100 }], "the view still serves the old list as before");
+  assert.deepEqual(Object.keys(await publicRead(id)).sort(), ["optionAvailability", "optionVariants", "options", "sizeChart"]);
+});
+
+test("item_options_convert_legacy copies the old list into stored options once, for the editor task, and empties it", async () => {
+  const id = await newItem();
+  const list = oldList(["small", "Small", 3500, 4], ["large", "Large", 4500, 0]);
+  await saveOld(id, list);
+  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [id]))[0].ok, true);
+  const rows = await variantRows(id);
+  assert.deepEqual(rows.map((r) => [r.combo_key, Number(r.price), r.stock_count, r.status]), [["option=small", 3500, 4, "available"], ["option=large", 4500, 0, "out_of_stock"]]);
+  assert.deepEqual((await sql(c, `select variants from items where id = $1`, [id]))[0].variants, []);
+  const pub = await publicRead(id);
+  assert.deepEqual(pub.options, (await publicRead(id)).options);
+  assert.deepEqual(pub.optionVariants.map((x) => [x.label, x.price, x.status]), [["Small", 3500, "available"], ["Large", 4500, "out_of_stock"]]);
+  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [id]))[0].ok, false, "converting twice does nothing");
+  assert.equal((await sql(c, `select item_options_convert_legacy($1) as ok`, [await newItem()]))[0].ok, false, "nothing to convert");
 });
 
 test("duplicate copies axes, variants and the size chart; media ids are parked and remapped once the files are copied", async () => {
@@ -271,6 +333,15 @@ test("remapping drops ids that did not copy, and is closed to sellers", async ()
   assert.deepEqual((await variantRows(copy))[0].media_ids, [n1]);
   await rejects(c, asA, `select item_remap_copied_media('${copy}', '{}')`, [], /permission denied/);
   await rejects(c, undefined, `select item_remap_copied_media('${copy}', '[]')`, [], /invalid_map/);
+});
+
+test("duplicate copies the old variants list too", async () => {
+  const src = await newItem();
+  const list = oldList(["a", "A", 100, 3], ["b", "B", 200]);
+  await saveOld(src, list);
+  const copy = (await as(asA, `select seller_duplicate_item($1) as id`, [src]))[0].id;
+  assert.deepEqual((await sql(c, `select variants from items where id = $1`, [copy]))[0].variants, stored(list));
+  assert.deepEqual((await sellerRead(copy)).variants.map((x) => x.id), ["a", "b"]);
 });
 
 test("duplicating an item without options changes nothing", async () => {

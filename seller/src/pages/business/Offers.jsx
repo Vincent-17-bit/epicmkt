@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { OfferChip, Offers as OfferTickets } from "@epicmkt/ui";
 import {
@@ -334,12 +335,14 @@ export default function Offers() {
   const refresh = () => Promise.all(["offers", "offer-items", "offer-quota", "shop-preview"].map((key) => qc.invalidateQueries({ queryKey: [key] })));
   useRealtime(["offers", "offer_items", "businesses"], refresh);
 
-  const list = offers.data ?? [];
+  const onlyItem = useSearchParams()[0].get("item");
+  const everyOffer = offers.data ?? [];
+  const list = onlyItem ? everyOffer.filter((o) => o.scope === "store" || o.items.some((e) => e.itemId === onlyItem)) : everyOffer;
   const choices = useMemo(() => (items.data ?? []).filter((i) => !i.hiddenByAdmin), [items.data]);
   const current = list.filter((o) => phaseOpen(o, now));
   const past = list.filter((o) => !phaseOpen(o, now));
   const startNew = (scope) => setEditing({ form: emptyForm(scope) });
-  const q = quota.data ?? offerQuota(list, null, now);
+  const q = quota.data ?? offerQuota(everyOffer, null, now);
 
   return (
     <div className={ui.page}>
@@ -367,6 +370,7 @@ export default function Offers() {
         <p className={ui.error} role="alert">We could not load your offers. Check your connection and refresh.</p>
       ) : (
         <>
+          {onlyItem && <p className={ui.muted} data-testid="offer-item-filter">Showing offers that apply to {(items.data ?? []).find((i) => i.id === onlyItem)?.name ?? "one item"}. <Link className={ui.link} to="/business/offers">Show all</Link></p>}
           <section aria-labelledby="of-current">
             <h2 id="of-current">Running, scheduled and paused</h2>
             {current.length === 0 ? <p className={ui.muted} data-testid="empty">No offers yet. Start a shop offer or a product offer from a ready-made idea.</p> : (

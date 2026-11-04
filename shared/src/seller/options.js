@@ -7,9 +7,10 @@
 //   storedOptions(f)          what seller_save_item keeps for a save's `options`, or { ok: false, error } (the RPC's error name).
 //   validateOptions(options)  the same checks for a form: { ok, errors, value }, errors keyed by row so the UI can show them.
 //   buildAvailability(...)    the availability matrix the public read returns.
-//   publicOptions(...)        the public payload { options, variants, optionAvailability, sizeChart }.
-//                             (optionAvailability, not availability: the item already has an `availability` status string that pages read.)
-//   legacyVariantsToOptions   the old items.variants [{id,label,price}] as one "option" axis (migration 0084, section 3).
+//   publicOptions(...)        the public payload { options, optionVariants, optionAvailability, sizeChart }.
+//                             (The option* names, not availability / variants: the item already has an `availability` status string
+//                             and a legacy `variants` list that pages and pricing read. The new keys sit beside them.)
+//   legacyVariantsToOptions   the old items.variants [{id,label,price}] as one "option" axis (migration 0086, section 3).
 //   cleanSizeChart / sizeChartFor   the admin library row and what an item shows (chart rows or the seller's override).
 
 export const OPTION_DISPLAY_TYPES = ["swatch", "image-card", "button", "dropdown", "text-card"];
@@ -328,7 +329,7 @@ export const selectableValues = (availability, partial = {}) => {
   return out;
 };
 
-export const emptyOptions = () => ({ options: [], variants: [], optionAvailability: buildAvailability([], []), sizeChart: null });
+export const emptyOptions = () => ({ options: [], optionVariants: [], optionAvailability: buildAvailability([], []), sizeChart: null });
 
 // The size chart a buyer sees: the chart's rows, or the seller's override when it still fits the chart's columns.
 export const sizeChartFor = (chart, override) => {
@@ -351,11 +352,11 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
   const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
-  return { options, variants: shown, optionAvailability: buildAvailability(axes, variants), sizeChart: sizeChartFor(chart, override) };
+  return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), sizeChart: sizeChartFor(chart, override) };
 };
 
-// The old items.variants shape [{ id, label, price }] as { axes, variants }: one axis "option", one variant per usable entry.
-// Same rules as item_options_convert_legacy in migration 0084 (entries without a label are skipped, ids become unique slugs).
+// The old items.variants shape [{ id, label, price, stock? }] as { axes, variants }: one axis "option", one variant per usable entry
+// (a stock of 0 is out_of_stock). Same rules as item_options_from_legacy in migration 0086 (entries without a label are skipped, ids become unique slugs).
 export const legacyVariantsToOptions = (legacy) => {
   if (!Array.isArray(legacy) || legacy.length === 0) return { axes: [], variants: [] };
   const used = [];
@@ -372,8 +373,9 @@ export const legacyVariantsToOptions = (legacy) => {
     if (used.includes(slug)) return;
     used.push(slug);
     const price = MONEY.test(String(entry.price ?? "")) ? Number(entry.price) : null;
+    const stock = /^\d{1,6}$/.test(String(entry.stock ?? "")) ? Number(entry.stock) : null;
     values.push({ id: slug, label });
-    variants.push({ choice: { option: slug }, key: `option=${slug}`, price, salePrice: null, stock: null, status: "available", sku: null, mediaIds: [] });
+    variants.push({ choice: { option: slug }, key: `option=${slug}`, price, salePrice: null, stock, status: stock === 0 ? "out_of_stock" : "available", sku: null, mediaIds: [] });
   });
   if (values.length === 0) return { axes: [], variants: [] };
   return { axes: [{ key: "option", label: "Option", display: "button", values }], variants };

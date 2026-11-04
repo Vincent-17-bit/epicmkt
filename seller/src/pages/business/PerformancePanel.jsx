@@ -3,32 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { DEFAULT_PERFORMANCE_RANGE, PERFORMANCE_METRICS, PERFORMANCE_RANGES, performanceIsEmpty } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
+import TrendChart from "./TrendChart.jsx";
 import styles from "./performance.module.css";
-
-const W = 560;
-const H = 160;
-const PAD = 8;
-
-// Line chart of one metric. Plain SVG so it follows the theme through currentColor and CSS variables.
-export function TrendChart({ series, metric, label }) {
-  const values = series.map((p) => p[metric] ?? 0);
-  const max = Math.max(1, ...values);
-  const x = (i) => PAD + (values.length <= 1 ? (W - PAD * 2) / 2 : (i * (W - PAD * 2)) / (values.length - 1));
-  const y = (v) => H - PAD - (v / max) * (H - PAD * 2);
-  const line = values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join(" ");
-  const area = values.length ? `${line} L${x(values.length - 1).toFixed(1)} ${H - PAD} L${x(0).toFixed(1)} ${H - PAD} Z` : "";
-  return (
-    <figure className={styles.chart}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${label} over time. Highest point ${max}.`} preserveAspectRatio="none">
-        <line x1={PAD} x2={W - PAD} y1={H - PAD} y2={H - PAD} className={styles.axis} />
-        {area && <path d={area} className={styles.area} />}
-        {line && <path d={line} className={styles.line} fill="none" />}
-        {values.length === 1 && <circle cx={x(0)} cy={y(values[0])} r="3" className={styles.dot} />}
-      </svg>
-      <figcaption className={styles.peak}>Highest: {max}</figcaption>
-    </figure>
-  );
-}
 
 // Views and taps for the whole shop, or for one item when `itemId` is given. The same for every plan.
 export default function PerformancePanel({ itemId = null, title = "Performance" }) {
@@ -63,7 +39,7 @@ export default function PerformancePanel({ itemId = null, title = "Performance" 
           {performanceIsEmpty(q.data) ? (
             <p className={styles.muted} data-testid="performance-empty">Nothing yet for this period. Views and taps appear here as customers find you.</p>
           ) : (
-            <TrendChart series={q.data.series} metric={metric} label={label} />
+            <TrendChart series={q.data.series} grain={q.data.grain} metric={metric} label={label} />
           )}
         </>
       )}

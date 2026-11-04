@@ -4,12 +4,12 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleQuestion, faClipboardCheck } from "@fortawesome/free-solid-svg-icons";
 import { Logo } from "@epicmkt/ui";
 import Skeleton from "../../components/Skeleton.jsx";
-import { useBrowserTheme } from "./useBrowserTheme.js";
+import { useSelectedTheme } from "./useSelectedTheme.js";
 import { useRouteSeo } from "../../hooks/useRouteSeo.js";
 import styles from "./layout.module.css";
 
 export default function PublicSellerLayout() {
-  useBrowserTheme();
+  useSelectedTheme();
   useRouteSeo();
   return (
     <div className={styles.root} id="seller-scroll">

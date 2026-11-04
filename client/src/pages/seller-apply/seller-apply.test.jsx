@@ -9,6 +9,7 @@ import { useCatalog } from "./useCatalog.js";
 import PlanStep from "./PlanStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
 import PublicSellerLayout from "./PublicSellerLayout.jsx";
+import { useUiStore } from "../../stores/ui.js";
 import BecomeASeller from "./BecomeASeller.jsx";
 import { resetPricing, setPlanOverride } from "../../api/applications/mockStore.js";
 import * as api from "../../api/applications/index.js";
@@ -173,14 +174,26 @@ describe("page", () => {
     expect(screen.getByRole("list", { name: "How it works" })).toBeInTheDocument();
   });
 
-  it("follows the browser colour scheme live", async () => {
-    let listener;
-    const media = { matches: true, addEventListener: (_, f) => (listener = f), removeEventListener() {} };
-    vi.spyOn(window, "matchMedia").mockImplementation(() => media);
+  it("shows the theme chosen on the main site, even when the device is set to dark", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(() => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+    useUiStore.setState({ theme: "light" });
+    mountPage();
+    expect(document.documentElement.dataset.theme).toBe("light");
+  });
+
+  it("shows dark when dark was chosen, even when the device is set to light", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(() => ({ matches: false, addEventListener() {}, removeEventListener() {} }));
+    useUiStore.setState({ theme: "dark" });
     mountPage();
     expect(document.documentElement.dataset.theme).toBe("dark");
-    media.matches = false;
-    listener();
+  });
+
+  it("follows the device only when the choice is system, and changes with the main site's choice", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation(() => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+    useUiStore.setState({ theme: "system" });
+    mountPage();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    act(() => useUiStore.getState().setTheme("light"));
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 

@@ -89,7 +89,7 @@ export const catalogItem = (i) => ({
   availability: i.availability, stockCount: i.stock_count ?? null, trackStock: !!i.track_stock, lowStockThreshold: i.low_stock_threshold ?? 3,
   showStockCount: !!i.show_stock_count, availableFrom: i.available_from ?? null, season: i.season ?? null,
   visible: !!i.visible, draft: !!i.draft, sort: i.sort ?? 0, hiddenByAdmin: !!i.hidden_by_admin, removedByAdmin: !!i.removed_by_admin,
-  adminHideReason: i.admin_hide_reason ?? i.admin_reason ?? null, tags: i.tags ?? [], badge: i.badge ?? null, variants: i.variants ?? [],
+  adminHideReason: i.admin_hide_reason ?? i.admin_reason ?? null, tags: i.tags ?? [], badge: i.badge ?? null, variants: Array.isArray(i.variants) ? i.variants : [],
   priceConfirmedAt: i.price_confirmed_at ?? null, createdAt: i.created_at, updatedAt: i.updated_at,
   imagePaths: i.image_paths ?? [], imageCount: (i.image_paths ?? []).length, hasVideo: !!i.has_video,
   inFlashSale: !!i.in_flash_sale, specs: Array.isArray(i.specs) ? i.specs : [],

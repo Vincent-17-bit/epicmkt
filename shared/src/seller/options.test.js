@@ -166,7 +166,7 @@ test("availability: a combination with no row is unavailable, and every value ge
 test("an item without options returns empty arrays and an empty matrix", () => {
   const e = emptyOptions();
   assert.deepEqual(e.options, []);
-  assert.deepEqual(e.variants, []);
+  assert.deepEqual(e.optionVariants, []);
   assert.deepEqual(e.optionAvailability, { axes: [], missing: "unavailable", cells: [], values: {} });
   assert.equal(e.sizeChart, null);
   assert.deepEqual(publicOptions({ item: { price: 100 } }), e);
@@ -178,16 +178,21 @@ test("public payload: inherited price, sale only from the item when the variant 
     { id: "b", choice: { color: "red", size: "m" }, price: 2000, salePrice: 1500, status: "available", stock: 9 },
   ];
   const shown = publicOptions({ axes: axes(), variants: rows, item: { price: 1000, salePrice: 800, showStockCount: true } });
-  assert.equal(shown.variants[0].label, "Red / S");
-  assert.equal(shown.variants[1].label, "Red / M");
-  assert.equal(shown.variants[0].price, 1000);
-  assert.equal(shown.variants[0].salePrice, 800);
-  assert.equal(shown.variants[0].stockLeft, 2);
-  assert.equal(shown.variants[1].price, 2000);
-  assert.equal(shown.variants[1].salePrice, 1500);
-  assert.equal(shown.variants[1].stockLeft, null);
-  assert.equal(publicOptions({ axes: axes(), variants: rows, item: { price: 1000 } }).variants[0].stockLeft, null);
+  assert.equal(shown.optionVariants[0].label, "Red / S");
+  assert.equal(shown.optionVariants[1].label, "Red / M");
+  assert.equal(shown.optionVariants[0].price, 1000);
+  assert.equal(shown.optionVariants[0].salePrice, 800);
+  assert.equal(shown.optionVariants[0].stockLeft, 2);
+  assert.equal(shown.optionVariants[1].price, 2000);
+  assert.equal(shown.optionVariants[1].salePrice, 1500);
+  assert.equal(shown.optionVariants[1].stockLeft, null);
+  assert.equal(publicOptions({ axes: axes(), variants: rows, item: { price: 1000 } }).optionVariants[0].stockLeft, null);
   assert.equal(shown.options[0].values[0].color, "#FF0000");
+});
+
+test("legacy stock carries over: a number is the stock, 0 is out of stock", () => {
+  const r = legacyVariantsToOptions([{ id: "a", label: "A", price: 100, stock: 5 }, { id: "b", label: "B", price: 100, stock: 0 }, { id: "c", label: "C", price: 100, stock: null }, { id: "d", label: "D", price: 100, stock: "12" }, { id: "e", label: "E", price: 100 }]);
+  assert.deepEqual(r.variants.map((v) => [v.stock, v.status]), [[5, "available"], [0, "out_of_stock"], [null, "available"], [12, "available"], [null, "available"]]);
 });
 
 test("legacy variants become one 'option' axis, skipping unusable entries", () => {

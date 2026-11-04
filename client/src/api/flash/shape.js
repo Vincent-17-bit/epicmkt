@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, isPurchasable, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -98,33 +98,17 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
-// pricing.variants for an item with options: one entry per variant a buyer can pick (sold-out and unavailable ones are left out, since
-// the page defaults to the first entry and builds the chat message from it) with its label and regular price. Flash and offers are
-// not applied here. No variants: the empty list the page has always had.
-export const variantPricing = (variants) =>
-  (Array.isArray(variants) ? variants : [])
-    .filter((v) => isPurchasable(v) && Number.isFinite(v?.price))
-    .map((v) => ({ id: v.id, label: v.label, regularPrice: v.price, salePrice: v.price, savings: 0, discountPercent: 0 }));
-
-// The pricing of an item with options. An item in a live flash sale keeps pricing exactly as it was (no variant list): the page shows
-// each variant's sale price, and flash pricing per variant is a separate task. Otherwise the list from variantPricing, if any.
-export const withVariantPricing = (pricing, variants, { flashActive = false } = {}) => {
-  if (!pricing || flashActive) return pricing;
-  const list = variantPricing(variants);
-  return list.length > 0 ? { ...pricing, variants: list } : pricing;
-};
-
-export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
+export const pricingOf = (regularPrice, salePrice, priceType, unit, variants = [], priceFor) => ({
   regularPrice,
   salePrice,
   savings: regularPrice - salePrice,
   discountPercent: regularPrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0,
   unit: unit ?? null,
   priceType: priceType ?? "fixed",
-  variants: []
+  variants: variantPricing(variants, priceFor)
 });
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, imagePaths, videoPaths, mediaPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt }) => {
   const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
   const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
   // One ordered list of photos and videos, as the seller arranged them (the database's shared sequence). The ids match images[] and
@@ -163,7 +147,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     availability: availability ?? "available",
     // How many are left, only when the seller counts stock, it is running low, and they chose to say so.
     stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
-    variants: [],
+    variants: variantsOf(variants),
     specs: specsOf(specs),
     createdAt
   };

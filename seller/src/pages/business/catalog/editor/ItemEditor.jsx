@@ -147,6 +147,11 @@ function EditorForm({ item, sections, category, business }) {
     if (focus) focusOn(focus);
   }, [phone, focusOn, step]);
 
+  useEffect(() => {
+    const want = location.state?.focus;
+    if (want) goTo(location.state.step ?? "media", want);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // A phone shows one step at a time: when it changes, start at the top of the new one and name it for screen readers.
   useEffect(() => {
     if (!phone) return;
@@ -314,7 +319,7 @@ function EditorForm({ item, sections, category, business }) {
       );
     }
     if (id === "basics") return <BasicsSection key={id} form={form} patch={patch} errors={errors} category={category} sections={sections} focusOn={focusOn} />;
-    if (id === "price") return <PriceSection key={id} form={form} patch={patch} errors={errors} />;
+    if (id === "price") return <PriceSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
     if (id === "details") return <DetailsSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
     return <ReviewSection key={id} form={form} checks={checks} isNew={isNew} onJump={goTo} />;
   };

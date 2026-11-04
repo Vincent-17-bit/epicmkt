@@ -1,9 +1,9 @@
-import { PLAN_FEATURES, emptyOptions, isListed, rankSimilar, similarTerms } from "@epicmkt/shared";
+import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf, withVariantPricing } from "./shape.js";
+import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -127,6 +127,7 @@ const itemRow = (row, business) =>
     includes: row.includes,
     terms: row.terms,
     packSize: row.pack_size,
+    variants: row.variants,
     price: row.price === null ? NaN : Number(row.price),
     priceType: row.price_type,
     unit: row.unit,
@@ -139,14 +140,16 @@ const itemRow = (row, business) =>
     createdAt: row.created_at
   });
 
-// Options, variants, availability matrix and size chart (migration 0084), in one call. A database without the function yet
-// (Postgres 42883, PostgREST PGRST202) has no options; any other failure throws, so an item that has options is never shown as
-// if it had none. null (the item is not public) is the same as none: the row read above already decided that.
+// Options, option variants, option availability matrix and size chart (migration 0086), in one call. These are NEW keys: the item's
+// own `availability` status string and its legacy `variants` list (which pricing.variants is built from, flash included) are not
+// touched. A database without the function yet (Postgres 42883, PostgREST PGRST202) has no options; any other failure throws, so an
+// item that has options is never shown as if it had none. null (the item is not public) is the same as none: the row read above
+// already decided that.
 const optionsFor = async (itemId) => {
   const found = await supabase.rpc("public_item_options", { p_item: itemId });
   if (found.error && MISSING_FUNCTION.has(found.error.code)) return emptyOptions();
   const data = unwrap(found);
-  const sound = data !== null && typeof data === "object" && !Array.isArray(data) && Array.isArray(data.options) && Array.isArray(data.variants);
+  const sound = data !== null && typeof data === "object" && !Array.isArray(data) && Array.isArray(data.options) && Array.isArray(data.optionVariants);
   return sound ? { ...emptyOptions(), ...data } : emptyOptions();
 };
 
@@ -159,8 +162,12 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const item = itemRow(row, business);
   const [{ now, entries }, options] = await Promise.all([liveEntries(), optionsFor(itemId)]);
   const entry = entries.find((e) => e.item.id === itemId);
-  const basePricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
-  const pricing = withVariantPricing(basePricing, options.variants, { flashActive: Boolean(entry) });
+  const { discount } = entry?.sale ?? {};
+  const pricing = entry
+    ? { ...entry.pricing, variants: variantPricing(item.variants, (price) => flashPrice(discount.type, discount.value, price)) }
+    : Number.isFinite(item.regularPrice)
+      ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit, item.variants)
+      : null;
   const card = cardOfBusiness(business, origin);
   return {
     ...item,
