@@ -3,7 +3,7 @@ import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf, variantPricing } from "./shape.js";
+import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf, withVariantPricing } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -160,7 +160,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const [{ now, entries }, options] = await Promise.all([liveEntries(), optionsFor(itemId)]);
   const entry = entries.find((e) => e.item.id === itemId);
   const basePricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
-  const pricing = basePricing && options.variants.length > 0 ? { ...basePricing, variants: variantPricing(options.variants) } : basePricing;
+  const pricing = withVariantPricing(basePricing, options.variants, { flashActive: Boolean(entry) });
   const card = cardOfBusiness(business, origin);
   return {
     ...item,

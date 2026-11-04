@@ -386,6 +386,7 @@ declare
   v_price numeric;
   v_sale numeric;
   v_media uuid[];
+  v_rows jsonb := '[]'::jsonb;
   m jsonb;
   v_changed boolean;
   v_chart public.size_charts;
@@ -421,11 +422,7 @@ begin
       end if;
     end loop;
 
-    -- Check every variant first, then write.
-    create temp table if not exists _opt_variants (
-      ord integer, combo_key text, choice jsonb, price numeric, sale_price numeric, stock_count integer, status text, sku text, media_ids uuid[]
-    ) on commit drop;
-    truncate _opt_variants;
+    -- Check every variant first (collected in v_rows), then write.
 
     for e in select jsonb_array_elements(v_vars) loop
       n := n + 1;
@@ -476,13 +473,15 @@ begin
           v_media := v_media || (m #>> '{}')::uuid;
         end loop;
       end if;
-      insert into _opt_variants values (n, v_key, e -> 'choice', v_price, v_sale, v_stock, v_status, v_sku, v_media);
+      v_rows := v_rows || jsonb_build_array(jsonb_build_object('ord', n, 'combo_key', v_key, 'choice', e -> 'choice', 'price', v_price, 'sale_price', v_sale,
+                                                               'stock_count', v_stock, 'status', v_status, 'sku', v_sku, 'media_ids', to_jsonb(v_media)));
     end loop;
 
     -- The flash guard of seller_save_item covers variant prices too: they cannot change while the item is in a scheduled or live sale.
     if exists (select 1 from public.flash_sales s where s.item_id = p_item and s.status in ('scheduled', 'live')) then
       select exists (
-        select 1 from _opt_variants t full join public.item_variants o on o.item_id = p_item and o.combo_key = t.combo_key
+        select 1 from jsonb_to_recordset(v_rows) as t(combo_key text, price numeric, sale_price numeric)
+          full join public.item_variants o on o.item_id = p_item and o.combo_key = t.combo_key
         where (t.combo_key is null or o.combo_key is null) and coalesce(t.price, o.price) is not null
            or (t.combo_key is not null and o.combo_key is not null and (t.price, t.sale_price) is distinct from (o.price, o.sale_price))
       ) into v_changed;
@@ -492,7 +491,9 @@ begin
     delete from public.item_variants where item_id = p_item and not (combo_key = any (v_keys));
     update public.item_variants set sku = null where item_id = p_item;   -- a SKU may move between combinations in one save
     insert into public.item_variants (item_id, business_id, combo_key, choice, price, sale_price, stock_count, status, sku, media_ids, copy_media_ids, sort)
-    select p_item, p_business, t.combo_key, t.choice, t.price, t.sale_price, t.stock_count, t.status, t.sku, t.media_ids, '{}', t.ord - 1 from _opt_variants t
+    select p_item, p_business, t.combo_key, t.choice, t.price, t.sale_price, t.stock_count, t.status, t.sku,
+           array(select jsonb_array_elements_text(t.media_ids)::uuid), '{}', t.ord - 1
+      from jsonb_to_recordset(v_rows) as t(ord integer, combo_key text, choice jsonb, price numeric, sale_price numeric, stock_count integer, status text, sku text, media_ids jsonb)
     on conflict (item_id, combo_key) do update set
       choice = excluded.choice, price = excluded.price, sale_price = excluded.sale_price, stock_count = excluded.stock_count, status = excluded.status,
       sku = excluded.sku, media_ids = excluded.media_ids, copy_media_ids = '{}', sort = excluded.sort, updated_at = now();

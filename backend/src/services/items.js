@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, isPurchasable, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -177,8 +177,11 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   // Detail only, like the live API: lists keep their lean shape. The old {id, label, price} entries are a subset of the new
   // variants (every variant has a label), so pricing and pages read them unchanged.
   const detail = optionsOf(business.services.find((svc) => svc.id === item.id) ?? {});
-  const priced = { ...item, variants: detail.variants };
   const sale = liveSaleFor(item, business);
+  // Same rules as the live API: only variants a buyer can pick are listed for pricing, and a new-style item in a live flash sale keeps
+  // pricing as it was (flash pricing per variant is a separate task). Old variants keep their flash overrides as they always had.
+  const isNewStyle = Array.isArray(business.services.find((svc) => svc.id === item.id)?.optionAxes);
+  const priced = { ...item, variants: isNewStyle && sale ? [] : detail.variants.filter(isPurchasable) };
   return {
     ...item,
     ...detail,

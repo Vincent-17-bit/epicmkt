@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, isPurchasable, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -98,12 +98,21 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
-// pricing.variants for an item with options: one entry per variant with its label and regular price (flash and offers are not
-// applied here), the same list the demo backend builds. No variants: the empty list the page has always had.
+// pricing.variants for an item with options: one entry per variant a buyer can pick (sold-out and unavailable ones are left out, since
+// the page defaults to the first entry and builds the chat message from it) with its label and regular price. Flash and offers are
+// not applied here. No variants: the empty list the page has always had.
 export const variantPricing = (variants) =>
   (Array.isArray(variants) ? variants : [])
-    .filter((v) => Number.isFinite(v?.price))
+    .filter((v) => isPurchasable(v) && Number.isFinite(v?.price))
     .map((v) => ({ id: v.id, label: v.label, regularPrice: v.price, salePrice: v.price, savings: 0, discountPercent: 0 }));
+
+// The pricing of an item with options. An item in a live flash sale keeps pricing exactly as it was (no variant list): the page shows
+// each variant's sale price, and flash pricing per variant is a separate task. Otherwise the list from variantPricing, if any.
+export const withVariantPricing = (pricing, variants, { flashActive = false } = {}) => {
+  if (!pricing || flashActive) return pricing;
+  const list = variantPricing(variants);
+  return list.length > 0 ? { ...pricing, variants: list } : pricing;
+};
 
 export const pricingOf = (regularPrice, salePrice, priceType, unit) => ({
   regularPrice,

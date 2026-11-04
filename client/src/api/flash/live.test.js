@@ -507,6 +507,18 @@ describe("live item and business pages", () => {
         expect(item.pricing).toMatchObject({ regularPrice: 1000 });
       });
 
+      it("a sold-out or unavailable combination is in the matrix but not in pricing.variants", async () => {
+        setup();
+        const rows = [
+          { ...payload.variants[0], id: "gone", label: "S", status: "out_of_stock" },
+          { ...payload.variants[0], id: "open", label: "M", status: "available", price: 1300 },
+        ];
+        db().rpc.public_item_options = () => ({ ...payload, variants: rows });
+        const item = await live.getItemDetail(ID);
+        expect(item.variants.map((x) => x.id)).toEqual(["gone", "open"]);
+        expect(item.pricing.variants.map((x) => x.id)).toEqual(["open"]);
+      });
+
       it("an item without options gets empty arrays, an empty matrix and no chart; its pricing is untouched", async () => {
         setup();
         db().rpc.public_item_options = () => ({ options: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChart: null });

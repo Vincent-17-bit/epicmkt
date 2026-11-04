@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   OPTION_LIMITS, OPTION_DISPLAY_TYPES, VARIANT_STATUSES, optionSlug, comboKey, storedOptions, validateOptions, cleanOptionAxes, allCombinations,
-  buildAvailability, variantLabel, statusForChoice, selectableValues, emptyOptions, publicOptions, sizeChartFor, legacyVariantsToOptions, cleanSizeChart, cleanSizeChartOverride,
+  buildAvailability, variantLabel, isPurchasable, statusForChoice, selectableValues, emptyOptions, publicOptions, sizeChartFor, legacyVariantsToOptions, cleanSizeChart, cleanSizeChartOverride,
 } from "./options.js";
 
 const MEDIA = "5f1c2d3e-0000-4000-8000-000000000001";
@@ -286,4 +286,10 @@ test("choosing a value greys out what only exists in another", () => {
   assert.deepEqual(selectableValues(m, { color: "blue" }).size, { s: "unavailable", m: "available", l: "out_of_stock" });
   assert.deepEqual(selectableValues(m, { color: "red" }).color, { red: "available", blue: "available" }, "an axis can always be switched");
   assert.equal(statusForChoice(m, { color: "red", size: "m" }), "unavailable");
+});
+
+test("only available and limited-stock variants are purchasable", () => {
+  assert.deepEqual(VARIANT_STATUSES.filter((status) => isPurchasable({ status })), ["available", "limited_stock"]);
+  assert.equal(isPurchasable(null), false);
+  assert.equal(isPurchasable({}), false);
 });

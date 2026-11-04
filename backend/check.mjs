@@ -274,7 +274,8 @@ console.log("items ok");
   assert.deepEqual(detail.optionAvailability.values.color, { tan: "available", black: "available" }, "a value shows its best status across combinations");
   assert.equal(detail.sizeChart.id, "chart-shoes-eu");
   assert.equal(detail.sizeChart.overridden, false);
-  assert.ok(detail.pricing.variants.length === 4 && detail.pricing.variants[0].label === "Tan / 38", "pricing still lists variants with label and price");
+  assert.deepEqual(detail.pricing.variants.map((v) => v.label), ["Tan / 38", "Tan / 39", "Black / 40"], "pricing lists only what a buyer can pick; sold-out Black / 39 stays in the matrix but not in the list");
+  assert.ok(detail.pricing.variants.every((v) => Number.isFinite(v.regularPrice)), "each entry has a price");
 
   // an item with no options: exactly the empty payload, and the fields it always had
   const plain = urban.services.find((s) => s.name === "Ladies Ankara dress");

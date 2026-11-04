@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { businessOf, cardOfBusiness, cardOfFlash, itemOf } from "./shape.js";
+import { businessOf, cardOfBusiness, cardOfFlash, itemOf, variantPricing, withVariantPricing } from "./shape.js";
+import { defaultVariantId } from "../../lib/itemView.js";
 import { hoursCaption, hoursRows, statusText } from "../../lib/businessView.js";
 import { toSummary } from "../browse/engine.js";
 import { setUserTimeZone } from "@epicmkt/shared";
@@ -207,5 +208,32 @@ describe("customer gallery, team, timetable and shop settings", () => {
     expect(shopSettingsOf(null)).toEqual({ whatsappGreeting: null, showClosesChip: true, partialClosureMessage: null });
     expect(shopSettingsOf({ whatsapp_greeting: "Hi {item}", show_closes_chip: false, partial_closure_message: "Some items are out." }))
       .toEqual({ whatsappGreeting: "Hi {item}", showClosesChip: false, partialClosureMessage: "Some items are out." });
+  });
+});
+
+describe("pricing.variants for items with options", () => {
+  const regular = { regularPrice: 1000, salePrice: 1000, savings: 0, discountPercent: 0 };
+  const v = (id, label, price, status = "available") => ({ id, label, price, status });
+  const list = [v("a", "Red / S", 1500, "out_of_stock"), v("b", "Red / M", 1200, "unavailable"), v("c", "Blue / M", 1300, "limited_stock"), v("d", "Blue / L", 1400), v("e", "No price", null)];
+
+  it("lists only variants a buyer can pick, with a price", () => {
+    expect(variantPricing(list).map((x) => x.id)).toEqual(["c", "d"]);
+    expect(variantPricing(list)[0]).toEqual({ id: "c", label: "Blue / M", regularPrice: 1300, salePrice: 1300, savings: 0, discountPercent: 0 });
+    expect(variantPricing(undefined)).toEqual([]);
+  });
+
+  it("the page never defaults to a sold-out or unavailable combination", () => {
+    const pricing = withVariantPricing(regular, list);
+    expect(["c", "d"]).toContain(defaultVariantId(pricing));
+    // the first listed variant is sold out: it must not be the default just because it is first
+    expect(defaultVariantId(withVariantPricing(regular, [v("a", "Sold out", 1000, "out_of_stock"), v("d", "Open", 1400)]))).toBe("d");
+  });
+
+  it("keeps the pricing exactly as it was when there is nothing to pick, no variants, or a live flash sale", () => {
+    expect(withVariantPricing(regular, [])).toBe(regular);
+    expect(withVariantPricing(regular, [v("a", "Gone", 1000, "out_of_stock")])).toBe(regular);
+    expect(withVariantPricing(regular, list, { flashActive: true })).toBe(regular);
+    expect(withVariantPricing(null, list)).toBeNull();
+    expect(withVariantPricing(regular, list)).toEqual({ ...regular, variants: variantPricing(list) });
   });
 });

@@ -292,6 +292,10 @@ export const buildAvailability = (axes, variants) => {
   };
 };
 
+// A variant a buyer can pick: sold-out and unavailable combinations are not offered (they stay in the matrix, where a picker greys
+// them out). Pages that list variants to choose from, and the default selection, must only see these.
+export const isPurchasable = (variant) => variant?.status === "available" || variant?.status === "limited_stock";
+
 // What a picker needs from the matrix, so a client never scans cells or guesses.
 // statusForChoice: the status of one FULL choice ({ color: "red", size: "m" }). A combination with no cell is `missing`
 // ("unavailable"). null while the choice is still incomplete or names an unknown value.
