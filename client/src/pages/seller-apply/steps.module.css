@@ -66,7 +66,7 @@
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--primary-tint);
   color: var(--primary-pressed);
 }
