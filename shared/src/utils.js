@@ -56,14 +56,16 @@ export const directionsLink = (lat, lng) =>
  *   first, so 1299.999 is "KES 1,300", not "KES 1,300.00".
  * - `decimals` defaults to 2, the smallest unit of the shilling. Pass 0 to round
  *   to whole shillings.
- * - null, undefined and anything that is not a finite number return `empty`
- *   ("KES 0" by default, which is what these callers always showed). Pass
- *   `empty: ""` or `empty: "–"` where a missing amount should look missing.
+ * - A missing amount (null or undefined) returns `empty`, "KES 0" by default.
+ *   Pass `empty: ""` or `empty: "–"` where it should look missing.
+ * - An amount that is not a finite number (NaN, "abc", Infinity) is a bug in
+ *   the data, not a missing value, so it returns `invalid` ("–") instead of
+ *   passing for "KES 0".
  */
-export function formatKes(amount, { decimals = 2, empty = "KES 0" } = {}) {
+export function formatKes(amount, { decimals = 2, empty = "KES 0", invalid = "–" } = {}) {
   if (amount === null || amount === undefined) return empty;
   const value = Number(amount);
-  if (!Number.isFinite(value)) return empty;
+  if (!Number.isFinite(value)) return invalid;
   const rounded = Number(value.toFixed(decimals));
   const places = Number.isInteger(rounded) ? 0 : decimals;
   return `KES ${rounded.toLocaleString("en-KE", { minimumFractionDigits: places, maximumFractionDigits: places })}`;

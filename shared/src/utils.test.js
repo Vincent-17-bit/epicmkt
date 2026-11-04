@@ -144,10 +144,18 @@ test("formatKes `decimals` overrides the places; 0 rounds to whole shillings", (
   assert.equal(formatKes(12.3456, { decimals: 3 }), "KES 12.346");
 });
 
-test("formatKes returns `empty` for null, undefined and non-numbers; the default is KES 0", () => {
-  for (const bad of [null, undefined, NaN, "abc", Infinity]) {
-    assert.equal(formatKes(bad), "KES 0");
-    assert.equal(formatKes(bad, { empty: "" }), "");
-    assert.equal(formatKes(bad, { empty: "–" }), "–");
+test("formatKes returns `empty` for a missing amount; the default is KES 0", () => {
+  for (const missing of [null, undefined]) {
+    assert.equal(formatKes(missing), "KES 0");
+    assert.equal(formatKes(missing, { empty: "" }), "");
+    assert.equal(formatKes(missing, { empty: "–" }), "–");
+  }
+});
+
+test("formatKes does not pass bad data off as KES 0", () => {
+  for (const bad of [NaN, "abc", Infinity, -Infinity, {}]) {
+    assert.equal(formatKes(bad), "–");
+    assert.equal(formatKes(bad, { empty: "" }), "–", "`empty` is for missing amounts only");
+    assert.equal(formatKes(bad, { invalid: "?" }), "?");
   }
 });
