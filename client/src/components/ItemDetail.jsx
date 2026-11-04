@@ -21,7 +21,7 @@ import { chatMessage, defaultVariantId } from "../lib/itemView.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
-import { ItemView, coverUrl, metaDescription, Skeleton } from "@epicmkt/ui";
+import { ItemView, coverUrl, metaDescription, Skeleton, Button } from "@epicmkt/ui";
 
 import FlashBanner from "./FlashBanner.jsx";
 import FlashStickyBar from "./FlashStickyBar.jsx";
@@ -264,10 +264,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
           {failed && (
             <div className={styles.state} role="alert">
               <p>{t("item.loadFailed")}</p>
-              <button type="button" className={styles.retry} onClick={() => refetch()}>
-                <FontAwesomeIcon icon={faRotateRight} aria-hidden="true" />
+              <Button variant="secondary" icon={faRotateRight} onClick={() => refetch()}>
                 {t("item.retry")}
-              </button>
+              </Button>
             </div>
           )}
 

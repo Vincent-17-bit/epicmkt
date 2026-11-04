@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { Button } from "@epicmkt/ui";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt } from "@fortawesome/free-solid-svg-icons";
@@ -35,9 +36,9 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
   const body = isError && entries.length === 0 ? (
     <div className={styles.error} role="alert">
       <p>{t("flash.loadFailed")}</p>
-      <button type="button" className={styles.retry} onClick={() => refetch()}>
+      <Button variant="secondary" onClick={() => refetch()}>
         {t("flash.retry")}
-      </button>
+      </Button>
     </div>
   ) : (
     <>

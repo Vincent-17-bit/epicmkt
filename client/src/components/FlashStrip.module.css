@@ -61,15 +61,6 @@
   padding: var(--space-3) var(--space-4);
 }
 
-.retry {
-  min-height: 44px;
-  padding: 0 var(--space-4);
-  border: 2px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 700;
-}
 
 .offline {
   margin: 0 0 var(--space-2);
