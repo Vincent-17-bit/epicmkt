@@ -1,4 +1,4 @@
-import { DAYS, closingInfo, exceptionFor, intervalsOn, isOpenOn, nairobiNow } from "./utils.js";
+import { DAYS, closingInfo, exceptionFor, intervalsOn, isOpenOn, nairobiNow, openAllDayNow } from "./utils.js";
 import { zonedTimeToUtc } from "./time.js";
 import { nextShopDateOf, safeShopZone, shopTimeText } from "./shopTime.js";
 import { addDays } from "./seller/exceptions.js";
@@ -19,9 +19,11 @@ function reasonFor(hours, exceptions, now, opensAt) {
 export function businessStatus(hours, exceptions, date, timeZone) {
   const weekly = hours && typeof hours === "object" ? hours : {};
   const list = Array.isArray(exceptions) ? exceptions : [];
-  const now = nairobiNow(date, timeZone);
-  const { closesAt, opensAt } = closingInfo(weekly, list, date, timeZone);
-  const isOpen = closesAt !== null;
+  const zone = safeShopZone(timeZone);
+  const now = nairobiNow(date, zone);
+  const { closesAt: rawCloses, opensAt } = closingInfo(weekly, list, date, zone);
+  const isOpen = rawCloses !== null;
+  const closesAt = isOpen && openAllDayNow(weekly, list, date, zone) ? null : rawCloses;
   const special = exceptionFor(list, now.date)?.kind === "special";
   const reason = isOpen ? (special ? reasonFor(weekly, list, now, opensAt) : null) : reasonFor(weekly, list, now, opensAt);
   return { isOpen, closesAt, opensAt, reason };
@@ -65,8 +67,9 @@ export function describeStatus(status, date, timeZone, viewerZone) {
 }
 
 export const statusOf = (hours, exceptions, date, timeZone, viewerZone) => {
-  const status = businessStatus(hours, exceptions, date, timeZone);
-  return { ...status, ...describeStatus(status, date, timeZone, viewerZone) };
+  const zone = safeShopZone(timeZone);
+  const status = businessStatus(hours, exceptions, date, zone);
+  return { ...status, ...describeStatus(status, date, zone, viewerZone) };
 };
 
 const LATE_HOUR = 21;
