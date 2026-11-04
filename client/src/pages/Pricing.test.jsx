@@ -121,8 +121,8 @@ describe("Seller guide", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Seller guide" })).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "On this page" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Need help getting listed?" })).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: "Related pages" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Become a seller/ })).toHaveAttribute("href", "/become-a-seller");
-    expect(screen.getByRole("link", { name: /Pricing/ })).toHaveAttribute("href", "/pricing");
+    const related = within(screen.getByRole("navigation", { name: "Related pages" }));
+    expect(related.getByRole("link", { name: /Become a seller/ })).toHaveAttribute("href", "/become-a-seller");
+    expect(related.getByRole("link", { name: /Pricing/ })).toHaveAttribute("href", "/pricing");
   });
 });
