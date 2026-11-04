@@ -94,7 +94,7 @@
   align-items: center;
   justify-content: center;
   width: 44px;
-  height: 44px;
+  height: var(--tap);
   border: 2px solid var(--text);
   border-radius: var(--radius-pill);
   font-size: var(--text-lg);

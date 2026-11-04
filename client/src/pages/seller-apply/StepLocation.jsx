@@ -11,8 +11,7 @@ import {
   faXmark
 } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
-import Button from "../../components/Button.jsx";
-import Skeleton from "../../components/Skeleton.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import { ErrorLine, fieldId, MaskedField, SelectField, TextField } from "./Field.jsx";
 import { phoneDisplay, phoneMask } from "./masks.js";
 import form from "./form.module.css";

@@ -21,7 +21,7 @@
   align-items: center;
   justify-content: center;
   width: 44px;
-  height: 44px;
+  height: var(--tap);
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--on-primary);
@@ -53,14 +53,4 @@
   .more:hover .moreIcon {
     transform: translateX(4px);
   }
-}
-
-.error {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
 }

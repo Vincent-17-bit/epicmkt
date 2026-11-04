@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import { routes } from "../../../config/routes.js";
 import { usePageTitle } from "../../../hooks/usePageTitle.js";
 import { endStatusSession, getApplication } from "../../../api/applications/index.js";
-import Skeleton from "../../../components/Skeleton.jsx";
-import Button from "../../../components/Button.jsx";
+import { Skeleton, Button } from "@epicmkt/ui";
 import { CodeForm, RequestForm } from "./StatusForms.jsx";
 import ApplicationView from "./ApplicationView.jsx";
 import AdminSimulator from "./AdminSimulator.jsx";
@@ -110,7 +110,7 @@ export default function CheckStatus() {
 
   return (
     <div className={styles.page}>
-      <Link to="/become-a-seller" className={styles.back}>
+      <Link to={routes.apply} className={styles.back}>
         <FontAwesomeIcon icon={faArrowLeft} />
         <span>Back to the application form</span>
       </Link>

@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from "./motion.js";
+
 export const THEME_KEY = "epicmkt-theme";
 export const MODES = ["light", "dark", "system"];
 
@@ -27,7 +29,7 @@ export function resolveMode(mode) {
 export function applyMode(mode, animate = false) {
   const root = document.documentElement;
   const resolved = resolveMode(mode);
-  if (animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (animate && !prefersReducedMotion()) {
     root.classList.add("theme-switching");
     window.setTimeout(() => root.classList.remove("theme-switching"), 250);
   }

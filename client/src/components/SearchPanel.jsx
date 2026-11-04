@@ -13,10 +13,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { getSuggestions, getTopSearches, logSearch } from "../api/index.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
-import Container from "./Container.jsx";
+import { Container, IconButton, Skeleton } from "@epicmkt/ui";
 import Flame from "./Flame.jsx";
-import IconButton from "./IconButton.jsx";
-import Skeleton from "./Skeleton.jsx";
 import styles from "./SearchPanel.module.css";
 
 export const SEARCH_ID = "site-search";
@@ -131,7 +129,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
         <Container className={styles.inner}>
           <form role="search" className={styles.bar} onSubmit={submit}>
             <div className={styles.search}>
-              <label htmlFor="search-input" className={styles.srOnly}>
+              <label htmlFor="search-input" className="sr-only">
                 Search businesses
               </label>
               <input

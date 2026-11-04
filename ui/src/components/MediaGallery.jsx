@@ -293,7 +293,7 @@ export default function MediaGallery({ media, images, videos, name = "", labels,
               </button>
             </>
           )}
-          <p className={styles.sr} aria-live="polite" aria-atomic="true">
+          <p className="sr-only" aria-live="polite" aria-atomic="true">
             {position(current, index)}
           </p>
         </div>

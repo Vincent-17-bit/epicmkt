@@ -1,4 +1,4 @@
-import Container from "./Container.jsx";
+import { Container } from "@epicmkt/ui";
 import styles from "./HomeSection.module.css";
 
 /** One band of the home page. Every band uses this spacing, so the gaps between sections are the same all the way down. */

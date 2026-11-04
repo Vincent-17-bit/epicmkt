@@ -14,7 +14,7 @@ export default function OfferChip({ offer, className = "", labels = DEFAULT_LABE
   const extra = offer.extra > 0 ? offer.extra : 0;
   return (
     <span className={`${styles.offerTag} ${className}`} data-offer-chip="">
-      <span className={styles.sr}>
+      <span className="sr-only">
         {labels.offer}: {offer.label}
         {extra > 0 && `, +${extra} ${labels.more}`}
       </span>

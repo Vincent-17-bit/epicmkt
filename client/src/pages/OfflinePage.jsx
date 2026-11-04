@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { faWifi, faHouse, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import StatusPage from "../components/StatusPage.jsx";
-import Button from "../components/Button.jsx";
+import { Button } from "@epicmkt/ui";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 
 export default function OfflinePage() {

@@ -97,7 +97,7 @@
   align-items: center;
   justify-content: center;
   width: 44px;
-  height: 44px;
+  height: var(--tap);
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;

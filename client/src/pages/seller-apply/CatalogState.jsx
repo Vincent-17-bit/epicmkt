@@ -1,7 +1,6 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
-import Button from "../../components/Button.jsx";
-import Skeleton from "../../components/Skeleton.jsx";
+import { Button, Skeleton } from "@epicmkt/ui";
 import styles from "./steps.module.css";
 
 export function CatalogLoading({ rows = 4 }) {

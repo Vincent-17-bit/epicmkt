@@ -92,7 +92,7 @@ exports[`customer ItemCard > is the shared card from @epicmkt/ui, so the seller 
           class="_was_71452e"
         >
           <span
-            class="_sr_71452e"
+            class="sr-only"
           >
             Was
              

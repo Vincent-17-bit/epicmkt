@@ -121,10 +121,10 @@
 
 .missing {
   padding: var(--space-3) var(--space-4);
-  border: 1.5px solid var(--danger-border);
+  border: 1.5px solid var(--status-bad-border);
   border-radius: var(--radius-card);
-  background: var(--danger-bg);
-  color: var(--danger-fg);
+  background: var(--status-bad-bg);
+  color: var(--status-bad-fg);
 }
 
 .missing ul {

@@ -1,9 +1,16 @@
-.error {
+.card {
   display: grid;
   justify-items: start;
   gap: var(--space-3);
-  padding: var(--space-4);
   border-radius: var(--radius-card);
   background: var(--surface);
   box-shadow: var(--shadow-sm);
+}
+
+.roomy {
+  padding: var(--space-5);
+}
+
+.snug {
+  padding: var(--space-4);
 }

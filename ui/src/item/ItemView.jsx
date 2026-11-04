@@ -117,7 +117,7 @@ export default function ItemView({
                     </p>
                     <p className={styles.was}>
                       <s>
-                        <span className={styles.sr}>{t("item.was")} </span>
+                        <span className="sr-only">{t("item.was")} </span>
                         {formatKes(shown.regularPrice)}
                       </s>
                       <span>

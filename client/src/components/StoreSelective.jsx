@@ -6,7 +6,7 @@ import { faArrowRight, faChevronLeft, faChevronRight } from "@fortawesome/free-s
 import { items } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import ItemCard from "./ItemCard.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Skeleton } from "@epicmkt/ui";
 import styles from "./StoreSelective.module.css";
 
 const LIMIT = 12;

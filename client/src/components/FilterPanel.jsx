@@ -78,7 +78,7 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
       <fieldset className={styles.group}>
         <legend className={styles.legend}>Price from (KES)</legend>
         <div className={styles.range}>
-          <label htmlFor={id("pmin")} className={styles.srOnly}>
+          <label htmlFor={id("pmin")} className="sr-only">
             Minimum price
           </label>
           <input
@@ -93,7 +93,7 @@ export default function FilterPanel({ idPrefix, filters, facets, onChange }) {
             onBlur={commitPrice}
           />
           <span aria-hidden="true">–</span>
-          <label htmlFor={id("pmax")} className={styles.srOnly}>
+          <label htmlFor={id("pmax")} className="sr-only">
             Maximum price
           </label>
           <input

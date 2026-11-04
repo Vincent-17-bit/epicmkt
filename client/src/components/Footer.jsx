@@ -1,77 +1,65 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUp, faChevronDown, faClock, faEnvelope, faLocationDot, faPhone } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatPhoneKE, telLink, whatsappLink } from "@epicmkt/shared";
 import { site } from "../lib/site.js";
-import Container from "./Container.jsx";
-import { Logo } from "@epicmkt/ui";
+import { businessLinks, links } from "../config/nav.js";
+import { t } from "../i18n/index.js";
+import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { scrollToTop } from "../lib/scrollToTop.js";
+import { Logo, Container } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import styles from "./Footer.module.css";
 
 const columns = [
   {
     area: "quick",
-    title: "Quick links",
+    titleKey: "footer.quickLinks",
     links: [
-      { to: "/", label: "Home" },
-      { to: "/#categories", label: "Categories" },
-      { to: "/search", label: "Browse all businesses" },
-      { to: "/about", label: "About" }
+      { to: "/", labelKey: "footer.home" },
+      { to: "/#categories", labelKey: "footer.categories" },
+      { to: "/search", labelKey: "footer.browseAll" },
+      links.about
     ]
   },
   {
     area: "business",
-    title: "For businesses",
-    links: [
-      { to: "/become-a-seller", label: "Become a seller" },
-      { to: "/pricing", label: "Pricing" },
-      { to: "/seller-guide", label: "Seller guide" }
-    ]
+    titleKey: "footer.forBusinesses",
+    links: businessLinks
   },
   {
     area: "help",
-    title: "Help",
+    titleKey: "footer.help",
     links: [
-      { to: "/faq", label: "FAQs" },
-      { to: "/about", label: "How it works" },
-      { to: "/contact", label: "Report a problem" },
-      { to: "/contact", label: "Suggest a business" }
+      links.faq,
+      { to: links.about.to, labelKey: "footer.howItWorks" },
+      { to: links.contact.to, labelKey: "footer.reportProblem" },
+      { to: links.contact.to, labelKey: "footer.suggestBusiness" }
     ]
   },
   {
     area: "legal",
-    title: "Legal",
+    titleKey: "footer.legal",
     links: [
-      { to: "/privacy", label: "Privacy Policy" },
-      { to: "/terms", label: "Terms of Service" },
-      { to: "/cookies", label: "Cookie notice" }
+      { to: "/privacy", labelKey: "footer.privacy" },
+      { to: "/terms", labelKey: "footer.terms" },
+      { to: "/cookies", labelKey: "footer.cookies" }
     ]
   }
 ];
 
 const contactRows = [
   site.phone && { key: "phone", icon: faPhone, label: formatPhoneKE(site.phone), href: telLink(site.phone) },
-  site.whatsapp && { key: "whatsapp", icon: faWhatsapp, label: `WhatsApp ${formatPhoneKE(site.whatsapp)}`, href: whatsappLink(site.whatsapp), external: true },
+  site.whatsapp && { key: "whatsapp", icon: faWhatsapp, label: `${t("footer.whatsapp")} ${formatPhoneKE(site.whatsapp)}`, href: whatsappLink(site.whatsapp), external: true },
   site.email && { key: "email", icon: faEnvelope, label: site.email, href: `mailto:${site.email}` },
   site.town && { key: "town", icon: faLocationDot, label: site.town },
-  site.supportHours && { key: "hours", icon: faClock, label: `Support: ${site.supportHours}` }
+  site.supportHours && { key: "hours", icon: faClock, label: `${t("footer.support")} ${site.supportHours}` }
 ].filter(Boolean);
 
 // Below this width the link groups collapse into an accordion.
 const WIDE = "(min-width: 40rem)";
-
-function useDesktop() {
-  const [desktop, setDesktop] = useState(() => window.matchMedia(WIDE).matches);
-  useEffect(() => {
-    const query = window.matchMedia(WIDE);
-    const sync = () => setDesktop(query.matches);
-    query.addEventListener("change", sync);
-    return () => query.removeEventListener("change", sync);
-  }, []);
-  return desktop;
-}
 
 function Section({ id, title, area, desktop, children }) {
   const [open, setOpen] = useState(false);
@@ -98,29 +86,21 @@ function Section({ id, title, area, desktop, children }) {
 }
 
 export default function Footer() {
-  const desktop = useDesktop();
-  const toTop = () => {
-    const main = document.getElementById("main");
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-    main?.focus({ preventScroll: true });
-  };
+  const desktop = useMediaQuery(WIDE);
 
   return (
     <footer className={styles.footer} data-theme="light">
-      <button type="button" className={styles.topBar} onClick={toTop}>
+      <button type="button" className={styles.topBar} onClick={scrollToTop}>
         <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
-        Back to top
+        {t("footer.backToTop")}
       </button>
 
       <Container className={styles.top}>
         <div className={`${styles.brand} ${styles.about}`}>
-          <Logo tagline="Digitize. Scale. Thrive." />
-          <p className={styles.aboutText}>
-            EpicMKT is a directory of local businesses across Kenya. Find what you need nearby, then call, WhatsApp or get directions in one tap.
-          </p>
+          <Logo tagline={t("footer.tagline")} />
+          <p className={styles.aboutText}>{t("footer.about")}</p>
           {site.socials.length > 0 && (
-            <ul className={styles.socials} aria-label="Follow EpicMKT">
+            <ul className={styles.socials} aria-label={t("footer.follow")}>
               {site.socials.map((s) => (
                 <li key={s.key}>
                   <a href={s.href} className={styles.social} target="_blank" rel="noopener noreferrer" aria-label={s.label}>
@@ -132,7 +112,7 @@ export default function Footer() {
           )}
         </div>
 
-        <Section id="footer-contact" title="Contact" area="contact" desktop={desktop}>
+        <Section id="footer-contact" title={t("footer.contact")} area="contact" desktop={desktop}>
           <ul className={styles.rows}>
             {contactRows.map((row) => (
               <li key={row.key} className={styles.row}>
@@ -148,20 +128,20 @@ export default function Footer() {
             ))}
             <li className={styles.row}>
               <FontAwesomeIcon icon={faEnvelope} className={styles.rowIcon} aria-hidden="true" />
-              <Link to="/contact" className={styles.rowLink}>
-                Contact page
+              <Link to={links.contact.to} className={styles.rowLink}>
+                {t("footer.contactPage")}
               </Link>
             </li>
           </ul>
         </Section>
 
         {columns.map((col) => (
-          <Section key={col.title} id={`footer-${col.area}`} title={col.title} area={col.area} desktop={desktop}>
+          <Section key={col.area} id={`footer-${col.area}`} title={t(col.titleKey)} area={col.area} desktop={desktop}>
             <ul className={styles.links}>
               {col.links.map((link) => (
-                <li key={link.label}>
+                <li key={link.labelKey}>
                   <Link to={link.to} className={styles.link}>
-                    {link.label}
+                    {t(link.labelKey)}
                   </Link>
                 </li>
               ))}
@@ -172,9 +152,9 @@ export default function Footer() {
 
       <Container>
         <div className={styles.bottom}>
-          <p className={styles.note}>Find it nearby. Call, WhatsApp or get directions in one tap.</p>
+          <p className={styles.note}>{t("footer.note")}</p>
           <ThemeSwitch className={styles.theme} />
-          <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. All rights reserved.</small>
+          <small className={styles.copy}>&copy; {new Date().getFullYear()} EpicMKT. {t("footer.rights")}</small>
         </div>
       </Container>
     </footer>

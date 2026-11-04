@@ -50,7 +50,7 @@ export default function ItemCard({
               <span className={styles.price}>{formatKes(pricing.salePrice)}</span>
               {onSale && (
                 <s className={styles.was}>
-                  <span className={styles.sr}>{labels.was} </span>
+                  <span className="sr-only">{labels.was} </span>
                   {formatKes(pricing.regularPrice)}
                 </s>
               )}

@@ -30,7 +30,7 @@ export default function PromoChip({ promo, className = "", labels = DEFAULT_LABE
           {offers > 1 && (
             <>
               <span className={styles.count} aria-hidden="true">{offers}</span>
-              <span className={styles.sr}>{offers} {suffix}</span>
+              <span className="sr-only">{offers} {suffix}</span>
             </>
           )}
         </span>

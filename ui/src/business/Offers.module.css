@@ -261,7 +261,6 @@
   font-size: var(--text-xs);
 }
 
-.sr,
 .live {
   position: absolute;
   width: 1px;

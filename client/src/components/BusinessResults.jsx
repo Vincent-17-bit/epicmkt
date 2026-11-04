@@ -6,8 +6,7 @@ import { searchBusinesses } from "../api/index.js";
 import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import BusinessCard from "./BusinessCard.jsx";
 import CardGrid from "./CardGrid.jsx";
-import Button from "./Button.jsx";
-import Skeleton from "./Skeleton.jsx";
+import { Button, Skeleton, StateCard } from "@epicmkt/ui";
 import styles from "./BusinessResults.module.css";
 
 const PAGE_SIZE = 12;
@@ -46,12 +45,11 @@ export default function BusinessResults({ query = "", categoryId = null, filters
 
   if (isError && !data) {
     return (
-      <div className={styles.state} role="alert">
-        <p>{online ? "We could not load businesses." : "You are offline. Search needs a connection."}</p>
+      <StateCard role="alert" message={online ? "We could not load businesses." : "You are offline. Search needs a connection."}>
         <Button icon={faRotateRight} onClick={() => refetch()}>
           Try again
         </Button>
-      </div>
+      </StateCard>
     );
   }
 
@@ -72,8 +70,7 @@ export default function BusinessResults({ query = "", categoryId = null, filters
 
   if (!total) {
     return (
-      <div className={styles.state}>
-        <p>{onReset ? "No businesses match these filters." : "No businesses found. Try another search or browse the categories."}</p>
+      <StateCard message={onReset ? "No businesses match these filters." : "No businesses found. Try another search or browse the categories."}>
         {onReset ? (
           <Button icon={faRotateRight} onClick={onReset}>
             Clear filters
@@ -83,7 +80,7 @@ export default function BusinessResults({ query = "", categoryId = null, filters
             Browse categories
           </Button>
         )}
-      </div>
+      </StateCard>
     );
   }
 

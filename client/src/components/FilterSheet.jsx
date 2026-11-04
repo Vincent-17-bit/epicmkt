@@ -1,7 +1,5 @@
 import { faXmark } from "@fortawesome/free-solid-svg-icons";
-import { BottomSheet } from "@epicmkt/ui";
-import Button from "./Button.jsx";
-import IconButton from "./IconButton.jsx";
+import { BottomSheet, Button, IconButton } from "@epicmkt/ui";
 import styles from "./FilterSheet.module.css";
 
 export default function FilterSheet({

@@ -71,7 +71,7 @@ function Deal({ deal, labels, mode, onOpenItem }) {
       <div className={styles.body}>
         <h3 className={styles.title}>{deal.title}</h3>
         <p className={styles.headline}>
-          <span className={styles.sr}>{deal.label}. </span>
+          <span className="sr-only">{deal.label}. </span>
           {deal.headline}
         </p>
         {deal.description && <p className={styles.description}>{deal.description}</p>}

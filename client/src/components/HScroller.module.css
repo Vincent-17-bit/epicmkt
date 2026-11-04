@@ -61,7 +61,7 @@
   align-items: center;
   justify-content: center;
   width: 44px;
-  height: 44px;
+  height: var(--tap);
   padding: 0;
   border: 1px solid var(--border-strong);
   border-radius: 50%;
@@ -112,7 +112,7 @@
 .header {
   display: flex;
   align-items: center;
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0 calc(var(--space-4) + 44px * 2 + var(--space-2)) 0 var(--space-4);
 }
 
@@ -120,7 +120,7 @@
   top: 0;
   display: inline-flex;
   width: 44px;
-  height: 44px;
+  height: var(--tap);
   transform: none;
   box-shadow: none;
 }

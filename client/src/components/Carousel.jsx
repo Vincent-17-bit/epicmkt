@@ -2,6 +2,7 @@ import { Children, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { scrollBehavior } from "../lib/motion.js";
 import styles from "./Carousel.module.css";
 
 const EDGE_SLACK = 2;
@@ -54,8 +55,7 @@ export default function Carousel({
     const gap = parseFloat(getComputedStyle(track).columnGap) || 0;
     const step = first.getBoundingClientRect().width + gap;
     const whole = Math.max(1, Math.floor((track.clientWidth + gap) / step));
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    track.scrollBy({ left: dir * whole * step, behavior: reduce ? "auto" : "smooth" });
+    track.scrollBy({ left: dir * whole * step, behavior: scrollBehavior() });
   };
 
   const onPointerDown = (event) => {

@@ -3,8 +3,7 @@ import { faLocationCrosshairs, faRotateLeft, faXmark } from "@fortawesome/free-s
 import { TOWNS } from "@epicmkt/shared";
 import { useGeoStore } from "../stores/geo.js";
 import { showToast } from "../stores/toast.js";
-import Button from "./Button.jsx";
-import IconButton from "./IconButton.jsx";
+import { Button, Field, IconButton, Select } from "@epicmkt/ui";
 import styles from "./LocationDialog.module.css";
 
 export default function LocationDialog() {
@@ -71,17 +70,16 @@ export default function LocationDialog() {
         )}
 
         <form className={styles.form} onSubmit={submit}>
-          <label className={styles.field}>
-            <span className={styles.label}>{canLocate ? "Or choose a town" : "Choose a town"}</span>
-            <select className={styles.select} value={choice} onChange={(e) => setChoice(e.target.value)}>
+          <Field label={canLocate ? "Or choose a town" : "Choose a town"}>
+            <Select value={choice} onChange={(e) => setChoice(e.target.value)}>
               <option value="">Select a town</option>
               {TOWNS.map((t) => (
                 <option key={t.name} value={t.name}>
                   {t.name}, {t.county}
                 </option>
               ))}
-            </select>
-          </label>
+            </Select>
+          </Field>
           <Button type="submit" variant={canLocate ? "secondary" : "primary"} disabled={!choice || choice === town}>
             Use this town
           </Button>

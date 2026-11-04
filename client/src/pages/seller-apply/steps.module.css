@@ -9,10 +9,10 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1.5px solid var(--danger-border);
+  border: 1.5px solid var(--status-bad-border);
   border-radius: var(--ap-r);
-  background: var(--danger-bg);
-  color: var(--danger-fg);
+  background: var(--status-bad-bg);
+  color: var(--status-bad-fg);
 }
 
 .errorCard div {
@@ -66,7 +66,7 @@
   flex: none;
   width: 2.5rem;
   height: 2.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-card);
   background: var(--primary-tint);
   color: var(--primary-pressed);
 }
@@ -187,8 +187,8 @@
 
 @media (hover: hover) {
   .iconBtn:hover {
-    background: var(--danger-bg);
-    color: var(--danger-fg);
+    background: var(--status-bad-bg);
+    color: var(--status-bad-fg);
   }
 
   .addBtn:hover {
@@ -240,8 +240,8 @@
 }
 
 .pinState[data-set="true"] {
-  background: var(--ok-bg);
-  color: var(--ok-fg);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 @media (max-width: 23.75rem) {

@@ -29,7 +29,7 @@ export default function FlashBanner({ flash, pricing, unit, bannerRef, ended = f
             {t("flash.endsOn")} {formatEndsAt(sale.endsAt)}
           </p>
         </div>
-        <span className={styles.sr} role="status">
+        <span className="sr-only" role="status">
           {remaining}
         </span>
         <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} animate className={styles.fuse} />
@@ -45,7 +45,7 @@ export default function FlashBanner({ flash, pricing, unit, bannerRef, ended = f
           {saving && (
             <p className={styles.was}>
               <s>
-                <span className={styles.sr}>{t("item.was")} </span>
+                <span className="sr-only">{t("item.was")} </span>
                 {kesText(pricing.regularPrice)}
               </s>
               <span className={styles.saved}>

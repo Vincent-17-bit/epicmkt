@@ -164,13 +164,13 @@
   }
 }
 
-@media (min-width: 56.25rem) {
+@media (min-width: 64rem) {
   .categoryGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 75rem) {
+@media (min-width: 80rem) {
   .categoryGrid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
@@ -197,16 +197,6 @@
 
 a.card:active {
   transform: scale(0.98);
-  box-shadow: var(--shadow-sm);
-}
-
-.error {
-  display: grid;
-  justify-items: start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-card);
-  background: var(--surface);
   box-shadow: var(--shadow-sm);
 }
 
