@@ -129,7 +129,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
         <Container className={styles.inner}>
           <form role="search" className={styles.bar} onSubmit={submit}>
             <div className={styles.search}>
-              <label htmlFor="search-input" className={styles.srOnly}>
+              <label htmlFor="search-input" className="sr-only">
                 Search businesses
               </label>
               <input

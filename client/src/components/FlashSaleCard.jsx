@@ -66,7 +66,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       </span>
       {pricing.savings > 0 && (
         <s className={styles.was}>
-          <span className={styles.sr}>{t("item.was")} </span>
+          <span className="sr-only">{t("item.was")} </span>
           {kes(pricing.regularPrice)}
         </s>
       )}

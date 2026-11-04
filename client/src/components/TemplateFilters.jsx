@@ -26,7 +26,7 @@ function RangeFilter({ field, id, value, onChange }) {
         {field.unit ? ` (${field.unit})` : ""}
       </legend>
       <div className={styles.range}>
-        <label htmlFor={`${id}-min`} className={styles.srOnly}>
+        <label htmlFor={`${id}-min`} className="sr-only">
           {field.label}, minimum
         </label>
         <input
@@ -41,7 +41,7 @@ function RangeFilter({ field, id, value, onChange }) {
           onBlur={commit}
         />
         <span aria-hidden="true">–</span>
-        <label htmlFor={`${id}-max`} className={styles.srOnly}>
+        <label htmlFor={`${id}-max`} className="sr-only">
           {field.label}, maximum
         </label>
         <input

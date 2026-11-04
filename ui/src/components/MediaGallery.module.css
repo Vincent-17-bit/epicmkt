@@ -272,14 +272,6 @@
   outline-offset: 2px;
 }
 
-.sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 
 /* Wide screens: the rail stands vertically beside the stage and never makes it taller. */
 @media (min-width: 64rem) {

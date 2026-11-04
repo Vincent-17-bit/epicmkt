@@ -51,7 +51,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
       >
         <Container className={styles.inner}>
           <form role="search" className={`${styles.search} ${styles.areaSearch}`} onSubmit={submit}>
-            <label htmlFor="menu-search" className={styles.srOnly}>
+            <label htmlFor="menu-search" className="sr-only">
               {t("menu.searchLabel")}
             </label>
             <input

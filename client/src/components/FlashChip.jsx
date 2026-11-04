@@ -10,7 +10,7 @@ export default function FlashChip({ endsAt, className = "" }) {
   return (
     <span className={`${styles.chip} ${className}`}>
       <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
-      <span className={styles.sr}>
+      <span className="sr-only">
         {t("flash.label")}. {label}
       </span>
       <CountdownTiles endsAt={endsAt} variant="inline" />

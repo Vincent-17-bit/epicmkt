@@ -37,7 +37,7 @@ function CopyCode({ code }) {
       <span className={styles.codeLabel}>{t("offer.code")}</span>
       <strong className={styles.codeValue}>{code}</strong>
       <FontAwesomeIcon icon={done ? faCheck : faCopy} aria-hidden="true" />
-      <span className={styles.sr} role="status">{done ? t("offer.copied") : ""}</span>
+      <span className="sr-only" role="status">{done ? t("offer.copied") : ""}</span>
     </button>
   );
 }
@@ -67,7 +67,7 @@ export default function OfferTicket({ view, item, price, onOpenProduct }) {
       <div className={styles.body}>
         <h4 className={styles.title}>{offer.title || offerHeadline(offer)}</h4>
         <p className={styles.headline}>
-          <span className={styles.sr}>{offerLabel(offer)}. </span>
+          <span className="sr-only">{offerLabel(offer)}. </span>
           {offerHeadline(offer)}
         </p>
         {offer.description && <p className={styles.description}>{offer.description}</p>}
