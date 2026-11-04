@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { daysLeft, formatDay, formatKes, planLabel, subscriptionView } from "@epicmkt/shared/billing";
+import { daysLeft, formatDay, formatPrice, planLabel, subscriptionView } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import Banners from "../../components/Banners.jsx";
 import SetupCard from "../../onboarding/SetupCard.jsx";
@@ -133,7 +133,7 @@ export default function Subscription() {
       {suspended ? null : <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />}
       {suspended ? null : <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />}
       <PaymentHistory payments={payments.data ?? []} />
-      {sub.data.plans[business.planKey] && <p className={ui.muted}>{formatKes(sub.data.plans[business.planKey].price)} per month is your current price.</p>}
+      {sub.data.plans[business.planKey] && <p className={ui.muted}>{formatPrice(sub.data.plans[business.planKey].price)} per month is your current price.</p>}
     </div>
   );
 }

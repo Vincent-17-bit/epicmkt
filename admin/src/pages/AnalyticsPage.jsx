@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/index.js";
 import LoadError from "../components/LoadError.jsx";
-import { barGeometry, funnelRows, kes, percent } from "../lib/audit.js";
+import { barGeometry, funnelRows, percent } from "../lib/audit.js";
 import { calendarDayShort } from "../lib/time.js";
+import { formatKes } from "@epicmkt/shared";
 
 const WINDOWS = [[7, "7 days"], [30, "30 days"], [90, "90 days"], [365, "12 months"]];
 const day = calendarDayShort;
@@ -38,14 +39,14 @@ export default function AnalyticsPage() {
         {isError ? <LoadError what="analytics" error={error} onRetry={refetch} /> : isLoading || !data ? <p>Loading…</p> : (
           <>
             <div className="stat-grid">
-              {data.can_see_money && <div className="stat"><span className="muted">Revenue, {data.days} days</span><strong>{kes(data.revenue_total)}</strong></div>}
-              {data.can_see_money && <div className="stat"><span className="muted">Monthly recurring</span><strong>{kes(data.mrr_kes)}</strong></div>}
+              {data.can_see_money && <div className="stat"><span className="muted">Revenue, {data.days} days</span><strong>{formatKes(data.revenue_total)}</strong></div>}
+              {data.can_see_money && <div className="stat"><span className="muted">Monthly recurring</span><strong>{formatKes(data.mrr_kes)}</strong></div>}
               <div className="stat"><span className="muted">Live businesses</span><strong>{data.businesses.live}</strong><span className="muted">{data.businesses.premium_live} premium</span></div>
               <div className="stat"><span className="muted">Expired or suspended</span><strong>{data.businesses.expired + data.businesses.suspended}</strong></div>
               {data.can_see_money && data.renewals?.due > 0 && <div className="stat"><span className="muted">Renewal rate</span><strong>{percent(data.renewals.renewed, data.renewals.due)}%</strong><span className="muted">{data.renewals.renewed} of {data.renewals.due} that came due</span></div>}
             </div>
 
-            {data.can_see_money && <><h3 className="heading-flow">Revenue per day</h3><BarChart rows={data.revenue_by_day} valueKey="kes" label="Revenue per day" format={kes} /></>}
+            {data.can_see_money && <><h3 className="heading-flow">Revenue per day</h3><BarChart rows={data.revenue_by_day} valueKey="kes" label="Revenue per day" format={formatKes} /></>}
             <h3 className="heading-flow">New businesses per day</h3>
             <BarChart rows={data.new_businesses_by_day} valueKey="n" label="New businesses per day" />
 
@@ -66,7 +67,7 @@ export default function AnalyticsPage() {
             <div className="table-shell">
               <table>
                 <thead><tr><th scope="col">Category</th><th scope="col">Live</th>{data.can_see_money && <th scope="col">Monthly value</th>}</tr></thead>
-                <tbody>{data.by_category.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.live}</td>{data.can_see_money && <td>{kes(c.monthly_kes)}</td>}</tr>)}</tbody>
+                <tbody>{data.by_category.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.live}</td>{data.can_see_money && <td>{formatKes(c.monthly_kes)}</td>}</tr>)}</tbody>
               </table>
             </div>
           </>

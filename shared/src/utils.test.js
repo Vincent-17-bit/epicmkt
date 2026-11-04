@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { closingInfo, hoursRowsFor, isOpenOn, nairobiNow } from "./utils.js";
+import { closingInfo, formatKes, hoursRowsFor, isOpenOn, nairobiNow } from "./utils.js";
 
 // Nairobi is UTC+3, no daylight saving. at("2026-10-20", "09:30") is Tue 20 Oct 2026, 09:30 in Nairobi.
 const at = (date, time) => new Date(`${date}T${time}:00+03:00`);
@@ -116,4 +116,38 @@ test("overnight: 09:00 to 09:00 is a full 24 hours, and a weekly overnight slot 
   assert.equal(openClub("2026-10-24", "03:00"), true, "Friday's slot is still open early on Saturday");
   assert.equal(openClub("2026-10-24", "04:00"), false);
   assert.equal(openClub("2026-10-23", "03:00"), false, "early Friday is Thursday's night, and Thursday has no hours");
+});
+
+test("formatKes groups thousands and drops decimals on whole amounts", () => {
+  assert.equal(formatKes(1300), "KES 1,300");
+  assert.equal(formatKes(0), "KES 0");
+  assert.equal(formatKes("2500"), "KES 2,500");
+  assert.equal(formatKes(1234567), "KES 1,234,567");
+});
+
+test("formatKes shows two decimals on fractional amounts, like 999.99", () => {
+  assert.equal(formatKes(999.99), "KES 999.99");
+  assert.equal(formatKes(99.5), "KES 99.50");
+  assert.equal(formatKes(1500.05), "KES 1,500.05");
+  assert.equal(formatKes(-12.5), "KES -12.50");
+});
+
+test("formatKes rounds before deciding whether to show decimals", () => {
+  assert.equal(formatKes(1299.999), "KES 1,300");
+  assert.equal(formatKes(12.001), "KES 12");
+  assert.equal(formatKes(12.345), "KES 12.35");
+});
+
+test("formatKes `decimals` overrides the places; 0 rounds to whole shillings", () => {
+  assert.equal(formatKes(99.5, { decimals: 0 }), "KES 100");
+  assert.equal(formatKes(1299.4, { decimals: 0 }), "KES 1,299");
+  assert.equal(formatKes(12.3456, { decimals: 3 }), "KES 12.346");
+});
+
+test("formatKes returns `empty` for null, undefined and non-numbers; the default is KES 0", () => {
+  for (const bad of [null, undefined, NaN, "abc", Infinity]) {
+    assert.equal(formatKes(bad), "KES 0");
+    assert.equal(formatKes(bad, { empty: "" }), "");
+    assert.equal(formatKes(bad, { empty: "–" }), "–");
+  }
 });

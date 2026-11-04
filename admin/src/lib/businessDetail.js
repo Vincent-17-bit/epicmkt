@@ -64,7 +64,6 @@ export function auditLabel(action) {
   return words ? words[0].toUpperCase() + words.slice(1) : "Change";
 }
 
-export const kes = (value) => `KES ${Number(value ?? 0).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
 
 /** The business as the status chip and countdown expect it. */
 export const stateInput = (business) => ({

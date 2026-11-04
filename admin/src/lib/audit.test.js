@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { actionLabel, barGeometry, diffRows, funnelRows, kes, nairobiDay, percent } from "./audit.js";
+import { formatKes } from "@epicmkt/shared";
+import { actionLabel, barGeometry, diffRows, funnelRows, nairobiDay, percent } from "./audit.js";
 
 test("known actions read as sentences; unknown ones are made readable", () => {
   assert.equal(actionLabel("item.hide"), "Hid an item");
@@ -45,7 +46,7 @@ test("percentages and the funnel", () => {
 });
 
 test("money and dates", () => {
-  assert.equal(kes(12500), "KES 12,500");
-  assert.equal(kes(null), "KES 0");
+  assert.equal(formatKes(12500), "KES 12,500");
+  assert.equal(formatKes(null), "KES 0");
   assert.match(nairobiDay(new Date("2026-10-21T22:30:00Z")), /^2026-10-22$/, "22:30 UTC is already tomorrow in Nairobi");
 });

@@ -3,8 +3,9 @@ import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import Modal from "../../components/Modal.jsx";
 import {
-  ACTION_FIELDS, ACTION_HELP, ACTION_LABELS, buildDecisionPayload, describeError, formatKes, statusMeta, validateDecision,
+  ACTION_FIELDS, ACTION_HELP, ACTION_LABELS, buildDecisionPayload, describeError, statusMeta, validateDecision,
 } from "../../lib/applications.js";
+import { formatKes } from "@epicmkt/shared";
 
 const CHANNELS = [
   { id: "sms", label: "SMS" },
@@ -91,7 +92,7 @@ export default function DecisionDialog({ application, action, openFlags = 0, onC
           <>
             <label className="field field--inline">
               <input type="checkbox" checked={override} onChange={(event) => setOverride(event.target.checked)} />
-              Charge a different amount than {formatKes(application.price)}
+              Charge a different amount than {formatKes(application.price, { empty: "" })}
             </label>
             {override ? (
               <>

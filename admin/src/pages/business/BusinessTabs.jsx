@@ -6,9 +6,10 @@ import Button from "../../components/Button.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
-import { auditLabel, friendlyError, kes } from "../../lib/businessDetail.js";
+import { auditLabel, friendlyError } from "../../lib/businessDetail.js";
 import { daysLeft, formatBusinessDate, formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
 import HealthPanel from "./HealthPanel.jsx";
+import { formatKes } from "@epicmkt/shared";
 
 const PAYMENT_STATUS = { confirmed: "Confirmed", submitted: "Submitted", awaiting_confirmation: "Awaiting confirmation", needs_assignment: "Needs assignment", rejected: "Rejected", ignored: "Ignored" };
 const label = (map, key) => map[key] ?? String(key ?? "").replace(/_/g, " ");
@@ -68,7 +69,7 @@ export function OverviewTab({ detail }) {
         <li><strong>{s.items_hidden}</strong><span>Hidden by admin</span></li>
         <li><strong>{s.open_flags}</strong><span>Open flags</span></li>
         <li><strong>{s.open_reports}</strong><span>Open reports</span></li>
-        <li><strong>{kes(s.paid_total_kes)}</strong><span>Paid in total</span></li>
+        <li><strong>{formatKes(s.paid_total_kes, { decimals: 0 })}</strong><span>Paid in total</span></li>
         <li><strong>{s.payments_waiting}</strong><span>Payments waiting</span></li>
       </ul>
       <div className="biz-columns">
@@ -94,7 +95,7 @@ export function OverviewTab({ detail }) {
           <h3 className="heading-flow">Subscription</h3>
           <dl className="biz-fields">
             <Field name="Plan">{b.plan_key ? `${b.plan_key[0].toUpperCase()}${b.plan_key.slice(1)}` : ""}</Field>
-            <Field name="Monthly price">{b.monthly_price ? kes(b.monthly_price) : ""}</Field>
+            <Field name="Monthly price">{b.monthly_price ? formatKes(b.monthly_price, { decimals: 0 }) : ""}</Field>
             <Field name="Paid until">{b.paid_until ? `${formatBusinessDate(b.paid_until)} (${left < 0 ? `${-left} day${left === -1 ? "" : "s"} ago` : `${left} day${left === 1 ? "" : "s"} left`})` : ""}</Field>
             <Field name="Grace period">
               {`${graceNow} day${graceNow === 1 ? "" : "s"} (${overridden ? "set for this business" : "default"})`}
@@ -112,7 +113,7 @@ export function OverviewTab({ detail }) {
               ) : null}
             </Field>
             <Field name="First paid">{formatDate(b.first_paid_at)}</Field>
-            <Field name="Credit">{b.credit_kes ? kes(b.credit_kes) : ""}</Field>
+            <Field name="Credit">{b.credit_kes ? formatKes(b.credit_kes, { decimals: 0 }) : ""}</Field>
           </dl>
         </section>
         <section>
@@ -162,7 +163,7 @@ export function PaymentsTab({ id }) {
               {rows.map((p) => (
                 <tr key={p.id}>
                   <td>{formatDate(p.created_at)}</td>
-                  <td>{kes(p.amount_kes)}{p.months ? <span className="muted"> · {p.months} mo</span> : null}</td>
+                  <td>{formatKes(p.amount_kes, { decimals: 0 })}{p.months ? <span className="muted"> · {p.months} mo</span> : null}</td>
                   <td>{label(PAYMENT_STATUS, p.status)}{p.decline_reason ? <span className="muted"> ({p.decline_reason})</span> : null}</td>
                   <td>{label({}, p.kind)}</td>
                   <td>{p.mpesa_code ? <Link to={`/admin/payments?q=${encodeURIComponent(p.mpesa_code)}`}>{p.mpesa_code}</Link> : "—"}</td>
@@ -204,7 +205,7 @@ export function ItemsTab({ id }) {
       refresh();
     },
   });
-  const price = (i) => (i.price_type === "fixed" && i.price !== null ? kes(i.price) : label({}, i.price_type));
+  const price = (i) => (i.price_type === "fixed" && i.price !== null ? formatKes(i.price, { decimals: 0 }) : label({}, i.price_type));
   const canModerate = can("moderation.resolve");
   return (
     <>
@@ -218,7 +219,7 @@ export function ItemsTab({ id }) {
                   <tr key={i.id}>
                     <td>{i.name}</td>
                     <td>{i.section ?? "—"}</td>
-                    <td>{price(i)}{i.sale_price ? <span className="muted"> · sale {kes(i.sale_price)}</span> : null}</td>
+                    <td>{price(i)}{i.sale_price ? <span className="muted"> · sale {formatKes(i.sale_price, { decimals: 0 })}</span> : null}</td>
                     <td>
                       {i.hidden_by_admin ? <span className="chip chip--black">Hidden by admin</span> : i.draft ? <span className="chip chip--neutral">Draft</span> : i.visible ? <span className="chip chip--live">Visible</span> : <span className="chip chip--neutral">Hidden by seller</span>}
                       {i.hidden_by_admin && i.admin_hide_reason ? <div className="muted">{i.admin_hide_reason}</div> : null}

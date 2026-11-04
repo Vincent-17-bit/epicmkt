@@ -5,9 +5,9 @@ import { api } from "../api/index.js";
 import LoadError from "../components/LoadError.jsx";
 import { daysLeftLabel, groupRadar, revenueAtRisk, whatsappLink } from "../lib/moderation.js";
 import { businessDayShort, stampDay } from "../lib/time.js";
+import { formatKes } from "@epicmkt/shared";
 
 const WINDOWS = [[7, "7 days"], [14, "14 days"], [30, "30 days"], [60, "60 days"]];
-const kes = (v) => `KES ${Number(v).toLocaleString("en-KE")}`;
 const day = stampDay;
 
 export default function ExpiryRadarPage() {
@@ -35,7 +35,7 @@ export default function ExpiryRadarPage() {
         {isError ? <LoadError what="the expiry radar" error={error} onRetry={refetch} /> : isLoading ? <p>Loading…</p> : (
           <>
             <p className="radar-summary">
-              <strong>{data.length}</strong> {data.length === 1 ? "listing" : "listings"} in this window. <strong>{kes(atRisk)}</strong> a month is still to be collected (payments already waiting for confirmation are not counted).
+              <strong>{data.length}</strong> {data.length === 1 ? "listing" : "listings"} in this window. <strong>{formatKes(atRisk)}</strong> a month is still to be collected (payments already waiting for confirmation are not counted).
             </p>
             {groups.map((group) => (
               <section key={group.id} className="radar-group" aria-labelledby={`radar-${group.id}`}>
@@ -51,7 +51,7 @@ export default function ExpiryRadarPage() {
                           return (
                             <tr key={row.id}>
                               <td><Link to={`/admin/businesses/${row.id}`}>{row.name}</Link></td>
-                              <td>{row.plan_key} · {kes(row.monthly_price)}</td>
+                              <td>{row.plan_key} · {formatKes(row.monthly_price)}</td>
                               <td>{businessDayShort(row.paid_until)}</td>
                               <td>{daysLeftLabel(row)}</td>
                               <td>{row.last_reminder_at ? day(row.last_reminder_at) : "None sent"}</td>

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faMinus, faShieldHalved, faStar } from "@fortawesome/free-solid-svg-icons";
-import { compareFeatureRows, formatKes, priceBands } from "../shared/billing.js";
+import { compareFeatureRows, formatPrice, priceBands } from "../shared/billing.js";
 import { useCatalog } from "../pages/seller-apply/useCatalog.js";
 import { CatalogError, CatalogLoading } from "../pages/seller-apply/CatalogState.jsx";
 import { Button, Container } from "@epicmkt/ui";
@@ -66,7 +66,7 @@ export default function PlansSection({ id = "plans", children }) {
                   <span className={styles.planName}>Standard</span>
                   <span className={styles.price}>
                     {ranged && <span className={styles.from}>From </span>}
-                    {formatKes(lowStandard)}
+                    {formatPrice(lowStandard)}
                   </span>
                   <span className={styles.per}>per month</span>
                 </th>
@@ -76,7 +76,7 @@ export default function PlansSection({ id = "plans", children }) {
                   </span>
                   <span className={styles.price}>
                     {ranged && <span className={styles.from}>From </span>}
-                    {formatKes(lowPremium)}
+                    {formatPrice(lowPremium)}
                   </span>
                   <span className={styles.per}>per month</span>
                 </th>

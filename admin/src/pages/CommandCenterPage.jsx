@@ -7,7 +7,6 @@ import { useAuth } from "../auth/AuthContext.jsx";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { canReview } from "../lib/applications.js";
-import { kes } from "../lib/audit.js";
 import { attentionRows, lastDays, sum } from "../lib/commandCenter.js";
 import { attentionTotal } from "../lib/counts.js";
 import LiveActivityPanel, { ACTIVITY_KEY } from "../components/LiveActivityPanel.jsx";
@@ -15,6 +14,7 @@ import EmptyState from "../components/EmptyState.jsx";
 import ErrorCard from "../components/ErrorCard.jsx";
 import Skeleton, { SkeletonCard } from "../components/Skeleton.jsx";
 import Sparkline from "../components/Sparkline.jsx";
+import { formatKes } from "@epicmkt/shared";
 
 export { ACTIVITY_KEY };
 
@@ -55,7 +55,7 @@ export default function CommandCenterPage() {
     },
     { id: "expiring", label: "Expiring in 7 days", value: data?.expiringSoon, to: "/admin/businesses", context: data?.inGrace ? `${data.inGrace} more in the grace period` : "" },
     ...(revenue.length
-      ? [{ id: "revenue", label: `Revenue, last ${TREND_DAYS} days`, value: kes(sum(revenue)), to: "/admin/analytics", context: "", trend: revenue, trendLabel: `Revenue per day, last ${TREND_DAYS} days` }]
+      ? [{ id: "revenue", label: `Revenue, last ${TREND_DAYS} days`, value: formatKes(sum(revenue)), to: "/admin/analytics", context: "", trend: revenue, trendLabel: `Revenue per day, last ${TREND_DAYS} days` }]
       : []),
   ];
 

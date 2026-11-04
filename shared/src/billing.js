@@ -1,4 +1,5 @@
 import { businessDay, zonedParts, zoneLabel } from './time.js';
+import { formatKes } from './utils.js';
 
 export const PLAN_KEYS = ['standard', 'premium'];
 
@@ -6,13 +7,14 @@ export const PLAN_LABELS = { standard: 'Standard', premium: 'Premium' };
 
 export const planLabel = (planKey) => PLAN_LABELS[planKey] ?? planKey;
 
-export function formatKes(amount) {
+// A plan price for display: "Free" at zero, "" when it is not a number.
+export function formatPrice(amount) {
   if (!Number.isFinite(amount)) return '';
   if (amount === 0) return 'Free';
-  return `KES ${amount.toLocaleString('en-KE')}`;
+  return formatKes(amount);
 }
 
-export const formatKesPerMonth = (amount) => (amount === 0 ? 'Free' : `${formatKes(amount)} / month`);
+export const formatKesPerMonth = (amount) => (amount === 0 ? 'Free' : `${formatPrice(amount)} / month`);
 
 export const getPlan = (category, planKey) => category?.plans?.[planKey] ?? null;
 
@@ -40,7 +42,7 @@ export function summarizePlan(category, planKey) {
     planKey,
     label: planLabel(planKey),
     price: plan.price,
-    priceText: formatKes(plan.price),
+    priceText: formatPrice(plan.price),
     perMonthText: formatKesPerMonth(plan.price),
     itemsLimit: plan.limits.items,
     topBenefits: plan.topBenefits,
@@ -264,7 +266,7 @@ export function receiptModel({ payment, business, categoryName, issuer }) {
     plan: planLabel(payment.planKey ?? business.planKey),
     purpose: PAYMENT_KIND_LABELS[payment.kind] ?? payment.kind,
     amount: payment.amount,
-    amountText: formatKes(payment.amount),
+    amountText: formatPrice(payment.amount),
     mpesaCode: payment.mpesaCode,
     paidAt: formatDateTime(payment.confirmedAt ?? payment.submittedAt ?? payment.createdAt),
     period: payment.periodStart && payment.periodEnd ? `${formatDay(payment.periodStart)} to ${formatDay(payment.periodEnd)}` : '',

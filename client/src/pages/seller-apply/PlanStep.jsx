@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronDown, faCircleCheck, faMinus } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@epicmkt/ui";
-import { PLAN_FEATURE_GROUPS as GROUPS, compareFeatureRows as compareRows, formatKes, planLabel } from "../../shared/billing.js";
+import { PLAN_FEATURE_GROUPS as GROUPS, compareFeatureRows as compareRows, formatPrice, planLabel } from "../../shared/billing.js";
 import { CatalogError, CatalogLoading } from "./CatalogState.jsx";
 import { ErrorLine, fieldId } from "./Field.jsx";
 import styles from "./plans.module.css";
@@ -30,7 +30,7 @@ function PlanCard({ planKey, plan, selected, open, onSelect, onToggle, name }) {
         )}
       </div>
       <p className={styles.price}>
-        <strong>{formatKes(plan.price)}</strong> <span>per month</span>
+        <strong>{formatPrice(plan.price)}</strong> <span>per month</span>
       </p>
       <ul className={styles.top}>
         {plan.topBenefits.map((b) => (
@@ -147,8 +147,8 @@ export default function PlanStep({ catalog }) {
           <tbody>
             <tr>
               <th scope="row">Price per month</th>
-              <td>{formatKes(standard.price)}</td>
-              <td>{formatKes(premium.price)}</td>
+              <td>{formatPrice(standard.price)}</td>
+              <td>{formatPrice(premium.price)}</td>
             </tr>
             {rows.map((g) => (
               <Group key={g.group} group={g} />

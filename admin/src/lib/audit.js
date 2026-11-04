@@ -52,7 +52,6 @@ export function barGeometry(values, { width = 600, height = 140, gap = 2 } = {})
   return { bars, max };
 }
 
-export const kes = (n) => `KES ${Number(n ?? 0).toLocaleString("en-KE")}`;
 
 export function percent(part, whole) {
   if (!whole) return null;

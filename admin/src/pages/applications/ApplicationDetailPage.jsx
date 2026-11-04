@@ -7,13 +7,14 @@ import Button from "../../components/Button.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { COUNTS_KEY } from "../../hooks/useAdminCounts.js";
 import {
-  ACTION_LABELS, availableActions, canReview, describeError, eventLabel, flagPathLabel, formatBytes, formatKes, maskValue,
+  ACTION_LABELS, availableActions, canReview, describeError, eventLabel, flagPathLabel, formatBytes, maskValue,
   slotLabel, statusMeta,
 } from "../../lib/applications.js";
 import { formatBusinessDate, formatDateTime, timeAgo } from "../../lib/time.js";
 import ApplicationStatus from "./ApplicationStatus.jsx";
 import DecisionDialog from "./DecisionDialog.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
+import { formatKes } from "@epicmkt/shared";
 import "./applications.css";
 
 const ACTOR = { seller: "Applicant", admin: "Reviewer", system: "System" };
@@ -202,8 +203,8 @@ export default function ApplicationDetailPage() {
           <dl className="detail__grid">
             <Field label="Name">{app.businessName}</Field>
             <Field label="Category">{app.categoryName ?? app.categoryId}</Field>
-            <Field label="Plan">{app.plan === "premium" ? "Premium" : "Standard"}, {formatKes(app.price)} a month</Field>
-            {override ? <Field label="Price override">{formatKes(override.amount)}: {override.reason}</Field> : null}
+            <Field label="Plan">{app.plan === "premium" ? "Premium" : "Standard"}, {formatKes(app.price, { empty: "" })} a month</Field>
+            {override ? <Field label="Price override">{formatKes(override.amount, { empty: "" })}: {override.reason}</Field> : null}
             <Field label="Established">{app.yearEstablished}</Field>
             <Field label="Registered">{app.registered ? `Yes${app.regType ? `, ${app.regType.replace(/_/g, " ")}` : ""}` : "No"}</Field>
             <Field label="Registration number">{app.regNumber}</Field>

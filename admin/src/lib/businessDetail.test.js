@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DETAIL_TABS, auditLabel, bulkPermission, canToggleVisibility, friendlyError, kes, pickTab, visibleTabs } from "./businessDetail.js";
+import { formatKes } from "@epicmkt/shared";
+import { DETAIL_TABS, auditLabel, bulkPermission, canToggleVisibility, friendlyError, pickTab, visibleTabs } from "./businessDetail.js";
 import { roleCan } from "../auth/permissions.js";
 
 const tabIds = (role) => visibleTabs((action) => roleCan(role, action)).map((t) => t.id);
@@ -48,6 +49,6 @@ test("only live or paused, undeleted businesses can be hidden or shown", () => {
 });
 
 test("money is shown in KES with separators", () => {
-  assert.equal(kes(1300), "KES 1,300");
-  assert.equal(kes(null), "KES 0");
+  assert.equal(formatKes(1300), "KES 1,300");
+  assert.equal(formatKes(null), "KES 0");
 });

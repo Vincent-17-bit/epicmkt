@@ -1,4 +1,4 @@
-import { formatKes, planLabel } from "@epicmkt/shared/billing";
+import { formatPrice, planLabel } from "@epicmkt/shared/billing";
 import ui from "../../styles/ui.module.css";
 import styles from "./subscription.module.css";
 
@@ -9,7 +9,7 @@ function PlanColumn({ planKey, plan, current, canUpgrade, upgradeBlocked, onUpgr
         <h3>{planLabel(planKey)}</h3>
         {current ? <span className={`${ui.pill} ${ui.tone_info}`}>Your plan</span> : plan.badge ? <span className={`${ui.pill} ${ui.tone_ok}`}>{plan.badge}</span> : null}
       </header>
-      <p className={styles.price} style={{ margin: 0 }}>{formatKes(plan.price)}<span className={ui.muted} style={{ fontSize: "var(--text-sm)", fontWeight: 400 }}> / month</span></p>
+      <p className={styles.price} style={{ margin: 0 }}>{formatPrice(plan.price)}<span className={ui.muted} style={{ fontSize: "var(--text-sm)", fontWeight: 400 }}> / month</span></p>
       <p style={{ margin: 0 }}><strong>Unlimited</strong> items</p>
       <ul aria-label="Top benefits">{(plan.topBenefits ?? []).map((b) => <li key={b}>{b}</li>)}</ul>
       {Object.entries(plan.features ?? {}).map(([group, list]) => (

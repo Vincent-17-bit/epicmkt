@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 // Pure helpers for Plans, Categories and the template builder. They mirror the database's rules (migrations
 // 0026 and 0027) so the screen can say what is wrong before saving; the database still has the last word.
 
@@ -99,7 +100,6 @@ export function removeField(fields, index) {
 
 // ---- Plans -------------------------------------------------------------------------------------------------------
 
-const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 
 /** What a plan edit will mean, in words, for the confirmation step. */
 export function planImpact(row, newPrice) {
@@ -107,10 +107,10 @@ export function planImpact(row, newPrice) {
   const live = Number(row.live_businesses) || 0;
   if (newPrice !== row.price_kes) {
     const diff = newPrice - row.price_kes;
-    lines.push(`New and unpaid applications will owe ${kes(newPrice)} a month instead of ${kes(row.price_kes)} (${diff > 0 ? "+" : "-"}${kes(Math.abs(diff))}), straight away on the seller and application pages.`);
+    lines.push(`New and unpaid applications will owe ${formatKes(newPrice)} a month instead of ${formatKes(row.price_kes)} (${diff > 0 ? "+" : "-"}${formatKes(Math.abs(diff))}), straight away on the seller and application pages.`);
     lines.push(live === 0
       ? "No live businesses are on this plan."
-      : `${live} live ${live === 1 ? "business keeps" : "businesses keep"} the monthly price already set on ${live === 1 ? "its" : "their"} account (${kes(row.live_monthly_kes)} a month in total). Only a plan change by the seller picks up the new price.`);
+      : `${live} live ${live === 1 ? "business keeps" : "businesses keep"} the monthly price already set on ${live === 1 ? "its" : "their"} account (${formatKes(row.live_monthly_kes)} a month in total). Only a plan change by the seller picks up the new price.`);
   }
   return lines;
 }
