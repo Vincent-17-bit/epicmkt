@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@epicmkt/ui";
-import { maskPhone } from "@epicmkt/shared";
+import { formatDateTime, maskPhone } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { useBusinessFacts } from "../lib/useBusinessFacts.js";
 import { showToast } from "../state/toast.js";
@@ -11,7 +11,6 @@ import { Row, Section } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 // A sign-in is an instant, so it is shown in the viewer's own time zone.
-const when = new Intl.DateTimeFormat("en-KE", { dateStyle: "medium", timeStyle: "short" });
 
 // The sign-in email and password already have their own verified flows on the Account page, so this section links there
 // instead of repeating them. What lives here: the phone change request, other devices and the sign-in history.
@@ -63,7 +62,7 @@ export default function AccountSecurity() {
               <ul className={styles.history} aria-label="Sign-in history">
                 {history.rows.map((r) => (
                   <li key={r.id}>
-                    <time dateTime={r.at}>{when.format(new Date(r.at))}</time>
+                    <time dateTime={r.at}>{formatDateTime(r.at, { year: "numeric" })}</time>
                     <span>{r.device} · {r.success ? "Signed in" : "Failed attempt"}</span>
                     {r.success && r.failedBefore > 0 && <span className={styles.danger}>{r.failedBefore} failed {r.failedBefore === 1 ? "attempt" : "attempts"} before this sign-in</span>}
                   </li>

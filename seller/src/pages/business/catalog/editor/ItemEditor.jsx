@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { emptyItemForm, formFromItem, validateItemForm } from "@epicmkt/shared";
+import { emptyItemForm, formFromItem, formatDateTime, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -22,7 +22,6 @@ import { firstErrorTarget, qualityChecks, STEPS, stepDone, stepIndex } from "./m
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
-const when = (ms) => new Date(ms).toLocaleString("en-KE", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // The route element for both /business/catalog/new and /business/catalog/:itemId/edit.
@@ -398,7 +397,7 @@ function EditorForm({ item, sections, category, business }) {
           <form className={styles.form} onSubmit={(e) => e.preventDefault()} noValidate aria-label={isNew ? "Add item" : "Edit item"}>
             {restoredAt && (
               <div className={styles.banner} role="status">
-                <span>We brought back your unsaved changes from {when(restoredAt)}.</span>
+                <span>We brought back your unsaved changes from {formatDateTime(restoredAt)}.</span>
                 <button type="button" className={styles.linkBtn} onClick={startOver}>Start over</button>
               </div>
             )}
