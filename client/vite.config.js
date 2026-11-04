@@ -105,6 +105,12 @@ export default defineConfig(({ mode }) => {
           display_override: ["standalone", "minimal-ui"],
           theme_color: "#FFFFFF",
           background_color: "#F3F4F6",
+          // TODO: add `screenshots` (one wide, one narrow) so the install prompt can show a richer card. They must be real
+          // captures of the live app with real listings, and a demo build only has mock data, so none are shipped yet:
+          //   screenshots: [
+          //     { src: "/screenshot-wide.png", sizes: "1280x720", type: "image/png", form_factor: "wide", label: "Browse local businesses" },
+          //     { src: "/screenshot-narrow.png", sizes: "540x720", type: "image/png", form_factor: "narrow", label: "Find a business near you" }
+          //   ]
           categories: ["business", "lifestyle", "shopping"],
           prefer_related_applications: false,
           shortcuts: [
