@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { formatDateTime, formatDay, formatKes, PAYMENT_KIND_LABELS, PAYMENT_STATUS_LABELS } from "@epicmkt/shared/billing";
+import { formatDateTime, formatDay, formatPrice, PAYMENT_KIND_LABELS, PAYMENT_STATUS_LABELS } from "@epicmkt/shared/billing";
 import ui from "../../styles/ui.module.css";
 import styles from "./subscription.module.css";
 
@@ -29,7 +29,7 @@ export default function PaymentHistory({ payments }) {
               {payments.map((p) => (
                 <tr key={p.id} data-testid="payment-row">
                   <td data-label="Date">{formatDateTime(p.confirmedAt ?? p.submittedAt ?? p.createdAt)}<br /><span className={ui.muted}>{PAYMENT_KIND_LABELS[p.kind] ?? p.kind}</span></td>
-                  <td data-label="Amount" className={styles.num}>{formatKes(p.amount)}</td>
+                  <td data-label="Amount" className={styles.num}>{formatPrice(p.amount)}</td>
                   <td data-label="M-Pesa code" className={`${styles.mono} ${styles.num}`}>{p.mpesaCode ?? ""}</td>
                   <td data-label="Period covered">{p.periodStart && p.periodEnd ? `${formatDay(p.periodStart)} to ${formatDay(p.periodEnd)}` : ""}</td>
                   <td data-label="Status"><span className={`${ui.pill} ${ui[TONE[p.status]]}`}>{PAYMENT_STATUS_LABELS[p.status] ?? p.status}</span>{p.status === "rejected" && p.declineReason ? <><br /><span className={ui.muted}>{p.declineReason}</span></> : null}</td>

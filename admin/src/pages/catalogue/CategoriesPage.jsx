@@ -8,6 +8,7 @@ import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { CATEGORY_ERRORS, cleanField, docProblems, templateProblems } from "../../lib/catalogue.js";
 import { DocsEditor, QuestionsEditor } from "./TemplateBuilder.jsx";
+import { formatKes } from "@epicmkt/shared";
 
 const blank = { isNew: true, id: "", name: "", grp: "", icon: "store", tier: "B", sort: 100, active: false, template: [], extra_docs: [] };
 
@@ -96,7 +97,7 @@ export default function CategoriesPage() {
                     <td><strong>{c.name}</strong><div className="muted">{c.grp} · tier {c.tier}</div></td>
                     <td><span className={`status-pill ${c.active ? "status-pill--live" : "status-pill--neutral"}`}>{c.active ? "On" : "Off"}</span></td>
                     <td>{c.live_businesses} live{c.businesses > c.live_businesses ? ` (${c.businesses} total)` : ""}</td>
-                    <td>{c.priced_plans === 2 ? `From KES ${Number(c.min_price).toLocaleString("en-KE")}` : <span className="text-danger">Not priced</span>}</td>
+                    <td>{c.priced_plans === 2 ? `From ${formatKes(c.min_price)}` : <span className="text-danger">Not priced</span>}</td>
                     <td>{c.template.length}</td>
                     <td>{c.extra_docs.length}</td>
                     <td><Button size="sm" disabled={!canEdit} title={why("catalogue.edit")} onClick={() => setEditing({ ...c, isNew: false })} aria-label={`Edit ${c.name}`}>Edit</Button></td>

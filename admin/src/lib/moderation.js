@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 // Pure helpers for Moderation, Approvals and the Expiry Radar. No React, no network: easy to test.
 
 const REPORT_REASONS = {
@@ -47,8 +48,8 @@ export function changeValue(row, which) {
 export function changeCost(row) {
   if (row?.field !== "category_id") return "";
   const parts = [];
-  if (row.extra_due_kes > 0) parts.push(`The seller owes KES ${Number(row.extra_due_kes).toLocaleString("en-KE")} now`);
-  if (row.new_monthly_price != null) parts.push(`new monthly price KES ${Number(row.new_monthly_price).toLocaleString("en-KE")}${row.applies_from_next_renewal ? " from the next renewal" : ""}`);
+  if (row.extra_due_kes > 0) parts.push(`The seller owes ${formatKes(row.extra_due_kes)} now`);
+  if (row.new_monthly_price != null) parts.push(`new monthly price ${formatKes(row.new_monthly_price)}${row.applies_from_next_renewal ? " from the next renewal" : ""}`);
   if (parts.length === 0) return "";
   const text = parts.join("; ");
   return `${text.charAt(0).toUpperCase()}${text.slice(1)}.`;

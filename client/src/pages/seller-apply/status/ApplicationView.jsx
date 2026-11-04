@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { routes } from "../../../config/routes.js";
 import { Button } from "@epicmkt/ui";
-import { formatKes } from "../../../shared/billing.js";
+import { formatPrice } from "../../../shared/billing.js";
 import { docSlot, isDocPath } from "../../../shared/statusPaths.js";
 import { resubmitApplication, saveCorrections } from "../../../api/applications/index.js";
 import { LABELS } from "../formModel.js";
@@ -167,7 +167,7 @@ export default function ApplicationView({ app, session, onRefresh, onExpired, on
         <h2 id="pkg-title">Package</h2>
         <dl className={styles.list}>
           <div className={styles.row}><dt>Business type</dt><dd><span className={styles.value}>{app.category.name}</span></dd></div>
-          <div className={styles.row}><dt>Package</dt><dd><span className={styles.value}>{app.plan.name}, {formatKes(app.priceAtSubmission)} per month</span></dd></div>
+          <div className={styles.row}><dt>Package</dt><dd><span className={styles.value}>{app.plan.name}, {formatPrice(app.priceAtSubmission)} per month</span></dd></div>
         </dl>
         <p className={styles.small}>This price is fixed for your first month.</p>
       </section>

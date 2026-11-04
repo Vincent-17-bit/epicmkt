@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatKes, formatKesPerMonth, planLabel, planPrice, upgradeCost, priceRange, priceBands, compareFeatureRows, summarizePlan, getPlan, addCalendarMonth, graceEndsAt, listingState, categoryChangeQuote } from './billing';
+import { formatPrice, formatKesPerMonth, planLabel, planPrice, upgradeCost, priceRange, priceBands, compareFeatureRows, summarizePlan, getPlan, addCalendarMonth, graceEndsAt, listingState, categoryChangeQuote } from './billing';
 
 const cat = {
   id: 'bakery',
@@ -12,9 +12,9 @@ const cat = {
 
 describe('billing helpers', () => {
   it('formats money', () => {
-    expect(formatKes(1500)).toBe('KES 1,500');
-    expect(formatKes(0)).toBe('Free');
-    expect(formatKes(NaN)).toBe('');
+    expect(formatPrice(1500)).toBe('KES 1,500');
+    expect(formatPrice(0)).toBe('Free');
+    expect(formatPrice(NaN)).toBe('');
     expect(formatKesPerMonth(500)).toBe('KES 500 / month');
   });
 

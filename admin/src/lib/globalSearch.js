@@ -1,3 +1,4 @@
+import { formatKes } from "@epicmkt/shared";
 // Turns the raw jsonb from the admin_search() RPC into groups the header search can list, and says where each
 // result should open. Pure functions, no browser or Supabase. The demo API returns the same raw shape.
 //
@@ -5,7 +6,6 @@
 
 export const MIN_QUERY = 2;
 
-const kes = (value) => `KES ${Number(value ?? 0).toLocaleString("en-KE", { maximumFractionDigits: 0 })}`;
 const words = (text) => String(text ?? "").replace(/_/g, " ");
 const join = (...parts) => parts.filter((part) => part !== null && part !== undefined && String(part).trim() !== "").join(" · ");
 const toBusinesses = (name) => `/admin/businesses?q=${encodeURIComponent(name ?? "")}`;
@@ -25,12 +25,12 @@ const GROUPS = [
   {
     key: "payments",
     label: "Payments",
-    map: (r) => ({ id: r.id, title: join(r.mpesa_code, kes(r.amount_kes)), subtitle: join(r.business_name, words(r.status)), to: `/admin/payments?q=${encodeURIComponent(r.mpesa_code ?? r.business_name ?? "")}` }),
+    map: (r) => ({ id: r.id, title: join(r.mpesa_code, formatKes(r.amount_kes, { decimals: 0 })), subtitle: join(r.business_name, words(r.status)), to: `/admin/payments?q=${encodeURIComponent(r.mpesa_code ?? r.business_name ?? "")}` }),
   },
   {
     key: "items",
     label: "Items",
-    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.business_name, r.price !== null && r.price !== undefined ? kes(r.price) : null), to: r.business_id ? toBusiness(r.business_id, "items") : toBusinesses(r.business_name) }),
+    map: (r) => ({ id: r.id, title: r.name, subtitle: join(r.business_name, r.price !== null && r.price !== undefined ? formatKes(r.price, { decimals: 0 }) : null), to: r.business_id ? toBusiness(r.business_id, "items") : toBusinesses(r.business_name) }),
   },
   {
     key: "faqs",

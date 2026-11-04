@@ -9,6 +9,7 @@ import Skeleton from "../components/Skeleton.jsx";
 import EmptyState from "../components/EmptyState.jsx";
 import ErrorCard from "../components/ErrorCard.jsx";
 import { faCircleCheck, faCreditCard } from "@fortawesome/free-solid-svg-icons";
+import { formatKes } from "@epicmkt/shared";
 
 // Payments arrive by themselves: Safaricom tells the pay-callback function, which records the M-Pesa code, the amount
 // and the account the payer typed. Nobody types a code here. Three things can need a person:
@@ -35,7 +36,6 @@ const NOTE = {
   credit_failed: "A shop matched but the payment could not be applied.",
 };
 
-const kes = (n) => `KES ${Number(n ?? 0).toLocaleString("en-KE")}`;
 const when = (iso) =>
   iso ? stampLong(iso) : "";
 const COLS = 8;
@@ -80,7 +80,7 @@ function AssignPanel({ row, onClose, onDone }) {
       <td colSpan={COLS}>
         <div className="pay-assign" role="group" aria-label={`Assign payment ${row.mpesaCode}`}>
           <p>
-            <strong>{kes(row.amount)}</strong> arrived with the account <strong>“{row.account || "(empty)"}”</strong>. {NOTE[row.note] ?? ""}
+            <strong>{formatKes(row.amount)}</strong> arrived with the account <strong>“{row.account || "(empty)"}”</strong>. {NOTE[row.note] ?? ""}
             {" "}The money is recorded and safe. Choose the shop it belongs to.
           </p>
           {row.candidates.length ? <>{<h3 className="heading-flow">Likely shops</h3>}{list(row.candidates, "")}</> : null}
@@ -198,7 +198,7 @@ export default function PaymentsPage() {
               {stuck.map((c) => (
                 <li key={c.id}>
                   <div>
-                    {c.code ?? "No code"} · {c.amount ? kes(c.amount) : "no amount"} · {c.account || "no account"}
+                    {c.code ?? "No code"} · {c.amount ? formatKes(c.amount) : "no amount"} · {c.account || "no account"}
                     <div className="muted">{when(c.at)} · {c.error}</div>
                   </div>
                   <span>
@@ -242,9 +242,9 @@ export default function PaymentsPage() {
                         </td>
                         <td>{row.account || "—"}</td>
                         <td>
-                          <strong>{kes(row.amount)}</strong>
-                          {row.status === "awaiting_confirmation" && months ? <div className="muted">Covers {months} month{months === 1 ? "" : "s"} ({kes(row.credit)} received)</div> : null}
-                          {missing ? <div className="muted">{kes(row.credit)} so far, {kes(missing)} still due</div> : null}
+                          <strong>{formatKes(row.amount)}</strong>
+                          {row.status === "awaiting_confirmation" && months ? <div className="muted">Covers {months} month{months === 1 ? "" : "s"} ({formatKes(row.credit)} received)</div> : null}
+                          {missing ? <div className="muted">{formatKes(row.credit)} so far, {formatKes(missing)} still due</div> : null}
                         </td>
                         <td><code>{row.mpesaCode}</code></td>
                         <td>

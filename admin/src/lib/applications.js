@@ -193,11 +193,6 @@ export function eventLabel(event) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-export function formatKes(amount) {
-  if (amount === null || amount === undefined) return "";
-  return `KES ${Number(amount).toLocaleString("en-KE")}`;
-}
-
 // Show only the end of an ID or permit number until the reviewer asks to see all of it.
 export function maskValue(value, visible = 3) {
   const text = String(value ?? "");

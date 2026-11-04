@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCopy, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
-import { formatKes } from "../../../shared/billing.js";
+import { formatPrice } from "../../../shared/billing.js";
 import styles from "./status.module.css";
 
 const POLL_MS = 10000;
@@ -63,7 +63,7 @@ export default function PaymentCard({ app, onDone }) {
         <>
           {received > 0 && balance > 0 && (
             <p role="status" className={styles.payHint}>
-              We already received <strong>{formatKes(received)}</strong>. Please pay the remaining <strong>{formatKes(balance)}</strong> to the same account number below to finish your first month.
+              We already received <strong>{formatPrice(received)}</strong>. Please pay the remaining <strong>{formatPrice(balance)}</strong> to the same account number below to finish your first month.
             </p>
           )}
           <ol className={styles.paySteps}>
@@ -76,9 +76,9 @@ export default function PaymentCard({ app, onDone }) {
               <span className={styles.payHint}> Type it exactly as shown. This short code is yours alone, so we always know the payment is for your shop, even if another shop has the same name.</span>
             </li>
             <li>
-              Amount: <strong>{formatKes(balance > 0 ? balance : pay.amount)}</strong>
+              Amount: <strong>{formatPrice(balance > 0 ? balance : pay.amount)}</strong>
               <span className={styles.payHint}>
-                {" "}You can pay for more months now if you like: {formatKes(pay.amount * 2)} for 2 months, {formatKes(pay.amount * 3)} for 3 months. Extra months are added to your listing automatically. If you pay a different amount, nothing is lost: it is recorded and counted toward your payment.
+                {" "}You can pay for more months now if you like: {formatPrice(pay.amount * 2)} for 2 months, {formatPrice(pay.amount * 3)} for 3 months. Extra months are added to your listing automatically. If you pay a different amount, nothing is lost: it is recorded and counted toward your payment.
               </span>
             </li>
             <li>Enter your M-Pesa PIN and send.</li>

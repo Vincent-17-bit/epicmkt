@@ -6,7 +6,7 @@ import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import PlansSection from "../components/PlansSection.jsx";
 import { APPLY_PATH, FinalCta, SellHero } from "../components/SellBlocks.jsx";
 import { routes } from "../config/routes.js";
-import { formatKes, priceRange } from "../shared/billing.js";
+import { formatPrice, priceRange } from "../shared/billing.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useCatalog } from "./seller-apply/useCatalog.js";
 import styles from "./Sell.module.css";
@@ -81,7 +81,7 @@ export default function Sell() {
         id="sell-title"
         title="Get your business found by customers nearby"
         text={`List your business on EpicMKT and let people call, message you on WhatsApp or get directions in one tap.${
-          range ? ` Plans start at ${formatKes(range.min)} a month.` : ""
+          range ? ` Plans start at ${formatPrice(range.min)} a month.` : ""
         }`}
         actions={
           <>

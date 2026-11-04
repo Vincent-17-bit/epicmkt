@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatKes } from "@epicmkt/shared/billing";
+import { formatPrice } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
 import ui from "../../styles/ui.module.css";
@@ -65,15 +65,15 @@ export default function CategoryChange({ business, payments, onPay }) {
         <div className={`${styles.quote}`}>
           <p><strong>Waiting for admin approval.</strong> You asked to move to {nameOf(pending.newValue)}.</p>
           {pending.extraDue > 0 ? (
-            <p>{paid ? `Your ${formatKes(pending.extraDue)} payment is recorded.` : `Pay ${formatKes(pending.extraDue)} now (the prorated difference) so the request can be approved.`}</p>
+            <p>{paid ? `Your ${formatPrice(pending.extraDue)} payment is recorded.` : `Pay ${formatPrice(pending.extraDue)} now (the prorated difference) so the request can be approved.`}</p>
           ) : (
             <p>Nothing to pay now.</p>
           )}
-          <p>The new price, {formatKes(pending.newMonthlyPrice)} per month, applies from your next renewal.</p>
+          <p>The new price, {formatPrice(pending.newMonthlyPrice)} per month, applies from your next renewal.</p>
         </div>
         {error && <p className={ui.error} role="alert">{error}</p>}
         <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
-          {pending.extraDue > 0 && !paid && <button type="button" className={ui.btn} onClick={() => onPay({ purpose: "category_change", category: pending.newValue, changeId: pending.id })}>Pay {formatKes(pending.extraDue)}</button>}
+          {pending.extraDue > 0 && !paid && <button type="button" className={ui.btn} onClick={() => onPay({ purpose: "category_change", category: pending.newValue, changeId: pending.id })}>Pay {formatPrice(pending.extraDue)}</button>}
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={cancel} disabled={busy}>Cancel request</button>
         </div>
       </section>
@@ -89,13 +89,13 @@ export default function CategoryChange({ business, payments, onPay }) {
         <label className={ui.label} htmlFor="new-cat">New category</label>
         <select id="new-cat" className={ui.input} value={target} onChange={(e) => setTarget(e.target.value)}>
           <option value="">Choose a category</option>
-          {options.map((c) => <option key={c.id} value={c.id}>{c.name} ({formatKes(c.prices[business.planKey])} / month)</option>)}
+          {options.map((c) => <option key={c.id} value={c.id}>{c.name} ({formatPrice(c.prices[business.planKey])} / month)</option>)}
         </select>
       </div>
       {quote && (
         <div className={styles.quote} data-testid="category-quote">
-          {quote.dearer ? <p>Pay <strong>{formatKes(quote.extraDueNow)}</strong> now for the rest of this month.</p> : <p>Nothing to pay now.</p>}
-          <p>{formatKes(quote.newMonthlyPrice)} per month from your next renewal.</p>
+          {quote.dearer ? <p>Pay <strong>{formatPrice(quote.extraDueNow)}</strong> now for the rest of this month.</p> : <p>Nothing to pay now.</p>}
+          <p>{formatPrice(quote.newMonthlyPrice)} per month from your next renewal.</p>
         </div>
       )}
       {error && <p className={ui.error} role="alert">{error}</p>}

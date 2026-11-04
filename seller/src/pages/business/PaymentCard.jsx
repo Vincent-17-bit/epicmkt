@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { formatKes, formatDay, PAYMENT_KIND_LABELS } from "@epicmkt/shared/billing";
+import { formatPrice, formatDay, PAYMENT_KIND_LABELS } from "@epicmkt/shared/billing";
 import { copyText } from "../../lib/copy.js";
 import { errorText } from "../../lib/errors.js";
 import ui from "../../styles/ui.module.css";
@@ -42,7 +42,7 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
       <section className={`${ui.card} ${ui.tone_ok}`} aria-labelledby="pay-title" data-testid="payment-received">
         <h2 id="pay-title">Payment received</h2>
         <p style={{ margin: 0 }}>
-          Thank you. We received {formatKes(received.amount)}
+          Thank you. We received {formatPrice(received.amount)}
           {n > 1 ? <>, which covers <strong>{n} months</strong></> : null}
           {received.periodEnd ? <> and your listing is paid until <strong>{formatDay(received.periodEnd)}</strong></> : null}.
         </p>
@@ -60,7 +60,7 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
       <section className={ui.card} aria-labelledby="pay-title" data-testid="payment-confirming">
         <h2 id="pay-title">Payment under confirmation</h2>
         <p style={{ margin: 0 }}>
-          We have your payment{openPayment.mpesaCode ? <> (M-Pesa code <strong className={styles.mono}>{openPayment.mpesaCode}</strong>)</> : null} for {formatKes(openPayment.amount)}
+          We have your payment{openPayment.mpesaCode ? <> (M-Pesa code <strong className={styles.mono}>{openPayment.mpesaCode}</strong>)</> : null} for {formatPrice(openPayment.amount)}
           {" "}({PAYMENT_KIND_LABELS[openPayment.kind] ?? openPayment.kind}). We will confirm it shortly. This page updates by itself.
         </p>
       </section>
@@ -94,13 +94,13 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
 
       {creditKes > 0 && (
         <p style={{ margin: 0 }} role="status" data-testid="pay-credit">
-          You have <strong>{formatKes(creditKes)}</strong> credit from earlier payments.
-          {canUseCredit ? " It covers this payment." : <> It is already counted below, so you only need to pay <strong>{formatKes(total)}</strong>.</>}
+          You have <strong>{formatPrice(creditKes)}</strong> credit from earlier payments.
+          {canUseCredit ? " It covers this payment." : <> It is already counted below, so you only need to pay <strong>{formatPrice(total)}</strong>.</>}
         </p>
       )}
       {canUseCredit && (
         <div>
-          <button type="button" className={ui.btn} disabled={busy} onClick={useCredit}>{busy ? "Applying" : `Use my ${formatKes(amount)} credit`}</button>
+          <button type="button" className={ui.btn} disabled={busy} onClick={useCredit}>{busy ? "Applying" : `Use my ${formatPrice(amount)} credit`}</button>
           {error && <p className={ui.error} role="alert">{error}</p>}
         </div>
       )}
@@ -111,7 +111,7 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
             <div className={ui.field}>
               <label className={ui.label} htmlFor="pay-months">How many months do you want to pay for?</label>
               <select id="pay-months" className={ui.input} value={n} onChange={(e) => setMonths(Number(e.target.value))}>
-                {choices.map((m) => <option key={m} value={m}>{m === 1 ? "1 month" : `${m} months`}: {formatKes(amount * m)}</option>)}
+                {choices.map((m) => <option key={m} value={m}>{m === 1 ? "1 month" : `${m} months`}: {formatPrice(amount * m)}</option>)}
               </select>
             </div>
           )}
@@ -134,14 +134,14 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
             )}
             <div>
               <dt>Amount</dt>
-              <dd data-testid="pay-amount"><span>{formatKes(total)}</span><CopyButton value={total} label="amount" /></dd>
+              <dd data-testid="pay-amount"><span>{formatPrice(total)}</span><CopyButton value={total} label="amount" /></dd>
             </div>
           </dl>
           <ol className={styles.steps}>
             <li>Open M-Pesa on your phone and choose {paybill ? "Lipa na M-Pesa, then Pay Bill" : "Lipa na M-Pesa, then Buy Goods and Services"}.</li>
             <li>Enter {paybill ? "the Paybill number" : "the till number"} <strong>{number}</strong>.</li>
             {paybill && <li>Type <strong>{account}</strong> as the account number, exactly as shown.</li>}
-            <li>Enter the amount, <strong>{formatKes(total)}</strong>, and your M-Pesa PIN.</li>
+            <li>Enter the amount, <strong>{formatPrice(total)}</strong>, and your M-Pesa PIN.</li>
           </ol>
           <p className={ui.muted} style={{ margin: 0 }} role="status">
             That is all. You do not need to send us any code: this page updates by itself when your payment arrives.

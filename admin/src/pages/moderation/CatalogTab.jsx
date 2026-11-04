@@ -9,10 +9,10 @@ import Modal from "../../components/Modal.jsx";
 import Pager from "../../components/Pager.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
+import { formatKes } from "@epicmkt/shared";
 
 const PAGE_SIZE = 25;
 const STATES = [["all", "All items"], ["flagged", "Flagged or reported"], ["hidden", "Hidden by admin"], ["draft", "Drafts"], ["visible", "Visible"]];
-const money = (v) => (v == null ? "–" : `KES ${Number(v).toLocaleString("en-KE")}`);
 
 function AskSellerDialog({ item, onClose }) {
   const queryClient = useQueryClient();
@@ -130,7 +130,7 @@ export default function CatalogTab() {
                     <td><input type="checkbox" aria-label={`Select ${row.name}`} checked={selected.includes(row.id)} onChange={() => toggle(row.id)} /></td>
                     <td><strong>{row.name}</strong>{row.section ? <div className="muted">{row.section}</div> : null}</td>
                     <td><Link to={`/admin/businesses/${row.business_id}`}>{row.business_name}</Link></td>
-                    <td>{money(row.sale_price ?? row.price)}</td>
+                    <td>{formatKes(row.sale_price ?? row.price, { empty: "–" })}</td>
                     <td>
                       {row.hidden_by_admin ? <span className="status-pill status-pill--down">Hidden</span>
                         : row.draft ? <span className="status-pill status-pill--neutral">Draft</span>

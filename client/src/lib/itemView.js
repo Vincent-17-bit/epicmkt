@@ -1,11 +1,10 @@
-import { greetingProblems, renderGreeting, slugify } from "@epicmkt/shared";
+import { formatKes, greetingProblems, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
 
 const isBlank = (value) => value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
-const kes = (amount) => `KES ${Number(amount).toLocaleString("en-KE")}`;
 
 export function chatMessage({ item, variant, pricing, greeting }) {
   const name = variant ? `${item.name} (${variant.label})` : item.name;
@@ -13,13 +12,13 @@ export function chatMessage({ item, variant, pricing, greeting }) {
   // The seller's own greeting wins when they saved a valid one. {item} and {price} are filled in; it never carries links or numbers.
   if (typeof greeting === "string" && greeting.trim() && greetingProblems(greeting).length === 0) {
     const live = shown && Number.isFinite(shown.regularPrice) ? (shown.savings > 0 ? shown.salePrice : shown.regularPrice) : null;
-    return renderGreeting(greeting, { item: name, price: live === null ? "" : kes(live) });
+    return renderGreeting(greeting, { item: name, price: live === null ? "" : formatKes(live) });
   }
   if (!shown || !Number.isFinite(shown.regularPrice)) return `Hi, I saw ${name} on EpicMKT`;
   if (shown.savings > 0) {
-    return `Hi, I saw the flash sale on ${name}: ${kes(shown.salePrice)} (was ${kes(shown.regularPrice)}) on EpicMKT`;
+    return `Hi, I saw the flash sale on ${name}: ${formatKes(shown.salePrice)} (was ${formatKes(shown.regularPrice)}) on EpicMKT`;
   }
-  return `Hi, I saw ${name} (${kes(shown.regularPrice)}) on EpicMKT`;
+  return `Hi, I saw ${name} (${formatKes(shown.regularPrice)}) on EpicMKT`;
 }
 
 export function offerTarget(offer, business) {
@@ -48,7 +47,7 @@ export function countdown(ms) {
 export function offerValueLabel(offer) {
   if (offer.valueText) return offer.valueText;
   if (offer.kind === "percent_off" && offer.value != null) return `${offer.value}% off`;
-  if (offer.kind === "amount_off" && offer.value != null) return `${kes(offer.value)} off`;
+  if (offer.kind === "amount_off" && offer.value != null) return `${formatKes(offer.value)} off`;
   if (offer.kind === "freebie") return "Free gift";
   if (offer.kind === "free_service") return "Free";
   return "Offer";

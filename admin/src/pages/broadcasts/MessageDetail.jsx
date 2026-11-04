@@ -3,6 +3,7 @@ import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import Modal from "../../components/Modal.jsx";
 import { stampNairobi } from "../../lib/time.js";
+import { formatKes } from "@epicmkt/shared";
 
 const CHANNEL = { sms: "SMS", email: "Email", in_app: "In-app" };
 
@@ -23,7 +24,7 @@ export default function MessageDetail({ id, onClose }) {
     ["Attempts", String(m.attempts)],
     m.error ? ["Error", m.error] : null,
     m.provider_id ? ["Provider reference", m.provider_id] : null,
-    m.cost_kes != null ? ["Cost", `KES ${Number(m.cost_kes).toLocaleString("en-KE", { maximumFractionDigits: 2 })}`] : null,
+    m.cost_kes != null ? ["Cost", formatKes(m.cost_kes)] : null,
     m.created_by_email ? ["Sent by", m.created_by_email] : null,
     m.batch_id ? ["Broadcast", String(m.batch_id).slice(0, 8)] : null,
   ].filter(Boolean) : [];

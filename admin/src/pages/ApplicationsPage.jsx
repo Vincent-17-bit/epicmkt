@@ -11,10 +11,11 @@ import ErrorCard from "../components/ErrorCard.jsx";
 import { faFileSignature } from "@fortawesome/free-solid-svg-icons";
 import { useAdminCounts } from "../hooks/useAdminCounts.js";
 import {
-  APPLICATION_TABS, DEFAULT_TAB, PAGE_SIZE, canReview, formatKes, isOverdue, tabById, tabCounts,
+  APPLICATION_TABS, DEFAULT_TAB, PAGE_SIZE, canReview, isOverdue, tabById, tabCounts,
 } from "../lib/applications.js";
 import { formatDateTime, timeAgo } from "../lib/time.js";
 import ApplicationStatus from "./applications/ApplicationStatus.jsx";
+import { formatKes } from "@epicmkt/shared";
 import "./applications/applications.css";
 
 const ID_PREFIX = "applications";
@@ -117,7 +118,7 @@ export default function ApplicationsPage() {
                         <td>{row.businessName}</td>
                         <td>{row.ownerName}</td>
                         <td className="col-secondary">{row.town}</td>
-                        <td className="col-secondary">{row.plan === "premium" ? "Premium" : "Standard"} <span className="muted">{formatKes(row.price)}</span></td>
+                        <td className="col-secondary">{row.plan === "premium" ? "Premium" : "Standard"} <span className="muted">{formatKes(row.price, { empty: "" })}</span></td>
                         <td><ApplicationStatus status={row.status} /></td>
                         <td title={formatDateTime(row.submittedAt)}>
                           {timeAgo(row.submittedAt)}

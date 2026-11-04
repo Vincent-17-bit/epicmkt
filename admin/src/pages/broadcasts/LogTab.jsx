@@ -12,6 +12,7 @@ import { ago } from "../../lib/messaging.js";
 import MessageDetail from "./MessageDetail.jsx";
 import PendingBroadcasts from "./PendingBroadcasts.jsx";
 import { formatNairobiDateTime } from "../../lib/time.js";
+import { formatKes } from "@epicmkt/shared";
 
 const PAGE_SIZE = 25;
 const CHANNELS = [["all", "All channels"], ["sms", "SMS"], ["email", "Email"], ["in_app", "In-app"]];
@@ -57,7 +58,7 @@ export default function LogTab() {
       <PendingBroadcasts />
       {summary && (
         <p className="log-summary">
-          Last {summary.days} days: <strong>{(by.sent ?? 0) + (by.delivered ?? 0)}</strong> sent, <strong>{by.queued ?? 0}</strong> queued, <strong className={by.failed ? "text-danger" : ""}>{by.failed ?? 0}</strong> failed.{by.simulated > 0 && <> <strong>{by.simulated}</strong> simulated (never sent, no cost).</>} Real SMS cost KES {Number(summary.cost_kes).toLocaleString("en-KE", { maximumFractionDigits: 2 })}.
+          Last {summary.days} days: <strong>{(by.sent ?? 0) + (by.delivered ?? 0)}</strong> sent, <strong>{by.queued ?? 0}</strong> queued, <strong className={by.failed ? "text-danger" : ""}>{by.failed ?? 0}</strong> failed.{by.simulated > 0 && <> <strong>{by.simulated}</strong> simulated (never sent, no cost).</>} Real SMS cost {formatKes(summary.cost_kes)}.
           {by.failed > 0 && <> <Button size="sm" disabled={!canRetry || retryAll.isPending} title={why("messages.send")} onClick={() => retryAll.mutate()}>Retry all failed</Button></>}
         </p>
       )}

@@ -8,8 +8,8 @@ import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { BADGES, groupPlans, planImpact, planProblems } from "../../lib/catalogue.js";
 import { stampDayYear } from "../../lib/time.js";
+import { formatKes } from "@epicmkt/shared";
 
-const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
 const day = stampDayYear;
 
 function EditDialog({ row, onClose }) {
@@ -72,7 +72,7 @@ function HistoryDialog({ row, onClose }) {
         <ol className="plan-history">
           {data.map((v) => (
             <li key={v.id}>
-              <strong>{kes(v.price_kes)}</strong>{v.badge ? ` · ${v.badge}` : ""} <span className="muted">{day(v.created_at)}{v.changed_by_email ? ` by ${v.changed_by_email}` : ""}</span>
+              <strong>{formatKes(v.price_kes)}</strong>{v.badge ? ` · ${v.badge}` : ""} <span className="muted">{day(v.created_at)}{v.changed_by_email ? ` by ${v.changed_by_email}` : ""}</span>
               <div>{(v.top_benefits ?? []).join(" · ")}</div>
               {v.reason ? <div className="muted">Reason: {v.reason}</div> : null}
             </li>
@@ -94,7 +94,7 @@ export default function PlansPage() {
 
   const cell = (row) => (!row ? <td>–</td> : (
     <td>
-      <strong>{row.price_kes === 0 ? <span className="text-danger">Not priced</span> : kes(row.price_kes)}</strong>{row.badge ? <span className="muted"> · {row.badge}</span> : null}
+      <strong>{row.price_kes === 0 ? <span className="text-danger">Not priced</span> : formatKes(row.price_kes)}</strong>{row.badge ? <span className="muted"> · {row.badge}</span> : null}
       <div className="muted">{row.live_businesses} live · {row.versions} {row.versions === 1 ? "version" : "versions"}</div>
       <div className="row-actions">
         <Button size="sm" disabled={!canEdit} title={why("plans.edit")} onClick={() => setEditing(row)} aria-label={`Edit ${row.category_name} ${row.plan_key} plan`}>Edit</Button>
