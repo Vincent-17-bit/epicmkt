@@ -30,7 +30,7 @@
 
 .jump a {
   flex: none;
-  min-height: 40px;
+  min-height: var(--tap);
   display: inline-flex;
   align-items: center;
   padding: 0 var(--space-3);
@@ -224,7 +224,7 @@
 }
 
 .segBtn {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: 6px;
@@ -263,7 +263,7 @@
 }
 
 .linkBtn {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 0 var(--space-2);
   border: 0;
   background: transparent;

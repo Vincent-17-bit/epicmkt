@@ -1,4 +1,4 @@
-/* Status colours for both themes; everything else comes from @epicmkt/shared tokens. */
+/* Seller tokens and appearance preferences. */
 :root,
 [data-theme="light"] {
   --ok-bg: #e7f6ec;
@@ -50,14 +50,6 @@ html,
 body,
 #root {
   min-height: 100%;
-}
-
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: var(--text-md);
-  line-height: 1.5;
 }
 
 @media print {

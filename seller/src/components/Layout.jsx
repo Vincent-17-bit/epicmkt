@@ -166,11 +166,11 @@ export default function Layout() {
         <div className={styles.tools}>
           <button type="button" className={styles.iconBtn} onClick={toggle} aria-pressed={theme === "dark"} aria-label="Dark theme">
             <FontAwesomeIcon icon={theme === "dark" ? faSun : faMoon} aria-hidden="true" />
-            <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            <span className="sr-only">{theme === "dark" ? "Light" : "Dark"}</span>
           </button>
           <button type="button" className={styles.iconBtn} onClick={signOut}>
             <FontAwesomeIcon icon={faRightFromBracket} aria-hidden="true" />
-            <span>Sign out</span>
+            <span className="sr-only">Sign out</span>
           </button>
         </div>
       </header>

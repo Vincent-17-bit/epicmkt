@@ -70,14 +70,6 @@
   background: var(--surface-2);
 }
 
-.btn:focus-visible,
-.input:focus-visible,
-.chip:focus-visible,
-.link:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 .link {
   color: var(--link);
   text-decoration: underline;
@@ -175,15 +167,6 @@ textarea.input {
   border-color: var(--primary);
   color: var(--on-primary);
   font-weight: 600;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 @media print {

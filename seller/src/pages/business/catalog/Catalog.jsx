@@ -7,6 +7,7 @@ import {
 } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { errorText } from "../../../lib/errors.js";
+import { useMedia } from "../../../lib/useMedia.js";
 import { useSettings } from "../../../state/settings.js";
 import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog } from "./BulkBar.jsx";
@@ -27,19 +28,6 @@ const PAGE_SIZE = 60;
 const MODES = [["comfortable", "Comfortable"], ["compact", "Compact"], ["list", "List"]];
 const UNDO_MS = 8000;
 const EMPTY = [];
-
-const useMedia = (query) => {
-  const [matches, setMatches] = useState(() => (typeof window.matchMedia === "function" ? window.matchMedia(query).matches : false));
-  useEffect(() => {
-    if (typeof window.matchMedia !== "function") return undefined;
-    const mql = window.matchMedia(query);
-    const on = () => setMatches(mql.matches);
-    on();
-    mql.addEventListener?.("change", on);
-    return () => mql.removeEventListener?.("change", on);
-  }, [query]);
-  return matches;
-};
 
 export const NOT_LIVE = {
   paused: "You paused your listing.",

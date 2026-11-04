@@ -195,7 +195,7 @@ export default function Gallery() {
         <h1>Gallery</h1>
         {!readOnly && (
           <div className={styles.actions}>
-            <input ref={fileRef} className={ui.srOnly} type="file" accept={ACCEPT} multiple tabIndex={-1} aria-label="Choose photos" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
+            <input ref={fileRef} className="sr-only" type="file" accept={ACCEPT} multiple tabIndex={-1} aria-label="Choose photos" onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
             <button type="button" className={ui.btn} disabled={remaining === 0 || Boolean(busy)} onClick={() => fileRef.current?.click()}>{busy ?? "Add photos"}</button>
             {canPair(business?.categoryId) && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={remaining < 2 || Boolean(busy)} onClick={() => setPairOpen(true)}>Add before and after</button>}
           </div>

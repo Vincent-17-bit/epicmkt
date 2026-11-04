@@ -17,7 +17,7 @@
 }
 
 .close {
-  min-height: 40px;
+  min-height: var(--tap);
   padding: 0 var(--space-2);
   border: 0;
   background: none;

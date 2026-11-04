@@ -77,13 +77,6 @@
   cursor: not-allowed;
 }
 
-.badge:focus-visible,
-.coverEmpty:focus-visible,
-.option:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 .badgeCover {
   right: var(--space-3);
   bottom: var(--space-3);
@@ -245,11 +238,6 @@
   cursor: grabbing;
 }
 
-.cropFrame:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-
 .cropFrameLogo {
   max-width: 18rem;
 }
@@ -326,11 +314,6 @@
 .zoomBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.zoomBtn:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
 }
 
 .cropFoot {

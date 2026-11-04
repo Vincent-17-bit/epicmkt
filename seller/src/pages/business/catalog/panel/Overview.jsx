@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ItemView } from "@epicmkt/ui";
 import { formFromItem } from "@epicmkt/shared";
+import { copyText } from "../../../../lib/copy.js";
 import ui from "../../../../styles/ui.module.css";
 import { readDevicePref, storeDevicePref } from "../cardItem.js";
 import QualityPanel from "../editor/Quality.jsx";
@@ -27,12 +28,7 @@ export default function Overview({ item, shop, reason, ctx }) {
   const blocked = !reason.showing ? "Customers cannot see this item yet." : !url ? "The customer site address is not set up for this app." : "";
   const pick = (id) => { setDevice(id); storeDevicePref(KEY, id); };
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied("Link copied.");
-    } catch {
-      setCopied("Could not copy. Select the link and copy it.");
-    }
+    setCopied((await copyText(url)) ? "Link copied." : "Could not copy. Select the link and copy it.");
   };
   const fix = reason.fix;
   const runFix = () => (fix.kind === "show" ? ctx.handlers.toggle(item) : ctx.handlers.restock(item));

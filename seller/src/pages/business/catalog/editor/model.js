@@ -1,4 +1,4 @@
-import { ITEM_DETAIL_LIMITS, SPEC_LIMITS, VARIANT_LIMITS, statusFromCount } from "@epicmkt/shared";
+import { ITEM_DETAIL_LIMITS, SPEC_LIMITS, VARIANT_LIMITS, formatKes, statusFromCount } from "@epicmkt/shared";
 
 // The pure rules of the item editor: which step a field lives in, what is still missing, and how a form reads to a customer.
 // Nothing here touches React or the network, so it is tested on its own.
@@ -90,8 +90,6 @@ const parseKes = (raw) => {
   return n > 9999999999.99 ? null : n;
 };
 
-export const kes = (n) => `KES ${Number(n).toLocaleString("en-KE")}`;
-
 export const PRICED = ["fixed", "from", "range"];
 
 // What the customer is told about stock, from the form as it stands now. null means there is nothing to say.
@@ -122,11 +120,11 @@ export const priceSummary = (form) => {
   else {
     const onSale = sale !== null && sale < price;
     const shown = onSale ? sale : price;
-    if (form.priceType === "from") parts.push(`From ${kes(shown)}`);
-    else if (form.priceType === "range") parts.push(max !== null && max >= price ? `${kes(price)} to ${kes(max)}` : `${kes(price)} to ...`);
-    else parts.push(kes(shown));
+    if (form.priceType === "from") parts.push(`From ${formatKes(shown)}`);
+    else if (form.priceType === "range") parts.push(max !== null && max >= price ? `${formatKes(price)} to ${formatKes(max)}` : `${formatKes(price)} to ...`);
+    else parts.push(formatKes(shown));
     if (onSale) {
-      parts[0] += ` (was ${kes(price)})`;
+      parts[0] += ` (was ${formatKes(price)})`;
       parts.push(`${Math.round(((price - sale) / price) * 100)}% off`);
     }
   }

@@ -15,7 +15,7 @@ import Overview from "./Overview.jsx";
 import Performance from "./Performance.jsx";
 import styles from "./panel.module.css";
 import { reasonFor } from "./visibility.js";
-import { useMedia } from "./useMedia.js";
+import { useMedia } from "../../../../lib/useMedia.js";
 
 export const SECTIONS = [["overview", "Overview"], ["performance", "Performance"], ["deals", "Deals"], ["questions", "Questions"], ["history", "History"]];
 const CLOSE_MS = 180;
