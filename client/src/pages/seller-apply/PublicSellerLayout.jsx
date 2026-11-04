@@ -12,7 +12,7 @@ export default function PublicSellerLayout() {
   useSelectedTheme();
   useRouteSeo();
   return (
-    <div className={styles.root} id="seller-scroll">
+    <div className={styles.root} id="seller-scroll" data-density="compact">
       <header className={styles.header}>
         <div className={styles.bar}>
           <Link to="/" className={styles.brand} aria-label="EpicMKT home">
