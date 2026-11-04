@@ -1,5 +1,7 @@
 import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
+import { buildAvailability, cleanSizeChartOverride, scalePrice, storedOptions } from "@epicmkt/shared";
+import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
@@ -373,7 +375,7 @@ const FEATURES = {
 const ISO = (ms) => new Date(ms).toISOString();
 const DAY = 86_400_000;
 
-const bill = { items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
+const bill = { options: new Map(), items: [], flash: [], offers: [], exceptions: [], business: null, payments: [], messages: [], questions: [], changes: [], usedCodes: new Set(), paybill: null, application: null, listeners: new Set(), seq: 0, now: null };
 // ---- Settings, help and onboarding (mirror the live functions) ----
 export const getBusinessFacts = async () => {
   signedIn();
@@ -414,6 +416,7 @@ export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 function resetBilling() {
   const now = Date.now();
   bill.seq = 0;
+  bill.options = new Map();   // itemId -> { axes, variants, sizeChartId, sizeChartOverride } (migration 0084: option_axes, item_variants, size_chart_*)
   bill.now = null;
   bill.gallery = [];
   bill.staff = [];
@@ -729,6 +732,51 @@ export const getShopPreview = async () => {
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
 };
+// Options and size chart for a save, mirroring item_options_apply: everything is checked first (the real save is one transaction, so a
+// refused save changes nothing) and the returned function stores it once the item exists. A key that is absent keeps what is stored.
+const planOptions = async (id, f) => {
+  const has = f.options !== undefined || f.sizeChartId !== undefined || f.sizeChartOverride !== undefined;
+  if (!has) return () => {};
+  const prev = (id && bill.options.get(id)) || { axes: [], variants: [], sizeChartId: null, sizeChartOverride: null };
+  const next = { ...prev };
+  if (f.options !== undefined) {
+    const r = storedOptions(f.options);
+    if (!r.ok) throw new ApiError(r.error);
+    next.axes = r.value.axes;
+    next.variants = r.value.variants;
+    // The flash guard of the real save covers variant prices too.
+    if (id && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) {
+      const was = new Map(prev.variants.map((v) => [v.key, v]));
+      const now = new Map(r.value.variants.map((v) => [v.key, v]));
+      const changed = [...new Set([...was.keys(), ...now.keys()])].some((k) => {
+        const a = was.get(k);
+        const b = now.get(k);
+        return !a || !b ? (a ?? b).price !== null : a.price !== b.price || a.salePrice !== b.salePrice;
+      });
+      if (changed) throw new ApiError("item_in_flash_sale");
+    }
+  }
+  const charts = await demoSizeCharts();
+  if (f.sizeChartId !== undefined) {
+    if (f.sizeChartId === null) Object.assign(next, { sizeChartId: null, sizeChartOverride: null });
+    else {
+      if (!charts.some((c) => c.id === f.sizeChartId)) throw new ApiError("invalid_size_chart");
+      Object.assign(next, { sizeChartId: f.sizeChartId, sizeChartOverride: f.sizeChartId === prev.sizeChartId ? prev.sizeChartOverride : null });
+    }
+  }
+  if (f.sizeChartOverride !== undefined) {
+    if (f.sizeChartOverride === null) next.sizeChartOverride = null;
+    else {
+      const chart = charts.find((c) => c.id === next.sizeChartId);
+      const r = chart ? cleanSizeChartOverride(chart, f.sizeChartOverride?.rows) : { ok: false };
+      if (!r.ok) throw new ApiError("invalid_size_chart");
+      next.sizeChartOverride = { rows: r.rows };
+    }
+  }
+  return (itemId) => {
+    bill.options.set(itemId, { ...next, variants: next.variants.map((v, n) => ({ ...v, id: `${itemId}:${v.key}`, sort: n })) });
+  };
+};
 const DETAIL_KEYS = ["brand", "shortDescription", "packSize", "terms", "includes", "highlights", "specs"];
 const sent = (f, k) => (k === "specs" ? Array.isArray(f.specs) : f[k] !== undefined);
 export const saveItem = async (id, f) => {
@@ -745,19 +793,40 @@ export const saveItem = async (id, f) => {
     fields.variants = options.value;
   }
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
+  if (id && !bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  const commitOptions = await planOptions(id, f);
   if (fields.variants?.length && !["fixed", "from"].includes(fields.priceType)) throw new ApiError("invalid_variants");
   if (id) {
     const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
-    if (!item) throw new ApiError("item_not_found");
     const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
     const optionsChanged = fields.variants !== undefined && JSON.stringify(fields.variants) !== JSON.stringify(item.variants ?? []);
     if ((priceChanged || optionsChanged) && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
+    commitOptions(id);
     return id;
   }
   const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], variants: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
+  commitOptions(made.id);
   return made.id;
+};
+// The editor's read: like seller_item_options (raw stock counts, no internal keys).
+export const getItemOptions = async (id) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  const o = bill.options.get(id) ?? { axes: [], variants: [], sizeChartId: null, sizeChartOverride: null };
+  return copy({
+    axes: o.axes,
+    variants: o.variants.map((v) => ({ id: v.id, choice: v.choice, price: v.price, salePrice: v.salePrice, stock: v.stock, status: v.status, sku: v.sku, mediaIds: v.mediaIds })),
+    optionAvailability: buildAvailability(o.axes, o.variants),
+    sizeChartId: o.sizeChartId,
+    sizeChartOverride: o.sizeChartOverride
+  });
+};
+export const listSizeCharts = async () => {
+  signedIn();
+  return demoSizeCharts();
 };
 export const bulkItems = async (action, ids, args = {}) => {
   signedIn();
@@ -799,6 +868,17 @@ export const bulkItems = async (action, ids, args = {}) => {
     eligible.forEach((i, n) => { Object.assign(i, { price: next[n].price, priceMax: next[n].priceMax, salePrice: next[n].salePrice, priceConfirmedAt: next[n].price === i.price ? i.priceConfirmedAt : now }); });
     affected = preview.affected;
     skipped += preview.skipped;
+    // Variant prices follow the same percent, for the same items (the real bulk change does this in one transaction).
+    const tenths = Math.round(Number(args.percent) * 10);
+    eligible.forEach((i) => {
+      const o = bill.options.get(i.id);
+      o?.variants.forEach((v) => {
+        if (v.price === null) return;
+        const price = scalePrice(v.price, tenths);
+        const sale = v.salePrice === null ? null : scalePrice(v.salePrice, tenths);
+        Object.assign(v, { price, salePrice: sale === null ? null : sale < price ? sale : price > 1 ? price - 1 : null });
+      });
+    });
   } else targets.forEach((i) => { i.priceConfirmedAt = now; affected += 1; });
   targets.forEach((i) => { i.updatedAt = now; });
   return { affected, skipped };
@@ -841,6 +921,15 @@ export const duplicateItem = async (id) => {
   const vids = demoVideos.get(src.id);
   if (vids?.length) demoVideos.set(copyOf.id, vids.map((p, n) => `${p}.copy${bill.seq}-${n}`));
   bill.items.push(copyOf);
+  // Axes, variants and the size chart come with the copy; picture references do not (the copy gets its own files, re-picked in the editor).
+  const o = bill.options.get(src.id);
+  if (o) {
+    bill.options.set(copyOf.id, copy({
+      ...o,
+      axes: o.axes.map((a) => ({ ...a, values: a.values.map(({ mediaId, ...v }) => v) })),
+      variants: o.variants.map((v) => ({ ...v, id: `${copyOf.id}:${v.key}`, mediaIds: [] }))
+    }));
+  }
   return copyOf.id;
 };
 // ---- Performance, History, Deals (demo data; the real numbers come from the rollup tables in Supabase) ----

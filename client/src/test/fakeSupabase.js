@@ -159,7 +159,7 @@ export function createFakeSupabase() {
       const run = async () => {
         state.calls.push(name);
         if (signal?.aborted) return { data: null, error: { name: "AbortError", message: "AbortError: The user aborted a request." } };
-        if (name.startsWith("search_") || name.startsWith("similar_")) {
+        if (name.startsWith("search_") || name.startsWith("similar_") || name === "public_item_options") {
           if (state.failing) return { data: null, error: state.failing };
           const handler = state.rpc[name];
           if (!handler) return { data: null, error: { code: "PGRST202", message: "function not found" } };

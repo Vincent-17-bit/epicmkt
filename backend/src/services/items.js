@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, rankSimilar, statusOf } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -28,6 +28,32 @@ const highlightsOf = (value) => {
     if (out.length >= MAX_HIGHLIGHTS) break;
   }
   return out;
+};
+
+// Detail payload for one mock service: options, variants, availability matrix and size chart, the same payload public_item_options returns.
+// A service with optionAxes/optionVariants uses them as written (backend/check.mjs runs them through the shared validator, so the
+// validator itself stays out of the app bundle). Otherwise an old `variants`
+// list becomes one "option" axis, as migration 0084 converts it, keeping the old ids so flash overrides still match.
+// No options: empty arrays, an empty matrix and no chart, so such items look exactly as before.
+const optionsOf = (svc) => {
+  let axes = [];
+  let variants = [];
+  if (Array.isArray(svc.optionAxes) && svc.optionAxes.length > 0) {
+    axes = svc.optionAxes;
+    variants = (svc.optionVariants ?? []).map((v) => {
+      const key = comboKey(axes, v.choice);
+      return { price: null, salePrice: null, stock: null, status: "available", sku: null, mediaIds: [], ...v, key, id: `${svc.id}:${key}` };
+    });
+  } else if (Array.isArray(svc.variants) && svc.variants.length > 0) {
+    const legacy = legacyVariantsToOptions(svc.variants);
+    axes = legacy.axes;
+    variants = legacy.variants.map((v) => ({ ...v, id: v.choice.option }));
+  }
+  const chart = store.sizeCharts?.find((c) => c.id === svc.sizeChartId) ?? null;
+  return publicOptions({
+    axes, variants, chart, override: svc.sizeChartOverride ?? null,
+    item: { price: Number.isFinite(svc.priceKes) ? svc.priceKes : null, salePrice: null, showStockCount: Boolean(svc.showStockCount) }
+  });
 };
 
 const toItem = (business, svc, index) => {
@@ -148,9 +174,13 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
     throw new NotFoundError("Item not found");
   }
   const { item, business } = found;
+  // Detail only, like the live API: lists keep their lean shape. The new keys (options, optionVariants, optionAvailability,
+  // sizeChart) sit beside the item's own `availability` status and its legacy `variants` list, which pricing is built from.
+  const detail = optionsOf(business.services.find((svc) => svc.id === item.id) ?? {});
   const sale = liveSaleFor(item, business);
   return {
     ...item,
+    ...detail,
     business: sellerCard(business, originOf(origin)),
     pricing: buildPricing(item, sale),
     flash: sale ? flashParts(item, sale) : null,
@@ -438,4 +468,10 @@ export async function getFlashFacets() {
     categories: [...categories].map(([id, count]) => ({ id, count })),
     towns: [...towns.values()].sort((a, b) => a.name.localeCompare(b.name))
   };
+}
+
+// The active size charts, as the public_size_charts view returns them (sellers pick one for an item).
+export async function listSizeCharts() {
+  await delay();
+  return (store.sizeCharts ?? []).filter((c) => c.active !== false).map(({ id, name, category, unit, columns, rows }) => ({ id, name, category: category ?? null, unit, columns, rows }));
 }

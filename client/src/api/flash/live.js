@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
+import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -140,6 +140,19 @@ const itemRow = (row, business) =>
     createdAt: row.created_at
   });
 
+// Options, option variants, option availability matrix and size chart (migration 0086), in one call. These are NEW keys: the item's
+// own `availability` status string and its legacy `variants` list (which pricing.variants is built from, flash included) are not
+// touched. A database without the function yet (Postgres 42883, PostgREST PGRST202) has no options; any other failure throws, so an
+// item that has options is never shown as if it had none. null (the item is not public) is the same as none: the row read above
+// already decided that.
+const optionsFor = async (itemId) => {
+  const found = await supabase.rpc("public_item_options", { p_item: itemId });
+  if (found.error && MISSING_FUNCTION.has(found.error.code)) return emptyOptions();
+  const data = unwrap(found);
+  const sound = data !== null && typeof data === "object" && !Array.isArray(data) && Array.isArray(data.options) && Array.isArray(data.optionVariants);
+  return sound ? { ...emptyOptions(), ...data } : emptyOptions();
+};
+
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   if (!isLiveId(itemId)) throw new NotFoundError("Item not found");
   const row = unwrap(await supabase.from("public_items").select("*").eq("id", itemId).maybeSingle());
@@ -147,7 +160,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const business = unwrap(await supabase.from("public_businesses").select("*").eq("id", row.business_id).maybeSingle());
   if (!business || (businessId && businessId !== business.id && businessId !== business.slug)) throw new NotFoundError("Item not found");
   const item = itemRow(row, business);
-  const { now, entries } = await liveEntries();
+  const [{ now, entries }, options] = await Promise.all([liveEntries(), optionsFor(itemId)]);
   const entry = entries.find((e) => e.item.id === itemId);
   const { discount } = entry?.sale ?? {};
   const pricing = entry
@@ -158,6 +171,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const card = cardOfBusiness(business, origin);
   return {
     ...item,
+    ...options,
     business: card,
     pricing,
     flash: entry ? flashParts(entry, now) : null,

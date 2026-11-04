@@ -245,3 +245,58 @@ for (const b of seeded.filter((x) => ["barbershops", "salons", "gyms", "chemists
   assert.ok(b.services.every((svc) => svc.description), b.id);
 }
 console.log("items ok");
+
+// ---- options, variants, availability matrix and size charts (migration 0084 mirror) ----
+{
+  const { getItemDetail } = await import("./src/index.js");
+  const { storedOptions, emptyOptions } = await import("@epicmkt/shared");
+  const { sizeCharts } = await import("./src/data/sizeCharts.js");
+  const urban = seeded.find((b) => b.name === "Urban Threads Boutique");
+  const sandals = urban.services.find((s) => s.name === "Women's sandals");
+  const checked = storedOptions({ axes: sandals.optionAxes, variants: sandals.optionVariants });
+  assert.equal(checked.ok, true, "seeded options pass the shared validator");
+  // the mock uses the seed as written, so it must already be what a save would store
+  checked.value.variants.forEach((v, n) => assert.equal(v.status, sandals.optionVariants[n].status ?? "available", `seeded status of ${v.key}`));
+  for (const chart of sizeCharts) assert.ok(chart.rows.every((r) => r.length === chart.columns.length), chart.id);
+
+  const detail = await getItemDetail(sandals.id, { businessId: urban.id });
+  assert.equal(detail.options.length, 2);
+  assert.equal(detail.optionVariants.length, 4);
+  assert.equal(detail.optionVariants[0].label, "Tan / 38");
+  assert.equal(detail.optionVariants[0].stockLeft, 4, "shown for limited stock when the item shows counts");
+  assert.equal(detail.optionVariants[2].status, "out_of_stock", "a stock of 0 is out of stock");
+  assert.deepEqual(detail.variants, [], "the item's old variants list is not the new one: it stays as it was");
+  assert.equal(typeof detail.availability, "string", "the item's own availability status is untouched");
+  assert.equal(detail.availability, sandals.availability ?? "available");
+  assert.equal(detail.optionAvailability.missing, "unavailable");
+  assert.equal(detail.optionAvailability.cells.length, 4);
+  assert.ok(!detail.optionAvailability.cells.some((c) => c.key === "color=tan|size=40"), "a combination with no row has no cell");
+  assert.deepEqual(detail.optionAvailability.values.size, { 38: "limited_stock", 39: "available", 40: "available" });
+  assert.deepEqual(detail.optionAvailability.values.color, { tan: "available", black: "available" }, "a value shows its best status across combinations");
+  assert.equal(detail.sizeChart.id, "chart-shoes-eu");
+  assert.equal(detail.sizeChart.overridden, false);
+  assert.deepEqual(detail.pricing.variants, [], "pricing.variants is built from the old variants list only; an item with new-style options and no old list has none (the option fields drive pickers)");
+
+  // an item with no options: exactly the empty payload, and the fields it always had
+  const plain = urban.services.find((s) => s.name === "Ladies Ankara dress");
+  const dress = await getItemDetail(plain.id, { businessId: urban.id });
+  assert.equal(dress.availability, plain.availability ?? "available", "an item without options keeps its status string");
+  assert.deepEqual(dress.options, []);
+  assert.deepEqual(dress.optionVariants, []);
+  assert.deepEqual(dress.variants, []);
+  assert.deepEqual(dress.optionAvailability, emptyOptions().optionAvailability);
+  assert.equal(dress.sizeChart.id, "chart-tops");
+  const noChart = urban.services.find((s) => !s.optionAxes && !s.sizeChartId && !(s.variants ?? []).length);
+  const none = await getItemDetail(noChart.id, { businessId: urban.id });
+  assert.deepEqual({ o: none.options, v: none.optionVariants, c: none.sizeChart }, { o: [], v: [], c: null });
+
+  // legacy variants [{id,label,price}] become one "option" axis and read the same as before
+  const legacyBiz = seeded.find((b) => b.services.some((s) => Array.isArray(s.variants) && s.variants.length));
+  const legacy = legacyBiz.services.find((s) => Array.isArray(s.variants) && s.variants.length);
+  const old = await getItemDetail(legacy.id, { businessId: legacyBiz.id });
+  assert.equal(old.options.length, 1);
+  assert.deepEqual([old.options[0].key, old.options[0].label, old.options[0].display], ["option", "Option", "button"]);
+  assert.deepEqual(old.optionVariants.map((v) => [v.id, v.label, v.price]), legacy.variants.map((v) => [v.id, v.label, v.price]), "same ids, labels and prices as the old entries");
+  assert.deepEqual(old.variants.map((v) => [v.id, v.label, v.price]), legacy.variants.map((v) => [v.id, v.label, v.price]), "the old list is untouched");
+  assert.deepEqual(old.pricing.variants.map((v) => [v.id, v.label, v.regularPrice]), legacy.variants.map((v) => [v.id, v.label, v.price]));
+}

@@ -170,3 +170,40 @@ Deno.test("cloudinary copy: a signed upload from our own delivery URL, no overwr
   assertEquals(await down.copy("a", "b"), false);
   assert(cloudinaryConfigFromEnv(() => undefined) === null);
 });
+
+const withIds = () => [{ ...img(1, 0), id: "m-1" }, { ...vid(1, 1), id: "m-2" }, { ...img(2, 2), id: "m-3" }];
+
+Deno.test("copy-media: variants and option values are re-pointed at the copies (old media id -> new media id)", async () => {
+  const s = setup({ media: withIds() });
+  const out = await run(s, { fromItemId: FROM, toItemId: TO });
+  assertEquals(out, { status: 200, body: { copied: 3, failed: [], total: 3 } });
+  const remap = s.rpcCalls.filter((c) => c.name === "item_remap_copied_media");
+  assertEquals(remap.length, 1);
+  assertEquals(remap[0].args, { p_item: TO, p_map: { "m-1": "row-1", "m-2": "row-2", "m-3": "row-3" } });
+});
+
+Deno.test("copy-media: a file that did not copy is left out of the map, so its variants drop the reference", async () => {
+  const s = setup({ media: withIds(), failCopy: (id) => id.endsWith("img-1") });
+  const out = await run(s, { fromItemId: FROM, toItemId: TO });
+  assertEquals(out.body.copied, 2);
+  const remap = s.rpcCalls.filter((c) => c.name === "item_remap_copied_media");
+  assertEquals(remap[0].args.p_map, { "m-2": "row-1", "m-3": "row-2" });
+});
+
+Deno.test("copy-media: the remap runs even when nothing copied, and its failure never fails the copy", async () => {
+  const none = setup({ media: [], cloud: false });
+  assertEquals((await run(none, { fromItemId: FROM, toItemId: TO })).status, 200);
+  assertEquals(none.rpcCalls.filter((c) => c.name === "item_remap_copied_media")[0].args, { p_item: TO, p_map: {} });
+
+  const s = setup({ media: withIds() });
+  const original = s.deps.db.rpc;
+  (s.deps.db as any).rpc = (name: string, args: any) => (name === "item_remap_copied_media" ? Promise.resolve({ data: null, error: { message: "boom" } }) : original(name, args));
+  const out = await run(s, { fromItemId: FROM, toItemId: TO });
+  assertEquals(out, { status: 200, body: { copied: 3, failed: [], total: 3 } });
+});
+
+Deno.test("copy-media: nothing is remapped when the request is refused", async () => {
+  const s = setup({ media: withIds() });
+  await run(s, { fromItemId: FROM, toItemId: FOREIGN });
+  assertEquals(s.rpcCalls.filter((c) => c.name === "item_remap_copied_media").length, 0);
+});

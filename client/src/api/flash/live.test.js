@@ -484,6 +484,97 @@ describe("live item and business pages", () => {
       expect(bad).toMatchObject({ brand: null, highlights: [], includes: [], terms: "", packSize: null, specs: [] });
     });
 
+    describe("options, option variants, option availability and size chart (migration 0086)", () => {
+      const ID = "20000000-0000-0000-0000-000000000101";
+      const payload = {
+        options: [{ key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }, { id: "m", label: "M" }] }],
+        optionVariants: [{ id: "v1", label: "S", choice: { size: "s" }, price: 1200, salePrice: null, status: "available", sku: null, mediaIds: [], stockLeft: null }],
+        optionAvailability: { axes: ["size"], missing: "unavailable", cells: [{ key: "size=s", choice: { size: "s" }, status: "available", variantId: "v1" }], values: { size: { s: "available", m: "unavailable" } } },
+        sizeChart: { id: "c1", name: "Tops", category: null, unit: "cm", columns: ["Size"], rows: [["S"]], overridden: false }
+      };
+      const setup = (extra = {}) => {
+        db().items = [itemRow(extra)];
+        db().businesses = [bizRow()];
+      };
+
+      it("adds options, optionVariants, optionAvailability and sizeChart, and keeps every existing field as it was", async () => {
+        setup();
+        const before = await live.getItemDetail(ID);
+        db().rpc.public_item_options = () => payload;
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject(payload);
+        const added = ["options", "optionVariants", "optionAvailability", "sizeChart"];
+        for (const key of Object.keys(before).filter((k) => !added.includes(k))) expect(item[key], key).toEqual(before[key]);
+        expect(db().calls).toContain("public_item_options");
+      });
+
+      it("never touches the item's own availability status or its old variants list, which pricing is built from", async () => {
+        const legacy = [{ id: "small", label: "Small", price: 900 }, { id: "large", label: "Large", price: 1400 }];
+        setup({ availability: "limited_stock", variants: legacy });
+        const plain = await live.getItemDetail(ID);
+        expect(plain.availability).toBe("limited_stock");
+        expect(plain.variants.map((v) => v.id)).toEqual(["small", "large"]);
+        expect(plain.pricing.variants.map((v) => v.id)).toEqual(["small", "large"]);
+        db().rpc.public_item_options = () => payload;
+        const withOptions = await live.getItemDetail(ID);
+        expect(typeof withOptions.availability).toBe("string");
+        expect(withOptions.availability).toBe("limited_stock");
+        expect(withOptions.variants).toEqual(plain.variants);
+        expect(withOptions.pricing).toEqual(plain.pricing);
+        expect(withOptions.optionAvailability.missing).toBe("unavailable");
+      });
+
+      it("an item without options gets empty arrays, an empty matrix and no chart", async () => {
+        setup();
+        db().rpc.public_item_options = () => ({ options: [], optionVariants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChart: null });
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject({ options: [], optionVariants: [], sizeChart: null, optionAvailability: { axes: [], cells: [], values: {} } });
+        expect(item.variants).toEqual([]);
+      });
+
+      it("a database without the function yet (not deployed) shows no options instead of failing", async () => {
+        setup();
+        const item = await live.getItemDetail(ID);
+        expect(item).toMatchObject({ options: [], optionVariants: [], sizeChart: null });
+        expect(item.optionAvailability).toEqual({ axes: [], missing: "unavailable", cells: [], values: {} });
+        expect(typeof item.availability).toBe("string");
+      });
+
+      it("any other failure throws, so an item with options is never shown as if it had none", async () => {
+        setup();
+        db().rpc.public_item_options = () => ({ error: { code: "XX000", message: "boom" } });
+        await expect(live.getItemDetail(ID)).rejects.toBeTruthy();
+      });
+
+      it("a malformed answer is treated as no options, never spread into the item", async () => {
+        setup();
+        for (const bad of ["2026-10-01T00:00:00Z", [], null, { options: "x" }, { options: [], optionVariants: "no" }]) {
+          db().rpc.public_item_options = () => bad;
+          const item = await live.getItemDetail(ID);
+          expect(item.options, JSON.stringify(bad)).toEqual([]);
+          expect(item).not.toHaveProperty("0");
+        }
+      });
+
+      it("the demo backend's detail has the same option keys as the live detail, with the same shapes", async () => {
+        setup();
+        db().rpc.public_item_options = () => payload;
+        const liveItem = await live.getItemDetail(ID);
+        const { getAllProducts, getItemDetail: demoDetail } = await import("@epicmkt/backend");
+        const sandals = (await getAllProducts()).find((p) => p.item?.name === "Women's sandals" || p.name === "Women's sandals");
+        const demo = await demoDetail((sandals.item ?? sandals).id);
+        for (const key of ["options", "optionVariants", "optionAvailability", "sizeChart"]) {
+          expect(liveItem, `live ${key}`).toHaveProperty(key);
+          expect(demo, `demo ${key}`).toHaveProperty(key);
+        }
+        expect(typeof demo.availability).toBe("string");
+        expect(Object.keys(demo.optionAvailability).sort()).toEqual(Object.keys(liveItem.optionAvailability).sort());
+        expect(Object.keys(demo.optionVariants[0]).sort()).toEqual(Object.keys(liveItem.optionVariants[0]).sort());
+        expect(Object.keys(demo.options[0]).sort()).toEqual(Object.keys(liveItem.options[0]).sort());
+        expect(Object.keys(demo.sizeChart).sort()).toEqual(Object.keys(liveItem.sizeChart).sort());
+      });
+    });
+
     it("store selective and the business page do not ask for the heavy fields", async () => {
       db().items = [itemRow(), itemRow({ id: "20000000-0000-0000-0000-000000000102", name: "Wash", ...full })];
       db().businesses = [bizRow()];

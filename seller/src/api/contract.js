@@ -59,6 +59,8 @@ export const SELLER_API = [
   "getCatalog",
   "bulkItems",
   "saveItem",
+  "getItemOptions",
+  "listSizeCharts",
   "reorderItems",
   "duplicateItem",
   "getPerformance",

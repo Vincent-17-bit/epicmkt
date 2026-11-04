@@ -223,3 +223,103 @@ test("details: the mock refuses what the database refuses, specs included, and k
   for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
   assert.deepEqual(await find("it-fade"), before);
 });
+
+// ---- options, variants and size charts (migration 0084): the mock follows the same rules as seller_save_item ----
+
+const optForm = async () => {
+  const item = (await mock.getCatalog()).items.find((i) => i.id === "it-fade");
+  return { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+};
+const sizeAxes = () => [
+  { key: "color", label: "Color", display: "swatch", values: [{ id: "red", label: "Red", color: "#ff0000" }, { id: "blue", label: "Blue", color: "#0000ff" }] },
+  { key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }, { id: "m", label: "M" }] },
+];
+const variantOf = (color, size, extra = {}) => ({ choice: { color, size }, ...extra });
+
+test("options: saved, read back with the availability matrix, and an absent key keeps them", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  assert.deepEqual(await mock.getItemOptions("it-fade"), { axes: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChartId: null, sizeChartOverride: null });
+  await mock.saveItem("it-fade", { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s", { price: 1500, stock: 3, sku: "R-S" }), variantOf("blue", "m", { stock: 0 })] } });
+  const o = await mock.getItemOptions("it-fade");
+  assert.equal(o.axes.length, 2);
+  assert.deepEqual(o.variants.map((v) => [v.choice.color, v.choice.size, v.price, v.stock, v.status, v.sku]), [["red", "s", 1500, 3, "available", "R-S"], ["blue", "m", null, 0, "out_of_stock", null]]);
+  assert.equal(o.optionAvailability.missing, "unavailable");
+  assert.equal(o.optionAvailability.values.size.s, "available");
+  assert.equal(o.optionAvailability.values.color.blue, "out_of_stock");
+  await mock.saveItem("it-fade", { ...form, price: form.price + 100 });
+  assert.equal((await mock.getItemOptions("it-fade")).variants.length, 2, "a save without options leaves them");
+  await mock.saveItem("it-fade", { ...form, options: null });
+  assert.deepEqual((await mock.getItemOptions("it-fade")).axes, []);
+});
+
+test("options: the mock refuses what the database refuses, with the same error names, and a refused save changes nothing", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  await mock.saveItem("it-fade", { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s")] } });
+  const bad = (options, code) => assert.rejects(mock.saveItem("it-fade", { ...form, name: "Changed", options }), { code });
+  await bad({ axes: [{ ...sizeAxes()[0], display: "grid" }], variants: [] }, "invalid_options");
+  await bad({ axes: sizeAxes(), variants: [variantOf("green", "s")] }, "invalid_variant");
+  await bad({ axes: sizeAxes(), variants: [variantOf("red", "s"), variantOf("red", "s")] }, "duplicate_variant");
+  await bad({ axes: sizeAxes(), variants: [variantOf("red", "s", { sku: "A" }), variantOf("red", "m", { sku: "a" })] }, "duplicate_sku");
+  const big = [{ key: "a", label: "A", display: "dropdown", values: Array.from({ length: 40 }, (_, i) => ({ id: `a${i}`, label: `A${i}` })) }, { key: "b", label: "B", display: "dropdown", values: Array.from({ length: 6 }, (_, i) => ({ id: `b${i}`, label: `B${i}` })) }];
+  const many = big[0].values.flatMap((x) => big[1].values.map((y) => ({ choice: { a: x.id, b: y.id } })));
+  await bad({ axes: big, variants: many.slice(0, 201) }, "too_many_variants");
+  await mock.saveItem("it-fade", { ...form, options: { axes: big, variants: many.slice(0, 200) } });
+  assert.equal((await mock.getItemOptions("it-fade")).variants.length, 200);
+  assert.equal((await mock.getCatalog()).items.find((i) => i.id === "it-fade").name, form.name, "the refused saves changed nothing");
+});
+
+test("size chart: pick one from the library, override its rows, clear it", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  const charts = await mock.listSizeCharts();
+  assert.ok(charts.length >= 2);
+  assert.deepEqual(Object.keys(charts[0]).sort(), ["category", "columns", "id", "name", "rows", "unit"]);
+  const chart = charts[0];
+  await mock.saveItem("it-fade", { ...form, sizeChartId: chart.id });
+  assert.equal((await mock.getItemOptions("it-fade")).sizeChartId, chart.id);
+  const mine = [chart.columns.map((_, i) => String(40 + i))];
+  await mock.saveItem("it-fade", { ...form, sizeChartOverride: { rows: mine } });
+  assert.deepEqual((await mock.getItemOptions("it-fade")).sizeChartOverride, { rows: mine });
+  await assert.rejects(mock.saveItem("it-fade", { ...form, sizeChartOverride: { rows: [["x"]] } }), { code: "invalid_size_chart" });
+  await assert.rejects(mock.saveItem("it-fade", { ...form, sizeChartId: "nope" }), { code: "invalid_size_chart" });
+  await mock.saveItem("it-fade", { ...form, sizeChartId: charts[1].id });
+  assert.equal((await mock.getItemOptions("it-fade")).sizeChartOverride, null, "a different chart clears the override");
+  await mock.saveItem("it-fade", { ...form, sizeChartId: null });
+  assert.equal((await mock.getItemOptions("it-fade")).sizeChartId, null);
+  await assert.rejects(mock.saveItem("it-fade", { ...form, sizeChartOverride: { rows: mine } }), { code: "invalid_size_chart" });
+});
+
+test("duplicate copies options and the size chart; bulk price change scales variant prices", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  const chart = (await mock.listSizeCharts())[0];
+  await mock.saveItem("it-fade", { ...form, sizeChartId: chart.id, options: { axes: sizeAxes(), variants: [variantOf("red", "s", { price: 2000, salePrice: 1500 }), variantOf("red", "m")] } });
+  const copyId = await mock.duplicateItem("it-fade");
+  const copy = await mock.getItemOptions(copyId);
+  assert.deepEqual(copy.variants.map((v) => [v.choice.size, v.price, v.salePrice]), [["s", 2000, 1500], ["m", null, null]]);
+  assert.equal(copy.sizeChartId, chart.id);
+  assert.ok(copy.variants.every((v) => v.id.startsWith(copyId)), "the copy's variants are its own rows");
+  const r = await mock.bulkItems("price_percent", ["it-fade"], { percent: 10 });
+  assert.equal(r.affected, 1);
+  const o = await mock.getItemOptions("it-fade");
+  assert.deepEqual(o.variants.map((v) => [v.price, v.salePrice]), [[2200, 1650], [null, null]]);
+  assert.equal((await mock.getItemOptions(copyId)).variants[0].price, 2000, "the copy is untouched");
+});
+
+test("an item without options is unchanged by all of this", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  const before = (await mock.getCatalog()).items.find((i) => i.id === "it-fade");
+  await mock.saveItem("it-fade", form);
+  const after = (await mock.getCatalog()).items.find((i) => i.id === "it-fade");
+  assert.deepEqual(Object.keys(after).sort(), Object.keys(before).sort(), "the catalog item has no new keys");
+  const copyId = await mock.duplicateItem("it-fade");
+  assert.deepEqual((await mock.getItemOptions(copyId)).variants, []);
+});
