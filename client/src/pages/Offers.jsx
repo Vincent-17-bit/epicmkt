@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { faTag } from "@fortawesome/free-solid-svg-icons";
 import { offers, getCategories } from "../api/index.js";
 import { useListingParams } from "../hooks/useListingParams.js";
+import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
@@ -18,6 +19,7 @@ export default function Offers() {
   usePageTitle(t("offers.title"));
   const [params, set] = useListingParams();
   const coords = useGeoStore((s) => s.coords);
+  const online = useOnlineStatus();
 
   const category = params.get("category") ?? "";
   const town = params.get("town") ?? "";
@@ -81,6 +83,8 @@ export default function Offers() {
           ))}
         </ul>
       }
+      online={online}
+      offlineText={t("flash.offline")}
       failedText={t("offers.loadFailed")}
       noMatchText={t("offers.noMatch")}
       emptyText={t("offers.empty")}
