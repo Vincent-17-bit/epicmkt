@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, productTypeById } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -172,6 +172,13 @@ export async function getFlashForItem(itemId, businessId) {
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   await delay();
   runSweep();
+  // Contract v1 fixtures (shared/src/contracts/fixtures): served as written, before any store lookup. TODO(contract:W0) drop when the
+  // live items_detail returns product types.
+  const fixture = getFixture(itemId);
+  if (fixture) {
+    if (businessId && businessId !== fixture.detail.businessId && businessId !== fixture.detail.businessSlug) throw new NotFoundError("Item not found");
+    return structuredClone(fixture.detail);
+  }
   const found = locate(itemId, businessId);
   if (!found || found.item.status !== "listed" || found.business.status !== BUSINESS_STATUS.ACTIVE) {
     throw new NotFoundError("Item not found");
@@ -334,6 +341,33 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
   } catch {
     return [];
   }
+}
+
+// Contract v1 list: the lean ItemListCard rows of the fixtures, optionally one product type, paged. TODO(contract:W0) the live list
+// returns the same rows; until then the real mock products stay on getAllProducts (their business block has a different shape).
+export async function getItemList({ productType = null, businessId = null, limit = 24, offset = 0 } = {}) {
+  await delay();
+  runSweep();
+  const rows = getFixtures()
+    .filter((f) => (productType ? f.productType === productType : true))
+    .filter((f) => (businessId ? f.card.businessId === businessId || f.card.businessSlug === businessId : true))
+    .map((f) => f.card);
+  return { items: structuredClone(rows.slice(offset, offset + limit)), total: rows.length };
+}
+
+// Contract v1 related items: for a fixture, the other fixtures of the same product group (a bulb finds strip lights); for any other
+// item, the same-kind ranking getSimilarItems already does. Anything that goes wrong, or an aborted request, returns [].
+export async function getRelatedItems(itemId, { limit = 12, origin = null, signal = null } = {}) {
+  const fixture = getFixture(itemId);
+  if (!fixture) return getSimilarItems(itemId, { limit, origin, signal });
+  await delay();
+  if (signal?.aborted) return [];
+  const group = productTypeById(fixture.productType)?.group;
+  if (!group) return [];
+  const rows = getFixtures()
+    .filter((f) => f.id !== itemId && productTypeById(f.productType)?.group === group)
+    .map((f) => f.card);
+  return structuredClone(rows.slice(0, limit));
 }
 
 // Every listed product of every active store, for the home page. Filtering, sorting and paging happen in the client.

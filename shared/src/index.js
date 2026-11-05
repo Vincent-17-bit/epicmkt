@@ -28,3 +28,6 @@ export * from "./seller/limits.js";
 export * from "./seller/performance.js";
 export * from "./seller/team.js";
 export * from "./variants.js";
+
+// Contract v1 (W0): product types, option/price contracts, validators, lazy fixtures. See docs/contracts/.
+export * from "./contracts/index.js";

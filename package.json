@@ -23,7 +23,7 @@
     "migrate:images": "node --env-file=scripts/.env scripts/migrate-images-to-cloudinary.mjs",
     "test:tz": "node scripts/test-tz.mjs",
     "seed:sellers": "node --env-file=scripts/.env scripts/seed-sellers.mjs",
-    "test:shared": "node --test \"shared/src/**/*.test.js\" \"scripts/*.test.mjs\" \"seller/src/{api,lib}/*.test.js\"",
+    "test:shared": "node --test \"shared/src/**/*.test.js\" \"scripts/*.test.mjs\" \"seller/src/{api,lib}/*.test.js\" \"backend/src/**/*.test.js\"",
     "test:db": "node --test --test-concurrency=1 \"supabase/tests/*.test.mjs\"",
     "test:fn": "deno test --no-check -A --node-modules-dir=none --ignore=\"supabase/tests/*-db.test.ts\" \"supabase/tests/*.test.ts\"",
     "test:fn:db": "deno test --no-check -A --node-modules-dir=none \"supabase/tests/*-db.test.ts\"",
