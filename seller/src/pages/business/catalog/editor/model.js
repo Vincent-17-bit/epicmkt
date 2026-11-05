@@ -1,17 +1,13 @@
 import { ITEM_DETAIL_LIMITS, SPEC_LIMITS, VARIANT_LIMITS, formatKes, statusFromCount } from "@epicmkt/shared";
+import { PRICED, parseKes } from "./fields.js";
+import { qualityChecks } from "./checks/index.js";
+
+// The steps themselves (order, labels, which are visible, what is done) live in ./steps/index.js.
+// Kept here as re-exports so existing imports keep working.
+export { PRICED, parseKes, qualityChecks };
 
 // The pure rules of the item editor: which step a field lives in, what is still missing, and how a form reads to a customer.
 // Nothing here touches React or the network, so it is tested on its own.
-
-export const STEPS = [
-  { id: "media", label: "Media", short: "Media" },
-  { id: "basics", label: "Basics", short: "Basics" },
-  { id: "price", label: "Price and stock", short: "Price" },
-  { id: "details", label: "Details", short: "Details" },
-  { id: "review", label: "Review", short: "Review" },
-];
-
-export const stepIndex = (id) => STEPS.findIndex((s) => s.id === id);
 
 export const STEP_OF = {
   name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics",
@@ -82,15 +78,6 @@ export const errorList = (errors) => {
 };
 
 // ---- Money ----------------------------------------------------------------------------------------------------------
-
-const parseKes = (raw) => {
-  const text = String(raw ?? "").replace(/,/g, "").trim();
-  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
-  const n = Number(text);
-  return n > 9999999999.99 ? null : n;
-};
-
-export const PRICED = ["fixed", "from", "range"];
 
 // What the customer is told about stock, from the form as it stands now. null means there is nothing to say.
 export const stockStatusOf = (form) => {
@@ -172,36 +159,11 @@ export const exampleShortFor = (category) => {
 
 // ---- Quality --------------------------------------------------------------------------------------------------------
 
-const filled = (s) => String(s ?? "").trim().length > 0;
-
-// What would make the listing better. Advisory only: nothing here ever stops a save (validateItemForm does that).
-// `focus` is the data-focus key to put the cursor in when the seller taps the suggestion.
-export const qualityChecks = (form, mediaCount = 0) => {
-  const pricedType = PRICED.includes(form.priceType);
-  return [
-    { id: "photo", weight: 25, done: mediaCount > 0, step: "media", focus: "media-add", todo: "Add a photo", done_text: "Has a photo" },
-    { id: "name", weight: 5, done: String(form.name ?? "").trim().length >= 2, step: "basics", focus: "name", todo: "Give it a name", done_text: "Has a name" },
-    { id: "short", weight: 15, done: filled(form.shortDescription), step: "basics", focus: "shortDescription", todo: "Add a short description", done_text: "Has a short description" },
-    { id: "description", weight: 15, done: String(form.description ?? "").trim().length >= 60, step: "basics", focus: "description", todo: "Write the full description", done_text: "Has a full description" },
-    { id: "section", weight: 5, done: filled(form.section), step: "basics", focus: "section", todo: "Choose a section", done_text: "Has a section" },
-    { id: "price", weight: 15, done: !pricedType || parseKes(form.price) !== null, step: "price", focus: "price", todo: "Set a price", done_text: "Has a price" },
-    { id: "highlights", weight: 10, done: (form.highlights ?? []).some((h) => filled(h.text)), step: "details", focus: "add-highlight", todo: "Add 1 highlight", done_text: "Has highlights" },
-    { id: "specs", weight: 10, done: (form.specs ?? []).some((s) => filled(s.label) && filled(s.value)), step: "details", focus: "add-spec", todo: "Add 1 specification", done_text: "Has specifications" },
-  ];
-};
+// qualityChecks is built from the registry in ./checks/index.js (re-exported above).
 
 export const qualityScore = (checks) => checks.reduce((sum, c) => sum + (c.done ? c.weight : 0), 0);
 
 export const qualityLabel = (score) => (score >= 100 ? "Complete" : score >= 70 ? "Looking good" : score >= 40 ? "Getting there" : "Just started");
-
-// Which steps look finished, for the ticks in the section navigation.
-export const stepDone = (id, form, mediaCount) => {
-  if (id === "media") return mediaCount > 0;
-  if (id === "basics") return String(form.name ?? "").trim().length >= 2;
-  if (id === "price") return !PRICED.includes(form.priceType) || parseKes(form.price) !== null;
-  if (id === "details") return (form.highlights?.length ?? 0) + (form.specs?.length ?? 0) + (form.includes?.length ?? 0) > 0 || filled(form.packSize) || filled(form.terms) || filled(form.brand);
-  return false;
-};
 
 // ---- Preview --------------------------------------------------------------------------------------------------------
 
