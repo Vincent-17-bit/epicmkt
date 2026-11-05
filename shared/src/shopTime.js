@@ -29,6 +29,7 @@ import {
   zonedParts,
   zonedTimeToUtc
 } from "./time.js";
+import { zoneAbbreviation } from "./zoneNames.js";
 
 const TIME_RE = /^([01][0-9]|2[0-3]):([0-5][0-9])$/;
 const pad2 = (n) => String(n).padStart(2, "0");
@@ -44,12 +45,11 @@ export const safeShopZone = (zone) => (isValidTimeZone(zone) ? zone : BUSINESS_T
 /** The viewer's zone if valid, otherwise null (no conversion is shown). */
 export const safeViewerZone = (zone) => (isValidTimeZone(zone) ? zone : null);
 
-/**
- * Short zone name at an instant: "EAT" for Nairobi, "GMT+5:30" for Mumbai, "GMT-3" for Sao Paulo. The GMT form is used
- * on purpose where there is no unambiguous abbreviation ("IST" is India, Ireland and Israel).
- */
+/** Short zone name at an instant: "IST" for Kolkata, "EDT" for New York in summer. Zones without a listed name keep the GMT form. */
 export function shopZoneLabel(instant, zone) {
-  return zoneLabel(instant, safeShopZone(zone), "en-KE");
+  const safe = safeShopZone(zone);
+  const date = instant instanceof Date ? instant : new Date(instant);
+  return zoneAbbreviation(date, safe) ?? zoneLabel(instant, safe, "en-KE");
 }
 
 /**
