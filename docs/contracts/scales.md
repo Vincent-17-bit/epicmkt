@@ -1,7 +1,71 @@
-# Scales
+# Scales (Contract v1)
 
-> A02 owns the first part of this file (the scale registry and the scales it adds). The section below is A03's. On a merge conflict
-> keep both sides.
+Status: Wave 1 (A02), 2026-11-05. Code: `shared/src/scales/` (one file per scale), exported as `scales` from `@epicmkt/shared`
+(`import { scales } from "@epicmkt/shared"`; `sizeKey`, `validateAxisValues`, `registerScale`, `defineScale` and `listScales` are also exported flat).
+Full API at `shared/src/scales/index.js`: `parse`, `format`, `sizeKey`, `compare`, `toBase`, `plausible`, `validateAxisValues`.
+
+A stored value is `{ scale, system?, value, unit?, width? }`. It is never bare text. `parse(scaleId, raw, ctx)` returns `{ ok: true, value }` or
+`{ ok: false, error: { code, message, needs?, options? } }`. `needs` is `"unit"`, `"system"` or `"gender"` when the person only has to add that.
+`ctx` is what the form already knows: `{ system?, gender?, defaultUnit? }` (`defaultUnit` is also passed to the A03 scales as their `ctx.unit`).
+`raw` may be text, or a stored value, which is re-validated and normalised.
+
+The registry also holds the A03 scales (`./remaining`), fitted by `adoptScale()`: their string errors become `{ code, message }` (`unit-required`
+with `needs: "unit"` when the text says "Add a unit"; otherwise `invalid`), and their own `sizeKey`, `compare` and `plausible(typeId, axisKey, value)` are used as they are.
+
+## Scales
+
+| Scale id | Name | Accepted input | Display format |
+| --- | --- | --- | --- |
+| `apparel-alpha` | Clothing size (letters) | XS, S, M, L, XL, XXL (or 2XL), 3XL, 4XL, 5XL; also words such as small, medium, extra large | XS, S, M, L, XL, XXL, 3XL, 4XL, 5XL (ordered smallest to largest) |
+| `apparel-numeric` | Clothing size (US numbers) | whole US sizes 0 to 22, with or without 'US' (US 10, size 10) | US 0 to US 22 |
+| `kids-age` | Kids age | newborn, or an age or range with a unit: 6 months, 3 years, 3-4 yrs, 12-18 months | Newborn, 6 months, 18 months, 2 years, 3-4 years |
+| `collar-inch` | Shirt collar (inches) | inches in halves, 12 to 22: 15, 15.5, 15 1/2, 15½, 15", 15 inch | 15", 15.5" (half-inch steps) |
+| `shoe` | Shoe size | EU 42, UK 8.5, US 9 men, US 10.5 women, 26.7 cm; half sizes; optional width (narrow, regular, wide, extra wide) | EU 42, UK 8.5, US 9 (men), US 10.5 (women), 26.7 cm, with ' · Wide' when a width is set |
+| `screen-inch` | Screen size (inches) | inches with or without the unit: 42, 42", 42 inch, 42-inch, 6.7 in; centimetres are converted | 42", 6.7" |
+| `storage` | Storage / memory | number + MB, GB or TB (1 TB = 1024 GB) | MB below 1 GB, TB from 1024 GB, otherwise GB: 512 MB, 128 GB, 1 TB, 2 TB |
+| `body-measure` | Body measurement | a number with cm or in (90 cm, 36", 36 in); a bare number needs a unit | 90 cm, 36 in |
+| `ring-size` | Ring size | US 3 to 13 in half sizes, UK letters F to Z+2 (L, L 1/2, Z+1), EU 44 to 72 (inner circumference in mm); a bare number is read as US (3 to 13) or EU (44 to 72) | US 7, UK N½, EU 54 |
+
+The table above is A02's 9 scales. A03's 26 measure scales (`length`, `volume`, `weight`, `duration`, `dimensions`, `count` ...) are described in the
+A03 section below. The registry holds all 35; `volume` and `weight` are A03's.
+
+## Rules
+
+- **Keys.** `sizeKey(value)` is `scale:system:value[:unit]`, with `-` when a scale has no system (the A03 convention). Shoe 42 (EU) is `shoe:eu:42`,
+  a 42-inch TV is `screen-inch:-:42:in`, a dress 42 is `apparel-numeric:eu:42`: never equal. `width` is not in the key; an axis
+  merges on key plus width.
+- **Merging.** Equal amounts are stored one way so they share a key: `1 TB` and `1024 GB` are `storage:-:1024:GB`; `1000 ml` and `1 L` are
+  `2xl` and `XXL` are `apparel-alpha:-:XXL`; `24 months` and `2 years` are `kids-age:-:2:y`. The same fit in two shoe
+  systems (EU 42, UK 8) is the same size to `compare` and `toBase` but keeps two keys: an axis should use one system.
+- **Axis merging.** `validateAxisValues` merges on `sizeKey` plus width, and also merges two values of one scale, system and width with the same base
+  amount typed in different units (A03 keeps `1000 g` and `1 kg` as two keys; the axis keeps the first typed). Values with no base amount (labels, models) are
+  never merged that way.
+- **Units.** `storage`, `body-measure`, `kids-age` (and A03's `volume`, `weight`, `length` ...) need a unit (`needs: "unit"`) unless `ctx.defaultUnit` is given.
+  `shoe` needs a system (`ctx.system`) and, for US sizes, men or women (`ctx.gender`). `screen-inch`, `collar-inch` and `apparel-*` have an
+  implied unit. `ring-size` reads a bare number as US (3 to 13) or EU (44 to 72).
+- **Ordering.** `compare` orders by `toBase`: rank for letters, cm for shoes, mm for rings, months for ages (lower bound), GB, ml, g, inches.
+  Values of different scales sort by scale id, so a mixed list still has a stable order.
+- **Round trip.** `parse(format(value))` equals `value` for every scale (tested).
+
+## Conversion data
+
+- Shoes: `shared/src/scales/shoeChart.js` is a plain table (`SHOE_CHART`, one row per whole EU size with UK, US men, US women and cm). A05 lets an
+  admin edit it. Kids rows (EU 19 to 34) carry EU and cm only; UK and US kids sizes restart at 1 and are not in the chart yet.
+- Rings: US to inner circumference in mm (`RING_US_MM` in `ring-size.js`); UK letters step 1.27 mm from L = 51.9 mm; EU is the whole-mm circumference.
+- Charts are retail averages. Brands differ by up to a size.
+
+## Plausibility
+
+`plausible(typeId, axisKey, value)` returns `{ ok, warn? }`. `ok: false` means wrong scale or outside the hard limits; `ok: true` with `warn`
+means unusual. Limits are keyed `<product type id>.<axis key>` in `PLAUSIBILITY_RULES` (`phone.storage`, `memory-card.capacity`,
+`shoes-eu.size`, `bread.weight`, `drinking-water.size`, `fragrance.volume`); other axes get the scale's own check only.
+
+## Adding a scale
+
+One file in `shared/src/scales/` that default-exports `defineScale({ id, label, accepts, display, examples, parse, format, toBase, ... })`,
+imported in `index.js`. A scale written as a plain object (the A03 style) goes through `adoptScale()`. `examples.valid` and `examples.invalid` are run by the tests; add a row to the table above (a test checks it matches the code).
+
+---
 
 ## Remaining measure scales (A03)
 
