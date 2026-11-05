@@ -12,9 +12,15 @@ const form = (over = {}) => ({ ...emptyItemForm(), ...over });
 const model = (over = {}) => ({ form: form(), errors: {}, mediaCount: 0, ...over });
 
 describe("steps registry", () => {
-  it("keeps the order, with an Options slot between Basics and Price and stock", () => {
-    expect(STEPS.map((s) => s.id)).toEqual(["media", "basics", "options", "price", "details", "review"]);
-    expect(STEPS.map((s) => s.label)).toEqual(["Media", "Basics", "Options", "Price and stock", "Details", "Review"]);
+  it("keeps the order, with a Type step after Basics and an Options slot before Price and stock", () => {
+    expect(STEPS.map((s) => s.id)).toEqual(["media", "basics", "type", "options", "price", "details", "review"]);
+    expect(STEPS.map((s) => s.label)).toEqual(["Media", "Basics", "Type", "Options", "Price and stock", "Details", "Review"]);
+  });
+
+  it("shows the Type step only for an item that went through the type picker (null means Other goods)", () => {
+    expect(visibleSteps(model()).map((s) => s.id)).not.toContain("type");
+    expect(visibleSteps(model({ form: form({ productTypeId: "pt-dress" }) })).map((s) => s.id)).toContain("type");
+    expect(visibleSteps(model({ form: form({ productTypeId: null }) })).map((s) => s.id)).toContain("type");
   });
 
   it("shows the seller the same five steps as before (Options stays hidden)", () => {
@@ -66,7 +72,7 @@ describe("steps registry", () => {
 
 describe("form reducer slices", () => {
   it("lists the slices in order", () => {
-    expect(SLICES.map((s) => s.id)).toEqual(["basics", "options", "prices", "media", "specs"]);
+    expect(SLICES.map((s) => s.id)).toEqual(["basics", "options", "prices", "media", "specs", "type"]);
   });
 
   it("owns every key of a new item exactly once", () => {
