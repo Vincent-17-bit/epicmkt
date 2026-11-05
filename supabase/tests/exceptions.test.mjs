@@ -207,14 +207,14 @@ test("customers (anon) see only today and upcoming exceptions, with public field
   assert.deepEqual((await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions, [], "no exceptions is an empty list");
 });
 
-test("a shop in another zone is closed on its own exception date, including the evening the date is still running there", async () => {
+for (const zone of ["America/Los_Angeles", "Pacific/Honolulu", "America/New_York", "Asia/Kolkata"]) test(`a ${zone} shop is closed on its own exception date, including the evening the date is still running there`, async () => {
   await reset();
-  await sql(c, `update businesses set timezone = 'America/Los_Angeles' where id = '${ids.bizA}'`);
-  const day = (await sql(c, `select shop_day(now(), 'America/Los_Angeles')::text as d`))[0].d;
+  await sql(c, `update businesses set timezone = '${zone}' where id = '${ids.bizA}'`);
+  const day = (await sql(c, `select shop_day(now(), '${zone}')::text as d`))[0].d;
   await save(asA, day, "closed");
   const row = (await sql(c, `select hours, exceptions, timezone from businesses where id = '${ids.bizA}'`))[0];
   const hours = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat", "sun"].map((d) => [d, ["08:00", "22:00"]]));
-  const openAt = async (hh) => (await sql(c, `select hours_open_in($1::jsonb, $2::jsonb, ($3::date + $4::time) at time zone 'America/Los_Angeles', 'America/Los_Angeles') as o`, [JSON.stringify(hours), JSON.stringify(row.exceptions), day, hh]))[0].o;
+  const openAt = async (hh) => (await sql(c, `select hours_open_in($1::jsonb, $2::jsonb, ($3::date + $4::time) at time zone '${zone}', '${zone}') as o`, [JSON.stringify(hours), JSON.stringify(row.exceptions), day, hh]))[0].o;
   assert.equal(await openAt("19:00"), false);
   assert.equal(await openAt("00:05"), false);
   assert.equal(await openAt("23:30"), false);

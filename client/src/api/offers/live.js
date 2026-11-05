@@ -129,7 +129,7 @@ const viewOf = (offer, products, business, at) => ({
   remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null,
   appliesToLabel: label(products, offer.scope),
   products,
-  availableNow: offerAvailableNow(offer, at)
+  availableNow: offerAvailableNow(offer, at, business?.timezone)
 });
 
 /** The offers on one product, as the views the product page prints. */
@@ -142,12 +142,12 @@ export async function viewsForItem(itemId, businessId, businessCard) {
 }
 
 /** The deals a store's page prints, already worded. */
-export async function dealsForStore(businessId) {
+export async function dealsForStore(businessId, timeZone) {
   const at = nowMs();
   const list = await storeOffers(businessId);
   if (!list.length) return [];
   const byId = await productsFor([...new Set(list.flatMap((o) => o.items.map((e) => e.itemId)))]);
-  return list.map((offer) => dealOf(offer, productsOfOffer(offer, byId), at));
+  return list.map((offer) => dealOf(offer, productsOfOffer(offer, byId), at, timeZone));
 }
 
 const SORTS = {

@@ -142,7 +142,7 @@ const offerView = (offer, business, from = null, at = now()) => ({
   remainingMs: offer.endsAt ? Math.max(0, Date.parse(offer.endsAt) - at) : null,
   appliesToLabel: appliesToLabel(offer, business),
   products: offerProducts(offer, business),
-  availableNow: offerAvailableNow(offer, at)
+  availableNow: offerAvailableNow(offer, at, business?.timezone)
 });
 
 const offerViews = (item, business) => liveOffersFor(item, business).map((offer) => offerView(offer, business));

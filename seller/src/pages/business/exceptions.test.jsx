@@ -46,6 +46,22 @@ describe("upcoming list", () => {
   });
 });
 
+describe("shop in another zone", () => {
+  const WEST = [["America/Los_Angeles", "2026-10-11"], ["Pacific/Honolulu", "2026-10-11"], ["America/New_York", "2026-10-12"]];
+  const openIn = (zone, seed = []) => signedInApp("/business/exceptions", async () => { setTime(`${TODAY}T01:30:00Z`); await api.setTimezone(zone); M.state.exceptions = seed; });
+
+  it.each(WEST)("%s: today is the shop's own date", async (zone, today) => {
+    const user = userEvent.setup();
+    await openIn(zone, [ex("t", today), ex("y", addDays(today, -2))]);
+    await screen.findAllByTestId("exception");
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]).toHaveTextContent("Today");
+    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    expect(screen.getByLabelText("Date")).toHaveAttribute("min", today);
+    expect(screen.getByLabelText("Date")).toHaveAttribute("max", addDays(today, 730));
+  });
+});
+
 describe("add", () => {
   it("adds a closed-all-day exception with a note, in the right place", async () => {
     const user = userEvent.setup();

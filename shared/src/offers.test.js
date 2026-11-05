@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  OFFER_KIND_KEYS, OFFER_KINDS, OFFER_MAX_ITEMS, OFFER_RECIPES, STORE_OFFER_KIND_KEYS, STORE_OFFER_RECIPES, chipOf, conditionsText, liveOffers, offerAvailableNow, offerClaimMessage,
+  OFFER_KIND_KEYS, OFFER_KINDS, OFFER_MAX_ITEMS, OFFER_RECIPES, STORE_OFFER_KIND_KEYS, STORE_OFFER_RECIPES, chipOf, conditionsText, dealOf, liveOffers, offerAvailableNow, offerClaimMessage,
   offerHeadline, offerLabel, offerPhase, offerProductCount, offerQuota, offerRecipe, offerRemainingMs, offerSavings, offerSteps, offersByItem, validateOffer
 } from "./offers.js";
 import * as everything from "./index.js";
@@ -213,6 +213,23 @@ test("phases: paused, scheduled, live and ended, by flag or by window", () => {
   assert.equal(offerPhase(w({ endsAt: new Date(NOW).toISOString() }), NOW), "ended", "it ends at the stroke");
   assert.equal(offerPhase(w({ status: "expired" }), NOW), "ended");
   assert.equal(offerPhase(w({ active: false, endsAt: new Date(NOW - HOUR).toISOString() }), NOW), "ended", "ended beats paused");
+});
+
+test("day and hour limits follow the shop's zone", () => {
+  const la = "America/Los_Angeles";
+  const happy = { conditions: { hours: { from: "17:00", to: "19:00" } } };
+  const monday = { conditions: { daysOfWeek: ["mon"] } };
+  const at = Date.parse("2026-11-03T01:30:00Z");
+  assert.equal(offerAvailableNow(happy, at, la), true, "Monday 17:30 in Los Angeles");
+  assert.equal(offerAvailableNow(happy, at), false, "04:30 in Nairobi");
+  assert.equal(offerAvailableNow(monday, at, la), true, "Monday in Los Angeles");
+  assert.equal(offerAvailableNow(monday, at), false, "Tuesday in Nairobi");
+  assert.equal(offerAvailableNow(happy, at, "Pacific/Honolulu"), false, "Monday 15:30 in Honolulu");
+  assert.equal(offerAvailableNow(happy, Date.parse("2026-11-03T03:30:00Z"), "Pacific/Honolulu"), true, "17:30 in Honolulu");
+  assert.equal(offerAvailableNow(happy, Date.parse("2026-11-03T03:30:00Z"), "Asia/Kolkata"), false);
+  assert.equal(offerAvailableNow(happy, Date.parse("2026-11-03T12:00:00Z"), "Asia/Kolkata"), true, "17:30 in Kolkata");
+  assert.equal(offerAvailableNow(happy, at, "Mars/Base"), offerAvailableNow(happy, at), "an unknown zone reads as Nairobi");
+  assert.equal(dealOf({ id: "o", kind: "percent_off", config: { percent: 10 }, ...happy }, [], at, la).availableNow, true);
 });
 
 test("day and hour limits use Nairobi time", () => {
