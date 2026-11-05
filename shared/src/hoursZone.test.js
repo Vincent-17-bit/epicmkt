@@ -142,3 +142,30 @@ test("the shop's status does not depend on who is looking", () => {
   assert.equal(a.isOpen, b.isOpen);
   assert.equal(isOpenOn(hours, [], now, "America/Los_Angeles"), a.isOpen);
 });
+
+test("a closed-all-day exception holds for the shop's whole calendar day, west of Nairobi", () => {
+  const hours = everyDay(["09:00", "21:00"]);
+  const cases = [["America/Los_Angeles", [2026, 11, 2]], ["Pacific/Honolulu", [2026, 11, 2]], ["America/New_York", [2026, 11, 2]], ["America/Anchorage", [2026, 11, 2]]];
+  for (const [zone, [y, mo, d]] of cases) {
+    const closed = [{ id: "x", date: `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`, kind: "closed", intervals: [], note: null }];
+    for (const [h, mi] of [[0, 5], [10, 0], [19, 0], [23, 30]]) {
+      const now = at(zone, y, mo, d, h, mi);
+      assert.equal(open(hours, closed, now, zone), false, `${zone} ${h}:${mi}`);
+      assert.equal(statusOf(hours, closed, now, zone).reason?.kind, "closed_day", `${zone} ${h}:${mi}`);
+    }
+    assert.equal(open(hours, closed, at(zone, y, mo, d + 1, 10, 0), zone), true, `${zone} next morning`);
+  }
+});
+
+test("exceptions and the date they key on follow the shop across daylight saving and half-hour zones", () => {
+  const hours = everyDay(["09:00", "21:00"]);
+  for (const zone of ["America/Los_Angeles", "America/New_York", "Asia/Kolkata", "Asia/Kathmandu", "Australia/Adelaide"]) {
+    for (const [y, mo, d] of [[2026, 3, 8], [2026, 11, 1], [2026, 10, 4]]) {
+      const date = `${y}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+      const special = [{ id: "s", date, kind: "special", intervals: [["12:00", "14:00"]], note: null }];
+      assert.equal(open(hours, special, at(zone, y, mo, d, 13, 0), zone), true, `${zone} ${date} 13:00`);
+      assert.equal(open(hours, special, at(zone, y, mo, d, 10, 0), zone), false, `${zone} ${date} 10:00`);
+      assert.equal(open(hours, special, at(zone, y, mo, d, 20, 0), zone), false, `${zone} ${date} 20:00`);
+    }
+  }
+});

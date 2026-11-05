@@ -8,6 +8,7 @@
 // deal is explained next to it. The database function offer_config_valid() enforces the same shapes as validateOffer();
 // a database test keeps the two equal.
 import { DAYS, formatKes, nairobiNow } from "./utils.js";
+import { safeShopZone } from "./shopTime.js";
 
 export const OFFER_MAX_ITEMS = 12;
 export const OFFER_MAX_DAYS = 365;
@@ -478,10 +479,10 @@ export function offerPhase(offer, nowMs = Date.now()) {
   return "live";
 }
 
-/** Whether the day and hour limits (happy hour, weekends) allow it at this moment. Nairobi time. */
-export function offerAvailableNow(offer, nowMs = Date.now()) {
+/** Whether the day and hour limits (happy hour, weekends) allow it at this moment, on the shop's clock (Nairobi by default). */
+export function offerAvailableNow(offer, nowMs = Date.now(), timeZone) {
   const c = offer?.conditions ?? {};
-  const { day, minutes } = nairobiNow(new Date(nowMs));
+  const { day, minutes } = nairobiNow(new Date(nowMs), safeShopZone(timeZone));
   if (c.daysOfWeek?.length && !c.daysOfWeek.includes(day)) return false;
   if (c.hours) {
     const from = minutesOf(c.hours.from);
@@ -548,7 +549,7 @@ export function offerClaimMessage(offer, itemName) {
  * One offer as a customer-facing "deal": everything a card, the store page or the product page prints, already worded.
  * `products` are { id, name, imageUrl, price, role } for the products the offer is on that customers can see.
  */
-export function dealOf(offer, products = [], nowMs = Date.now()) {
+export function dealOf(offer, products = [], nowMs = Date.now(), timeZone) {
   return {
     id: offer.id,
     scope: offerScope(offer),
@@ -565,7 +566,7 @@ export function dealOf(offer, products = [], nowMs = Date.now()) {
     endsAt: offer.endsAt ?? null,
     remainingMs: offerRemainingMs(offer, nowMs),
     conditions: conditionsText(offer),
-    availableNow: offerAvailableNow(offer, nowMs),
+    availableNow: offerAvailableNow(offer, nowMs, timeZone),
     products
   };
 }

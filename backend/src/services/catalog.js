@@ -91,7 +91,7 @@ const toPublic = (b, origin) => {
   const listed = b.services.filter((svc) => svc.status !== "unlisted");
   return {
     ...rest,
-    offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at)),
+    offers: liveStoreOffers(b, at).map((offer) => dealOf(offer, offerProducts(offer, b), at, b.timezone)),
     services: listed.map((svc) => ({ ...svc, offer: offerChipFor({ id: svc.id, status: svc.status ?? "listed" }, b, at) })),
     productCount: listed.length,
     closesAt: open.closesAt,
@@ -198,7 +198,7 @@ export async function searchBusinesses({
     .filter((b) => !closedNow || !statusOf(b.hours, b.exceptions, undefined, b.timezone).isOpen)
     .filter((b) => !open24 || isOpenAllDay(b.hours))
     .filter((b) => !openSunday || opensOn(b.hours, "sun"))
-    .filter((b) => !openLate || isOpenLate(b.hours, b.exceptions))
+    .filter((b) => !openLate || isOpenLate(b.hours, b.exceptions, undefined, b.timezone))
     .filter((b) => !verifiedOnly || b.verified)
     .filter((b) => !featuredOnly || PLAN_FEATURES[b.plan].featured)
     .filter((b) => !flashSale || promoCountsFor(b).flash > 0)
