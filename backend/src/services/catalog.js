@@ -77,6 +77,9 @@ const toSummary = (b, origin) => ({
   lng: b.lng,
   isOpen: statusOf(b.hours, b.exceptions, undefined, b.timezone).isOpen,
   statusLine: statusOf(b.hours, b.exceptions, undefined, b.timezone).line,
+  hours: b.hours,
+  exceptions: b.exceptions ?? [],
+  timezone: b.timezone,
   distanceKm: origin ? distanceKm(origin, b) : null,
   promo: promoCountsFor(b)
 });

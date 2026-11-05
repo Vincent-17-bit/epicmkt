@@ -124,6 +124,9 @@ const sellerCard = (business, origin) => ({
   whatsapp: business.whatsapp,
   isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
   statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line,
+  hours: business.hours,
+  exceptions: business.exceptions ?? [],
+  timezone: business.timezone,
   distanceKm: origin ? distanceKm(origin, business) : null
 });
 

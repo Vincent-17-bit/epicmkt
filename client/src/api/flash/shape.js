@@ -86,7 +86,7 @@ const statusFor = (hours, exceptions, timeZone, viewerZone) => {
 
 export const statusCard = (hours, exceptions, timeZone) => {
   const { isOpen, line } = statusFor(hours, exceptions, timeZone);
-  return { isOpen, statusLine: line };
+  return { isOpen, statusLine: line, hours, exceptions: exceptionsOf(exceptions), timezone: timeZone };
 };
 
 const exceptionsOf = (value) => (Array.isArray(value) ? value : []);

@@ -33,6 +33,11 @@ const MESSAGES = {
   intervals_required: "Add at least one opening interval, or choose Closed all day.",
   too_many_intervals: "You can add up to 3 intervals for a day.",
   invalid_time: "Enter each time as hours and minutes.",
+  invalid_hours: "Your opening hours could not be read. Reload the page and try again.",
+  unknown_day: "Your opening hours could not be read. Reload the page and try again.",
+  invalid_interval: "Set both an opening time and a closing time for each open day.",
+  zero_length: "Opening and closing time cannot be the same. For a full day, choose Open 24 hours.",
+  not_a_seller: "Sign in to your shop account to change opening hours.",
   interval_order: "Each interval must end after it starts.", // no longer raised: an earlier end means "until the next day"
   intervals_overlap: "Intervals cannot overlap or touch. Merge them into one. An interval that runs past midnight fills the rest of its day, so nothing else can start later that day.",
   invalid_note: "Keep the note between 2 and 80 characters of plain text.",

@@ -8,6 +8,7 @@ export const SELLER_API = [
   "setLoginEmail",
   "updateProfile",
   "setTimezone",
+  "saveWeeklyHours",
   "setLocation",
   "requestChange",
   "cancelChange",

@@ -46,6 +46,7 @@ export const changePassword = ({ code, newPassword }) => fn("seller-change-passw
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
+export const saveWeeklyHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
 // Moves the shop pin on the map. `address` (the landmark text) is optional: leave it out to keep what is saved.
 export const setLocation = ({ lat, lng, address } = {}) => rpc("seller_set_location", { p_lat: lat, p_lng: lng, p_address: address ?? null });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
