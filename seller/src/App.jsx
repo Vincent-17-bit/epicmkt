@@ -15,6 +15,7 @@ import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
 import ItemPanel from "./pages/business/catalog/panel/ItemPanel.jsx";
 import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
+import AddItem from "./pages/business/catalog/AddItem.jsx";
 import Preview from "./pages/business/Preview.jsx";
 import Gallery from "./pages/business/Gallery.jsx";
 import Team from "./pages/business/Team.jsx";
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route element={<RequireSeller />}>
         {/* The item editor is a page of its own, without the app's bottom navigation, so it can have its own bars. */}
+        <Route path="/business/catalog/add" element={<AddItem />} />
         <Route path="/business/catalog/new" element={<ItemEditor />} />
         <Route path="/business/catalog/:itemId/edit" element={<ItemEditor />} />
         <Route path="/business" element={<Layout />}>

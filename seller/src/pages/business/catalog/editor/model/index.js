@@ -3,11 +3,12 @@ import { optionsSlice } from "./options.js";
 import { pricesSlice } from "./prices.js";
 import { mediaSlice } from "./media.js";
 import { specsSlice } from "./specs.js";
+import { typeSlice } from "./type.js";
 
 // The form is split into slices, each owning a set of keys. The saved form is still ONE flat object, exactly as before,
 // so the payload, the draft on the device and the dirty check are unchanged.
 // Order is the order of the steps on screen. Other prompts append their slice at the end of this list.
-export const SLICES = [basicsSlice, optionsSlice, pricesSlice, mediaSlice, specsSlice];
+export const SLICES = [basicsSlice, optionsSlice, pricesSlice, mediaSlice, specsSlice, typeSlice];
 
 export const sliceOf = (key) => SLICES.find((s) => s.keys.includes(key)) ?? null;
 

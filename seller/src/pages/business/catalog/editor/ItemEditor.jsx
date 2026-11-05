@@ -77,7 +77,10 @@ function EditorForm({ item, sections, category, business }) {
   if (startRef.current === null) {
     // A new item starts from the seller's saved catalog defaults (Settings, Catalog defaults).
     const fresh = { ...emptyItemForm(), availability: catalogDefaults.default_availability === "unavailable" ? "out_of_stock" : catalogDefaults.default_availability, lowStockThreshold: String(catalogDefaults.low_stock_threshold), showStockCount: catalogDefaults.show_only_n_left };
-    const saved = item ? formFromItem(item) : fresh;
+    // The type picked on the Add item screen rides along in the route state; null means Other goods. Items with no type get no key at all.
+    const picked = location.state && "productTypeId" in location.state ? { productTypeId: location.state.productTypeId ?? null } : {};
+    const typed = item?.productTypeId ? { productTypeId: item.productTypeId } : {};
+    const saved = item ? { ...formFromItem(item), ...typed } : { ...fresh, ...picked };
     const base = JSON.stringify(saved);
     const draft = loadDraft(draftId, base);
     startRef.current = { base, saved, form: draft ? { ...saved, ...draft.form } : saved, restoredAt: draft?.savedAt ?? null };
@@ -215,7 +218,8 @@ function EditorForm({ item, sections, category, business }) {
     busyRef.current = true;
     setBusy(true);
     try {
-      const id = await api.saveItem(item?.id ?? null, check.value);
+      // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
+      const id = await api.saveItem(item?.id ?? null, "productTypeId" in form ? { ...check.value, productTypeId: form.productTypeId } : check.value);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
