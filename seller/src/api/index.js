@@ -15,7 +15,7 @@ export const changePassword = (...a) => impl.changePassword(...a);
 export const setLoginEmail = (...a) => impl.setLoginEmail(...a);
 export const updateProfile = (...a) => impl.updateProfile(...a);
 export const setTimezone = (...a) => impl.setTimezone(...a);
-export const setHours = (...a) => impl.setHours(...a);
+export const saveWeeklyHours = (...a) => impl.saveWeeklyHours(...a);
 export const setLocation = (...a) => impl.setLocation(...a);
 export const requestChange = (...a) => impl.requestChange(...a);
 export const cancelChange = (...a) => impl.cancelChange(...a);

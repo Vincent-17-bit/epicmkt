@@ -169,7 +169,7 @@ export const setTimezone = async (timezone) => {
   bill.business.timezone = tz;
   return tz;
 };
-export const setHours = async (hours) => {
+export const saveWeeklyHours = async (hours) => {
   writer();
   await wait();
   const result = validateWeeklyHours(hours);

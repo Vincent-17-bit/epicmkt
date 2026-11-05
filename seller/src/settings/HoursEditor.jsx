@@ -69,7 +69,7 @@ export default function HoursEditor() {
     setError("");
     setStatus("");
     try {
-      await api.setHours(hours);
+      await api.saveWeeklyHours(hours);
       await qc.invalidateQueries({ queryKey: ["shop-preview"] });
       setEdited(null);
       clearTimeout(timer.current);
