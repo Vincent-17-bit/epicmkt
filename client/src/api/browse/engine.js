@@ -180,6 +180,8 @@ export const toSummary = (b, snap, origin, now = Date.now()) => {
     lat: b.lat,
     lng: b.lng,
     timezone: b.timezone,
+    hours: b.hours,
+    exceptions: b.exceptions,
     isOpen: status.isOpen,
     statusLine: status.line,
     distanceKm: distanceTo(origin, b),

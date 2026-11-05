@@ -5,6 +5,7 @@ import { faArrowRight, faBolt, faCircleCheck, faQuoteLeft } from "@fortawesome/f
 import { formatDistance } from "@epicmkt/shared";
 import { LazyImage } from "@epicmkt/ui";
 import { useCardLife } from "../hooks/useCardLife.js";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
 import { URGENCY, discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
 import { motionAllowed } from "../lib/motion.js";
@@ -29,7 +30,8 @@ function Embers() {
   );
 }
 
-function StoreRow({ business }) {
+function StoreRow({ business: source }) {
+  const business = useLiveStatus(source);
   const distance = Number.isFinite(business.distanceKm) ? formatDistance(business.distanceKm) : null;
   return (
     <span className={styles.store}>

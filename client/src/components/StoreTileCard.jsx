@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { StoreTile } from "@epicmkt/ui";
 import { logContactEvent } from "../api/index.js";
 import { t } from "../i18n/index.js";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 
 const renderLink = ({ href, children, ...rest }) => (
   <Link to={href} {...rest}>
@@ -20,7 +21,8 @@ export const storeTileLabels = () => ({
 });
 
 /** The compact store card (two thirds picture, details, contact strip) wired to the router and contact tracking. */
-export default function StoreTileCard({ business }) {
+export default function StoreTileCard({ business: source }) {
+  const business = useLiveStatus(source);
   return (
     <StoreTile
       business={business}
