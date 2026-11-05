@@ -116,7 +116,7 @@ export function isOpenNow(hours, date, timeZone) {
   const slot = hours[day];
   if (!slot) return false;
   const start = toMinutes(slot[0]);
-  const end = toMinutes(slot[1]);
+  const end = endOf(slot);
   return end > start ? minutes >= start && minutes < end : minutes >= start || minutes < end;
 }
 
@@ -133,6 +133,8 @@ const isTime = (t) => typeof t === "string" && /^([01][0-9]|2[0-3]):[0-5][0-9]$/
 const isInterval = (iv) => Array.isArray(iv) && iv.length === 2 && isTime(iv[0]) && isTime(iv[1]);
 const pad2 = (n) => String(n).padStart(2, "0");
 const toTime = (minutes) => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
+export const isFullDay = (iv) => Array.isArray(iv) && iv[0] === "00:00" && iv[1] === "23:59";
+const endOf = (iv) => (isFullDay(iv) ? 1440 : toMinutes(iv[1]));
 const weekdayOf = (dateStr) => DAYS[new Date(`${dateStr}T00:00:00Z`).getUTCDay()];
 
 /** The exception that applies to one calendar date, or null. Entries that are not closed/special are ignored. */
@@ -155,8 +157,8 @@ function windowsOn(hours, exceptions, dateStr) {
   const nextDayClosed = exceptionFor(exceptions, addDays(dateStr, 1))?.kind === "closed";
   for (const [from, to] of intervalsOn(hours, exceptions, dateStr)) {
     const start = toMinutes(from);
-    const end = toMinutes(to);
-    if (end > start) windows.push({ start, end, startLabel: from, closes: to });
+    const end = endOf([from, to]);
+    if (end > start) windows.push({ start, end, startLabel: from, closes: to, fullDay: isFullDay([from, to]) });
     else windows.push({ start, end: 1440, startLabel: from, closes: nextDayClosed ? "00:00" : to });
   }
   if (exceptionFor(exceptions, dateStr)?.kind !== "closed") {
@@ -172,6 +174,13 @@ function windowsOn(hours, exceptions, dateStr) {
 export function isOpenOn(hours, exceptions, date, timeZone) {
   const now = nairobiNow(date, timeZone);
   return windowsOn(hours, exceptions, now.date).some((w) => now.minutes >= w.start && now.minutes < w.end);
+}
+
+export function openAllDayNow(hours, exceptions, date, timeZone) {
+  const now = nairobiNow(date, timeZone);
+  const current = windowsOn(hours, exceptions, now.date).find((w) => now.minutes >= w.start && now.minutes < w.end);
+  if (!current?.fullDay) return false;
+  return windowsOn(hours, exceptions, addDays(now.date, 1)).some((w) => w.start === 0);
 }
 
 /**
@@ -239,7 +248,7 @@ export function hoursRowsFor(hours, exceptions, date, timeZone, viewerZone) {
   const shopZone = safeShopZone(timeZone);
   return weekSchedule(hours, exceptions, date, shopZone)
     .map((d) => {
-      const views = d.intervals.map((iv) => shopIntervalView(d.date, iv, { shopZone, viewerZone })).filter(Boolean);
+      const views = d.intervals.filter((iv) => !isFullDay(iv)).map((iv) => shopIntervalView(d.date, iv, { shopZone, viewerZone })).filter(Boolean);
       const closedDay = d.exception?.kind === "closed" ? shopDayInViewer(d.date, { shopZone, viewerZone }) : null;
       const viewerParts = views.map((v) => v.viewerText ?? v.shopText);
       return {
@@ -248,11 +257,11 @@ export function hoursRowsFor(hours, exceptions, date, timeZone, viewerZone) {
         date: d.date,
         dateLabel: `${Number(d.date.slice(8))} ${MONTH_SHORT[Number(d.date.slice(5, 7)) - 1]}`,
         today: d.today,
-        text: d.intervals.length ? d.intervals.map(([a, b]) => `${formatClock(a)} to ${formatClock(b)}`).join(", ") : "Closed",
+        text: d.intervals.length ? d.intervals.map((iv) => (isFullDay(iv) ? "Open 24 hours" : `${formatClock(iv[0])} to ${formatClock(iv[1])}`)).join(", ") : "Closed",
         changed: Boolean(d.exception),
         note: d.exception?.note ? String(d.exception.note) : null,
         shopZone,
-        shopLabel: shopZoneLabel(startOfDayUtcIso(d.date, shopZone), shopZone),
+        shopLabel: d.intervals.length && d.intervals.every(isFullDay) ? "" : shopZoneLabel(startOfDayUtcIso(d.date, shopZone), shopZone),
         viewerText: views.some((v) => v.viewerText) ? viewerParts.join(", ") : closedDay ? `Closed ${closedDay.from} to ${closedDay.to}` : null,
         viewerLabel: views.find((v) => v.viewerText)?.viewerLabel ?? closedDay?.label ?? ""
       };

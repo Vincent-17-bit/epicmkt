@@ -138,3 +138,15 @@ test("a seller can set their shop's zone, a bad zone is refused, and another sho
   const audit = await sql(c, `select action from audit_log where business_id = $1 and action = 'timezone_changed'`, [ids.bizA]);
   assert.equal(audit.length, 1);
 });
+
+test("shop_day reads the calendar date at the shop in every session zone", async () => {
+  const cases = [["Africa/Nairobi", "2026-11-05"], ["Asia/Kolkata", "2026-11-05"], ["America/Los_Angeles", "2026-11-04"], ["Pacific/Auckland", "2026-11-05"], [null, "2026-11-05"], ["", "2026-11-05"]];
+  for (const session of SESSION_ZONES) {
+    await c.query(`set time zone '${session}'`);
+    for (const [zone, expected] of cases) {
+      const r = await sql(c, `select shop_day('2026-11-04T22:30:00Z'::timestamptz, $1)::text as d`, [zone]);
+      assert.equal(r[0].d, expected, `${session} ${zone}`);
+    }
+  }
+  await c.query(`reset time zone`);
+});

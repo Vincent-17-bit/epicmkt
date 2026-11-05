@@ -1,4 +1,4 @@
-import { PLAN_FEATURES, isValidPhoneKE, statusOf, validateAttributes } from "@epicmkt/shared";
+import { PLAN_FEATURES, PRODUCT_TYPES, isValidPhoneKE, statusOf, validateAttributes } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { NotFoundError, ValidationError } from "../errors.js";
@@ -70,4 +70,11 @@ export async function updateSellerBusiness(sellerId, patch) {
 
   Object.assign(business, patch);
   return getSellerBusiness(sellerId);
+}
+
+// seller_product_types (Contract v1): the product types a seller can pick when adding an item, each with the option axes it asks for.
+// TODO(contract:W0) the live RPC returns the same rows.
+export async function getSellerProductTypes() {
+  await delay();
+  return structuredClone(PRODUCT_TYPES);
 }

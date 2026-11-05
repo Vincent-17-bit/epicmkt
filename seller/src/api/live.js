@@ -46,6 +46,7 @@ export const changePassword = ({ code, newPassword }) => fn("seller-change-passw
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
+export const saveWeeklyHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
 // Moves the shop pin on the map. `address` (the landmark text) is optional: leave it out to keep what is saved.
 export const setLocation = ({ lat, lng, address } = {}) => rpc("seller_set_location", { p_lat: lat, p_lng: lng, p_address: address ?? null });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
@@ -491,7 +492,7 @@ export const getShopPreview = async () => {
   return shape.preview(b, { categoryName: category?.name, catalog, flashSales, offers, nowMs: Date.parse(server.now) });
 };
 export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id ?? null, p_fields: itemRow(fields) });
-// The issues a save would raise, without saving (migration 0087): { ok, issues: [{ code }] }. Same arguments as saveItem.
+// The issues a save would raise, without saving (migration 0088): { ok, issues: [{ code }] }. Same arguments as saveItem.
 export const checkItem = (id, fields) => rpc("seller_check_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 // The editor's read of an item's options: { axes, variants (with stock counts), availability, sizeChartId, sizeChartOverride }.
 export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });

@@ -22,6 +22,7 @@ import RestockDialog from "./RestockDialog.jsx";
 import SavedViews from "./SavedViews.jsx";
 import Tracker from "./Tracker.jsx";
 import { readDevicePref, storeDevicePref } from "./cardItem.js";
+import { productTypesReady } from "./AddItem.data.js";
 import styles from "./catalog.module.css";
 
 const PAGE_SIZE = 60;
@@ -73,7 +74,7 @@ export default function Catalog() {
   const refresh = useCallback(() => qc.invalidateQueries({ queryKey: ["catalog"] }), [qc]);
 
   // Adding and editing happen on a page of their own. It remembers the filters you came from, and tells this page what happened when it is done.
-  const openEditor = useCallback((item) => navigate(item ? `/business/catalog/${item.id}/edit` : "/business/catalog/new", { state: { from: location.search } }), [navigate, location.search]);
+  const openEditor = useCallback((item) => navigate(item ? `/business/catalog/${item.id}/edit` : productTypesReady() ? "/business/catalog/add" : "/business/catalog/new", { state: { from: location.search } }), [navigate, location.search]);
   useEffect(() => {
     const told = location.state?.notice;
     if (!told) return;

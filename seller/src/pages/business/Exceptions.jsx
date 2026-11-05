@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
-  addDays, dayLabel, describeException, describeExceptionForViewer, formatClock, getUserTimeZone, safeShopZone, shopTimeNote, isOvernight, upcomingExceptions, validateException,
+  addDays, dayLabel, describeException, describeExceptionForViewer, formatClock, getUserTimeZone, nairobiNow, safeShopZone, shopTimeNote, isOvernight, upcomingExceptions, validateException,
 } from "@epicmkt/shared";
-import { dayOf } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
@@ -13,7 +12,7 @@ import ui from "../../styles/ui.module.css";
 import styles from "./exceptions.module.css";
 
 export const UNDO_MS = 8000;
-const todayOf = () => dayOf(now());
+const todayOf = (zone) => nairobiNow(now(), zone).date;
 // The same exception in the viewer's own clock, when that reads differently from the shop's.
 const viewerLine = (e, shopZone) => describeExceptionForViewer(e, { shopZone, viewerZone: getUserTimeZone() }).viewerText;
 const nextDayLabel = (date) => (date ? dayLabel(addDays(date, 1)) : "the next day");
@@ -77,7 +76,7 @@ function previewOf({ kind, intervals, note }) {
 }
 
 function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
-  const today = todayOf();
+  const today = todayOf(shopZone);
   const [date, setDate] = useState(initial?.date ?? "");
   const [kind, setKind] = useState(initial?.kind ?? "closed");
   const [intervals, setIntervals] = useState(initial?.intervals?.length ? initial.intervals.map((i) => [...i]) : [["09:00", "17:00"]]);
@@ -232,7 +231,7 @@ export default function Exceptions() {
 
   const shop = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
   const shopZone = safeShopZone(shop.data?.shop?.timezone);
-  const today = todayOf();
+  const today = todayOf(shopZone);
   const list = upcomingExceptions(q.data, today);
   const full = list.length >= EXCEPTION_LIMIT;
   const months = Object.entries(list.reduce((acc, e) => { (acc[monthKey(e.date)] ??= []).push(e); return acc; }, {}));

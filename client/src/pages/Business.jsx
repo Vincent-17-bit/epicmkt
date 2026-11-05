@@ -10,6 +10,7 @@ import { hoursCaption, hoursRows, socialLinks, statusText } from "../lib/busines
 import { t } from "../i18n/index.js";
 import { useGeoStore } from "../stores/geo.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
 import { visibleFields } from "@epicmkt/shared";
 import TemplateDetails from "../components/TemplateDetails.jsx";
@@ -44,13 +45,14 @@ export default function Business() {
     return () => navigator.geolocation.clearWatch(id);
   }, [geo.status, geo.source]);
 
-  const { data, isPending, isError, error, refetch } = useQuery({
+  const { data: loaded, isPending, isError, error, refetch } = useQuery({
     queryKey: ["business", slug],
     queryFn: () => getBusiness(slug),
     retry: false,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true
   });
+  const data = useLiveStatus(loaded);
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
   usePageMeta(data ? { description: data.tagline || data.description, image: data.coverUrl || data.logoUrl, path: `/b/${data.slug}` } : undefined);

@@ -10,6 +10,7 @@ import { coverUrl, metaDescription } from "@epicmkt/ui";
 
 import { useOptionSelection } from "../hooks/useOptionSelection.js";
 import { useUrgency } from "../hooks/useCountdown.js";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { useInView } from "../hooks/useInView.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
@@ -185,7 +186,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const optionPrice = option ? optionShown(option, current) : null;
   const variant = option ? optionPrice : legacyVariant;
   const shown = option ? (current?.flash ? current.pricing : option.variant ? optionPrice : null) : (legacyVariant ?? current?.pricing ?? null);
-  const seller = current?.business ?? null;
+  const seller = useLiveStatus(current?.business ?? null);
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;

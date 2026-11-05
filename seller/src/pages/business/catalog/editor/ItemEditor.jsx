@@ -8,17 +8,15 @@ import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
 import Modal from "../Modal.jsx";
-import BasicsSection from "./BasicsSection.jsx";
-import DetailsSection from "./DetailsSection.jsx";
 import LivePreview from "./LivePreview.jsx";
-import MediaSlot, { useMediaSlot } from "./MediaSlot.jsx";
-import PriceSection from "./PriceSection.jsx";
+import { useMediaSlot } from "./MediaSlot.jsx";
 import QualityPanel from "./Quality.jsx";
-import ReviewSection from "./ReviewSection.jsx";
-import { SectionCard, IconBtn } from "./parts.jsx";
+import { IconBtn } from "./parts.jsx";
 import { useSettings } from "../../../../state/settings.js";
 import { clearDraft, loadDraft, prefersCalm, storeDraft, useBreakpoint, useUnsavedGuard } from "./hooks.js";
-import { firstErrorTarget, qualityChecks, STEPS, stepDone, stepIndex } from "./model.js";
+import { firstErrorTarget, qualityChecks } from "./model.js";
+import { useItemModel } from "./model/useItemModel.js";
+import { visibleSteps } from "./steps/index.js";
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
@@ -79,13 +77,16 @@ function EditorForm({ item, sections, category, business }) {
   if (startRef.current === null) {
     // A new item starts from the seller's saved catalog defaults (Settings, Catalog defaults).
     const fresh = { ...emptyItemForm(), availability: catalogDefaults.default_availability === "unavailable" ? "out_of_stock" : catalogDefaults.default_availability, lowStockThreshold: String(catalogDefaults.low_stock_threshold), showStockCount: catalogDefaults.show_only_n_left };
-    const saved = item ? formFromItem(item) : fresh;
+    // The type picked on the Add item screen rides along in the route state; null means Other goods. Items with no type get no key at all.
+    const picked = location.state && "productTypeId" in location.state ? { productTypeId: location.state.productTypeId ?? null } : {};
+    const typed = item?.productTypeId ? { productTypeId: item.productTypeId } : {};
+    const saved = item ? { ...formFromItem(item), ...typed } : { ...fresh, ...picked };
     const base = JSON.stringify(saved);
     const draft = loadDraft(draftId, base);
     startRef.current = { base, saved, form: draft ? { ...saved, ...draft.form } : saved, restoredAt: draft?.savedAt ?? null };
   }
   const baseRef = useRef(startRef.current.base);
-  const [form, setForm] = useState(startRef.current.form);
+  const { form, patch, replace } = useItemModel(startRef.current.form);
   const [restoredAt, setRestoredAt] = useState(startRef.current.restoredAt);
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
@@ -105,8 +106,9 @@ function EditorForm({ item, sections, category, business }) {
   const dirty = formDirty || media.hasQueued;
   const { blocker, allow } = useUnsavedGuard(dirty);
 
-  const patch = useCallback((key, value) => setForm((f) => ({ ...f, [key]: value })), []);
   const checks = useMemo(() => qualityChecks(form, media.photoCount), [form, media.photoCount]);
+  // The steps the seller sees (a step can hide itself with visibleWhen). Everything that numbers or steps through them reads this list.
+  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount });
 
   // ---- Put the cursor somewhere, after the right step has had a chance to render ----
   const focusOn = useCallback((key) => {
@@ -172,12 +174,12 @@ function EditorForm({ item, sections, category, business }) {
     const seen = new Map();
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => seen.set(e.target.dataset.step, e.isIntersecting));
-      const first = STEPS.find((s) => seen.get(s.id));
+      const first = steps.find((s) => seen.get(s.id));
       if (first) setActive(first.id);
     }, { rootMargin: "-25% 0px -60% 0px" });
     root.current.querySelectorAll("[data-step]").forEach((el) => io.observe(el));
     return () => io.disconnect();
-  }, [phone, bp]);
+  }, [phone, bp, steps.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---- Errors clear as the seller fixes them, without new ones appearing before they have asked to save ----
   useEffect(() => {
@@ -216,7 +218,8 @@ function EditorForm({ item, sections, category, business }) {
     busyRef.current = true;
     setBusy(true);
     try {
-      const id = await api.saveItem(item?.id ?? null, check.value);
+      // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
+      const id = await api.saveItem(item?.id ?? null, "productTypeId" in form ? { ...check.value, productTypeId: form.productTypeId } : check.value);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
@@ -245,7 +248,7 @@ function EditorForm({ item, sections, category, business }) {
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
       const next = fresh ? formFromItem(fresh) : form;
       baseRef.current = JSON.stringify(next);
-      setForm(next);
+      replace(next);
       setNotice(result);
     } catch (err) {
       setError(errorText(err));
@@ -280,7 +283,7 @@ function EditorForm({ item, sections, category, business }) {
   const leave = () => navigate(backTo);
   const startOver = () => {
     clearDraft(draftId);
-    setForm(startRef.current.saved);
+    replace(startRef.current.saved);
     setRestoredAt(null);
     setErrors({});
   };
@@ -297,36 +300,25 @@ function EditorForm({ item, sections, category, business }) {
   const onFocusIn = (e) => setArea(e.target.closest?.("[data-area]")?.dataset.area ?? null);
   const onFocusOut = (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setArea(null); };
 
-  const idx = stepIndex(step);
+  const idx = steps.findIndex((x) => x.id === step);
   const draftish = isNew || item.draft || !item.visible;
   const secondary = draftish ? "Save as draft" : "Save and stay";
   const primary = isNew ? "Add item" : "Save changes";
   const problemCount = Object.keys(errors).length;
   const showAll = !phone;
-  const visible = showAll ? STEPS.map((s) => s.id) : [step];
+  const visible = showAll ? steps : steps.filter((x) => x.id === step);
   const split = bp === "desktop" || bp === "wide";
   const shown = phone ? step : active;
 
   const saveState = busy ? "Saving..." : dirty ? "Unsaved changes" : isNew ? "New item" : "All changes saved";
 
-  const renderSection = (id) => {
-    if (id === "media") {
-      return (
-        <SectionCard key={id} id="media" title="Media" why="Items with clear photos get far more taps and messages." >
-          <div data-area="media"><MediaSlot media={media} disabled={busy} /></div>
-        </SectionCard>
-      );
-    }
-    if (id === "basics") return <BasicsSection key={id} form={form} patch={patch} errors={errors} category={category} sections={sections} focusOn={focusOn} />;
-    if (id === "price") return <PriceSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
-    if (id === "details") return <DetailsSection key={id} form={form} patch={patch} errors={errors} focusOn={focusOn} />;
-    return <ReviewSection key={id} form={form} checks={checks} isNew={isNew} onJump={goTo} />;
-  };
+  const stepProps = { form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo };
+  const renderSection = (st) => <st.component key={st.id} {...stepProps} />;
 
   const stepButtons = (variant) => (
     <ol className={variant === "steps" ? styles.steps : styles.navList}>
-      {STEPS.map((s, n) => {
-        const done = stepDone(s.id, form, media.photoCount);
+      {steps.map((s, n) => {
+        const done = s.done({ form, errors, mediaCount: media.photoCount });
         const current = shown === s.id;
         return (
           <li key={s.id}>
@@ -343,8 +335,8 @@ function EditorForm({ item, sections, category, business }) {
     </ol>
   );
 
-  const nextStep = STEPS[idx + 1];
-  const prevStep = STEPS[idx - 1];
+  const nextStep = steps[idx + 1];
+  const prevStep = steps[idx - 1];
 
   return (
     <div ref={root} className={styles.editor} data-bp={bp}>
@@ -381,9 +373,9 @@ function EditorForm({ item, sections, category, business }) {
 
       {phone && (
         <nav className={styles.stepper} aria-label="Steps">
-          <p className={styles.stepLabel}>Step {idx + 1} of {STEPS.length}: <strong>{STEPS[idx].label}</strong></p>
-          <div className={styles.track} role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={idx + 1} aria-valuetext={`Step ${idx + 1} of ${STEPS.length}: ${STEPS[idx].label}`}>
-            <span className={styles.fill} style={{ inlineSize: `${((idx + 1) / STEPS.length) * 100}%` }} />
+          <p className={styles.stepLabel}>Step {idx + 1} of {steps.length}: <strong>{steps[idx].label}</strong></p>
+          <div className={styles.track} role="progressbar" aria-label="Progress" aria-valuemin={1} aria-valuemax={steps.length} aria-valuenow={idx + 1} aria-valuetext={`Step ${idx + 1} of ${steps.length}: ${steps[idx].label}`}>
+            <span className={styles.fill} style={{ inlineSize: `${((idx + 1) / steps.length) * 100}%` }} />
           </div>
           {stepButtons("steps")}
         </nav>

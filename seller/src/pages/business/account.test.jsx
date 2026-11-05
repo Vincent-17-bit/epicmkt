@@ -92,7 +92,7 @@ describe("shop time zone", () => {
     expect(save).toBeDisabled();
     await user.selectOptions(select, "Asia/Kolkata");
     await waitFor(() => expect(screen.getByLabelText("Time zone")).toHaveValue("Asia/Kolkata"));
-    expect(screen.getByTestId("shop-tz-now")).toHaveTextContent("GMT+5:30");
+    expect(screen.getByTestId("shop-tz-now")).toHaveTextContent("IST");
     await user.click(save);
     expect(await screen.findByTestId("shop-tz-saved")).toBeInTheDocument();
     expect(M.state.business).toBeDefined();

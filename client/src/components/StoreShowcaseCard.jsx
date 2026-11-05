@@ -3,6 +3,7 @@ import { StoreShowcase } from "@epicmkt/ui";
 import { logContactEvent } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { itemPagePath } from "./ProductTile.jsx";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 
 const renderLink = ({ href, children, ...rest }) => (
   <Link to={href} {...rest}>
@@ -29,7 +30,8 @@ const labels = () => ({
  * A featured store as one card: the header opens the store, each product picture opens that product's page, and
  * Call, WhatsApp and Directions sit along the bottom.
  */
-export default function StoreShowcaseCard({ business, products = [], loading = false }) {
+export default function StoreShowcaseCard({ business: source, products = [], loading = false }) {
+  const business = useLiveStatus(source);
   return (
     <StoreShowcase
       business={business}

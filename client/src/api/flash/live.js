@@ -490,7 +490,7 @@ export async function getBusiness(ref, origin = null) {
     categoriesCache,
     supabase.from("public_items").select(CARD_COLUMNS).eq("business_id", row.id).order("sort").order("created_at", { ascending: false }).then(unwrap),
     chipsByItem(row.id),
-    dealsForStore(row.id),
+    dealsForStore(row.id, row.timezone),
     optionalRows("public_gallery_photos", row.id, "sort"),
     optionalRows("public_staff", row.id, "sort"),
     optionalRows("public_timetable", row.id, "start_time")

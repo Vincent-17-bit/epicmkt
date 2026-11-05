@@ -3,6 +3,7 @@ import { ShopCard } from "@epicmkt/ui";
 import { logContactEvent } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
+import { useLiveStatus } from "../hooks/useLiveStatus.js";
 
 const renderLink = ({ href, children, ...rest }) => (
   <Link to={href} {...rest}>
@@ -12,7 +13,8 @@ const renderLink = ({ href, children, ...rest }) => (
 
 const onContact = (business, type) => logContactEvent({ businessId: business.id, type });
 
-export default function BusinessCard({ business }) {
+export default function BusinessCard({ business: source }) {
+  const business = useLiveStatus(source);
   return (
     <ShopCard
       business={business}

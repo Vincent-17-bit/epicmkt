@@ -1,6 +1,6 @@
 // Product options, variants, availability matrix and size charts: the ONE place their rules live in JavaScript.
 //
-// Mirrors migrations 0086 and 0087 (the SQL validators and seller_save_item / public_item_options). Same limits, same error names, so the
+// Mirrors migrations 0086 and 0088 (the SQL validators and seller_save_item / public_item_options). Same limits, same error names, so the
 // seller editor can catch a problem before the database does, the mock API behaves like the real one, and the db tests can compare
 // both. Style follows itemForm.js: plain functions, no classes, errors as readable strings.
 //

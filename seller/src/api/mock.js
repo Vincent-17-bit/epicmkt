@@ -1,4 +1,4 @@
-import { GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
+import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { buildAvailability, cleanSizeChartOverride, comboKey, scalePrice, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
@@ -168,6 +168,14 @@ export const setTimezone = async (timezone) => {
   if (!tz) throw new ApiError("invalid_timezone");
   bill.business.timezone = tz;
   return tz;
+};
+export const saveWeeklyHours = async (hours) => {
+  writer();
+  await wait();
+  const result = validateWeeklyHours(hours);
+  if (!result.ok) throw new ApiError(result.errors[0].error);
+  bill.business.hours = result.value;
+  return { ...result.value };
 };
 // Mirrors seller_set_location: the pin has to sit inside Kenya's box, the address is optional.
 export const setLocation = async ({ lat, lng, address } = {}) => {
@@ -721,7 +729,7 @@ export const getShopPreview = async () => {
   await wait();
   settleFlash();
   const cat = await getCatalog();
-  const hours = Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["08:00", "18:00"]]));
+  const hours = bill.business.hours ?? Object.fromEntries(["mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, ["08:00", "18:00"]]));
   const shop = {
     timezone: bill.business.timezone ?? "Africa/Nairobi",
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",
@@ -744,7 +752,7 @@ const planOptions = async (id, f) => {
     if (!r.ok) throw new ApiError(r.error);
     next.axes = r.value.axes;
     next.variants = r.value.variants;
-    // The seller's default combination (migration 0087): absent keeps the stored one, null clears it.
+    // The seller's default combination (migration 0088): absent keeps the stored one, null clears it.
     if (r.value.defaultChoice !== undefined) next.defaultChoice = r.value.defaultChoice;
     // The flash guard of the real save covers variant prices too.
     if (id && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) {
@@ -1190,7 +1198,7 @@ export const deleteOffer = async (id) => {
   return true;
 };
 
-const todayNairobi = () => nairobiDay(clockNow());
+const todayNairobi = () => nairobiNow(clockNow(), safeShopZone(bill.business.timezone)).date;
 const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
 export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };
 export const saveException = async ({ id = null, date, kind, intervals = [], note = null }) => {

@@ -11,6 +11,7 @@ export * from "./seller/images.js";
 export * from "./seller/cloudinarySign.js";
 export * from "./seller/proofs.js";
 export * from "./seller/exceptions.js";
+export * from "./seller/hours.js";
 export * from "./seller/flash.js";
 export * from "./offers.js";
 export * from "./availability.js";
@@ -28,3 +29,6 @@ export * from "./seller/performance.js";
 export * from "./seller/team.js";
 export * from "./variants.js";
 export * from "./options/index.js";
+
+// Contract v1 (W0): product types, option/price contracts, validators, lazy fixtures. See docs/contracts/.
+export * from "./contracts/index.js";

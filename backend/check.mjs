@@ -3,6 +3,7 @@ import { validateTemplate, validateAttributes, FIELD_TYPES } from "@epicmkt/shar
 import { categories as templates } from "./src/data/categories.js";
 import { businesses as seeded } from "./src/data/businesses.js";
 import { setLatency, searchBusinesses, getBusiness, getCategories, getTopSearches, logSearch, logContactEvent, getSuggestions, getNearbyBusinesses, getSimilarBusinesses, getFeaturedBusinesses, resolveShortcode, reportBusiness, getSearchFacets, getTowns, logEvent, getSellerBusiness, updateSellerBusiness, ValidationError } from "./src/index.js";
+import { store } from "./src/store.js";
 import { getOverview, listBusinesses, setBusinessStatus } from "../admin-backend/src/index.js";
 
 setLatency(0);
@@ -290,7 +291,7 @@ console.log("items ok");
   const none = await getItemDetail(noChart.id, { businessId: urban.id });
   assert.deepEqual({ o: none.options, v: none.optionVariants, c: none.sizeChart }, { o: [], v: [], c: null });
 
-  // dependent options (migration 0087): the SanDisk demo. Valid for the shared validator, with a default and per-style specs.
+  // dependent options (migration 0088): the SanDisk demo. Valid for the shared validator, with a default and per-style specs.
   {
     const { dependentValues, reconcileSelection, formatCapacityLabel } = await import("@epicmkt/shared");
     const tech = seeded.find((b) => b.name === "Kisumu Tech Zone");
@@ -320,4 +321,23 @@ console.log("items ok");
   assert.deepEqual(old.optionVariants.map((v) => [v.id, v.label, v.price]), legacy.variants.map((v) => [v.id, v.label, v.price]), "same ids, labels and prices as the old entries");
   assert.deepEqual(old.variants.map((v) => [v.id, v.label, v.price]), legacy.variants.map((v) => [v.id, v.label, v.price]), "the old list is untouched");
   assert.deepEqual(old.pricing.variants.map((v) => [v.id, v.label, v.regularPrice]), legacy.variants.map((v) => [v.id, v.label, v.price]));
+}
+
+{
+  const { mock } = await import("node:test");
+  const shop = store.businesses.find((b) => b.status === "active");
+  const before = { hours: shop.hours, exceptions: shop.exceptions, timezone: shop.timezone };
+  const lateIds = async () => (await searchBusinesses({ openLate: true })).items.map((b) => b.id);
+  mock.timers.enable({ apis: ["Date"], now: Date.parse("2026-11-05T21:00:00Z") });
+  try {
+    shop.exceptions = [];
+    shop.hours = { thu: ["10:00", "22:00"] };
+    shop.timezone = "America/Los_Angeles";
+    assert.ok((await lateIds()).includes(shop.id), "open at 21:00 on the shop's own Thursday");
+    shop.timezone = "Africa/Nairobi";
+    assert.ok(!(await lateIds()).includes(shop.id), "Friday already in Nairobi");
+  } finally {
+    mock.timers.reset();
+    Object.assign(shop, before);
+  }
 }

@@ -1,4 +1,4 @@
-// Migration 0087: dependsOn, the seller's default variant, per-variant specs, the database cap on variants, seller_check_item.
+// Migration 0088: dependsOn, the seller's default variant, per-variant specs, the database cap on variants, seller_check_item.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { publicOptions } from "../../shared/src/seller/options.js";

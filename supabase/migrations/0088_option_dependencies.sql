@@ -1,6 +1,6 @@
--- 0087: option dependencies, the seller's default variant, per-variant spec overrides, a database cap on variants, seller_check_item.
+-- 0088: option dependencies, the seller's default variant, per-variant spec overrides, a database cap on variants, seller_check_item.
 -- Builds on 0086 (item_variants, option_axes, item_options_apply, the reads). Nothing from 0086 is edited; the functions below are
--- re-created with their 0086 text plus the changes marked 0087.
+-- re-created with their 0086 text plus the changes marked 0088.
 --
 --   1. items.default_variant_id        the seller's default combination (an item_variants row of the SAME item; cleared if that variant is removed).
 --   2. item_variants.specs             spec rows that replace the item's own rows for one combination ("Compatible devices" by style).
@@ -466,7 +466,7 @@ begin
   insert into public.item_variants (item_id, business_id, combo_key, choice, price, sale_price, stock_count, status, sku, media_ids, copy_media_ids, sort, specs)
   select v_new, v_id, s.combo_key, s.choice, s.price, s.sale_price, s.stock_count, s.status, s.sku, '{}', case when cardinality(s.media_ids) > 0 then s.media_ids else s.copy_media_ids end, s.sort, s.specs
     from public.item_variants s where s.item_id = p_id;
-  -- 0087: the copy keeps the same default combination (its variants have new ids, so look it up by combination).
+  -- 0088: the copy keeps the same default combination (its variants have new ids, so look it up by combination).
   if v_src.default_variant_id is not null then
     update public.items set default_variant_id = (select n.id from public.item_variants n join public.item_variants o on o.combo_key = n.combo_key
                                                    where n.item_id = v_new and o.id = v_src.default_variant_id) where id = v_new;
