@@ -1,64 +1,25 @@
 import { useState } from "react";
 import { formatKes, offerLabel } from "@epicmkt/shared";
-import MediaGallery from "../components/MediaGallery.jsx";
 import OfferChip from "../components/OfferChip.jsx";
 import StockTag from "../components/StockTag.jsx";
-import { dedupeDescription } from "../lib/media.js";
-import ItemDescription from "./ItemDescription.jsx";
+import ItemDetails from "./ItemDetails.jsx";
+import ItemGallery from "./ItemGallery.jsx";
+import ItemHeader from "./ItemHeader.jsx";
+import ItemOptions from "./ItemOptions.jsx";
 import ItemSpecs from "./ItemSpecs.jsx";
-import { HIGHLIGHT_LIMIT, buildSpecGroups, normalizeHighlights } from "./itemView.js";
+import { buildSpecGroups } from "./itemView.js";
 import { itemT } from "./labels.js";
 import styles from "./ItemView.module.css";
 
-const galleryLabels = (t) => ({
-  gallery: t("item.gallery"),
-  choose: t("item.chooseMedia"),
-  photo: t("item.photo"),
-  video: t("item.video"),
-  zoom: t("item.zoom"),
-  play: t("video.playStage"),
-  pause: t("video.pauseStage"),
-  soundOn: t("video.soundOn"),
-  soundOff: t("video.soundOff"),
-  previous: t("item.prev"),
-  next: t("item.next"),
-  position: t("item.mediaPosition"),
-  videoError: t("video.error"),
-  slide: t("item.slide"),
-  carousel: t("item.carousel")
-});
+// The item page body. Each part is its own component (ItemGallery, ItemHeader, ItemOptions, ItemDetails, ItemSpecs) and ItemView
+// puts them where they go. A caller can replace a part with the slot props `gallery`, `header`, `options`, `details` and `specs`:
+// leave a prop out (undefined) for today's markup, pass any node (null and false included) to draw that part itself, or pass a
+// function that gets the props the default part would have received and returns the node (the specs table needs `reveal`, and the
+// details need `onMoreSpecs`, which ItemView owns). The wrappers that place a part in the layout stay, so a replaced part cannot
+// break the layout.
+// Props flash, offers, seller and after are the older slots for what sits around those parts.
 
-function Highlights({ items, onMore, t, dataHl }) {
-  const [all, setAll] = useState(false);
-  const shown = all ? items : items.slice(0, HIGHLIGHT_LIMIT);
-  return (
-    <section className={styles.about} aria-labelledby="item-about" data-hl={dataHl}>
-      <h3 id="item-about" className={styles.aboutTitle}>
-        {t("item.highlights")}
-      </h3>
-      <ul className={styles.bullets}>
-        {shown.map((entry, index) => (
-          <li key={index} className={styles.bullet}>
-            {entry.title && <strong className={styles.lead}>{entry.title} </strong>}
-            {entry.text}
-          </li>
-        ))}
-      </ul>
-      <div className={styles.aboutActions}>
-        {items.length > HIGHLIGHT_LIMIT && (
-          <button type="button" className={styles.more} aria-expanded={all} onClick={() => setAll((v) => !v)}>
-            {all ? t("item.showLess") : t("item.showAll")}
-          </button>
-        )}
-        {onMore && (
-          <button type="button" className={styles.moreLink} onClick={onMore}>
-            {t("item.moreDetails")}
-          </button>
-        )}
-      </div>
-    </section>
-  );
-}
+const fill = (slot, props, Default, key) => (slot === undefined ? <Default key={key} {...props} /> : typeof slot === "function" ? slot(props) : slot);
 
 export default function ItemView({
   item,
@@ -78,12 +39,14 @@ export default function ItemView({
   offers = null,
   seller = null,
   after = null,
+  gallery,
+  header,
+  options,
+  details,
+  specs,
   className = "",
   marks
 }) {
-  const variants = item.pricing?.variants ?? [];
-  const highlights = normalizeHighlights(item.highlights);
-  const fullDescription = dedupeDescription(item.shortDescription, item.description);
   const hasSpecs = buildSpecGroups({ item, category, attributes }).length > 0;
   const [pinged, setPinged] = useState(0);
   const reveal = pinged;
@@ -91,66 +54,16 @@ export default function ItemView({
   return (
     <div className={`${styles.layout} ${className}`} data-variant={layout}>
       <div className={styles.media} data-hl={mark("media")}>
-        <MediaGallery key={`gallery-${item.id}`} media={item.media} images={item.images} videos={item.videos} name={item.name} labels={galleryLabels(t)} />
+        {fill(gallery, { item, t }, ItemGallery)}
       </div>
       <div className={styles.content}>
         <div className={styles.details}>
           {flash}
 
           <div className={styles.info}>
-            {item.brand && <p className={styles.brand} data-hl={mark("brand")}>{item.brand}</p>}
-            <Heading id={headingId} ref={headingRef} tabIndex={-1} className={styles.title} data-hl={mark("name")}>
-              {item.name}
-            </Heading>
-            {item.shortDescription && <p className={styles.description} data-hl={mark("short")}>{item.shortDescription}</p>}
+            {fill(header, { item, shown, t, Heading, headingRef, headingId, marks }, ItemHeader)}
 
-            {shown && !item.flash && (
-              <div className={styles.priceBlock} data-hl={mark("price")}>
-                {shown.savings > 0 ? (
-                  <>
-                    <p className={styles.salePrice}>
-                      {formatKes(shown.salePrice)}
-                      {item.pricing.unit && <span className={styles.unit}> / {item.pricing.unit}</span>}
-                      <span className={styles.saleChip}>
-                        {t("item.sale")} -{shown.discountPercent}%
-                      </span>
-                    </p>
-                    <p className={styles.was}>
-                      <s>
-                        <span className="sr-only">{t("item.was")} </span>
-                        {formatKes(shown.regularPrice)}
-                      </s>
-                      <span>
-                        {t("item.save")} {formatKes(shown.savings)}
-                      </span>
-                    </p>
-                  </>
-                ) : (
-                  <p className={styles.price}>
-                    {formatKes(shown.regularPrice)}
-                    {item.pricing.unit && <span className={styles.unit}> / {item.pricing.unit}</span>}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {variants.length > 0 && (
-              <div role="radiogroup" aria-label={t("item.options")} className={styles.variants}>
-                {variants.map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    role="radio"
-                    aria-checked={v.id === activeId}
-                    className={`${styles.variant} ${v.id === activeId ? styles.selected : ""}`}
-                    onClick={() => onVariant?.(v.id)}
-                  >
-                    {v.label}
-                    {item.flash && <span className={styles.variantPrice}>{money(v.salePrice)}</span>}
-                  </button>
-                ))}
-              </div>
-            )}
+            {fill(options, { item, activeId, onVariant, t, money }, ItemOptions)}
 
             {item.availability === "limited_stock" && <StockTag item={item} labels={{ lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft") }} className={styles.stockTag} />}
             {item.availability === "by_appointment" && <p className={styles.availability}>{t("item.availability.by_appointment")}</p>}
@@ -178,17 +91,13 @@ export default function ItemView({
 
           {seller}
 
-          {highlights.length > 0 && (
-            <Highlights key={`highlights-${item.id}`} dataHl={mark("highlights")} items={highlights} onMore={hasSpecs ? () => setPinged((n) => n + 1) : undefined} t={t} />
-          )}
-
-          {fullDescription && <ItemDescription key={`description-${item.id}`} text={fullDescription} t={t} dataHl={mark("description")} />}
+          {fill(details, { item, t, marks, onMoreSpecs: hasSpecs ? () => setPinged((n) => n + 1) : undefined }, ItemDetails)}
 
           {after}
         </div>
 
         <div className={styles.panels} data-hl={mark("specs")}>
-          <ItemSpecs key={`specs-${item.id}`} item={item} category={category} attributes={attributes} reveal={reveal} onExpand={onExpandSpec} t={t} />
+          {fill(specs, { item, category, attributes, reveal, onExpand: onExpandSpec, t }, ItemSpecs, `specs-${item.id}`)}
         </div>
       </div>
     </div>

@@ -542,7 +542,46 @@ export const businesses = [
     rating: 4.7, reviewCount: 83, hue: 225,
     tags: ["laptops", "computers", "printers", "monitors", "networking", "office"],
     socials: { facebook: "kisumutechzone", instagram: "kisumutechzone" },
-    services: [{ name: "HP 15 laptop Core i5 8GB 512GB", priceKes: 62000 }, { name: "Wi-Fi router dual band", priceKes: 4200 }],
+    services: [
+      { name: "HP 15 laptop Core i5 8GB 512GB", priceKes: 62000 },
+      { name: "Wi-Fi router dual band", priceKes: 4200 },
+      // Dependent options: the Capacity list follows the Style (Old Version has 32 GB and no 64 GB or 2 TB, New Version the reverse).
+      // The capacity labels say 1024 GB and 2048 GB on purpose: the pickers show them as 1 TB and 2 TB.
+      {
+        name: "SanDisk microSD card", priceKes: 3765, section: "Storage",
+        description: "SanDisk microSD memory card with an SD adapter. Pick the style first: the capacities on offer follow it.",
+        specs: [
+          { group: "Features & Specs", label: "Type", value: "microSD" },
+          { group: "Features & Specs", label: "Speed class", value: "Class 10, U1" },
+          { group: "Features & Specs", label: "Compatible devices", value: "Phones, cameras and tablets" },
+          { group: "Additional details", label: "Warranty", value: "Limited lifetime" }
+        ],
+        optionAxes: [
+          { key: "style", label: "Style", display: "text-card", values: [{ id: "old", label: "Old Version" }, { id: "new", label: "New Version" }] },
+          {
+            key: "capacity", label: "Capacity", display: "text-card", dependsOn: "style",
+            values: [32, 64, 128, 256, 512, 1024, 2048].map((n) => ({ id: `${n}gb`, label: `${n} GB` }))
+          }
+        ],
+        optionVariants: [
+          { choice: { style: "old", capacity: "32gb" }, price: 3765, salePrice: 3582, stock: 9 },
+          { choice: { style: "old", capacity: "128gb" }, price: 5843, stock: 14 },
+          { choice: { style: "old", capacity: "256gb" }, price: 13631, stock: 6 },
+          { choice: { style: "old", capacity: "512gb" }, price: 24664, stock: 3, status: "limited_stock" },
+          { choice: { style: "old", capacity: "1024gb" }, price: 36365, stock: 2, status: "limited_stock" },
+          { choice: { style: "new", capacity: "64gb" }, price: 4650, stock: 11 },
+          { choice: { style: "new", capacity: "128gb" }, price: 6751, stock: 8 },
+          { choice: { style: "new", capacity: "256gb" }, price: 16883, salePrice: 12078, stock: 5 },
+          { choice: { style: "new", capacity: "512gb" }, price: 22078, stock: 4 },
+          { choice: { style: "new", capacity: "1024gb" }, price: 39628, stock: 0, status: "out_of_stock" },
+          { choice: { style: "new", capacity: "2048gb" }, price: 71433, stock: 2, status: "limited_stock" }
+        ].map((v) => ({
+          ...v,
+          specs: [{ group: "Features & Specs", label: "Compatible devices", value: v.choice.style === "old" ? "Car navigation, computers, digital cameras, home theatre" : "Camera" }]
+        })),
+        optionDefault: { style: "old", capacity: "128gb" }
+      }
+    ],
     gallery: gallery(225, ["Laptop wall", "Printers", "Service bench", "Shopfront"])
   }),
   make(40, {

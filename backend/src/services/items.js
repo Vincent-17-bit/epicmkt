@@ -33,7 +33,7 @@ const highlightsOf = (value) => {
 // Detail payload for one mock service: options, variants, availability matrix and size chart, the same payload public_item_options returns.
 // A service with optionAxes/optionVariants uses them as written (backend/check.mjs runs them through the shared validator, so the
 // validator itself stays out of the app bundle). Otherwise an old `variants`
-// list becomes one "option" axis, as migration 0084 converts it, keeping the old ids so flash overrides still match.
+// list becomes one "option" axis, as migration 0086 converts it, keeping the old ids so flash overrides still match.
 // No options: empty arrays, an empty matrix and no chart, so such items look exactly as before.
 const optionsOf = (svc) => {
   let axes = [];
@@ -50,8 +50,11 @@ const optionsOf = (svc) => {
     variants = legacy.variants.map((v) => ({ ...v, id: v.choice.option }));
   }
   const chart = store.sizeCharts?.find((c) => c.id === svc.sizeChartId) ?? null;
+  // The seller's default combination (svc.optionDefault, like options.defaultChoice in a save) becomes the default variant's id.
+  const defaultKey = svc.optionDefault && axes.length > 0 ? comboKey(axes, svc.optionDefault) : null;
+  const defaultVariantId = defaultKey ? (variants.find((v) => v.key === defaultKey)?.id ?? null) : null;
   return publicOptions({
-    axes, variants, chart, override: svc.sizeChartOverride ?? null,
+    axes, variants, chart, defaultVariantId, override: svc.sizeChartOverride ?? null,
     item: { price: Number.isFinite(svc.priceKes) ? svc.priceKes : null, salePrice: null, showStockCount: Boolean(svc.showStockCount) }
   });
 };

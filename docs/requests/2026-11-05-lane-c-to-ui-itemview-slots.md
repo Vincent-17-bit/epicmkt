@@ -1,5 +1,10 @@
 # Request: split ItemView into slots
 
+**Status: done (2026-11-05).** `ItemView` now does both of the options below: it is built from exported `ItemGallery`, `ItemHeader`,
+`ItemOptions`, `ItemDetails` and `ItemSpecs`, and takes the slot props `gallery`, `header`, `options`, `details` and `specs` (a node, or a
+function of the props the default part gets). Markup is unchanged; `ItemDetail.dom.test.jsx` passes untouched. The client slot files are
+`client/src/components/item/{Gallery,Header,Options,Details}.jsx`. The text below is kept as it was written.
+
 From: lane C (prompt C01, ItemDetail slots)
 To: whoever owns `ui/src/item/**`
 Date: 2026-11-05

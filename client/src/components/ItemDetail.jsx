@@ -8,6 +8,7 @@ import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
 import { coverUrl, metaDescription } from "@epicmkt/ui";
 
+import { useOptionSelection } from "../hooks/useOptionSelection.js";
 import { useUrgency } from "../hooks/useCountdown.js";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { useInView } from "../hooks/useInView.js";
@@ -19,6 +20,18 @@ import { Gone, LoadFailed, Loading } from "./item/States.jsx";
 import StickyNav from "./item/StickyNav.jsx";
 import TopBar from "./item/TopBar.jsx";
 import styles from "./ItemDetail.module.css";
+
+// What the header and the message to the seller use for a chosen combination: its price in the shape of pricing (regular, sale,
+// savings), and its name. A combination the seller does not sell has a name and no price. During a flash sale the item's own
+// flash pricing stays in charge of the header (price rules for options come later), but the chat still names the choice.
+function optionShown(option, current) {
+  const v = option.variant;
+  const base = { id: v?.id ?? null, label: option.label };
+  if (!v || !Number.isFinite(v.price)) return { ...base, regularPrice: NaN, salePrice: NaN, savings: 0, discountPercent: 0, unit: current?.pricing?.unit ?? null };
+  const sale = Number.isFinite(v.salePrice) && v.salePrice < v.price ? v.salePrice : v.price;
+  const savings = v.price - sale;
+  return { ...base, regularPrice: v.price, salePrice: sale, savings, discountPercent: savings > 0 ? Math.round((savings / v.price) * 100) : 0, unit: current?.pricing?.unit ?? null, plainSale: true };
+}
 
 const MAX_TIMEOUT = 2147483647;
 const HOLD_MS = 6000;
@@ -166,8 +179,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
   const variants = current?.pricing?.variants ?? [];
   const activeId = choice.itemId === itemId ? choice.variantId : defaultVariantId(current?.pricing);
-  const variant = variants.find((v) => v.id === activeId) ?? null;
-  const shown = variant ?? current?.pricing ?? null;
+  const legacyVariant = variants.find((v) => v.id === activeId) ?? null;
+  // Option axes (colour, size, storage...): null for an item without them, which then behaves exactly as before.
+  const option = useOptionSelection(current, itemId);
+  const optionPrice = option ? optionShown(option, current) : null;
+  const variant = option ? optionPrice : legacyVariant;
+  const shown = option ? (current?.flash ? current.pricing : option.variant ? optionPrice : null) : (legacyVariant ?? current?.pricing ?? null);
   const seller = current?.business ?? null;
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }) : "";
@@ -206,6 +223,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     vanished,
     shown,
     variant,
+    option,
     activeId,
     selectVariant: (variantId) => setChoice({ itemId, variantId }),
     seller,

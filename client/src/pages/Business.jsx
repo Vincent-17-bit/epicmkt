@@ -87,6 +87,7 @@ export default function Business() {
         (prev) => {
           const next = new URLSearchParams(prev);
           next.delete("item");
+          next.delete("v"); // the option choice belongs to the item
           return next;
         },
         { replace: true }
