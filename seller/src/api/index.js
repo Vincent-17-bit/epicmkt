@@ -67,6 +67,7 @@ export const listItems = (...a) => impl.listItems(...a);
 export const getCatalog = (...a) => impl.getCatalog(...a);
 export const saveItem = (...a) => impl.saveItem(...a);
 export const getItemOptions = (...a) => impl.getItemOptions(...a);
+export const checkItem = (...a) => impl.checkItem(...a);
 export const listSizeCharts = (...a) => impl.listSizeCharts(...a);
 export const bulkItems = (...a) => impl.bulkItems(...a);
 export const itemStock = (...a) => impl.itemStock(...a);

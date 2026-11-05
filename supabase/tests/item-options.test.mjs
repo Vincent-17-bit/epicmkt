@@ -271,7 +271,7 @@ test("the public payload leaves the item's own fields to the item: availability 
   const row = (await as({ role: "anon" }, `select availability, variants from public_items where id = $1`, [id]))[0];
   assert.equal(row.availability, "available");
   assert.deepEqual(row.variants, [{ id: "a", label: "A", price: 100 }], "the view still serves the old list as before");
-  assert.deepEqual(Object.keys(await publicRead(id)).sort(), ["optionAvailability", "optionVariants", "options", "sizeChart"]);
+  assert.deepEqual(Object.keys(await publicRead(id)).sort(), ["defaultVariantId", "optionAvailability", "optionVariants", "options", "sizeChart"]);
 });
 
 test("item_options_convert_legacy copies the old list into stored options once, for the editor task, and empties it", async () => {
