@@ -19,14 +19,14 @@ test("the Mumbai example: a shop closing 22:00 on 26 Oct reads correctly in othe
   const read = (viewerZone) => shopTimeText("2026-10-26", "22:00", { ...shop, viewerZone });
   // 22:00 IST is 16:30 UTC.
   assert.equal(read("Asia/Kolkata"), "10:00 PM IST");
-  assert.equal(read("Africa/Nairobi"), "10:00 PM IST · 7:30 PM your time");
-  assert.equal(read("Asia/Dubai"), "10:00 PM IST · 8:30 PM your time");
-  assert.equal(read("Asia/Kathmandu"), "10:00 PM IST · 10:15 PM your time");
-  assert.equal(read("America/Sao_Paulo"), "10:00 PM IST · 1:30 PM your time");
-  assert.equal(read("America/New_York"), "10:00 PM IST · 12:30 PM your time", "EDT, UTC-4, until 1 Nov");
-  assert.equal(read("Pacific/Auckland"), "10:00 PM IST · Tue 5:30 AM your time", "NZDT UTC+13, and it is already the 27th there");
-  assert.equal(read("Pacific/Pago_Pago"), "10:00 PM IST · 5:30 AM your time", "UTC-11, same date");
-  assert.equal(read("Pacific/Kiritimati"), "10:00 PM IST · Tue 6:30 AM your time", "UTC+14");
+  assert.equal(read("Africa/Nairobi"), "10:00 PM IST · 7:30 PM EAT");
+  assert.equal(read("Asia/Dubai"), "10:00 PM IST · 8:30 PM GST");
+  assert.equal(read("Asia/Kathmandu"), "10:00 PM IST · 10:15 PM GMT+5:45");
+  assert.equal(read("America/Sao_Paulo"), "10:00 PM IST · 1:30 PM GMT-3");
+  assert.equal(read("America/New_York"), "10:00 PM IST · 12:30 PM EDT", "EDT, UTC-4, until 1 Nov");
+  assert.equal(read("Pacific/Auckland"), "10:00 PM IST · Tue 5:30 AM NZDT", "NZDT UTC+13, and it is already the 27th there");
+  assert.equal(read("Pacific/Pago_Pago"), "10:00 PM IST · 5:30 AM GMT-11", "UTC-11, same date");
+  assert.equal(read("Pacific/Kiritimati"), "10:00 PM IST · Tue 6:30 AM GMT+14", "UTC+14");
 });
 
 test("no viewer zone: the shop's time with its label, for everyone (what a server prints)", () => {
@@ -36,7 +36,7 @@ test("no viewer zone: the shop's time with its label, for everyone (what a serve
 });
 
 test("the example from the brief: 6:00 PM EAT is 7:00 PM in Dubai", () => {
-  assert.equal(shopTimeText("2026-10-27", "18:00", { viewerZone: "Asia/Dubai" }), "6:00 PM EAT · 7:00 PM your time");
+  assert.equal(shopTimeText("2026-10-27", "18:00", { viewerZone: "Asia/Dubai" }), "6:00 PM EAT · 7:00 PM GST");
   assert.equal(shopTimeText("2026-10-27", "18:00", { viewerZone: "Africa/Nairobi" }), "6:00 PM EAT", "same clock: nothing extra");
   assert.equal(shopTimeText("2026-10-27", "18:00", { viewerZone: "Africa/Kampala" }), "6:00 PM EAT", "another zone with the same offset");
 });
@@ -133,8 +133,8 @@ test("the shop's status does not change with the viewer; only the words around i
     assert.equal(s.closesAt, base.closesAt, viewerZone);
     assert.ok(s.closes.startsWith("Closes 6:00 PM EAT"), `${viewerZone}: ${s.closes}`);
   }
-  assert.equal(statusOf(hours, [], at, undefined, "Asia/Dubai").closes, "Closes 6:00 PM EAT · 7:00 PM your time");
-  assert.equal(statusOf(hours, [], at, undefined, "America/Sao_Paulo").closes, "Closes 6:00 PM EAT · 12:00 PM your time");
+  assert.equal(statusOf(hours, [], at, undefined, "Asia/Dubai").closes, "Closes 6:00 PM EAT · 7:00 PM GST");
+  assert.equal(statusOf(hours, [], at, undefined, "America/Sao_Paulo").closes, "Closes 6:00 PM EAT · 12:00 PM GMT-3");
 });
 
 test("a Mumbai shop: open/closed is read in Mumbai, and the closing line converts", () => {
@@ -143,18 +143,18 @@ test("a Mumbai shop: open/closed is read in Mumbai, and the closing line convert
   assert.equal(statusOf(hours, [], mon("21:59"), "Asia/Kolkata").isOpen, true);
   assert.equal(statusOf(hours, [], mon("22:00"), "Asia/Kolkata").isOpen, false);
   // The same two instants read as Nairobi would say the shop is open until 19:30 Nairobi, i.e. the wrong shop clock.
-  assert.equal(statusOf(hours, [], mon("21:59"), "Asia/Kolkata", "America/Sao_Paulo").closes, "Closes 10:00 PM IST · 1:30 PM your time");
+  assert.equal(statusOf(hours, [], mon("21:59"), "Asia/Kolkata", "America/Sao_Paulo").closes, "Closes 10:00 PM IST · 1:30 PM GMT-3");
 });
 
 test("reopening line: shop wording first, viewer reading after, weekday when the days differ", () => {
   const hours = { tue: ["09:00", "18:00"], wed: ["09:00", "18:00"] };
   const night = new Date("2026-10-27T19:00:00Z"); // 22:00 Tuesday in Nairobi, closed; reopens Wed 09:00 EAT = 06:00 UTC
   const s = statusOf(hours, [], night, undefined, "America/Sao_Paulo"); // 03:00 Wed in Brazil, same date
-  assert.equal(s.reopens, "Reopens tomorrow at 9:00 AM EAT · 3:00 AM your time");
+  assert.equal(s.reopens, "Reopens tomorrow at 9:00 AM EAT · 3:00 AM GMT-3");
   const t = statusOf(hours, [], night, undefined, "Pacific/Auckland"); // 19:00 Wed, same date
-  assert.equal(t.reopens, "Reopens tomorrow at 9:00 AM EAT · 7:00 PM your time");
+  assert.equal(t.reopens, "Reopens tomorrow at 9:00 AM EAT · 7:00 PM NZDT");
   const u = statusOf({ wed: ["01:00", "05:00"] }, [], night, undefined, "America/Sao_Paulo"); // 01:00 EAT Wed = 19:00 Tue in Brazil
-  assert.equal(u.reopens, "Reopens tomorrow at 1:00 AM EAT · Tue 7:00 PM your time");
+  assert.equal(u.reopens, "Reopens tomorrow at 1:00 AM EAT · Tue 7:00 PM GMT-3");
 });
 
 test("hours rows: shop text unchanged, viewer text and labels added only when asked", () => {
@@ -208,13 +208,13 @@ test("exception wording: the restocking example, 1 to 2 PM EAT, for a viewer in 
   const e = { date: "2026-10-27", kind: "special", intervals: [["13:00", "14:00"]], note: "Restocking" };
   assert.deepEqual(describeExceptionForViewer(e, { viewerZone: "America/Sao_Paulo" }), {
     shopText: "Special hours: 1:00 PM to 2:00 PM EAT",
-    viewerText: "Special hours: 7:00 AM to 8:00 AM your time"
+    viewerText: "Special hours: 7:00 AM to 8:00 AM GMT-3"
   });
   assert.equal(describeExceptionForViewer(e, { viewerZone: "Africa/Nairobi" }).viewerText, null);
   assert.equal(describeExceptionForViewer(e, {}).viewerText, null);
   const closed = describeExceptionForViewer({ date: "2026-10-27", kind: "closed", intervals: [] }, { viewerZone: "Pacific/Auckland" });
   assert.equal(closed.shopText, "Closed all day (EAT)");
-  assert.equal(closed.viewerText, "Closed Tue 27 Oct 10:00 AM to Wed 28 Oct 10:00 AM your time", "Nairobi midnight is 21:00 UTC, NZDT is UTC+13");
+  assert.equal(closed.viewerText, "Closed Tue 27 Oct 10:00 AM to Wed 28 Oct 10:00 AM NZDT", "Nairobi midnight is 21:00 UTC, NZDT is UTC+13");
   assert.deepEqual(describeExceptionForViewer({ date: "bad", kind: "closed" }, {}), { shopText: "", viewerText: null });
 });
 
@@ -243,4 +243,11 @@ test("shop zone names are short and follow daylight saving, and unlisted zones k
   assert.equal(label("America/Sao_Paulo", "2026-11-05T10:00:00Z"), "GMT-3");
   assert.equal(label("Mars/Base", "2026-11-05T10:00:00Z"), "EAT");
   assert.equal(label(undefined, "2026-11-05T10:00:00Z"), "EAT");
+});
+
+test("a viewer whose zone shares the shop's short name is shown the GMT form, so the two times cannot be confused", () => {
+  const dublin = shopTimeText("2026-07-27", "22:00", { shopZone: "Asia/Kolkata", viewerZone: "Europe/Dublin" });
+  assert.equal(dublin, "10:00 PM IST · 5:30 PM GMT+1");
+  assert.equal(shopTimeText("2026-10-27", "18:00", { shopZone: "Africa/Nairobi", viewerZone: "Europe/Paris" }), "6:00 PM EAT · 4:00 PM CET");
+  assert.equal(shopTimeText("2026-07-27", "14:00", { shopZone: "Africa/Nairobi", viewerZone: "Europe/Paris" }), "2:00 PM EAT · 1:00 PM CEST");
 });

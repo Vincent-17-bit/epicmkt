@@ -38,7 +38,7 @@ describe("HoursTable", () => {
     const wednesday = screen.getByText("Wednesday").closest("tr");
     expect(within(wednesday).getByText("9:00 AM to 6:00 PM")).toBeInTheDocument();
     expect(within(wednesday).getByTestId("break")).toHaveTextContent("Lunch 1:00 PM to 2:00 PM");
-    expect(within(wednesday).getByTestId("break-viewer")).toHaveTextContent("6:00 AM to 7:00 AM your time");
+    expect(within(wednesday).getByTestId("break-viewer")).toHaveTextContent("6:00 AM to 7:00 AM GMT-4");
     expect(within(wednesday).queryByText("This date only")).toBeNull();
     expect(wednesday).not.toHaveAttribute("data-changed");
   });

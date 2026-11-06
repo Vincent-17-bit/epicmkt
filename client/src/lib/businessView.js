@@ -20,7 +20,7 @@ export const formatTime = (time) => {
 };
 
 /**
- * "Open now · Closes 6:00 PM EAT · 7:00 PM your time". The shop's own time always comes first with its zone name; the
+ * "Open now · Closes 6:00 PM EAT · 7:00 PM GST". The shop's own time always comes first with its zone name; the
  * viewer's reading follows when it is a different clock. business.timezone is the shop's IANA zone (default Nairobi).
  */
 export function statusText(business, viewerZone = getUserTimeZone()) {

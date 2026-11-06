@@ -17,7 +17,7 @@ test("a full-day shop closed the next day closes at midnight, not 11:59 PM", () 
   const now = at(Z, 2026, 11, 7, 20, 0);
   assert.equal(businessStatus(hours, [], now, Z).closesAt, "00:00");
   assert.equal(statusOf(hours, [], now, Z).closes, "Closes midnight EAT");
-  assert.equal(statusOf(hours, [], now, Z, "America/New_York").closes, "Closes midnight EAT · Sat 4:00 PM your time");
+  assert.equal(statusOf(hours, [], now, Z, "America/New_York").closes, "Closes midnight EAT · Sat 4:00 PM EST");
   const both = { sat: ["00:00", "23:59"], sun: ["00:00", "23:59"] };
   assert.equal(statusOf(both, [], now, Z).closes, null);
 });
@@ -55,7 +55,7 @@ test("the seller's note replaces the words on break, and an overseas viewer also
   const ex = [brk({ note: "Lunch" })];
   assert.equal(statusOf(hours, ex, MON(13, 30), Z).line, "Lunch · Reopens at 2:00 PM EAT");
   const far = statusOf(hours, [brk({ date: "2026-10-26" })], at(Z, 2026, 10, 26, 13, 30), Z, "America/New_York");
-  assert.equal(far.line, "On break · Reopens at 2:00 PM EAT · 7:00 AM your time");
+  assert.equal(far.line, "On break · Reopens at 2:00 PM EAT · 7:00 AM EDT");
 });
 
 test("a break running to closing time reopens tomorrow", () => {

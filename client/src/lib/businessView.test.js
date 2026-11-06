@@ -13,7 +13,7 @@ describe("statusText while a break is on", () => {
   it("says on break and when the shop reopens, in the shop's time and the viewer's", () => {
     vi.useFakeTimers({ now: new Date("2026-11-02T10:30:00Z") });
     expect(statusText(onBreak(), "Africa/Nairobi")).toBe("On break · Reopens at 2:00 PM EAT");
-    expect(statusText(onBreak(), "America/New_York")).toBe("On break · Reopens at 2:00 PM EAT · 6:00 AM your time");
+    expect(statusText(onBreak(), "America/New_York")).toBe("On break · Reopens at 2:00 PM EAT · 6:00 AM EST");
   });
 
   it("uses the shop's own words for the break", () => {

@@ -4,7 +4,7 @@
 // wall-clock times IN THE SHOP'S ZONE. The status (open or closed) is always computed in that zone, so it is the same
 // for every viewer. These helpers only change how a time is WRITTEN for a viewer: the shop's own time first, always
 // labelled ("6:00 PM EAT"), then the same instant in the viewer's zone when that is a different clock reading
-// ("7:00 PM your time"), with the weekday or date when the viewer's day is not the shop's day.
+// ("7:00 PM GST"), with the weekday or date when the viewer's day is not the shop's day.
 //
 // Rules that keep it right in every zone:
 //   - A shop time is turned into a real instant with zonedTimeToUtc (Intl and the IANA database), on the exact date it
@@ -85,11 +85,17 @@ export function shopClock(date, time, { shopZone, viewerZone } = {}) {
     const v = zonedParts(instant, viewZone);
     const viewerDate = `${String(v.year).padStart(4, "0")}-${pad2(v.month)}-${pad2(v.day)}`;
     const viewerTime = `${pad2(v.hour)}:${pad2(v.minute)}`;
-    viewer = { date: viewerDate, time: viewerTime, clock: formatClock(viewerTime), label: shopZoneLabel(instant, viewZone), weekday: v.weekday };
+    viewer = { date: viewerDate, time: viewerTime, clock: formatClock(viewerTime), label: viewerZoneLabel(instant, viewZone, shop.label), weekday: v.weekday };
     dayShift = calendarDaysBetween(shopDate, viewerDate);
     sameClock = viewerDate === shopDate && viewerTime === shopTime;
   }
   return { instant, iso: instant.toISOString(), shop, viewer, dayShift, sameClock, adjusted: shopTime !== time || shopDate !== date };
+}
+
+/** The viewer's zone name for a reading. When it would repeat the shop's own short name (IST in India and in Ireland) the GMT form is used, so the two times cannot be mixed up. */
+function viewerZoneLabel(instant, viewerZone, shopLabel) {
+  const label = shopZoneLabel(instant, viewerZone);
+  return label === shopLabel ? zoneLabel(instant, viewerZone, "en-KE") : label;
 }
 
 /** "Sun" or "Sun 25 Oct" for a calendar day, no zone applied. */
@@ -111,15 +117,15 @@ export function viewerClockText(clock, { dayStyle = "weekday" } = {}) {
 /**
  * One shop time as a label, for a single moment such as a closing time.
  *   no viewer, or the same reading: "6:00 PM EAT"
- *   different reading:              "6:00 PM EAT · 7:00 PM your time"  (with weekday/date when the day differs)
+ *   different reading:              "6:00 PM EAT · 7:00 PM GST"  (with weekday/date when the day differs)
  * Returns "" for an invalid date or time.
  */
-export function shopTimeText(date, time, { shopZone, viewerZone, dayStyle = "weekday", youLabel = "your time" } = {}) {
+export function shopTimeText(date, time, { shopZone, viewerZone, dayStyle = "weekday" } = {}) {
   const c = shopClock(date, time, { shopZone, viewerZone });
   if (!c) return "";
   const base = `${time === "00:00" ? "midnight" : c.shop.clock} ${c.shop.label}`;
   if (!c.viewer || c.sameClock) return base;
-  return `${base} · ${viewerClockText(c, { dayStyle })} ${youLabel}`;
+  return `${base} · ${viewerClockText(c, { dayStyle })} ${c.viewer.label}`;
 }
 
 /**
@@ -180,7 +186,7 @@ export function shopDayInViewer(date, { shopZone, viewerZone } = {}) {
     const day = `${String(p.year).padStart(4, "0")}-${pad2(p.month)}-${pad2(p.day)}`;
     return `${dayTag(day, "date")} ${formatClock(`${pad2(p.hour)}:${pad2(p.minute)}`)}`;
   };
-  return { from: part(a), to: part(b), label: shopZoneLabel(startIso, view), startIso, endIso };
+  return { from: part(a), to: part(b), label: viewerZoneLabel(startIso, view, shopZoneLabel(startIso, zone)), startIso, endIso };
 }
 
 /**
@@ -210,7 +216,7 @@ export function shopTimeNote(now = new Date(), { shopZone, viewerZone } = {}) {
 /**
  * An exception ({ date, kind, intervals }) in words, in the shop's zone and, when it reads differently, the viewer's.
  *   shopText:   "Closed all day (EAT)" | "Special hours: 1:00 PM to 2:00 PM EAT"
- *   viewerText: null | "Closed Mon 26 Oct 6:00 PM to Tue 27 Oct 6:00 PM your time" | "Special hours: 7:00 AM to 8:00 AM your time"
+ *   viewerText: null | "Closed Mon 26 Oct 6:00 PM to Tue 27 Oct 6:00 PM GST" | "Special hours: 7:00 AM to 8:00 AM GST"
  * The exception stays attached to the shop's calendar date; only its wording is converted.
  */
 export function describeExceptionForViewer(exception, { shopZone, viewerZone, dayStyle = "date" } = {}) {
@@ -219,18 +225,18 @@ export function describeExceptionForViewer(exception, { shopZone, viewerZone, da
   const label = shopZoneLabel(startOfDayUtcIso(exception.date, zone), zone);
   if (exception.kind === "closed") {
     const day = shopDayInViewer(exception.date, { shopZone: zone, viewerZone });
-    return { shopText: `Closed all day (${label})`, viewerText: day ? `Closed ${day.from} to ${day.to} your time` : null };
+    return { shopText: `Closed all day (${label})`, viewerText: day ? `Closed ${day.from} to ${day.to} ${day.label}` : null };
   }
   const views = (exception.intervals ?? []).map((iv) => shopIntervalView(exception.date, iv, { shopZone: zone, viewerZone, dayStyle })).filter(Boolean);
   const shop = views.map((v) => v.shopText).join(", ");
   if (exception.kind === "break") {
     return {
       shopText: `Closed ${shop} ${label}`,
-      viewerText: views.some((v) => v.viewerText) ? `Closed ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} your time` : null
+      viewerText: views.some((v) => v.viewerText) ? `Closed ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} ${views.find((v) => v.viewerLabel)?.viewerLabel}` : null
     };
   }
   return {
     shopText: `Special hours: ${shop} ${label}`,
-    viewerText: views.some((v) => v.viewerText) ? `Special hours: ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} your time` : null
+    viewerText: views.some((v) => v.viewerText) ? `Special hours: ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} ${views.find((v) => v.viewerLabel)?.viewerLabel}` : null
   };
 }

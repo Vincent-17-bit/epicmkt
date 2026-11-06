@@ -160,9 +160,9 @@ describe("customer business shape for a shop outside Nairobi", () => {
     const b = businessOf(row({ timezone: sanJuan }), { category: null, services: [] });
     expect(b.timezone).toBe(sanJuan);
     expect(b.isOpen).toBe(false);
-    expect(statusText(b)).toBe("Closed · Opens 8:00 AM GMT-4 · 3:00 PM your time");
+    expect(statusText(b)).toBe("Closed · Opens 8:00 AM GMT-4 · 3:00 PM EAT");
     expect(hoursCaption(b.timezone)).toBe("Hours are in shop time (GMT-4). Your time is shown too.");
-    expect(b.openStatus.reopens).toBe("Reopens today at 8:00 AM GMT-4 · 3:00 PM your time");
+    expect(b.openStatus.reopens).toBe("Reopens today at 8:00 AM GMT-4 · 3:00 PM EAT");
   });
 
   it("reads today's hours on the shop's calendar day", () => {

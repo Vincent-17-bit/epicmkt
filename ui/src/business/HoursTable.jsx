@@ -28,14 +28,14 @@ export default function HoursTable({ rows, caption }) {
               {row.shopLabel && row.text !== "Closed" && <span className={styles.zone}> {row.shopLabel}</span>}
               {row.viewerText && (
                 <span className={styles.viewer} data-testid="viewer-hours" title={row.viewerLabel || undefined}>
-                  {row.viewerText} your time
+                  {row.viewerText} {row.viewerLabel || "your time"}
                 </span>
               )}
               {row.note && <span className={styles.note}>{row.note}</span>}
               {(row.breaks ?? []).map((b) => (
                 <span key={b.text} className={styles.break}>
                   <span data-testid="break">{b.note ?? "Break"} {b.text}</span>
-                  {b.viewerText && <span className={styles.viewer} data-testid="break-viewer" title={b.viewerLabel || undefined}>{b.viewerText} your time</span>}
+                  {b.viewerText && <span className={styles.viewer} data-testid="break-viewer" title={b.viewerLabel || undefined}>{b.viewerText} {b.viewerLabel || "your time"}</span>}
                 </span>
               ))}
             </td>

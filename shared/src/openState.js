@@ -43,7 +43,7 @@ const reasonText = (reason) => {
 
 // Times are always written with the shop's zone ("6:00 PM EAT"). When a viewerZone is passed (browsers pass
 // getUserTimeZone(); servers pass nothing) and the viewer's clock reads differently, the viewer's own time follows
-// ("6:00 PM EAT · 7:00 PM your time"), with the weekday when the viewer's day is not the shop's day.
+// ("6:00 PM EAT · 7:00 PM GST"), with the weekday when the viewer's day is not the shop's day.
 const reopenText = (opensAt, today, opts, reason) => {
   if (!opensAt) return null;
   const sameDay = opensAt.date === today;
@@ -53,7 +53,7 @@ const reopenText = (opensAt, today, opts, reason) => {
 
 /**
  * Words for a status. timeZone is the SHOP's zone (default Nairobi); viewerZone is the viewer's, opt in.
- * closes: "Closes 6:00 PM EAT" or "Closes 6:00 PM EAT · 7:00 PM your time". reopens: "Reopens tomorrow at 8:00 AM EAT".
+ * closes: "Closes 6:00 PM EAT" or "Closes 6:00 PM EAT · 7:00 PM GST". reopens: "Reopens tomorrow at 8:00 AM EAT".
  */
 export function describeStatus(status, date, timeZone, viewerZone) {
   const shopZone = safeShopZone(timeZone);
