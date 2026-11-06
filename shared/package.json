@@ -10,6 +10,8 @@
     "./openState": "./src/openState.js",
     "./time": "./src/time.js",
     "./constants": "./src/constants.js",
-    "./template": "./src/template.js"
+    "./template": "./src/template.js",
+    "./options": "./src/options/index.js",
+    "./options/fixtures": "./src/options/fixtures.js"
   }
 }

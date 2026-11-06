@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { buildAvailability, cleanSizeChartOverride, scalePrice, storedOptions } from "@epicmkt/shared";
+import { buildAvailability, cleanSizeChartOverride, comboKey, scalePrice, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -745,13 +745,15 @@ export const getShopPreview = async () => {
 const planOptions = async (id, f) => {
   const has = f.options !== undefined || f.sizeChartId !== undefined || f.sizeChartOverride !== undefined;
   if (!has) return () => {};
-  const prev = (id && bill.options.get(id)) || { axes: [], variants: [], sizeChartId: null, sizeChartOverride: null };
+  const prev = (id && bill.options.get(id)) || { axes: [], variants: [], defaultChoice: null, sizeChartId: null, sizeChartOverride: null };
   const next = { ...prev };
   if (f.options !== undefined) {
     const r = storedOptions(f.options);
     if (!r.ok) throw new ApiError(r.error);
     next.axes = r.value.axes;
     next.variants = r.value.variants;
+    // The seller's default combination (migration 0088): absent keeps the stored one, null clears it.
+    if (r.value.defaultChoice !== undefined) next.defaultChoice = r.value.defaultChoice;
     // The flash guard of the real save covers variant prices too.
     if (id && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) {
       const was = new Map(prev.variants.map((v) => [v.key, v]));
@@ -782,15 +784,17 @@ const planOptions = async (id, f) => {
     }
   }
   return (itemId) => {
-    bill.options.set(itemId, { ...next, variants: next.variants.map((v, n) => ({ ...v, id: `${itemId}:${v.key}`, sort: n })) });
+    // Like the foreign key on items.default_variant_id: a default whose combination is no longer sold is cleared.
+    const key = next.defaultChoice ? comboKey(next.axes, next.defaultChoice) : null;
+    const defaultChoice = key && next.variants.some((v) => v.key === key) ? next.defaultChoice : null;
+    bill.options.set(itemId, { ...next, defaultChoice, variants: next.variants.map((v, n) => ({ ...v, id: `${itemId}:${v.key}`, sort: n })) });
   };
 };
 const DETAIL_KEYS = ["brand", "shortDescription", "packSize", "terms", "includes", "highlights", "specs"];
 const sent = (f, k) => (k === "specs" ? Array.isArray(f.specs) : f[k] !== undefined);
-export const saveItem = async (id, f) => {
-  signedIn();
-  await wait();
-  const now = clockNow().toISOString();
+// Everything a save checks before it writes (the real save is one transaction, so a refused save changes nothing), shared by
+// saveItem and checkItem so the two cannot drift. Returns what saveItem needs to write.
+const prepareSave = async (id, f) => {
   const fields = { name: f.name, description: f.description ?? "", section: f.section || null, priceType: f.priceType, price: f.price ?? null, priceMax: f.priceMax ?? null, salePrice: f.salePrice ?? null, unit: f.unit || null, availability: f.availability, trackStock: Boolean(f.trackStock), stockCount: f.trackStock ? f.stockCount : null, lowStockThreshold: f.lowStockThreshold ?? 3, showStockCount: Boolean(f.trackStock && f.showStockCount) };
   const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
   if (!details.ok) throw new ApiError("invalid_details");
@@ -804,11 +808,22 @@ export const saveItem = async (id, f) => {
   if (id && !bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
   const commitOptions = await planOptions(id, f);
   if (fields.variants?.length && !["fixed", "from"].includes(fields.priceType)) throw new ApiError("invalid_variants");
+  let item = null;
+  let priceChanged = false;
   if (id) {
-    const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
-    const priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
+    item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+    priceChanged = [item.price, item.priceMax, item.priceType, item.salePrice].join() !== [fields.price, fields.priceMax, fields.priceType, fields.salePrice].join();
     const optionsChanged = fields.variants !== undefined && JSON.stringify(fields.variants) !== JSON.stringify(item.variants ?? []);
     if ((priceChanged || optionsChanged) && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
+  }
+  return { fields, commitOptions, item, priceChanged };
+};
+export const saveItem = async (id, f) => {
+  signedIn();
+  await wait();
+  const now = clockNow().toISOString();
+  const { fields, commitOptions, item, priceChanged } = await prepareSave(id, f);
+  if (id) {
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     commitOptions(id);
     return id;
@@ -818,16 +833,32 @@ export const saveItem = async (id, f) => {
   commitOptions(made.id);
   return made.id;
 };
+// seller_check_item: the issues a save would raise, without saving. { ok: true, issues: [] } or { ok: false, issues: [{ code }] }.
+export const checkItem = async (id, f) => {
+  signedIn();
+  await wait();
+  const name = String(f?.name ?? "").trim();
+  try {
+    if (name.length < 2 || name.length > 120) throw new ApiError("invalid_name");
+    await prepareSave(id, f ?? {});
+    return { ok: true, issues: [] };
+  } catch (e) {
+    if (e instanceof ApiError && e.code !== "unauthorized") return { ok: false, issues: [{ code: e.code }] };
+    throw e;
+  }
+};
 // The editor's read: like seller_item_options (raw stock counts, no internal keys).
 export const getItemOptions = async (id) => {
   signedIn();
   await wait();
   if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
-  const o = bill.options.get(id) ?? { axes: [], variants: [], sizeChartId: null, sizeChartOverride: null };
+  const o = bill.options.get(id) ?? { axes: [], variants: [], defaultChoice: null, sizeChartId: null, sizeChartOverride: null };
+  const defaultKey = o.defaultChoice ? comboKey(o.axes, o.defaultChoice) : null;
   return copy({
     axes: o.axes,
-    variants: o.variants.map((v) => ({ id: v.id, choice: v.choice, price: v.price, salePrice: v.salePrice, stock: v.stock, status: v.status, sku: v.sku, mediaIds: v.mediaIds })),
+    variants: o.variants.map((v) => ({ id: v.id, choice: v.choice, price: v.price, salePrice: v.salePrice, stock: v.stock, status: v.status, sku: v.sku, mediaIds: v.mediaIds, specs: v.specs ?? [] })),
     optionAvailability: buildAvailability(o.axes, o.variants),
+    defaultVariantId: defaultKey ? (o.variants.find((v) => v.key === defaultKey)?.id ?? null) : null,
     sizeChartId: o.sizeChartId,
     sizeChartOverride: o.sizeChartOverride
   });

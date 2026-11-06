@@ -2,6 +2,7 @@ import { PRICED, filled, parseKes } from "../fields.js";
 import { errorList } from "../model.js";
 import MediaStep from "./MediaStep.jsx";
 import BasicsStep from "./BasicsStep.jsx";
+import TypeStep from "./TypeStep.jsx";
 import OptionsStep from "./OptionsStep.jsx";
 import PriceStep from "./PriceStep.jsx";
 import DetailsStep from "./DetailsStep.jsx";
@@ -22,6 +23,8 @@ const issuesFor = (id) => ({ errors }) => errorList(errors ?? {}).filter((e) => 
 export const STEPS = [
   { id: "media", label: "Media", short: "Media", component: MediaStep, visibleWhen: always, issues: issuesFor("media"), done: ({ mediaCount }) => mediaCount > 0 },
   { id: "basics", label: "Basics", short: "Basics", component: BasicsStep, visibleWhen: always, issues: issuesFor("basics"), done: ({ form }) => String(form.name ?? "").trim().length >= 2 },
+  // Shown only for an item that went through the type picker (the key is on the form, null meaning Other goods). Other items see no new step.
+  { id: "type", label: "Type", short: "Type", component: TypeStep, visibleWhen: ({ form }) => "productTypeId" in form, issues: () => [], done: ({ form }) => "productTypeId" in form },
   // Empty slot for B07 (item options). Hidden until then, so no screen changes. TODO(contract:B07)
   { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: () => false, issues: issuesFor("options"), done: () => false },
   { id: "price", label: "Price and stock", short: "Price", component: PriceStep, visibleWhen: always, issues: issuesFor("price"), done: ({ form }) => !PRICED.includes(form.priceType) || parseKes(form.price) !== null },

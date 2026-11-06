@@ -291,6 +291,27 @@ console.log("items ok");
   const none = await getItemDetail(noChart.id, { businessId: urban.id });
   assert.deepEqual({ o: none.options, v: none.optionVariants, c: none.sizeChart }, { o: [], v: [], c: null });
 
+  // dependent options (migration 0088): the SanDisk demo. Valid for the shared validator, with a default and per-style specs.
+  {
+    const { dependentValues, reconcileSelection, formatCapacityLabel } = await import("@epicmkt/shared");
+    const tech = seeded.find((b) => b.name === "Kisumu Tech Zone");
+    const card = tech.services.find((s) => s.name === "SanDisk microSD card");
+    const stored = storedOptions({ axes: card.optionAxes, variants: card.optionVariants, defaultChoice: card.optionDefault });
+    assert.equal(stored.ok, true, `SanDisk seed passes the validator: ${stored.error}`);
+    const sd = await getItemDetail(card.id, { businessId: tech.id });
+    assert.equal(sd.options[1].dependsOn, "style");
+    assert.equal(sd.optionVariants.length, 11);
+    assert.equal(sd.defaultVariantId, `${card.id}:style=old|capacity=128gb`);
+    assert.deepEqual(dependentValues(sd.options, sd.optionVariants, "capacity", { style: "old" }).map((v) => v.id), ["32gb", "128gb", "256gb", "512gb", "1024gb"]);
+    assert.deepEqual(dependentValues(sd.options, sd.optionVariants, "capacity", { style: "new" }).map((v) => v.id), ["64gb", "128gb", "256gb", "512gb", "1024gb", "2048gb"]);
+    assert.deepEqual(reconcileSelection(sd.options, sd.optionVariants, { style: "new", capacity: "128gb" }, sd.defaultVariantId), { style: "new", capacity: "128gb" });
+    assert.equal(formatCapacityLabel(sd.options[1].values[6].label), "2 TB");
+    assert.match(sd.optionVariants.find((v) => v.choice.style === "old").specs[0].value, /home theatre/);
+    // an item with no default says so
+    assert.equal(detail.defaultVariantId, null);
+    assert.equal(dress.defaultVariantId, null);
+  }
+
   // legacy variants [{id,label,price}] become one "option" axis and read the same as before
   const legacyBiz = seeded.find((b) => b.services.some((s) => Array.isArray(s.variants) && s.variants.length));
   const legacy = legacyBiz.services.find((s) => Array.isArray(s.variants) && s.variants.length);

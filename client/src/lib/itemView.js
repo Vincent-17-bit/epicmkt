@@ -15,6 +15,8 @@ export function chatMessage({ item, variant, pricing, greeting }) {
     return renderGreeting(greeting, { item: name, price: live === null ? "" : formatKes(live) });
   }
   if (!shown || !Number.isFinite(shown.regularPrice)) return `Hi, I saw ${name} on EpicMKT`;
+  // An option's own sale price (not a flash sale) says what the buyer would pay, without the flash wording.
+  if (shown.plainSale) return `Hi, I saw ${name} (${formatKes(shown.savings > 0 ? shown.salePrice : shown.regularPrice)}) on EpicMKT`;
   if (shown.savings > 0) {
     return `Hi, I saw the flash sale on ${name}: ${formatKes(shown.salePrice)} (was ${formatKes(shown.regularPrice)}) on EpicMKT`;
   }

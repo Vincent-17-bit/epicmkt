@@ -488,7 +488,7 @@ describe("live item and business pages", () => {
       const ID = "20000000-0000-0000-0000-000000000101";
       const payload = {
         options: [{ key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }, { id: "m", label: "M" }] }],
-        optionVariants: [{ id: "v1", label: "S", choice: { size: "s" }, price: 1200, salePrice: null, status: "available", sku: null, mediaIds: [], stockLeft: null }],
+        optionVariants: [{ id: "v1", label: "S", choice: { size: "s" }, price: 1200, salePrice: null, status: "available", sku: null, mediaIds: [], specs: [], stockLeft: null }],
         optionAvailability: { axes: ["size"], missing: "unavailable", cells: [{ key: "size=s", choice: { size: "s" }, status: "available", variantId: "v1" }], values: { size: { s: "available", m: "unavailable" } } },
         sizeChart: { id: "c1", name: "Tops", category: null, unit: "cm", columns: ["Size"], rows: [["S"]], overridden: false }
       };

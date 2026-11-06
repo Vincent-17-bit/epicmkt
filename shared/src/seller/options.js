@@ -1,6 +1,6 @@
 // Product options, variants, availability matrix and size charts: the ONE place their rules live in JavaScript.
 //
-// Mirrors migration 0084 (the SQL validators and seller_save_item / public_item_options). Same limits, same error names, so the
+// Mirrors migrations 0086 and 0088 (the SQL validators and seller_save_item / public_item_options). Same limits, same error names, so the
 // seller editor can catch a problem before the database does, the mock API behaves like the real one, and the db tests can compare
 // both. Style follows itemForm.js: plain functions, no classes, errors as readable strings.
 //
@@ -12,6 +12,9 @@
 //                             and a legacy `variants` list that pages and pricing read. The new keys sit beside them.)
 //   legacyVariantsToOptions   the old items.variants [{id,label,price}] as one "option" axis (migration 0086, section 3).
 //   cleanSizeChart / sizeChartFor   the admin library row and what an item shows (chart rows or the seller's override).
+
+import { SPEC_GROUPS, SPEC_LIMITS } from "./itemForm.js";
+import { generateCombinations } from "../options/combinations.js";
 
 export const OPTION_DISPLAY_TYPES = ["swatch", "image-card", "button", "dropdown", "text-card"];
 export const VARIANT_STATUSES = ["available", "limited_stock", "out_of_stock", "unavailable"];
@@ -27,6 +30,7 @@ export const OPTION_LIMITS = {
   sku: 40,
   mediaPerVariant: 10,
   stock: 999999,
+  specs: SPEC_LIMITS.rows,
 };
 
 export const SIZE_CHART_UNITS = ["cm", "in", "mm", "kg", "lb", "none"];
@@ -67,6 +71,18 @@ export const comboKey = (axes, choice) => {
   return parts.join("|");
 };
 
+// Spec override rows for one variant: [{ group, label, value }], trimmed, or null when any row is not valid. Same rules as items.specs.
+export const cleanSpecOverrides = (rows) => {
+  if (!Array.isArray(rows) || rows.length > OPTION_LIMITS.specs) return null;
+  const out = [];
+  for (const r of rows) {
+    if (!isRecord(r) || Object.keys(r).some((k) => !["group", "label", "value"].includes(k))) return null;
+    if (!SPEC_GROUPS.includes(r.group) || !text(r.label, SPEC_LIMITS.label) || !text(r.value, SPEC_LIMITS.value)) return null;
+    out.push({ group: r.group, label: r.label.trim(), value: r.value.trim() });
+  }
+  return out;
+};
+
 // Every check, as a list of { code, path, message }. `code` is the error name the RPC raises, `path` points at the row.
 function check(options, { mediaIds } = {}) {
   const issues = [];
@@ -76,7 +92,7 @@ function check(options, { mediaIds } = {}) {
   let variants = [];
 
   if (options === null || options === undefined) return { issues, axes, variants };
-  if (!isRecord(options) || Object.keys(options).some((k) => k !== "axes" && k !== "variants")) {
+  if (!isRecord(options) || Object.keys(options).some((k) => k !== "axes" && k !== "variants" && k !== "defaultChoice")) {
     add("invalid_options", "options", "Options must have axes and variants.");
     return { issues, axes, variants };
   }
@@ -89,15 +105,20 @@ function check(options, { mediaIds } = {}) {
 
   if (rawAxes.length > OPTION_LIMITS.axes) add("invalid_options", "axes", `Use ${OPTION_LIMITS.axes} option types or fewer.`);
   const keys = new Set();
+  const earlier = new Set();
   rawAxes.forEach((axis, a) => {
     const at = `axes.${a}`;
-    if (!isRecord(axis) || Object.keys(axis).some((k) => !["key", "label", "display", "values"].includes(k))) {
+    if (!isRecord(axis) || Object.keys(axis).some((k) => !["key", "label", "display", "values", "dependsOn"].includes(k))) {
       add("invalid_options", at, "This option type is not valid.");
       return;
     }
     if (!slugOk(axis.key, OPTION_LIMITS.axisKey)) add("invalid_options", `${at}.key`, "Use lowercase letters, digits, dashes or underscores.");
     else if (keys.has(axis.key)) add("invalid_options", `${at}.key`, "Each option type needs its own key.");
     else keys.add(axis.key);
+    if (present(axis, "dependsOn") && !(slugOk(axis.dependsOn, OPTION_LIMITS.axisKey) && earlier.has(axis.dependsOn))) {
+      add("invalid_options", `${at}.dependsOn`, "Depend on an option type listed before this one.");
+    }
+    if (slugOk(axis.key, OPTION_LIMITS.axisKey)) earlier.add(axis.key);
     if (!text(axis.label, OPTION_LIMITS.axisLabel)) add("invalid_options", `${at}.label`, `Name the option type in ${OPTION_LIMITS.axisLabel} characters or fewer.`);
     if (!OPTION_DISPLAY_TYPES.includes(axis.display)) add("invalid_options", `${at}.display`, "Choose how the buyer picks it.");
     const values = axis.values;
@@ -129,6 +150,7 @@ function check(options, { mediaIds } = {}) {
     key: axis.key,
     label: axis.label.trim(),
     display: axis.display,
+    ...(present(axis, "dependsOn") && { dependsOn: axis.dependsOn }),
     values: axis.values.map((v) => ({
       id: v.id,
       label: v.label.trim(),
@@ -151,7 +173,7 @@ function check(options, { mediaIds } = {}) {
   rawVariants.forEach((row, i) => {
     const at = `variants.${i}`;
     const bad = (path, message) => add("invalid_variant", `${at}.${path}`, message);
-    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds"].includes(k))) {
+    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds", "specs"].includes(k))) {
       add("invalid_variant", at, "This variant is not valid.");
       return;
     }
@@ -174,6 +196,7 @@ function check(options, { mediaIds } = {}) {
     let status = "available";
     let sku = null;
     const media = [];
+    let specs;
     if (present(row, "price")) {
       price = money(row.price);
       if (Number.isNaN(price)) { bad("price", "Enter a number such as 1500."); price = null; }
@@ -214,25 +237,41 @@ function check(options, { mediaIds } = {}) {
         }
       }
     }
-    variants.push({ choice: Object.fromEntries(axes.map((a) => [a.key, row.choice[a.key]])), key, price, salePrice, stock, status, sku, mediaIds: media });
+    if (present(row, "specs")) {
+      const cleaned = cleanSpecOverrides(row.specs);
+      if (cleaned === null) bad("specs", `Use up to ${OPTION_LIMITS.specs} rows, each with a group from the list, a label and a value.`);
+      else specs = cleaned;
+    }
+    variants.push({ choice: Object.fromEntries(axes.map((a) => [a.key, row.choice[a.key]])), key, price, salePrice, stock, status, sku, mediaIds: media, ...(specs !== undefined && { specs }) });
   });
-  return { issues, axes, variants };
+  // The seller's default: a choice that matches one of the variants being saved. Absent keeps the stored default; null clears it.
+  let defaultChoice;
+  if (has(options, "defaultChoice")) {
+    if (options.defaultChoice === null) defaultChoice = null;
+    else {
+      const key = comboKey(axes, options.defaultChoice);
+      const hit = key === null ? undefined : variants.find((v) => v.key === key);
+      if (!hit) add("invalid_default", "defaultChoice", "Pick one of the combinations you sell as the default.");
+      else defaultChoice = hit.choice;
+    }
+  }
+  return { issues, axes, variants, defaultChoice };
 }
 
 // What seller_save_item keeps for a save's `options`, or { ok: false, error } with the RPC's error name. `options` of null clears.
 // Pass `mediaIds` (the item's own media ids) to check picture references; leave it out to skip that check.
 export const storedOptions = (options, opts = {}) => {
-  const { issues, axes, variants } = check(options, opts);
+  const { issues, axes, variants, defaultChoice } = check(options, opts);
   if (issues.length) return { ok: false, error: issues[0].code };
-  return { ok: true, value: { axes, variants } };
+  return { ok: true, value: { axes, variants, ...(defaultChoice !== undefined && { defaultChoice }) } };
 };
 
 // The same checks for a form. `errors` is keyed by path ("variants.2.price") so each row can show its own message.
 export const validateOptions = (options, opts = {}) => {
-  const { issues, axes, variants } = check(options, opts);
+  const { issues, axes, variants, defaultChoice } = check(options, opts);
   const errors = {};
   for (const issue of issues) if (!(issue.path in errors)) errors[issue.path] = issue.message;
-  return { ok: issues.length === 0, errors, code: issues[0]?.code ?? null, value: issues.length ? null : { axes, variants } };
+  return { ok: issues.length === 0, errors, code: issues[0]?.code ?? null, value: issues.length ? null : { axes, variants, ...(defaultChoice !== undefined && { defaultChoice }) } };
 };
 
 // Editor helper: drop blank rows and build values from labels, so a half-typed axis does not block saving other things.
@@ -253,17 +292,8 @@ export const cleanOptionAxes = (raw) => {
   return axes;
 };
 
-// All combinations of the axes (for an editor "generate variants" button). Capped so it can never build more than the limit + 1.
-export const allCombinations = (axes, cap = OPTION_LIMITS.variants + 1) => {
-  let out = [{}];
-  for (const axis of axes ?? []) {
-    const next = [];
-    for (const base of out) for (const v of axis.values) { next.push({ ...base, [axis.key]: v.id }); if (next.length >= cap) break; }
-    out = next;
-    if (out.length >= cap) break;
-  }
-  return axes?.length ? out.slice(0, cap) : [];
-};
+// All combinations of the axes (for an editor "generate variants" button). Lives in ../options/combinations.js.
+export const allCombinations = generateCombinations;
 
 // "Red / S": the chosen values' labels in axis order (the old {id, label, price} entries had a label; so does every variant now).
 export const variantLabel = (axes, choice) =>
@@ -329,7 +359,7 @@ export const selectableValues = (availability, partial = {}) => {
   return out;
 };
 
-export const emptyOptions = () => ({ options: [], optionVariants: [], optionAvailability: buildAvailability([], []), sizeChart: null });
+export const emptyOptions = () => ({ options: [], optionVariants: [], optionAvailability: buildAvailability([], []), defaultVariantId: null, sizeChart: null });
 
 // The size chart a buyer sees: the chart's rows, or the seller's override when it still fits the chart's columns.
 export const sizeChartFor = (chart, override) => {
@@ -339,7 +369,7 @@ export const sizeChartFor = (chart, override) => {
 };
 
 // The public payload from stored rows. `item` supplies the inherited price and the stock-count switch.
-export const publicOptions = ({ axes = [], variants = [], item = {}, chart = null, override = null }) => {
+export const publicOptions = ({ axes = [], variants = [], item = {}, chart = null, override = null, defaultVariantId = null }) => {
   const shown = variants.map((v) => ({
     id: v.id ?? null,
     label: variantLabel(axes, v.choice),
@@ -349,10 +379,11 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     status: v.status,
     sku: v.sku ?? null,
     mediaIds: v.mediaIds ?? [],
+    specs: v.specs ?? [],
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
-  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
-  return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), sizeChart: sizeChartFor(chart, override) };
+  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
+  return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), defaultVariantId: defaultVariantId ?? null, sizeChart: sizeChartFor(chart, override) };
 };
 
 // The old items.variants shape [{ id, label, price, stock? }] as { axes, variants }: one axis "option", one variant per usable entry

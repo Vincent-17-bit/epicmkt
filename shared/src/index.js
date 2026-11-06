@@ -28,6 +28,12 @@ export * from "./seller/limits.js";
 export * from "./seller/performance.js";
 export * from "./seller/team.js";
 export * from "./variants.js";
+export * from "./options/index.js";
 
 // Contract v1 (W0): product types, option/price contracts, validators, lazy fixtures. See docs/contracts/.
 export * from "./contracts/index.js";
+
+// Scale framework (A02, Wave 1). The Contract v1 functions are generic names (parse, format, compare), so they live under `scales`;
+// the unambiguous ones are also exported flat. Module path for the full API: shared/src/scales/index.js
+export * as scales from "./scales/index.js";
+export { sizeKey, validateAxisValues, registerScale, defineScale, listScales } from "./scales/index.js";

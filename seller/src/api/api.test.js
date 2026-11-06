@@ -240,7 +240,7 @@ test("options: saved, read back with the availability matrix, and an absent key 
   mock.resetMock();
   await mock.login("es100001", "Demo-Passw0rd");
   const form = await optForm();
-  assert.deepEqual(await mock.getItemOptions("it-fade"), { axes: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, sizeChartId: null, sizeChartOverride: null });
+  assert.deepEqual(await mock.getItemOptions("it-fade"), { axes: [], variants: [], optionAvailability: { axes: [], missing: "unavailable", cells: [], values: {} }, defaultVariantId: null, sizeChartId: null, sizeChartOverride: null });
   await mock.saveItem("it-fade", { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s", { price: 1500, stock: 3, sku: "R-S" }), variantOf("blue", "m", { stock: 0 })] } });
   const o = await mock.getItemOptions("it-fade");
   assert.equal(o.axes.length, 2);
@@ -252,6 +252,57 @@ test("options: saved, read back with the availability matrix, and an absent key 
   assert.equal((await mock.getItemOptions("it-fade")).variants.length, 2, "a save without options leaves them");
   await mock.saveItem("it-fade", { ...form, options: null });
   assert.deepEqual((await mock.getItemOptions("it-fade")).axes, []);
+});
+
+test("options: a default combination is kept, moved, cleared, and dropped with its variant; variant specs and dependsOn are stored", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  const deps = sizeAxes();
+  deps[1].dependsOn = "color";
+  const rows = () => [variantOf("red", "s", { price: 10 }), variantOf("red", "m", { price: 20, specs: [{ group: "Measurements", label: "Weight", value: "1 kg" }] }), variantOf("blue", "m", { price: 30 })];
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows(), defaultChoice: { color: "blue", size: "m" } } });
+  let o = await mock.getItemOptions("it-fade");
+  assert.equal(o.axes[1].dependsOn, "color");
+  assert.equal(o.defaultVariantId, "it-fade:color=blue|size=m");
+  assert.deepEqual(o.variants[1].specs, [{ group: "Measurements", label: "Weight", value: "1 kg" }]);
+  assert.deepEqual(o.variants[0].specs, []);
+  // a save that does not mention the default keeps it
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows() } });
+  assert.equal((await mock.getItemOptions("it-fade")).defaultVariantId, "it-fade:color=blue|size=m");
+  // moved, then cleared
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows(), defaultChoice: { color: "red", size: "s" } } });
+  assert.equal((await mock.getItemOptions("it-fade")).defaultVariantId, "it-fade:color=red|size=s");
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows(), defaultChoice: null } });
+  assert.equal((await mock.getItemOptions("it-fade")).defaultVariantId, null);
+  // removed with its variant
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows(), defaultChoice: { color: "blue", size: "m" } } });
+  await mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows().slice(0, 2) } });
+  assert.equal((await mock.getItemOptions("it-fade")).defaultVariantId, null, "the default goes with its variant");
+  // refused, and nothing changes
+  const before = await mock.getItemOptions("it-fade");
+  await assert.rejects(mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows(), defaultChoice: { color: "red", size: "x" } } }), { code: "invalid_default" });
+  await assert.rejects(mock.saveItem("it-fade", { ...form, options: { axes: deps, variants: rows().slice(0, 2), defaultChoice: { color: "blue", size: "m" } } }), { code: "invalid_default" });
+  const later = sizeAxes(); later[0].dependsOn = "size";
+  await assert.rejects(mock.saveItem("it-fade", { ...form, options: { axes: later, variants: rows() } }), { code: "invalid_options" });
+  assert.deepEqual(await mock.getItemOptions("it-fade"), before);
+});
+
+test("checkItem returns the save's error name and never saves; a good item is ok", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const form = await optForm();
+  const before = await mock.getItemOptions("it-fade");
+  const catalog = (await mock.getCatalog()).items.length;
+  assert.deepEqual(await mock.checkItem("it-fade", { ...form, name: "Renamed", options: { axes: sizeAxes(), variants: [variantOf("red", "s")], defaultChoice: { color: "red", size: "s" } } }), { ok: true, issues: [] });
+  assert.deepEqual(await mock.checkItem(null, { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s")] } }), { ok: true, issues: [] });
+  assert.deepEqual((await mock.checkItem("it-fade", { ...form, name: "x" })).issues, [{ code: "invalid_name" }]);
+  assert.deepEqual((await mock.checkItem("it-fade", { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s")], defaultChoice: { color: "blue", size: "m" } } })).issues, [{ code: "invalid_default" }]);
+  assert.deepEqual((await mock.checkItem("it-fade", { ...form, options: { axes: sizeAxes(), variants: [variantOf("red", "s"), variantOf("red", "s")] } })).issues, [{ code: "duplicate_variant" }]);
+  assert.deepEqual((await mock.checkItem("nope", form)).issues, [{ code: "item_not_found" }]);
+  assert.deepEqual(await mock.getItemOptions("it-fade"), before, "nothing was stored");
+  assert.equal((await mock.getCatalog()).items.length, catalog, "and no item was made");
+  assert.equal((await mock.getCatalog()).items.find((i) => i.id === "it-fade").name, form.name);
 });
 
 test("options: the mock refuses what the database refuses, with the same error names, and a refused save changes nothing", async () => {

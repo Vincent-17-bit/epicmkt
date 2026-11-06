@@ -1,0 +1,88 @@
+.card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md, 10px);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--dur) ease, background-color var(--dur) ease;
+}
+
+.card[data-kind="photo"] {
+  width: 5.5rem;
+}
+
+.card[data-kind="button"] {
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-4);
+  font-weight: 600;
+}
+
+.card[data-selected] {
+  border: 2px solid var(--text);
+  background: var(--primary-tint);
+}
+
+/* Dashed, not hidden: the choice is still there, and still pickable, but cannot be bought in this combination. */
+.card[data-unavailable] {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.card[data-unavailable] .photo,
+.card[data-unavailable] .swatch {
+  opacity: 0.55;
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+.photo {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm, 6px);
+  object-fit: cover;
+}
+
+.swatch {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+}
+
+.label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.price {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 700;
+}
+
+.was {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: var(--text-xs, 0.75rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}
