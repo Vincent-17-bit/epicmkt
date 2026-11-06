@@ -37,3 +37,6 @@ export * from "./contracts/index.js";
 // the unambiguous ones are also exported flat. Module path for the full API: shared/src/scales/index.js
 export * as scales from "./scales/index.js";
 export { sizeKey, validateAxisValues, registerScale, defineScale, listScales } from "./scales/index.js";
+
+// A18: open values dictionary (typed material, colour, brand). normalizeValueKey is the one canonical key function.
+export * from "./openValues.js";
