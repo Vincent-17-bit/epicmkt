@@ -160,3 +160,30 @@ test("deleting and saving keep the shop's yesterday and drop older dates", async
   const left = (await sql(c, `select exceptions from businesses where id = $1`, [ids.bizA]))[0].exceptions;
   assert.deepEqual(left.map((e) => e.date), [yest]);
 });
+
+test("hours_open_in agrees with the JavaScript rule in every zone Postgres accepts, with breaks, across daylight saving changes", async () => {
+  const { isValidTimeZone } = await import("../../shared/src/time.js");
+  const names = (await sql(c, `select name from pg_timezone_names where name !~ '^(posix|right)/' order by name`)).map((r) => r.name).filter((z) => isValidTimeZone(z) && z.includes("/"));
+  const hours = { mon: ["09:00", "18:00"], tue: ["20:00", "02:00"], wed: ["00:00", "23:59"], thu: ["09:00", "18:00"], fri: ["22:00", "03:00"], sat: ["09:00", "13:00"] };
+  const ex = [
+    { id: "a", kind: "break", date: "2026-01-01", until: null, weekdays: ["mon", "wed", "thu"], intervals: [["13:00", "14:00"], ["02:30", "03:30"]], note: null },
+    { id: "b", kind: "break", date: "2026-01-01", until: null, weekdays: ["tue", "fri"], intervals: [["23:00", "23:30"], ["01:00", "01:30"]], note: null }
+  ];
+  const windows = [[2026, 3, 7], [2026, 3, 28], [2026, 10, 24], [2026, 11, 1], [2027, 3, 13], [2027, 3, 27]];
+  let checked = 0;
+  for (const zone of names) {
+    const instants = [];
+    for (const [y, mo, d] of windows) {
+      for (let day = d; day < d + 3; day += 1) {
+        for (let h = 0; h < 24; h += 1) for (const mi of [0, 30, 59]) instants.push(zonedTimeToUtc({ year: y, month: mo, day, hour: h, minute: mi }, zone));
+      }
+    }
+    const rows = await sql(c, `select t, hours_open_in($1::jsonb, $2::jsonb, t, $3) as open from unnest($4::timestamptz[]) t`, [JSON.stringify(hours), JSON.stringify(ex), zone, instants]);
+    for (const row of rows) {
+      assert.equal(row.open, isOpenOn(hours, ex, new Date(row.t), zone), `${zone} ${new Date(row.t).toISOString()}`);
+      checked += 1;
+    }
+  }
+  assert.ok(names.length > 300, String(names.length));
+  assert.ok(checked > 100000, String(checked));
+});

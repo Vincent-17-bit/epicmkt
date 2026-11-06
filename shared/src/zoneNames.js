@@ -34,6 +34,7 @@ export const ZONE_NAMES = {
   "Asia/Dubai": ["GST"],
   "Asia/Karachi": ["PKT"],
   "Asia/Kolkata": ["IST"],
+  "Asia/Calcutta": ["IST"],
   "Asia/Singapore": ["SGT"],
   "Asia/Hong_Kong": ["HKT"],
   "Asia/Tokyo": ["JST"],
@@ -55,6 +56,14 @@ export const ZONE_NAMES = {
   "Pacific/Auckland": ["NZST", "NZDT"]
 };
 
+const NAME_OFFSETS = {
+  UTC: [0], EAT: [180], CAT: [120], WAT: [60], CET: [60], CEST: [120], EET: [120], EEST: [180], GMT: [0], BST: [60],
+  SAST: [120], MSK: [180], GST: [240], PKT: [300], SGT: [480], HKT: [480], JST: [540], KST: [540], IST: [330, 60],
+  EST: [-300], EDT: [-240], CST: [-360], CDT: [-300], MST: [-420], MDT: [-360], PST: [-480], PDT: [-420],
+  AKST: [-540], AKDT: [-480], HST: [-600], AEST: [600], AEDT: [660], ACST: [570], ACDT: [630], AWST: [480],
+  NZST: [720], NZDT: [780]
+};
+
 const isSummerTime = (date, zone) => {
   const year = date.getUTCFullYear();
   const now = tzOffsetMinutes(date, zone);
@@ -64,5 +73,6 @@ const isSummerTime = (date, zone) => {
 export function zoneAbbreviation(date, zone) {
   const names = ZONE_NAMES[zone];
   if (!names || !(date instanceof Date) || Number.isNaN(date.getTime())) return null;
-  return names.length > 1 && isSummerTime(date, zone) ? names[1] : names[0];
+  const name = names.length > 1 && isSummerTime(date, zone) ? names[1] : names[0];
+  return NAME_OFFSETS[name]?.includes(tzOffsetMinutes(date, zone)) ? name : null;
 }
