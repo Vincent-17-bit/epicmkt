@@ -2,7 +2,7 @@
 //
 // A type is sellable by any shop unless it carries `restrictedTo[]`: a list of SHOP CATEGORY IDS (the ids in
 // client/src/data/categories.js, which are `businesses.category_id` in the database). An empty or missing list means "anyone".
-// The database enforces the same rule (shop_can_sell_type and a trigger on items, migration 0089); these helpers let the picker
+// The database enforces the same rule (shop_can_sell_type and a trigger on items, migration 0090); these helpers let the picker
 // hide what a shop may not sell. Unknown shop categories fail closed: a restricted type is never offered to a shop whose
 // category is missing or not listed.
 //
