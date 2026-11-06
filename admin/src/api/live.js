@@ -694,3 +694,13 @@ export const saveHealthConfig = async (config, reason = null) =>
 
 export const setBusinessGrace = ({ id, days, reason }) =>
   detailRpc("admin_set_business_grace", { p_business: id, p_days: days, p_reason: reason });
+
+// ---- Open values dictionary review (A18, migration 0090_option_values.sql) ----
+// -> { total, values: [{ id, kind, label, key, status, hex, tags, uses, mergedInto, createdAt, reviewedAt }] }
+export const listOptionValues = ({ status = null, kind = null, query = "", limit = 50, offset = 0 } = {}) =>
+  detailRpc("admin_option_values", { p_status: status, p_kind: kind, p_query: query, p_limit: limit, p_offset: offset });
+export const approveOptionValue = (id, fields = null) => detailRpc("admin_approve_option_value", { p_id: id, p_fields: fields });
+export const updateOptionValue = (id, fields) => detailRpc("admin_update_option_value", { p_id: id, p_fields: fields });
+// Rename and merge answer with the value plus `itemsUpdated` (how many items now show the new spelling).
+export const renameOptionValue = (id, label) => detailRpc("admin_rename_option_value", { p_id: id, p_label: label });
+export const mergeOptionValue = (from, into) => detailRpc("admin_merge_option_value", { p_from: from, p_into: into });

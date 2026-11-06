@@ -149,15 +149,16 @@ const STORE_ROWS = [
 export default function ProductFilters({ filters, facets, counts: liveCounts, categories = [], categoryName, onChange }) {
   const bounds = facets?.price ?? null;
   const towns = useMemo(() => facets?.towns ?? [], [facets]);
+  const brands = useMemo(() => facets?.brands ?? [], [facets]);
 
   // Rows keep a fixed order (most products first, judged over the whole catalogue) so they do not jump about as the
   // shopper ticks; only the numbers beside them change. The totals come with the facets, the live counts from the server.
   const totals = useMemo(
-    () => ({ categories: new Map((facets?.categories ?? []).map((c) => [c.id, c.count])), towns: new Map(towns.map((t) => [t.slug, t.count])) }),
-    [facets, towns]
+    () => ({ categories: new Map((facets?.categories ?? []).map((c) => [c.id, c.count])), towns: new Map(towns.map((t) => [t.slug, t.count])), brands: new Map(brands.map((b) => [b.slug, b.count])) }),
+    [facets, towns, brands]
   );
   // Until the live counts arrive the options show the catalogue totals, and the one-off product toggles show no number.
-  const counts = liveCounts ?? { categories: totals.categories, towns: totals.towns, flags: {} };
+  const counts = liveCounts ?? { categories: totals.categories, towns: totals.towns, brands: totals.brands, flags: {} };
 
   const categoryRows = useMemo(() => {
     const known = categories.length ? categories : (facets?.categories ?? []).map((c) => ({ id: c.id, name: categoryName(c.id) }));
@@ -168,6 +169,11 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
   const townRows = useMemo(
     () => towns.map((t) => ({ id: t.slug, name: t.name, count: counts.towns.get(t.slug) ?? 0 })).sort((a, b) => (totals.towns.get(b.id) ?? 0) - (totals.towns.get(a.id) ?? 0) || a.name.localeCompare(b.name)),
     [towns, counts, totals]
+  );
+
+  const brandRows = useMemo(
+    () => brands.map((b) => ({ id: b.slug, name: b.name, count: counts.brands?.get(b.slug) ?? 0 })).sort((a, b) => (totals.brands.get(b.id) ?? 0) - (totals.brands.get(a.id) ?? 0) || a.name.localeCompare(b.name)),
+    [brands, counts, totals]
   );
 
   const priceSummary = filters.min || filters.max ? `KES ${filters.min || "0"} – ${filters.max || "any"}` : null;
@@ -230,6 +236,12 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
           ))}
         </div>
       </Section>
+
+      {brandRows.length > 1 && (
+        <Section title="Brand" open={filters.brands.length > 0} summary={filters.brands.length ? `${filters.brands.length} selected` : null}>
+          <CheckList rows={brandRows} selected={filters.brands} onToggle={(id) => onChange({ brands: toggle(filters.brands, id) })} noun="brands" />
+        </Section>
+      )}
 
       {townRows.length > 1 && (
         <Section title="Town" open={filters.towns.length > 0} summary={filters.towns.length ? `${filters.towns.length} selected` : null}>

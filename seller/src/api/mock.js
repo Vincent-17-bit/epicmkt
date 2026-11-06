@@ -1,4 +1,4 @@
-import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange } from "@epicmkt/shared";
+import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { buildAvailability, cleanSizeChartOverride, comboKey, scalePrice, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
@@ -424,6 +424,8 @@ export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 function resetBilling() {
   const now = Date.now();
   bill.seq = 0;
+  bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
+  bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
   bill.options = new Map();   // itemId -> { axes, variants, sizeChartId, sizeChartOverride } (migration 0084: option_axes, item_variants, size_chart_*)
   bill.now = null;
   bill.gallery = [];
@@ -1433,4 +1435,57 @@ export const __mock = {
     bill.usedCodes.delete(p.mpesaCode);
     emit("payments", "UPDATE", p);
   },
+};
+
+// ---- Open values dictionary (A18, mirrors migration 0090) ----
+const valueJson = (v) => ({ id: v.id, kind: v.kind, label: v.label, key: v.key, status: v.status, hex: v.hex ?? null, tags: v.tags ?? [] });
+const liveValue = (kind, key) => {
+  const v = bill.values.find((x) => x.kind === kind && x.key === key && x.status !== "merged");
+  if (v) return v;
+  const old = bill.values.find((x) => x.kind === kind && x.key === key && x.status === "merged");
+  return old ? bill.values.find((x) => x.id === old.mergedInto) ?? null : null;
+};
+const valueUses = (id) => [...bill.valueLinks.values()].filter((l) => l.some((u) => u.valueId === id)).length;
+export const findOptionValues = async (kind, query = "", limit = 8) => {
+  signedIn();
+  await wait();
+  const probe = validateOpenValue({ kind, label: "x" });
+  if (!probe.ok) throw new ApiError("invalid_kind");
+  const label = String(query ?? "").replace(/\s+/g, " ").trim().slice(0, 200);
+  const key = normalizeValueKey(label);
+  const pool = bill.values.map((v) => ({ ...v, use_count: valueUses(v.id) }));
+  const exact = key ? liveValue(kind, key) : null;
+  let matches = key ? matchOpenValues(pool, kind, label, { limit }) : matchOpenValuesAll(pool, kind, limit);
+  if (exact && !matches.some((m) => m.id === exact.id)) matches = [{ ...exact, use_count: valueUses(exact.id) }, ...matches];
+  const canAdd = key !== "" && label.length <= 60 && !exact;
+  return { kind, query: label, matches: matches.map((v) => ({ ...valueJson(v), uses: v.use_count ?? valueUses(v.id) })), canAdd, addLabel: canAdd ? label : null };
+};
+const matchOpenValuesAll = (pool, kind, limit) => pool.filter((v) => v.kind === kind && v.status !== "merged")
+  .sort((a, b) => (b.status === "approved") - (a.status === "approved") || b.use_count - a.use_count || a.label.localeCompare(b.label)).slice(0, limit);
+export const addOptionValue = async (kind, label, hex = null) => {
+  signedIn();
+  await wait();
+  const r = validateOpenValue({ kind, label, hex });
+  if (!r.ok) throw new ApiError(r.error.code);
+  const found = liveValue(kind, r.value.key);
+  if (found) return { created: false, value: valueJson(found) };
+  if (bill.values.filter((v) => v.status === "pending").length >= 50) throw new ApiError("too_many_pending");
+  const made = { id: `ov-${++bill.seq}`, kind, key: r.value.key, label: r.value.label, status: "pending", hex: r.value.hex, tags: [], mergedInto: null };
+  bill.values.push(made);
+  return { created: true, value: valueJson(made) };
+};
+export const linkItemValues = async (itemId, uses) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === itemId && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  if (!Array.isArray(uses) || uses.length > 120) throw new ApiError("invalid_uses");
+  const out = [];
+  for (const u of uses) {
+    const v = bill.values.find((x) => x.id === u?.valueId);
+    if (!["brand", "spec", "axis"].includes(u?.slot)) throw new ApiError("invalid_uses");
+    if (!v) throw new ApiError("value_not_found");
+    out.push({ slot: u.slot, valueId: v.status === "merged" ? v.mergedInto : v.id });
+  }
+  if (out.length) bill.valueLinks.set(itemId, out); else bill.valueLinks.delete(itemId);
+  return out.length;
 };

@@ -112,3 +112,7 @@ export const deleteSlot = (...a) => impl.deleteSlot(...a);
 export const getPerformance = (...a) => impl.getPerformance(...a);
 export const getItemHistory = (...a) => impl.getItemHistory(...a);
 export const getItemDeals = (...a) => impl.getItemDeals(...a);
+// A18: open values dictionary (migration 0090)
+export const findOptionValues = (...a) => impl.findOptionValues(...a);
+export const addOptionValue = (...a) => impl.addOptionValue(...a);
+export const linkItemValues = (...a) => impl.linkItemValues(...a);

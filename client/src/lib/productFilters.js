@@ -1,4 +1,5 @@
 import { normalizeText } from "../../../shared/src/utils.js";
+import { normalizeValueKey } from "../../../shared/src/openValues.js";
 
 // Everything a shopper can do to narrow or reorder the home page products. Pure functions over the product list, so
 // the same rules apply to demo and live data and are easy to test. The state lives in the page address (?psort=...).
@@ -18,6 +19,7 @@ export const EMPTY_FILTERS = Object.freeze({
   max: "",
   categories: [],
   towns: [],
+  brands: [],
   onSale: false,
   flash: false,
   verified: false,
@@ -29,7 +31,7 @@ export const EMPTY_FILTERS = Object.freeze({
 const FLAGS = { onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto", openNow: "popen" };
 // "pstock" was the old In stock toggle. Sold-out products are no longer listed at all, so it is gone; it stays in this list
 // only so an old link's leftover parameter is dropped the next time the filters are written.
-const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", "pstock", ...Object.values(FLAGS)];
+const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", "pbrand", "pstock", ...Object.values(FLAGS)];
 
 const list = (value) => (value ? value.split(",").map((v) => v.trim()).filter(Boolean) : []);
 const amount = (value) => (/^\d{1,9}$/.test(value ?? "") ? value : "");
@@ -43,7 +45,9 @@ export function parseFilters(params) {
     min: amount(params.get("pmin")),
     max: amount(params.get("pmax")),
     categories: list(params.get("pcat")),
-    towns: list(params.get("ptown"))
+    towns: list(params.get("ptown")),
+    // A brand is its canonical key (A18), so "Samsung", "SAMSUNG" and "samsung" are one choice and one link.
+    brands: list(params.get("pbrand"))
   };
   for (const [name, key] of Object.entries(FLAGS)) filters[name] = params.get(key) === "1";
   return filters;
@@ -59,6 +63,7 @@ export function writeFilters(params, filters) {
   if (filters.max !== "") next.set("pmax", filters.max);
   if (filters.categories.length) next.set("pcat", filters.categories.join(","));
   if (filters.towns.length) next.set("ptown", filters.towns.join(","));
+  if (filters.brands.length) next.set("pbrand", filters.brands.join(","));
   for (const [name, key] of Object.entries(FLAGS)) if (filters[name]) next.set(key, "1");
   return next;
 }
@@ -68,7 +73,7 @@ export function countActive(filters) {
   let n = 0;
   if (filters.q.trim()) n += 1;
   if (filters.min !== "" || filters.max !== "") n += 1;
-  n += filters.categories.length + filters.towns.length;
+  n += filters.categories.length + filters.towns.length + filters.brands.length;
   for (const name of Object.keys(FLAGS)) if (filters[name]) n += 1;
   return n;
 }
@@ -91,6 +96,7 @@ export function applyFilters(products, filters) {
   if (min !== null && max !== null && min > max) [min, max] = [max, min];
   const towns = new Set(filters.towns.map(normalizeText));
   const categories = new Set(filters.categories);
+  const brands = new Set(filters.brands);
 
   const kept = products.filter((p) => {
     const store = p.business ?? {};
@@ -107,6 +113,7 @@ export function applyFilters(products, filters) {
     }
     if (categories.size && !categories.has(store.categoryId)) return false;
     if (towns.size && !towns.has(normalizeText(store.town))) return false;
+    if (brands.size && !brands.has(normalizeValueKey(p.brand))) return false;
     if (filters.onSale && !(p.pricing?.savings > 0)) return false;
     if (filters.flash && !p.flash) return false;
     if (filters.verified && !store.verified) return false;
@@ -118,10 +125,14 @@ export function applyFilters(products, filters) {
   return kept.sort(SORTERS[filters.sort] ?? SORTERS.newest);
 }
 
+// One brand, however it was typed: show the spelling most shops used (ties: the one that sorts first).
+const commonSpelling = (spellings) => [...spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+
 // What is on offer to filter by, counted over the whole list so the options do not shift as filters are chosen.
 export function facetsOf(products) {
   const categories = new Map();
   const towns = new Map();
+  const brands = new Map();
   let min = Infinity;
   let max = -Infinity;
   for (const p of products) {
@@ -133,6 +144,13 @@ export function facetsOf(products) {
       entry.count += 1;
       towns.set(key, entry);
     }
+    const brandKey = normalizeValueKey(p.brand);
+    if (brandKey) {
+      const entry = brands.get(brandKey) ?? { slug: brandKey, name: "", count: 0, spellings: new Map() };
+      entry.count += 1;
+      entry.spellings.set(p.brand.trim(), (entry.spellings.get(p.brand.trim()) ?? 0) + 1);
+      brands.set(brandKey, entry);
+    }
     const value = price(p);
     if (value !== null) {
       min = Math.min(min, value);
@@ -142,12 +160,13 @@ export function facetsOf(products) {
   return {
     categories: [...categories].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count),
     towns: [...towns.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    brands: [...brands.values()].map(({ slug, count, spellings }) => ({ slug, count, name: commonSpelling(spellings) })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
     price: Number.isFinite(min) ? { min, max } : null
   };
 }
 
 // One removable chip per active filter, for the row under the heading.
-export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) => slug } = {}) {
+export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) => slug, brandName = (slug) => slug } = {}) {
   const chips = [];
   if (filters.q.trim()) chips.push({ key: "q", label: `"${filters.q.trim()}"`, clear: (f) => ({ ...f, q: "" }) });
   if (filters.min !== "" || filters.max !== "") {
@@ -156,6 +175,7 @@ export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) 
   }
   for (const id of filters.categories) chips.push({ key: `cat:${id}`, label: categoryName(id), clear: (f) => ({ ...f, categories: f.categories.filter((c) => c !== id) }) });
   for (const slug of filters.towns) chips.push({ key: `town:${slug}`, label: townName(slug), clear: (f) => ({ ...f, towns: f.towns.filter((t) => t !== slug) }) });
+  for (const slug of filters.brands) chips.push({ key: `brand:${slug}`, label: brandName(slug), clear: (f) => ({ ...f, brands: f.brands.filter((b) => b !== slug) }) });
   const named = { onSale: "On sale", flash: "Flash sale", verified: "Verified stores", featured: "Featured stores", photo: "With photo", openNow: "Open now" };
   for (const [name, label] of Object.entries(named)) if (filters[name]) chips.push({ key: name, label, clear: (f) => ({ ...f, [name]: false }) });
   return chips;
@@ -177,6 +197,7 @@ export function countsFor(products, filters) {
   return {
     categories: tally(without({ categories: [] }), (p) => p.business?.categoryId),
     towns: tally(without({ towns: [] }), (p) => normalizeText(p.business?.town)),
+    brands: tally(without({ brands: [] }), (p) => normalizeValueKey(p.brand)),
     flags
   };
 }

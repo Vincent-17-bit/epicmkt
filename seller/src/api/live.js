@@ -697,3 +697,11 @@ export const saveSlot = async (id, draft) => {
   }
 };
 export const deleteSlot = async (id) => rows(need().from("timetable_slots").delete().eq("id", id));
+
+// ---- Open values dictionary (A18, migration 0090) ----
+// -> { kind, query, matches: [{id, kind, label, key, status, hex, tags, uses}], canAdd, addLabel }
+export const findOptionValues = (kind, query = "", limit = 8) => rpc("seller_option_values", { p_kind: kind, p_query: query, p_limit: limit });
+// -> { created, value }. A value is usable at once; a new one is queued for review.
+export const addOptionValue = (kind, label, hex = null) => rpc("seller_add_option_value", { p_kind: kind, p_label: label, p_hex: hex });
+// Replaces the dictionary links of one item: uses = [{ slot: "brand" | "spec" | "axis", valueId }]. Call after saveItem.
+export const linkItemValues = (itemId, uses) => rpc("seller_link_item_values", { p_item: itemId, p_uses: uses });

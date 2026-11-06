@@ -17,6 +17,7 @@ import { clearDraft, loadDraft, prefersCalm, storeDraft, useBreakpoint, useUnsav
 import { firstErrorTarget, qualityChecks } from "./model.js";
 import { useItemModel } from "./model/useItemModel.js";
 import { visibleSteps } from "./steps/index.js";
+import { settleBrand, linkBrand } from "./brandValue.js";
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
@@ -219,7 +220,10 @@ function EditorForm({ item, sections, category, business }) {
     setBusy(true);
     try {
       // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
-      const id = await api.saveItem(item?.id ?? null, "productTypeId" in form ? { ...check.value, productTypeId: form.productTypeId } : check.value);
+      const { brand, valueId } = await settleBrand(form);   // A18: one dictionary value per brand, however it was typed
+      const fields = brand ? { ...check.value, brand } : check.value;   // empty brand: the form's own value, as before
+      const id = await api.saveItem(item?.id ?? null, "productTypeId" in form ? { ...fields, productTypeId: form.productTypeId } : fields);
+      await linkBrand(id, valueId, !!item?.brand);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
