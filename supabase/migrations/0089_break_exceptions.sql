@@ -1,4 +1,4 @@
--- 0088: break exceptions. The shop is closed for a few hours (a lunch break) and the normal hours apply around it.
+-- 0089: break exceptions. The shop is closed for a few hours (a lunch break) and the normal hours apply around it.
 -- A break covers one date, every date up to "until", or (with weekdays) those weekdays from its date until "until".
 
 create or replace function public.break_applies_on(e jsonb, d date) returns boolean
