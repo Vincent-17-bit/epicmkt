@@ -1,4 +1,4 @@
--- 0089_option_values.sql
+-- 0090_option_values.sql
 -- The open values dictionary (A18): typed material, colour, brand, finish and flavour shared by every shop.
 --
 --   * option_values            one row per value. `key` is the canonical form (normalize_value_key), so "Samsung", "SAMSUNG" and

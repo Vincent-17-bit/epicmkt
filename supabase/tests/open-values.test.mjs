@@ -1,4 +1,4 @@
-// Migration 0089: the open values dictionary (typed material, colour, brand), its type-ahead, and the admin review (approve, rename, merge).
+// Migration 0090: the open values dictionary (typed material, colour, brand), its type-ahead, and the admin review (approve, rename, merge).
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { normalizeValueKey, KEY_CASES } from "../../shared/src/openValues.js";

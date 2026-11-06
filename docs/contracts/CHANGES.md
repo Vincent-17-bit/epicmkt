@@ -103,7 +103,7 @@ Entry format:
 - Contract: v1 (additive; nothing existing changes)
 - Lane / author: Lane A, open values dictionary prompt (database)
 - What changed:
-  - Migration `0089_option_values.sql`: tables `option_values` and `item_option_value_uses`; `normalize_value_key(text)`; the contract's
+  - Migration `0090_option_values.sql`: tables `option_values` and `item_option_value_uses`; `normalize_value_key(text)`; the contract's
     `seller_option_values(kind, query, limit)`; `seller_add_option_value(kind, label, hex)`; `seller_link_item_values(item, uses)`;
     `public_option_value_filter(kind)`; `admin_option_values`, `admin_approve_option_value`, `admin_update_option_value`,
     `admin_rename_option_value`, `admin_merge_option_value`. `seller_save_item` is not touched.

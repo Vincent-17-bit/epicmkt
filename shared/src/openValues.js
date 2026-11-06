@@ -2,7 +2,7 @@
 //
 // A seller may type a value that is not in the shared list. It is usable at once, shown to buyers exactly as typed, and queued for
 // admin review. What makes "Samsung", "SAMSUNG" and " samsung " one filter choice is the canonical KEY below. The database has the same
-// function (public.normalize_value_key, migration 0089); supabase/tests/open-values.test.mjs checks that the two agree on a shared table,
+// function (public.normalize_value_key, migration 0090); supabase/tests/open-values.test.mjs checks that the two agree on a shared table,
 // so change both together.
 //
 // normalizeValueKey(raw) rules, in this order:
