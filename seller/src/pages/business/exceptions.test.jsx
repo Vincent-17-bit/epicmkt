@@ -108,6 +108,37 @@ describe("add", () => {
     expect(input).toHaveFocus();
   });
 
+  it("today only allows times from the shop's current time on", async () => {
+    const user = userEvent.setup();
+    await open([]);
+    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("radio", { name: /Different hours/ }));
+    setDate(TODAY);
+    expect(screen.getByLabelText("Interval 1 opens")).toHaveAttribute("min", "12:00");
+    expect(screen.getByRole("button", { name: "Mornings only" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Afternoons only" })).toBeEnabled();
+    setTimes(0, "09:00", "17:00");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("already passed today");
+    expect(rows()).toHaveLength(0);
+    setTimes(0, "13:00", "17:00");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+  });
+
+  it("a later day has no time limit, and a typed past date snaps back to today", async () => {
+    const user = userEvent.setup();
+    await open([]);
+    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("radio", { name: /Different hours/ }));
+    setDate(addDays(TODAY, 1));
+    expect(screen.getByLabelText("Interval 1 opens")).not.toHaveAttribute("min");
+    expect(screen.getByRole("button", { name: "Mornings only" })).toBeEnabled();
+    setDate("2019-03-04");
+    fireEvent.blur(screen.getByLabelText("Date"));
+    expect(screen.getByLabelText("Date")).toHaveValue(TODAY);
+  });
+
   it("explains each mistake in plain words and saves nothing", async () => {
     const user = userEvent.setup();
     await open([ex("a", "2026-10-20")]);

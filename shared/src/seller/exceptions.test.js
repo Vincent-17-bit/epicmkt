@@ -68,3 +68,30 @@ test("describes an exception for the list, and the limit is 60", () => {
   assert.equal(describeException({ kind: "special", intervals: [["08:00", "12:00"], ["14:00", "18:00"]] }), "Special hours: 08:00 to 12:00, 14:00 to 18:00");
   assert.equal(EXCEPTION_LIMIT, 60);
 });
+
+test("on today, a special or break time that starts before the shop's current time is refused", () => {
+  const today = "2026-11-06";
+  const special = (from) => validateException({ date: today, kind: "special", intervals: [[from, "21:00"]], note: "" }, today, { nowTime: "15:33" });
+  assert.deepEqual(special("09:00"), { ok: false, error: "time_in_past", index: 0 });
+  assert.equal(special("15:32").ok, false);
+  assert.equal(special("15:33").ok, true);
+  assert.equal(special("16:00").ok, true);
+  const brk = (from, to) => validateException({ date: today, kind: "break", intervals: [[from, to]], note: "" }, today, { nowTime: "15:33" });
+  assert.equal(brk("13:00", "14:00").error, "time_in_past");
+  assert.equal(brk("16:00", "16:30").ok, true);
+});
+
+test("the time check applies only when a now is given, never to later days, and spares unchanged times", () => {
+  const today = "2026-11-06";
+  const input = { date: today, kind: "break", intervals: [["13:00", "14:00"]], note: "" };
+  assert.equal(validateException(input, today).ok, true);
+  assert.equal(validateException({ ...input, date: "2026-11-07" }, today, { nowTime: "15:33" }).ok, true);
+  assert.equal(validateException(input, today, { nowTime: "13:30", keep: [["13:00", "14:00"]] }).ok, true);
+  assert.equal(validateException({ ...input, intervals: [["13:00", "14:00"], ["12:00", "12:30"]] }, today, { nowTime: "13:30", keep: [["13:00", "14:00"]] }).error, "time_in_past");
+});
+
+test("an overnight special that starts later than now is fine; closed days have no times to check", () => {
+  const today = "2026-11-06";
+  assert.equal(validateException({ date: today, kind: "special", intervals: [["20:00", "02:00"]], note: "" }, today, { nowTime: "15:33" }).ok, true);
+  assert.equal(validateException({ date: today, kind: "closed", intervals: [], note: "" }, today, { nowTime: "23:59" }).ok, true);
+});

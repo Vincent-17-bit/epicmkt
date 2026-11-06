@@ -24,6 +24,8 @@ const utc = (day) => new Date(`${day}T00:00:00Z`);
 const daysUntil = (day, from) => Math.round((utc(day) - utc(from)) / DAY_MS);
 const monthKey = (day) => day.slice(0, 7);
 const monthTitle = (day) => `${MONTHS[Number(day.slice(5, 7)) - 1]} ${day.slice(0, 4)}`;
+const clockOf = (total) => `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+const clamp = (value, min, max) => (value && value < min ? min : value && value > max ? max : value);
 const minutes = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
 
 /** "In 5 days", "In 3 weeks", "In 4 months". Today and tomorrow are shown as pills instead. */
@@ -166,12 +168,16 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
   const setTimes = isBreak ? setBreakTimes : setIntervals;
   const setTime = (i, k, value) => setTimes(times.map((iv, n) => (n === i ? (k === 0 ? [value, iv[1]] : [iv[0], value]) : iv)));
   const lastDay = mode === "range" || (mode === "weekly" && !endless) ? until : "";
+  const shopNow = nairobiNow(now(), shopZone);
+  const maxDate = addDays(today, EXCEPTION_MAX_DAYS_AHEAD);
+  const nowTime = kind !== "closed" && date === today && (!isBreak || mode !== "weekly" || weekdays.includes(shopNow.day)) ? clockOf(shopNow.minutes) : null;
+  const isPast = (intervalsList) => Boolean(nowTime) && intervalsList.some((iv) => iv[0] < nowTime);
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
     if (isBreak && (mode === "range" || (mode === "weekly" && !endless)) && !until) return setError(errorText({ code: "until_required" }));
-    const v = validateException({ date, kind, intervals: times, note, until: isBreak && lastDay ? lastDay : null, weekdays: isBreak && mode === "weekly" ? weekdays : null }, today);
+    const v = validateException({ date, kind, intervals: times, note, until: isBreak && lastDay ? lastDay : null, weekdays: isBreak && mode === "weekly" ? weekdays : null }, today, { nowTime, keep: initial?.kind === kind ? initial.intervals ?? [] : [] });
     if (!v.ok) return setError(errorText({ code: v.error }));
     if (kind !== "break" && existing.some((x) => x.date === date && x.kind !== "break" && x.id !== initial?.id)) return setError(errorText({ code: "date_taken" }));
     setBusy(true);
@@ -250,8 +256,8 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
         <div className={ui.field}>
           <label className={ui.label} htmlFor="exc-date">{dateLabel}</label>
           <input
-            ref={dateRef} id="exc-date" type="date" className={ui.input} value={date} min={today} max={addDays(today, EXCEPTION_MAX_DAYS_AHEAD)}
-            onChange={(e) => setDate(e.target.value)} aria-invalid={error && !date ? true : undefined}
+            ref={dateRef} id="exc-date" type="date" className={ui.input} value={date} min={today} max={maxDate}
+            onChange={(e) => setDate(e.target.value)} onBlur={(e) => setDate(clamp(e.target.value, today, maxDate))} aria-invalid={error && !date ? true : undefined}
           />
           <div className={styles.chips}>
             {quickDates.map((q) => (
@@ -280,7 +286,7 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
         {isBreak && (mode === "range" || (mode === "weekly" && !endless)) && (
           <div className={ui.field}>
             <label className={ui.label} htmlFor="exc-until">Last day</label>
-            <input id="exc-until" type="date" className={ui.input} value={until} min={date || today} max={addDays(today, EXCEPTION_MAX_DAYS_AHEAD)} onChange={(e) => setUntil(e.target.value)} />
+            <input id="exc-until" type="date" className={ui.input} value={until} min={date || today} max={maxDate} onChange={(e) => setUntil(e.target.value)} onBlur={(e) => setUntil(clamp(e.target.value, date || today, maxDate))} />
           </div>
         )}
 
@@ -289,15 +295,15 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
             <legend>Closed times (up to {EXCEPTION_MAX_INTERVALS})</legend>
             <div className={styles.chips}>
               {BREAK_PRESETS.map((p) => (
-                <button key={p.label} type="button" className={styles.chip} onClick={() => setBreakTimes(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
+                <button key={p.label} type="button" className={styles.chip} disabled={isPast(p.intervals)} onClick={() => setBreakTimes(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
               ))}
             </div>
-            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.</p>
+            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.{nowTime ? ` Today, only ${formatClock(nowTime)} or later.` : ""}</p>
             {breakTimes.map((iv, i) => (
               <div key={i} className={styles.interval}>
                 <div className={ui.field}>
                   <label className={ui.label} htmlFor={`exc-from-${i}`}>{i === 0 ? "Closed from" : `Break ${i + 1} from`}</label>
-                  <input id={`exc-from-${i}`} type="time" className={ui.input} value={iv[0]} onChange={(e) => setTime(i, 0, e.target.value)} />
+                  <input id={`exc-from-${i}`} type="time" className={ui.input} value={iv[0]} min={nowTime ?? undefined} onChange={(e) => setTime(i, 0, e.target.value)} />
                 </div>
                 <div className={ui.field}>
                   <label className={ui.label} htmlFor={`exc-to-${i}`}>{i === 0 ? "Until" : `Break ${i + 1} until`}</label>
@@ -323,10 +329,10 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
             <legend>Opening intervals (up to {EXCEPTION_MAX_INTERVALS})</legend>
             <div className={styles.chips}>
               {HOUR_PRESETS.map((p) => (
-                <button key={p.label} type="button" className={styles.chip} onClick={() => setIntervals(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
+                <button key={p.label} type="button" className={styles.chip} disabled={isPast(p.intervals)} onClick={() => setIntervals(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
               ))}
             </div>
-            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.</p>
+            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.{nowTime ? ` Today, only ${formatClock(nowTime)} or later.` : ""}</p>
             <p className={styles.count} id="exc-overnight-hint">
               Open past midnight? Set the closing time earlier than the opening time, for example 20:00 to 02:00. The hours after midnight count for the next day.
             </p>
@@ -335,7 +341,7 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
                 <div className={styles.interval}>
                   <div className={ui.field}>
                     <label className={ui.label} htmlFor={`exc-open-${i}`}>Interval {i + 1} opens</label>
-                    <input id={`exc-open-${i}`} type="time" className={ui.input} value={iv[0]} onChange={(e) => setTime(i, 0, e.target.value)} />
+                    <input id={`exc-open-${i}`} type="time" className={ui.input} value={iv[0]} min={nowTime ?? undefined} onChange={(e) => setTime(i, 0, e.target.value)} />
                   </div>
                   <div className={ui.field}>
                     <label className={ui.label} htmlFor={`exc-close-${i}`}>Interval {i + 1} closes</label>

@@ -27,6 +27,7 @@ const MESSAGES = {
   invalid_location: "Place the pin on the map inside Kenya, then try again.",
   invalid_address: "Keep the landmark under 200 characters.",
   date_in_past: "Choose today or a later date. Past dates cannot be added.",
+  time_in_past: "That time has already passed today. Choose the current time or a later one.",
   date_too_far: "Choose a date within the next 2 years.",
   date_taken: "You already have an exception on that date. Edit it instead.",
   invalid_kind: "Choose Closed all day, Closed for a while or Different hours.",

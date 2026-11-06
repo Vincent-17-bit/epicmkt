@@ -42,8 +42,12 @@ export const describeWeekdays = (days) => {
 };
 export const describeException = (e) => (e.kind === "closed" ? "Closed all day" : e.kind === "break" ? `Closed ${(e.intervals ?? []).map((iv) => `${iv[0]} to ${iv[1]}`).join(", ")}` : `Special hours: ${describeIntervals(e.intervals)}`);
 
-/** Returns { ok: true, value } or { ok: false, error, index? } with the same codes as the database. */
-export function validateException({ date, kind, intervals, note, until, weekdays }, today) {
+/**
+ * Returns { ok: true, value } or { ok: false, error, index? } with the same codes as the database.
+ * options.nowTime ("HH:MM", the shop clock) refuses special or break times that start before it; options.keep lists
+ * intervals already saved, which stay allowed.
+ */
+export function validateException({ date, kind, intervals, note, until, weekdays }, today, { nowTime = null, keep = [] } = {}) {
   if (!isRealDate(date)) return { ok: false, error: "invalid_date" };
   if (date < today) return { ok: false, error: "date_in_past" };
   if (date > addDays(today, EXCEPTION_MAX_DAYS_AHEAD)) return { ok: false, error: "date_too_far" };
@@ -74,6 +78,7 @@ export function validateException({ date, kind, intervals, note, until, weekdays
       const iv = intervals[i];
       if (!Array.isArray(iv) || iv.length !== 2 || !TIME.test(iv[0] ?? "") || !TIME.test(iv[1] ?? "")) return { ok: false, error: "invalid_time", index: i };
       if (kind === "break" && iv[1] <= iv[0]) return { ok: false, error: "break_order", index: i };
+      if (nowTime && date === today && iv[0] < nowTime && !keep.some((k) => k[0] === iv[0] && k[1] === iv[1])) return { ok: false, error: "time_in_past", index: i };
     }
     clean = [...intervals].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map(([a, b]) => [a, b]);
     // An overnight interval (end <= start) occupies the rest of this date, so nothing later the same date may touch it.
