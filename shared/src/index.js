@@ -40,3 +40,6 @@ export { sizeKey, validateAxisValues, registerScale, defineScale, listScales } f
 
 // A18: open values dictionary (typed material, colour, brand). normalizeValueKey is the one canonical key function.
 export * from "./openValues.js";
+
+// Selling restrictions and type requests (A08).
+export * from "./types/restrictions.js";

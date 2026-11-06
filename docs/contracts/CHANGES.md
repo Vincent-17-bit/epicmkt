@@ -132,3 +132,40 @@ Entry format:
   - Client lane: filter lists from `public_option_value_filter`.
   - Whoever owns `scripts/sync-shared.mjs`: add `openValues.js` if an edge function needs it (request below). No edge function uses it today.
 - Request files: `docs/requests/2026-11-06-a18-to-supabase-sync-open-values.md`
+
+## 2026-11-06 A08: Departments, selling restrictions and missing-type requests (Wave 1)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, prompt A08
+- What changed:
+  - Migration `0091_departments_restrictions.sql` (first written as 0089; renumbered twice, after `0089_break_exceptions.sql` and `0090_option_values.sql` reached main): tables `departments`, `product_types` (contract-shaped: `id, slug, name, kind, department_id, category_ids,
+    restricted_to, quantity_mode, axes, spec_rows, size_chart_id, active`), `type_requests`; column `items.product_type_id` (null = Other goods).
+  - **`restrictedTo[]` is a list of shop category ids** (`businesses.category_id`, the ids in `client/src/data/categories.js`). Empty or absent = any shop.
+    Regulated: `prescription-medicine` -> `chemist`; `vet-medicine`, `agrochemicals` -> `agrovet`. Written in code in `shared/src/types/restrictions.js`
+    (`REGULATED_TYPES`, `canSellType`, `sellableTypesFor`, `cleanTypeRequest`, `TYPE_ERRORS`) and a DB test keeps the seed equal to it.
+    An unknown category in a restriction fails closed (nobody can sell the type).
+  - `seller_save_item(uuid, jsonb)` accepts `productTypeId`: key absent = leave the type alone; `null` = Other goods; text = a type the shop may sell.
+    Errors: `type_not_allowed`, `unknown_product_type`, `invalid_product_type`. It is now a thin wrapper over the 0086 function, renamed
+    `seller_save_item_base` (no browser grant). A trigger on `items` enforces the same rule for every writer. `seller_check_item` reports the same code as
+    `{ok:false, issues:[{code}]}`.
+  - `seller_request_type(name, note)` -> request id. Name 2-80 chars, note up to 500, one open request per shop per name (asking again returns the open one),
+    at most 20 open per shop (`too_many_type_requests`). A seller may `select` their own rows from `type_requests`.
+  - `admin_type_requests_list(status default 'pending')` (`pending | resolved | declined | all`) -> rows `{id, name, note, status, created_at, resolved_at,
+    resolvedTypeId, adminNote, businessId, businessName, sellerId, categoryId, alsoAskedBy}`.
+    `admin_resolve_type_request(id, outcome 'resolved'|'declined', type_id?, note?)`: owner or reviewer; declining needs a note; a closed request
+    cannot be resolved again (`type_request_closed`). Audited as `type_request.resolved` / `type_request.declined`.
+  - `seller_product_types()` -> `{ departments: [{id, name}], types: [ProductType] }`, leaving out types this shop may not sell. `restrictedTo` and
+    `sizeChartId` appear on a type only when set.
+- Why: sellers need departments and a type picker that never offers regulated goods to the wrong shop; a missing type must not block adding an item.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - A06 is not merged, so `product_types` is created here, seeded with only five types (the regulated three, `fragrance`, `stationery`).
+    `// TODO(contract:A06)` marks the seed, the `seller_product_types` body and `REGULATED_TYPES`. A06 must add its types with
+    `insert ... on conflict (id) do update` and add columns with `add column if not exists`; `fragrance` keeps the W0 id.
+  - Departments: the 13 named ones plus one per live category group (water-energy, food-drink, medicine-health, ...), not one per live category.
+  - A type's restriction is checked when the type is set or changed, not on every edit, so an item stays editable if the shop later changes category.
+  - Admin list/resolve are SQL RPCs called straight from the admin app (as the other `admin_*` are), so `supabase/functions/**` is unchanged.
+- Who must act:
+  - Seller lane: wrappers for `seller_product_types` and `seller_request_type`; send `productTypeId` from the editor (request below).
+  - Admin lane: a type-requests page on the two admin RPCs (request below).
+  - Lane A (A06): merge with the tables above; see the assumptions.
+- Request files: `docs/requests/2026-11-06-a08-to-seller-type-picker-api.md`, `docs/requests/2026-11-06-a08-to-admin-type-requests-page.md`
