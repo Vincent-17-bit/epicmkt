@@ -1,4 +1,4 @@
-// Migration 0090 (A08): departments, selling restrictions on product types, missing-type requests.
+// Migration 0091 (A08): departments, selling restrictions on product types, missing-type requests.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { REGULATED_TYPES } from "../../shared/src/types/restrictions.js";

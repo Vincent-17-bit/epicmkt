@@ -1,4 +1,4 @@
--- 0090 (A08): departments as data, selling restrictions on product types, missing-type requests.
+-- 0091 (A08): departments as data, selling restrictions on product types, missing-type requests.
 --
 --   1. departments            Clothing, Shoes, Bags ... one row each (data, not code). Types point at one.
 --   2. product_types          contract-shaped table (id, slug, name, kind, department_id, category_ids, restricted_to, quantity_mode, axes, spec_rows,
