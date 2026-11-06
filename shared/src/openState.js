@@ -58,7 +58,7 @@ const reopenText = (opensAt, today, opts, reason) => {
 export function describeStatus(status, date, timeZone, viewerZone) {
   const shopZone = safeShopZone(timeZone);
   const now = nairobiNow(date, shopZone);
-  const opts = { shopZone, viewerZone };
+  const opts = { shopZone, viewerZone, now: date ?? new Date() };
   const reasonLine = reasonText(status.reason);
   if (status.isOpen) {
     const closesDate = status.closesAt ? nextShopDateOf(status.closesAt, date ?? new Date(), shopZone) : null;

@@ -98,6 +98,12 @@ function viewerZoneLabel(instant, viewerZone, shopLabel) {
   return label === shopLabel ? zoneLabel(instant, viewerZone, "en-KE") : label;
 }
 
+/** True when the reading falls on the viewer's own calendar day at `now`. */
+function sameViewerDay(clock, now, viewerZone) {
+  const p = zonedParts(now, viewerZone);
+  return clock.viewer.date === `${String(p.year).padStart(4, "0")}-${pad2(p.month)}-${pad2(p.day)}`;
+}
+
 /** "Sun" or "Sun 25 Oct" for a calendar day, no zone applied. */
 function dayTag(day, style) {
   if (style === "date") return formatCalendarDay(day, { weekday: "short", day: "numeric", month: "short", year: undefined });
@@ -120,12 +126,14 @@ export function viewerClockText(clock, { dayStyle = "weekday" } = {}) {
  *   different reading:              "6:00 PM EAT · 7:00 PM GST"  (with weekday/date when the day differs)
  * Returns "" for an invalid date or time.
  */
-export function shopTimeText(date, time, { shopZone, viewerZone, dayStyle = "weekday" } = {}) {
+export function shopTimeText(date, time, { shopZone, viewerZone, dayStyle = "weekday", now } = {}) {
   const c = shopClock(date, time, { shopZone, viewerZone });
   if (!c) return "";
   const base = `${time === "00:00" ? "midnight" : c.shop.clock} ${c.shop.label}`;
   if (!c.viewer || c.sameClock) return base;
-  return `${base} · ${viewerClockText(c, { dayStyle })} ${c.viewer.label}`;
+  const viewerDay = c.dayShift !== 0 || (now !== undefined && !sameViewerDay(c, now, safeViewerZone(viewerZone)));
+  const clock = viewerDay ? `${dayTag(c.viewer.date, dayStyle)} ${c.viewer.clock}` : c.viewer.clock;
+  return `${base} · ${clock} ${c.viewer.label}`;
 }
 
 /**

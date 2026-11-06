@@ -149,8 +149,8 @@ test("a Mumbai shop: open/closed is read in Mumbai, and the closing line convert
 test("reopening line: shop wording first, viewer reading after, weekday when the days differ", () => {
   const hours = { tue: ["09:00", "18:00"], wed: ["09:00", "18:00"] };
   const night = new Date("2026-10-27T19:00:00Z"); // 22:00 Tuesday in Nairobi, closed; reopens Wed 09:00 EAT = 06:00 UTC
-  const s = statusOf(hours, [], night, undefined, "America/Sao_Paulo"); // 03:00 Wed in Brazil, same date
-  assert.equal(s.reopens, "Reopens tomorrow at 9:00 AM EAT · 3:00 AM GMT-3");
+  const s = statusOf(hours, [], night, undefined, "America/Sao_Paulo"); // Wed 03:00 in Brazil, a day after the viewer's Tuesday
+  assert.equal(s.reopens, "Reopens tomorrow at 9:00 AM EAT · Wed 3:00 AM GMT-3");
   const t = statusOf(hours, [], night, undefined, "Pacific/Auckland"); // 19:00 Wed, same date
   assert.equal(t.reopens, "Reopens tomorrow at 9:00 AM EAT · 7:00 PM NZDT");
   const u = statusOf({ wed: ["01:00", "05:00"] }, [], night, undefined, "America/Sao_Paulo"); // 01:00 EAT Wed = 19:00 Tue in Brazil
@@ -250,4 +250,12 @@ test("a viewer whose zone shares the shop's short name is shown the GMT form, so
   assert.equal(dublin, "10:00 PM IST · 5:30 PM GMT+1");
   assert.equal(shopTimeText("2026-10-27", "18:00", { shopZone: "Africa/Nairobi", viewerZone: "Europe/Paris" }), "6:00 PM EAT · 4:00 PM CET");
   assert.equal(shopTimeText("2026-07-27", "14:00", { shopZone: "Africa/Nairobi", viewerZone: "Europe/Paris" }), "2:00 PM EAT · 1:00 PM CEST");
+});
+
+test("with a now, the viewer part names its day whenever it is not the viewer's own today", () => {
+  const opts = { shopZone: "Africa/Nairobi", viewerZone: "Pacific/Honolulu" };
+  assert.equal(shopTimeText("2026-11-10", "22:00", { ...opts, now: new Date("2026-11-08T21:30:00Z") }), "10:00 PM EAT · Tue 9:00 AM HST");
+  assert.equal(shopTimeText("2026-11-06", "13:00", { ...opts, now: new Date("2026-11-06T09:30:00Z") }), "1:00 PM EAT · Fri 12:00 AM HST");
+  assert.equal(shopTimeText("2026-11-06", "14:00", { ...opts, now: new Date("2026-11-06T10:30:00Z") }), "2:00 PM EAT · 1:00 AM HST");
+  assert.equal(shopTimeText("2026-11-10", "22:00", opts), "10:00 PM EAT · 9:00 AM HST");
 });

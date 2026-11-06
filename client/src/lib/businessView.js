@@ -25,7 +25,7 @@ export const formatTime = (time) => {
  */
 export function statusText(business, viewerZone = getUserTimeZone()) {
   const shopZone = safeShopZone(business.timezone);
-  const opts = { shopZone, viewerZone };
+  const opts = { shopZone, viewerZone, now: new Date() };
   if (business.isOpen) {
     if (!business.closesAt) return "Open now";
     const date = nextShopDateOf(business.closesAt, new Date(), shopZone);
