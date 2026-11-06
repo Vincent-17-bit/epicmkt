@@ -1,8 +1,8 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, productTypeById } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
-import { NotFoundError } from "../errors.js";
+import { NotFoundError, ValidationError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
@@ -514,4 +514,37 @@ export async function getFlashFacets() {
 export async function listSizeCharts() {
   await delay();
   return (store.sizeCharts ?? []).filter((c) => c.active !== false).map(({ id, name, category, unit, columns, rows }) => ({ id, name, category: category ?? null, unit, columns, rows }));
+}
+
+// ---- A05: charts by product type and the shoe conversion chart (mirror the database functions) ----
+
+// size_charts_for_type(type, category): the active charts attached to a type; when none, the category's charts that name no type.
+export async function getSizeChartsForType(typeId = null, category = null) {
+  await delay();
+  const active = (store.sizeCharts ?? []).filter((c) => c.active !== false);
+  const types = (c) => c.productTypeIds ?? [];
+  const byType = typeId ? active.filter((c) => types(c).includes(typeId)) : [];
+  const picked = byType.length ? byType : category ? active.filter((c) => c.category === category && types(c).length === 0) : [];
+  return picked
+    .map(({ id, name, category: cat, unit, columns, rows, productTypeIds }) => ({ id, name, category: cat ?? null, unit, columns, rows, product_type_ids: [...(productTypeIds ?? [])] }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// public_shoe_conversion: the chart (adult and kids rows) and its version.
+export async function getShoeConversion() {
+  await delay();
+  return structuredClone(store.shoeConversion);
+}
+
+// admin_save_shoe_conversion(chart) -> the new version. Same validation as the database (cleanShoeConversion mirrors shoe_chart_valid).
+export async function saveShoeConversion(chart) {
+  await delay();
+  const r = cleanShoeConversion(chart);
+  if (!r.ok) {
+    const err = new ValidationError("invalid_shoe_chart", { chart: r.errors });
+    err.code = "invalid_shoe_chart";
+    throw err;
+  }
+  store.shoeConversion = { chart: r.value, version: (store.shoeConversion?.version ?? 0) + 1 };
+  return store.shoeConversion.version;
 }

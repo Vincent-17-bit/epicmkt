@@ -186,3 +186,27 @@ Entry format:
   - The buyer filter groups on the brand text in the snapshot, not on the link table, so it also works for items saved before the dictionary existed.
   - `public_option_value_filter` (0090) is not used by the client yet; the snapshot route needs no extra request. It stays available for a standalone brand list.
   - Only Brand is typed-ahead in the seller editor today; material, colour, finish and flavour fields come with product types (A01).
+
+## 2026-11-06 - A05: size charts by product type, and the shoe conversion chart (Lane A)
+
+- Migration `0092_size_chart_types_shoe_conversion.sql`. Nothing from A04 (`0086`) is removed or renamed.
+  - `size_charts.product_type_ids text[]` (type ids are text slugs, at most 20, no foreign key until A06 adds `product_types`). `public_size_charts`
+    gains `product_type_ids` (appended). `admin_save_size_chart` accepts `product_type_ids` (absent key keeps the old value) and fails with `invalid_type_ids`.
+  - `size_charts_for_type(p_type, p_category default null)`: public. The active charts for the type; if none, the category's charts that name no type.
+  - `shoe_conversion` (one row) holds `{adult: [...], kids: [...]}` in the shape of `shared/src/scales/shoeChart.js`, plus `version`. `public_shoe_conversion`
+    is the public read. `admin_save_shoe_conversion(chart) -> version` is owner only, validated by `shoe_chart_valid`, audited.
+  - Seeds: Dresses and tops (cm), Shirt collar, Men's shoes, Women's shoes, Kids clothes (age), and the default shoe conversion chart.
+- `shared/src/sizeCharts.js`: `convertShoe(value, toSystem, chart?)`, `cleanShoeConversion`, `shoeChartFrom`, `shoeChartRows`, `shoeTable`, `pickSizeChart`,
+  `SEED_SIZE_CHARTS`. Exported from the shared barrel. Errors from `convertShoe` use A02's `{code, message}` shape (`unknown-system`, `out-of-range`,
+  `no-equivalent`, plus the shoe scale's own codes for text input).
+- Backend mock: `getSizeChartsForType`, `getShoeConversion`, `saveShoeConversion`. `listSizeCharts` keeps its six keys (the seller app and its test read them).
+- Assumptions (change with a new entry, not by editing this one):
+  - The men's and women's shoe tables are size charts built from the one conversion chart. The conversion chart stores both US columns in each row, as A02's `SHOE_CHART` does.
+  - The seeded charts name `dress`, `shirt` and `shoes-eu` as product types. A06 decides the real type ids; correct them with `admin_save_size_chart`.
+  - Charts are chosen for a buyer in this order: the item's own `size_chart_id` (with its override), then a chart attached to the item's product type, then
+    the category's chart that names no type (`pickSizeChart`). A06 applies it in `items.getDetail`.
+- Who must act:
+  - Admin lane: pages for charts and the shoe chart (`docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`).
+  - Lane A (A06): validate `product_type_ids` against `product_types`; call `pickSizeChart` when building `items.getDetail`; use `convertShoe` to show the buyer a size in their own system.
+  - Edge functions: `shared/src/sizeCharts.js` is not synced; add `["sizeCharts.js", "sizeCharts.js"]` to `scripts/sync-shared.mjs` when a function needs it (it imports `./scales/**` and `./seller/options.js`).
+
