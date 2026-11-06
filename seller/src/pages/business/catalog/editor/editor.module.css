@@ -464,3 +464,19 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
   .badge,
   .navMark { border: 1px solid CanvasText; }
 }
+
+/* A18: dictionary type-ahead (ValueField) */
+.valueWrap { position: relative; }
+.valueList {
+  position: absolute; inset-inline: 0; inset-block-start: calc(100% + var(--space-1)); z-index: 20;
+  margin: 0; padding: var(--space-1); list-style: none; max-block-size: 16rem; overflow-y: auto;
+  background: var(--surface); border: 1px solid var(--input-border); border-radius: var(--radius-sm); box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+}
+.valueOption { display: flex; align-items: center; min-block-size: var(--tap); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); cursor: pointer; }
+.valueOption:hover, .valueOption[data-active="true"] { background: var(--info-bg); color: var(--info-text); }
+.valueOption[data-active="true"] { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.valueTag { color: var(--text-muted); font-size: var(--text-xs); }
+.valueNote { margin: 0; color: var(--info-text); font-size: var(--text-sm); }
+@media (forced-colors: active) {
+  .valueOption[data-active="true"] { outline: 2px solid Highlight; }
+}

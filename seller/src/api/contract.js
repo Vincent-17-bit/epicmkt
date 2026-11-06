@@ -102,4 +102,8 @@ export const SELLER_API = [
   "listTimetable",
   "saveSlot",
   "deleteSlot",
+  // A18: open values dictionary (migration 0090)
+  "findOptionValues",
+  "addOptionValue",
+  "linkItemValues",
 ];

@@ -27,18 +27,19 @@ export function pageOf(products, filters, { page = 1, pageSize = PAGE_SIZE } = {
 // What can be filtered by, over the whole catalogue (it does not shift as filters are chosen).
 export function facetsSummary(products) {
   const f = facetsOf(products);
-  return { total: products.length, categories: f.categories, towns: f.towns, price: f.price };
+  return { total: products.length, categories: f.categories, towns: f.towns, brands: f.brands, price: f.price };
 }
 
 // Live option counts for the filter sheet, as JSON (Maps become pair lists).
 export function countsSummary(products, filters) {
   const c = countsFor(products, filters);
-  return { categories: [...c.categories], towns: [...c.towns], flags: c.flags };
+  return { categories: [...c.categories], towns: [...c.towns], brands: [...c.brands], flags: c.flags };
 }
 
 export const countsFromJson = (json) => ({
   categories: new Map(json?.categories ?? []),
   towns: new Map(json?.towns ?? []),
+  brands: new Map(json?.brands ?? []),
   flags: json?.flags ?? {}
 });
 

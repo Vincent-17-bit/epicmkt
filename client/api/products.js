@@ -61,7 +61,7 @@ async function fromRpc() {
 async function fromViews() {
   const [rows, businesses, sales] = await Promise.all([
     restAll(
-      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
+      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
@@ -84,6 +84,7 @@ async function fromViews() {
       price_type: r.price_type,
       unit: r.unit,
       availability: r.availability,
+      brand: r.brand ?? null,
       created_at: r.created_at,
       image_path: r.image_paths?.[0] ?? null,
       video_paths: r.video_paths?.length ? r.video_paths : null,
@@ -135,6 +136,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       name: row.name,
       shortDescription: shorten(description),
       section: row.section ?? null,
+      brand: typeof row.brand === "string" && row.brand.trim() ? row.brand.trim() : null,
       availability: row.availability ?? "available",
       stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
       imagePath: row.image_path ?? null,

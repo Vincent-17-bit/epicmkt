@@ -199,4 +199,45 @@ describe("HomeProducts filters", () => {
     await waitFor(() => expect(within(dialog).getByRole("status")).toHaveTextContent("Show 2 products"));
     expect(screen.getByRole("button", { name: /Remove filter: KES 1000 to 5000/ })).toBeInTheDocument();
   });
+  describe("brand filter (A18)", () => {
+    const phones = () => serve([
+      product(1, { name: "Phone", brand: "Samsung" }),
+      product(2, { name: "TV", brand: "SAMSUNG" }),
+      product(3, { name: "Radio", brand: " samsung " }),
+      product(4, { name: "Shoe", brand: "Nike" }),
+      product(5, { name: "Bag" })
+    ]);
+
+    it('offers "Samsung", "SAMSUNG" and "samsung" as one choice with one count, and narrows to all of them', async () => {
+      phones();
+      view();
+      await screen.findByText("Phone");
+      await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+      const dialog = await screen.findByRole("dialog", { hidden: true });
+      const boxes = within(dialog).getAllByLabelText(/^(Samsung|SAMSUNG|samsung|Nike)/);
+      expect(boxes.map((b) => b.closest("label").textContent.replace(/\s+/g, ""))).toEqual(["Samsung3", "Nike1"]);
+      await userEvent.click(within(dialog).getByLabelText(/^Samsung/));
+      await waitFor(() => expect(screen.queryByText("Shoe")).not.toBeInTheDocument());
+      for (const name of ["Phone", "TV", "Radio"]) expect(screen.getByText(name)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Remove filter: Samsung" })).toBeInTheDocument();
+    });
+
+    it("reads the brand from the address, and the chip removes it", async () => {
+      phones();
+      view("/?pbrand=nike");
+      await screen.findByText("Shoe");
+      expect(screen.queryByText("Phone")).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole("button", { name: "Remove filter: Nike" }));
+      expect(await screen.findByText("Phone")).toBeInTheDocument();
+    });
+
+    it("shows no Brand section when there is nothing to choose between", async () => {
+      serve([product(1, { name: "Phone", brand: "Samsung" }), product(2, { name: "Bag" })]);
+      view();
+      await screen.findByText("Phone");
+      await userEvent.click(screen.getByRole("button", { name: /Filters/ }));
+      const dialog = await screen.findByRole("dialog", { hidden: true });
+      expect(within(dialog).queryByText("Brand")).not.toBeInTheDocument();
+    });
+  });
 });

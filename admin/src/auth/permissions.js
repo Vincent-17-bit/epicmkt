@@ -50,6 +50,9 @@ export const ACTIONS = {
   "settings.edit": { label: "change settings", roles: [] },
   "admins.manage": { label: "manage admin accounts", roles: [] },
   "security.view": { label: "see your sessions", roles: ANY },
+  // A18. Mirrors has_role(array['reviewer']) in the admin_*_option_value functions (migration 0090); the owner is implied.
+  "values.view": { label: "see the open values dictionary", roles: ["reviewer"] },
+  "values.review": { label: "approve, rename or merge dictionary values", roles: ["reviewer"] },
 };
 
 export function isRole(role) {

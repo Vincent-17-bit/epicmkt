@@ -165,3 +165,59 @@ describe("open now filter", () => {
     expect(parseFilters(params).openNow).toBe(true);
   });
 });
+
+// A18: the Brand filter. A brand is its canonical key, so "Samsung", "SAMSUNG" and " samsung " are one choice.
+describe("brand filter", () => {
+  const phone = p({ name: "Phone", brand: "Samsung" });
+  const tv = p({ name: "TV", brand: "SAMSUNG" }, { town: "Kisumu" });
+  const radio = p({ name: "Radio", brand: " samsung " });
+  const shoe = p({ name: "Shoe", brand: "Nike" });
+  const none = p({ name: "Bag", brand: null });
+  const blank = p({ name: "Hat" });
+  const all = [phone, tv, radio, shoe, none, blank];
+
+  it("one choice per brand however it was typed, named by the most used spelling, most products first", () => {
+    const { brands } = facetsOf([...all, p({ brand: "Samsung" })]);
+    expect(brands).toEqual([{ slug: "samsung", name: "Samsung", count: 4 }, { slug: "nike", name: "Nike", count: 1 }]);
+  });
+
+  it("ties in spelling prefer one that is not all capitals, then plain character order; products with no brand add no choice", () => {
+    expect(facetsOf([p({ brand: "SAMSUNG" }), p({ brand: "Samsung" })]).brands[0].name).toBe("Samsung");
+    expect(facetsOf([p({ brand: "Tecno" }), p({ brand: "TECno" })]).brands[0].name).toBe("TECno");
+    expect(facetsOf([none, blank]).brands).toEqual([]);
+  });
+
+  it("keeps only products of the chosen brands, whatever their spelling", () => {
+    expect(ids(applyFilters(all, f({ brands: ["samsung"] }))).sort()).toEqual(["Phone", "Radio", "TV"]);
+    expect(ids(applyFilters(all, f({ brands: ["samsung", "nike"] }))).sort()).toEqual(["Phone", "Radio", "Shoe", "TV"]);
+    expect(applyFilters(all, f({ brands: ["adidas"] }))).toEqual([]);
+    expect(applyFilters(all, f({ brands: [] }))).toHaveLength(6);
+  });
+
+  it("combines with the other filters", () => {
+    expect(ids(applyFilters(all, f({ brands: ["samsung"], towns: ["kisumu"] })))).toEqual(["TV"]);
+  });
+
+  it("lives in the page address as pbrand and survives a round trip; defaults are left out", () => {
+    const written = writeFilters(new URLSearchParams("x=1"), f({ brands: ["samsung", "nike"] }));
+    expect(written.get("pbrand")).toBe("samsung,nike");
+    expect(written.get("x")).toBe("1");
+    expect(parseFilters(written).brands).toEqual(["samsung", "nike"]);
+    expect(writeFilters(new URLSearchParams("pbrand=nike"), f()).has("pbrand")).toBe(false);
+    expect(parseFilters(new URLSearchParams()).brands).toEqual([]);
+  });
+
+  it("counts as an active filter and has a removable chip with the brand's name", () => {
+    expect(countActive(f({ brands: ["samsung", "nike"] }))).toBe(2);
+    const chips = chipsOf(f({ brands: ["samsung"] }), { brandName: () => "Samsung" });
+    expect(chips.map((c) => c.label)).toEqual(["Samsung"]);
+    expect(chips[0].clear(f({ brands: ["samsung", "nike"] })).brands).toEqual(["nike"]);
+    expect(chipsOf(f({ brands: ["samsung"] }))[0].label).toBe("samsung");
+  });
+
+  it("live counts for the brand list ignore the brand filter itself, so the other brands keep their numbers", () => {
+    const c = countsFor(all, f({ brands: ["nike"], towns: ["kisumu"] }));
+    expect([...c.brands]).toEqual([["samsung", 1]]);
+    expect([...countsFor(all, f()).brands].sort()).toEqual([["nike", 1], ["samsung", 3]]);
+  });
+});

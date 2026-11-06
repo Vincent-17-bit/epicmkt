@@ -65,7 +65,8 @@ export default function HomeProducts() {
 
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
   const townName = (slug) => towns.find((x) => x.slug === slug)?.name ?? slug;
-  const chips = chipsOf(filters, { categoryName, townName });
+  const brandName = (slug) => facets.data?.brands?.find((x) => x.slug === slug)?.name ?? slug;
+  const chips = chipsOf(filters, { categoryName, townName, brandName });
 
   const change = (patch) => {
     setParams(writeFilters(params, { ...filters, ...patch }), { replace: true, state: { keepScroll: true } });

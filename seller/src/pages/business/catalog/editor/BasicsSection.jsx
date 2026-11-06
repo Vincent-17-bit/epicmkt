@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { exampleShortFor, firstSentence, LIMITS } from "./model.js";
 import { Field, SectionCard } from "./parts.jsx";
+import ValueField from "./ValueField.jsx";
 import styles from "./editor.module.css";
 
 export default function BasicsSection({ form, patch, errors, category, sections, focusOn }) {
@@ -15,8 +16,9 @@ export default function BasicsSection({ form, patch, errors, category, sections,
       <div className={styles.grid}>
         <Field name="name" label="Name" area="name" max={LIMITS.name} value={form.name} error={errors.name} onChange={(e) => patch("name", e.target.value)} autoComplete="off"
           hint="Say what it is in plain words, like Men's fade cut or Chocolate cake, 1 kg." className={styles.span2} />
-        <Field name="brand" label="Brand (optional)" area="brand" max={LIMITS.brand} value={form.brand} error={errors.brand} onChange={(e) => patch("brand", e.target.value)} autoComplete="off"
-          hint="The maker or label, such as Nike or Brookside." />
+        <ValueField kind="brand" name="brand" label="Brand (optional)" area="brand" max={LIMITS.brand} value={form.brand} valueId={form.brandValueId} error={errors.brand} noun="brand"
+          onChange={(text, v) => { patch("brand", text); patch("brandValueId", v?.id ?? null); }}
+          hint="The maker or label, such as Nike or Brookside. Pick one from the list so it matches other shops, or type your own." />
         <Field name="section" label="Section" area="section" max={LIMITS.section} value={form.section} error={errors.section} onChange={(e) => patch("section", e.target.value)} list={listId} autoComplete="off"
           hint="Groups items on your page, like Haircuts or Cakes. Pick one you use already or type a new one." />
         <datalist id={listId}>{sections.map((s) => <option key={s} value={s} />)}</datalist>
