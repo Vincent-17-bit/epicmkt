@@ -220,3 +220,109 @@ for (const zone of ["America/Los_Angeles", "Pacific/Honolulu", "America/New_York
   assert.equal(await openAt("23:30"), false);
   await sql(c, `update businesses set timezone = 'Africa/Nairobi' where id = '${ids.bizA}'`);
 });
+
+const saveBreak = (who, date, intervals, { until = null, weekdays = null, note = null, id = null } = {}) =>
+  tx(c, who, async (k) => (await sql(k, `select seller_save_exception($1::uuid, $2::date, 'break', $3::jsonb, $4, $5::date, $6::jsonb) as r`, [id, date, JSON.stringify(intervals), note, until, weekdays ? JSON.stringify(weekdays) : null]))[0].r, { commit: true });
+
+test("a break is saved with only its closed windows, one day, a run of days, or every week", async () => {
+  await reset();
+  const one = await saveBreak(asA, addDays(today, 2), [["14:00", "15:00"], ["13:00", "13:30"]], { note: " Lunch " });
+  assert.deepEqual({ ...one, id: undefined }, { id: undefined, date: addDays(today, 2), kind: "break", intervals: [["13:00", "13:30"], ["14:00", "15:00"]], note: "Lunch", until: null, weekdays: null });
+  const run = await saveBreak(asA, addDays(today, 5), [["13:00", "14:00"]], { until: addDays(today, 8) });
+  assert.equal(run.until, addDays(today, 8));
+  const weekly = await saveBreak(asA, addDays(today, 1), [["13:00", "14:00"]], { weekdays: ["fri", "mon", "mon"] });
+  assert.deepEqual([weekly.weekdays, weekly.until], [["mon", "fri"], null]);
+  assert.equal((await list()).length, 3);
+  const closed = await save(asA, addDays(today, 30), "closed");
+  assert.deepEqual(Object.keys(closed).sort(), ["date", "id", "intervals", "kind", "note"], "closed and special keep their old shape");
+});
+
+test("breaks never block each other or a closed day, but two closed or special exceptions on one date still do", async () => {
+  await reset();
+  const d = addDays(today, 4);
+  await saveBreak(asA, d, [["13:00", "14:00"]]);
+  await saveBreak(asA, d, [["16:00", "17:00"]]);
+  await save(asA, d, "closed");
+  await saveBreak(asA, d, [["10:00", "11:00"]]);
+  await rejects(c, asA, `select seller_save_exception(null, $1::date, 'special', '[["09:00","12:00"]]'::jsonb)`, [d], /date_taken/);
+  assert.equal((await list()).length, 4);
+});
+
+test("break input that makes no sense is refused with the same codes as the shared validator", async () => {
+  await reset();
+  const d = addDays(today, 3);
+  const bad = [
+    [{ intervals: [] }, /intervals_required/],
+    [{ intervals: [["13:00", "13:00"]] }, /break_order/],
+    [{ intervals: [["15:00", "14:00"]] }, /break_order/],
+    [{ intervals: [["13:00", "14:00"], ["13:30", "15:00"]] }, /intervals_overlap/],
+    [{ intervals: [["01:00", "02:00"], ["03:00", "04:00"], ["05:00", "06:00"], ["07:00", "08:00"]] }, /too_many_intervals/],
+    [{ intervals: [["1pm", "14:00"]] }, /invalid_time/],
+    [{ until: addDays(today, 2) }, /until_before_date/],
+    [{ until: addDays(today, 800) }, /date_too_far/],
+    [{ weekdays: [] }, /invalid_weekdays/],
+    [{ weekdays: ["funday"] }, /invalid_weekdays/],
+  ];
+  for (const [over, re] of bad) {
+    const input = { intervals: [["13:00", "14:00"]], until: null, weekdays: null, ...over };
+    const js = validateException({ date: d, kind: "break", intervals: input.intervals, note: null, until: input.until, weekdays: input.weekdays }, today);
+    assert.equal(js.ok, false, JSON.stringify(over));
+    await rejects(c, asA, `select seller_save_exception(null, $1::date, 'break', $2::jsonb, null, $3::date, $4::jsonb)`, [d, JSON.stringify(input.intervals), input.until, input.weekdays ? JSON.stringify(input.weekdays) : null], re);
+    assert.match(re.source, new RegExp(js.error));
+  }
+  await rejects(c, asA, `select seller_save_exception(null, $1::date, 'break', '[["13:00","14:00"]]'::jsonb, null, null, null)`, [addDays(today, -1)], /date_in_past/);
+  assert.equal((await list()).length, 0);
+});
+
+test("a running break stays; an ended one is dropped; a repeating break with no end is kept", async () => {
+  await reset();
+  const past = addDays(today, -10);
+  await sql(c, `update businesses set exceptions = $1::jsonb where id = $2`, [JSON.stringify([
+    { id: "00000000-0000-0000-0000-00000000aa01", kind: "break", date: past, until: addDays(today, 2), intervals: [["13:00", "14:00"]], note: null, weekdays: null },
+    { id: "00000000-0000-0000-0000-00000000aa02", kind: "break", date: past, until: addDays(past, 1), intervals: [["13:00", "14:00"]], note: null, weekdays: null },
+    { id: "00000000-0000-0000-0000-00000000aa03", kind: "break", date: past, until: null, intervals: [["13:00", "14:00"]], note: null, weekdays: ["mon"] },
+    { id: "00000000-0000-0000-0000-00000000aa04", kind: "break", date: past, until: null, intervals: [["13:00", "14:00"]], note: null, weekdays: null },
+  ]), ids.bizA]);
+  const anon = async () => (await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions.map((e) => e.id.slice(-2));
+  assert.deepEqual(await anon(), ["01", "03"], "customers get the running and the repeating ones only");
+  await save(asA, addDays(today, 40), "closed");
+  assert.deepEqual((await list()).map((e) => e.id.slice(-2)).filter((x) => x.startsWith("0")).sort(), ["01", "03"]);
+  const seen = (await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions[0];
+  assert.deepEqual(Object.keys(seen).sort(), ["date", "id", "intervals", "kind", "note", "until", "weekdays"]);
+});
+
+test("limit of 60 counts each break once, however many days it covers", async () => {
+  await reset();
+  for (let i = 0; i < 59; i += 1) await save(asA, addDays(today, i + 1), "closed");
+  await saveBreak(asA, addDays(today, 1), [["13:00", "14:00"]], { weekdays: ["mon", "tue", "wed", "thu", "fri"] });
+  await rejects(c, asA, `select seller_save_exception(null, $1::date, 'break', '[["15:00","16:00"]]'::jsonb)`, [addDays(today, 2)], /limit_reached/);
+  await reset();
+});
+
+test("hours_open_in agrees with the shared JS for breaks, across zones, days and every minute that matters", async () => {
+  await reset();
+  const { isOpenOn } = await import("../../shared/src/utils.js");
+  const { zonedTimeToUtc } = await import("../../shared/src/time.js");
+  const hours = { mon: ["09:00", "18:00"], tue: ["09:00", "18:00"], wed: ["20:00", "02:00"], thu: ["00:00", "23:59"], fri: ["09:00", "18:00"], sat: ["09:00", "13:00"] };
+  const ex = [
+    { id: "a", kind: "break", date: "2026-11-02", until: null, weekdays: null, intervals: [["13:00", "14:00"], ["16:00", "16:30"]], note: null },
+    { id: "b", kind: "break", date: "2026-11-03", until: "2026-11-05", weekdays: null, intervals: [["12:00", "12:30"]], note: null },
+    { id: "c", kind: "break", date: "2026-11-01", until: null, weekdays: ["wed", "thu"], intervals: [["23:00", "23:30"], ["01:00", "01:30"]], note: null },
+    { id: "d", kind: "closed", date: "2026-11-06", intervals: [], note: null },
+    { id: "e", kind: "special", date: "2026-11-07", intervals: [["10:00", "17:00"]], note: null },
+    { id: "f", kind: "break", date: "2026-11-06", until: null, weekdays: ["fri", "sat"], intervals: [["11:00", "12:00"]], note: null },
+    { id: "g", kind: "break", date: "2026-11-07", until: null, weekdays: ["fri", "sat"], intervals: [["11:00", "12:00"]], note: null },
+  ];
+  let checked = 0;
+  for (const zone of ["Africa/Nairobi", "America/Los_Angeles"]) {
+    for (let day = 1; day <= 9; day += 1) {
+      for (const [h, mi] of [[0, 0], [0, 30], [1, 0], [1, 15], [1, 30], [2, 0], [9, 0], [11, 0], [11, 59], [12, 0], [12, 29], [12, 30], [13, 0], [13, 59], [14, 0], [16, 0], [16, 29], [16, 30], [17, 59], [18, 0], [20, 0], [22, 59], [23, 0], [23, 29], [23, 30], [23, 59]]) {
+        const at = zonedTimeToUtc({ year: 2026, month: 11, day, hour: h, minute: mi }, zone);
+        const db = (await sql(c, `select hours_open_in($1::jsonb, $2::jsonb, $3::timestamptz, $4) as o`, [JSON.stringify(hours), JSON.stringify(ex), at.toISOString(), zone]))[0].o;
+        assert.equal(db, isOpenOn(hours, ex, at, zone), `${zone} 2026-11-${day} ${h}:${mi}`);
+        checked += 1;
+      }
+    }
+  }
+  assert.ok(checked > 400);
+});

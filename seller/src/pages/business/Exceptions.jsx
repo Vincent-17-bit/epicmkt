@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
-  addDays, dayLabel, describeException, describeExceptionForViewer, formatClock, getUserTimeZone, nairobiNow, safeShopZone, shopTimeNote, isOvernight, upcomingExceptions, validateException,
+  BREAK_WEEKDAYS, DAYS, EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
+  addDays, breaksOn, dayLabel, describeException, describeExceptionForViewer, describeWeekdays, formatClock, getUserTimeZone, hoursRowsFor, nairobiNow, openMinutesOn, safeShopZone, shopTimeNote, statusOf, isOvernight, upcomingExceptions, validateException, zonedTimeToUtc,
 } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { now } from "../../lib/clock.js";
@@ -42,6 +42,55 @@ const nextWeekday = (today, weekday) => {
 };
 
 const REASONS = ["Public holiday", "Stock take", "Early close", "Staff event", "Away"];
+const BREAK_REASONS = ["Lunch", "Prayer", "Staff meeting", "Deliveries"];
+const BREAK_PRESETS = [
+  { label: "Lunch 1 to 2 PM", intervals: [["13:00", "14:00"]] },
+  { label: "Short break 3 to 3:30 PM", intervals: [["15:00", "15:30"]] },
+];
+const MODES = [
+  { id: "day", label: "This day only" },
+  { id: "range", label: "Several days in a row" },
+  { id: "weekly", label: "Every week" },
+];
+const DAY_FULL = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
+const WEEKDAY_CHIPS = { mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun" };
+const weekdayOf = (day) => DAYS[utc(day).getUTCDay()];
+const instantAt = (day, time, zone) => zonedTimeToUtc({ year: Number(day.slice(0, 4)), month: Number(day.slice(5, 7)), day: Number(day.slice(8)), hour: Number(time.slice(0, 2)), minute: Number(time.slice(3)) }, zone);
+
+/** The first date a break applies on, so the preview can show what customers read on a real day. */
+function sampleDate({ mode, date, until, weekdays }, today) {
+  if (!date) return null;
+  if (mode !== "weekly") return date;
+  const from = date < today ? today : date;
+  for (let i = 0; i < 7; i += 1) {
+    const day = addDays(from, i);
+    if (weekdays.includes(weekdayOf(day)) && (!until || day <= until)) return day;
+  }
+  return null;
+}
+
+/** The dates a break covers, for the "usual hours" reminder: the one day, up to two weeks of a run, or the chosen weekdays. */
+function coveredWeekdays({ mode, date, until, weekdays }) {
+  if (!date) return [];
+  if (mode === "day") return [weekdayOf(date)];
+  if (mode === "weekly") return BREAK_WEEKDAYS.filter((d) => weekdays.includes(d));
+  const found = new Set();
+  for (let i = 0; i < 14 && (!until || addDays(date, i) <= until); i += 1) found.add(weekdayOf(addDays(date, i)));
+  return BREAK_WEEKDAYS.filter((d) => found.has(d));
+}
+
+const exceptionTitle = (e) => {
+  if (e.kind !== "break") return dayLabel(e.date);
+  if (Array.isArray(e.weekdays)) return describeWeekdays(e.weekdays);
+  if (e.until && e.until !== e.date) return `${dayLabel(e.date)} to ${dayLabel(e.until)}`;
+  return dayLabel(e.date);
+};
+const exceptionSpan = (e, today) => {
+  if (e.kind !== "break" || !Array.isArray(e.weekdays)) return null;
+  const from = e.date > today ? `From ${dayLabel(e.date)} ` : "";
+  return `${from}${e.until ? `until ${dayLabel(e.until)}` : "until you remove it"}`.replace(/^./, (c) => c.toUpperCase());
+};
+const appliesToday = (e, today) => (e.kind === "break" ? breaksOn([e], today).length > 0 : e.date === today);
 const HOUR_PRESETS = [
   { label: "Mornings only", intervals: [["08:00", "13:00"]] },
   { label: "Afternoons only", intervals: [["13:00", "18:00"]] },
@@ -49,9 +98,10 @@ const HOUR_PRESETS = [
 ];
 
 /** A 24 hour strip: the filled parts are when the shop is open. Overnight hours stop at midnight; the rest belongs to the next day. */
-function DayBar({ intervals }) {
+function DayBar({ intervals, spans }) {
   const parts = [];
-  for (const iv of intervals ?? []) {
+  if (spans) for (const s of spans) parts.push({ from: s.start, to: s.end, spill: false });
+  else for (const iv of intervals ?? []) {
     if (!iv?.[0] || !iv?.[1]) continue;
     const a = minutes(iv[0]);
     const b = minutes(iv[1]);
@@ -75,25 +125,55 @@ function previewOf({ kind, intervals, note }) {
   return { head: "Special hours", detail: [text, clean].filter(Boolean).join(". ") || null, hours: ok };
 }
 
-function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
+/** What customers read on a day the break is on: the same status line the shop page builds, from the same code. */
+function breakPreview({ hours, shape, times, note, today, shopZone, viewerZone }) {
+  const sample = sampleDate(shape, today);
+  const ok = times.filter((iv) => iv?.[0] && iv?.[1] && iv[0] < iv[1]).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+  const dateLine = shape.mode === "weekly" && shape.date ? `${describeWeekdays(shape.weekdays)} from ${dayLabel(shape.date < today ? today : shape.date)}` : shape.mode === "range" && shape.date && shape.until ? `${dayLabel(shape.date)} to ${dayLabel(shape.until)}` : null;
+  const timeText = ok.map((iv) => `${formatClock(iv[0])} to ${formatClock(iv[1])}`).join(", ");
+  if (!sample || ok.length === 0 || !hours) return { dateLine, head: "Closed for a while", detail: [timeText, "Your normal hours apply around it."].filter(Boolean).join(". ") };
+  const draft = [{ id: "draft", kind: "break", date: sample, until: null, weekdays: null, intervals: ok, note: note.trim() || null }];
+  const during = statusOf(hours, draft, instantAt(sample, ok[0][0], shopZone), shopZone, viewerZone);
+  const spans = openMinutesOn(hours, draft, sample);
+  if (during.reason?.kind !== "on_break") {
+    const name = DAY_FULL[weekdayOf(sample)];
+    return { dateLine, head: "No change for customers", detail: `You are normally closed at that time on ${name}, so customers will see no change.`, spans };
+  }
+  const after = statusOf(hours, draft, instantAt(sample, ok[0][1], shopZone), shopZone, viewerZone);
+  const back = after.isOpen ? `Open again at ${formatClock(ok[0][1])}${after.closesAt ? `, then until ${formatClock(after.closesAt)} as usual` : ""}.` : after.reopens ? `${after.reopens}.` : null;
+  return { dateLine, head: during.line, detail: back, spans };
+}
+
+function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours }) {
   const today = todayOf(shopZone);
-  const [date, setDate] = useState(initial?.date ?? "");
+  const wasBreak = initial?.kind === "break";
+  const [date, setDate] = useState(initial ? (wasBreak && initial.date < today ? today : initial.date) : "");
   const [kind, setKind] = useState(initial?.kind ?? "closed");
-  const [intervals, setIntervals] = useState(initial?.intervals?.length ? initial.intervals.map((i) => [...i]) : [["09:00", "17:00"]]);
+  const [intervals, setIntervals] = useState(initial?.kind === "special" && initial.intervals?.length ? initial.intervals.map((i) => [...i]) : [["09:00", "17:00"]]);
+  const [breakTimes, setBreakTimes] = useState(wasBreak && initial.intervals?.length ? initial.intervals.map((i) => [...i]) : [["13:00", "14:00"]]);
+  const [mode, setMode] = useState(wasBreak ? (Array.isArray(initial.weekdays) ? "weekly" : initial.until ? "range" : "day") : "day");
+  const [until, setUntil] = useState(initial?.until ?? "");
+  const [weekdays, setWeekdays] = useState(wasBreak && Array.isArray(initial.weekdays) ? initial.weekdays : ["mon", "tue", "wed", "thu", "fri"]);
+  const [endless, setEndless] = useState(!(wasBreak && Array.isArray(initial.weekdays) && initial.until));
   const [note, setNote] = useState(initial?.note ?? "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const dateRef = useRef(null);
   useEffect(() => { dateRef.current?.focus(); }, []);
 
-  const setTime = (i, k, value) => setIntervals(intervals.map((iv, n) => (n === i ? (k === 0 ? [value, iv[1]] : [iv[0], value]) : iv)));
+  const isBreak = kind === "break";
+  const times = isBreak ? breakTimes : intervals;
+  const setTimes = isBreak ? setBreakTimes : setIntervals;
+  const setTime = (i, k, value) => setTimes(times.map((iv, n) => (n === i ? (k === 0 ? [value, iv[1]] : [iv[0], value]) : iv)));
+  const lastDay = mode === "range" || (mode === "weekly" && !endless) ? until : "";
 
   const submit = async (e) => {
     e.preventDefault();
     setError("");
-    const v = validateException({ date, kind, intervals, note }, today);
+    if (isBreak && (mode === "range" || (mode === "weekly" && !endless)) && !until) return setError(errorText({ code: "until_required" }));
+    const v = validateException({ date, kind, intervals: times, note, until: isBreak && lastDay ? lastDay : null, weekdays: isBreak && mode === "weekly" ? weekdays : null }, today);
     if (!v.ok) return setError(errorText({ code: v.error }));
-    if (existing.some((x) => x.date === date && x.id !== initial?.id)) return setError(errorText({ code: "date_taken" }));
+    if (kind !== "break" && existing.some((x) => x.date === date && x.kind !== "break" && x.id !== initial?.id)) return setError(errorText({ code: "date_taken" }));
     setBusy(true);
     try {
       await onSave({ id: initial?.id ?? null, ...v.value });
@@ -104,22 +184,71 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
   };
 
   const title = initial ? "Edit exception" : "Add an exception";
-  const preview = previewOf({ kind, intervals, note });
   const viewerZone = getUserTimeZone();
+  const shape = { mode, date, until: lastDay, weekdays };
+  const usual = isBreak && hours ? hoursRowsFor(hours, [], now(), shopZone) : [];
+  const usualFor = (day) => usual.find((r) => r.day === day);
+  const covered = isBreak && hours ? coveredWeekdays(shape) : [];
+  const preview = isBreak ? breakPreview({ hours, shape, times: breakTimes, note, today, shopZone, viewerZone }) : previewOf({ kind, intervals, note });
   const converted = date
-    ? describeExceptionForViewer({ date, kind, intervals: (intervals ?? []).filter((iv) => iv?.[0] && iv?.[1]) }, { shopZone, viewerZone })
+    ? describeExceptionForViewer({ date, kind, intervals: (times ?? []).filter((iv) => iv?.[0] && iv?.[1]) }, { shopZone, viewerZone })
     : null;
   const quickDates = [
     { label: "Tomorrow", value: addDays(today, 1) },
     { label: "Next Saturday", value: nextWeekday(today, 6) },
     { label: "Next Sunday", value: nextWeekday(today, 0) },
   ];
+  const dateLabel = !isBreak || mode === "day" ? "Date" : mode === "range" ? "First day" : "Starting";
   return (
     <form className={`${ui.card} ${styles.form}`} onSubmit={submit} noValidate aria-labelledby="exc-form-title">
       <div className={styles.formMain}>
         <h2 id="exc-form-title">{title}</h2>
+
+        <fieldset className={styles.fieldset}>
+          <legend>What happens</legend>
+          <div className={styles.choices}>
+            <div className={styles.choice} data-on={kind === "closed" || undefined}>
+              <label>
+                <input type="radio" name="exc-kind" checked={kind === "closed"} onChange={() => setKind("closed")} />
+                <strong>Closed all day</strong>
+              </label>
+              <small>Customers see you are closed.</small>
+            </div>
+            <div className={styles.choice} data-on={kind === "break" || undefined}>
+              <label>
+                <input type="radio" name="exc-kind" checked={kind === "break"} onChange={() => setKind("break")} />
+                <strong>Closed for a while</strong>
+              </label>
+              <small>Closed at set times, like lunch. Normal hours apply around it.</small>
+            </div>
+            <div className={styles.choice} data-on={kind === "special" || undefined}>
+              <label>
+                <input type="radio" name="exc-kind" checked={kind === "special"} onChange={() => setKind("special")} />
+                <strong>Different hours</strong>
+              </label>
+              <small>Open only at set times, instead of normal hours.</small>
+            </div>
+          </div>
+        </fieldset>
+
+        {isBreak && (
+          <fieldset className={styles.fieldset}>
+            <legend>How often</legend>
+            <div className={styles.choices}>
+              {MODES.map((m) => (
+                <div key={m.id} className={styles.choice} data-on={mode === m.id || undefined}>
+                  <label>
+                    <input type="radio" name="exc-mode" checked={mode === m.id} onChange={() => setMode(m.id)} />
+                    <strong>{m.label}</strong>
+                  </label>
+                </div>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <div className={ui.field}>
-          <label className={ui.label} htmlFor="exc-date">Date</label>
+          <label className={ui.label} htmlFor="exc-date">{dateLabel}</label>
           <input
             ref={dateRef} id="exc-date" type="date" className={ui.input} value={date} min={today} max={addDays(today, EXCEPTION_MAX_DAYS_AHEAD)}
             onChange={(e) => setDate(e.target.value)} aria-invalid={error && !date ? true : undefined}
@@ -131,25 +260,63 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
           </div>
         </div>
 
-        <fieldset className={styles.fieldset}>
-          <legend>What happens that day</legend>
-          <div className={styles.choices}>
-            <div className={styles.choice} data-on={kind === "closed" || undefined}>
-              <label>
-                <input type="radio" name="exc-kind" checked={kind === "closed"} onChange={() => setKind("closed")} />
-                <strong>Closed all day</strong>
-              </label>
-              <small>Customers see you are closed.</small>
+        {isBreak && mode === "weekly" && (
+          <fieldset className={styles.fieldset}>
+            <legend>On these days</legend>
+            <div className={styles.chips}>
+              {BREAK_WEEKDAYS.map((d) => (
+                <button
+                  key={d} type="button" role="checkbox" aria-checked={weekdays.includes(d)} className={styles.chip} data-on={weekdays.includes(d) || undefined}
+                  onClick={() => setWeekdays(weekdays.includes(d) ? weekdays.filter((x) => x !== d) : [...weekdays, d])}
+                >{WEEKDAY_CHIPS[d]}</button>
+              ))}
             </div>
-            <div className={styles.choice} data-on={kind === "special" || undefined}>
-              <label>
-                <input type="radio" name="exc-kind" checked={kind === "special"} onChange={() => setKind("special")} />
-                <strong>Special hours</strong>
-              </label>
-              <small>Open at different times.</small>
+            <div className={styles.chips}>
+              <button type="button" role="checkbox" aria-checked={endless} className={styles.chip} data-on={endless || undefined} onClick={() => setEndless(!endless)}>Keep repeating until I remove it</button>
             </div>
+          </fieldset>
+        )}
+
+        {isBreak && (mode === "range" || (mode === "weekly" && !endless)) && (
+          <div className={ui.field}>
+            <label className={ui.label} htmlFor="exc-until">Last day</label>
+            <input id="exc-until" type="date" className={ui.input} value={until} min={date || today} max={addDays(today, EXCEPTION_MAX_DAYS_AHEAD)} onChange={(e) => setUntil(e.target.value)} />
           </div>
-        </fieldset>
+        )}
+
+        {isBreak && (
+          <fieldset className={styles.fieldset}>
+            <legend>Closed times (up to {EXCEPTION_MAX_INTERVALS})</legend>
+            <div className={styles.chips}>
+              {BREAK_PRESETS.map((p) => (
+                <button key={p.label} type="button" className={styles.chip} onClick={() => setBreakTimes(p.intervals.map((iv) => [...iv]))}>{p.label}</button>
+              ))}
+            </div>
+            <p className={styles.count} data-testid="shop-time-hint">{shopTimeNote(new Date(), { shopZone, viewerZone })} Type the times as they are on the shop's clock.</p>
+            {breakTimes.map((iv, i) => (
+              <div key={i} className={styles.interval}>
+                <div className={ui.field}>
+                  <label className={ui.label} htmlFor={`exc-from-${i}`}>{i === 0 ? "Closed from" : `Break ${i + 1} from`}</label>
+                  <input id={`exc-from-${i}`} type="time" className={ui.input} value={iv[0]} onChange={(e) => setTime(i, 0, e.target.value)} />
+                </div>
+                <div className={ui.field}>
+                  <label className={ui.label} htmlFor={`exc-to-${i}`}>{i === 0 ? "Until" : `Break ${i + 1} until`}</label>
+                  <input id={`exc-to-${i}`} type="time" className={ui.input} value={iv[1]} onChange={(e) => setTime(i, 1, e.target.value)} />
+                </div>
+                <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={breakTimes.length === 1} onClick={() => setBreakTimes(breakTimes.filter((_, n) => n !== i))} aria-label={`Remove break ${i + 1}`}>Remove</button>
+              </div>
+            ))}
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} style={{ justifySelf: "start" }} disabled={breakTimes.length >= EXCEPTION_MAX_INTERVALS} onClick={() => setBreakTimes([...breakTimes, ["", ""]])}>Add another break</button>
+            {covered.length > 0 && (
+              <div role="group" aria-label="Your usual hours">
+                <p className={styles.count}>Your usual hours</p>
+                {covered.map((d) => (
+                  <p key={d} className={styles.count}>{usualFor(d)?.name ?? d}: {usualFor(d)?.text ?? "Closed"}</p>
+                ))}
+              </div>
+            )}
+          </fieldset>
+        )}
 
         {kind === "special" && (
           <fieldset className={styles.fieldset}>
@@ -191,11 +358,11 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
           <label className={ui.label} htmlFor="exc-note">Note (optional)</label>
           <input id="exc-note" className={ui.input} value={note} maxLength={EXCEPTION_NOTE_MAX} onChange={(e) => setNote(e.target.value)} aria-describedby="exc-note-count" />
           <div className={styles.chips}>
-            {REASONS.map((r) => (
+            {(isBreak ? BREAK_REASONS : REASONS).map((r) => (
               <button key={r} type="button" className={styles.chip} data-on={note === r || undefined} onClick={() => setNote(r)}>{r}</button>
             ))}
           </div>
-          <span id="exc-note-count" className={styles.count}>{note.length} / {EXCEPTION_NOTE_MAX}. Customers may see this note.</span>
+          <span id="exc-note-count" className={styles.count}>{note.length} / {EXCEPTION_NOTE_MAX}. Customers may see this note.{isBreak ? " It replaces the words \"On break\" on your shop's status." : ""}</span>
         </div>
 
         {error && <p className={ui.error} role="alert">{error}</p>}
@@ -207,9 +374,9 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone }) {
 
       <aside className={styles.preview} aria-label="What customers will see" data-kind={kind}>
         <p className={styles.previewLabel}>What customers will see</p>
-        <p className={styles.previewDate}>{date ? dayLabel(date) : "Pick a date"}</p>
+        <p className={styles.previewDate}>{preview.dateLine ?? (date ? dayLabel(date) : "Pick a date")}</p>
         <p className={styles.previewHead}>{preview.head}</p>
-        {kind === "special" && <DayBar intervals={preview.hours} />}
+        {(kind === "special" || preview.spans) && <DayBar intervals={preview.hours} spans={preview.spans} />}
         {preview.detail && <p className={styles.previewDetail}>{preview.detail}</p>}
         {converted?.shopText && <p className={styles.previewDetail} data-testid="preview-shop-time">{converted.shopText}</p>}
         {converted?.viewerText && <p className={styles.previewDetail} data-testid="preview-viewer-time">{converted.viewerText}</p>}
@@ -234,7 +401,7 @@ export default function Exceptions() {
   const today = todayOf(shopZone);
   const list = upcomingExceptions(q.data, today);
   const full = list.length >= EXCEPTION_LIMIT;
-  const months = Object.entries(list.reduce((acc, e) => { (acc[monthKey(e.date)] ??= []).push(e); return acc; }, {}));
+  const months = Object.entries(list.reduce((acc, e) => { (acc[monthKey(e.date < today ? today : e.date)] ??= []).push(e); return acc; }, {}));
 
   const dropToast = (key) => {
     clearTimeout(timers.current.get(key));
@@ -295,7 +462,7 @@ export default function Exceptions() {
       )}
       {error && <p className={ui.error} role="alert">{error}</p>}
 
-      {form && <ExceptionForm key={form.initial?.id ?? "new"} shopZone={shopZone} initial={form.initial} existing={list} onSave={save} onCancel={() => setForm(null)} />}
+      {form && <ExceptionForm key={form.initial?.id ?? "new"} shopZone={shopZone} hours={shop.data?.shop?.hours ?? null} initial={form.initial} existing={list} onSave={save} onCancel={() => setForm(null)} />}
 
       {q.isLoading ? (
         <p role="status">Loading</p>
@@ -313,23 +480,24 @@ export default function Exceptions() {
               {items.map((e) => (
                 <li key={e.id} className={styles.row} data-kind={e.kind} data-testid="exception">
                   <div className={styles.leaf} aria-hidden="true">
-                    <span className={styles.leafTop}>{WEEKDAYS[utc(e.date).getUTCDay()]}</span>
-                    <span className={styles.leafDay}>{Number(e.date.slice(8))}</span>
+                    <span className={styles.leafTop}>{WEEKDAYS[utc(e.date < today ? today : e.date).getUTCDay()]}</span>
+                    <span className={styles.leafDay}>{Number((e.date < today ? today : e.date).slice(8))}</span>
                   </div>
                   <div className={styles.rowBody}>
                     <h3>
-                      <span>{dayLabel(e.date)}</span>
-                      {todayLabel(e.date) && <span className={`${ui.pill} ${ui.tone_info}`}>{todayLabel(e.date)}</span>}
+                      <span>{exceptionTitle(e)}</span>
+                      {appliesToday(e, today) ? <span className={`${ui.pill} ${ui.tone_info}`}>Today</span> : todayLabel(e.date) && <span className={`${ui.pill} ${ui.tone_info}`}>{todayLabel(e.date)}</span>}
                     </h3>
                     <p>{describeException(e)}</p>
+                    {exceptionSpan(e, today) && <p className={styles.when}>{exceptionSpan(e, today)}</p>}
                     {viewerLine(e, shopZone) && <p className={styles.when} data-testid="exception-viewer-time">{viewerLine(e, shopZone)}</p>}
                     {e.kind === "special" && <DayBar intervals={e.intervals} />}
                     {e.note && <p className={styles.note}>{e.note}</p>}
                     {relative(e.date, today) && <p className={styles.when}>{relative(e.date, today)}</p>}
                   </div>
                   <div className={styles.actions}>
-                    <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setForm({ initial: e })} aria-label={`Edit ${dayLabel(e.date)}`}>Edit</button>
-                    <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => remove(e)} aria-label={`Delete ${dayLabel(e.date)}`}>Delete</button>
+                    <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setForm({ initial: e })} aria-label={`Edit ${exceptionTitle(e)}`}>Edit</button>
+                    <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => remove(e)} aria-label={`Delete ${exceptionTitle(e)}`}>Delete</button>
                   </div>
                 </li>
               ))}

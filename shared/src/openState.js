@@ -1,4 +1,4 @@
-import { DAYS, closingInfo, exceptionFor, intervalsOn, isOpenOn, nairobiNow, openAllDayNow } from "./utils.js";
+import { DAYS, activeBreak, closingInfo, exceptionFor, intervalsOn, isOpenOn, nairobiNow } from "./utils.js";
 import { zonedTimeToUtc } from "./time.js";
 import { nextShopDateOf, safeShopZone, shopTimeText } from "./shopTime.js";
 import { addDays } from "./seller/exceptions.js";
@@ -7,10 +7,11 @@ const DAY_NAMES = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thurs
 
 const cleanNote = (note) => (typeof note === "string" && note.trim() ? note.trim() : null);
 
-function reasonFor(hours, exceptions, now, opensAt) {
+function reasonFor(hours, exceptions, now, opensAt, onBreak) {
   const exception = exceptionFor(exceptions, now.date);
   if (exception?.kind === "closed") return { kind: "closed_day", note: cleanNote(exception.note) };
   if (exception?.kind === "special") return { kind: "special_hours", note: cleanNote(exception.note) };
+  if (onBreak) return { kind: "on_break", note: cleanNote(onBreak.note) };
   if (!opensAt) return { kind: "no_schedule", note: null };
   if (!intervalsOn(hours, exceptions, now.date).length) return { kind: "day_off", note: null, day: now.day };
   return { kind: "outside_hours", note: null };
@@ -21,11 +22,11 @@ export function businessStatus(hours, exceptions, date, timeZone) {
   const list = Array.isArray(exceptions) ? exceptions : [];
   const zone = safeShopZone(timeZone);
   const now = nairobiNow(date, zone);
-  const { closesAt: rawCloses, opensAt } = closingInfo(weekly, list, date, zone);
-  const isOpen = rawCloses !== null;
-  const closesAt = isOpen && openAllDayNow(weekly, list, date, zone) ? null : rawCloses;
+  const { closesAt, opensAt } = closingInfo(weekly, list, date, zone);
+  const isOpen = isOpenOn(weekly, list, date, zone);
   const special = exceptionFor(list, now.date)?.kind === "special";
-  const reason = isOpen ? (special ? reasonFor(weekly, list, now, opensAt) : null) : reasonFor(weekly, list, now, opensAt);
+  const onBreak = isOpen ? null : activeBreak(weekly, list, date, zone);
+  const reason = isOpen ? (special ? reasonFor(weekly, list, now, opensAt) : null) : reasonFor(weekly, list, now, opensAt, onBreak);
   return { isOpen, closesAt, opensAt, reason };
 }
 
@@ -34,6 +35,7 @@ const reasonText = (reason) => {
   const withNote = (label) => (reason.note ? `${label}: ${reason.note}` : label);
   if (reason.kind === "closed_day") return withNote("Closed today");
   if (reason.kind === "special_hours") return withNote("Special hours today");
+  if (reason.kind === "on_break") return reason.note ?? "On break";
   if (reason.kind === "day_off") return `Closed on ${DAY_NAMES[reason.day]}s`;
   if (reason.kind === "no_schedule") return "Opening hours not set";
   return null;
@@ -42,10 +44,11 @@ const reasonText = (reason) => {
 // Times are always written with the shop's zone ("6:00 PM EAT"). When a viewerZone is passed (browsers pass
 // getUserTimeZone(); servers pass nothing) and the viewer's clock reads differently, the viewer's own time follows
 // ("6:00 PM EAT · 7:00 PM your time"), with the weekday when the viewer's day is not the shop's day.
-const reopenText = (opensAt, today, opts) => {
+const reopenText = (opensAt, today, opts, reason) => {
   if (!opensAt) return null;
-  const when = opensAt.date === today ? "today" : opensAt.date === addDays(today, 1) ? "tomorrow" : DAY_NAMES[opensAt.day].slice(0, 3);
-  return `Reopens ${when} at ${shopTimeText(opensAt.date, opensAt.time, opts)}`;
+  const sameDay = opensAt.date === today;
+  const when = sameDay ? (reason?.kind === "on_break" ? null : "today") : opensAt.date === addDays(today, 1) ? "tomorrow" : DAY_NAMES[opensAt.day].slice(0, 3);
+  return `Reopens ${when ? `${when} ` : ""}at ${shopTimeText(opensAt.date, opensAt.time, opts)}`;
 };
 
 /**
@@ -62,7 +65,7 @@ export function describeStatus(status, date, timeZone, viewerZone) {
     const closes = status.closesAt && closesDate ? `Closes ${shopTimeText(closesDate, status.closesAt, opts)}` : null;
     return { headline: "Open now", closes, reasonText: reasonLine, reopens: null, line: reasonLine };
   }
-  const reopens = reopenText(status.opensAt, now.date, opts);
+  const reopens = reopenText(status.opensAt, now.date, opts, status.reason);
   return { headline: "Closed", closes: null, reasonText: reasonLine, reopens, line: [reasonLine, reopens].filter(Boolean).join(" · ") || null };
 }
 

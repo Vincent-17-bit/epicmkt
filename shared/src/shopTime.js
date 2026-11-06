@@ -117,7 +117,7 @@ export function viewerClockText(clock, { dayStyle = "weekday" } = {}) {
 export function shopTimeText(date, time, { shopZone, viewerZone, dayStyle = "weekday", youLabel = "your time" } = {}) {
   const c = shopClock(date, time, { shopZone, viewerZone });
   if (!c) return "";
-  const base = `${c.shop.clock} ${c.shop.label}`;
+  const base = `${time === "00:00" ? "midnight" : c.shop.clock} ${c.shop.label}`;
   if (!c.viewer || c.sameClock) return base;
   return `${base} · ${viewerClockText(c, { dayStyle })} ${youLabel}`;
 }
@@ -223,6 +223,12 @@ export function describeExceptionForViewer(exception, { shopZone, viewerZone, da
   }
   const views = (exception.intervals ?? []).map((iv) => shopIntervalView(exception.date, iv, { shopZone: zone, viewerZone, dayStyle })).filter(Boolean);
   const shop = views.map((v) => v.shopText).join(", ");
+  if (exception.kind === "break") {
+    return {
+      shopText: `Closed ${shop} ${label}`,
+      viewerText: views.some((v) => v.viewerText) ? `Closed ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} your time` : null
+    };
+  }
   return {
     shopText: `Special hours: ${shop} ${label}`,
     viewerText: views.some((v) => v.viewerText) ? `Special hours: ${views.map((v) => v.viewerText ?? v.shopText).join(", ")} your time` : null

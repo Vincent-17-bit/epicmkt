@@ -35,7 +35,7 @@ test("a 24-hour day before a closed day still closes at the end of that day", ()
   const wed = at("Africa/Nairobi", 2026, 11, 4, 23, 59, 30000);
   assert.equal(openAllDayNow(hours, [], wed, "Africa/Nairobi"), false);
   assert.equal(businessStatus(hours, [], wed, "Africa/Nairobi").isOpen, true);
-  assert.equal(businessStatus(hours, [], wed, "Africa/Nairobi").closesAt, "23:59");
+  assert.equal(businessStatus(hours, [], wed, "Africa/Nairobi").closesAt, "00:00");
   assert.equal(open(hours, [], at("Africa/Nairobi", 2026, 11, 5, 0, 0), "Africa/Nairobi"), false);
 });
 

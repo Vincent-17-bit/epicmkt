@@ -100,3 +100,12 @@
   font-weight: 400;
   color: var(--text-muted);
 }
+
+.break {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}

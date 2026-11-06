@@ -34,6 +34,8 @@ export function statusText(business, viewerZone = getUserTimeZone()) {
   const next = business.opensAt;
   if (!next) return "Closed";
   const today = nairobiNow(new Date(), shopZone);
+  const reason = business.openStatus?.reason;
+  if (reason?.kind === "on_break" && next.date === today.date) return `${reason.note ?? "On break"} · Reopens at ${shopTimeText(next.date, next.time, opts)}`;
   // Compare dates, not weekdays: "opens next Tuesday" must not read as "opens today" when today is a Tuesday.
   const day = next.date ? (next.date === today.date ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `) : next.day === today.day ? "" : `${DAY_NAMES[next.day].slice(0, 3)} `;
   const at = next.date ? shopTimeText(next.date, next.time, opts) : formatTime(next.time);

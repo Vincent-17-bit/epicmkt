@@ -2,7 +2,7 @@ import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAI
 import { ApiError } from "./errors.js";
 import { buildAvailability, cleanSizeChartOverride, scalePrice, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
-import { BULK_ACTIONS, EXCEPTION_LIMIT, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
+import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
 
 
@@ -735,7 +735,7 @@ export const getShopPreview = async () => {
     slug: cat.shop.slug, name: bill.business.name, tagline: "Quality you can trust", description: "A demo shop used to preview how customers see your page.",
     planKey: bill.business.planKey, status: bill.business.status, live: cat.shop.live, verified: bill.business.verificationLevel === "verified",
     county: "Kisumu", town: "Maseno", address: "Main Street", lat: -0.09, lng: 34.6, phone: "0712345678", whatsapp: "0712345678",
-    socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => e.date >= todayNairobi()).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals, note })), tags: ["demo"], logoPath: bill.business.logoPath ?? null, coverPath: bill.business.coverPath ?? null, categoryName: "Barbershop",
+    socials: { instagram: "demoshop" }, hours, exceptions: bill.exceptions.filter((e) => lastDayOf(e) >= todayNairobi()).map(({ id, date, kind, intervals, note, until, weekdays }) => ({ id, date, kind, intervals, note, ...(kind === "break" ? { until, weekdays } : {}) })), tags: ["demo"], logoPath: bill.business.logoPath ?? null, coverPath: bill.business.coverPath ?? null, categoryName: "Barbershop",
   };
   const flashSales = bill.flash.map(flashView).filter((s) => s.status === "live" && Date.parse(s.startsAt) <= nowMs() && Date.parse(s.endsAt) > nowMs());
   return copy({ shop, items: cat.items.filter((i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin).sort((a, b) => a.sort - b.sort), flashSales, offers: bill.offers.filter((o) => offerPhase(o, nowMs()) === "live") });
@@ -1168,17 +1168,17 @@ export const deleteOffer = async (id) => {
 };
 
 const todayNairobi = () => nairobiNow(clockNow(), safeShopZone(bill.business.timezone)).date;
-const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => e.date >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
+const pruneExceptions = () => { bill.exceptions = bill.exceptions.filter((e) => lastDayOf(e) >= todayNairobi()).sort((a, b) => (a.date < b.date ? -1 : 1)); };
 export const listExceptions = async () => { signedIn(); await wait(); pruneExceptions(); return copy(bill.exceptions); };
-export const saveException = async ({ id = null, date, kind, intervals = [], note = null }) => {
+export const saveException = async ({ id = null, date, kind, intervals = [], note = null, until = null, weekdays = null }) => {
   writer();
   await wait();
-  const v = validateException({ date, kind, intervals, note }, todayNairobi());
+  const v = validateException({ date, kind, intervals, note, until, weekdays }, todayNairobi());
   if (!v.ok) throw new ApiError(v.error);
   pruneExceptions();
   const key = id ?? `x${++bill.seq + 500}`;
   const known = bill.exceptions.some((e) => e.id === key);
-  if (bill.exceptions.some((e) => e.date === date && e.id !== key)) throw new ApiError("date_taken");
+  if (kind !== "break" && bill.exceptions.some((e) => e.date === date && e.kind !== "break" && e.id !== key)) throw new ApiError("date_taken");
   if (!known && bill.exceptions.length >= EXCEPTION_LIMIT) throw new ApiError("limit_reached", "limit_reached:exceptions");
   bill.exceptions = [...bill.exceptions.filter((e) => e.id !== key), { id: key, ...v.value }].sort((a, b) => (a.date < b.date ? -1 : 1));
   emit("businesses", "UPDATE", bill.business);

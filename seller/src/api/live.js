@@ -427,13 +427,13 @@ export const subscribe = (tables, onEvent) => {
   return () => { client.removeChannel(channel); };
 };
 
-// Opening-hours exceptions: [{ id, date: "YYYY-MM-DD", kind: "closed" | "special", intervals: [["09:00","13:00"]], note }]
+// Opening-hours exceptions: [{ id, date: "YYYY-MM-DD", kind: "closed" | "special" | "break", intervals: [["09:00","13:00"]], note, until?, weekdays? }]
 export const listExceptions = async () => {
   const b = await rows(need().from("businesses").select("exceptions").maybeSingle());
   return b?.exceptions ?? [];
 };
-export const saveException = ({ id = null, date, kind, intervals = [], note = null }) =>
-  rpc("seller_save_exception", { p_id: id, p_date: date, p_kind: kind, p_intervals: intervals, p_note: note });
+export const saveException = ({ id = null, date, kind, intervals = [], note = null, until = null, weekdays = null }) =>
+  rpc("seller_save_exception", { p_id: id, p_date: date, p_kind: kind, p_intervals: intervals, p_note: note, p_until: until, p_weekdays: weekdays });
 export const deleteException = (id) => rpc("seller_delete_exception", { p_id: id });
 
 const FLASH_CONSTRAINTS = {

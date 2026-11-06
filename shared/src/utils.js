@@ -121,10 +121,13 @@ export function isOpenNow(hours, date, timeZone) {
 }
 
 // ---- Opening hours with exceptions -------------------------------------------------------------------------------
-// An exception is { date: "YYYY-MM-DD", kind: "closed" | "special", intervals: [["09:00","13:00"], ...], note }.
+// An exception is { date: "YYYY-MM-DD", kind: "closed" | "special" | "break", intervals: [["09:00","13:00"], ...], note }.
 // The exception for a Nairobi calendar date replaces the weekly hours for that date.
 //   closed  -> closed all day.
 //   special -> open only inside its intervals.
+//   break   -> the normal hours apply, except inside its intervals (1 to 3, each within one day). It does not replace the
+//              day: it applies on `date` alone, on every date up to `until`, or (with `weekdays`) on those weekdays from
+//              `date` until `until` (no `until` repeats for good). Breaks stack; a closed or special date ignores them.
 // An interval (weekly or exception) with end <= start runs past midnight. The part after midnight belongs to the
 // NEXT date: it carries over unless that date has a "closed" exception. A "special" exception on the next date takes
 // over at its first interval's start, so the carried-over time before that still counts as open.
@@ -143,6 +146,42 @@ export function exceptionFor(exceptions, dateStr) {
   return exceptions.find((e) => e && e.date === dateStr && (e.kind === "closed" || e.kind === "special")) ?? null;
 }
 
+const breakApplies = (e, dateStr) => {
+  if (!e || e.kind !== "break" || typeof e.date !== "string" || e.date > dateStr) return false;
+  if (Array.isArray(e.weekdays)) return (!e.until || dateStr <= e.until) && e.weekdays.includes(weekdayOf(dateStr));
+  if (e.until) return dateStr <= e.until;
+  return e.date === dateStr;
+};
+
+/** The break windows in force on a calendar date, soonest first: { from, to, start, end, note }. None on a closed or special date. */
+export function breaksOn(exceptions, dateStr) {
+  if (!Array.isArray(exceptions) || exceptionFor(exceptions, dateStr)) return [];
+  const found = [];
+  for (const e of exceptions) {
+    if (!breakApplies(e, dateStr)) continue;
+    const note = typeof e.note === "string" && e.note.trim() ? e.note.trim() : null;
+    for (const iv of e.intervals ?? []) {
+      if (isInterval(iv) && toMinutes(iv[0]) < toMinutes(iv[1])) found.push({ from: iv[0], to: iv[1], start: toMinutes(iv[0]), end: toMinutes(iv[1]), note });
+    }
+  }
+  return found.sort((a, b) => a.start - b.start || a.end - b.end);
+}
+
+/** Open minute ranges with the break windows taken out. The part before a break closes at the break's start, the part after it opens at its end. */
+function cutWindows(windows, cuts) {
+  let out = windows;
+  for (const cut of cuts) {
+    out = out.flatMap((w) => {
+      if (cut.end <= w.start || cut.start >= w.end) return [w];
+      const pieces = [];
+      if (cut.start > w.start) pieces.push({ ...w, end: cut.start, closes: cut.from, fullDay: false });
+      if (cut.end < w.end) pieces.push({ ...w, start: cut.end, startLabel: cut.end > w.start ? cut.to : w.startLabel, fullDay: false });
+      return pieces;
+    });
+  }
+  return out;
+}
+
 /** The intervals that START on a calendar date: its exception if it has one, otherwise the weekly slot for that weekday. */
 export function intervalsOn(hours, exceptions, dateStr) {
   const exception = exceptionFor(exceptions, dateStr);
@@ -152,13 +191,13 @@ export function intervalsOn(hours, exceptions, dateStr) {
 }
 
 // Minute ranges that are open on one calendar date, 0 to 1440, each with the clock time it closes at.
-function windowsOn(hours, exceptions, dateStr) {
+function windowsOn(hours, exceptions, dateStr, withBreaks = true) {
   const windows = [];
   const nextDayClosed = exceptionFor(exceptions, addDays(dateStr, 1))?.kind === "closed";
   for (const [from, to] of intervalsOn(hours, exceptions, dateStr)) {
     const start = toMinutes(from);
     const end = endOf([from, to]);
-    if (end > start) windows.push({ start, end, startLabel: from, closes: to, fullDay: isFullDay([from, to]) });
+    if (end > start) windows.push({ start, end, startLabel: from, closes: isFullDay([from, to]) ? "00:00" : to, fullDay: isFullDay([from, to]) });
     else windows.push({ start, end: 1440, startLabel: from, closes: nextDayClosed ? "00:00" : to });
   }
   if (exceptionFor(exceptions, dateStr)?.kind !== "closed") {
@@ -167,7 +206,17 @@ function windowsOn(hours, exceptions, dateStr) {
       if (end <= toMinutes(from) && end > 0) windows.push({ start: 0, end, startLabel: "00:00", closes: to });
     }
   }
-  return windows;
+  return withBreaks ? cutWindows(windows, breaksOn(exceptions, dateStr)) : windows;
+}
+
+/** The open stretches of a calendar date as minute ranges, breaks taken out: [{ start, end }]. A stretch that runs past midnight ends at 1440. */
+export const openMinutesOn = (hours, exceptions, dateStr) => windowsOn(hours, exceptions, dateStr).map(({ start, end }) => ({ start, end }));
+
+/** The break in force right now, or null. Only counts when the shop would be open this minute without it. */
+export function activeBreak(hours, exceptions, date, timeZone) {
+  const now = nairobiNow(date, timeZone);
+  const scheduled = windowsOn(hours, exceptions, now.date, false).some((w) => now.minutes >= w.start && now.minutes < w.end);
+  return scheduled ? breaksOn(exceptions, now.date).find((b) => now.minutes >= b.start && now.minutes < b.end) ?? null : null;
 }
 
 /** Is the business open at this moment (default now)? Exceptions override the weekly hours for that Nairobi date. */
@@ -183,6 +232,23 @@ export function openAllDayNow(hours, exceptions, date, timeZone) {
   return windowsOn(hours, exceptions, addDays(now.date, 1)).some((w) => w.start === 0);
 }
 
+// The clock time an open stretch ends, following it across midnight while the next date picks up at 00:00. Null when the
+// stretch has no end within a day (a 24-hour shop), because a clock time alone would then name the wrong day.
+function closingClock(hours, exceptions, now, current) {
+  let day = now.date;
+  let w = current;
+  let elapsed = 0;
+  for (let step = 0; step < 8; step += 1) {
+    if (w.end < 1440) return elapsed + w.end - now.minutes < 1440 ? w.closes : null;
+    day = addDays(day, 1);
+    elapsed += 1440;
+    const next = windowsOn(hours, exceptions, day).filter((x) => x.start === 0).sort((a, b) => b.end - a.end)[0];
+    if (!next) return elapsed - now.minutes < 1440 ? w.closes : null;
+    w = next;
+  }
+  return null;
+}
+
 /**
  * { closesAt: "HH:MM" | null, opensAt: { day, time, date } | null }.
  * Open now: closesAt is set. Closed: opensAt is the next opening today or in the next 7 days, exceptions included.
@@ -196,7 +262,7 @@ export function closingInfo(hours, exceptions, date, timeZone) {
   const now = nairobiNow(date, timeZone);
   const today = windowsOn(hours, exceptions, now.date);
   const current = today.find((w) => now.minutes >= w.start && now.minutes < w.end);
-  if (current) return { closesAt: current.closes, opensAt: null };
+  if (current) return { closesAt: closingClock(hours, exceptions, now, current), opensAt: null };
   const later = today.filter((w) => w.start > now.minutes).sort((a, b) => a.start - b.start)[0];
   if (later) return { closesAt: null, opensAt: { day: now.day, time: later.startLabel, date: now.date } };
   for (let step = 1; step <= 7; step += 1) {
@@ -215,7 +281,7 @@ export function weekSchedule(hours, exceptions, date, timeZone) {
   const first = nairobiNow(date, timeZone).date;
   return Array.from({ length: 7 }, (_, i) => {
     const day = addDays(first, i);
-    return { day: weekdayOf(day), date: day, today: i === 0, exception: exceptionFor(exceptions, day), intervals: intervalsOn(hours, exceptions, day) };
+    return { day: weekdayOf(day), date: day, today: i === 0, exception: exceptionFor(exceptions, day), intervals: intervalsOn(hours, exceptions, day), breaks: breaksOn(exceptions, day) };
   });
 }
 
@@ -228,6 +294,11 @@ const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 export const formatClock = (time) => {
   const [h, m] = time.split(":").map(Number);
   return `${h % 12 || 12}:${pad2(m)} ${h >= 12 ? "PM" : "AM"}`;
+};
+
+const breakRow = (date, b, shopZone, viewerZone) => {
+  const view = shopIntervalView(date, [b.from, b.to], { shopZone, viewerZone });
+  return { from: b.from, to: b.to, text: view?.shopText ?? `${formatClock(b.from)} to ${formatClock(b.to)}`, viewerText: view?.viewerText ?? null, viewerLabel: view?.viewerLabel ?? "", note: b.note };
 };
 
 /**
@@ -258,6 +329,7 @@ export function hoursRowsFor(hours, exceptions, date, timeZone, viewerZone) {
         dateLabel: `${Number(d.date.slice(8))} ${MONTH_SHORT[Number(d.date.slice(5, 7)) - 1]}`,
         today: d.today,
         text: d.intervals.length ? d.intervals.map((iv) => (isFullDay(iv) ? "Open 24 hours" : `${formatClock(iv[0])} to ${formatClock(iv[1])}`)).join(", ") : "Closed",
+        breaks: d.intervals.length ? d.breaks.map((b) => breakRow(d.date, b, shopZone, viewerZone)) : [],
         changed: Boolean(d.exception),
         note: d.exception?.note ? String(d.exception.note) : null,
         shopZone,

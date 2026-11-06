@@ -104,7 +104,7 @@ export const preview = (b, { categoryName, catalog: c, flashSales, offers = [], 
     live: c.shop.live, verified: b.verification_level === "verified", county: b.county ?? "", town: b.town ?? "", address: b.address ?? "",
     lat: b.lat ?? null, lng: b.lng ?? null, phone: b.phone ?? null, whatsapp: b.whatsapp ?? null, socials: b.socials ?? {}, hours: b.hours ?? {}, timezone: b.timezone ?? BUSINESS_TIME_ZONE,
     // Customers only ever get today and upcoming dates, so the preview shows the same.
-    exceptions: upcomingExceptions(b.exceptions, nairobiNow(undefined, safeShopZone(b.timezone)).date).map(({ id, date, kind, intervals, note }) => ({ id, date, kind, intervals: intervals ?? [], note: note ?? null })),
+    exceptions: upcomingExceptions(b.exceptions, nairobiNow(undefined, safeShopZone(b.timezone)).date).map(({ id, date, kind, intervals, note, until, weekdays }) => ({ id, date, kind, intervals: intervals ?? [], note: note ?? null, ...(kind === "break" ? { until: until ?? null, weekdays: weekdays ?? null } : {}) })),
     tags: b.tags ?? [], logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null, categoryName: categoryName ?? "",
   },
   items: c.items.filter(customerSees).sort((x, y) => x.sort - y.sort || Date.parse(y.createdAt) - Date.parse(x.createdAt)),

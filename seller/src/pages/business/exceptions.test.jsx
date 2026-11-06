@@ -47,7 +47,7 @@ describe("upcoming list", () => {
 });
 
 describe("shop in another zone", () => {
-  const WEST = [["America/Los_Angeles", "2026-10-11"], ["Pacific/Honolulu", "2026-10-11"], ["America/New_York", "2026-10-12"]];
+  const WEST = [["America/Los_Angeles", "2026-10-11"], ["Pacific/Honolulu", "2026-10-11"], ["America/New_York", "2026-10-11"]];
   const openIn = (zone, seed = []) => signedInApp("/business/exceptions", async () => { setTime(`${TODAY}T01:30:00Z`); await api.setTimezone(zone); M.state.exceptions = seed; });
 
   it.each(WEST)("%s: today is the shop's own date", async (zone, today) => {
@@ -84,7 +84,7 @@ describe("add", () => {
     await open([]);
     await user.click(await screen.findByRole("button", { name: "Add exception" }));
     setDate("2026-10-31");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "08:00", "12:00");
     await user.click(screen.getByRole("button", { name: "Add another interval" }));
     setTimes(1, "14:00", "17:00");
@@ -123,7 +123,7 @@ describe("add", () => {
     await save();
     expect(screen.getByRole("alert")).toHaveTextContent("already have an exception on that date");
     setDate("2026-10-25");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     fireEvent.change(screen.getByLabelText("Interval 1 opens"), { target: { value: "" } });
     await save();
     expect(screen.getByRole("alert")).toHaveTextContent("hours and minutes");
@@ -142,7 +142,7 @@ describe("add", () => {
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
     await user.click(screen.getByRole("button", { name: "Add exception" }));
     setDate("2026-10-23");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     expect(screen.getByText(/Open past midnight\? Set the closing time earlier than the opening time/)).toBeInTheDocument();
     expect(screen.queryByTestId("overnight-0")).toBeNull();
     setTimes(0, "20:00", "02:00");
@@ -160,7 +160,7 @@ describe("add", () => {
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
     await user.click(screen.getByRole("button", { name: "Add exception" }));
     setDate("2026-10-23");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "20:00", "02:00");
     await save();
     expect(await screen.findByText("Special hours: 20:00 to 02:00 the next day")).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe("add", () => {
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
     await user.click(screen.getByRole("button", { name: "Add exception" }));
     setDate("2026-10-23");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "20:00", "02:00");
     await user.click(screen.getByRole("button", { name: "Add another interval" }));
     setTimes(1, "22:00", "23:00");
@@ -217,7 +217,7 @@ describe("edit", () => {
     expect(screen.getByLabelText("Date")).toHaveValue("2026-10-20");
     expect(screen.getByLabelText(/Note/)).toHaveValue("Old note");
     setDate("2026-11-05");
-    await user.click(screen.getByLabelText("Special hours"));
+    await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "10:00", "13:00");
     await user.clear(screen.getByLabelText(/Note/));
     await user.type(screen.getByLabelText(/Note/), "Late start");
@@ -373,5 +373,125 @@ describe("access and layout", () => {
     expect(small).toMatch(/\.interval\s*{[^}]*grid-template-columns:\s*1fr 1fr/);
     expect(css).toMatch(/\.toasts\s*{[^}]*safe-bottom/);
     expect(css).toContain("overflow-wrap: anywhere");
+  });
+});
+
+describe("closed for a while", () => {
+  const addBreak = async (user) => {
+    await open([]);
+    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByLabelText(/Closed for a while/));
+  };
+  const saved = () => M.state.exceptions.find((e) => e.kind === "break");
+
+  it("offers three choices and asks only for the closed times, not the opening hours", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    expect(screen.getByLabelText(/Closed all day/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Different hours")).toBeInTheDocument();
+    expect(screen.getAllByText(/Normal hours apply around it/).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Closed from")).toHaveValue("13:00");
+    expect(screen.getByLabelText("Until")).toHaveValue("14:00");
+    expect(screen.queryByLabelText("Interval 1 opens")).toBeNull();
+    expect(screen.getByRole("button", { name: "Add another break" })).toBeEnabled();
+  });
+
+  it("saves a lunch break for one day, lists it, and previews what customers read while it is on", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    setDate("2026-10-13");
+    await user.type(screen.getByLabelText(/Note/), "Lunch");
+    const preview = screen.getByLabelText("What customers will see");
+    await waitFor(() => expect(preview).toHaveTextContent("Lunch · Reopens at 2:00 PM EAT"));
+    expect(preview).toHaveTextContent("Open again at 2:00 PM, then until 6:00 PM as usual");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(saved()).toMatchObject({ date: "2026-10-13", kind: "break", intervals: [["13:00", "14:00"]], note: "Lunch", until: null, weekdays: null });
+    expect(rows()[0]).toHaveTextContent("Closed 13:00 to 14:00");
+  });
+
+  it("says so when the break falls where the shop is normally closed", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    setDate("2026-10-18");
+    await waitFor(() => expect(screen.getByLabelText("What customers will see")).toHaveTextContent("You are normally closed at that time on Sunday, so customers will see no change"));
+    expect(screen.getByLabelText("Your usual hours")).toHaveTextContent("Sunday: Closed");
+  });
+
+  it("runs over several days when a last day is picked, and refuses without one", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    await user.click(screen.getByLabelText("Several days in a row"));
+    fireEvent.change(screen.getByLabelText("First day"), { target: { value: "2026-10-13" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Pick the last day");
+    expect(M.state.exceptions).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText("Last day"), { target: { value: "2026-10-15" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(saved()).toMatchObject({ date: "2026-10-13", until: "2026-10-15", weekdays: null });
+    expect(rows()[0]).toHaveTextContent("Tue 13 Oct 2026 to Thu 15 Oct 2026");
+  });
+
+  it("repeats every week on the days picked, with no end unless one is set", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    await user.click(screen.getByLabelText("Every week"));
+    expect(screen.getByRole("checkbox", { name: "Mon" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Fri" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Sat" })).not.toBeChecked();
+    await user.click(screen.getByRole("checkbox", { name: "Sat" }));
+    await user.click(screen.getByRole("checkbox", { name: "Tue" }));
+    fireEvent.change(screen.getByLabelText("Starting"), { target: { value: "2026-10-13" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(rows()).toHaveLength(1));
+    expect(saved()).toMatchObject({ date: "2026-10-13", until: null, weekdays: ["mon", "wed", "thu", "fri", "sat"] });
+    expect(rows()[0]).toHaveTextContent("Every Mon, Wed, Thu, Fri, Sat");
+    expect(rows()[0]).toHaveTextContent("until you remove it");
+  });
+
+  it("a weekly break needs at least one day", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    await user.click(screen.getByLabelText("Every week"));
+    for (const d of ["Mon", "Tue", "Wed", "Thu", "Fri"]) await user.click(screen.getByRole("checkbox", { name: d }));
+    fireEvent.change(screen.getByLabelText("Starting"), { target: { value: "2026-10-13" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Pick at least one day");
+  });
+
+  it("a repeating break that started in the past stays listed, and editing it restarts it from today", async () => {
+    const user = userEvent.setup();
+    await open([ex("w", "2026-09-01", { kind: "break", intervals: [["13:00", "14:00"]], until: null, weekdays: ["mon", "tue", "wed", "thu", "fri"] }), ex("r", "2026-09-01", { kind: "break", intervals: [["13:00", "14:00"]], until: "2026-10-01", weekdays: null })]);
+    await screen.findAllByTestId("exception");
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0]).toHaveTextContent("Every weekday");
+    expect(rows()[0]).toHaveTextContent("Today");
+    await user.click(screen.getByRole("button", { name: /^Edit/ }));
+    expect(screen.getByLabelText("Every week")).toBeChecked();
+    expect(screen.getByLabelText("Starting")).toHaveValue(TODAY);
+  });
+
+  it("two breaks can share a date, but a break and a different-hours day cannot clash with each other's rules", async () => {
+    const user = userEvent.setup();
+    await open([ex("b", "2026-10-13", { kind: "break", intervals: [["13:00", "14:00"]], until: null, weekdays: null })]);
+    await screen.findAllByTestId("exception");
+    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    setDate("2026-10-13");
+    await user.click(screen.getByLabelText(/Closed for a while/));
+    fireEvent.change(screen.getByLabelText("Closed from"), { target: { value: "16:00" } });
+    fireEvent.change(screen.getByLabelText("Until"), { target: { value: "16:30" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(rows()).toHaveLength(2));
+  });
+
+  it("refuses a break that ends before it starts, with words a seller understands", async () => {
+    const user = userEvent.setup();
+    await addBreak(user);
+    setDate("2026-10-13");
+    fireEvent.change(screen.getByLabelText("Closed from"), { target: { value: "15:00" } });
+    fireEvent.change(screen.getByLabelText("Until"), { target: { value: "14:00" } });
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("A break has to end after it starts");
   });
 });

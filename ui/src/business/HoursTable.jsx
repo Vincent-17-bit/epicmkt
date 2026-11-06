@@ -1,6 +1,6 @@
 import styles from "./HoursTable.module.css";
 
-// Rows: { day, name, today, text, changed?, dateLabel?, note? }. A row with `changed` is a one-off exception for that
+// Rows: { day, name, today, text, changed?, dateLabel?, note?, breaks? }. `breaks` are the closed windows inside the day's hours: { text, viewerText, viewerLabel, note }. A row with `changed` is a one-off exception for that
 // date, so it carries the date, a "This date only" tag and the shop's note. The note is the shop's own text and is
 // rendered as plain text (React escapes it). A row without an exception renders only the weekday and the hours.
 // Rows may also carry { shopLabel, viewerText, viewerLabel } (see hoursRowsFor): the shop's zone name is printed next to
@@ -32,6 +32,12 @@ export default function HoursTable({ rows, caption }) {
                 </span>
               )}
               {row.note && <span className={styles.note}>{row.note}</span>}
+              {(row.breaks ?? []).map((b) => (
+                <span key={b.text} className={styles.break}>
+                  <span data-testid="break">{b.note ?? "Break"} {b.text}</span>
+                  {b.viewerText && <span className={styles.viewer} data-testid="break-viewer" title={b.viewerLabel || undefined}>{b.viewerText} your time</span>}
+                </span>
+              ))}
             </td>
           </tr>
         ))}
