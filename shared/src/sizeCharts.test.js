@@ -134,6 +134,7 @@ test("shoeTable: men's, women's and kids' rows for the buyer", () => {
 
 test("SEED_SIZE_CHARTS: five valid charts, each passing the admin chart rules, with the right shape", () => {
   assert.deepEqual(SEED_SIZE_CHARTS.map((c) => c.name), ["Dresses and tops (cm)", "Shirt collar", "Men's shoes", "Women's shoes", "Kids clothes (age)"]);
+  assert.deepEqual(SEED_SIZE_CHARTS.map((c) => c.productTypeIds), [["dress"], ["shirt"], [], [], []], "a type has one default chart; shoes are picked per item");
   for (const c of SEED_SIZE_CHARTS) {
     const r = cleanSizeChart({ name: c.name, unit: c.unit, columns: c.columns, rows: c.rows });
     assert.equal(r.ok, true, `${c.name}: ${JSON.stringify(r.errors)}`);
@@ -176,6 +177,14 @@ test("pickSizeChart: the seller's override applies to the item's own chart only;
   assert.equal(c.overridden, false);
   assert.equal(pickSizeChart({ item: { sizeChartId: "own" }, charts: [chart({ id: "own", active: false })] }), null);
   assert.equal(pickSizeChart({ item: { productTypeId: "dress" }, charts: [chart({ id: "t", productTypeIds: ["dress"], active: false })] }), null);
+});
+test("pickSizeChart: the item's product type can carry its chart (ProductType.sizeChartId), and an item's own chart still wins", () => {
+  const a = chart({ id: "a" }), b = chart({ id: "b" });
+  assert.equal(pickSizeChart({ item: { productTypeId: "dress" }, type: { id: "dress", sizeChartId: "b" }, charts: [a, b] }).id, "b");
+  assert.equal(pickSizeChart({ item: {}, type: { id: "dress", sizeChartId: "b" }, charts: [a, b] }).id, "b");
+  assert.equal(pickSizeChart({ item: { sizeChartId: "a" }, type: { id: "dress", sizeChartId: "b" }, charts: [a, b] }).id, "a");
+  assert.equal(pickSizeChart({ item: {}, type: { id: "dress", sizeChartId: "gone" }, charts: [a, b] }), null);
+  assert.equal(pickSizeChart({ item: { category: "fashion" }, type: { id: "dress", sizeChartId: "gone" }, charts: [chart({ id: "c", category: "fashion" })] }).id, "c");
 });
 test("pickSizeChart: reads the database's snake_case product_type_ids too", () => {
   const dbRow = { id: "d", name: "Dress", category: null, unit: "cm", columns: ["A"], rows: [["1"]], product_type_ids: ["dress"] };

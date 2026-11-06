@@ -518,13 +518,13 @@ export async function listSizeCharts() {
 
 // ---- A05: charts by product type and the shoe conversion chart (mirror the database functions) ----
 
-// size_charts_for_type(type, category): the active charts attached to a type; when none, the category's charts that name no type.
+// size_charts_for_type(type, category): the type's one chart (product_types.size_chart_id); when the type has none, the category's charts that no type uses.
 export async function getSizeChartsForType(typeId = null, category = null) {
   await delay();
   const active = (store.sizeCharts ?? []).filter((c) => c.active !== false);
   const types = (c) => c.productTypeIds ?? [];
-  const byType = typeId ? active.filter((c) => types(c).includes(typeId)) : [];
-  const picked = byType.length ? byType : category ? active.filter((c) => c.category === category && types(c).length === 0) : [];
+  const own = typeId ? active.find((c) => types(c).includes(typeId)) : null;
+  const picked = own ? [own] : category ? active.filter((c) => c.category === category && types(c).length === 0) : [];
   return picked
     .map(({ id, name, category: cat, unit, columns, rows, productTypeIds }) => ({ id, name, category: cat ?? null, unit, columns, rows, product_type_ids: [...(productTypeIds ?? [])] }))
     .sort((a, b) => a.name.localeCompare(b.name));

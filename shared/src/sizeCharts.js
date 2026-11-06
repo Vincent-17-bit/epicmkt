@@ -2,7 +2,7 @@
 //   * convertShoe(value, toSystem, chart?)      one shoe size in another system, using the admin-editable conversion chart
 //   * shoeChartFrom(row) / cleanShoeConversion  the stored conversion chart <-> the shape A02's shoe scale reads (SHOE_CHART)
 //   * shoeTable(chart, audience)                the buyer-facing rows for a men's, women's or kids' shoe size table
-//   * pickSizeChart({item, charts})             which chart a buyer sees: the item's own, else the one attached to its product type, else its category's
+//   * pickSizeChart({item, type, charts})       which chart a buyer sees: the item's own, else the one its product type points at, else its category's
 //   * SEED_SIZE_CHARTS                          the charts migration 0092 seeds (a DB test keeps the two equal)
 // A02 owns the shoe scale and the chart's default data (shared/src/scales/shoeChart.js). This file never re-implements their maths.
 import { parse } from "./scales/index.js";
@@ -110,20 +110,25 @@ export function shoeTable(chart = SHOE_CHART, audience = "men") {
 }
 
 /** Which chart a buyer sees, as sizeChartFor() returns it ({id, name, category, unit, columns, rows, overridden}) or null.
- *  item: { sizeChartId?, sizeChartOverride?: {rows}, productTypeId?, category? } (the override only applies to the item's own chart);
- *  charts: active charts, each with productTypeIds (the public_size_charts view calls it product_type_ids; both are read). */
-export function pickSizeChart({ item = {}, charts = [] } = {}) {
+ *  Order: the item's own chart (item.sizeChartId, with its override when it still fits), then the product type's chart (type.sizeChartId, the contract's
+ *  ProductType.sizeChartId; a chart's productTypeIds / product_type_ids are read too), then a chart of the shop's category that no type uses.
+ *  item: { sizeChartId?, sizeChartOverride?: {rows}, productTypeId?, category? }; type: the item's product type, { id?, sizeChartId? } (optional);
+ *  charts: the active charts (the public_size_charts view). Only the item's own chart takes the seller's override. */
+export function pickSizeChart({ item = {}, type = null, charts = [] } = {}) {
   const active = (charts ?? []).filter((c) => c && c.active !== false);
   const typeIds = (c) => c.productTypeIds ?? c.product_type_ids ?? [];
   const own = item.sizeChartId ? active.find((c) => c.id === item.sizeChartId) : null;
   if (own) return sizeChartFor(own, item.sizeChartOverride ?? null);
-  const byType = item.productTypeId ? active.filter((c) => typeIds(c).includes(item.productTypeId)) : [];
-  const pick = byType[0] ?? (item.category ? active.find((c) => c.category === item.category && typeIds(c).length === 0) : null);
+  const typeId = item.productTypeId ?? type?.id ?? null;
+  const byType = (type?.sizeChartId ? active.find((c) => c.id === type.sizeChartId) : null) ?? (typeId ? active.find((c) => typeIds(c).includes(typeId)) : null);
+  const pick = byType ?? (item.category ? active.find((c) => c.category === item.category && typeIds(c).length === 0) : null);
   return pick ? sizeChartFor(pick, null) : null;
 }
 
 const SIZE_ROWS = (rows, key) => rows.map((r) => [String(r.eu), String(r.uk), String(r[key]), String(r.cm)]);
-/** The five charts migration 0092 seeds. Shoe charts are built from A02's SHOE_CHART so the numbers have one source. */
+/** The five charts migration 0092 seeds. Shoe charts are built from A02's SHOE_CHART so the numbers have one source.
+ *  productTypeIds are the types a chart is the default for (attach_default_size_charts): a type has ONE default chart, so the two shoe charts name none;
+ *  a seller picks men's or women's per item (items.size_chart_id). */
 export const SEED_SIZE_CHARTS = Object.freeze([
   {
     name: "Dresses and tops (cm)", category: null, unit: "cm", productTypeIds: ["dress"],
@@ -135,8 +140,8 @@ export const SEED_SIZE_CHARTS = Object.freeze([
     columns: ["Collar (in)", "Collar (cm)", "Shirt size"],
     rows: [["14", "35.6", "S"], ["14.5", "36.8", "S"], ["15", "38.1", "M"], ["15.5", "39.4", "M"], ["16", "40.6", "L"], ["16.5", "41.9", "L"], ["17", "43.2", "XL"], ["17.5", "44.5", "XL"], ["18", "45.7", "2XL"]]
   },
-  { name: "Men's shoes", category: null, unit: "cm", productTypeIds: ["shoes-eu"], columns: ["EU", "UK", "US men", "Foot length (cm)"], rows: SIZE_ROWS(SHOE_CHART.adult, "usM") },
-  { name: "Women's shoes", category: null, unit: "cm", productTypeIds: ["shoes-eu"], columns: ["EU", "UK", "US women", "Foot length (cm)"], rows: SIZE_ROWS(SHOE_CHART.adult, "usW") },
+  { name: "Men's shoes", category: null, unit: "cm", productTypeIds: [], columns: ["EU", "UK", "US men", "Foot length (cm)"], rows: SIZE_ROWS(SHOE_CHART.adult, "usM") },
+  { name: "Women's shoes", category: null, unit: "cm", productTypeIds: [], columns: ["EU", "UK", "US women", "Foot length (cm)"], rows: SIZE_ROWS(SHOE_CHART.adult, "usW") },
   {
     name: "Kids clothes (age)", category: null, unit: "cm", productTypeIds: [],
     columns: ["Age", "Height", "Chest", "Waist"],

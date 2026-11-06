@@ -6,26 +6,31 @@ import { SHOE_CHART } from "../../shared/src/scales/shoeChart.js";
 
 let c;
 const anon = { role: "anon" };
+const asService = { role: "service_role" };
 before(async () => {
   c = await connect(await createDatabase({ database: "epicmkt_size_charts" }));
   await seedFixtures(c);
+  // product types the tests attach charts to (A06 seeds the real ones)
+  for (const id of ["dress", "shirt", "t-hat", "t-scarf", "t-coat"]) await sql(c, `insert into product_types (id, slug, name) values ($1, $1, $1) on conflict do nothing`, [id]);
 });
 after(async () => { await c.end(); });
 
 const as = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
 const chartFields = (o = {}) => ({ name: "T-Chart", unit: "cm", columns: ["Size", "Bust"], rows: [["S", "84"], ["M", "90"]], ...o });
 const save = (who, id, f) => as(who, `select admin_save_size_chart($1, $2::jsonb) as id`, [id, JSON.stringify(f)]).then((r) => r[0].id);
-const clean = () => sql(c, `delete from size_charts where name like 'T-%'`);
+const clean = async () => { await sql(c, `update product_types set size_chart_id = null where id like 't-%'`); await sql(c, `delete from size_charts where name like 'T-%'`); };
+const typeChart = async (id) => (await sql(c, `select size_chart_id from product_types where id = $1`, [id]))[0].size_chart_id;
+const typesOf = async (chartId) => (await sql(c, `select array_agg(id order by id) as ids from product_types where size_chart_id = $1`, [chartId]))[0].ids ?? [];
 const shoeRow = (eu, uk, usM, usW, cm) => ({ eu, uk, usM, usW, cm });
 const adultRows = () => shoeChartRows().adult;
 
 test("seeds: five charts and the default shoe conversion chart, equal to the shared data", async () => {
-  const rows = await sql(c, `select name, category, unit, columns, rows, product_type_ids from size_charts where name not like 'T-%' order by name`);
+  const rows = await sql(c, `select name, category, unit, columns, rows from size_charts where name not like 'T-%' order by name`);
   assert.equal(rows.length, SEED_SIZE_CHARTS.length);
   for (const seed of SEED_SIZE_CHARTS) {
     const got = rows.find((r) => r.name === seed.name);
     assert.ok(got, seed.name);
-    assert.deepEqual([got.category, got.unit, got.columns, got.rows, got.product_type_ids], [seed.category, seed.unit, seed.columns, seed.rows, seed.productTypeIds], seed.name);
+    assert.deepEqual([got.category, got.unit, got.columns, got.rows], [seed.category, seed.unit, seed.columns, seed.rows], seed.name);
   }
   const shoe = (await sql(c, `select chart, version from shoe_conversion where id = 'default'`))[0];
   assert.deepEqual(shoe.chart, shoeChartRows(SHOE_CHART));
@@ -43,6 +48,20 @@ test("seeds: the dress chart is XS to XL in cm of bust, waist and hip; the colla
   assert.deepEqual(byName["Men's shoes"].rows.find((r) => r[0] === "42"), ["42", "8", "9", "26.7"]);
   assert.deepEqual(byName["Women's shoes"].rows.find((r) => r[0] === "42"), ["42", "8", "10", "26.7"]);
 });
+test("attach_default_size_charts: points dress and shirt at their charts when they have none; repeating changes nothing; service role only", async () => {
+  assert.equal((await sql(c, `select count(*)::int as n from product_types where size_chart_id is not null and id in ('dress', 'shirt')`))[0].n, 0, "the migration ran before the types existed");
+  assert.equal((await as(asService, `select attach_default_size_charts() as n`))[0].n, 2);
+  assert.equal((await as(asService, `select attach_default_size_charts() as n`))[0].n, 0);
+  const view = Object.fromEntries((await as(anon, `select name, product_type_ids from public_size_charts`)).map((r) => [r.name, r.product_type_ids]));
+  for (const seed of SEED_SIZE_CHARTS) assert.deepEqual(view[seed.name], seed.productTypeIds, seed.name);
+  await sql(c, `update product_types set size_chart_id = null where id = 'dress'`);
+  await sql(c, `update product_types set size_chart_id = (select id from size_charts where name = 'Men''s shoes') where id = 'shirt'`);
+  assert.equal((await as(asService, `select attach_default_size_charts() as n`))[0].n, 1, "a type that already has a chart keeps it");
+  assert.equal((await sql(c, `select name from size_charts where id = (select size_chart_id from product_types where id = 'shirt')`))[0].name, "Men's shoes");
+  await sql(c, `update product_types set size_chart_id = (select id from size_charts where name = 'Shirt collar') where id = 'shirt'`);
+  await rejects(c, asAdmin, `select attach_default_size_charts()`, [], /permission denied/);
+  await rejects(c, anon, `select attach_default_size_charts()`, [], /permission denied/);
+});
 
 test("public read: anyone can read the active charts (with their types), the shoe chart, and charts by type; the tables stay closed", async () => {
   for (const who of [anon, asA, asAdmin]) {
@@ -52,61 +71,86 @@ test("public read: anyone can read the active charts (with their types), the sho
   const dress = (await as(anon, `select size_charts_for_type('dress') as r`))[0].r;
   assert.deepEqual(dress.map((x) => x.name), ["Dresses and tops (cm)"]);
   assert.deepEqual(dress[0].product_type_ids, ["dress"]);
-  assert.deepEqual((await as(anon, `select size_charts_for_type('shoes-eu') as r`))[0].r.map((x) => x.name), ["Men's shoes", "Women's shoes"]);
+  assert.deepEqual(Object.keys(dress[0]).sort(), ["category", "columns", "id", "name", "product_type_ids", "rows", "unit"]);
+  assert.deepEqual((await as(anon, `select size_charts_for_type('shirt') as r`))[0].r.map((x) => x.name), ["Shirt collar"]);
   assert.deepEqual((await as(anon, `select size_charts_for_type('nothing') as r`))[0].r, []);
   assert.deepEqual((await as(anon, `select size_charts_for_type(null, null) as r`))[0].r, []);
   await rejects(c, anon, `select count(*) from size_charts`, [], /permission denied/);
   await rejects(c, anon, `select count(*) from shoe_conversion`, [], /permission denied/);
-  await rejects(c, asA, `select count(*) from size_charts`, [], /permission denied|row-level/).catch(async () => assert.equal((await as(asA, `select count(*)::int as n from size_charts`))[0].n, 0));
   assert.equal((await as(asA, `select count(*)::int as n from shoe_conversion`))[0].n, 0);
 });
-test("public read by type: falls back to the category's charts that name no type; inactive charts and typed charts are not used for the fallback", async () => {
+test("public read by type: the type's one chart; otherwise the category's charts that no type uses; switched-off charts are never shown", async () => {
   await clean();
-  await save(asAdmin, null, chartFields({ name: "T-Barber general", category: "barber" }));
-  await save(asAdmin, null, chartFields({ name: "T-Barber typed", category: "barber", product_type_ids: ["hat"] }));
+  const general = await save(asAdmin, null, chartFields({ name: "T-Barber general", category: "barber" }));
+  await save(asAdmin, null, chartFields({ name: "T-Barber typed", category: "barber", product_type_ids: ["t-coat"] }));
   await save(asAdmin, null, chartFields({ name: "T-Barber hidden", category: "barber", active: false }));
-  await save(asAdmin, null, chartFields({ name: "T-Hat chart", product_type_ids: ["hat"] }));
+  const hat = await save(asAdmin, null, chartFields({ name: "T-Hat chart", product_type_ids: ["t-hat"] }));
   const names = async (t, cat) => (await as(anon, `select size_charts_for_type($1, $2) as r`, [t, cat]))[0].r.map((x) => x.name);
-  assert.deepEqual(await names("hat", "barber"), ["T-Barber typed", "T-Hat chart"]);
-  assert.deepEqual(await names("scarf", "barber"), ["T-Barber general"]);
-  assert.deepEqual(await names("scarf", null), []);
-  assert.deepEqual(await names("scarf", "other"), []);
+  assert.deepEqual(await names("t-hat", "barber"), ["T-Hat chart"]);
+  assert.deepEqual(await names("t-coat", "barber"), ["T-Barber typed"]);
+  assert.deepEqual(await names("t-scarf", "barber"), ["T-Barber general"], "a type with no chart falls back to the category's untyped charts");
+  assert.deepEqual(await names("unknown-type", "barber"), ["T-Barber general"]);
+  assert.deepEqual(await names("t-scarf", null), []);
+  assert.deepEqual(await names("t-scarf", "other"), []);
+  await sql(c, `update size_charts set active = false where id = $1`, [hat]);
+  assert.deepEqual(await names("t-hat", null), [], "a switched-off chart is not shown");
+  assert.deepEqual(await names("t-hat", "barber"), ["T-Barber general"], "and the type falls back to the category");
+  assert.deepEqual((await as(anon, `select product_type_ids from public_size_charts where id = $1`, [general]))[0].product_type_ids, []);
+  await sql(c, `update product_types set active = false where id = 't-coat'`);
+  assert.deepEqual(await names("t-coat", null), [], "a switched-off type has no chart");
+  await sql(c, `update product_types set active = true where id = 't-coat'`);
   await clean();
 });
 
 test("admin writes size charts with product types; sellers and anon cannot", async () => {
   await clean();
-  const id = await save(asAdmin, null, chartFields({ product_type_ids: ["dress", "top"] }));
-  const got = (await sql(c, `select product_type_ids from size_charts where id = $1`, [id]))[0];
-  assert.deepEqual(got.product_type_ids, ["dress", "top"]);
+  const id = await save(asAdmin, null, chartFields({ product_type_ids: ["t-hat", "t-scarf"] }));
+  assert.deepEqual(await typesOf(id), ["t-hat", "t-scarf"], "the types now point at the chart (product_types.size_chart_id)");
   assert.equal((await sql(c, `select 1 from audit_log where action = 'size_chart.create' and target_id = $1`, [id])).length, 1);
-  assert.deepEqual((await as(asAdmin, `select admin_size_charts_list() as r`))[0].r.find((x) => x.id === id).product_type_ids, ["dress", "top"]);
-  const sellerView = (await as(anon, `select product_type_ids from public_size_charts where id = $1`, [id]))[0];
-  assert.deepEqual(sellerView.product_type_ids, ["dress", "top"]);
+  assert.deepEqual((await as(asAdmin, `select admin_size_charts_list() as r`))[0].r.find((x) => x.id === id).product_type_ids, ["t-hat", "t-scarf"]);
+  assert.deepEqual((await as(anon, `select product_type_ids from public_size_charts where id = $1`, [id]))[0].product_type_ids, ["t-hat", "t-scarf"]);
+  const seller = (await as(asA, `select jsonb_path_query_array(seller_product_types() -> 'types', '$[*] ? (@.id == "t-hat").sizeChartId') as r`))[0].r;
+  assert.deepEqual(seller, [id], "seller_product_types already returns the type's sizeChartId (A08)");
   await rejects(c, asA, `select admin_save_size_chart(null, '${JSON.stringify(chartFields({ name: "T-Nope" }))}')`, [], /forbidden/);
   await rejects(c, anon, `select admin_save_size_chart(null, '${JSON.stringify(chartFields({ name: "T-Nope" }))}')`, [], /permission denied/);
+  assert.equal((await sql(c, `select count(*)::int as n from size_charts where name = 'T-Nope'`))[0].n, 0);
   await clean();
 });
-test("product_type_ids: an absent key keeps them on edit, an empty list or null clears them, bad lists are refused", async () => {
+test("product_type_ids: an absent key changes nothing, [] or null releases the types, a type moves from its old chart, bad lists are refused", async () => {
   await clean();
-  const id = await save(asAdmin, null, chartFields({ product_type_ids: ["dress"] }));
-  await save(asAdmin, id, chartFields({ name: "T-Renamed" }));
-  assert.deepEqual((await sql(c, `select product_type_ids from size_charts where id = $1`, [id]))[0].product_type_ids, ["dress"]);
-  await save(asAdmin, id, chartFields({ name: "T-Renamed", product_type_ids: ["a", "b"] }));
-  assert.deepEqual((await sql(c, `select product_type_ids from size_charts where id = $1`, [id]))[0].product_type_ids, ["a", "b"]);
-  await save(asAdmin, id, chartFields({ name: "T-Renamed", product_type_ids: [] }));
-  assert.deepEqual((await sql(c, `select product_type_ids from size_charts where id = $1`, [id]))[0].product_type_ids, []);
-  await save(asAdmin, id, chartFields({ name: "T-Renamed", product_type_ids: ["x"] }));
-  await save(asAdmin, id, chartFields({ name: "T-Renamed", product_type_ids: null }));
-  assert.deepEqual((await sql(c, `select product_type_ids from size_charts where id = $1`, [id]))[0].product_type_ids, []);
-  const bad = (ids) => rejects(c, asAdmin, `select admin_save_size_chart(null, $1::jsonb)`, [JSON.stringify(chartFields({ name: "T-Bad", product_type_ids: ids }))], /invalid_type_ids/);
-  await bad(["Dress"]); await bad(["a", "a"]); await bad(["has space"]); await bad("dress"); await bad([""]); await bad(["-x"]);
-  await bad(Array.from({ length: 21 }, (_, i) => `t${i}`)); await bad(["x".repeat(41)]); await bad([5]);
-  await save(asAdmin, null, chartFields({ name: "T-Twenty", product_type_ids: Array.from({ length: 20 }, (_, i) => `t${i}`) }));
-  assert.equal((await sql(c, `select count(*)::int as n from size_charts where name = 'T-Bad'`))[0].n, 0);
+  const a = await save(asAdmin, null, chartFields({ name: "T-A", product_type_ids: ["t-hat"] }));
+  await save(asAdmin, a, chartFields({ name: "T-A renamed" }));
+  assert.deepEqual(await typesOf(a), ["t-hat"], "an absent key keeps the types");
+  const b = await save(asAdmin, null, chartFields({ name: "T-B", product_type_ids: ["t-hat", "t-coat"] }));
+  assert.deepEqual([await typesOf(a), await typesOf(b)], [[], ["t-coat", "t-hat"]], "a type has one chart: t-hat moved to B");
+  await save(asAdmin, b, chartFields({ name: "T-B", product_type_ids: ["t-coat"] }));
+  assert.deepEqual([await typeChart("t-hat"), await typesOf(b)], [null, ["t-coat"]], "a type left out of the list is released");
+  await save(asAdmin, b, chartFields({ name: "T-B", product_type_ids: [] }));
+  assert.deepEqual(await typesOf(b), []);
+  await save(asAdmin, b, chartFields({ name: "T-B", product_type_ids: ["t-coat"] }));
+  await save(asAdmin, b, chartFields({ name: "T-B", product_type_ids: null }));
+  assert.deepEqual(await typesOf(b), []);
+  const bad = (ids) => rejects(c, asAdmin, `select admin_save_size_chart($1, $2::jsonb)`, [b, JSON.stringify(chartFields({ name: "T-B", product_type_ids: ids }))], /invalid_type_ids/);
+  await bad(["no-such-type"]); await bad(["t-hat", "t-hat"]); await bad("t-hat"); await bad([5]); await bad([null]); await bad(["t-hat", "nope"]); await bad({ id: "t-hat" });
+  await bad(Array.from({ length: 21 }, (_, i) => `t-${i}`));
+  assert.deepEqual(await typesOf(b), [], "a refused save changes nothing");
+  assert.equal((await sql(c, `select name from size_charts where id = $1`, [b]))[0].name, "T-B");
+  await rejects(c, asAdmin, `select admin_save_size_chart(null, $1::jsonb)`, [JSON.stringify(chartFields({ name: "T-New", product_type_ids: ["nope"] }))], /invalid_type_ids/);
+  assert.equal((await sql(c, `select count(*)::int as n from size_charts where name = 'T-New'`))[0].n, 0, "a refused create writes nothing");
   await clean();
 });
-test("what A04 already did still holds: same errors, deleting, and items keep their chart", async () => {
+test("a chart a type uses cannot be deleted, and the database enforces the link", async () => {
+  await clean();
+  const id = await save(asAdmin, null, chartFields({ product_type_ids: ["t-scarf"] }));
+  await rejects(c, asAdmin, `select admin_delete_size_chart($1)`, [id], /size_chart_in_use/);
+  await rejects(c, asAdmin, `delete from size_charts where id = $1`, [id], /permission denied|violates foreign key/).catch(async () => rejects(c, { role: "service_role" }, `delete from size_charts where id = $1`, [id], /foreign key/));
+  await rejects(c, { role: "service_role" }, `update product_types set size_chart_id = gen_random_uuid() where id = 't-hat'`, [], /foreign key/);
+  await save(asAdmin, id, chartFields({ product_type_ids: [] }));
+  await as(asAdmin, `select admin_delete_size_chart($1)`, [id]);
+  assert.equal((await sql(c, `select count(*)::int as n from size_charts where id = $1`, [id]))[0].n, 0);
+  await clean();
+});
+test("what A04 already did still holds: same errors, deleting an unused chart, items keep using their chart", async () => {
   await clean();
   const bad = (f, p) => rejects(c, asAdmin, `select admin_save_size_chart(null, $1::jsonb)`, [JSON.stringify(chartFields(f))], p);
   await bad({ name: "x" }, /invalid_name/); await bad({ unit: "yd" }, /invalid_unit/); await bad({ category: "nope" }, /invalid_category/);
@@ -114,6 +158,7 @@ test("what A04 already did still holds: same errors, deleting, and items keep th
   const id = await save(asAdmin, null, chartFields());
   await save(asAdmin, null, chartFields({ name: "T-Chart2" }));
   await rejects(c, asAdmin, `select admin_save_size_chart(null, $1::jsonb)`, [JSON.stringify(chartFields())], /duplicate_chart/);
+  assert.deepEqual((await as(asAdmin, `select admin_size_charts_list() as r`))[0].r.find((x) => x.id === id).product_type_ids, []);
   await as(asAdmin, `select admin_delete_size_chart($1)`, [id]);
   assert.equal((await sql(c, `select count(*)::int as n from size_charts where id = $1`, [id]))[0].n, 0);
   await clean();

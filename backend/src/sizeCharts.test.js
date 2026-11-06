@@ -15,14 +15,15 @@ test("mock: listSizeCharts keeps the shape the seller app reads (no new keys), a
   }
   assert.ok(new Set(list.map((c) => c.id)).size === list.length, "ids are unique");
 });
-test("mock: charts by type mirror size_charts_for_type (same names as the database seeds)", async () => {
+test("mock: charts by type mirror size_charts_for_type: a type has one chart; otherwise the category's charts that no type uses", async () => {
   const names = async (t, c) => (await getSizeChartsForType(t, c)).map((x) => x.name);
-  assert.ok((await names("dress")).includes("Dresses and tops (cm)"));
-  assert.ok((await names("shoes-eu")).includes("Men's shoes") && (await names("shoes-eu")).includes("Women's shoes"));
+  assert.deepEqual(await names("dress"), ["Dresses and tops (cm)"]);
   assert.deepEqual(await names("shirt"), ["Shirt collar"]);
+  assert.deepEqual(await names("shoes-eu"), [], "the shoe charts are picked per item, not attached to a type");
   assert.deepEqual(await names("nothing"), []);
   assert.deepEqual(await names(null, null), []);
-  const dress = (await getSizeChartsForType("dress")).find((c) => c.name === "Dresses and tops (cm)");
+  assert.deepEqual(await names("nothing", "fashion-boutiques"), ["Tops and dresses", "Women's shoes (EU)"], "the category's charts that no type uses");
+  const dress = (await getSizeChartsForType("dress"))[0];
   assert.deepEqual(dress.product_type_ids, ["dress"]);
   assert.deepEqual(Object.keys(dress).sort(), ["category", "columns", "id", "name", "product_type_ids", "rows", "unit"]);
 });
