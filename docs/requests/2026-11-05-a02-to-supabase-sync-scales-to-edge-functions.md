@@ -1,7 +1,7 @@
 # Sync `shared/src/scales/*` to the edge functions (only if the functions need it)
 
 - From: lane a / A02      - To: supabase (owner of `scripts/sync-shared.mjs`)      - Date: 2026-11-05
-- Status: open            (open | accepted | done | declined)
+- Status: done            (open | accepted | done | declined)
 
 ## Need
 
@@ -17,3 +17,11 @@ relative imports working.
 ## Meanwhile
 
 Nothing in Lane A depends on it yet. Marked `TODO(contract:A01)` where it will matter.
+
+## Done (2026-11-06)
+
+`scripts/sync-shared.mjs` now takes whole folders (`folders = [["scales", "scales"]]`) and copies them with their sub-folders to
+`supabase/functions/_shared/synced/scales/`, skipping `*.test.js` and `testkit.js`. `--check` also fails on a stale file left in `synced/` after a rename.
+Edge functions import `../_shared/synced/scales/index.js`. `shared/src/scales/remaining/` is included (A03's request). Test: `scripts/sync-shared.test.mjs`.
+To sync another folder later, add it to `folders`. `openValues.js` (A18) is still a single-file entry to add when a function needs it.
+
