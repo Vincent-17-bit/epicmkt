@@ -125,8 +125,11 @@ export function applyFilters(products, filters) {
   return kept.sort(SORTERS[filters.sort] ?? SORTERS.newest);
 }
 
-// One brand, however it was typed: show the spelling most shops used (ties: the one that sorts first).
-const commonSpelling = (spellings) => [...spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0];
+// One brand, however it was typed: show the spelling most shops used. On a tie prefer one that is not ALL CAPITALS, then the one that
+// comes first in plain character order (not locale order, so the browser and the server pick the same).
+const shouting = (t) => t === t.toUpperCase() && t !== t.toLowerCase();
+const commonSpelling = (spellings) =>
+  [...spellings].sort((a, b) => b[1] - a[1] || shouting(a[0]) - shouting(b[0]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))[0][0];
 
 // What is on offer to filter by, counted over the whole list so the options do not shift as filters are chosen.
 export function facetsOf(products) {

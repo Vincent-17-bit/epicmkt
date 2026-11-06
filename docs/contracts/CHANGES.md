@@ -169,3 +169,20 @@ Entry format:
   - Admin lane: a type-requests page on the two admin RPCs (request below).
   - Lane A (A06): merge with the tables above; see the assumptions.
 - Request files: `docs/requests/2026-11-06-a08-to-seller-type-picker-api.md`, `docs/requests/2026-11-06-a08-to-admin-type-requests-page.md`
+
+## 2026-11-06 A18b: Open values screens and wiring (seller, admin, buyer)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, at the owner's request, because A18 left these three screens undone. They touch the seller, admin and client apps, so the other lanes should review them.
+- What changed:
+  - Migration `0092_products_snapshot_brand.sql`: `products_snapshot` also returns each item's `brand` (one extra column; signature and paging unchanged).
+  - Seller: `findOptionValues`, `addOptionValue`, `linkItemValues` in the seller API (live, mock, contract list); a `ValueField` type-ahead (ARIA combobox) used for Brand in the item editor;
+    on save the editor settles the brand against the dictionary (typed "SAMSUNG" saves as the existing "Samsung") and calls `seller_link_item_values`. A dictionary failure never blocks a save.
+  - Admin: page `/admin/open-values` (nav item under Catalogue): waiting / approved / merged / all, kind filter, search, approve, rename, merge (with an "N items will become X" warning), tags and shade.
+    New permissions `values.view` and `values.review` (reviewer; owner implied), matching `has_role(array['reviewer'])`.
+  - Buyer: a Brand filter on the home products (`pbrand` in the address, one choice per brand key, named by the most used spelling, live counts, removable chip). Grouping is done with `normalizeValueKey`.
+- Assumptions (change with a new entry, not by editing this one):
+  - The editor owns only the `brand` slot of `seller_link_item_values`. The call replaces ALL of an item's links, so when spec or option values become dictionary values (TODO(contract:A01)) the editor must send every slot it owns.
+  - The buyer filter groups on the brand text in the snapshot, not on the link table, so it also works for items saved before the dictionary existed.
+  - `public_option_value_filter` (0090) is not used by the client yet; the snapshot route needs no extra request. It stays available for a standalone brand list.
+  - Only Brand is typed-ahead in the seller editor today; material, colour, finish and flavour fields come with product types (A01).
