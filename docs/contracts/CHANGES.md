@@ -97,3 +97,38 @@ Entry format:
   - Whoever owns `scripts/sync-shared.mjs`: add `scales/*` and `scales/remaining/*` to the synced file list if the edge functions need them (request below).
   - A03: read `docs/requests/2026-11-05-a02-to-a03-registered-and-differences.md` (what was registered, and three things A03 may want to change).
 - Request files: `docs/requests/2026-11-05-a02-to-supabase-sync-scales-to-edge-functions.md`, `docs/requests/2026-11-05-a02-to-a03-registered-and-differences.md`
+
+## 2026-11-06 A18: Open values dictionary (typed material, colour, brand, finish, flavour)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, open values dictionary prompt (database)
+- What changed:
+  - Migration `0089_option_values.sql`: tables `option_values` and `item_option_value_uses`; `normalize_value_key(text)`; the contract's
+    `seller_option_values(kind, query, limit)`; `seller_add_option_value(kind, label, hex)`; `seller_link_item_values(item, uses)`;
+    `public_option_value_filter(kind)`; `admin_option_values`, `admin_approve_option_value`, `admin_update_option_value`,
+    `admin_rename_option_value`, `admin_merge_option_value`. `seller_save_item` is not touched.
+  - `shared/src/openValues.js`, exported from `@epicmkt/shared`: `normalizeValueKey` (the one canonical key function the contract lists),
+    `cleanValueLabel`, `validateOpenValue`, `matchRank`, `matchOpenValues`, `isHexColor`, `VALUE_KINDS`, `VALUE_STATUSES`, `KEY_CASES`.
+  - Shapes: a value is `{id, kind, label, key, status: pending|approved|merged, hex, tags[]}`. `seller_option_values` returns
+    `{kind, query, matches: [value + uses], canAdd, addLabel}`; `seller_add_option_value` returns `{created, value}`; rename and merge return the value plus
+    `itemsUpdated`. Errors are `P0001` messages: `invalid_kind`, `invalid_label`, `label_too_long`, `invalid_hex`, `too_many_pending` (50 per shop),
+    `value_exists`, `value_merged`, `same_value`, `kind_mismatch`, `value_not_found`, `item_not_found`, `invalid_uses`.
+- Why: a seller can type a material, colour or brand that is not listed; it is usable at once, shown as typed and queued for review; admin approves,
+  renames or merges it and every item using it follows. "Samsung", "SAMSUNG" and "samsung" are one value, so one filter choice.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - Key rules: NFKD, accents dropped, NFC, lower case, apostrophes dropped, "&" read as "and", runs of spaces and punctuation become one space.
+    Written in `openValues.js`; the db test runs one table (`KEY_CASES`) through both functions.
+  - Items refer to a value through `item_option_value_uses(item_id, slot, value_id)`, slot `brand` (items.brand), `spec` (a spec row's value, also the
+    per-variant rows) or `axis` (an option value's label; its id and so every variant combination stays). The app calls `seller_link_item_values` after
+    `seller_save_item`. Rename and merge rewrite the item text found by key, only for linked items. Items with no links are untouched.
+    TODO(contract:A01): when product types give typed spec rows and option values a `valueId`, point the rewrite at those.
+  - A merged value keeps its key, so the old spelling resolves to the target; a merge never leaves a chain. Merging copies tags and fills a missing shade.
+  - Rename is refused when another live value of the kind has that key (`value_exists`): merge instead. Rename keeps the status.
+  - The admin functions need the `reviewer` role (owner always passes). There is no undo for a value merge.
+  - A new value is always `pending`; there is no auto-approve.
+- Who must act:
+  - Seller lane: call `seller_option_values` for the type-ahead and `seller_add_option_value` for Add "<typed>"; call `seller_link_item_values` after a save.
+  - Admin lane: a review page over `admin_option_values` and the three actions (`admin_*` names above).
+  - Client lane: filter lists from `public_option_value_filter`.
+  - Whoever owns `scripts/sync-shared.mjs`: add `openValues.js` if an edge function needs it (request below). No edge function uses it today.
+- Request files: `docs/requests/2026-11-06-a18-to-supabase-sync-open-values.md`
