@@ -46,3 +46,7 @@ export * from "./types/restrictions.js";
 
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
+
+// Pricing core: price per combination, flash, offers and sale (integer money). priceFor, priceBounds, priceMin, priceMax, lineTotal.
+export { priceFor, priceBounds, priceMin, priceMax } from "./pricing.js";
+export { lineTotal } from "./pricing/money.js";
