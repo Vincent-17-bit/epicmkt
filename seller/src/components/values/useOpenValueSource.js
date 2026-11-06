@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import * as api from "../../api/index.js";
 import { createApiSource, createLocalSource } from "./source.js";
 
-const hasApi = () => typeof api.sellerOptionValues === "function" && typeof api.sellerAddOptionValue === "function";
+// The source the editor steps pass to the inputs: the seller api (live or mock, whichever the app runs on).
+// Only if the api has no option value wrappers (an old build) do local dev and tests get an in-memory stand-in; a production build gets null,
+// and the inputs say suggestions are unavailable, so a stand-in never looks like it is saving a value nobody will see.
+const hasApi = () => typeof api.findOptionValues === "function" && typeof api.addOptionValue === "function";
 
-// The source the editor steps pass to the inputs. It uses the real seller api as soon as the two wrappers exist.
-// Until then local dev and tests get an in-memory stand-in; a production build gets null, and the inputs say suggestions are unavailable
-// (a stand-in must never look like it is saving a value that nobody will ever see).  TODO(contract:A18)
 export function useOpenValueSource() {
   return useMemo(() => (hasApi() ? createApiSource(api) : import.meta.env?.PROD ? null : createLocalSource()), []);
 }

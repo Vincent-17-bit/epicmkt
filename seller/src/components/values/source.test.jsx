@@ -59,9 +59,26 @@ describe("helpers", () => {
   });
   it("createApiSource calls the two seller api wrappers", async () => {
     const calls = [];
-    const src = createApiSource({ sellerOptionValues: async (...a) => { calls.push(["s", ...a]); return { matches: [] }; }, sellerAddOptionValue: async (...a) => { calls.push(["a", ...a]); return { created: true, value: {} }; } });
+    const src = createApiSource({ findOptionValues: async (...a) => { calls.push(["s", ...a]); return { matches: [] }; }, addOptionValue: async (...a) => { calls.push(["a", ...a]); return { created: true, value: {} }; } });
     await src.search("brand", "sam", { limit: 5 });
     await src.add("color", "Teal");
     expect(calls).toEqual([["s", "brand", "sam", 5], ["a", "color", "Teal", null]]);
+  });
+});
+
+describe("createApiSource against the real seller api (mock mode)", () => {
+  it("searches and adds through findOptionValues / addOptionValue, with the shapes the inputs expect", async () => {
+    const [api, mock] = await Promise.all([import("../../api/index.js"), import("../../api/mock.js")]);
+    mock.resetMock();
+    await api.login("ES100001", "Demo-Passw0rd");
+    const src = createApiSource(api);
+    const made = await src.add("material", "Mahogany veneer test");
+    expect(made).toMatchObject({ created: true, value: { label: "Mahogany veneer test", status: "pending", kind: "material" } });
+    const found = await src.search("material", "mahogany veneer", { limit: 5 });
+    expect(found.matches.map((m) => m.label)).toContain("Mahogany veneer test");
+    expect(found.canAdd).toBe(true);
+    const again = await src.add("material", "MAHOGANY VENEER TEST");
+    expect(again.created).toBe(false);
+    expect((await src.search("material", "mahogany veneer test")).canAdd).toBe(false);
   });
 });

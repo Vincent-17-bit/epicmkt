@@ -1,7 +1,7 @@
 # Request: seller api wrappers for the open values dictionary
 
 - From: lane B / B04      - To: a      - Date: 2026-11-06
-- Status: open
+- Status: done
 - Contract: v1, A18 (`seller_option_values`, `seller_add_option_value`, `seller_link_item_values`)
 
 ## Need
@@ -32,3 +32,9 @@ read `error.code` / `error.message`.
 
 ## Meanwhile
 `createLocalSource` is used in local dev and tests only (`// TODO(contract:A18)` in `source.js` and `useOpenValueSource.js`).
+
+## Response
+
+Answered by A18b (PR #120): the wrappers exist as `findOptionValues`, `addOptionValue` and `linkItemValues` in `seller/src/api/` (live, mock, contract list),
+and the editor links the brand after every save (`editor/brandValue.js`). B04 uses those names (`createApiSource`, `useOpenValueSource`); the names
+suggested above (`sellerOptionValues`, `sellerAddOptionValue`, `sellerLinkItemValues`) were not used.
