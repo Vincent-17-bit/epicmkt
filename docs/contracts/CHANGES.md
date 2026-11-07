@@ -263,3 +263,26 @@ Entry format:
   - Client lane: show `optionVariants[].flash` and `variant_flash`.
   - Whoever builds `items.getDetail`: carry the per-variant `flash`.
 - Request files: none
+
+## 2026-11-07 A-price-range: Denormalised price range and list payloads (migration 0096, mock getItemList)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, denormalised price range prompt
+- What changed:
+  - Migration `0096_price_range_columns.sql` adds to `items`: `price_min`, `price_high`, `has_options`, `department_id`, `has_3d`. `product_type_id` already existed (0091). The brief's `price_max` is NOT a new column: `items.price_max` already holds the seller's "range" top, so the highest price a buyer can pay is stored as `price_high` and is called `priceMax` in payloads.
+  - `price_min` / `price_high` are the lowest and highest price a buyer can pay now, over the combinations that can be bought (status not `unavailable` or `out_of_stock`; all of them when none can). Per combination: its own price (else the item price), its sale price, its quantity tiers (lowest and highest tier price), and a live flash sale (lowers `price_min` only). Price types other than fixed, from and range, and items with no price, have null.
+  - Backfill: every existing item is computed once; an item with no options, tiers or flash gets `price_min = price_high = price` (a `range` item gets `price_max` as its top).
+  - Kept by triggers on `items` (every insert and update; a direct write to these columns is overwritten), `item_variants`, `flash_sales` and `product_types`, so `seller_save_item`, bulk edits, the flash sweep and admin changes are all covered. A flash that starts or ends by the clock shows when the sweep next runs (within a minute).
+  - `public_items` gains the last columns `price_min, price_high, has_options, department_id, product_type_id, has_3d`.
+  - `products_snapshot` items gain `price_min, price_max (= price_high), has_price_range, has_options, department_id, product_type_id, has_3d`. `search_businesses` and `search_facets` use `min(price_min)` for `from_price`, so the price filter and the price sorts use what a buyer can actually pay.
+  - Mock: `getItemList` and `getRelatedItems` cards carry `priceMin, priceMax, hasPriceRange, hasOptions, departmentId, productTypeId, has3d`; `getItemList` takes `minPrice`, `maxPrice` and `sort` (`price_asc` | `price_desc`) on `priceMin`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - `has_options` is true when the item has option axes or the older variants list. `department_id` is the product type's department, null when there is no type.
+  - `has_3d` stays false: nothing in the repo stores a 3D view yet (`view3d` is only named in the contract). Whoever adds it sets the column in the same change.
+  - `hasPriceRange` is `priceMin < priceMax`, worked out where the payload is built (the snapshot returns it as `has_price_range`).
+  - Fixture product types carry no `departmentId`, so the mock's `departmentId` is null (`TODO(contract:A-dept)`).
+  - The existing test `listings.test.mjs` pins the column list of `public_items`; its expected tail now includes the six new columns.
+- Who must act:
+  - Client lane: read `price_min`, `price_max`, `has_price_range`, `has_options`, `department_id`, `product_type_id`, `has_3d` from the snapshot; show "From" when `has_price_range`.
+  - Whoever builds `items.getList` for real: return the camelCase names above from `public_items`.
+- Request files: none
