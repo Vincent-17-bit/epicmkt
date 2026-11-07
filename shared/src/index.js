@@ -46,3 +46,6 @@ export * from "./types/restrictions.js";
 
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
+
+// Quantity tier pricing.
+export * from "./pricing/tiers.js";
