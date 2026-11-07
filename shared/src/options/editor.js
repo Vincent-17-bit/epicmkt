@@ -83,10 +83,24 @@ export const comboCount = (axes) => axes.reduce((n, a) => n * Math.max(a.values.
 
 export const canAddAxis = (options, limits = effectiveLimits()) => options.axes.length < limits.axes;
 
-export const addAxis = (options, { label = "", display = "button" } = {}, limits = effectiveLimits()) => {
+export const addAxis = (options, { label = "", display = "button", scale = null } = {}, limits = effectiveLimits()) => {
   if (!canAddAxis(options, limits)) return options;
   const key = optionSlug(label || "option", options.axes.map((a) => a.key), OPTION_LIMITS.axisKey);
-  return reconcileRows({ ...options, axes: [...options.axes, { key, label, display, auto: true, rid: newRid(), values: [] }] });
+  return reconcileRows({ ...options, axes: [...options.axes, { key, label, display, ...(scale && { scale }), auto: true, rid: newRid(), values: [] }] });
+};
+
+// A product type's usual options (its `axes`: { key, label, display, scale? }) in one step, skipping any the item already has and
+// stopping at the limit. Returns the new options and how many were added.
+export const addTypeAxes = (options, defs, limits = effectiveLimits()) => {
+  let next = options;
+  let added = 0;
+  for (const d of Array.isArray(defs) ? defs : []) {
+    if (next.axes.some((a) => a.label.trim().toLowerCase() === String(d.label ?? "").trim().toLowerCase())) continue;
+    if (!canAddAxis(next, limits)) break;
+    next = addAxis(next, { label: d.label, display: d.display, scale: d.scale }, limits);
+    added += 1;
+  }
+  return { options: next, added };
 };
 
 const mapAxis = (options, axisKey, fn) => ({ ...options, axes: options.axes.map((a) => (a.key === axisKey ? fn(a) : a)) });
@@ -344,4 +358,46 @@ export const limitMessage = (reason, limits = effectiveLimits(), plan = false) =
   if (reason === "values") return cap(limits.values, "values for one option");
   if (reason === "variants") return cap(limits.variants, "combinations");
   return "";
+};
+
+// ---- quick ways to fill prices (Prompt 4.6) ----
+// Prices are always stored per combination (one absolute price each). These only fill the list faster; a "difference" is stored as the
+// price it adds up to. A value left blank, or a result that is not a sensible price, leaves that row exactly as it was.
+
+const amount = (v) => (isMoney(v) ? Number(clean(v)) : null);
+const priceText = (n) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+const mapSold = (options, fn) => ({ ...options, rows: options.rows.map((r) => (rowKeyOf(options, r.choice) !== null && r.sold ? fn(r) : r)) });
+
+export const setSamePrice = (options, price) => (amount(price) === null ? options : mapSold(options, (r) => ({ ...r, price: priceText(amount(price)) })));
+
+// "Price by Colour": { black: "25000", grey: "24000" } sets the price of every combination with that colour.
+export const setPricesByAxis = (options, axisKey, prices = {}) => mapSold(options, (r) => {
+  const n = amount(prices[r.choice[axisKey]]);
+  return n === null ? r : { ...r, price: priceText(n) };
+});
+
+// Storage sets the base, colour adds or removes money: price = base[storage] + diff[colour]. A diff may be negative ("-1000").
+export const setBasePlusDifference = (options, { baseAxis, diffAxis, base = {}, diff = {} }) => mapSold(options, (r) => {
+  const b = amount(base[r.choice[baseAxis]]);
+  if (b === null) return r;
+  const raw = clean(diff[r.choice[diffAxis]]);
+  const d = raw === "" ? 0 : /^-?\d{1,10}(\.\d{1,2})?$/.test(raw) ? Number(raw) : null;
+  if (d === null || b + d <= 0) return r;
+  return { ...r, price: priceText(b + d) };
+});
+
+// A plain warning (never a block) for a price far from the rest: 2,400 typed instead of 24,000. Keyed by combination.
+export const priceWarnings = (options) => {
+  const rows = liveRows(options).filter((r) => r.sold && amount(r.price) !== null && amount(r.price) > 0);
+  if (rows.length < 3) return {};
+  const sorted = rows.map((r) => amount(r.price)).sort((a, b) => a - b);
+  const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+  const out = {};
+  for (const r of rows) {
+    const n = amount(r.price);
+    const key = rowKeyOf(options, r.choice);
+    if (n * 5 <= mid) out[key] = `This is far below the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
+    else if (n >= mid * 5) out[key] = `This is far above the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
+  }
+  return out;
 };

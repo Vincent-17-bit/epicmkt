@@ -277,3 +277,54 @@ test("an axis made with Your own takes its key from the first name typed, and it
   assert.equal(renameAxis(saved, "capacity", "Space").axes[0].key, "capacity", "a saved axis keeps its key");
   assert.ok(!("auto" in optionsPayload(o).axes[0]), "the flag is never sent");
 });
+
+// ---- type axes, scales and price tools ----
+import { addTypeAxes, setSamePrice, setPricesByAxis, setBasePlusDifference, priceWarnings } from "./editor.js";
+
+test("a type's usual options are added in one step, skipping ones already there and respecting the limit", () => {
+  const defs = [{ key: "colour", label: "Colour", display: "swatch" }, { key: "storage", label: "Storage", display: "button", scale: "storage" }];
+  const r = addTypeAxes(emptyOptionsForm(), defs);
+  assert.equal(r.added, 2);
+  assert.equal(r.options.axes[1].scale, "storage");
+  assert.ok(!("scale" in optionsPayload(addValue(r.options, "storage", "128 GB").options, true).axes[1]), "the scale is form-only");
+  assert.equal(addTypeAxes(r.options, defs).added, 0);
+  assert.equal(addTypeAxes(emptyOptionsForm(), defs, effectiveLimits({ axes: 1 })).added, 1);
+});
+
+const priced = () => build([["Storage", "button", ["128 GB", "256 GB", "512 GB"]], ["Colour", "swatch", ["Black", "Grey", "Blue"]]]);
+const priceOf = (o, k) => o.rows.find((r) => rowKeyOf(o, r.choice) === k).price;
+
+test("same price for all fills every combination on sale and skips Not sold ones", () => {
+  let o = setSold(priced(), "storage=128-gb|colour=blue", false);
+  o = setSamePrice(o, "1,500");
+  assert.equal(priceOf(o, "storage=256-gb|colour=grey"), "1500");
+  assert.equal(priceOf(o, "storage=128-gb|colour=blue"), "");
+  assert.equal(setSamePrice(o, "abc"), o);
+});
+
+test("price by one option sets each value's price across the rest", () => {
+  const o = setPricesByAxis(priced(), "colour", { black: "25000", grey: "24000" });
+  assert.equal(priceOf(o, "storage=512-gb|colour=black"), "25000");
+  assert.equal(priceOf(o, "storage=512-gb|colour=grey"), "24000");
+  assert.equal(priceOf(o, "storage=512-gb|colour=blue"), "", "a value left blank is untouched");
+});
+
+test("base + difference: storage sets the base, Grey is 1,000 cheaper, and the result is stored as the absolute price", () => {
+  const o = setBasePlusDifference(priced(), { baseAxis: "storage", diffAxis: "colour", base: { "128-gb": "22000", "256-gb": "25000", "512-gb": "30000" }, diff: { grey: "-1000" } });
+  assert.equal(priceOf(o, "storage=128-gb|colour=black"), "22000");
+  assert.equal(priceOf(o, "storage=256-gb|colour=grey"), "24000");
+  assert.equal(priceOf(o, "storage=512-gb|colour=grey"), "29000");
+  assert.equal(optionsPayload(o).variants.find((v) => v.choice.storage === "256-gb" && v.choice.colour === "grey").price, 24000);
+  const bad = setBasePlusDifference(priced(), { baseAxis: "storage", diffAxis: "colour", base: { "128-gb": "500" }, diff: { grey: "-900" } });
+  assert.equal(priceOf(bad, "storage=128-gb|colour=grey"), "", "a result at or below zero is not applied");
+});
+
+test("a price far from the others gets a plain warning, not an error", () => {
+  let o = setBasePlusDifference(priced(), { baseAxis: "storage", diffAxis: "colour", base: { "128-gb": "22000", "256-gb": "25000", "512-gb": "30000" }, diff: {} });
+  assert.deepEqual(priceWarnings(o), {});
+  o = setRow(o, "storage=128-gb|colour=black", { price: "2400" });
+  const w = priceWarnings(o);
+  assert.deepEqual(Object.keys(w), ["storage=128-gb|colour=black"]);
+  assert.match(w["storage=128-gb|colour=black"], /far below/);
+  assert.equal(checkOptions(o).ok, true, "a warning never blocks a save");
+});

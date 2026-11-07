@@ -3,6 +3,6 @@
 // options saves, drafts and compares exactly as before (it is not in emptyItemForm()).
 export const optionsSlice = {
   id: "options",
-  keys: ["options"],
+  keys: ["options", "customSize"],
   reduce: () => undefined,
 };

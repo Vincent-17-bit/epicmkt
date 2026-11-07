@@ -220,5 +220,7 @@ Entry format:
 ## B07: Options step and dependent options editor (Prompts 3.2, 3.3)
 
 - New `shared/src/options/editor.js`, exported from `@epicmkt/shared`: `emptyOptionsForm`, axis/value/row operations, `dependentSets` and friends, `summarize`/`summaryText`, `checkOptions`, `optionsFromServer`, `optionsPayload`, `effectiveLimits`/`limitMessage`. No contract shape changed: the save still sends `options: { axes, variants, defaultChoice }` as in migration 0086.
-- Seller editor: the Options step is live (`steps/OptionsStep.jsx`, `steps/options/*`). Stand-ins: `TODO(contract:A06)` type `axes`, `TODO(contract:B6a)` plan caps (`planLimits.options`).
-- Not built (optional, Prompts 3.4 and 3.7): custom size.
+- Seller editor: the Options step is live (`steps/OptionsStep.jsx`, `steps/options/*`): axes, combinations, dependent lists, "Fill prices faster" (same price, by one option, base + difference) and plain price-typo warnings. Prices are always stored per combination.
+- Type axes: a product type's `axes` (`{ key, label, display, scale? }`) give a one-tap "Use the usual options" start; values on a scale axis go through `scales.parse/format`. Seller fixtures (`AddItem.fixtures.js`) now carry axes for Dress, Shoes, Perfume and Phone. `TODO(contract:A06)` until the real `seller_product_types` returns them.
+- Plan caps: the subscription's `limits[planKey].options` (`{ axes, values, variants }`) can lower the hard limits (3 / 40 / 200); the mock sends them for both plans. Missing means the hard limits.
+- Custom size (Prompts 3.4 and 3.7): `shared/src/options/customSize.js`, `client/src/components/item/CustomSize.jsx`, `steps/options/CustomSizeEditor.jsx`, all tested but OFF (`CUSTOM_SIZE_STORED = false`) until the data layer stores `customSize`: see `docs/requests/2026-11-07-b07-to-data-custom-size-storage.md`.

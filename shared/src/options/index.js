@@ -14,3 +14,4 @@ export * from "./capacity.js";
 export * from "./specs.js";
 export * from "./selection.js";
 export * from "./editor.js";
+export * from "./customSize.js";

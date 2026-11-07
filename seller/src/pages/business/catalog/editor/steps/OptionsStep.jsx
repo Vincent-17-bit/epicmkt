@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { AXIS_PRESETS, addAxis, canAddAxis, effectiveLimits, emptyOptionsForm, limitMessage, removeAxis } from "@epicmkt/shared";
+import { AXIS_PRESETS, CUSTOM_SIZE_STORED, addAxis, addTypeAxes, canAddAxis, effectiveLimits, emptyOptionsForm, limitMessage, removeAxis } from "@epicmkt/shared";
 import { SectionCard } from "../parts.jsx";
 import { useProductTypes } from "./useProductTypes.js";
 import AxisCard from "./options/AxisCard.jsx";
+import CustomSizeEditor from "./options/CustomSizeEditor.jsx";
 import Combinations, { SummaryTiles } from "./options/Combinations.jsx";
 import ed from "../editor.module.css";
 import s from "./options/options.module.css";
@@ -12,14 +13,14 @@ import s from "./options/options.module.css";
 // Item options: colours, sizes, storage, styles. Axes come from the product type; every combination has its own price and stock.
 // Items with no options never see this step (see steps/index.js), and saving without touching it changes nothing.
 export default function OptionsStep({ form, patch, errors }) {
-  const { types, business } = useProductTypes();
+  const { types, planLimits } = useProductTypes();
   const [said, setSaid] = useState("");
   const options = form.options ?? emptyOptionsForm();
   const set = (next) => patch("options", next);
-  // TODO(contract:B6a) the plan's caps on options, once the subscription returns them. Until then the hard limits apply.
-  const limits = effectiveLimits(business?.planLimits?.options);
+  const limits = effectiveLimits(planLimits);
   const type = types.find((t) => t.id === form.productTypeId);
-  // TODO(contract:A06) a type's own axes ({ key, label, display }) once seller_product_types returns them; the common ones until then.
+  // A type's own axes ({ key, label, display, scale? }) when it has them, the common ones otherwise. TODO(contract:A06) real types carry axes.
+  const typeAxes = Array.isArray(type?.axes) ? type.axes : [];
   const presets = (Array.isArray(type?.axes) && type.axes.length ? type.axes : AXIS_PRESETS).filter((p) => !options.axes.some((a) => a.label.toLowerCase() === p.label.toLowerCase()));
   const found = errors?.options ?? {};
   const roomForAxis = canAddAxis(options, limits);
@@ -36,6 +37,12 @@ export default function OptionsStep({ form, patch, errors }) {
           <div className={s.start}>
             <p className={s.startTitle}><FontAwesomeIcon icon={faLayerGroup} aria-hidden="true" /> What do buyers choose?</p>
             <p className={s.startText}>Pick one to start. You can add up to {limits.axes} option types, each with up to {limits.values} values.</p>
+            {typeAxes.length > 0 && (
+              <button type="button" className={`${s.pill} ${s.pillPrimary}`} style={{ justifySelf: "start" }}
+                onClick={() => { const r = addTypeAxes(options, typeAxes, limits); set(r.options); setSaid(`${r.added} option ${r.added === 1 ? "type" : "types"} added for ${type.name}.`); }}>
+                <FontAwesomeIcon icon={faPlus} aria-hidden="true" />Use the usual options for {type.name} ({typeAxes.map((a) => a.label).join(", ")})
+              </button>
+            )}
             <ul className={s.presets}>
               {presets.map((p) => <li key={p.label}><button type="button" className={s.pill} onClick={() => start(p)}><FontAwesomeIcon icon={faPlus} aria-hidden="true" />{p.label}</button></li>)}
               <li><button type="button" className={`${s.pill} ${s.pillPrimary}`} onClick={() => start({ label: "", display: "button" })}>Your own</button></li>
@@ -61,6 +68,7 @@ export default function OptionsStep({ form, patch, errors }) {
             </div>
             <SummaryTiles options={options} itemPrice={itemPrice} />
             <Combinations options={options} set={set} errors={found} announce={setSaid} itemPrice={itemPrice} />
+            {CUSTOM_SIZE_STORED && <CustomSizeEditor options={options} config={form.customSize} set={(v) => patch("customSize", v)} errors={found} announce={setSaid} />}
           </>
         )}
       </div>

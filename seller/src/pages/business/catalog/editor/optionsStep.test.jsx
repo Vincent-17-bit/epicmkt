@@ -10,7 +10,7 @@ import { signedInApp } from "../../../../test/utils.jsx";
 import { visibleSteps } from "./steps/index.js";
 import OptionsStep from "./steps/OptionsStep.jsx";
 
-vi.mock("./steps/useProductTypes.js", () => ({ useProductTypes: () => ({ types: [], business: window.__plan ?? {}, departments: [], loading: false, error: false, retry() {} }) }));
+vi.mock("./steps/useProductTypes.js", () => ({ useProductTypes: () => ({ types: window.__types ?? [], planLimits: window.__plan, departments: [], loading: false, error: false, retry() {} }) }));
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
 
 function Harness({ initial = {}, spy }) {
@@ -24,8 +24,8 @@ const addValues = async (user, axisName, text) => {
   const group = screen.getByRole("group", { name: `Values for ${axisName}` });
   await user.type(within(group).getByLabelText("Add a value"), `${text}{Enter}`);
 };
-beforeEach(() => { window.__plan = undefined; });
-afterEach(() => { window.__plan = undefined; });
+beforeEach(() => { window.__plan = undefined; window.__types = undefined; });
+afterEach(() => { window.__plan = undefined; window.__types = undefined; });
 
 describe("steps registry", () => {
   it("shows the step only for a typed item or one that has options", () => {
@@ -69,7 +69,7 @@ describe("Options step", () => {
   });
 
   it("shows the value limit as a friendly counter and message, and the plan limit when the plan caps it", async () => {
-    window.__plan = { planLimits: { options: { values: 2 } } };
+    window.__plan = { values: 2 };
     const { user } = setup();
     await addAxis(user, "Size");
     await addValues(user, "Size", "S, M");
@@ -103,6 +103,48 @@ describe("Options step", () => {
     await addAxis(user, "Storage");
     await addValues(user, "Storage", "128 GB");
     expect((await axe(container)).violations).toEqual([]);
+  });
+});
+
+describe("type axes, scales and price tools", () => {
+  const phone = { id: "pt-phone", name: "Phone", axes: [{ key: "colour", label: "Colour", display: "swatch" }, { key: "storage", label: "Storage", display: "button", scale: "storage" }] };
+
+  it("starts a typed item with the type's usual options in one tap", async () => {
+    window.__types = [phone];
+    const { user, spy } = setup({ productTypeId: "pt-phone" });
+    await user.click(screen.getByRole("button", { name: /Use the usual options for Phone \(Colour, Storage\)/ }));
+    expect(spy.current.options.axes.map((a) => a.label)).toEqual(["Colour", "Storage"]);
+  });
+
+  it("reads storage values the one shared way and explains one it cannot read", async () => {
+    window.__types = [phone];
+    const { user, spy } = setup({ productTypeId: "pt-phone" });
+    await user.click(screen.getByRole("button", { name: /Use the usual options/ }));
+    await addValues(user, "Storage", "128gb, 1024 GB, 64");
+    expect(spy.current.options.axes[1].values.map((v) => v.label)).toEqual(["128 GB", "1 TB"]);
+    expect(screen.getByText(/Add a unit to 64/)).toBeInTheDocument();
+  });
+
+  it("fills prices with base + difference, and warns about a typo without blocking", async () => {
+    const { user, spy } = setup();
+    await addAxis(user, "Storage");
+    await addValues(user, "Storage", "128 GB, 256 GB, 512 GB");
+    await addAxis(user, "Colour");
+    await addValues(user, "Colour", "Black, Grey");
+    await user.click(screen.getByText("Fill prices faster"));
+    await user.selectOptions(screen.getByLabelText("How do you want to price?"), "diff");
+    await user.type(screen.getByLabelText("128 GB (KES)"), "22000");
+    await user.type(screen.getByLabelText("256 GB (KES)"), "25000");
+    await user.type(screen.getByLabelText("512 GB (KES)"), "30000");
+    await user.type(screen.getByLabelText("Grey (KES, such as -1000)"), "-1000");
+    await user.click(screen.getByRole("button", { name: "Fill the prices" }));
+    expect(screen.getByLabelText("256 GB / Grey price")).toHaveValue("24000");
+    expect(screen.getByText("from KES 21,000", { exact: false })).toBeInTheDocument();
+    const box = screen.getByLabelText("128 GB / Black price");
+    await user.clear(box);
+    await user.type(box, "2400");
+    expect(screen.getByText(/far below the others/)).toBeInTheDocument();
+    expect(spy.current.options.rows.length).toBe(6);
   });
 });
 

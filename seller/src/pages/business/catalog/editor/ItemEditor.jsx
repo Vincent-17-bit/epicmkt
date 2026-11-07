@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { checkOptions, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateItemForm } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, checkOptions, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -221,8 +221,11 @@ function EditorForm({ item, sections, category, business }) {
     if (busyRef.current) return;
     const check = validateItemForm(form);
     const optionsCheck = checkOptions(form.options);
-    if (!check.ok || !optionsCheck.ok) {
-      const found = { ...(check.ok ? {} : check.errors), ...(optionsCheck.ok ? {} : { options: optionsCheck.errors }) };
+    // Made to measure is checked only where the data layer can keep it (docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
+    const customCheck = CUSTOM_SIZE_STORED ? validateCustomSize(form.customSize) : { ok: true, errors: {} };
+    const optionErrors = { ...(optionsCheck.ok ? {} : optionsCheck.errors), ...Object.fromEntries(Object.entries(customCheck.errors).map(([k, v]) => [`custom.${k}`, v])) };
+    if (!check.ok || Object.keys(optionErrors).length) {
+      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}) };
       setErrors(found);
       setNotice(null);
       const target = firstErrorTarget(found);
@@ -240,7 +243,7 @@ function EditorForm({ item, sections, category, business }) {
       const fields = brand ? { ...check.value, brand } : check.value;   // empty brand: the form's own value, as before
       // B07: `options` goes along only for an item that has (or had) options, so every other item saves exactly as before.
       const options = optionsPayload(form.options, hadOptions.current);
-      const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }) };
+      const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await api.saveItem(item?.id ?? null, body);
       await linkBrand(id, valueId, !!item?.brand);
       const { problems, leftover } = await media.flush(id);

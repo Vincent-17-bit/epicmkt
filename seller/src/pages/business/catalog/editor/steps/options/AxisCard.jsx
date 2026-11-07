@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { DISPLAYS, OPTION_LIMITS, addValue, canAddValue, dependencyChoices, limitMessage, moveValue, removeValue, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
+import { scales, DISPLAYS, OPTION_LIMITS, addValue, canAddValue, dependencyChoices, limitMessage, moveValue, removeValue, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
 import DependentEditor from "./DependentEditor.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
@@ -29,7 +29,14 @@ export default function AxisCard({ options, index, set, limits, announce, onRemo
     let next = options;
     const added = [];
     let problem = "";
-    for (const p of parts) {
+    for (const raw of parts) {
+      // An axis tied to a scale (Storage, clothing size) reads what was typed the one shared way: "128gb" -> "128 GB", "1024 GB" -> "1 TB".
+      let p = raw;
+      if (axis.scale) {
+        const read = scales.parse(axis.scale, raw, {});
+        if (!read.ok) { problem = read.error.message; continue; }
+        p = scales.format(read.value);
+      }
       const r = addValue(next, axis.key, p, {}, limits);
       if (r.error === "duplicate") { problem = `${r.existing.label} is already listed.`; continue; }
       if (r.error) { problem = ERRORS[r.error] ?? limitMessage(r.error, limits, r.plan); break; }

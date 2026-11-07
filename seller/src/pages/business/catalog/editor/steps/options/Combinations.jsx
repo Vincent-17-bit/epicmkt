@@ -1,5 +1,6 @@
 import { useId } from "react";
-import { formatKes as kes, liveRows, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
+import { formatKes as kes, liveRows, priceWarnings, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
+import PriceTools from "./PriceTools.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
 
@@ -27,6 +28,7 @@ export default function Combinations({ options, set, errors = {}, announce, item
   const rows = liveRows(options);
   if (rows.length === 0) return null;
   const sum = summarize(options, itemPrice);
+  const warn = priceWarnings(options);
   return (
     <section className={s.stack} aria-labelledby={`${uid}-h`}>
       <div className={s.comboHead}>
@@ -36,6 +38,7 @@ export default function Combinations({ options, set, errors = {}, announce, item
       <p className={s.hint}>
         Leave a price empty to use the item price{itemPrice ? ` (KES ${itemPrice})` : ""}. Leave stock empty if you do not count it; at 0 the combination shows as sold out.
       </p>
+      <PriceTools options={options} set={set} announce={announce} />
       {errors.rows && <p className={ed.error} data-focus="opt-rows" tabIndex={-1}>{errors.rows}</p>}
       <ul className={s.combos}>
         {rows.map((r) => {
@@ -58,6 +61,7 @@ export default function Combinations({ options, set, errors = {}, announce, item
                 {cell("price", "Price", { inputMode: "decimal", placeholder: itemPrice ? String(itemPrice) : "" })}
                 {cell("salePrice", "Sale price", { inputMode: "decimal" })}
                 {cell("stock", "Stock", { inputMode: "numeric", maxLength: 6 })}
+                {warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}
                 {err("specs") && <span className={s.cellError} role="alert">{err("specs")}</span>}
               </div>
               <div className={s.comboFoot}>
