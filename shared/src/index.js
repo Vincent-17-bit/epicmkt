@@ -57,3 +57,6 @@ export { measureTotal, measuredMessage, measuredLine, amountText, formatAmount, 
 
 // Quantity tier pricing.
 export * from "./pricing/tiers.js";
+
+// Flash sale per combination.
+export * from "./flash/validateFlashVariants.js";
