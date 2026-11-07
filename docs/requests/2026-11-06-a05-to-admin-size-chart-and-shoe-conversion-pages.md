@@ -5,7 +5,7 @@
 - Contract: v1, A05 entry in docs/contracts/CHANGES.md
 
 ## Need
-Two admin screens, using functions that already exist after migration 0092:
+Two admin screens, using functions that already exist after migration 0093:
 
 1. Size charts: list, create, edit, delete. `admin_size_charts_list()` (rows now include `product_type_ids`), `admin_save_size_chart(id, fields)` where
    `fields` is `{name, category, unit, columns, rows, active, product_type_ids}` (an absent `product_type_ids` changes nothing; `[]` releases every type), `admin_delete_size_chart(id)`.

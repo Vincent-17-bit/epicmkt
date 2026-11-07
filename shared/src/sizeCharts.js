@@ -3,7 +3,7 @@
 //   * shoeChartFrom(row) / cleanShoeConversion  the stored conversion chart <-> the shape A02's shoe scale reads (SHOE_CHART)
 //   * shoeTable(chart, audience)                the buyer-facing rows for a men's, women's or kids' shoe size table
 //   * pickSizeChart({item, type, charts})       which chart a buyer sees: the item's own, else the one its product type points at, else its category's
-//   * SEED_SIZE_CHARTS                          the charts migration 0092 seeds (a DB test keeps the two equal)
+//   * SEED_SIZE_CHARTS                          the charts migration 0093 seeds (a DB test keeps the two equal)
 // A02 owns the shoe scale and the chart's default data (shared/src/scales/shoeChart.js). This file never re-implements their maths.
 import { parse } from "./scales/index.js";
 import { shoeFromCm, shoeToCm } from "./scales/shoe.js";
@@ -126,7 +126,7 @@ export function pickSizeChart({ item = {}, type = null, charts = [] } = {}) {
 }
 
 const SIZE_ROWS = (rows, key) => rows.map((r) => [String(r.eu), String(r.uk), String(r[key]), String(r.cm)]);
-/** The five charts migration 0092 seeds. Shoe charts are built from A02's SHOE_CHART so the numbers have one source.
+/** The five charts migration 0093 seeds. Shoe charts are built from A02's SHOE_CHART so the numbers have one source.
  *  productTypeIds are the types a chart is the default for (attach_default_size_charts): a type has ONE default chart, so the two shoe charts name none;
  *  a seller picks men's or women's per item (items.size_chart_id). */
 export const SEED_SIZE_CHARTS = Object.freeze([

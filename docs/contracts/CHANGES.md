@@ -189,7 +189,7 @@ Entry format:
 
 ## 2026-11-06 - A05: size charts by product type, and the shoe conversion chart (Lane A)
 
-- Migration `0092_size_chart_types_shoe_conversion.sql`. Nothing from A04 (`0086`) or A08 (`0091`) is removed or renamed.
+- Migration `0093_size_chart_types_shoe_conversion.sql`. Nothing from A04 (`0086`) or A08 (`0091`) is removed or renamed.
   - The link between a type and its chart is the contract's `ProductType.sizeChartId`, stored in `product_types.size_chart_id` (A08 added the column and
     `seller_product_types` already returns it). A05 adds the foreign key (`on delete restrict`). A type has ONE default chart; an item can still pick any chart
     (`items.size_chart_id`) and override its rows (`items.size_chart_override`).
