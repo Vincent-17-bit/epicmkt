@@ -216,3 +216,27 @@ Entry format:
   - Admin lane: pages for charts and the shoe chart (`docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`).
   - Lane A (A06): `admin_save_product_type` should keep `size_chart_id` (or leave it alone); call `pickSizeChart` in `items.getDetail`; use `convertShoe` to show a size in the buyer's system.
   - Edge functions: `shared/src/sizeCharts.js` is not synced; add the `sizeCharts.js` and `seller/options.js` entries to `scripts/sync-shared.mjs` when a function needs them.
+## 2026-11-07 A-tiers: Quantity tier pricing (tiers.js, migration 0094, seller_save_item)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, quantity tier pricing prompt
+- What changed:
+  - `shared/src/pricing/tiers.js`, exported from `@epicmkt/shared`: `validateTiers(tiers, mode)`, `priceTiered({tiers, mode, qty, adjust})`, `nextTierHint`, `priceFor(item, selection, qty, now)`, `toMinor`, `kesText`, `TIER_MODES`, `TIER_LIMITS`.
+  - Tiers keep the contract shape `{minQty, maxQty, unitPrice}`; the mode is stored beside them: `whole` (the tier price applies to every unit) or `graduated` (each band at its own price).
+  - Migration `0094_price_tiers.sql`: `items.price_tiers`, `items.price_tier_mode` (default `whole`), `item_variants.price_tiers`; `price_tiers_valid(jsonb)`; `seller_save_item` is wrapped again (the 0091 text is now `seller_save_item_typed`, no browser grant).
+  - `seller_save_item` accepts `priceTiers` (list or null), `priceTierMode`, and `options.variants[].priceTiers`. Key absent = leave alone; null = clear. Errors: `invalid_price_tiers`, `tiers_need_from_price`, `item_in_flash_sale`.
+  - `priceFor` returns `{unit, total, was, source: regular|sale|tier|flash, bands, next}` in integer minor units (KES x 100). `next.text` is the hint, e.g. "Add 3 more for KES 7 each".
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - Prices must be above 0 with at most 2 decimals (the contract validator allowed 0); at most 10 tiers; quantities up to 1,000,000; no extra keys on a tier; `maxQty` must be present (null on the last tier).
+  - The mode belongs to the item; a variant's own tiers use the item's mode.
+  - An item with tiers (or with tiers on any combination) must be priced `from`, as the contract validator already says for items.
+  - Tiers cannot change while the item is in a scheduled or live flash sale (same rule as price).
+  - Flash with tiers: a percent or amount off is taken from each tier unit price; a flash sale price never raises a tier price. A sale price on the item is ignored when tiers exist.
+  - Graduated `unit` is the rounded average per unit; `marginal` is the last band's price; `total` is exact.
+  - There is no save edge function; the save is SQL, so `supabase/functions/**` is unchanged. SQL and JS validation are kept equal by `supabase/tests/price-tiers.test.mjs`.
+  - `priceFor` reads `item.flash` / `variant.flash` as `{discountType, discountValue, startsAt, endsAt}`; `TODO(contract:flash-variants)` marks it until the per-variant flash payload lands.
+- Who must act:
+  - Seller lane: send `priceTiers` and `priceTierMode` from the editor.
+  - Whoever builds `items.getDetail`: return `priceTiers`, `priceTierMode` and each variant's `priceTiers`.
+  - `seller_duplicate_item` does not copy tiers yet; `seller_check_item` does not report tier issues yet.
+- Request files: none
