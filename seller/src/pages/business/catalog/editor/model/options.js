@@ -1,7 +1,8 @@
-// Slice "options": owns no form keys yet. B07 fills it and moves variants here. TODO(contract:B07)
+// Slice "options" (B07): owns the one `options` key, { axes, rows, defaultKey } (see shared/src/options/editor.js).
+// The key exists on the form only for an item that went through the type picker or already has options, so an item with no
+// options saves, drafts and compares exactly as before (it is not in emptyItemForm()).
 export const optionsSlice = {
   id: "options",
-  keys: [],
-  // Optional: handle slice-specific actions. Return the next form, or undefined to fall through to the default patch.
+  keys: ["options"],
   reduce: () => undefined,
 };

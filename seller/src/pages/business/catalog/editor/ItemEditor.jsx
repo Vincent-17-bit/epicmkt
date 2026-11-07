@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { emptyItemForm, formFromItem, formatDateTime, validateItemForm } from "@epicmkt/shared";
+import { checkOptions, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -89,6 +89,20 @@ function EditorForm({ item, sections, category, business }) {
   const baseRef = useRef(startRef.current.base);
   const { form, patch, replace } = useItemModel(startRef.current.form);
   const [restoredAt, setRestoredAt] = useState(startRef.current.restoredAt);
+  // B07: an existing item's options come from their own read (axes, variants and stock counts). They join the form, and the starting
+  // point the unsaved-changes check compares with, in one step, so loading them never shows as an edit.
+  const hadOptions = useRef(false);
+  const optionsRead = useQuery({ queryKey: ["itemOptions", item?.id], queryFn: () => api.getItemOptions(item.id), enabled: Boolean(item), retry: 1, staleTime: 0, gcTime: 0 });
+  const optionsLoaded = useRef(false);
+  useEffect(() => {
+    if (optionsLoaded.current || !optionsRead.data) return;
+    optionsLoaded.current = true;
+    const loaded = optionsFromServer(optionsRead.data);
+    if (loaded.axes.length === 0) return;
+    hadOptions.current = true;
+    baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), options: loaded });
+    if (!form.options) patch("options", loaded);
+  }, [optionsRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(null);
@@ -206,10 +220,12 @@ function EditorForm({ item, sections, category, business }) {
   const save = useCallback(async ({ stay }) => {
     if (busyRef.current) return;
     const check = validateItemForm(form);
-    if (!check.ok) {
-      setErrors(check.errors);
+    const optionsCheck = checkOptions(form.options);
+    if (!check.ok || !optionsCheck.ok) {
+      const found = { ...(check.ok ? {} : check.errors), ...(optionsCheck.ok ? {} : { options: optionsCheck.errors }) };
+      setErrors(found);
       setNotice(null);
-      const target = firstErrorTarget(check.errors);
+      const target = firstErrorTarget(found);
       if (target) goTo(target.step, target.focus);
       return;
     }
@@ -222,7 +238,10 @@ function EditorForm({ item, sections, category, business }) {
       // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
       const { brand, valueId } = await settleBrand(form);   // A18: one dictionary value per brand, however it was typed
       const fields = brand ? { ...check.value, brand } : check.value;   // empty brand: the form's own value, as before
-      const id = await api.saveItem(item?.id ?? null, "productTypeId" in form ? { ...fields, productTypeId: form.productTypeId } : fields);
+      // B07: `options` goes along only for an item that has (or had) options, so every other item saves exactly as before.
+      const options = optionsPayload(form.options, hadOptions.current);
+      const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }) };
+      const id = await api.saveItem(item?.id ?? null, body);
       await linkBrand(id, valueId, !!item?.brand);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
@@ -250,7 +269,16 @@ function EditorForm({ item, sections, category, business }) {
         return;
       }
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
-      const next = fresh ? formFromItem(fresh) : form;
+      let next = fresh ? formFromItem(fresh) : form;
+      if (fresh) {
+        // formFromItem knows nothing of the type or the options: carry them over, re-reading the options so ids and stock are the saved ones.
+        if ("productTypeId" in form) next = { ...next, productTypeId: form.productTypeId };
+        if (form.options) {
+          const again = optionsFromServer(await api.getItemOptions(id));
+          hadOptions.current = again.axes.length > 0;
+          if (again.axes.length > 0) next = { ...next, options: again };
+        }
+      }
       baseRef.current = JSON.stringify(next);
       replace(next);
       setNotice(result);

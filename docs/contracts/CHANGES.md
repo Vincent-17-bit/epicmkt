@@ -216,3 +216,9 @@ Entry format:
   - Admin lane: pages for charts and the shoe chart (`docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`).
   - Lane A (A06): `admin_save_product_type` should keep `size_chart_id` (or leave it alone); call `pickSizeChart` in `items.getDetail`; use `convertShoe` to show a size in the buyer's system.
   - Edge functions: `shared/src/sizeCharts.js` is not synced; add the `sizeCharts.js` and `seller/options.js` entries to `scripts/sync-shared.mjs` when a function needs them.
+
+## B07: Options step and dependent options editor (Prompts 3.2, 3.3)
+
+- New `shared/src/options/editor.js`, exported from `@epicmkt/shared`: `emptyOptionsForm`, axis/value/row operations, `dependentSets` and friends, `summarize`/`summaryText`, `checkOptions`, `optionsFromServer`, `optionsPayload`, `effectiveLimits`/`limitMessage`. No contract shape changed: the save still sends `options: { axes, variants, defaultChoice }` as in migration 0086.
+- Seller editor: the Options step is live (`steps/OptionsStep.jsx`, `steps/options/*`). Stand-ins: `TODO(contract:A06)` type `axes`, `TODO(contract:B6a)` plan caps (`planLimits.options`).
+- Not built (optional, Prompts 3.4 and 3.7): custom size.
