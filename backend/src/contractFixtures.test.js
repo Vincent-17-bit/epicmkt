@@ -37,6 +37,30 @@ test("items.getList serves all 14 fixtures as valid list cards, filters by type 
   assert.equal((await getItemList({ businessId: "fixture-store" })).total, 14);
 });
 
+test("items.getList cards carry the price range fields", async () => {
+  const by = Object.fromEntries((await getItemList()).items.map((c) => [c.id, c]));
+  const pick = (c) => [c.priceMin, c.priceMax, c.hasPriceRange, c.hasOptions, c.productTypeId, c.has3d];
+  assert.deepEqual(pick(by["fx-legacy"]), [1500, 1500, false, false, null, false]);
+  assert.deepEqual(pick(by["fx-phone"]), [24000, 25000, true, true, "phone", false]);
+  assert.deepEqual(pick(by["fx-printing"]), [10, 40, true, true, "printing", false]);
+  assert.deepEqual(pick(by["fx-sandisk"]).slice(0, 3), [by["fx-sandisk"].priceMin, by["fx-sandisk"].priceMax, true]);
+  for (const c of Object.values(by)) assert.ok(c.priceMin !== null && c.priceMin <= c.priceMax, c.id);
+  assert.ok(Object.values(by).every((c) => c.departmentId === null));
+});
+
+test("items.getList filters and sorts on priceMin", async () => {
+  const cheap = await getItemList({ maxPrice: 100 });
+  assert.ok(cheap.items.length > 0 && cheap.items.every((c) => c.priceMin <= 100));
+  assert.equal(cheap.total, cheap.items.length);
+  const band = await getItemList({ minPrice: 2000, maxPrice: 3000 });
+  assert.ok(band.items.every((c) => c.priceMin >= 2000 && c.priceMin <= 3000));
+  const asc = (await getItemList({ sort: "price_asc", limit: 50 })).items.map((c) => c.priceMin);
+  assert.deepEqual(asc, [...asc].sort((a, b) => a - b));
+  const desc = (await getItemList({ sort: "price_desc", limit: 50 })).items.map((c) => c.priceMin);
+  assert.deepEqual(desc, [...desc].sort((a, b) => b - a));
+  assert.deepEqual((await getItemList({ sort: "nope" })).items.map((c) => c.id), (await getItemList()).items.map((c) => c.id));
+});
+
 test("items.getRelated finds same-group fixtures, never the item itself", async () => {
   assert.deepEqual((await getRelatedItems("fx-led-bulb")).map((c) => c.id), ["fx-led-strip"]);
   assert.deepEqual((await getRelatedItems("fx-led-strip")).map((c) => c.id), ["fx-led-bulb"]);
