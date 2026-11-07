@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, priceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -346,15 +346,41 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
   }
 }
 
+function priceRangeOf(detail) {
+  const b = priceBounds(detail, now());
+  return { priceMin: b?.min ?? null, priceMax: b?.max ?? null };
+}
+
+// TODO(contract:A-dept) fixtures carry no departmentId on their product type yet, so it is null until they do
+const withListFields = (card, detail) => {
+  const range = priceRangeOf(detail);
+  return {
+    ...card,
+    ...range,
+    hasPriceRange: range.priceMin !== null && range.priceMin < range.priceMax,
+    hasOptions: (detail.options ?? []).length > 0,
+    departmentId: productTypeById(detail.productType)?.departmentId ?? null,
+    productTypeId: detail.productType ?? null,
+    has3d: false
+  };
+};
+
+const LIST_SORTS = {
+  price_asc: (a, b) => (a.priceMin ?? Infinity) - (b.priceMin ?? Infinity),
+  price_desc: (a, b) => (b.priceMin ?? -Infinity) - (a.priceMin ?? -Infinity)
+};
+
 // Contract v1 list: the lean ItemListCard rows of the fixtures, optionally one product type, paged. TODO(contract:W0) the live list
 // returns the same rows; until then the real mock products stay on getAllProducts (their business block has a different shape).
-export async function getItemList({ productType = null, businessId = null, limit = 24, offset = 0 } = {}) {
+export async function getItemList({ productType = null, businessId = null, minPrice = null, maxPrice = null, sort = null, limit = 24, offset = 0 } = {}) {
   await delay();
   runSweep();
   const rows = getFixtures()
     .filter((f) => (productType ? f.productType === productType : true))
     .filter((f) => (businessId ? f.card.businessId === businessId || f.card.businessSlug === businessId : true))
-    .map((f) => f.card);
+    .map((f) => withListFields(f.card, f.detail))
+    .filter((c) => (minPrice === null || (c.priceMin !== null && c.priceMin >= minPrice)) && (maxPrice === null || (c.priceMin !== null && c.priceMin <= maxPrice)));
+  if (LIST_SORTS[sort]) rows.sort(LIST_SORTS[sort]);
   return { items: structuredClone(rows.slice(offset, offset + limit)), total: rows.length };
 }
 
@@ -369,7 +395,7 @@ export async function getRelatedItems(itemId, { limit = 12, origin = null, signa
   if (!group) return [];
   const rows = getFixtures()
     .filter((f) => f.id !== itemId && productTypeById(f.productType)?.group === group)
-    .map((f) => f.card);
+    .map((f) => withListFields(f.card, f.detail));
   return structuredClone(rows.slice(0, limit));
 }
 
