@@ -351,3 +351,11 @@ Entry format:
 - Existing test adjusted: `type-restrictions.test.mjs` retypes a live item to fragrance with a raw update; it now also sets the Authenticity spec the gate requires.
 - Who must act: J01 / 11.1 call `item_check_publish`; the seller editor (5.7) sends `publish` to `seller_check_item` and shows `spec` and `issues`; `seller_bulk_items` could skip blocked items instead of failing the call (see request).
 - Request files: docs/requests/2026-11-12-g05-to-j01-publish-gate-wiring.md
+
+## B09: admin size charts and shoe conversion pages (1.9)
+- Admin page `/admin/size-charts` (`admin/src/pages/catalogue/SizeChartsPage.jsx`): list, create, edit and delete size charts; one editable shoe conversion table;
+  a live preview of what the buyer sees. Uses `admin_size_charts_list`, `admin_save_size_chart`, `admin_delete_size_chart`, `public_shoe_conversion`,
+  `admin_save_shoe_conversion` (migration 0093). Validation is `cleanSizeChart` and `cleanShoeConversion`, the same as the database.
+- Permissions (append-only): `sizes.view` (any admin), `sizes.edit` (owner only, mirrors the database). Nav: Catalogue > Size charts.
+- Closes `docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`.
+- Assumption: the product type picker is a text field of type ids (there is no admin product type list yet; A08 owns it). Swap it for a picker when one exists.

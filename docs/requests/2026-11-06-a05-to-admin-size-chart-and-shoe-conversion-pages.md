@@ -1,7 +1,7 @@
 # A05 to admin: pages to edit size charts (with product types) and the shoe conversion chart
 
 - From: a05      - To: admin      - Date: 2026-11-06
-- Status: open            (open | accepted | done | declined)
+- Status: done            (open | accepted | done | declined)
 - Contract: v1, A05 entry in docs/contracts/CHANGES.md
 
 ## Need

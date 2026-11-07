@@ -3,7 +3,7 @@ import {
   faGear, faGears, faHourglassHalf, faLayerGroup, faShieldHalved, faSitemap, faStore, faUserCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { faTags } from "@fortawesome/free-solid-svg-icons";
+import { faRulerCombined, faTags } from "@fortawesome/free-solid-svg-icons";
 
 // The sidebar, as data. A group's `label` is its section heading; the first group has none.
 export const navGroups = [
@@ -43,6 +43,7 @@ export const navGroups = [
       { label: "Plans", to: "/admin/plans", icon: faLayerGroup, permission: "plans.view" },
       { label: "Categories", to: "/admin/categories", icon: faSitemap, permission: "plans.view" },
       { label: "Open values", to: "/admin/open-values", icon: faTags, permission: "values.view" },
+      { label: "Size charts", to: "/admin/size-charts", icon: faRulerCombined, permission: "sizes.view" },
     ],
   },
   {

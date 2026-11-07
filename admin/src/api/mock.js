@@ -10,6 +10,7 @@ export { getHealthConfig, saveHealthConfig } from "./mockHealth.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
 export { getPlanHistory, listCategories, listPlans, saveCategory, savePlan } from "./mockCatalogue.js";
+export { deleteSizeChart, getShoeConversion, listSizeCharts, saveShoeConversion, saveSizeChart } from "./mockSizeCharts.js";   // A05
 export { approveOptionValue, listOptionValues, mergeOptionValue, renameOptionValue, updateOptionValue } from "./mockValues.js";   // A18
 export {
   cancelBroadcast, deleteTemplate, getAutomationStatus, getMessageDetail, getMessageSummary, getMessagingMode, listMessageLog, listPendingBroadcasts, listTemplates, retryFailedMessages, retryMessage,
