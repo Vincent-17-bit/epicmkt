@@ -54,3 +54,6 @@ export { lineTotal } from "./pricing/money.js";
 // Measured quantity (units | measure | none): normalizeQuantity, checkQuantity, quantityRules, measuredLine, measureTotal.
 export { QUANTITY_MODES, quantityModeOf, quantityRules, checkQuantity, normalizeQuantity, parseAmount } from "./quantity.js";
 export { measureTotal, measuredMessage, measuredLine, amountText, formatAmount, perUnitText } from "./pricing/measure.js";
+
+// Quantity tier pricing.
+export * from "./pricing/tiers.js";
