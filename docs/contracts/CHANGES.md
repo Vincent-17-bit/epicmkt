@@ -186,3 +186,33 @@ Entry format:
   - The buyer filter groups on the brand text in the snapshot, not on the link table, so it also works for items saved before the dictionary existed.
   - `public_option_value_filter` (0090) is not used by the client yet; the snapshot route needs no extra request. It stays available for a standalone brand list.
   - Only Brand is typed-ahead in the seller editor today; material, colour, finish and flavour fields come with product types (A01).
+
+## 2026-11-06 - A05: size charts by product type, and the shoe conversion chart (Lane A)
+
+- Migration `0093_size_chart_types_shoe_conversion.sql`. Nothing from A04 (`0086`) or A08 (`0091`) is removed or renamed.
+  - The link between a type and its chart is the contract's `ProductType.sizeChartId`, stored in `product_types.size_chart_id` (A08 added the column and
+    `seller_product_types` already returns it). A05 adds the foreign key (`on delete restrict`). A type has ONE default chart; an item can still pick any chart
+    (`items.size_chart_id`) and override its rows (`items.size_chart_override`).
+  - `public_size_charts` and `admin_size_charts_list` gain `product_type_ids`, worked out from that column (appended; existing readers are unaffected).
+  - `admin_save_size_chart` accepts `product_type_ids`: it points those types at the chart (a type moves from its old chart) and releases the types left out.
+    An absent key changes nothing; null or `[]` releases all. Error `invalid_type_ids` (a type that does not exist, a repeat, a non-list, more than 20).
+  - `admin_delete_size_chart` also refuses a chart that a type uses (`size_chart_in_use`).
+  - `size_charts_for_type(p_type, p_category default null)`: public. The type's chart; if the type has none, the category's charts that no type uses.
+  - `attach_default_size_charts()` (service role, safe to repeat) points the types `dress` and `shirt` at the seeded charts when they have none.
+  - `shoe_conversion` (one row) holds `{adult: [...], kids: [...]}` in the shape of `shared/src/scales/shoeChart.js`, plus `version`. `public_shoe_conversion`
+    is the public read. `admin_save_shoe_conversion(chart) -> version` is owner only, validated by `shoe_chart_valid`, audited.
+  - Seeds: Dresses and tops (cm), Shirt collar, Men's shoes, Women's shoes, Kids clothes (age), and the default shoe conversion chart.
+- `shared/src/sizeCharts.js`: `convertShoe(value, toSystem, chart?)`, `cleanShoeConversion`, `shoeChartFrom`, `shoeChartRows`, `shoeTable`,
+  `pickSizeChart({item, type, charts})`, `SEED_SIZE_CHARTS`. Exported from the shared barrel. Errors from `convertShoe` use A02's `{code, message}` shape
+  (`unknown-system`, `out-of-range`, `no-equivalent`, plus the shoe scale's own codes for text input).
+- Backend mock: `getSizeChartsForType`, `getShoeConversion`, `saveShoeConversion`. `listSizeCharts` keeps its six keys (the seller app and its test read them).
+- Assumptions (change with a new entry, not by editing this one):
+  - The men's and women's shoe tables are size charts built from the one conversion chart (which stores both US columns in each row, as A02's `SHOE_CHART` does).
+    Because a type has one chart, neither is a type's default; a seller picks one per item.
+  - `dress` and `shirt` are guesses at A06's type ids. A06 should call `select attach_default_size_charts()` after it seeds its types (or set `size_chart_id` itself).
+  - Charts are chosen for a buyer in this order: the item's own `size_chart_id` (with its override), then the type's chart, then the category's chart that no type
+    uses (`pickSizeChart`). A06 applies it in `items.getDetail`.
+- Who must act:
+  - Admin lane: pages for charts and the shoe chart (`docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`).
+  - Lane A (A06): `admin_save_product_type` should keep `size_chart_id` (or leave it alone); call `pickSizeChart` in `items.getDetail`; use `convertShoe` to show a size in the buyer's system.
+  - Edge functions: `shared/src/sizeCharts.js` is not synced; add the `sizeCharts.js` and `seller/options.js` entries to `scripts/sync-shared.mjs` when a function needs them.
