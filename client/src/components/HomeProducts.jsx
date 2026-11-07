@@ -12,6 +12,7 @@ import { Button, Container, Skeleton } from "@epicmkt/ui";
 import ProductTile from "./ProductTile.jsx";
 import FilterSheet from "./FilterSheet.jsx";
 import ProductFilters from "./ProductFilters.jsx";
+import { readShoeSystem } from "../lib/scaleLabels.js";
 import styles from "./HomeProducts.module.css";
 
 // A multiple of 2, 3, 4 and 6 so every row of the grid is full at every screen width.
@@ -66,7 +67,7 @@ export default function HomeProducts() {
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
   const townName = (slug) => towns.find((x) => x.slug === slug)?.name ?? slug;
   const brandName = (slug) => facets.data?.brands?.find((x) => x.slug === slug)?.name ?? slug;
-  const chips = chipsOf(filters, { categoryName, townName, brandName });
+  const chips = chipsOf(filters, { categoryName, townName, brandName, sizeFacets: facets.data?.sizes ?? null, shoeSystem: readShoeSystem() });
 
   const change = (patch) => {
     setParams(writeFilters(params, { ...filters, ...patch }), { replace: true, state: { keepScroll: true } });

@@ -5,6 +5,7 @@
 //   - the browser runs it over a full list only as the fallback when that endpoint is unreachable, and in demo mode.
 // It must stay free of browser, Node and Supabase imports so it runs anywhere.
 import { EMPTY_FILTERS, applyFilters, countsFor, facetsOf } from "./productFilters.js";
+import { sizeFacets } from "./sizeFilters.js";
 
 export const PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 48;
@@ -27,19 +28,20 @@ export function pageOf(products, filters, { page = 1, pageSize = PAGE_SIZE } = {
 // What can be filtered by, over the whole catalogue (it does not shift as filters are chosen).
 export function facetsSummary(products) {
   const f = facetsOf(products);
-  return { total: products.length, categories: f.categories, towns: f.towns, brands: f.brands, price: f.price };
+  return { total: products.length, categories: f.categories, towns: f.towns, brands: f.brands, price: f.price, sizes: sizeFacets(products) };
 }
 
 // Live option counts for the filter sheet, as JSON (Maps become pair lists).
 export function countsSummary(products, filters) {
   const c = countsFor(products, filters);
-  return { categories: [...c.categories], towns: [...c.towns], brands: [...c.brands], flags: c.flags };
+  return { categories: [...c.categories], towns: [...c.towns], brands: [...c.brands], sizes: [...c.sizes], flags: c.flags };
 }
 
 export const countsFromJson = (json) => ({
   categories: new Map(json?.categories ?? []),
   towns: new Map(json?.towns ?? []),
   brands: new Map(json?.brands ?? []),
+  sizes: new Map(json?.sizes ?? []),
   flags: json?.flags ?? {}
 });
 

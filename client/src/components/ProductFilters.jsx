@@ -2,6 +2,8 @@ import { useId, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { SORTS } from "../lib/productFilters.js";
+import { SHOE_SYSTEMS, readShoeSystem, writeShoeSystem } from "../lib/scaleLabels.js";
+import { optionLabel } from "../lib/sizeFilters.js";
 import styles from "./ProductFilters.module.css";
 
 const toggle = (list, value) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -133,6 +135,39 @@ function PriceRange({ filters, bounds, onChange }) {
   );
 }
 
+// A numeric range in the group's display unit (screen inches, metres). Leaving both ends empty clears it.
+function SizeRange({ group, value, onChange }) {
+  const { min = "", max = "" } = value ?? {};
+  const unitName = group.unit === "in" ? "inches" : "metres";
+  const clean = (text) => text.replace(/[^\d.]/g, "").slice(0, 8);
+  const set = (patch) => onChange({ ...{ min, max }, ...patch });
+  const round = (n) => String(Math.round(n * 100) / 100);
+  return (
+    <div className={styles.fields}>
+      <label className={styles.money}>
+        <span className={styles.cur}>{group.unit}</span>
+        <input className={styles.moneyInput} inputMode="decimal" aria-label={`Minimum ${group.title.toLowerCase()} in ${unitName}`} placeholder={round(group.range.min)} value={min} onChange={(e) => set({ min: clean(e.target.value) })} />
+      </label>
+      <span aria-hidden="true" className={styles.dash}>to</span>
+      <label className={styles.money}>
+        <span className={styles.cur}>{group.unit}</span>
+        <input className={styles.moneyInput} inputMode="decimal" aria-label={`Maximum ${group.title.toLowerCase()} in ${unitName}`} placeholder={round(group.range.max)} value={max} onChange={(e) => set({ max: clean(e.target.value) })} />
+      </label>
+    </div>
+  );
+}
+
+// One shoe system for the buyer, shared with the item page (it is remembered on this device).
+function ShoeSwitch({ system, onChange }) {
+  return (
+    <div className={styles.presets} role="group" aria-label="Shoe size system">
+      {SHOE_SYSTEMS.map((s) => (
+        <button key={s.id} type="button" className={styles.preset} aria-pressed={system === s.id} onClick={() => onChange(s.id)}>{s.label}</button>
+      ))}
+    </div>
+  );
+}
+
 const FLAG_ROWS = [
   ["onSale", "On sale"],
   ["flash", "Flash sale"],
@@ -175,6 +210,19 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
     () => brands.map((b) => ({ id: b.slug, name: b.name, count: counts.brands?.get(b.slug) ?? 0 })).sort((a, b) => (totals.brands.get(b.id) ?? 0) - (totals.brands.get(a.id) ?? 0) || a.name.localeCompare(b.name)),
     [brands, counts, totals]
   );
+
+  // Size groups: each scale on its own, so shoe 42 never sits beside dress 42. Rows keep scale order (smallest first), only the numbers move.
+  const [system, setSystem] = useState(() => readShoeSystem());
+  const chooseSystem = (id) => {
+    setSystem(id);
+    writeShoeSystem(id);
+  };
+  const sizeGroups = useMemo(() => facets?.sizes ?? [], [facets]);
+  const sizeCount = (option) => (liveCounts?.sizes ? liveCounts.sizes.get(option.key) ?? 0 : option.count);
+  const setRange = (scale, range) => {
+    const { [scale]: _old, ...rest } = filters.ranges ?? {};
+    onChange({ ranges: range.min === "" && range.max === "" ? rest : { ...rest, [scale]: range } });
+  };
 
   const priceSummary = filters.min || filters.max ? `KES ${filters.min || "0"} – ${filters.max || "any"}` : null;
 
@@ -236,6 +284,28 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
           ))}
         </div>
       </Section>
+
+      {sizeGroups.map((g) => {
+        const picked = filters.sizes.filter((k) => g.options.some((o) => o.key === k)).length;
+        const ranged = filters.ranges?.[g.scale];
+        const summary = g.kind === "range" ? (ranged ? "1 selected" : null) : picked ? `${picked} selected` : null;
+        return (
+          <Section key={g.scale} title={g.title} open={Boolean(picked || ranged)} summary={summary}>
+            {g.scale === "shoe" ? <ShoeSwitch system={system ?? "eu"} onChange={chooseSystem} /> : null}
+            {g.kind === "range" ? (
+              <SizeRange group={g} value={ranged} onChange={(range) => setRange(g.scale, range)} />
+            ) : (
+              <CheckList
+                rows={g.options.map((o) => ({ id: o.key, name: optionLabel(o.value, g.scale === "shoe" ? system ?? "eu" : null), count: sizeCount(o) }))}
+                selected={filters.sizes}
+                onToggle={(key) => onChange({ sizes: toggle(filters.sizes, key) })}
+                limit={8}
+                noun="sizes"
+              />
+            )}
+          </Section>
+        );
+      })}
 
       {brandRows.length > 1 && (
         <Section title="Brand" open={filters.brands.length > 0} summary={filters.brands.length ? `${filters.brands.length} selected` : null}>
