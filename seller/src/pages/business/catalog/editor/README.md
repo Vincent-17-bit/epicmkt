@@ -28,7 +28,7 @@ The saved form is still **one flat object**. The saved payload, the draft kept o
    - `done` decides the tick in the navigation.
 3. If fields in the step can have validation errors, add them to `STEP_OF` and `ERROR_ORDER` in `model.js` so "take me to the first problem" finds them.
 
-The **Options** step is an empty slot between Basics and Price and stock. It is hidden (`visibleWhen: () => false`) and renders nothing until B07 fills it.
+The **Options** step (B07) sits between Basics and Price and stock. It is shown only for an item that went through the type picker or already has options, so every other item sees no new step. Its form key `options` is `{ axes, rows, defaultKey }` (pure rules in `shared/src/options/editor.js`): the combination `rows` are the single source of truth, a `sold: false` row is left out of the save, and a dependent list (Style -> Capacity) is just the `sold` flags per parent value. `ItemEditor` reads an existing item's options with `getItemOptions`, validates with `checkOptions`, and sends `options` only for an item that has or had them.
 
 ## Add a slice
 
