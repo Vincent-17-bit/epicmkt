@@ -36,6 +36,8 @@ export default {
   "sizeChart.custom": "Seller's own measurements",
   "sizeChart.shoeSystem": "Shoe size system",
   "sizeChart.shoeNote": "Charts are retail averages. If you are between sizes, go up.",
+  "item.shoeSystem": "Shoe size system",
+  "item.dimensions": "Dimensions:",
   "item.back": "Item",
   "item.availability.available": "Available",
   "item.availability.limited": "Limited",

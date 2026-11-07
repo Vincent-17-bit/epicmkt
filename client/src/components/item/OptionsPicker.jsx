@@ -1,31 +1,50 @@
-import { useId, useRef } from "react";
+import { useId, useRef, useState } from "react";
 import { OptionCard, OptionSelect } from "@epicmkt/ui";
-import { axisCards, formatCapacityLabel } from "@epicmkt/shared";
+import { axisCards } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import SizeChartLink from "./SizeChartLink.jsx";
 import { kesText } from "../../lib/flash.js";
+import { SHOE_SYSTEMS, readShoeSystem, scaleLabel, shoeHelp, variantDimensions, writeShoeSystem } from "../../lib/scaleLabels.js";
 import styles from "./OptionsPicker.module.css";
 
 // More than this many values in a list that is not made of swatches or photos: a dropdown.
 const DROPDOWN_OVER = 8;
 
 const cardStatus = (card) => (card.available ? "" : card.status === "out_of_stock" ? t("item.optionSoldOut") : t("item.optionUnavailable"));
-// "1024 GB" is read as "1 TB"; everything else is shown as the seller wrote it.
-const valueLabel = (value) => formatCapacityLabel(value.label);
+// Shown from the value's scale when the axis has one ("1024 GB" -> "1 TB", shoes in the buyer's system); else as the seller wrote it.
+const valueLabel = (value, axis, system) => scaleLabel(axis, value, { system });
+// "Size (EU)" would be wrong once the buyer switches to UK, so the system part of a shoe axis's name goes.
+const axisName = (axis, system) => (axis.scale === "shoe" && system ? axis.label.replace(/\s*\((EU|UK|US)[^)]*\)\s*$/i, "") : axis.label);
 
 // The axis a size chart belongs to: the one called Size (or "Shoe size", "Collar size"...). Only that axis gets the link.
 const isSizeAxis = (axis) => /size/i.test(axis.key) || /size/i.test(axis.label);
 
 const photoOf = (item, value) => (value.mediaId ? (item.images ?? []).find((m) => m.id === value.mediaId)?.url ?? "" : "");
 
-function Group({ item, option, axis }) {
+function ShoeSystemSwitch({ system, onChange }) {
+  return (
+    <div className={styles.systems} role="group" aria-label={t("item.shoeSystem")}>
+      {SHOE_SYSTEMS.map((s) => (
+        <button key={s.id} type="button" className={styles.system} aria-pressed={system === s.id} onClick={() => onChange(s.id)}>{s.label}</button>
+      ))}
+    </div>
+  );
+}
+
+function Group({ item, option, axis, system, onSystem }) {
   const headId = useId();
   const refs = useRef(new Map());
   const { values, showPrice } = axisCards(option.axes, option.variants, option.choice, axis.key);
   if (values.length === 0) return null;
 
   const current = option.choice[axis.key];
-  const currentLabel = valueLabel(axis.values.find((v) => v.id === current) ?? { label: "" });
+  const currentValue = axis.values.find((v) => v.id === current) ?? { label: "" };
+  const currentLabel = valueLabel(currentValue, axis, system);
+  const name = axisName(axis, system);
+  const shoe = axis.scale === "shoe";
+  const help = shoe ? shoeHelp(axis, currentValue) : "";
+  // The shoe switch shows the buyer's system, or the one the value is stored in until they choose.
+  const shownSystem = system ?? (shoe ? (currentValue.scaleValue?.system ?? "eu") : null);
   const asSelect = axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER);
   const money = (n) => kesText(n);
   const chartLink = item.sizeChart && isSizeAxis(axis) ? <SizeChartLink chart={item.sizeChart} /> : null;
@@ -33,22 +52,23 @@ function Group({ item, option, axis }) {
   // "Color: Grey". Polite and atomic: when the choice changes a screen reader says the whole line once, and not on first load.
   const header = (
     <span id={headId} className={styles.header} aria-live="polite" aria-atomic="true">
-      {axis.label}: <strong className={styles.value}>{currentLabel}</strong>
+      {name}: <strong className={styles.value}>{currentLabel}</strong>
     </span>
   );
 
   if (asSelect) {
     return (
       <div className={styles.group}>
-        <p className={styles.live} aria-live="polite" aria-atomic="true">{axis.label}: {currentLabel}</p>
+        <p className={styles.live} aria-live="polite" aria-atomic="true">{name}: {currentLabel}</p>
         {chartLink}
+        {shoe ? <ShoeSystemSwitch system={shownSystem} onChange={onSystem} /> : null}
         <OptionSelect
-          label={axis.label}
+          label={name}
           value={current}
           onChange={(id) => option.select(axis.key, id)}
           items={values.map((card) => ({
             id: card.value.id,
-            label: valueLabel(card.value),
+            label: valueLabel(card.value, axis, system),
             unavailable: !card.available,
             suffix: [showPrice && card.price !== null ? money(card.price) : "", cardStatus(card)].filter(Boolean).join(", ")
           }))}
@@ -81,6 +101,7 @@ function Group({ item, option, axis }) {
         {header}
         {chartLink}
       </p>
+      {shoe ? <ShoeSystemSwitch system={shownSystem} onChange={onSystem} /> : null}
       <div role="radiogroup" aria-labelledby={headId} className={styles.cards}>
         {values.map((card, index) => {
           const value = card.value;
@@ -89,7 +110,7 @@ function Group({ item, option, axis }) {
             <OptionCard
               key={value.id}
               ref={(node) => (node ? refs.current.set(value.id, node) : refs.current.delete(value.id))}
-              label={valueLabel(value)}
+              label={valueLabel(value, axis, system)}
               selected={selected}
               unavailable={!card.available}
               unavailableText={cardStatus(card)}
@@ -106,6 +127,7 @@ function Group({ item, option, axis }) {
           );
         })}
       </div>
+      {help ? <p className={styles.help}>{help}</p> : null}
     </div>
   );
 }
@@ -114,11 +136,19 @@ function Group({ item, option, axis }) {
 // for the choice before it. A combination the seller does not sell can still be picked (it is dashed, not hidden); then the page
 // says so and shows no price.
 export default function OptionsPicker({ item, option }) {
+  // One shoe system for the whole picker, remembered for this buyer. null = nobody chose yet (the item's default or the stored system shows).
+  const [system, setSystem] = useState(() => readShoeSystem());
+  const onSystem = (id) => {
+    setSystem(id);
+    writeShoeSystem(id);
+  };
+  const dimensions = variantDimensions(option.variant);
   return (
     <div className={styles.picker}>
       {option.axes.map((axis) => (
-        <Group key={axis.key} item={item} option={option} axis={axis} />
+        <Group key={axis.key} item={item} option={option} axis={axis} system={system} onSystem={onSystem} />
       ))}
+      {dimensions ? <p className={styles.dims}><span className={styles.dimsLabel}>{t("item.dimensions")}</span> {dimensions}</p> : null}
       {!option.variant && (
         <p className={styles.note} role="status">
           {t("item.optionNotSold")}

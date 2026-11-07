@@ -382,7 +382,9 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     specs: v.specs ?? [],
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
-  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
+  // `scale` (a scale id from shared/src/scales) and a value's `scaleValue` (its stored scale value) are passed through when a seller's axis has them,
+  // so the buyer page can show "1 TB" or "EU 42 · UK 8" from the data instead of from the typed label (B07). Axes without them are unchanged.
+  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), ...(a.scale && { scale: a.scale }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }), ...(v.scaleValue && { scaleValue: v.scaleValue }) })) }));
   return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), defaultVariantId: defaultVariantId ?? null, sizeChart: sizeChartFor(chart, override) };
 };
 

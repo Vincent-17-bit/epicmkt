@@ -298,3 +298,17 @@ test("only available and limited-stock variants are purchasable", () => {
   assert.equal(isPurchasable(null), false);
   assert.equal(isPurchasable({}), false);
 });
+
+test("publicOptions passes an axis's scale and a value's scaleValue through, and leaves other axes unchanged (B07)", async () => {
+  const { publicOptions } = await import("./options.js");
+  const axes = [
+    { key: "size", label: "Size", display: "button", scale: "shoe", values: [{ id: "eu-42", label: "EU 42", scaleValue: { scale: "shoe", system: "eu", value: 42 } }] },
+    { key: "colour", label: "Colour", display: "button", values: [{ id: "red", label: "Red" }] },
+  ];
+  const variants = [{ id: "v1", choice: { size: "eu-42", colour: "red" }, price: 100, status: "available", stock: 3, mediaIds: [], specs: [] }];
+  const { options } = publicOptions({ axes, variants, item: { price: 100 } });
+  assert.equal(options[0].scale, "shoe");
+  assert.deepEqual(options[0].values[0].scaleValue, { scale: "shoe", system: "eu", value: 42 });
+  assert.equal("scale" in options[1], false);
+  assert.equal("scaleValue" in options[1].values[0], false);
+});
