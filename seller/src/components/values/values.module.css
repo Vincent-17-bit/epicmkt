@@ -35,3 +35,26 @@
 .shadeField { display: grid; gap: var(--space-1); font-size: var(--text-sm); font-weight: 600; color: var(--text); }
 .colorPick { inline-size: 3.5rem; block-size: var(--tap, 44px); padding: 0; background: none; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
 @media (prefers-reduced-motion: reduce) { .wrap *, .palette * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+/* Scale editors (B04, B05) */
+.addRow { display: flex; gap: var(--space-2); align-items: stretch; }
+.addRow .input { flex: 1 1 auto; min-inline-size: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: var(--space-2); max-inline-size: 100%; min-block-size: var(--tap, 44px); box-sizing: border-box; padding: 0 var(--space-1) 0 var(--space-3); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); }
+.chipText { font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; }
+.chipActions { display: inline-flex; }
+.chipBtn { inline-size: 2rem; block-size: 2rem; display: grid; place-items: center; padding: 0; font: inherit; color: var(--text); background: none; border: 0; border-radius: 50%; cursor: pointer; }
+.chipBtn:hover:not(:disabled) { background: var(--surface-3); }
+.chipBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.chipBtn:focus-visible, .segBtn:focus-visible, .ghost:focus-visible, .input:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.preview { margin: 0; font-size: var(--text-sm); color: var(--text); }
+.previewLabel { color: var(--text-muted); }
+.warn { margin: 0; padding: var(--space-2) var(--space-3); font-size: var(--text-sm); color: var(--warn-text); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); }
+.quiet { margin: 0; font-size: var(--text-xs); color: var(--text-muted); }
+.unitAsk { display: grid; gap: var(--space-1); }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; background: var(--surface-2); border-radius: var(--radius-pill); align-self: start; max-inline-size: 100%; }
+.segBtn { min-block-size: 36px; padding: 0 var(--space-3); font: inherit; font-size: var(--text-sm); font-weight: 600; color: var(--text-muted); background: none; border: 0; border-radius: var(--radius-pill); cursor: pointer; }
+.segBtn[aria-pressed="true"] { color: var(--text); background: var(--surface); box-shadow: 0 0 0 1px var(--border-strong); }
+.rangeGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); gap: var(--space-2); }
+.miniLabel { display: grid; gap: var(--space-1); font-size: var(--text-xs); font-weight: 600; color: var(--text-muted); min-inline-size: 0; }
+.helpList { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-1); }

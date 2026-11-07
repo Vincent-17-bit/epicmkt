@@ -359,3 +359,14 @@ Entry format:
 - Permissions (append-only): `sizes.view` (any admin), `sizes.edit` (owner only, mirrors the database). Nav: Catalogue > Size charts.
 - Closes `docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`.
 - Assumption: the product type picker is a text field of type ids (there is no admin product type list yet; A08 owns it). Swap it for a picker when one exists.
+
+## B07 + B08 + B04/B05: scale-aware labels, size filters, seller value editors (1.7, 1.8, 1.4, 1.5)
+- `publicOptions` passes an axis's `scale` (a scale id) and a value's `scaleValue` (its stored scale value) through to buyers when a seller's axis has them.
+  Axes without them are unchanged. The buyer page shows values with `format` (shoes in the buyer's system, 1024 GB as 1 TB, "3-seater", dimensions per option).
+  Nothing writes `scale` or `scaleValue` onto an axis yet: the seller save path (`seller_save_item`, A06) must keep them. Until then labels are parsed from the typed label.
+- Shared: `scales.dimensionLabels`, `scales.dimensionProfileId`, `scales.DIMENSION_PROFILES` exported from `scales/index.js`; `shoeSummary(value, chart?)` in `sizeCharts.js`.
+- Client: `lib/scaleLabels.js` (shoe system remembered in localStorage key `epicmkt.shoeSystem`), `lib/sizeFilters.js`. Filters add `psize` (canonical keys) and
+  `prange` (`length:5-10`, `screen-inch:32-55`) to the page address; `facetsSummary`/`countsSummary` gain `sizes`.
+- Contract needed from A06 (marked `TODO(contract:A06)`): the product list carries `sizes`, an array of stored scale values per product. Without it there are no size facets.
+- Seller: `components/values` gains `ValueEditor` (router), `ScaleValueEditor`, `ShoeValueEditor`, `DimensionsEditor`, `ValueChips`, model in `scaleEditing.js`.
+- Assumption: the editors merge 5 m with 500 cm and 1 TB with 1024 GB (by base amount); EU 42 and UK 8 stay as two entries because the seller typed two.

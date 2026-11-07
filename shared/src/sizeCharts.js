@@ -148,3 +148,15 @@ export const SEED_SIZE_CHARTS = Object.freeze([
     rows: [["2-3 years", "98", "53", "52"], ["3-4 years", "104", "55", "53"], ["4-5 years", "110", "57", "54"], ["5-6 years", "116", "60", "55"], ["6-7 years", "122", "63", "56"], ["7-8 years", "128", "66", "58"], ["8-9 years", "134", "69", "59"], ["9-10 years", "140", "72", "61"]]
   }
 ]);
+
+/** "EU 42 · UK 8 · US 9 (about 27 cm)" for a stored shoe value, or "" when it is not a shoe or has no equivalents in the chart (B05, B07). */
+export function shoeSummary(value, chart) {
+  if (!value || value.scale !== "shoe") return "";
+  const to = (system) => {
+    if (system === value.system) return value.value;
+    const r = convertShoe(value, system, chart);
+    return r.ok ? r.value.value : null;
+  };
+  const [eu, uk, usM, cm] = [to("eu"), to("uk"), to("us-m"), to("cm")];
+  return [eu, uk, usM, cm].some((n) => n === null) ? "" : `EU ${eu} · UK ${uk} · US ${usM} (about ${Math.round(cm)} cm)`;
+}

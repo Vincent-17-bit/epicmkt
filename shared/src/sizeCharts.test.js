@@ -190,3 +190,12 @@ test("pickSizeChart: reads the database's snake_case product_type_ids too", () =
   const dbRow = { id: "d", name: "Dress", category: null, unit: "cm", columns: ["A"], rows: [["1"]], product_type_ids: ["dress"] };
   assert.equal(pickSizeChart({ item: { productTypeId: "dress" }, charts: [dbRow] }).id, "d");
 });
+
+test("shoeSummary writes a size in every system with the foot length, and is empty when it cannot (B05)", async () => {
+  const { shoeSummary } = await import("./sizeCharts.js");
+  assert.equal(shoeSummary({ scale: "shoe", system: "eu", value: 42 }), "EU 42 · UK 8 · US 9 (about 27 cm)");
+  assert.equal(shoeSummary({ scale: "shoe", system: "uk", value: 8 }), "EU 42 · UK 8 · US 9 (about 27 cm)");
+  assert.equal(shoeSummary({ scale: "volume", value: 20, unit: "l" }), "");
+  assert.equal(shoeSummary(null), "");
+  assert.equal(shoeSummary({ scale: "shoe", system: "eu", value: 99 }), "");
+});

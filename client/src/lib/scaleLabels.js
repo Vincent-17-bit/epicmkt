@@ -1,7 +1,7 @@
 // Scale-aware labels for option values (B07). A value is shown from its stored scale value when the axis names a scale
 // (`axis.scale`) and the value carries `scaleValue` (or its label parses): shoes "EU 42" in the buyer's system, storage "1 TB",
 // collar 16", count "3-seater". Anything else is shown as the seller typed it, exactly as before.
-import { convertShoe, formatCapacityLabel, scales } from "@epicmkt/shared";
+import { convertShoe, formatCapacityLabel, scales, shoeSummary } from "@epicmkt/shared";
 
 export const SHOE_SYSTEMS = Object.freeze([
   { id: "eu", label: "EU" },
@@ -57,15 +57,7 @@ export function scaleLabel(axis, value, { system = null } = {}) {
 
 /** "EU 42 · UK 8 · US 9 (about 27 cm)" for a shoe value; "" for anything else or when a size has no equivalents. */
 export function shoeHelp(axis, value) {
-  const stored = valueScale(axis, value);
-  if (!stored || stored.scale !== "shoe") return "";
-  const to = (id) => {
-    const r = id === stored.system ? { ok: true, value: stored } : convertShoe(stored, id);
-    return r.ok ? r.value.value : null;
-  };
-  const [eu, uk, usM, cm] = [to("eu"), to("uk"), to("us-m"), to("cm")];
-  if (eu === null || uk === null || usM === null || cm === null) return "";
-  return `EU ${eu} · UK ${uk} · US ${usM} (about ${Math.round(cm)} cm)`;
+  return shoeSummary(valueScale(axis, value));
 }
 
 /** "120 x 60 x 75 cm" from a variant's specs, when one of them is a dimensions spec ("Dimensions", "Size (cm)"...). "" when there is none. */
