@@ -2,6 +2,7 @@ import { useId, useRef } from "react";
 import { OptionCard, OptionSelect } from "@epicmkt/ui";
 import { axisCards, formatCapacityLabel } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
+import SizeChartLink from "./SizeChartLink.jsx";
 import { kesText } from "../../lib/flash.js";
 import styles from "./OptionsPicker.module.css";
 
@@ -11,6 +12,9 @@ const DROPDOWN_OVER = 8;
 const cardStatus = (card) => (card.available ? "" : card.status === "out_of_stock" ? t("item.optionSoldOut") : t("item.optionUnavailable"));
 // "1024 GB" is read as "1 TB"; everything else is shown as the seller wrote it.
 const valueLabel = (value) => formatCapacityLabel(value.label);
+
+// The axis a size chart belongs to: the one called Size (or "Shoe size", "Collar size"...). Only that axis gets the link.
+const isSizeAxis = (axis) => /size/i.test(axis.key) || /size/i.test(axis.label);
 
 const photoOf = (item, value) => (value.mediaId ? (item.images ?? []).find((m) => m.id === value.mediaId)?.url ?? "" : "");
 
@@ -24,6 +28,7 @@ function Group({ item, option, axis }) {
   const currentLabel = valueLabel(axis.values.find((v) => v.id === current) ?? { label: "" });
   const asSelect = axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER);
   const money = (n) => kesText(n);
+  const chartLink = item.sizeChart && isSizeAxis(axis) ? <SizeChartLink chart={item.sizeChart} /> : null;
 
   // "Color: Grey". Polite and atomic: when the choice changes a screen reader says the whole line once, and not on first load.
   const header = (
@@ -36,6 +41,7 @@ function Group({ item, option, axis }) {
     return (
       <div className={styles.group}>
         <p className={styles.live} aria-live="polite" aria-atomic="true">{axis.label}: {currentLabel}</p>
+        {chartLink}
         <OptionSelect
           label={axis.label}
           value={current}
@@ -71,7 +77,10 @@ function Group({ item, option, axis }) {
 
   return (
     <div className={styles.group}>
-      <p className={styles.headLine}>{header}</p>
+      <p className={styles.headLine}>
+        {header}
+        {chartLink}
+      </p>
       <div role="radiogroup" aria-labelledby={headId} className={styles.cards}>
         {values.map((card, index) => {
           const value = card.value;

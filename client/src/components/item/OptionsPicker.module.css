@@ -11,6 +11,10 @@
 }
 
 .headLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   margin: 0;
   color: var(--text-muted);
   font-size: var(--text-sm);
