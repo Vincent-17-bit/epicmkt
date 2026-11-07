@@ -216,3 +216,18 @@ Entry format:
   - Admin lane: pages for charts and the shoe chart (`docs/requests/2026-11-06-a05-to-admin-size-chart-and-shoe-conversion-pages.md`).
   - Lane A (A06): `admin_save_product_type` should keep `size_chart_id` (or leave it alone); call `pickSizeChart` in `items.getDetail`; use `convertShoe` to show a size in the buyer's system.
   - Edge functions: `shared/src/sizeCharts.js` is not synced; add the `sizeCharts.js` and `seller/options.js` entries to `scripts/sync-shared.mjs` when a function needs them.
+
+## 2026-11-07 - Sizes 1.6 and 1.7: size chart modal, scale-aware option labels (buyer)
+
+- Two OPTIONAL, additive fields on option data. Nothing is removed or renamed; an item without them reads exactly as before.
+  - `axis.scale`: a scale id (`shoe`, `collar-inch`, `storage` ...). The buyer page parses each value's label with it.
+  - `value.stored`: a stored scale value `{scale, system?, value, unit?}` for one option value. It wins over `axis.scale`.
+- Assumptions (change with a new entry, not by editing this one):
+  - With neither field, the scale comes from `client/src/lib/scaleLabels.js` `AXIS_SCALES`: product type id + axis key (`shoes-eu.size` -> shoe, `sofa.seats` -> count,
+    `phone.storage` -> storage, `led-strip.length` -> length ...). An item with no product type is never rewritten.
+  - A label that does not parse stays exactly as the seller wrote it. The option value id is never changed, so a buyer's choice and the `?v=` link survive a system switch.
+  - The shoe system (EU, UK, US men, US women, cm) is the buyer's, remembered in `localStorage` (`epicmkt-shoe-system`); else the system the item's first shoe value is written in; else EU. No shop sets it.
+  - A variant's `dimensions` `{length, width, height, unit}` is shown as "Size: 160 × 88 × 85 cm" for the selected option.
+  - The size chart link sits in the header line of the first size-like axis (key or label matches size, collar, shoe, waist, fit), else the first axis. It is hidden when `item.sizeChart` is null.
+  - `ui` `Modal` gains `variant="sheet"`, a page scroll lock and focus return to the opener. Existing callers are unchanged (the defaults keep a centred card; scroll lock and focus return are on by default and harmless there).
+  - The collar scale formats as `16"`; the item page shows `16 in` as the prompt asks.
