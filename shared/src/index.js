@@ -50,3 +50,7 @@ export * from "./sizeCharts.js";
 // Pricing core: price per combination, flash, offers and sale (integer money). priceFor, priceBounds, priceMin, priceMax, lineTotal.
 export { priceFor, priceBounds, priceMin, priceMax } from "./pricing.js";
 export { lineTotal } from "./pricing/money.js";
+
+// Measured quantity (units | measure | none): normalizeQuantity, checkQuantity, quantityRules, measuredLine, measureTotal.
+export { QUANTITY_MODES, quantityModeOf, quantityRules, checkQuantity, normalizeQuantity, parseAmount } from "./quantity.js";
+export { measureTotal, measuredMessage, measuredLine, amountText, formatAmount, perUnitText } from "./pricing/measure.js";
