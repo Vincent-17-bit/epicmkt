@@ -3,6 +3,7 @@
 //   2. the sale price and any live flash sale price: the buyer pays the lower of the two (flash is never worse than the sale it sits on),
 //   3. an offer works on that current price ("a flash sale price counts") and only changes the TOTAL for the quantity bought.
 import { flashPrice } from "../seller/flash.js";
+import { comboKey } from "../seller/options.js";
 import { liveOffers, offerAvailableNow } from "../offers.js";
 import { percentOf, wholeAmount } from "./money.js";
 
@@ -12,12 +13,29 @@ const entryId = (e) => (typeof e === "string" ? e : (e?.variantId ?? e?.id ?? nu
  * Per-combination targeting. `entries` is a flash sale's variantOverrides (migration 0013) or an offer's variantIds/variantOverrides:
  * a list of variant ids or { variantId, discount? }. Empty or missing = the whole item.
  * -> null (does not apply), or the entry that applies ({} for a whole-item deal).
- * TODO(contract:A01): the stored shape of variant_overrides entries is not fixed yet; today it is always [].
+ * A flash sale's own per-combination entries ({ combo, type, value }, migration 0095) are read by flashTarget below.
  */
 export function targetOf(entries, variantId) {
   if (!Array.isArray(entries) || entries.length === 0) return {};
   const hit = entries.find((e) => entryId(e) === variantId);
   return hit === undefined ? null : typeof hit === "string" ? {} : hit;
+}
+
+const isComboEntry = (e) => e !== null && typeof e === "object" && typeof e.combo === "string";
+
+/**
+ * What a flash sale does to one combination: null (not on sale), or { discount? }.
+ * variantTarget "chosen": only the combinations listed in variantOverrides ({ combo, type, value }) are on sale, each at its own discount.
+ * variantTarget "all" (the default): every combination gets the sale's discount, a listed one its own. Older id entries still work.
+ */
+export function flashTarget(sale, item, variant) {
+  const entries = Array.isArray(sale.variantOverrides) ? sale.variantOverrides : [];
+  const own = entries.filter(isComboEntry);
+  if (sale.variantTarget !== "chosen" && own.length === 0) return targetOf(entries, variant?.id ?? null);
+  const combo = variant ? comboKey(item?.options ?? item?.axes ?? [], variant.choice) : null;
+  const hit = combo === null ? null : own.find((e) => e.combo === combo);
+  if (hit) return { discount: { type: hit.type, value: hit.value } };
+  return sale.variantTarget === "chosen" ? null : {};
 }
 
 /** The live flash sale of the item, whether given as the sale itself or as { sale }. */
@@ -37,7 +55,7 @@ export function unitPrice(item, variant, listed, nowMs) {
   const salePrice = wholeAmount(variant ? variant.salePrice : (item?.salePrice ?? item?.pricing?.salePrice));
   if (salePrice !== null && salePrice < out.unit) Object.assign(out, { unit: salePrice, source: "sale" });
   const sale = liveFlash(item, nowMs);
-  const target = sale ? targetOf(sale.variantOverrides, variant?.id ?? null) : null;
+  const target = sale ? flashTarget(sale, item, variant) : null;
   if (sale && target) {
     const discount = target.discount ?? sale.discount;
     const price = flashPrice(discount.type, Number(discount.value), listed);

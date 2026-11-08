@@ -248,3 +248,27 @@ Entry format:
   - Whoever builds `items.getDetail`: return `priceTiers`, `priceTierMode` and each variant's `priceTiers`.
   - `seller_duplicate_item` does not copy tiers yet; `seller_check_item` does not report tier issues yet.
 - Request files: none
+
+## 2026-11-07 A-flash-combo: Flash sale per combination (migration 0095, validateFlashVariants)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, flash sale per combination prompt
+- What changed:
+  - Migration `0095_flash_per_combination.sql`: `flash_sales.variant_target` (`all` default | `chosen`); `variant_overrides` (0013) now carries `{combo, type, value}` entries, `type` being `percent | amount_off | sale_price`, `combo` the `item_variants.combo_key` (`colour=black|storage=64`). Older `{variantId, salePrice}` entries stay valid and are ignored.
+  - A trigger `t_flash_sales_variants` (the 0013 trigger is untouched) refuses bad overrides. Errors (P0001): `invalid_flash_overrides`, `flash_needs_combinations`, `invalid_flash_target`, `discount_too_large`, `sale_price_not_lower`. Changing `variant_target` after the sale starts is `flash_locked`, like the other flash fields.
+  - `public_flash_sales` gains two last columns: `variant_target` and `variant_flash` (`[{combo, choice, regularPrice, salePrice}]`, only combinations on sale, or null). `sale_price` for a sale with `chosen` or with overrides is the lowest price a buyer can pay across the sold combinations; a sale with neither is priced exactly as before.
+  - `public_item_options(item)` (renamed inner `public_item_options_base`) adds `flash` to every `optionVariants[]` entry while the item has a live sale: `{type, value, regularPrice, salePrice, endsAt}` or `null`. With no live sale the payload is unchanged.
+  - `shared/src/flash/validateFlashVariants.js`, exported from `@epicmkt/shared`: `validateFlashVariants(flash, item)` -> `{ok, errors:[{code, combo?}], targets:[{combo, regularPrice, salePrice}]}`, `flashComboPrice`, `overridesShapeValid`, `FLASH_TARGETS`, `FLASH_OVERRIDE_LIMIT`. Input `flash` is `{discountType, discountValue, variantTarget, variantOverrides}`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - A sold combination is a stored `item_variants` row with its own price whose status is not `unavailable` (the pricing core's `isSold`). Out of stock combinations can still be put on sale. A combination with no price of its own is not sold and cannot be targeted.
+  - A combination's regular price is its own price. Variant `sale_price` is ignored.
+  - With `all`, a discount that cannot lower a combination (amount off above its price, sale price above it) skips that combination instead of refusing the sale; an explicit override that cannot lower its combination is refused.
+  - With `chosen` the sale's own `discount_type` and `discount_value` are still required and are checked against the item price by the 0013 rules, but are not applied to combinations that are not listed.
+  - The database function cannot call the JS file, so the same rules are written in SQL and `supabase/tests/flash-per-combination.test.mjs` runs one table of cases through both.
+  - `priceFor` reads the new shape: `shared/src/pricing/deals.js` gains `flashTarget(sale, item, variant)`, which resolves `sale.variantTarget` and `sale.variantOverrides` entries `{combo, type, value}` through `comboKey` (this settles `TODO(contract:A01)`); older id entries behave as before. A tier price takes the combination's flash per unit.
+- Who must act:
+  - Seller lane: the flash form can send `variant_target` and `variant_overrides` in the existing insert.
+  - Client lane: show `optionVariants[].flash` and `variant_flash`.
+  - Whoever maps the public flash sale into `item.flash`: pass `variantTarget` (from `variant_target`) and `variantOverrides` (from `variant_overrides`) as they are; `priceFor` does the rest.
+  - Whoever builds `items.getDetail`: carry the per-variant `flash` where the buyer page wants it.
+- Request files: none
