@@ -8,6 +8,8 @@
 //   total   what `qty` units cost, after the best offer. Money is rounded half up, never a fraction.
 //   was     the listed price x qty when the buyer pays less than that, else null (the struck-through figure).
 //   source  where the price comes from: "regular" | "tier" | "sale" | "flash" | "offer".
+//   next    with quantity tiers: { from, more, unit, text } for the next tier ("Add 3 more for KES 7 each"), else null.
+//   bands   with graduated tiers: [{ from, qty, unit, subtotal }], else null. In graduated mode `unit` is the average price per unit.
 //
 // Selecting a combination with no price, or one the seller switched off, is "not_sold". A legacy item (no options) is priced from the
 // item itself and behaves as before. A quantity is never 0 or negative: whole units go to at least 1; a measured item to at least its minimum.
@@ -15,6 +17,7 @@
 import { hasCombinations, inStock, isSold, resolveVariant, variantsOf } from "./pricing/combination.js";
 import { bestOffer, unitPrice } from "./pricing/deals.js";
 import { lineTotal, toMs, wholeAmount } from "./pricing/money.js";
+import { nextTierHint, priceTiered, tierIndex, validateTiers } from "./pricing/tiers.js";
 
 const cleanQty = (item, qty) => {
   const n = Number(qty);
@@ -26,7 +29,11 @@ const cleanQty = (item, qty) => {
   return Number.isFinite(n) ? Math.max(1, Math.round(n)) : 1;
 };
 
-const tierFor = (tiers, qty) => (Array.isArray(tiers) ? tiers.find((t) => qty >= t.minQty && (t.maxQty === null || t.maxQty === undefined || qty <= t.maxQty)) : null);
+const tiersOf = (item, variant) => {
+  const tiers = variant?.priceTiers ?? item?.priceTiers;
+  const mode = variant?.priceTierMode ?? item?.priceTierMode ?? "whole";
+  return Array.isArray(tiers) && tiers.length > 0 && validateTiers(tiers, mode).ok ? { tiers, mode } : null;
+};
 
 export function priceFor(item, selection, qty, now) {
   const nowMs = toMs(now);
@@ -39,15 +46,27 @@ export function priceFor(item, selection, qty, now) {
     if (!isSold(variant)) return { available: false, reason: "not_sold", qty: q };
   }
   const base = wholeAmount(variant ? variant.price : (item?.regularPrice ?? item?.price ?? item?.pricing?.regularPrice));
-  const tier = tierFor(variant?.priceTiers ?? item?.priceTiers, q);
+  const set = tiersOf(item, variant);
+  const tier = set ? set.tiers[tierIndex(set.tiers, q)] : null;
   const listed = tier ? wholeAmount(tier.unitPrice) : base;
   if (listed === null) return { available: false, reason: "no_price", qty: q };
 
   const current = unitPrice(item, variant, listed, nowMs);
-  const regular = lineTotal(listed, q);
-  const offer = bestOffer(item, variant?.id ?? null, current.unit, q, nowMs);
+  let regular = lineTotal(listed, q);
+  let unit = current.unit;
   let total = lineTotal(current.unit, q);
   let source = current.source === "regular" && tier ? "tier" : current.source;
+  let bands = null;
+  if (set?.mode === "graduated" && Number.isInteger(q)) {
+    const listedBands = priceTiered({ tiers: set.tiers, mode: set.mode, qty: q });
+    const paid = priceTiered({ tiers: set.tiers, mode: set.mode, qty: q, adjust: (n) => unitPrice(item, variant, n, nowMs).unit });
+    regular = listedBands.total;
+    total = paid.total;
+    unit = paid.unit;
+    bands = paid.bands;
+    source = total < regular ? (listedBands.bands.map((b) => unitPrice(item, variant, b.unit, nowMs).source).find((x) => x !== "regular") ?? "tier") : "tier";
+  }
+  const offer = bestOffer(item, variant?.id ?? null, unit, q, nowMs);
   if (offer && offer.total < total) {
     total = offer.total;
     source = "offer";
@@ -56,12 +75,14 @@ export function priceFor(item, selection, qty, now) {
     available: true,
     variantId: variant?.id ?? null,
     qty: q,
-    unit: current.unit,
+    unit,
     total,
     was: total < regular ? regular : null,
     source,
     offerId: source === "offer" ? offer.offerId : null,
-    inStock: variant ? inStock(variant) : item?.availability !== "out_of_stock"
+    inStock: variant ? inStock(variant) : item?.availability !== "out_of_stock",
+    next: set ? nextTierHint(set.tiers, q, (n) => unitPrice(item, variant, n, nowMs).unit) : null,
+    bands
   };
 }
 

@@ -224,3 +224,27 @@ Entry format:
 - Type axes: a product type's `axes` (`{ key, label, display, scale? }`) give a one-tap "Use the usual options" start; values on a scale axis go through `scales.parse/format`. Seller fixtures (`AddItem.fixtures.js`) now carry axes for Dress, Shoes, Perfume and Phone. `TODO(contract:A06)` until the real `seller_product_types` returns them.
 - Plan caps: the subscription's `limits[planKey].options` (`{ axes, values, variants }`) can lower the hard limits (3 / 40 / 200); the mock sends them for both plans. Missing means the hard limits.
 - Custom size (Prompts 3.4 and 3.7): `shared/src/options/customSize.js`, `client/src/components/item/CustomSize.jsx`, `steps/options/CustomSizeEditor.jsx`, all tested but OFF (`CUSTOM_SIZE_STORED = false`) until the data layer stores `customSize`: see `docs/requests/2026-11-07-b07-to-data-custom-size-storage.md`.
+
+## 2026-11-07 A-tiers: Quantity tier pricing (tiers.js, migration 0094, seller_save_item, priceFor)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, quantity tier pricing prompt
+- What changed:
+  - `shared/src/pricing/tiers.js`, exported from `@epicmkt/shared`: `validateTiers(tiers, mode)`, `priceTiered({tiers, mode, qty, adjust})`, `nextTierHint`, `tierIndex`, `kesText`, `TIER_MODES`, `TIER_LIMITS`.
+  - Tiers keep the contract shape `{minQty, maxQty, unitPrice}`; the mode is stored beside them: `whole` (the tier price applies to every unit) or `graduated` (each band at its own price).
+  - `priceFor` (shared/src/pricing.js, from the pricing core) now uses `tiers.js`: it reads `priceTierMode` (variant, else item, default `whole`), prices graduated bands (each band after the sale or flash price), and returns two new fields: `next` (`{from, more, unit, text}`, e.g. "Add 3 more for KES 7 each", or null) and `bands` (graduated only, else null). In graduated mode `unit` is the average per unit and `total` is exact; an offer is checked against that average. Invalid tiers fall back to the regular price. Existing results are unchanged for items without tiers or with whole tiers.
+  - Migration `0094_price_tiers.sql`: `items.price_tiers`, `items.price_tier_mode` (default `whole`), `item_variants.price_tiers`; `price_tiers_valid(jsonb)`; `seller_save_item` is wrapped again (the 0091 text is now `seller_save_item_typed`, no browser grant).
+  - `seller_save_item` accepts `priceTiers` (list or null), `priceTierMode`, and `options.variants[].priceTiers`. Key absent = leave alone; null = clear. Errors: `invalid_price_tiers`, `tiers_need_from_price`, `item_in_flash_sale`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - Tier prices are whole amounts of 1 or more, like the rest of the pricing core (integer shillings); at most 10 tiers; quantities up to 1,000,000; no extra keys on a tier; `maxQty` must be present (null on the last tier).
+  - The mode belongs to the item; a variant's own tiers use the item's mode unless the variant sets `priceTierMode`.
+  - An item with tiers (or with tiers on any combination) must be priced `from`, as the contract validator already says for items.
+  - Tiers cannot change while the item is in a scheduled or live flash sale (same rule as price).
+  - Flash with tiers: the sale price or flash price is applied to each tier's price (the lower of the two, as for any listed price); a flash sale price never raises a tier price.
+  - There is no save edge function; the save is SQL, so `supabase/functions/**` is unchanged. SQL and JS validation are kept equal by `supabase/tests/price-tiers.test.mjs`.
+  - Graduated tiers apply to whole quantities; a measured (fractional) quantity is priced as `whole`.
+- Who must act:
+  - Seller lane: send `priceTiers` and `priceTierMode` from the editor.
+  - Whoever builds `items.getDetail`: return `priceTiers`, `priceTierMode` and each variant's `priceTiers`.
+  - `seller_duplicate_item` does not copy tiers yet; `seller_check_item` does not report tier issues yet.
+- Request files: none
