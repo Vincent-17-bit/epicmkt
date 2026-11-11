@@ -205,3 +205,11 @@ test("measured items keep the amount positive and price per unit of measure", ()
   assert.equal(priceFor(butcher, steak.id, 0, NOW).qty, 0.5);
   assert.equal(priceFor(butcher, steak.id, -3, NOW).qty, 0.5);
 });
+
+// Regression: the package index must keep the catalog's list-wide priceBounds(items) and expose the one-item helper under its own name.
+test("the shared index keeps both price range helpers apart", async () => {
+  const shared = await import("./index.js");
+  assert.deepEqual(shared.priceBounds([{ price: 1000 }, { price: 5000 }]), { min: 1000, max: 5000 });
+  assert.equal(typeof shared.itemPriceBounds, "function");
+  assert.notEqual(shared.itemPriceBounds, shared.priceBounds);
+});

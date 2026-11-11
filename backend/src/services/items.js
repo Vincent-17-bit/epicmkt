@@ -1,4 +1,4 @@
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, priceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -347,7 +347,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
 }
 
 function priceRangeOf(detail) {
-  const b = priceBounds({ ...detail, offers: [] }, now());
+  const b = itemPriceBounds({ ...detail, offers: [] }, now());
   return { priceMin: b?.min ?? null, priceMax: b?.max ?? null };
 }
 

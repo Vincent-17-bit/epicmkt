@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { AXIS_PRESETS, CUSTOM_SIZE_STORED, addAxis, addTypeAxes, canAddAxis, effectiveLimits, emptyOptionsForm, limitMessage, removeAxis } from "@epicmkt/shared";
+import { AXIS_PRESETS, CUSTOM_SIZE_STORED, addAxis, addTypeAxes, canAddAxis, effectiveLimits, emptyOptionsForm, inferPriceAxes, limitMessage, priceLayout, removeAxis } from "@epicmkt/shared";
 import { SectionCard } from "../parts.jsx";
 import { useProductTypes } from "./useProductTypes.js";
 import AxisCard from "./options/AxisCard.jsx";
 import CustomSizeEditor from "./options/CustomSizeEditor.jsx";
 import Combinations, { SummaryTiles } from "./options/Combinations.jsx";
+import PriceModes from "./options/PriceModes.jsx";
 import ed from "../editor.module.css";
 import s from "./options/options.module.css";
 
@@ -16,6 +17,11 @@ export default function OptionsStep({ form, patch, errors }) {
   const { types, planLimits } = useProductTypes();
   const [said, setSaid] = useState("");
   const options = form.options ?? emptyOptionsForm();
+  // Which options change the price. null = the seller has not said yet (the plain list of combinations, as before). An existing
+  // item starts from what its saved prices already show.
+  const [priceAxes, setPriceAxes] = useState(() => { const found = inferPriceAxes(options); return found.length ? found : null; });
+  const known = priceAxes === null ? null : priceAxes.filter((k) => options.axes.some((a) => a.key === k));
+  const modeLayout = known === null ? null : priceLayout(known);
   const set = (next) => patch("options", next);
   const limits = effectiveLimits(planLimits);
   const type = types.find((t) => t.id === form.productTypeId);
@@ -67,7 +73,8 @@ export default function OptionsStep({ form, patch, errors }) {
               )}
             </div>
             <SummaryTiles options={options} itemPrice={itemPrice} />
-            <Combinations options={options} set={set} errors={found} announce={setSaid} itemPrice={itemPrice} />
+            <PriceModes options={options} set={set} announce={setSaid} itemPrice={itemPrice} priceAxes={known} setPriceAxes={setPriceAxes} errors={found} />
+            <Combinations options={options} set={set} errors={found} announce={setSaid} itemPrice={itemPrice} hidePrice={modeLayout === "single" || modeLayout === "list" || modeLayout === "grid"} />
             {CUSTOM_SIZE_STORED && <CustomSizeEditor options={options} config={form.customSize} set={(v) => patch("customSize", v)} errors={found} announce={setSaid} />}
           </>
         )}
