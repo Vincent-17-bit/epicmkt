@@ -14,13 +14,13 @@
 .button { min-block-size: var(--tap, 44px); min-inline-size: var(--tap, 44px); padding: var(--space-2) var(--space-4); font: inherit; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; }
 .button:hover:not(:disabled) { background: var(--surface-3); }
 .button:disabled { opacity: 0.55; cursor: not-allowed; }
-.primary { color: var(--on-primary, #fff); background: var(--primary); border-color: var(--primary); }
+.primary { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
 .primary:hover:not(:disabled) { background: var(--primary); filter: brightness(0.92); }
 .choices { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; padding: 0; border: 0; min-inline-size: 0; }
 .choices legend { padding: 0; font-size: var(--text-sm); color: var(--text); }
 .pick { min-block-size: var(--tap, 44px); padding: var(--space-1) var(--space-3); font: inherit; font-size: var(--text-sm); color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); cursor: pointer; }
 .pick:hover { background: var(--surface-3); }
-.pickOn, .pick[aria-pressed="true"] { color: var(--on-primary, #fff); background: var(--primary); border-color: var(--primary); }
+.pickOn, .pick[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
 .list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .chip { display: inline-flex; align-items: center; gap: var(--space-1); min-block-size: var(--tap, 44px); box-sizing: border-box; padding: 0 var(--space-1) 0 var(--space-3); color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
 .chipWarn { border-color: var(--warn-border); background: var(--warn-bg); }
