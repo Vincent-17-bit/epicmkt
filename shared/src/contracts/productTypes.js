@@ -1,6 +1,8 @@
 // The product types a seller can pick (seller_product_types). Plain data: nothing here runs at import time.
 // Each fixture in fixtures/ uses exactly one of these, and the test checks that its options match the type's axes.
 
+const row = (key, label, level, input = "text", extra = {}) => ({ key, label, level, input, ...extra });
+
 const sizes = (...labels) => labels.map((label) => ({ id: label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), label }));
 
 /** @type {import("./types.js").ProductType[]} */
@@ -11,7 +13,13 @@ export const PRODUCT_TYPES = [
       { key: "colour", label: "Colour", display: "swatch" },
       { key: "storage", label: "Storage", display: "button", suggested: sizes("64 GB", "128 GB", "256 GB") }
     ],
-    variantFields: [], itemFields: []
+    variantFields: [], itemFields: [],
+    specRows: [
+      row("warranty", "Warranty", "required"),
+      row("display", "Display", "recommended"),
+      row("sim", "SIM", "recommended"),
+      row("battery", "Battery", "recommended")
+    ]
   },
   {
     id: "memory-card", name: "Memory card and flash drive", group: "electronics", priceType: "from", unit: null,
@@ -51,7 +59,16 @@ export const PRODUCT_TYPES = [
       { key: "weight", label: "Weight", display: "button", suggested: sizes("400 g", "800 g") },
       { key: "kind", label: "Kind", display: "button", suggested: sizes("White", "Brown", "Wholemeal") }
     ],
-    variantFields: [], itemFields: []
+    variantFields: [], itemFields: [],
+    specRows: [
+      row("ingredients", "Ingredients", "required"),
+      row("allergens", "Allergens", "required"),
+      row("shelf-life", "Shelf life", "recommended"),
+      row("storage", "Storage", "recommended"),
+      row("sliced", "Sliced or unsliced", "recommended", "choice", { choices: ["Sliced", "Unsliced"] }),
+      row("ready-from", "Ready from", "recommended"),
+      row("dietary-notes", "Dietary notes", "recommended")
+    ]
   },
   {
     id: "drinking-water", name: "Drinking water", group: "food-drink", priceType: "from", unit: null,
@@ -59,7 +76,14 @@ export const PRODUCT_TYPES = [
       { key: "size", label: "Size", display: "button", suggested: sizes("5 L", "10 L", "20 L") },
       { key: "fill", label: "Fill", display: "button", suggested: sizes("Refill", "New bottle") }
     ],
-    variantFields: [], itemFields: []
+    variantFields: [], itemFields: [],
+    specRows: [
+      row("water-type", "Water type", "required", "choice", { choices: ["Purified", "Borehole", "Spring"] }),
+      row("treatment-method", "Treatment method", "recommended"),
+      row("container-material", "Container material", "recommended", "openValue"),
+      row("bottle-deposit", "Bottle deposit", "recommended"),
+      row("quality-test", "Quality test", "recommended")
+    ]
   },
   {
     id: "led-strip", name: "LED strip light", group: "lighting", priceType: "from", unit: null,
