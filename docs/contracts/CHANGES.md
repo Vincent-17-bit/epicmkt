@@ -225,3 +225,10 @@ Entry format:
 - Admin API: `listSizeCharts`, `listProductTypes`, `saveSizeChart`, `deleteSizeChart`, `getShoeConversion`, `saveShoeConversion` (mock and live; live uses the 0093 RPCs).
 - `useTableLabels` skips tables inside `[data-no-cards]`, so a grid or chart preview stays a real table on a phone.
 - Left undone: assigning a chart to one item from admin (no admin RPC exists; sellers choose per item).
+
+## 2026-11-12 — Admin: a size chart for one single item (migration 0094)
+
+- `admin_set_item_size_chart(item, chart)` (owner only; chart null clears; the chart must exist and be active; a different chart drops the item's own row edits; audited as `item.size_chart`; setting the same chart again changes and audits nothing).
+- `admin_items_for_size_chart(chart, query, limit)` (owner, reviewer, support): the items on a chart, or items matching a name search (a `%` or `_` in the search is plain text).
+- Admin: the chart editor has an "Items on this chart" section (look, search by name, put an item on the chart, take it off). Admin API: `listItemsForSizeChart`, `setItemSizeChart` (mock and live).
+- Sellers still choose a chart on their own items through `seller_save_item`; this is for fixing a wrong chart without the seller.
