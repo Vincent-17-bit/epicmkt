@@ -23,7 +23,7 @@ export function SummaryTiles({ options, itemPrice }) {
 }
 
 // One row per combination. This list is the single source of truth: prices, stock, "Not sold" and the default all live here.
-export default function Combinations({ options, set, errors = {}, announce, itemPrice }) {
+export default function Combinations({ options, set, errors = {}, announce, itemPrice, hidePrice = false }) {
   const uid = useId();
   const rows = liveRows(options);
   if (rows.length === 0) return null;
@@ -36,9 +36,9 @@ export default function Combinations({ options, set, errors = {}, announce, item
         <p className={s.hint}>{sum.notSold > 0 ? `${sum.notSold} not sold` : "Every combination is on sale"}</p>
       </div>
       <p className={s.hint}>
-        Leave a price empty to use the item price{itemPrice ? ` (KES ${itemPrice})` : ""}. Leave stock empty if you do not count it; at 0 the combination shows as sold out.
+        {hidePrice ? "Prices are set above. " : `Leave a price empty to use the item price${itemPrice ? ` (KES ${itemPrice})` : ""}. `}Leave stock empty if you do not count it; at 0 the combination shows as sold out.
       </p>
-      <PriceTools options={options} set={set} announce={announce} />
+      {!hidePrice && <PriceTools options={options} set={set} announce={announce} />}
       {errors.rows && <p className={ed.error} data-focus="opt-rows" tabIndex={-1}>{errors.rows}</p>}
       <ul className={s.combos}>
         {rows.map((r) => {
@@ -58,10 +58,10 @@ export default function Combinations({ options, set, errors = {}, announce, item
                 <p className={s.comboName}>{name}{options.defaultKey === key && <span className={`${s.tag} ${s.tagDefault}`}>Shown first</span>}{!r.sold && <span className={s.tag}>Not sold</span>}</p>
               </div>
               <div className={s.cells}>
-                {cell("price", "Price", { inputMode: "decimal", placeholder: itemPrice ? String(itemPrice) : "" })}
+                {!hidePrice && cell("price", "Price", { inputMode: "decimal", placeholder: itemPrice ? String(itemPrice) : "" })}
                 {cell("salePrice", "Sale price", { inputMode: "decimal" })}
                 {cell("stock", "Stock", { inputMode: "numeric", maxLength: 6 })}
-                {warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}
+                {!hidePrice && warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}
                 {err("specs") && <span className={s.cellError} role="alert">{err("specs")}</span>}
               </div>
               <div className={s.comboFoot}>
