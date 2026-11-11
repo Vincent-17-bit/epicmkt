@@ -315,3 +315,15 @@ test("the stored range equals priceBounds of the same item across scenarios", as
     assert.deepEqual([b.min, b.max], [min, max], `scenario ${n}`);
   }
 });
+
+test("a flash sale with the older id entries hits only the listed combinations, as the pricing core does", async () => {
+  const id = await save(null, optioned(four([40, 50, 30, 45])));
+  const [grey] = await sql(c, `select id from item_variants where item_id = $1 and combo_key = $2`, [id, GREY_S]);
+  await flash(id, { type: "percent", value: 50, overrides: [{ variantId: grey.id }] });
+  assert.deepEqual(await range(id), [15, 50]);
+  const b = priceBounds(await shape(id), Date.now());
+  assert.deepEqual([b.min, b.max], [15, 50]);
+  const opts = await tx(c, { role: "anon" }, (k) => sql(k, `select public_item_options($1) as r`, [id]));
+  const flashed = opts[0].r.optionVariants.filter((v) => v.flash).map((v) => v.flash.salePrice);
+  assert.deepEqual(flashed, [15]);
+});

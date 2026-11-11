@@ -300,3 +300,10 @@ Entry format:
 
 - Contract: v1 (additive)
 - What changed: `seller_duplicate_item` now also copies `price_tiers` and `price_tier_mode` of the item and `price_tiers` of each combination (the previous function is kept as `seller_duplicate_item_base`, service_role only). `seller_check_item` already reported `invalid_price_tiers`, `tiers_need_from_price` and `item_in_flash_sale` because it runs the real save; tests now pin that.
+
+## 2026-11-12 A-range-followup: legacy flash targets in the price range (migration 0098)
+
+- Contract: v1 (additive)
+- What changed: a flash sale saved with the older id entries (`{ variantId }`) now applies only to the listed combinations in `price_min`/`price_high` and in the `flash` of `public_item_options`, as `priceFor` does (new `flash_variant_price`). Items are recomputed once.
+- Decision: offers stay out of the stored range. They depend on the shop's time of day and weekday and mostly change the total for a quantity, so they are not a stable "from" price; they are shown as offer badges. The mock list range ignores offers to match.
+- Not changed: `public_flash_sales.variant_flash` still treats id entries as "all" (its rows carry no variant id yet); `has_3d` stays false and `test:fn` needs Deno.
