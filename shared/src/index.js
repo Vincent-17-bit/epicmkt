@@ -62,3 +62,6 @@ export * from "./pricing/tiers.js";
 
 // Flash sale per combination.
 export * from "./flash/validateFlashVariants.js";
+
+// Specification rules engine (5.2): specIssues, GENERIC_GOODS_TEMPLATE, checkSpecRows.
+export * from "./specRules/index.js";

@@ -307,3 +307,16 @@ Entry format:
 - What changed: a flash sale saved with the older id entries (`{ variantId }`) now applies only to the listed combinations in `price_min`/`price_high` and in the `flash` of `public_item_options`, as `priceFor` does (new `flash_variant_price`). Items are recomputed once.
 - Decision: offers stay out of the stored range. They depend on the shop's time of day and weekday and mostly change the total for a quantity, so they are not a stable "from" price; they are shown as offer badges. The mock list range ignores offers to match.
 - Not changed: `public_flash_sales.variant_flash` still treats id entries as "all" (its rows carry no variant id yet); `has_3d` stays false and `test:fn` needs Deno.
+
+## 2026-11-12 5.2: Specification rules engine (specRows on product types)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.2
+- What changed:
+  - `ProductType` gains an optional `specRows: SpecRowDef[]` (`{key, label, level, input, choices?, requiredIf?, showIf?}`, at most 4 required). `checkProductType` validates it. Defined for `phone` (warranty required), `bread` (ingredients, allergens) and `drinking-water` (water type).
+  - New `shared/src/specRules/`: `specIssues(item, type, { grandfathered })` returns `{blockers, warnings, score}`; `GENERIC_GOODS_TEMPLATE` (nothing required) is used when the type is null or has no `specRows`; `checkSpecRows`. An issue is `{key, label, level, message}`.
+  - A row's value is the item's `specs` entry with the same label (case, accents and punctuation ignored); `brand`, `pack-size` and `includes` also read `item.brand`, `item.packSize`, `item.includes`.
+  - Fixtures `phone`, `bread`, `drinking-water` now carry the required spec values.
+- Not done: `requiredIf` and `showIf` are stored but not evaluated (5.3); server gate (5.4); `specIssues` is not yet in `sync-shared` (5.4 adds it).
+- Who must act: nobody.
+- Request files: none
