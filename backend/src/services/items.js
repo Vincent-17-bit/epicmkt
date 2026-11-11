@@ -347,7 +347,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
 }
 
 function priceRangeOf(detail) {
-  const b = priceBounds(detail, now());
+  const b = priceBounds({ ...detail, offers: [] }, now());
   return { priceMin: b?.min ?? null, priceMax: b?.max ?? null };
 }
 
