@@ -99,8 +99,9 @@ export const ITEM_FIELDS = ["dimensions", "priceTiers", "quantity"];
  * @property {"required"|"recommended"|"optional"} level
  * @property {"text"|"number"|"choice"|"openValue"|"boolean"|"dimension"} input
  * @property {string[]} [choices]   for a choice row
- * @property {object} [requiredIf]  evaluated by Prompt 5.3
- * @property {object} [showIf]      evaluated by Prompt 5.3
+ * @property {string} [labelSet]    a fixed choice list: condition | authenticity | fragranceState | chargerKind
+ * @property {object} [requiredIf]  condition that makes the row required: {row, equals|in|tag|present} or {all|any: [...]} or {not}
+ * @property {object} [showIf]      same shape; the row is hidden and ignored while it is false
  *
  * @typedef {object} SellerCard  The shop block on an item (same as the card the mock API builds today).
  * @property {string} id

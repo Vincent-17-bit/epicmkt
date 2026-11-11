@@ -1,29 +1,19 @@
 import { GENERIC_GOODS_TEMPLATE } from "./genericTemplate.js";
 import { checkSpecRows } from "./rows.js";
+import { hasRowValue, resolveRows, specValue } from "./conditional.js";
+import { rowChoices } from "./labels.js";
+import { normalizeValueKey } from "../openValues.js";
 
-const FIELD_FALLBACK = { brand: "brand", "pack-size": "packSize", includes: "includes" };
-
-const fold = (s) => String(s ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-
-const filled = (v) => {
-  if (typeof v === "string") return v.trim() !== "";
-  if (typeof v === "number") return Number.isFinite(v);
-  if (typeof v === "boolean") return true;
-  if (Array.isArray(v)) return v.some(filled);
-  return false;
+const choiceOk = (row, value) => {
+  const choices = rowChoices(row);
+  if (!choices) return true;
+  const key = normalizeValueKey(value);
+  return choices.some((c) => normalizeValueKey(c) === key);
 };
 
-function hasValue(item, row) {
-  const label = fold(row.label);
-  const specs = Array.isArray(item?.specs) ? item.specs : [];
-  if (specs.some((s) => fold(s?.label) === label && filled(s?.value))) return true;
-  const field = FIELD_FALLBACK[row.key];
-  return field ? filled(item?.[field]) : false;
-}
-
-export function specIssues(item, type, { grandfathered = false } = {}) {
-  const rows = type?.specRows ?? GENERIC_GOODS_TEMPLATE.specRows;
-  const problems = checkSpecRows(rows);
+export function specIssues(item, type, { grandfathered = false, tags } = {}) {
+  const defined = type?.specRows ?? GENERIC_GOODS_TEMPLATE.specRows;
+  const problems = checkSpecRows(defined);
   if (problems.length) throw new Error(`specIssues: invalid specRows for "${type?.id ?? "generic"}": ${problems.join("; ")}`);
 
   const blockers = [];
@@ -31,17 +21,24 @@ export function specIssues(item, type, { grandfathered = false } = {}) {
   let recommended = 0;
   let answered = 0;
 
-  for (const row of rows) {
+  for (const row of resolveRows(item, defined, { tags })) {
     if (row.level === "optional") continue;
-    const ok = hasValue(item, row);
+    const present = hasRowValue(item, row);
+    const own = specValue(item, row);
+    const invalid = present && own !== undefined && row.input === "choice" && !choiceOk(row, own);
+    const base = { key: row.key, label: row.label, level: row.level };
     if (row.level === "recommended") {
       recommended += 1;
-      if (ok) answered += 1;
-      else warnings.push({ key: row.key, label: row.label, level: row.level, message: `${row.label} is recommended` });
-    } else if (!ok) {
-      const issue = { key: row.key, label: row.label, level: row.level, message: `${row.label} is required` };
-      (grandfathered ? warnings : blockers).push(issue);
+      if (present && !invalid) answered += 1;
+      else if (invalid) warnings.push({ ...base, code: "invalid", message: `${row.label} must be one of: ${rowChoices(row).join(", ")}` });
+      else warnings.push({ ...base, code: "missing", message: `${row.label} is recommended` });
+      continue;
     }
+    if (present && !invalid) continue;
+    const issue = invalid
+      ? { ...base, code: "invalid", message: `${row.label} must be one of: ${rowChoices(row).join(", ")}` }
+      : { ...base, code: "missing", message: `${row.label} is required` };
+    (grandfathered ? warnings : blockers).push(issue);
   }
 
   const score = recommended === 0 ? 100 : Math.round((answered / recommended) * 100);

@@ -1,3 +1,6 @@
+import { isLabelSet, LABEL_SET_KEYS } from "./labels.js";
+import { checkCondition } from "./conditional.js";
+
 export const SPEC_LEVELS = Object.freeze(["required", "recommended", "optional"]);
 export const SPEC_INPUTS = Object.freeze(["text", "number", "choice", "openValue", "boolean", "dimension"]);
 export const MAX_REQUIRED_ROWS = 4;
@@ -18,11 +21,18 @@ export function checkSpecRows(rows, path = "specRows") {
     if (!SPEC_LEVELS.includes(r.level)) out.push(`${at}.level: must be one of ${SPEC_LEVELS.join(", ")}`);
     if (!SPEC_INPUTS.includes(r.input)) out.push(`${at}.input: must be one of ${SPEC_INPUTS.join(", ")}`);
     if (r.choices !== undefined && !(Array.isArray(r.choices) && r.choices.length > 0 && r.choices.every(text))) out.push(`${at}.choices: must be a list of text`);
-    if (r.input === "choice" && r.choices === undefined) out.push(`${at}.choices: required for a choice row`);
+    if (r.labelSet !== undefined && !isLabelSet(r.labelSet)) out.push(`${at}.labelSet: must be one of ${LABEL_SET_KEYS.join(", ")}`);
+    if (r.input === "choice" && r.choices === undefined && r.labelSet === undefined) out.push(`${at}.choices: required for a choice row`);
     keys.push(r.key);
   });
+  rows.forEach((r, i) => {
+    if (!isRecord(r)) return;
+    for (const field of ["requiredIf", "showIf"]) {
+      if (r[field] !== undefined) out.push(...checkCondition(r[field], keys, r.key, `${path}.${i}.${field}`));
+    }
+  });
   if (keys.some((k, i) => keys.indexOf(k) !== i)) out.push(`${path}: keys must be unique`);
-  const required = rows.filter((r) => r?.level === "required").length;
+  const required = rows.filter((r) => r?.level === "required" || r?.requiredIf !== undefined).length;
   if (required > MAX_REQUIRED_ROWS) out.push(`${path}: at most ${MAX_REQUIRED_ROWS} required rows (found ${required})`);
   return out;
 }
