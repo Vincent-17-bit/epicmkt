@@ -295,3 +295,8 @@ Entry format:
   - Client lane: read `price_min`, `price_max`, `has_price_range`, `has_options`, `department_id`, `product_type_id`, `has_3d` from the snapshot; show "From" when `has_price_range`.
   - Whoever builds `items.getList` for real: return the camelCase names above from `public_items`.
 - Request files: none
+
+## 2026-11-11 A-tiers-followup: duplicate keeps tiers (migration 0097)
+
+- Contract: v1 (additive)
+- What changed: `seller_duplicate_item` now also copies `price_tiers` and `price_tier_mode` of the item and `price_tiers` of each combination (the previous function is kept as `seller_duplicate_item_base`, service_role only). `seller_check_item` already reported `invalid_price_tiers`, `tiers_need_from_price` and `item_in_flash_sale` because it runs the real save; tests now pin that.

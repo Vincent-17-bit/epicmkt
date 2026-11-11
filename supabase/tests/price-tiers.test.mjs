@@ -162,3 +162,18 @@ test("another shop cannot save tiers onto my item", async () => {
   await saveFails(id, base({ priceTiers: T2 }), /item_not_found/, asB);
   assert.deepEqual((await row(id)).price_tiers, T);
 });
+
+test("a duplicate keeps the item and variant tiers and the mode", async () => {
+  const id = await save(null, withOptions([{ choice: { paper: "a4" }, price: 10 }, { choice: { paper: "a3" }, price: 40, priceTiers: T2 }], { priceTiers: T, priceTierMode: "graduated" }));
+  const copy = (await tx(c, asA, (k) => sql(k, `select seller_duplicate_item($1) as id`, [id]), { commit: true }))[0].id;
+  assert.deepEqual(await row(copy), { price_tiers: T, price_tier_mode: "graduated", price_type: "from" });
+  assert.deepEqual((await variants(copy)).map((r) => r.price_tiers), [null, T2]);
+});
+
+test("seller_check_item reports bad tiers and saves nothing", async () => {
+  const check = (fields) => tx(c, asA, (k) => sql(k, `select seller_check_item(null, $1::jsonb) as r`, [JSON.stringify(fields)])).then((r) => r[0].r);
+  assert.deepEqual(await check(base({ priceTiers: [{ minQty: 2, maxQty: null, unitPrice: 5 }] })), { ok: false, issues: [{ code: "invalid_price_tiers" }] });
+  assert.deepEqual(await check(base({ price_type: "fixed", priceTiers: T })), { ok: false, issues: [{ code: "tiers_need_from_price" }] });
+  assert.equal((await check(base({ priceTiers: T }))).ok, true);
+  assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 0);
+});
