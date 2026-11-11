@@ -320,3 +320,17 @@ Entry format:
 - Not done: `requiredIf` and `showIf` are stored but not evaluated (5.3); server gate (5.4); `specIssues` is not yet in `sync-shared` (5.4 adds it).
 - Who must act: nobody.
 - Request files: none
+
+## 2026-11-12 5.3: Conditional rules and state label sets
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.3
+- What changed:
+  - `SpecRowDef.requiredIf` and `showIf` are now evaluated. A condition is `{row, equals | in | tag | present}`, or `{all: [...]}`, `{any: [...]}`, `{not: {...}}`. `requiredIf` true makes the row required; `showIf` false hides the row (no issue, not scored). Rows with `requiredIf` count toward the four-required limit. `checkSpecRows` validates conditions.
+  - `tag` conditions read the tags of the row's value from `specIssues(item, type, { tags })`, where `tags` is `{ [normalizeValueKey(value)]: string[] }` or `(value, row) => string[]`. Callers fill it from the open values dictionary.
+  - `SpecRowDef.labelSet` (`condition`, `authenticity`, `fragranceState`, `chargerKind`) gives a choice row a fixed list. `LABEL_SETS`, `labelFor`, `rowChoices` in `shared/src/specRules/labels.js`. Authenticity has only original and inspired.
+  - A choice row whose value is not in its list is an issue with `code: "invalid"` (blocker when required). Every issue now has `code: "missing" | "invalid"`.
+  - A row is also answered by an option axis with the same key (the necklace purity axis).
+  - `gold-necklace` gets rows (material required; purity required when the material has the tag `precious-metal`); `fragrance` gets authenticity (required) and fragrance state. Fixtures `necklace` and `fragrance` carry the matching spec values.
+- Who must act: whoever calls `specIssues` with real data (5.4) passes `tags` from `option_values`.
+- Request files: none

@@ -117,12 +117,22 @@ export const PRODUCT_TYPES = [
       { key: "purity", label: "Purity", display: "button", suggested: sizes("18K", "22K", "24K") },
       { key: "length", label: "Length", display: "button" }
     ],
-    variantFields: ["weightGrams"], itemFields: []
+    variantFields: ["weightGrams"], itemFields: [],
+    specRows: [
+      row("material", "Material", "required", "openValue"),
+      row("purity", "Purity", "optional", "text", { requiredIf: { row: "material", tag: "precious-metal" } }),
+      row("hallmark", "Hallmark", "recommended")
+    ]
   },
   {
     id: "fragrance", name: "Fragrance", group: "beauty", priceType: "from", unit: null,
     axes: [{ key: "volume", label: "Volume", display: "button", suggested: sizes("30 ml", "50 ml", "100 ml") }],
-    variantFields: [], itemFields: []
+    variantFields: [], itemFields: [],
+    specRows: [
+      row("authenticity", "Authenticity", "required", "choice", { labelSet: "authenticity" }),
+      row("fragrance-state", "Fragrance state", "recommended", "choice", { labelSet: "fragranceState" }),
+      row("notes", "Notes", "recommended")
+    ]
   }
 ];
 
