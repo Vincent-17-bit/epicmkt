@@ -1,0 +1,43 @@
+.wrap { display: grid; gap: var(--space-3); inline-size: 100%; min-inline-size: 0; }
+.wrap :focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.label { font-size: var(--text-sm); font-weight: 600; color: var(--text); }
+.req { font-weight: 400; color: var(--text-muted); }
+.hint { margin: 0; font-size: var(--text-xs); color: var(--text-muted); }
+.error { margin: 0; font-size: var(--text-sm); color: var(--danger-text); }
+.warn { margin: 0; font-size: var(--text-sm); color: var(--warn-text); }
+.notice { margin: 0; font-size: var(--text-sm); color: var(--text-muted); }
+.sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; margin: 0; }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: stretch; }
+.input { flex: 1 1 10rem; min-inline-size: 0; box-sizing: border-box; min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-3); font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
+.input[aria-invalid="true"] { border-color: var(--danger-text); }
+.input:disabled { opacity: 0.6; cursor: not-allowed; }
+.button { min-block-size: var(--tap, 44px); min-inline-size: var(--tap, 44px); padding: var(--space-2) var(--space-4); font: inherit; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); cursor: pointer; }
+.button:hover:not(:disabled) { background: var(--surface-3); }
+.button:disabled { opacity: 0.55; cursor: not-allowed; }
+.primary { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
+.primary:hover:not(:disabled) { background: var(--primary); filter: brightness(0.92); }
+.choices { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; padding: 0; border: 0; min-inline-size: 0; }
+.choices legend { padding: 0; font-size: var(--text-sm); color: var(--text); }
+.pick { min-block-size: var(--tap, 44px); padding: var(--space-1) var(--space-3); font: inherit; font-size: var(--text-sm); color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); cursor: pointer; }
+.pick:hover { background: var(--surface-3); }
+.pickOn, .pick[aria-pressed="true"] { color: var(--on-primary); background: var(--primary); border-color: var(--primary); }
+.list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.chip { display: inline-flex; align-items: center; gap: var(--space-1); min-block-size: var(--tap, 44px); box-sizing: border-box; padding: 0 var(--space-1) 0 var(--space-3); color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); }
+.chip[draggable="true"] { cursor: grab; }
+.dragging { opacity: 0.5; }
+.dropHere { border-color: var(--primary); box-shadow: -3px 0 0 var(--primary); }
+.chipWarn { border-color: var(--warn-border); background: var(--warn-bg); }
+.chipName { white-space: nowrap; font-size: var(--text-sm); font-weight: 600; overflow-wrap: anywhere; }
+.chipNote { flex: 1 1 8rem; min-inline-size: 0; font-size: var(--text-xs); color: var(--warn-text); }
+.icon { inline-size: var(--tap, 44px); block-size: var(--tap, 44px); padding: 0; font: inherit; color: var(--text); background: none; border: 0; border-radius: var(--radius-sm); cursor: pointer; }
+.icon:hover:not(:disabled) { background: var(--surface-3); }
+.icon:disabled { opacity: 0.35; cursor: not-allowed; }
+.preview { margin: 0; padding: var(--space-2) var(--space-3); font-size: var(--text-sm); color: var(--text); background: var(--surface-2); border-radius: var(--radius-sm); overflow-wrap: anywhere; }
+.previewLabel { color: var(--text-muted); }
+.meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); align-items: center; }
+.range { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.rangeRow { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; }
+.field { display: grid; gap: var(--space-1); font-size: var(--text-sm); font-weight: 600; color: var(--text); }
+.field .input { flex: none; inline-size: 7rem; }
+.select { composes: input; flex: none; inline-size: auto; }
+@media (prefers-reduced-motion: reduce) { .wrap * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }

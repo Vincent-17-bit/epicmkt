@@ -514,7 +514,7 @@ export const getSubscription = async () => {
       topBenefits: k === "premium" ? ["Featured badge", "Priority placement", "Unlimited offers"] : ["Listed in search", "Unlimited items", "Standard support"],
       features: Object.fromEntries(Object.entries(FEATURES[k]).map(([g, list]) => [g, list])),
     }])),
-    limits: { standard: { photosPerItem: 7, videosPerItem: 1, faqs: 5, activeOffers: 8 }, premium: { photosPerItem: 15, videosPerItem: 3, faqs: 20, activeOffers: null } },
+    limits: { standard: { photosPerItem: 7, videosPerItem: 1, faqs: 5, activeOffers: 8, options: { axes: 3, values: 20, variants: 60 } }, premium: { photosPerItem: 15, videosPerItem: 3, faqs: 20, activeOffers: null, options: { axes: 3, values: 40, variants: 200 } } },
   };
 };
 export const getPaymentInstructions = async ({ purpose = null, targetPlan = null, category = null } = {}) => {

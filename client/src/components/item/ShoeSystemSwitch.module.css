@@ -1,0 +1,6 @@
+.systems { display: inline-flex; flex-wrap: wrap; align-self: flex-start; border: 2px solid var(--text); border-radius: var(--radius-pill, 999px); overflow: hidden; }
+.system { min-height: 44px; min-width: 44px; padding: 0 var(--space-3); border: 0; background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+.system:focus-visible { outline: 3px solid var(--primary, currentColor); outline-offset: -3px; }
+/* Selected: filled, with a check mark, so it is not colour alone. */
+.systemOn { background: var(--text); color: var(--surface); }
+.systemOn::before { content: "\2713\00a0"; }

@@ -21,3 +21,4 @@ export { registerScale, adoptScale, getScale, listScales, parse, format, sizeKey
 export { plausible, PLAUSIBILITY_RULES } from "./plausibility.js";
 export { validateAxisValues } from "./validate.js";
 export { SHOE_CHART } from "./shoeChart.js";
+export { dimensionLabels, dimensionProfileId, DIMENSION_PROFILES } from "./remaining/index.js";
