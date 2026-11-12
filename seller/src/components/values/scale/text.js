@@ -7,6 +7,7 @@ export const T = Object.freeze({
   moveEarlier: (v) => `Move ${v} earlier`,
   moveLater: (v) => `Move ${v} later`,
   listLabel: (label) => `${label} values`,
+  dragHint: "Drag a value to reorder it, or use the arrow buttons.",
   empty: "No values yet.",
   count: (n, max) => `${n} of ${max} values`,
   preview: "Buyers will see",

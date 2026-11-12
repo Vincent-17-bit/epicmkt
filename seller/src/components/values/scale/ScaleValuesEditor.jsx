@@ -3,7 +3,7 @@ import { scales } from "@epicmkt/shared";
 import { T } from "./text.js";
 import { UNIT_NAMES, configFor } from "./scaleEditorConfig.js";
 import QuickPicks from "./QuickPicks.jsx";
-import { MAX_VALUES, add, addMany, checks, inspect, isSorted, labels, move, remove, sorted } from "./model.js";
+import { MAX_VALUES, add, addMany, checks, inspect, isSorted, labels, move, moveTo, remove, sorted } from "./model.js";
 import s from "./scale.module.css";
 
 /**
@@ -23,6 +23,8 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
   const [raw, setRaw] = useState("");
   const [shownError, setShownError] = useState(null); // { error, raw } after a failed Add
   const [notice, setNotice] = useState("");
+  const [drag, setDrag] = useState(null); // index being dragged
+  const [over, setOver] = useState(null);
 
   const withSuffix = (t) => (suffix ? `${t.trim()} ${suffix}` : t);
   const live = inspect(withSuffix(raw), { scaleId, ctx });
@@ -117,7 +119,16 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
               const name = scales.format(v);
               const note = noteAt(i);
               return (
-                <li key={`${scales.sizeKey(v)}|${v.width ?? ""}`} className={`${s.chip} ${note ? s.chipWarn : ""}`} data-testid="scale-chip">
+                <li
+                  key={`${scales.sizeKey(v)}|${v.width ?? ""}`}
+                  className={`${s.chip} ${note ? s.chipWarn : ""} ${drag === i ? s.dragging : ""} ${over === i && drag !== null && drag !== i ? s.dropHere : ""}`}
+                  data-testid="scale-chip"
+                  draggable={!disabled && values.length > 1}
+                  onDragStart={(e) => { setDrag(i); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", name); }}
+                  onDragOver={(e) => { if (drag !== null) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setOver(i); } }}
+                  onDrop={(e) => { e.preventDefault(); if (drag !== null && drag !== i) changeAt(moveTo(values, drag, i), T.moved(scales.format(values[drag]), i + 1, values.length)); setDrag(null); setOver(null); }}
+                  onDragEnd={() => { setDrag(null); setOver(null); }}
+                >
                   <span className={s.chipName}>{name}</span>
                   {note && <span className={s.chipNote}>{T.unusual}</span>}
                   {chipNote?.(v) && <span className={s.chipNote} style={{ color: "var(--text-muted)" }}>{chipNote(v)}</span>}
@@ -131,6 +142,7 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
         )}
       </div>
 
+      {values.length > 1 && <p className={s.hint}>{T.dragHint}</p>}
       {notes.map((n) => <p key={n.index} className={n.ok ? s.warn : s.error}>{n.warn}</p>)}
 
       <div className={s.meta}>

@@ -59,6 +59,15 @@ export function move(list, i, step) {
   return out;
 }
 
+/** Moves the value at `from` to position `to` (drag and drop). */
+export function moveTo(list, from, to) {
+  if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+  const out = [...list];
+  const [item] = out.splice(from, 1);
+  out.splice(to, 0, item);
+  return out;
+}
+
 /** The list in the scale's own order (smallest first). */
 export const sorted = (list) => [...list].sort(scales.compare);
 export const isSorted = (list) => list.every((v, i) => i === 0 || scales.compare(list[i - 1], v) <= 0);
