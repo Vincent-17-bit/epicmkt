@@ -47,6 +47,8 @@ export * from "./types/restrictions.js";
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
 
+// Sizes 1.9: size chart unit conversion (cm / in), shared by the buyer modal and the admin editor.
+export { canToggleUnit, chartInUnit, convertCell, convertLength, matchRow, measurementColumns } from "./chartUnits.js";
 // Pricing core: price per combination, flash, offers and sale (integer money). priceFor, itemPriceBounds, priceMin, priceMax, lineTotal.
 // The one-item range helper is exported as itemPriceBounds: `priceBounds(items)` already exists in seller/filters.js (the catalog's list-wide
 // price slider), and an explicit export here would silently shadow it.

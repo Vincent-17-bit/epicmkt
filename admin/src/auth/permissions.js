@@ -53,6 +53,9 @@ export const ACTIONS = {
   // A18. Mirrors has_role(array['reviewer']) in the admin_*_option_value functions (migration 0090); the owner is implied.
   "values.view": { label: "see the open values dictionary", roles: ["reviewer"] },
   "values.review": { label: "approve, rename or merge dictionary values", roles: ["reviewer"] },
+  // Sizes 1.9. Mirrors has_role(array['owner']) in admin_save_size_chart, admin_delete_size_chart and admin_save_shoe_conversion (migration 0093): the owner only.
+  "sizecharts.view": { label: "see the size charts and the shoe conversion table", roles: ["reviewer", "support"] },
+  "sizecharts.edit": { label: "change size charts and the shoe conversion table", roles: [] },
 };
 
 export function isRole(role) {
