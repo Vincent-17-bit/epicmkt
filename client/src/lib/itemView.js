@@ -3,6 +3,33 @@ import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHigh
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
 
+const keyOf = (label) => String(label ?? "").trim().toLowerCase();
+
+export function mergeSpecs(specs, overrides) {
+  const list = Array.isArray(specs) ? specs : [];
+  const extra = Array.isArray(overrides)
+    ? overrides
+    : overrides && typeof overrides === "object"
+      ? Object.entries(overrides).map(([label, value]) => ({ label, value }))
+      : [];
+  let out = list.map((s) => ({ ...s }));
+  for (const o of extra) {
+    const key = keyOf(o?.label);
+    if (!key) continue;
+    const at = out.findIndex((s) => keyOf(s.label) === key);
+    const blank = o.value === undefined || o.value === null || String(o.value).trim() === "";
+    if (blank) out = out.filter((_, i) => i !== at);
+    else if (at !== -1) out[at] = { ...out[at], value: o.value };
+    else out.push({ group: o.group ?? SPEC_GROUPS[0], label: o.label, value: o.value });
+  }
+  return out;
+}
+
+export const specGroupsFor = ({ item, category, attributes, overrides }) =>
+  buildSpecGroups({ item: overrides ? { ...item, specs: mergeSpecs(item?.specs, overrides) } : item, category, attributes });
+
+export const topHighlights = (groups, limit = 4) => groups.flatMap((g) => g.rows).slice(0, limit);
+
 const isBlank = (value) => value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
 

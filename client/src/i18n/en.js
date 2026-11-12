@@ -2,6 +2,8 @@ import { ITEM_LABELS } from "@epicmkt/ui";
 
 export default {
   ...ITEM_LABELS,
+  "item.topHighlights": "Top highlights",
+  "item.detailsTabs": "Item information",
   "breadcrumb.label": "Breadcrumb",
   "breadcrumb.home": "Home",
   "breadcrumb.search": "Search",
