@@ -46,3 +46,22 @@ export * from "./types/restrictions.js";
 
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
+
+// Pricing core: price per combination, flash, offers and sale (integer money). priceFor, itemPriceBounds, priceMin, priceMax, lineTotal.
+// The one-item range helper is exported as itemPriceBounds: `priceBounds(items)` already exists in seller/filters.js (the catalog's list-wide
+// price slider), and an explicit export here would silently shadow it.
+export { priceFor, priceBounds as itemPriceBounds, priceMin, priceMax } from "./pricing.js";
+export { lineTotal } from "./pricing/money.js";
+
+// Measured quantity (units | measure | none): normalizeQuantity, checkQuantity, quantityRules, measuredLine, measureTotal.
+export { QUANTITY_MODES, quantityModeOf, quantityRules, checkQuantity, normalizeQuantity, parseAmount } from "./quantity.js";
+export { measureTotal, measuredMessage, measuredLine, amountText, formatAmount, perUnitText } from "./pricing/measure.js";
+
+// Quantity tier pricing.
+export * from "./pricing/tiers.js";
+
+// Flash sale per combination.
+export * from "./flash/validateFlashVariants.js";
+
+// Specification rules engine (5.2): specIssues, GENERIC_GOODS_TEMPLATE, checkSpecRows.
+export * from "./specRules/index.js";

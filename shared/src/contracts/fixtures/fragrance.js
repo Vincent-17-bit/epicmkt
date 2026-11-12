@@ -8,7 +8,7 @@ export const fragrance = () => {
     id: "fx-fragrance", productType: "fragrance", name: "Eau de parfum", brand: "Aurelle", hue: 320, section: "Fragrance",
     description: "A warm floral and amber eau de parfum in three bottle sizes.",
     highlights: ["Long lasting", "Sealed and authentic"],
-    specs: [{ label: "Notes", value: "Jasmine, amber, vanilla" }],
+    specs: [{ label: "Authenticity", value: "Original" }, { label: "Fragrance state", value: "Sealed" }, { label: "Notes", value: "Jasmine, amber, vanilla" }],
     axes,
     variants: grid(axes, (c) => ({ price: PRICES[c.volume] }))
   };
