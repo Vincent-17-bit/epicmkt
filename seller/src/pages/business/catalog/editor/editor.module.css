@@ -480,3 +480,5 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 @media (forced-colors: active) {
   .valueOption[data-active="true"] { outline: 2px solid Highlight; }
 }
+.yesNo { display: flex; flex-wrap: wrap; gap: var(--space-4); }
+.yesNo label { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 2.75rem; }
