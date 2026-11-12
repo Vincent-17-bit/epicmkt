@@ -164,7 +164,7 @@ test("the guarantee is in the database: a direct insert or update of a forbidden
   await rejects(c, { role: "service_role" }, `insert into items (business_id, name, price_type, price, availability, product_type_id) values ($1, 'xx', 'fixed', 1, 'available', 'prescription-medicine')`, [bBoutique], /type_not_allowed/);
   const id = (await sql(c, `insert into items (business_id, name, price_type, price, availability) values ($1, 'xx', 'fixed', 1, 'available') returning id`, [bBoutique]))[0].id;
   await rejects(c, { role: "service_role" }, `update items set product_type_id = 'vet-medicine' where id = $1`, [id], /type_not_allowed/);
-  await sql(c, `update items set product_type_id = 'fragrance' where id = $1`, [id]);
+  await sql(c, `update items set product_type_id = 'fragrance', specs = '[{"group":"Item details","label":"Authenticity","value":"Original"}]' where id = $1`, [id]);
   assert.equal(await typeOf(id), "fragrance");
 });
 
