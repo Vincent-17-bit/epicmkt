@@ -173,6 +173,24 @@ describe("Size charts: editor", () => {
   });
 });
 
+describe("Size charts: database not updated", () => {
+  it("explains the missing migrations instead of showing a raw server message, and retries", async () => {
+    api.listSizeCharts.mockRejectedValueOnce(Object.assign(new Error("Could not find the function public.admin_size_charts_list without parameters in the schema cache"), { code: "PGRST202" }));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The database needs its size chart update");
+    expect(alert).toHaveTextContent("0093");
+    expect(alert).not.toHaveTextContent("without parameters");
+    fireEvent.click(within(alert).getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("button", { name: /Edit Dresses and tops/ })).toBeInTheDocument();
+  });
+  it("any other failure keeps the usual error card", async () => {
+    api.listSizeCharts.mockRejectedValueOnce(new Error("boom"));
+    renderPage();
+    expect(await screen.findByText("We could not load size charts")).toBeInTheDocument();
+  });
+});
+
 describe("Size charts: items on a chart", () => {
   const open = async () => {
     renderPage();

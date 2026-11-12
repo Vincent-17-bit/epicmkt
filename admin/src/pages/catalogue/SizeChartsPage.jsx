@@ -8,12 +8,24 @@ import Modal from "../../components/Modal.jsx";
 import Tabs from "../../components/Tabs.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
-import { chartError, itemsUsingText, rowsText, typesText } from "../../lib/sizeCharts.js";
+import { SCHEMA_HELP, chartError, isSchemaMissing, itemsUsingText, rowsText, typesText } from "../../lib/sizeCharts.js";
 import ChartEditor from "./sizeCharts/ChartEditor.jsx";
 import ShoeTab from "./sizeCharts/ShoeTab.jsx";
 import * as M from "./sizeCharts/model.js";
 
 const KEY = "admin-size-charts";
+
+// A load failure. When the database simply has not had the migrations applied, say so and what to do, instead of a raw server message.
+function SizeLoadError({ what, error, onRetry }) {
+  if (!isSchemaMissing(error)) return <LoadError what={what} error={error} onRetry={onRetry} />;
+  return (
+    <div className="empty" role="alert">
+      <h3 className="heading-sm">{SCHEMA_HELP.title}</h3>
+      <p className="muted">{SCHEMA_HELP.body}</p>
+      <Button type="button" onClick={onRetry}>Try again</Button>
+    </div>
+  );
+}
 const TABS = [{ id: "charts", label: "Charts" }, { id: "shoes", label: "Shoe conversion" }];
 
 function ConfirmDelete({ chart, onClose }) {
@@ -115,7 +127,7 @@ export default function SizeChartsPage() {
                   <input type="search" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="Dress, shirt, kids" />
                 </label>
               </div>
-              {charts.isError ? <LoadError what="size charts" error={charts.error} onRetry={charts.refetch} /> : charts.isLoading ? <span className="skeleton" /> : rows.length === 0 ? (
+              {charts.isError ? <SizeLoadError what="size charts" error={charts.error} onRetry={charts.refetch} /> : charts.isLoading ? <span className="skeleton" /> : rows.length === 0 ? (
                 <div className="sc-note" role="status">{query ? "No chart matches that search." : "No size charts yet. Create the first one and give it to a product type."}</div>
               ) : (
                 <ul className="sc-list">
@@ -144,7 +156,7 @@ export default function SizeChartsPage() {
                 </ul>
               )}
             </>
-          ) : shoe.isError ? <LoadError what="the shoe table" error={shoe.error} onRetry={shoe.refetch} /> : shoe.isLoading ? <span className="skeleton" /> : (
+          ) : shoe.isError ? <SizeLoadError what="the shoe table" error={shoe.error} onRetry={shoe.refetch} /> : shoe.isLoading ? <span className="skeleton" /> : (
             <ShoeTab stored={shoe.data} canEdit={canEdit} saving={saveShoe.isPending} error={saveShoe.isError ? chartError(saveShoe.error) : null} onSave={(chart) => saveShoe.mutate(chart)} />
           )}
         </div>

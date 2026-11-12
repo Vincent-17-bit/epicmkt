@@ -20,3 +20,15 @@ export const chartError = (error) =>
 export const rowsText = (n) => `${n} ${n === 1 ? "row" : "rows"}`;
 export const typesText = (n) => `${n} ${n === 1 ? "type" : "types"}`;
 export const itemsUsingText = (n) => `${n} ${n === 1 ? "item" : "items"}`;
+
+/** True when the database answered "I have no such function or table": its migrations have not been applied yet (PostgREST PGRST202 / PGRST205). */
+export function isSchemaMissing(error) {
+  const text = [error?.message, error?.cause?.message, error?.cause?.code, error?.code].filter(Boolean).join(" ");
+  return /PGRST20[25]|schema cache|could not find the (function|table)/i.test(text);
+}
+
+/** What to tell an admin when the database is behind the app. */
+export const SCHEMA_HELP = {
+  title: "The database needs its size chart update",
+  body: "This page needs database migrations that have not been applied to this project yet: 0086 (size charts), 0091 (product types), 0093 (shoe conversion and chart types) and 0100 (one item\u2019s chart). Apply them with “supabase db push”, or run each file in the SQL editor in that order, then run “notify pgrst, 'reload schema';” and try again.",
+};
