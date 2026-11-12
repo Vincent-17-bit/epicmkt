@@ -11,7 +11,9 @@ export function useProductTypes() {
   const q = useQuery({ queryKey: ["productTypes", categoryId], queryFn: () => loadProductTypes({ categoryId }), enabled: Boolean(business), staleTime: 5 * 60_000, retry: 1 });
   const types = useMemo(() => sellableTypes(q.data?.types ?? [], categoryId), [q.data, categoryId]);
   return {
-    business, categoryId, types, departments: q.data?.departments ?? [],
+    business, categoryId, types,
+    // The plan's caps on options ({ axes, values, variants }); undefined when the server does not send them, so the hard limits apply.
+    planLimits: me.data?.limits?.[business?.planKey]?.options, departments: q.data?.departments ?? [],
     loading: me.isLoading || (Boolean(business) && q.isLoading),
     error: me.isError || q.isError,
     retry: () => { if (me.isError) me.refetch(); else q.refetch(); },

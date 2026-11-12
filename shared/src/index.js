@@ -49,3 +49,21 @@ export * from "./sizeCharts.js";
 
 // Sizes 1.9: size chart unit conversion (cm / in), shared by the buyer modal and the admin editor.
 export { canToggleUnit, chartInUnit, convertCell, convertLength, matchRow, measurementColumns } from "./chartUnits.js";
+// Pricing core: price per combination, flash, offers and sale (integer money). priceFor, itemPriceBounds, priceMin, priceMax, lineTotal.
+// The one-item range helper is exported as itemPriceBounds: `priceBounds(items)` already exists in seller/filters.js (the catalog's list-wide
+// price slider), and an explicit export here would silently shadow it.
+export { priceFor, priceBounds as itemPriceBounds, priceMin, priceMax } from "./pricing.js";
+export { lineTotal } from "./pricing/money.js";
+
+// Measured quantity (units | measure | none): normalizeQuantity, checkQuantity, quantityRules, measuredLine, measureTotal.
+export { QUANTITY_MODES, quantityModeOf, quantityRules, checkQuantity, normalizeQuantity, parseAmount } from "./quantity.js";
+export { measureTotal, measuredMessage, measuredLine, amountText, formatAmount, perUnitText } from "./pricing/measure.js";
+
+// Quantity tier pricing.
+export * from "./pricing/tiers.js";
+
+// Flash sale per combination.
+export * from "./flash/validateFlashVariants.js";
+
+// Specification rules engine (5.2): specIssues, GENERIC_GOODS_TEMPLATE, checkSpecRows.
+export * from "./specRules/index.js";

@@ -5,7 +5,6 @@ import { CHECKS, qualityChecks, registerCheck } from "./checks/index.js";
 import { qualityScore, firstErrorTarget } from "./model.js";
 import { SLICES, itemReducer, sliceOf } from "./model/index.js";
 import { useItemModel } from "./model/useItemModel.js";
-import OptionsStep from "./steps/OptionsStep.jsx";
 import { STEPS, visibleSteps } from "./steps/index.js";
 
 const form = (over = {}) => ({ ...emptyItemForm(), ...over });
@@ -23,21 +22,19 @@ describe("steps registry", () => {
     expect(visibleSteps(model({ form: form({ productTypeId: null }) })).map((s) => s.id)).toContain("type");
   });
 
-  it("shows the seller the same five steps as before (Options stays hidden)", () => {
+  it("shows the seller the same five steps as before (Options appears only for a typed item or one that has options)", () => {
     const seen = visibleSteps(model());
     expect(seen.map((s) => s.id)).toEqual(["media", "basics", "price", "details", "review"]);
     expect(seen.map((s) => s.short)).toEqual(["Media", "Basics", "Price", "Details", "Review"]);
   });
 
-  it("gives every step the full shape, and the Options slot renders nothing", () => {
+  it("gives every step the full shape", () => {
     for (const s of STEPS) {
       expect(typeof s.component).toBe("function");
       expect(typeof s.visibleWhen).toBe("function");
       expect(typeof s.issues).toBe("function");
       expect(typeof s.done).toBe("function");
     }
-    const { container } = render(<OptionsStep />);
-    expect(container).toBeEmptyDOMElement();
   });
 
   it("a step that hides itself drops out of the visible list", () => {

@@ -10,14 +10,14 @@ export { PRICED, parseKes, qualityChecks };
 // Nothing here touches React or the network, so it is tested on its own.
 
 export const STEP_OF = {
-  name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics",
+  name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics", options: "options",
   priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", availability: "price", stockCount: "price", lowStockThreshold: "price", variants: "price", variantsCount: "price",
   highlights: "details", highlightsCount: "details", specs: "details", specsCount: "details", includes: "details", includesCount: "details", packSize: "details", terms: "details",
 };
 
 // The order errors are looked for in, the same order the fields appear on screen.
 const ERROR_ORDER = [
-  "name", "brand", "section", "shortDescription", "description",
+  "name", "brand", "section", "shortDescription", "description", "options",
   "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants",
   "highlightsCount", "highlights", "specsCount", "specs", "includesCount", "includes", "packSize", "terms",
 ];
@@ -44,6 +44,8 @@ export const firstErrorTarget = (errors) => {
     return { key, step, focus: `var-${i}-${row.label ? "label" : row.price ? "price" : "stock"}` };
   }
   if (key === "includes") return { key, step, focus: `inc-${firstIndex(errors.includes)}` };
+  // errors.options is a flat map of path -> message ("axes.0.label", "row:colour=black:price", "rows"); the first one is the first problem.
+  if (key === "options") return { key, step, focus: `opt-${Object.keys(errors.options)[0]}` };
   if (key.endsWith("Count")) return { key, step, focus: `${key}` };
   return { key, step, focus: key };
 };
@@ -68,6 +70,8 @@ export const errorList = (errors) => {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `spec-${i}-${f}`, step: "details", focus: `spec-${i}-${f}`, label: `Specification ${i + 1}`, message })));
     } else if (key === "variants") {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `var-${i}-${f}`, step: "price", focus: `var-${i}-${f}`, label: `Option ${i + 1}`, message })));
+    } else if (key === "options") {
+      Object.entries(value).forEach(([path, message]) => out.push({ key: `opt-${path}`, step: "options", focus: `opt-${path}`, label: path.startsWith("row:") ? "Combination" : "Options", message }));
     } else if (key === "includes") {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => out.push({ key: `inc-${i}`, step: "details", focus: `inc-${i}`, label: `Included item ${i + 1}`, message: value[i] }));
     } else {

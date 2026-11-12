@@ -2,6 +2,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Button from "../../../components/Button.jsx";
 import ChartPreview from "./ChartPreview.jsx";
+import ChartItems from "./ChartItems.jsx";
 import * as M from "./model.js";
 import { typesText } from "../../../lib/sizeCharts.js";
 
@@ -197,8 +198,9 @@ export default function ChartEditor({ initial, original, types, categories, canE
             <p role="status" className="muted">{typesText(chart.productTypeIds.length)} selected (up to {M.MAX_TYPES}).</p>
             {moved.length > 0 && <p className="sc-note" role="status">Saving moves {moved.map((m) => m.name).join(", ")} from {moved.length === 1 ? "its current chart" : "their current charts"} to this one.</p>}
             {released.length > 0 && <p className="sc-note" role="status">Saving releases {released.length} {released.length === 1 ? "type" : "types"} that used this chart.</p>}
-            <p className="muted">Choosing a chart for one single item is done by the seller on that item&rsquo;s page, not here.</p>
           </fieldset>
+
+          {chart.id ? <ChartItems chart={chart} canEdit={canEdit} /> : <p className="muted">Save the chart first, then you can put single items on it.</p>}
         </div>
 
         <aside className="sc-editor__side" aria-label="Preview">

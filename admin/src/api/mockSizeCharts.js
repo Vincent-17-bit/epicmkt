@@ -7,6 +7,7 @@ const latency = (ms = 100) => new Promise((resolve) => setTimeout(resolve, ms));
 let charts = [];
 let types = [];
 let shoe = null;
+let items = [];
 let seq = 0;
 
 export function resetMockSizeCharts() {
@@ -18,7 +19,13 @@ export function resetMockSizeCharts() {
     if (t) t.sizeChartId = charts[i].id;
   }
   shoe = { chart: shoeChartRows(scales.SHOE_CHART), version: 1 };
+  items = [
+    ["Linen sundress", "Zawadi Fashions", "dress", "sc-1"], ["Wrap dress", "Zawadi Fashions", "dress", "sc-1"], ["Kitenge top", "Mama Rosa Tailors", "dress", "sc-1"],
+    ["Office shirt", "Mama Rosa Tailors", "shirt", null], ["Floral maxi dress", "Zawadi Fashions", "dress", null], ["Canvas sneakers", "Step Right Shoes", "shoes-eu", null]
+  ].map(([name, business_name, product_type_id, size_chart_id], i) => ({ id: `it-${i + 1}`, name, business_name, product_type_id, size_chart_id }));
+  syncUsing();
 }
+function syncUsing() { for (const c of charts) c.items_using = items.filter((i) => i.size_chart_id === c.id).length; }
 resetMockSizeCharts();
 
 const withTypes = (c) => ({ ...structuredClone(c), product_type_ids: types.filter((t) => t.sizeChartId === c.id).map((t) => t.id).sort() });
@@ -60,6 +67,33 @@ export async function deleteSizeChart(id) {
   if (!chart) throw new ApiError("chart_not_found");
   if (chart.items_using > 0 || types.some((t) => t.sizeChartId === id)) throw new ApiError("size_chart_in_use");
   charts = charts.filter((c) => c.id !== id);
+}
+
+// Items on a chart (chartId given), or items whose name matches a search (chartId null). Needs a chart or a search, like the database function.
+export async function listItemsForSizeChart(chartId = null, query = "", limit = 30) {
+  await latency(60);
+  const q = String(query ?? "").trim().toLowerCase();
+  if (!chartId && !q) return [];
+  return items
+    .filter((i) => (!chartId || i.size_chart_id === chartId) && (!q || i.name.toLowerCase().includes(q)))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .slice(0, Math.min(Math.max(limit, 1), 100))
+    .map((i) => ({ ...i, size_chart_name: charts.find((c) => c.id === i.size_chart_id)?.name ?? null }));
+}
+
+// chartId null clears. Same rules as admin_set_item_size_chart.
+export async function setItemSizeChart(itemId, chartId) {
+  await latency();
+  const item = items.find((i) => i.id === itemId);
+  if (!item) throw new ApiError("item_not_found");
+  if (chartId) {
+    const chart = charts.find((c) => c.id === chartId);
+    if (!chart) throw new ApiError("chart_not_found");
+    if (!chart.active && item.size_chart_id !== chartId) throw new ApiError("chart_inactive");
+  }
+  item.size_chart_id = chartId ?? null;
+  syncUsing();
+  return true;
 }
 
 export async function getShoeConversion() {

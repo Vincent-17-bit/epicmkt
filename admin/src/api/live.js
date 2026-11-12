@@ -722,3 +722,8 @@ export async function getShoeConversion() {
   return data ? { chart: data.chart, version: data.version } : null;
 }
 export const saveShoeConversion = (chart) => detailRpc("admin_save_shoe_conversion", { p_chart: chart });
+
+// Per-item chart (migration 0100). listItemsForSizeChart(chartId, query, limit): items on a chart, or items matching a name search when chartId is null
+// -> [{ id, name, product_type_id, size_chart_id, size_chart_name, business_name }]. setItemSizeChart(itemId, chartId|null): owner only.
+export const listItemsForSizeChart = (chartId = null, query = "", limit = 30) => detailRpc("admin_items_for_size_chart", { p_chart: chartId, p_query: query || null, p_limit: limit });
+export const setItemSizeChart = (itemId, chartId = null) => detailRpc("admin_set_item_size_chart", { p_item: itemId, p_chart: chartId });
