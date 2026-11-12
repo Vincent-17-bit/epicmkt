@@ -1,7 +1,8 @@
 import { useId } from "react";
 import { SPEC_LIMITS, rowChoices } from "@epicmkt/shared";
+import { ColorValueInput, OpenValueInput, useOpenValueSource } from "../../../../components/values";
 import { Field } from "./parts.jsx";
-import { LEVEL_TEXT, ownValue, withRow } from "./typedRows.js";
+import { LEVEL_TEXT, ownValue, valueKindOf, valueOf, withRow, withValue } from "./typedRows.js";
 import styles from "./editor.module.css";
 
 function YesNo({ row, label, value, onChange }) {
@@ -20,7 +21,13 @@ function YesNo({ row, label, value, onChange }) {
   );
 }
 
-function Row({ row, form, patch }) {
+function OpenRow({ row, kind, label, form, patch, source }) {
+  const found = useOpenValueSource();
+  const common = { label, source: source ?? found, value: valueOf(form, row), onChange: (v) => { const next = withValue(form, row, v); patch("specs", next.specs); patch("specValues", next.specValues); } };
+  return kind === "color" ? <ColorValueInput {...common} /> : <OpenValueInput {...common} kind={kind} />;
+}
+
+function Row({ row, form, patch, source }) {
   const label = `${row.label} (${LEVEL_TEXT[row.level]})`;
   const value = ownValue(form, row);
   const set = (next) => patch("specs", withRow(form, row, next));
@@ -37,14 +44,16 @@ function Row({ row, form, patch }) {
     );
   }
   if (row.input === "number") return <Field {...common} max={SPEC_LIMITS.value} inputMode="decimal" autoComplete="off" />;
-  // TODO(contract:5.1) openValue: OpenValueInput (Prompt 5.6); TODO(contract:1.5) dimension: dimension editor
+  const kind = row.input === "openValue" ? valueKindOf(row) : null;
+  if (kind) return <OpenRow row={row} kind={kind} label={label} form={form} patch={patch} source={source} />;
+  // TODO(contract:1.5) dimension: dimension editor
   return <Field {...common} max={SPEC_LIMITS.value} autoComplete="off" />;
 }
 
-export default function TypeRows({ rows, form, patch }) {
+export default function TypeRows({ rows, form, patch, source }) {
   return (
     <div className={styles.grid}>
-      {rows.map((row) => <Row key={row.key} row={row} form={form} patch={patch} />)}
+      {rows.map((row) => <Row key={row.key} row={row} form={form} patch={patch} source={source} />)}
     </div>
   );
 }

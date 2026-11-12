@@ -30,3 +30,29 @@ export function withRow(form, row, value) {
   if (at !== -1) return specs.map((s, i) => (i === at ? { ...s, value } : s));
   return [...specs, { group: SPEC_DEFAULT_GROUP, label: row.label, value }];
 }
+
+const KINDS = [[/brand/, "brand"], [/colo(u)?r/, "color"], [/finish/, "finish"], [/flavo(u)?r/, "flavour"], [/material/, "material"]];
+
+export const valueKindOf = (row) => {
+  const hit = KINDS.find(([re]) => re.test(row.key));
+  return hit ? hit[1] : null;
+};
+
+export function valueOf(form, row) {
+  const text = ownValue(form, row);
+  if (!text) return null;
+  const stored = form.specValues?.[row.key];
+  if (stored && stored.label === text) return stored;
+  return { id: null, kind: valueKindOf(row), label: text, key: normalizeValueKey(text), status: "approved", hex: null, tags: [] };
+}
+
+export function withValue(form, row, value) {
+  const rest = { ...form.specValues };
+  delete rest[row.key];
+  return { specs: withRow(form, row, value?.label ?? ""), specValues: value ? { ...rest, [row.key]: value } : rest };
+}
+
+export const specLinks = (form) => {
+  const ids = Object.values(form.specValues ?? {}).map((v) => v?.id).filter(Boolean);
+  return [...new Set(ids)].map((valueId) => ({ slot: "spec", valueId }));
+};
