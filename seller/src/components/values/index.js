@@ -7,3 +7,5 @@ export { useOpenValueSource } from "./useOpenValueSource.js";
 export { default as ScaleValuesEditor } from "./scale/ScaleValuesEditor.jsx";
 export * from "./scale/wrappers.jsx";
 export { valuesEditorFor } from "./scale/valuesEditorFor.js";
+export { default as DimensionsEditor, DimensionForm, OptionDimensionsEditor } from "./scale/DimensionsEditor.jsx";
+export { default as ShoeValuesEditor, convertedHelp } from "./scale/ShoeValuesEditor.jsx";

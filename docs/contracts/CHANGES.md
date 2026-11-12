@@ -217,6 +217,12 @@ Entry format:
   - Lane A (A06): `admin_save_product_type` should keep `size_chart_id` (or leave it alone); call `pickSizeChart` in `items.getDetail`; use `convertShoe` to show a size in the buyer's system.
   - Edge functions: `shared/src/sizeCharts.js` is not synced; add the `sizeCharts.js` and `seller/options.js` entries to `scripts/sync-shared.mjs` when a function needs them.
 
+## 2026-11-12 — Seller: scale value editors (prompts 1.4 and 1.5)
+
+- `seller/src/components/values/scale/`: `ScaleValuesEditor` (any registered scale) and named wrappers for choice (`label` scale), count, volume, weight, duration, portion, voltage, power, ip-rating, colour temperature (1.4) and apparel alpha/numeric, kids age, collar, shoe, screen, storage, length, bed size, tyre, paper (1.5). `valuesEditorFor(scaleId)` picks one.
+- `DimensionsEditor` / `DimensionForm` / `OptionDimensionsEditor`: labels from the type (table L x W x H, sofa W x D x H, door W x H, round table Diameter x Height), unit cm/m/in/ft, plausibility warns and never blocks, one size per option for sofas.
+- `scales` now also exports `dimensionLabels`, `dimensionProfileId`, `DIMENSION_PROFILES` (additive; edge copy synced).
+- Values are always stored scale values; same size twice merges by sizeKey (and by base amount) with a quiet status message.
 ## B07: Options step and dependent options editor (Prompts 3.2, 3.3)
 
 - New `shared/src/options/editor.js`, exported from `@epicmkt/shared`: `emptyOptionsForm`, axis/value/row operations, `dependentSets` and friends, `summarize`/`summaryText`, `checkOptions`, `optionsFromServer`, `optionsPayload`, `effectiveLimits`/`limitMessage`. No contract shape changed: the save still sends `options: { axes, variants, defaultChoice }` as in migration 0086.

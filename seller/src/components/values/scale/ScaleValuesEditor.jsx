@@ -2,7 +2,8 @@ import { useId, useRef, useState } from "react";
 import { scales } from "@epicmkt/shared";
 import { T } from "./text.js";
 import { UNIT_NAMES, configFor } from "./scaleEditorConfig.js";
-import { MAX_VALUES, add, checks, inspect, isSorted, labels, move, remove, sorted } from "./model.js";
+import QuickPicks from "./QuickPicks.jsx";
+import { MAX_VALUES, add, addMany, checks, inspect, isSorted, labels, move, remove, sorted } from "./model.js";
 import s from "./scale.module.css";
 
 /**
@@ -12,9 +13,9 @@ import s from "./scale.module.css";
  * <ScaleValuesEditor scaleId="volume" label="Size" values={list} onChange={setList} typeId="drinking-water" axisKey="size" />
  *
  * Props: scaleId, label, values, onChange(list), ctx (parse context: system, defaultUnit, ...), typeId + axisKey (plausibility),
- * hint, required, disabled, children (extra controls placed under the input, such as a range picker), validate(value) -> { ok, warn? } extra check.
+ * hint, required, disabled, suffix (words added to every typed or quick-added value, e.g. "wide"), systems + system (shoe), chipNote(value) -> text shown in a chip, children (extra controls placed under the input, such as a range picker), validate(value) -> { ok, warn? } extra check.
  */
-export default function ScaleValuesEditor({ scaleId, label, values, onChange, ctx = {}, typeId, axisKey, hint, required = false, disabled = false, children }) {
+export default function ScaleValuesEditor({ scaleId, label, values, onChange, ctx = {}, typeId, axisKey, hint, required = false, disabled = false, suffix = "", systems, system, chipNote, children }) {
   const uid = useId();
   const inputRef = useRef(null);
   const config = configFor(scaleId);
@@ -23,7 +24,8 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
   const [shownError, setShownError] = useState(null); // { error, raw } after a failed Add
   const [notice, setNotice] = useState("");
 
-  const live = inspect(raw, { scaleId, ctx });
+  const withSuffix = (t) => (suffix ? `${t.trim()} ${suffix}` : t);
+  const live = inspect(withSuffix(raw), { scaleId, ctx });
   const full = values.length >= MAX_VALUES;
   const notes = checks(values, typeId, axisKey);
   const noteAt = (i) => notes.find((n) => n.index === i);
@@ -37,13 +39,20 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
   const focusInput = () => inputRef.current?.focus();
 
   function commit(text, useCtx = ctx) {
-    const r = add(values, text, { scaleId, ctx: useCtx });
+    const r = add(values, withSuffix(text), { scaleId, ctx: useCtx });
     if (!r.ok) { setShownError({ error: r.error, raw: text }); say(r.error.message); return; }
     setShownError(null);
     setRaw("");
     if (r.merged) say(T.merged(text.trim(), scales.format(r.into)));
     else { onChange(r.list); say(T.addedOne(scales.format(r.added))); }
     focusInput();
+  }
+
+  function quickAdd(raws, useCtx) {
+    const r = addMany(values, raws.map(withSuffix), { scaleId, ctx: useCtx });
+    if (r.added) onChange(r.list);
+    const parts = [r.added ? T.addedMany(r.added) : "", r.merged ? T.mergedMany(r.merged) : "", r.errors[0]?.error.message ?? ""].filter(Boolean);
+    say(parts.join(" "));
   }
 
   const submit = (e) => { e?.preventDefault?.(); if (!disabled && raw.trim()) commit(raw); };
@@ -98,6 +107,7 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
         </fieldset>
       )}
 
+      <QuickPicks config={config} values={values} scaleId={scaleId} ctx={ctx} systems={systems} system={system} onAdd={quickAdd} disabled={disabled} />
       {children}
 
       <div role="group" aria-label={T.listLabel(label)} className={s.wrap}>
@@ -110,6 +120,7 @@ export default function ScaleValuesEditor({ scaleId, label, values, onChange, ct
                 <li key={`${scales.sizeKey(v)}|${v.width ?? ""}`} className={`${s.chip} ${note ? s.chipWarn : ""}`} data-testid="scale-chip">
                   <span className={s.chipName}>{name}</span>
                   {note && <span className={s.chipNote}>{T.unusual}</span>}
+                  {chipNote?.(v) && <span className={s.chipNote} style={{ color: "var(--text-muted)" }}>{chipNote(v)}</span>}
                   <button type="button" className={s.icon} disabled={disabled || i === 0} aria-label={T.moveEarlier(name)} onClick={() => changeAt(move(values, i, -1), T.moved(name, i, values.length))}><span aria-hidden="true">←</span></button>
                   <button type="button" className={s.icon} disabled={disabled || i === values.length - 1} aria-label={T.moveLater(name)} onClick={() => changeAt(move(values, i, 1), T.moved(name, i + 2, values.length))}><span aria-hidden="true">→</span></button>
                   <button type="button" className={s.icon} disabled={disabled} aria-label={T.remove(name)} onClick={() => { changeAt(remove(values, i), T.removed(name)); focusInput(); }}><span aria-hidden="true">×</span></button>
