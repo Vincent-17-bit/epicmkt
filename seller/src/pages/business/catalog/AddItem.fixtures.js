@@ -21,6 +21,9 @@ export const DEPARTMENTS = [
   { id: "dep-farm", name: "Farm and vet supplies" },
 ];
 
+// The usual options for a type: { key, label, display, scale? }. `scale` (a shared scale id) makes the seller's typed values read the same way
+// everywhere ("128gb" -> "128 GB", "1024 GB" -> "1 TB"). TODO(contract:A06) the real seller_product_types carries these.
+const COLOUR = { key: "colour", label: "Colour", display: "swatch" };
 const type = (slug, name, departmentId, categoryIds, extra = {}) => ({
   id: `pt-${slug}`, slug, name, kind: "good", departmentId, categoryIds, quantityMode: "units", axes: [], specRows: [], ...extra,
 });
@@ -30,10 +33,10 @@ const ELECTRONICS = ["electronics-appliances", "electronics-computers"];
 const STATIONERS = ["printing-stationery"];
 
 export const PRODUCT_TYPES = [
-  type("dress", "Dress", "dep-clothing", FASHION),
-  type("shoes", "Shoes", "dep-shoes", FASHION),
-  type("perfume", "Perfume", "dep-fragrance", FASHION),
-  type("phone", "Phone", "dep-phones", ELECTRONICS),
+  type("dress", "Dress", "dep-clothing", FASHION, { axes: [COLOUR, { key: "size", label: "Size", display: "button", scale: "apparel-alpha" }] }),
+  type("shoes", "Shoes", "dep-shoes", FASHION, { axes: [{ key: "size", label: "Size", display: "button" }, { key: "width", label: "Width", display: "button" }] }),
+  type("perfume", "Perfume", "dep-fragrance", FASHION, { axes: [{ key: "size", label: "Size", display: "button" }] }),
+  type("phone", "Phone", "dep-phones", ELECTRONICS, { axes: [COLOUR, { key: "storage", label: "Storage", display: "button", scale: "storage" }] }),
   type("phone-charger", "Phone charger", "dep-cables", ELECTRONICS),
   type("led-bulb", "LED bulb", "dep-lighting", ELECTRONICS),
   type("a4-paper", "A4 paper", "dep-stationery", STATIONERS),

@@ -6,7 +6,6 @@ import { configureAxe } from "vitest-axe";
 import { getFixtures, scales } from "@epicmkt/shared";
 import { EDITORS } from "./wrappers.jsx";
 import ScaleValuesEditor from "./ScaleValuesEditor.jsx";
-import { scaleForAxis } from "../../../lib/axisScales.js";
 
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
 const noViolations = async (node) => expect((await axe(node)).violations.map((v) => `${v.id}: ${v.nodes[0]?.html}`)).toEqual([]);
@@ -136,6 +135,10 @@ describe("the other 1.4 scales", () => {
     expect(chips()).toEqual(shown);
   });
 });
+
+// The scale each fixture axis is read with (the Options step gets the same from the type's axis; "label" is a plain list of choices).
+const FIXTURE_SCALES = { "drinking-water.size": "volume", "drinking-water.fill": "label", "led-strip.length": "length", "led-strip.colour": "label", "led-bulb.wattage": "power", "led-bulb.base": "label" };
+const scaleForAxis = (typeId, axis) => FIXTURE_SCALES[`${typeId}.${axis.key}`] ?? "label";
 
 describe("fixtures: every axis of water, LED strip and LED bulb", () => {
   const fixtures = getFixtures().filter((f) => ["drinking-water", "led-strip", "led-bulb"].includes(f.productType));

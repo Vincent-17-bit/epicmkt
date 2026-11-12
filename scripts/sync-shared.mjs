@@ -8,11 +8,11 @@ const to = join(root, "supabase", "functions", "_shared", "synced");
 // [path under shared/src, name under supabase/functions/_shared/synced]
 const files = [
   ["seller/password.js", "password.js"], ["seller/media.js", "media.js"], ["seller/images.js", "images.js"],
-  ["seller/cloudinarySign.js", "cloudinarySign.js"], ["time.js", "time.js"]
+  ["seller/cloudinarySign.js", "cloudinarySign.js"], ["time.js", "time.js"], ["openValues.js", "openValues.js"]
 ];
 // Whole folders, copied with their sub-folders so relative imports keep working: [folder under shared/src, folder under synced].
 // Tests and test helpers stay behind. Add a folder here when an edge function imports from it (A02: seller_save_item / seller_check_item).
-const folders = [["scales", "scales"]];
+const folders = [["scales", "scales"], ["specRules", "specRules"]];
 const skip = (name) => !name.endsWith(".js") || name.endsWith(".test.js") || name === "testkit.js";
 
 function walk(dir, base = dir) {
