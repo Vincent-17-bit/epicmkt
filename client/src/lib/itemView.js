@@ -1,4 +1,4 @@
-import { formatKes, greetingProblems, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, formatKes, greetingProblems, labelFor, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -27,6 +27,15 @@ export function mergeSpecs(specs, overrides) {
 
 export const specGroupsFor = ({ item, category, attributes, overrides }) =>
   buildSpecGroups({ item: overrides ? { ...item, specs: mergeSpecs(item?.specs, overrides) } : item, category, attributes });
+
+export function stateLabels(item, overrides) {
+  const specs = mergeSpecs(item?.specs, overrides);
+  return Object.entries(LABEL_SETS).flatMap(([setKey, set]) => {
+    const row = specs.find((s) => keyOf(s.label) === keyOf(set.label));
+    const value = row ? labelFor(setKey, row.value) : null;
+    return value ? [{ key: setKey, label: set.label, value }] : [];
+  });
+}
 
 export const topHighlights = (groups, limit = 4) => groups.flatMap((g) => g.rows).slice(0, limit);
 
