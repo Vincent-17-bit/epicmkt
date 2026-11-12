@@ -1,11 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { useState } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { configureAxe } from "vitest-axe";
 import { getFixtures, scales } from "@epicmkt/shared";
 import { EDITORS } from "./wrappers.jsx";
 import ScaleValuesEditor from "./ScaleValuesEditor.jsx";
+import { scaleForAxis } from "../../../lib/axisScales.js";
 
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
 const noViolations = async (node) => expect((await axe(node)).violations.map((v) => `${v.id}: ${v.nodes[0]?.html}`)).toEqual([]);
@@ -136,16 +137,46 @@ describe("the other 1.4 scales", () => {
   });
 });
 
-describe("fixtures round trip", () => {
-  const byScale = { volume: ["drinking-water", "size"], power: ["led-bulb", "wattage"] };
-  it.each(Object.entries(byScale))("%s labels in the fixture read back to the same label", (scaleId, [id, key]) => {
-    const f = getFixtures().find((x) => x.productType === id);
-    const axis = f.detail.options.find((a) => a.key === key);
-    for (const v of axis.values) {
-      const r = scales.parse(scaleId, v.label);
-      expect(r.ok, v.label).toBe(true);
-      expect(scales.format(r.value)).toBe(v.label);
-    }
+describe("fixtures: every axis of water, LED strip and LED bulb", () => {
+  const fixtures = getFixtures().filter((f) => ["drinking-water", "led-strip", "led-bulb"].includes(f.productType));
+  const cases = fixtures.flatMap((f) => f.detail.options.map((axis) => [`${f.productType}.${axis.key}`, f.productType, axis]));
+  it("finds all three fixtures", () => expect(fixtures.map((f) => f.productType).sort()).toEqual(["drinking-water", "led-bulb", "led-strip"]));
+  it.each(cases)("%s: typing the fixture's labels gives the same chips, in order", async (_name, typeId, axis) => {
+    const user = userEvent.setup();
+    const scaleId = scaleForAxis(typeId, axis);
+    render(<Harness scaleId={scaleId} label={axis.label} typeId={typeId} axisKey={axis.key} />);
+    for (const v of axis.values) await user.type(screen.getByLabelText(axis.label, { selector: "input" }), `${v.label}{Enter}`);
+    expect(chips()).toEqual(axis.values.map((v) => v.label));
+  });
+  it("the scale picked for each strip and bulb axis is the one that reads it", () => {
+    expect(scaleForAxis("led-strip", { key: "length" })).toBe("length");
+    expect(scaleForAxis("led-bulb", { key: "wattage" })).toBe("power");
+    expect(scaleForAxis("led-strip", { key: "colour" })).toBe("label");
+  });
+});
+
+describe("drag and drop", () => {
+  it("dropping a chip on another moves it there and announces it", () => {
+    render(<Harness scaleId="volume" initial={["5 L", "10 L", "20 L"].map((r) => scales.parse("volume", r).value)} />);
+    const items = screen.getAllByTestId("scale-chip");
+    const data = { setData() {}, effectAllowed: "", dropEffect: "" };
+    fireEvent.dragStart(items[2], { dataTransfer: data });
+    fireEvent.dragOver(items[0], { dataTransfer: data });
+    fireEvent.drop(items[0], { dataTransfer: data });
+    expect(chips()).toEqual(["20 L", "5 L", "10 L"]);
+    expect(screen.getByRole("status")).toHaveTextContent("20 L moved to position 1 of 3.");
+  });
+  it("a drop on itself changes nothing, and the arrow buttons still work", async () => {
+    const user = userEvent.setup();
+    render(<Harness scaleId="volume" initial={["5 L", "10 L"].map((r) => scales.parse("volume", r).value)} />);
+    const items = screen.getAllByTestId("scale-chip");
+    const data = { setData() {}, effectAllowed: "", dropEffect: "" };
+    fireEvent.dragStart(items[0], { dataTransfer: data });
+    fireEvent.drop(items[0], { dataTransfer: data });
+    expect(chips()).toEqual(["5 L", "10 L"]);
+    await user.click(screen.getByRole("button", { name: "Move 5 L later" }));
+    expect(chips()).toEqual(["10 L", "5 L"]);
+    expect(screen.getByText(/Drag a value to reorder/)).toBeInTheDocument();
   });
 });
 

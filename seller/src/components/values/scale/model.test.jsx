@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { scales } from "@epicmkt/shared";
-import { add, addMany, checks, identity, inspect, isSorted, labels, move, rangeRaws, remove, sorted } from "./model.js";
+import { add, addMany, checks, identity, inspect, isSorted, labels, move, moveTo, rangeRaws, remove, sorted } from "./model.js";
 
 const run = (scaleId, raws, ctx) => raws.reduce((list, raw) => { const r = add(list, raw, { scaleId, ctx }); return r.ok ? r.list : list; }, []);
 
@@ -77,5 +77,15 @@ describe("rangeRaws", () => {
     expect(rangeRaws({ from: 1, to: 2, step: 0 }).ok).toBe(false);
     expect(rangeRaws({ from: 1, to: 500, step: 1 }).message).toMatch(/up to 40/);
     expect(rangeRaws({ from: "", to: 2, step: 1 }).ok).toBe(false);
+  });
+});
+
+describe("moveTo", () => {
+  const list = run("volume", ["5 L", "10 L", "20 L"]);
+  it("moves to a position, either way, and ignores nonsense", () => {
+    expect(labels(moveTo(list, 2, 0))).toEqual(["20 L", "5 L", "10 L"]);
+    expect(labels(moveTo(list, 0, 2))).toEqual(["10 L", "20 L", "5 L"]);
+    expect(moveTo(list, 1, 1)).toBe(list);
+    expect(moveTo(list, 0, 9)).toBe(list);
   });
 });
