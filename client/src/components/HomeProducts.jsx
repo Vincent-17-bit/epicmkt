@@ -12,6 +12,8 @@ import { Button, Container, Skeleton } from "@epicmkt/ui";
 import ProductTile from "./ProductTile.jsx";
 import FilterSheet from "./FilterSheet.jsx";
 import ProductFilters from "./ProductFilters.jsx";
+import { sizeNameFrom } from "../lib/sizeFilterLabels.js";
+import { chooseShoeSystem, readShoeSystem, saveShoeSystem } from "../lib/shoeSystem.js";
 import styles from "./HomeProducts.module.css";
 
 // A multiple of 2, 3, 4 and 6 so every row of the grid is full at every screen width.
@@ -30,6 +32,13 @@ function TileSkeleton() {
 export default function HomeProducts() {
   const [params, setParams] = useSearchParams();
   const [open, setOpen] = useState(false);
+  // The buyer's shoe size system (remembered on this device). It only changes how shoe sizes are written in the filters.
+  const [shoeBuyer, setShoeBuyer] = useState(() => readShoeSystem());
+  const shoeSystem = chooseShoeSystem(shoeBuyer, null);
+  const onShoeSystem = (id) => {
+    setShoeBuyer(id);
+    saveShoeSystem(id);
+  };
 
   const filters = useMemo(() => parseFilters(params), [params]);
   const serialized = writeFilters(new URLSearchParams(), filters).toString();
@@ -66,7 +75,7 @@ export default function HomeProducts() {
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
   const townName = (slug) => towns.find((x) => x.slug === slug)?.name ?? slug;
   const brandName = (slug) => facets.data?.brands?.find((x) => x.slug === slug)?.name ?? slug;
-  const chips = chipsOf(filters, { categoryName, townName, brandName });
+  const chips = chipsOf(filters, { categoryName, townName, brandName, sizeName: sizeNameFrom(facets.data?.sizes, shoeSystem) });
 
   const change = (patch) => {
     setParams(writeFilters(params, { ...filters, ...patch }), { replace: true, state: { keepScroll: true } });
@@ -155,7 +164,7 @@ export default function HomeProducts() {
         closeAbove="(min-width: 99999px)"
         className={styles.drawer}
       >
-        <ProductFilters filters={filters} facets={facets.data} counts={counts.data ? countsFromJson(counts.data) : null} categories={categories.data ?? []} categoryName={categoryName} onChange={change} />
+        <ProductFilters filters={filters} facets={facets.data} counts={counts.data ? countsFromJson(counts.data) : null} categories={categories.data ?? []} categoryName={categoryName} onChange={change} shoeSystem={shoeSystem} onShoeSystem={onShoeSystem} />
       </FilterSheet>
     </section>
   );
