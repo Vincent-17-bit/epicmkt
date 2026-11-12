@@ -11,9 +11,9 @@ const form = (over = {}) => ({ ...emptyItemForm(), ...over });
 const model = (over = {}) => ({ form: form(), errors: {}, mediaCount: 0, ...over });
 
 describe("steps registry", () => {
-  it("keeps the order, with a Type step after Basics and an Options slot before Price and stock", () => {
-    expect(STEPS.map((s) => s.id)).toEqual(["media", "basics", "type", "options", "price", "details", "review"]);
-    expect(STEPS.map((s) => s.label)).toEqual(["Media", "Basics", "Type", "Options", "Price and stock", "Details", "Review"]);
+  it("keeps the order, with a Type step after Basics, then Options and Size guide before Price and stock", () => {
+    expect(STEPS.map((s) => s.id)).toEqual(["media", "basics", "type", "options", "sizeguide", "price", "details", "review"]);
+    expect(STEPS.map((s) => s.label)).toEqual(["Media", "Basics", "Type", "Options", "Size guide", "Price and stock", "Details", "Review"]);
   });
 
   it("shows the Type step only for an item that went through the type picker (null means Other goods)", () => {

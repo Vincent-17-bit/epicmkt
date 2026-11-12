@@ -16,3 +16,4 @@ export * from "./selection.js";
 export * from "./editor.js";
 export * from "./customSize.js";
 export * from "./priceModes.js";
+export * from "./sizeGuide.js";

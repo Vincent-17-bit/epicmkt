@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { CUSTOM_SIZE_STORED, checkOptions, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, checkGuide, checkOptions, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -17,6 +17,7 @@ import { clearDraft, loadDraft, prefersCalm, storeDraft, useBreakpoint, useUnsav
 import { firstErrorTarget, qualityChecks } from "./model.js";
 import { useItemModel } from "./model/useItemModel.js";
 import { visibleSteps } from "./steps/index.js";
+import { useProductTypes } from "./steps/useProductTypes.js";
 import { settleBrand, linkBrand } from "./brandValue.js";
 import styles from "./editor.module.css";
 
@@ -103,6 +104,20 @@ function EditorForm({ item, sections, category, business }) {
     baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), options: loaded });
     if (!form.options) patch("options", loaded);
   }, [optionsRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The seller's own size guide has its own read; like the options it joins the form and the unsaved-changes starting point in one step.
+  const hadGuide = useRef(false);
+  const guideRead = useQuery({ queryKey: ["itemSizeGuide", item?.id], queryFn: () => api.getItemSizeGuide(item.id), enabled: Boolean(item), retry: 1, staleTime: 0, gcTime: 0 });
+  const guideLoaded = useRef(false);
+  useEffect(() => {
+    if (guideLoaded.current || guideRead.data === undefined) return;
+    guideLoaded.current = true;
+    const loaded = guideFromServer(guideRead.data);
+    if (!loaded) return;
+    hadGuide.current = true;
+    baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), sizeGuide: loaded });
+    if (form.sizeGuide === undefined) patch("sizeGuide", loaded);
+  }, [guideRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  const productTypes = useProductTypes();
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(null);
@@ -123,7 +138,8 @@ function EditorForm({ item, sections, category, business }) {
 
   const checks = useMemo(() => qualityChecks(form, media.photoCount), [form, media.photoCount]);
   // The steps the seller sees (a step can hide itself with visibleWhen). Everything that numbers or steps through them reads this list.
-  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount });
+  const typeName = productTypes.types.find((t) => t.id === form.productTypeId)?.name;
+  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount, typeName });
 
   // ---- Put the cursor somewhere, after the right step has had a chance to render ----
   const focusOn = useCallback((key) => {
@@ -223,9 +239,10 @@ function EditorForm({ item, sections, category, business }) {
     const optionsCheck = checkOptions(form.options);
     // Made to measure is checked only where the data layer can keep it (docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
     const customCheck = CUSTOM_SIZE_STORED ? validateCustomSize(form.customSize) : { ok: true, errors: {} };
+    const guideCheck = form.sizeGuide ? checkGuide(form.sizeGuide) : { errors: {} };
     const optionErrors = { ...(optionsCheck.ok ? {} : optionsCheck.errors), ...Object.fromEntries(Object.entries(customCheck.errors).map(([k, v]) => [`custom.${k}`, v])) };
-    if (!check.ok || Object.keys(optionErrors).length) {
-      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}) };
+    if (!check.ok || Object.keys(optionErrors).length || Object.keys(guideCheck.errors).length) {
+      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}), ...(Object.keys(guideCheck.errors).length ? { sizeGuide: guideCheck.errors } : {}) };
       setErrors(found);
       setNotice(null);
       const target = firstErrorTarget(found);
@@ -245,6 +262,11 @@ function EditorForm({ item, sections, category, business }) {
       const options = optionsPayload(form.options, hadOptions.current);
       const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await api.saveItem(item?.id ?? null, body);
+      // Size guide: written after the item exists. Nothing is sent for an item whose guide was never loaded or touched.
+      if (form.sizeGuide !== undefined || hadGuide.current) {
+        await api.saveItemSizeGuide(id, guidePayload(form.sizeGuide));
+        hadGuide.current = Boolean(guidePayload(form.sizeGuide));
+      }
       await linkBrand(id, valueId, !!item?.brand);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
@@ -282,6 +304,7 @@ function EditorForm({ item, sections, category, business }) {
           if (again.axes.length > 0) next = { ...next, options: again };
         }
       }
+      if (form.sizeGuide !== undefined) next = { ...next, sizeGuide: form.sizeGuide ? (guideFromServer(await api.getItemSizeGuide(id)) ?? null) : null };
       baseRef.current = JSON.stringify(next);
       replace(next);
       setNotice(result);

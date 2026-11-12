@@ -374,3 +374,32 @@ test("an item without options is unchanged by all of this", async () => {
   const copyId = await mock.duplicateItem("it-fade");
   assert.deepEqual((await mock.getItemOptions(copyId)).variants, []);
 });
+
+const guide = (o = {}) => ({ unit: "cm", columns: ["Size", "Chest"], rows: [["S", "86"], ["M", "92"]], ...o });
+test("size guide: none at first, saved, read back, copied with a duplicate, removed with null", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  assert.equal(await mock.getItemSizeGuide("it-fade"), null);
+  assert.equal(await mock.saveItemSizeGuide("it-fade", guide()), true);
+  assert.deepEqual(await mock.getItemSizeGuide("it-fade"), guide());
+  const copyId = await mock.duplicateItem("it-fade");
+  assert.deepEqual(await mock.getItemSizeGuide(copyId), guide());
+  await mock.saveItemSizeGuide("it-fade", null);
+  assert.equal(await mock.getItemSizeGuide("it-fade"), null);
+  assert.deepEqual(await mock.getItemSizeGuide(copyId), guide(), "the copy keeps its own");
+});
+test("size guide: the same rules as the database, and only the seller's own items", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const bad = [
+    guide({ columns: [] , rows: [] }), guide({ rows: [] }), guide({ rows: [["S"]] }), guide({ rows: [["S", ""]] }), guide({ columns: ["Size", "Size"], rows: [["S", "1"]] }),
+    guide({ unit: "yd" }), guide({ columns: ["Size", "x".repeat(31)], rows: [["S", "1"]] }), guide({ rows: [["S", "x".repeat(21)]] }), { ...guide(), extra: 1 },
+    guide({ columns: Array.from({ length: 13 }, (_, i) => `C${i}`), rows: [Array.from({ length: 13 }, () => "1")] }),
+    guide({ rows: Array.from({ length: 61 }, (_, i) => [`S${i}`, "1"]) })
+  ];
+  for (const g of bad) await assert.rejects(() => mock.saveItemSizeGuide("it-fade", g), { code: "invalid_size_guide" }, JSON.stringify(g).slice(0, 80));
+  await assert.rejects(() => mock.saveItemSizeGuide("nope", guide()), { code: "item_not_found" });
+  await assert.rejects(() => mock.getItemSizeGuide("nope"), { code: "item_not_found" });
+  assert.equal(await mock.saveItemSizeGuide("it-fade", guide({ unit: undefined })), true, "a missing unit is allowed");
+  assert.equal(await mock.getItemSizeGuide("it-fade").then((g) => g.rows.length), 2);
+});

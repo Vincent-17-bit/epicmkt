@@ -90,6 +90,7 @@ const MESSAGES = {
   duplicate_variant: "Two variants have the same combination. Each combination can be listed once.",
   duplicate_sku: "Two variants have the same SKU. Each SKU can be used once for an item.",
   too_many_variants: "An item can have up to 200 variants.",
+  invalid_size_guide: "The size guide could not be saved. Give every column a name, keep each cell to 20 characters, and keep at most 12 columns and 60 rows.",
   invalid_size_chart: "Pick a size chart from the list, and keep the rows the same width as its columns.",
   invalid_availability: "Choose an availability.",
   account_suspended: "Your account is suspended, so you cannot do this.",

@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, asA, asAdmin, ids } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, asA, asB, asAdmin, ids } from "./db.mjs";
 import { SEED_SIZE_CHARTS, cleanShoeConversion, shoeChartFrom, shoeChartRows, convertShoe } from "../../shared/src/sizeCharts.js";
 import { SHOE_CHART } from "../../shared/src/scales/shoeChart.js";
 
@@ -287,4 +287,76 @@ test("admin sets or clears one item's size chart: owner only, active chart, over
   assert.deepEqual(await chartOf(), { size_chart_id: null, size_chart_override: null });
   await sql(c, `delete from items where id = $1`, [item]);
   await clean();
+});
+
+// ---- Seller-owned size guide (0103) ----
+const guideItem = async (biz = ids.bizA) => {
+  const id = (await sql(c, `insert into items (business_id, name, price, price_type, availability, visible) values ($1, 'Runner', 1000, 'fixed', 'available', true) returning id`, [biz]))[0].id;
+  await sql(c, `select attach_item_media($1, 'image', $2, 'image/jpeg', 100, 100, null, 1000)`, [id, `${biz}/${id}.jpg`]);
+  await sql(c, `update businesses set status = 'live', paid_until = now() + interval '30 days'`);
+  return id;
+};
+const guideOf = (rows = [["EU 40", "6.5"], ["EU 41", "7.5"]]) => ({ unit: "cm", columns: ["Size", "UK"], rows });
+const setGuide = (who, id, g) => as(who, `select seller_set_item_size_guide($1, $2::jsonb) as ok`, [id, g === null ? null : JSON.stringify(g)]);
+const readGuide = (who, id) => as(who, `select seller_item_size_guide($1) as g`, [id]).then((r) => r[0].g);
+const publicChart = (id) => as(anon, `select public_item_options($1) as r`, [id]).then((r) => r[0].r?.sizeChart ?? null);
+
+test("size guide: a seller saves, reads back and removes the guide of their own item; the audit log records it", async () => {
+  const id = await guideItem();
+  assert.equal(await readGuide(asA, id), null);
+  assert.equal((await setGuide(asA, id, guideOf()))[0].ok, true);
+  assert.deepEqual(await readGuide(asA, id), guideOf());
+  const log = await sql(c, `select action from audit_log where target_id = $1 and action like 'item_size_guide_%' order by created_at`, [id]);
+  assert.deepEqual(log.map((r) => r.action), ["item_size_guide_saved"]);
+  await setGuide(asA, id, guideOf());
+  assert.equal((await sql(c, `select count(*)::int as n from audit_log where target_id = $1 and action like 'item_size_guide_%'`, [id]))[0].n, 1, "saving the same guide again writes nothing");
+  await setGuide(asA, id, null);
+  assert.equal(await readGuide(asA, id), null);
+  assert.equal((await sql(c, `select size_guide from items where id = $1`, [id]))[0].size_guide, null);
+});
+
+test("size guide: another shop, anonymous callers and admins-as-sellers cannot touch it", async () => {
+  const id = await guideItem();
+  await rejects(c, asB, `select seller_set_item_size_guide($1, $2::jsonb)`, [id, JSON.stringify(guideOf())], /item_not_found/);
+  await rejects(c, asB, `select seller_item_size_guide($1)`, [id], /item_not_found/);
+  await rejects(c, anon, `select seller_set_item_size_guide($1, $2::jsonb)`, [id, JSON.stringify(guideOf())], /permission denied/);
+  await rejects(c, anon, `select seller_item_size_guide($1)`, [id], /permission denied/);
+  assert.equal(await readGuide(asA, id), null, "nothing was written");
+});
+
+test("size guide: rules match the shared checks (width, empties, limits, unit, extra keys); the table itself refuses bad data too", async () => {
+  const id = await guideItem();
+  const bad = [
+    { ...guideOf(), rows: [] }, { ...guideOf(), rows: [["S"]] }, { ...guideOf(), rows: [["S", " "]] }, { ...guideOf(), columns: ["Size", "Size"].map((x, i) => (i ? "" : x)) },
+    { ...guideOf(), unit: "yd" }, { ...guideOf(), columns: ["Size", "x".repeat(31)] }, { ...guideOf(), rows: [["S", "x".repeat(21)]] }, { ...guideOf(), extra: 1 },
+    { ...guideOf(), columns: Array.from({ length: 13 }, (_, i) => `C${i}`), rows: [Array.from({ length: 13 }, () => "1")] },
+    { ...guideOf(), rows: Array.from({ length: 61 }, (_, i) => [`S${i}`, "1"]) }, [1, 2], "text"
+  ];
+  for (const g of bad) await rejects(c, asA, `select seller_set_item_size_guide($1, $2::jsonb)`, [id, JSON.stringify(g)], /invalid_size_guide/);
+  await rejects(c, asService, `update items set size_guide = '{"columns":["A"],"rows":[["1","2"]]}'::jsonb where id = $1`, [id], /items_size_guide_shape|violates check/);
+  assert.equal((await setGuide(asA, id, { columns: ["Size", "UK"], rows: [["S", "1"]] }))[0].ok, true, "the unit may be left out");
+  const max = { unit: "in", columns: Array.from({ length: 12 }, (_, i) => `C${i}`), rows: Array.from({ length: 60 }, (_, r) => Array.from({ length: 12 }, () => "x".repeat(20))) };
+  assert.equal((await setGuide(asA, id, max))[0].ok, true, "exactly at the limits is fine");
+});
+
+test("size guide: buyers get the seller's table first, the admin chart as before when there is none, and a removed guide gives the chart back", async () => {
+  const id = await guideItem();
+  const chart = await save(asAdmin, null, chartFields({ name: "T-Admin", columns: ["Size", "Bust"], rows: [["S", "84"]] }));
+  await sql(c, `update items set size_chart_id = $2 where id = $1`, [id, chart]);
+  assert.equal((await publicChart(id)).id, chart);
+  await setGuide(asA, id, guideOf());
+  assert.deepEqual(await publicChart(id), { id: null, name: "Size guide", category: null, unit: "cm", columns: ["Size", "UK"], rows: [["EU 40", "6.5"], ["EU 41", "7.5"]], overridden: false, own: true });
+  await setGuide(asA, id, null);
+  assert.equal((await publicChart(id)).id, chart);
+  await sql(c, `update items set size_chart_id = null where id = $1`, [id]);
+  assert.equal(await publicChart(id), null, "no guide and no chart: nothing");
+  await clean();
+});
+
+test("size guide: the buyer reads the same thing the shared helper builds for the editor's preview", async () => {
+  const { guideFromServer, guideForBuyer } = await import("../../shared/src/options/sizeGuide.js");
+  const id = await guideItem();
+  await setGuide(asA, id, guideOf());
+  const fromDb = await publicChart(id);
+  assert.deepEqual(fromDb, guideForBuyer(guideFromServer(await readGuide(asA, id))));
 });

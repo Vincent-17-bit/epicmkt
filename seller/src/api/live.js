@@ -496,7 +496,10 @@ export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id
 export const checkItem = (id, fields) => rpc("seller_check_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 // The editor's read of an item's options: { axes, variants (with stock counts), availability, sizeChartId, sizeChartOverride }.
 export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
-// The size chart library (active charts), for the picker. Admin owns it.
+// The seller's own size guide for one item (migration 0103): { unit, columns, rows } or null.
+export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id });
+export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
+// The size chart library (active charts). Admin keeps it; sellers copy one as the starting table of their own guide.
 export const listSizeCharts = async () => rows(need().from("public_size_charts").select("id, name, category, unit, columns, rows").order("name"));
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
@@ -510,6 +513,13 @@ export const duplicateItem = async (id) => {
     await fn("seller-item-copy-media", { fromItemId: id, toItemId: copyId });
   } catch {
     /* the copy exists without (some of) its media */
+  }
+  try {
+    // The seller's own size guide (migration 0103) comes with the copy; seller_duplicate_item itself does not know about it.
+    const g = await rpc("seller_item_size_guide", { p_id: id });
+    if (g) await rpc("seller_set_item_size_guide", { p_id: copyId, p_guide: g });
+  } catch {
+    /* the copy exists without it; the seller can add one in the editor */
   }
   return copyId;
 };
