@@ -5,6 +5,7 @@ import * as browse from "./browse/index.js";
 import * as offersApi from "./offers/index.js";
 import * as products from "./products/index.js";
 import { isLive } from "./flash/mode.js";
+import { getShoeConversion as shoeConversion } from "./shoeConversion.js";
 
 export const getCategories = () => browse.getCategories();
 export const getCounties = () => browse.getCounties();
@@ -44,7 +45,9 @@ export const items = {
   getPage: (filters, opts) => products.getPage(filters, opts),
   getFacets: () => products.getFacets(),
   getCounts: (filters) => products.getCounts(filters),
-  getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts)
+  getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts),
+  // The shoe conversion chart for the size chart modal; the built-in chart when the call fails.
+  getShoeConversion: () => shoeConversion()
 };
 export const flash = flashApi.flash;
 export const offers = {

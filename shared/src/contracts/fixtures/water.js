@@ -12,7 +12,7 @@ export const water = () => {
     id: "fx-water", productType: "drinking-water", name: "Purified drinking water", brand: null, hue: 195, section: "Water",
     description: "Purified drinking water in 5, 10 and 20 litre sizes. Refill your own bottle or buy a new one.",
     highlights: ["Purified and tested", "Free delivery nearby"],
-    specs: [{ label: "Treatment", value: "Filtered and UV treated" }],
+    specs: [{ label: "Water type", value: "Purified" }, { label: "Treatment", value: "Filtered and UV treated" }],
     axes,
     variants: grid(axes, (c) => ({ price: PRICES[c.fill][c.size] }))
   };

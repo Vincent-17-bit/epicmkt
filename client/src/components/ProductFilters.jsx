@@ -2,6 +2,9 @@ import { useId, useMemo, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronDown, faMagnifyingGlass, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { SORTS } from "../lib/productFilters.js";
+import { RANGE_SCALES } from "../lib/sizeFilters.js";
+import { sizeLabel } from "../lib/sizeFilterLabels.js";
+import ShoeSystemSwitch from "./item/ShoeSystemSwitch.jsx";
 import styles from "./ProductFilters.module.css";
 
 const toggle = (list, value) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -133,6 +136,60 @@ function PriceRange({ filters, bounds, onChange }) {
   );
 }
 
+// Sizes: one block per scale, so shoe 42 never sits with a dress 42 or a 42-inch screen. A shoe block has the system switch (it only changes
+// how each size is written). Length and screen size are ranges.
+function RangeGroup({ group, range, onChange }) {
+  const cfg = RANGE_SCALES[group.scale];
+  const name = group.label.toLowerCase();
+  const set = (patch) => onChange({ ...range, ...patch });
+  const clean = (v) => v.replace(/[^\d.]/g, "").slice(0, 8);
+  return (
+    <div className={styles.rangeGroup} role="group" aria-label={group.label}>
+      <div className={styles.fields}>
+        <label className={styles.money}>
+          <span className={styles.cur}>{cfg.unit}</span>
+          <input className={styles.moneyInput} inputMode="decimal" aria-label={`Minimum ${name} in ${cfg.unit === "m" ? "metres" : "inches"}`} placeholder={String(group.min)} value={range.min ?? ""} onChange={(e) => set({ min: clean(e.target.value) })} />
+        </label>
+        <span aria-hidden="true" className={styles.dash}>to</span>
+        <label className={styles.money}>
+          <span className={styles.cur}>{cfg.unit}</span>
+          <input className={styles.moneyInput} inputMode="decimal" aria-label={`Maximum ${name} in ${cfg.unit === "m" ? "metres" : "inches"}`} placeholder={String(group.max)} value={range.max ?? ""} onChange={(e) => set({ max: clean(e.target.value) })} />
+        </label>
+      </div>
+      <p className={styles.rangeHint}>Available from {group.min} to {group.max} {cfg.unit}</p>
+    </div>
+  );
+}
+
+function SizeBlock({ group, filters, counts, onChange, shoeSystem, onShoeSystem }) {
+  const heading = useId();
+  if (group.mode === "range") {
+    return (
+      <div className={styles.sizeBlock}>
+        <h4 className={styles.sizeHead}>{group.label}</h4>
+        <RangeGroup
+          group={group}
+          range={filters.ranges?.[group.scale] ?? {}}
+          onChange={(r) => {
+            const next = { ...(filters.ranges ?? {}) };
+            if ((r.min ?? "") === "" && (r.max ?? "") === "") delete next[group.scale];
+            else next[group.scale] = r;
+            onChange({ ranges: next });
+          }}
+        />
+      </div>
+    );
+  }
+  const rows = group.options.map((o) => ({ id: o.key, name: sizeLabel(o.value, shoeSystem), count: counts?.sizes?.get(o.key) ?? o.count }));
+  return (
+    <div className={styles.sizeBlock} role="group" aria-labelledby={heading}>
+      <h4 id={heading} className={styles.sizeHead}>{group.label}</h4>
+      {group.scale === "shoe" && <ShoeSystemSwitch system={shoeSystem} onChange={onShoeSystem} />}
+      <CheckList rows={rows} selected={filters.sizes ?? []} onToggle={(key) => onChange({ sizes: toggle(filters.sizes ?? [], key) })} noun="sizes" limit={8} />
+    </div>
+  );
+}
+
 const FLAG_ROWS = [
   ["onSale", "On sale"],
   ["flash", "Flash sale"],
@@ -146,7 +203,9 @@ const STORE_ROWS = [
 
 // Every way to narrow or reorder the products. Each change applies at once and every option shows how many products
 // it would leave, so the shopper never ticks a box that empties the list without seeing it coming.
-export default function ProductFilters({ filters, facets, counts: liveCounts, categories = [], categoryName, onChange }) {
+export default function ProductFilters({ filters, facets, counts: liveCounts, categories = [], categoryName, onChange, shoeSystem = "eu", onShoeSystem = () => {} }) {
+  const sizeGroups = useMemo(() => facets?.sizes ?? [], [facets]);
+  const sizesPicked = (filters.sizes?.length ?? 0) + Object.keys(filters.ranges ?? {}).length;
   const bounds = facets?.price ?? null;
   const towns = useMemo(() => facets?.towns ?? [], [facets]);
   const brands = useMemo(() => facets?.brands ?? [], [facets]);
@@ -240,6 +299,14 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
       {brandRows.length > 1 && (
         <Section title="Brand" open={filters.brands.length > 0} summary={filters.brands.length ? `${filters.brands.length} selected` : null}>
           <CheckList rows={brandRows} selected={filters.brands} onToggle={(id) => onChange({ brands: toggle(filters.brands, id) })} noun="brands" />
+        </Section>
+      )}
+
+      {sizeGroups.length > 0 && (
+        <Section title="Size" open={sizesPicked > 0} summary={sizesPicked ? `${sizesPicked} selected` : null}>
+          {sizeGroups.map((g) => (
+            <SizeBlock key={g.scale} group={g} filters={filters} counts={liveCounts} onChange={onChange} shoeSystem={shoeSystem} onShoeSystem={onShoeSystem} />
+          ))}
         </Section>
       )}
 
