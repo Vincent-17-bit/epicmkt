@@ -368,8 +368,20 @@ export const sizeChartFor = (chart, override) => {
   return { id: chart.id, name: chart.name, category: chart.category ?? null, unit: chart.unit, columns: chart.columns, rows: fits ? override.rows : chart.rows, overridden: Boolean(fits) };
 };
 
+// The seller's own size guide ({ unit?, columns, rows }, migration 0101) as the buyer gets it, or null when it does not meet the database rules.
+// Mirrors item_size_chart_payload: it takes the place of any admin chart.
+export const ownSizeChart = (guide) => {
+  const text = (v, max) => typeof v === "string" && v.trim() !== "" && v.length <= max;
+  if (!isRecord(guide) || Object.keys(guide).some((k) => !["unit", "columns", "rows"].includes(k))) return null;
+  if (!Array.isArray(guide.columns) || guide.columns.length < 1 || guide.columns.length > 12 || !guide.columns.every((c) => text(c, 30))) return null;
+  if (new Set(guide.columns.map((c) => c.trim().toLowerCase())).size !== guide.columns.length) return null;
+  if (guide.unit != null && guide.unit !== "cm" && guide.unit !== "in") return null;
+  if (!Array.isArray(guide.rows) || guide.rows.length < 1 || guide.rows.length > 60 || !guide.rows.every((r) => Array.isArray(r) && r.length === guide.columns.length && r.every((c) => text(c, 20)))) return null;
+  return { id: null, name: "Size guide", category: null, unit: guide.unit ?? "cm", columns: guide.columns, rows: guide.rows, overridden: false, own: true };
+};
+
 // The public payload from stored rows. `item` supplies the inherited price and the stock-count switch.
-export const publicOptions = ({ axes = [], variants = [], item = {}, chart = null, override = null, defaultVariantId = null }) => {
+export const publicOptions = ({ axes = [], variants = [], item = {}, chart = null, override = null, guide = null, defaultVariantId = null }) => {
   const shown = variants.map((v) => ({
     id: v.id ?? null,
     label: variantLabel(axes, v.choice),
@@ -383,7 +395,7 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
   const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
-  return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), defaultVariantId: defaultVariantId ?? null, sizeChart: sizeChartFor(chart, override) };
+  return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), defaultVariantId: defaultVariantId ?? null, sizeChart: ownSizeChart(guide) ?? sizeChartFor(chart, override) };
 };
 
 // The old items.variants shape [{ id, label, price, stock? }] as { axes, variants }: one axis "option", one variant per usable entry

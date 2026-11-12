@@ -426,6 +426,7 @@ function resetBilling() {
   bill.seq = 0;
   bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
   bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
+  bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0101)
   bill.options = new Map();   // itemId -> { axes, variants, sizeChartId, sizeChartOverride } (migration 0084: option_axes, item_variants, size_chart_*)
   bill.now = null;
   bill.gallery = [];
@@ -865,6 +866,31 @@ export const getItemOptions = async (id) => {
     sizeChartOverride: o.sizeChartOverride
   });
 };
+export const getItemSizeGuide = async (id) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  return copy(bill.guides.get(id) ?? null);
+};
+// Same rules as size_guide_valid in the database: 1..12 columns, 1..60 rows as wide as the columns, no empty text, headers 30 and cells 20 characters.
+const guideOk = (g) => {
+  const text = (v, max) => typeof v === "string" && v.trim() !== "" && v.length <= max;
+  if (!g || typeof g !== "object" || Array.isArray(g)) return false;
+  if (Object.keys(g).some((k) => !["unit", "columns", "rows"].includes(k)) || !Array.isArray(g.columns) || !Array.isArray(g.rows)) return false;
+  if (g.unit != null && !["cm", "in"].includes(g.unit)) return false;
+  if (g.columns.length < 1 || g.columns.length > 12 || !g.columns.every((c) => text(c, 30))) return false;
+  if (new Set(g.columns.map((c) => c.trim().toLowerCase())).size !== g.columns.length) return false;
+  return g.rows.length >= 1 && g.rows.length <= 60 && g.rows.every((r) => Array.isArray(r) && r.length === g.columns.length && r.every((c) => text(c, 20)));
+};
+export const saveItemSizeGuide = async (id, guide) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  if (guide == null) { bill.guides.delete(id); return true; }
+  if (!guideOk(guide)) throw new ApiError("invalid_size_guide");
+  bill.guides.set(id, copy(guide));
+  return true;
+};
 export const listSizeCharts = async () => {
   signedIn();
   return demoSizeCharts();
@@ -971,6 +997,8 @@ export const duplicateItem = async (id) => {
       variants: o.variants.map((v) => ({ ...v, id: `${copyOf.id}:${v.key}`, mediaIds: [] }))
     }));
   }
+  const g = bill.guides.get(src.id);
+  if (g) bill.guides.set(copyOf.id, copy(g));
   return copyOf.id;
 };
 // ---- Performance, History, Deals (demo data; the real numbers come from the rollup tables in Supabase) ----

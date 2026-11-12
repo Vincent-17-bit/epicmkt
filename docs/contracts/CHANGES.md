@@ -386,3 +386,11 @@ Entry format:
 - Existing test adjusted: `type-restrictions.test.mjs` retypes a live item to fragrance with a raw update; it now also sets the Authenticity spec the gate requires.
 - Who must act: J01 / 11.1 call `item_check_publish`; the seller editor (5.7) sends `publish` to `seller_check_item` and shows `spec` and `issues`; `seller_bulk_items` could skip blocked items instead of failing the call (see request).
 - Request files: docs/requests/2026-11-12-g05-to-j01-publish-gate-wiring.md
+
+## 2026-11-12 1.10: sellers write their own size guide (migration 0101)
+- Contract: v1 (additive)
+- Lane / author: seller + data
+- What changed: `items.size_guide` (jsonb `{unit?, columns, rows}`, same shape rules as a size chart); `seller_set_item_size_guide(item, guide)` and `seller_item_size_guide(item)`; `item_size_chart_payload` returns the item's own guide first (`{id: null, own: true}`), else the admin chart as before. Shared: `shared/src/options/sizeGuide.js` (table logic, shoe conversion, checks, payload), `ownSizeChart` and a `guide` input on `publicOptions`. Seller API: `getItemSizeGuide`, `saveItemSizeGuide` (live and mock); `duplicateItem` copies the guide.
+- Why: size tables belong to the item and the seller who knows its measurements. Admin charts stay as templates sellers can copy, and as the fallback for items with no guide.
+- Who must act: data/admin: run migration 0101 (supabase/catch-up-seller-size-guide.sql for a project that ran the catch-up). Buyer apps need nothing: `item.sizeChart` already carries columns and rows.
+- Request files: none

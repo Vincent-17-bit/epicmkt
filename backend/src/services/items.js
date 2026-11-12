@@ -54,7 +54,7 @@ const optionsOf = (svc) => {
   const defaultKey = svc.optionDefault && axes.length > 0 ? comboKey(axes, svc.optionDefault) : null;
   const defaultVariantId = defaultKey ? (variants.find((v) => v.key === defaultKey)?.id ?? null) : null;
   return publicOptions({
-    axes, variants, chart, defaultVariantId, override: svc.sizeChartOverride ?? null,
+    axes, variants, chart, defaultVariantId, override: svc.sizeChartOverride ?? null, guide: svc.sizeGuide ?? null,
     item: { price: Number.isFinite(svc.priceKes) ? svc.priceKes : null, salePrice: null, showStockCount: Boolean(svc.showStockCount) }
   });
 };
