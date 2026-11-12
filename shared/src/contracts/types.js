@@ -91,6 +91,17 @@ export const ITEM_FIELDS = ["dimensions", "priceTiers", "quantity"];
  * @property {AxisTemplate[]} axes  0 to 3 axes, in the order a picker shows them
  * @property {string[]} variantFields  subset of VARIANT_FIELDS shown per option
  * @property {string[]} itemFields     subset of ITEM_FIELDS shown on the item
+ * @property {SpecRowDef[]} [specRows]  spec rows the seller form asks for; at most 4 required. Absent: the generic goods template applies
+ *
+ * @typedef {object} SpecRowDef  One spec row of a product type. A value is the item's `specs` entry with the same label.
+ * @property {string} key
+ * @property {string} label
+ * @property {"required"|"recommended"|"optional"} level
+ * @property {"text"|"number"|"choice"|"openValue"|"boolean"|"dimension"} input
+ * @property {string[]} [choices]   for a choice row
+ * @property {string} [labelSet]    a fixed choice list: condition | authenticity | fragranceState | chargerKind
+ * @property {object} [requiredIf]  condition that makes the row required: {row, equals|in|tag|present} or {all|any: [...]} or {not}
+ * @property {object} [showIf]      same shape; the row is hidden and ignored while it is false
  *
  * @typedef {object} SellerCard  The shop block on an item (same as the card the mock API builds today).
  * @property {string} id
