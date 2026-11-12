@@ -334,3 +334,20 @@ Entry format:
   - `gold-necklace` gets rows (material required; purity required when the material has the tag `precious-metal`); `fragrance` gets authenticity (required) and fragrance state. Fixtures `necklace` and `fragrance` carry the matching spec values.
 - Who must act: whoever calls `specIssues` with real data (5.4) passes `tags` from `option_values`.
 - Request files: none
+
+## 2026-11-12 5.4: Publish gate on the server (migration 0099)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.4
+- What changed:
+  - `item_check_publish(item jsonb)` returns `{canSave: true, canPublish, grandfathered, blockers[], warnings[], score}`; issues are `{key, label, level, code: "missing"|"invalid", message}`, the same list `specIssues` gives. Input: `{id?, productTypeId, specs:[{label,value}], brand, packSize, includes, axes}`. Prompt 11.1 calls it. `item_spec_issues(item, grandfathered)` is the engine (service_role).
+  - SQL twin of `shared/src/specRules` (`spec_*` functions); `supabase/tests/publish-gate.test.mjs` runs both on the fixtures and on edge cases and requires equal answers. Change both together. In the database an empty `product_types.spec_rows` means "no rows defined" and uses the generic goods template.
+  - Trigger `items_spec_gate` on `items`: an item cannot become live (`draft = false and visible`), and a live item cannot have its type, specs, options, brand, pack size or includes changed, while a blocker exists. The error is `publish_blocked` (P0001) with the blocker list in `detail`. Drafts and hidden items always save. A tampered client or any other writer is covered because it is a table trigger.
+  - Grandfathering: `items.spec_gate_exempt` is true for every item that was not a draft when the migration ran. The first real edit (even while hidden) turns it off for good; until then the item stays live, can be renamed, repriced, hidden and shown, and `item_check_publish` reports its blockers as warnings with `grandfathered: true`.
+  - `seller_check_item` is unchanged unless the fields carry `publish`. With `publish` (true or false) the answer adds `spec` (the `item_check_publish` result); with `publish: true`, blockers also make `ok` false and add issues `{code: "spec_missing"|"spec_invalid", key, label, level, message}`. Fields not sent are read from the stored item.
+  - `product_types.spec_rows` may hold at most four required rows (a row with `requiredIf` counts); `fragrance` gets its rows. `specRules` and `openValues.js` are now copied to the edge functions by `sync:shared`.
+  - Tags for `requiredIf: {tag}` come from `option_values.tags`, following a merged value to its target.
+- Not changed: `seller_save_item` (A04 owns it). A new typed item reaches live through `seller_bulk_items('show')`, which now raises `publish_blocked` for the whole call when any item in it is blocked.
+- Existing test adjusted: `type-restrictions.test.mjs` retypes a live item to fragrance with a raw update; it now also sets the Authenticity spec the gate requires.
+- Who must act: J01 / 11.1 call `item_check_publish`; the seller editor (5.7) sends `publish` to `seller_check_item` and shows `spec` and `issues`; `seller_bulk_items` could skip blocked items instead of failing the call (see request).
+- Request files: docs/requests/2026-11-12-g05-to-j01-publish-gate-wiring.md
