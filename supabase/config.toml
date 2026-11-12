@@ -48,6 +48,12 @@ verify_jwt = false
 [functions.seller-media-sign]
 verify_jwt = false
 
+[functions.seller-media-ticket]
+verify_jwt = false
+
+[functions.seller-media3d-finalize]
+verify_jwt = false
+
 [functions.seller-item-copy-media]
 verify_jwt = false
 
