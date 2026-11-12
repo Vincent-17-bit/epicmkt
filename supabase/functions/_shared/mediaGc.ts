@@ -1,11 +1,11 @@
 import type { Deps } from "./seller.ts";
 
 const BUCKET = "seller-media";
-// A video is a file in the Supabase bucket (its path ends in an extension); every other queued id is a Cloudinary public id.
-const isStorageVideo = (id: string) => /\.(mp4|webm)$/i.test(id);
+// A video or a 3D model is a file in the Supabase bucket (its path ends in an extension); every other queued id is a Cloudinary public id.
+const isStorageVideo = (id: string) => /\.(mp4|webm|glb)$/i.test(id);
 
 // Deletes the given files and records the outcome in the queue: deleted files leave it, failed ones are retried later with a growing
-// pause. Cloudinary ids go to Cloudinary, video paths to the bucket. Shared by the cron job (media-gc) and the seller's own
+// pause. Cloudinary ids go to Cloudinary, video and .glb paths to the bucket. Shared by the cron job (media-gc) and the seller's own
 // "delete my removed photos now" call.
 export async function settleDeletes(d: Deps, ids: string[]) {
   const stored = ids.filter(isStorageVideo);

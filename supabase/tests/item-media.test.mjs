@@ -130,10 +130,11 @@ test("public_items returns images, videos and the merged media in one order, and
   const row = (await tx(c, { role: "anon" }, (k) => sql(k, `select image_paths, video_paths, media from public_items where id = $1`, [it])))[0];
   assert.deepEqual(row.image_paths, [p1, p2]);
   assert.deepEqual(row.video_paths, [v1]);
-  assert.deepEqual(row.media, [
-    { path: p1, kind: "image", duration: null },
-    { path: v1, kind: "video", duration: 30 },
-    { path: p2, kind: "image", duration: null },
+  // A17 added id, role and optionIds to every entry (additive); the order, path, kind and duration are as before.
+  assert.deepEqual(row.media.map(({ id, role, optionIds, ...rest }) => ({ ...rest, hasId: typeof id === "string", role, optionIds })), [
+    { path: p1, kind: "image", duration: null, hasId: true, role: "image", optionIds: [] },
+    { path: v1, kind: "video", duration: 30, hasId: true, role: "video", optionIds: [] },
+    { path: p2, kind: "image", duration: null, hasId: true, role: "image", optionIds: [] },
   ]);
   await mine(asA, `select seller_reorder_item_media($1, $2::text[])`, [it, [v1, p1, p2]]);
   const second = (await tx(c, { role: "anon" }, (k) => sql(k, `select image_paths, media from public_items where id = $1`, [it])))[0];
@@ -188,7 +189,7 @@ test("storage: the bucket is public for reading, accepts only the allowed types 
   const [b] = await sql(c, `select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'seller-media'`);
   assert.equal(b.public, true, "customers read videos straight from the bucket");
   assert.equal(Number(b.file_size_limit), 25 * 1024 * 1024);
-  assert.deepEqual([...b.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]);
+  assert.deepEqual([...b.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "model/gltf-binary", "video/mp4", "video/webm"]);   // A17 added model/gltf-binary for .glb models
   const pol = await sql(c, `select policyname, roles::text[] as roles, cmd, coalesce(qual, '') || ' ' || coalesce(with_check, '') as expr
     from pg_policies where schemaname = 'storage' and tablename = 'objects' and (qual like '%seller-media%' or with_check like '%seller-media%')`);
   assert.ok(pol.length >= 4);

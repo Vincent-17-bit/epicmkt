@@ -67,3 +67,6 @@ export * from "./flash/validateFlashVariants.js";
 
 // Specification rules engine (5.2): specIssues, GENERIC_GOODS_TEMPLATE, checkSpecRows.
 export * from "./specRules/index.js";
+
+// A17: 3D data, media roles and signed upload tickets (MEDIA3D, TICKET_KINDS, checkTicketRequest, inspectGlb, buildView3d, resolveMedia3d).
+export * from "./media3d.js";
