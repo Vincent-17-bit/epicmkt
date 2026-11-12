@@ -231,3 +231,11 @@ Entry format:
   - The size chart link sits in the header line of the first size-like axis (key or label matches size, collar, shoe, waist, fit), else the first axis. It is hidden when `item.sizeChart` is null.
   - `ui` `Modal` gains `variant="sheet"`, a page scroll lock and focus return to the opener. Existing callers are unchanged (the defaults keep a centred card; scroll lock and focus return are on by default and harmless there).
   - The collar scale formats as `16"`; the item page shows `16 in` as the prompt asks.
+## 2026-11-08 — Admin: Size charts and shoe conversion pages (prompt 1.9)
+
+- New admin page `Catalogue → Size charts` (`/admin/size-charts`). Tabs: **Charts** (list, search, create, edit, duplicate, delete) and **Shoe conversion** (Adult and Kids tables, reset to default, preview by audience, "try a size").
+- Permissions: `sizecharts.view` (reviewer, support) and `sizecharts.edit` (owner only, matching the database).
+- `shared/src/chartUnits.js` (`convertCell`, `measurementColumns`, `chartInUnit`, `canToggleUnit`, `matchRow`) now lives in shared and is exported from the barrel. The client keeps its copy in `client/src/lib/chartUnits.js` until it re-exports from shared.
+- Admin API: `listSizeCharts`, `listProductTypes`, `saveSizeChart`, `deleteSizeChart`, `getShoeConversion`, `saveShoeConversion` (mock and live; live uses the 0093 RPCs).
+- `useTableLabels` skips tables inside `[data-no-cards]`, so a grid or chart preview stays a real table on a phone.
+- Left undone: assigning a chart to one item from admin (no admin RPC exists; sellers choose per item).

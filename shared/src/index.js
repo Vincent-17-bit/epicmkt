@@ -46,3 +46,6 @@ export * from "./types/restrictions.js";
 
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
+
+// Sizes 1.9: size chart unit conversion (cm / in), shared by the buyer modal and the admin editor.
+export { canToggleUnit, chartInUnit, convertCell, convertLength, matchRow, measurementColumns } from "./chartUnits.js";

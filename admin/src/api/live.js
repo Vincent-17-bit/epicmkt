@@ -704,3 +704,21 @@ export const updateOptionValue = (id, fields) => detailRpc("admin_update_option_
 // Rename and merge answer with the value plus `itemsUpdated` (how many items now show the new spelling).
 export const renameOptionValue = (id, label) => detailRpc("admin_rename_option_value", { p_id: id, p_label: label });
 export const mergeOptionValue = (from, into) => detailRpc("admin_merge_option_value", { p_from: from, p_into: into });
+
+// ---- Size charts and the shoe conversion table (Sizes 1.9, migration 0093_size_chart_types_shoe_conversion.sql) ----
+// listSizeCharts -> [{ id, name, category, unit, columns, rows, active, updated_at, product_type_ids, items_using }]
+export const listSizeCharts = () => detailRpc("admin_size_charts_list");
+// fields: { name, category, unit, columns, rows, active, product_type_ids? } (an absent product_type_ids changes nothing; [] releases every type). -> the chart id
+export const saveSizeChart = (id, fields) => detailRpc("admin_save_size_chart", { p_id: id, p_fields: fields });
+export const deleteSizeChart = (id) => detailRpc("admin_delete_size_chart", { p_id: id });
+// The types a chart can be assigned to. product_types is readable by everyone (policy "product types are public"). -> [{ id, name, sizeChartId }]
+export async function listProductTypes() {
+  const { data } = check(await client().from("product_types").select("id,name,size_chart_id").eq("active", true).order("name"));
+  return (data ?? []).map((t) => ({ id: t.id, name: t.name ?? t.id, sizeChartId: t.size_chart_id ?? null }));
+}
+// -> { chart: { adult: [...], kids: [...] }, version } ; the built-in table's version is 0 when nothing was saved yet.
+export async function getShoeConversion() {
+  const { data } = check(await client().from("public_shoe_conversion").select("chart,version").maybeSingle());
+  return data ? { chart: data.chart, version: data.version } : null;
+}
+export const saveShoeConversion = (chart) => detailRpc("admin_save_shoe_conversion", { p_chart: chart });

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 
 function label(table) {
-  if (table.closest(".dt")) return;
+  // A table inside .dt (DataTable) or [data-no-cards] stays a real table on a phone (a grid to edit, or a chart that must look as buyers see it).
+  if (table.closest(".dt, [data-no-cards]")) return;
   const head = table.tHead?.rows[table.tHead.rows.length - 1];
   if (!head) return;
   table.dataset.cards = "";
