@@ -370,3 +370,18 @@ Entry format:
 - Contract needed from A06 (marked `TODO(contract:A06)`): the product list carries `sizes`, an array of stored scale values per product. Without it there are no size facets.
 - Seller: `components/values` gains `ValueEditor` (router), `ScaleValueEditor`, `ShoeValueEditor`, `DimensionsEditor`, `ValueChips`, model in `scaleEditing.js`.
 - Assumption: the editors merge 5 m with 500 cm and 1 TB with 1024 GB (by base amount); EU 42 and UK 8 stay as two entries because the seller typed two.
+
+## B12: scale data is stored and the product list carries sizes (migration 0100)
+- Migration `0100_option_scales_sizes.sql`: an option axis may carry `scale` (a scale id) and each value `scaleValue` ({scale, system?, value, unit?, width?, shape?}).
+  Validated, cleaned, shown by `item_option_axes_public`, kept by Duplicate, remap and photo delete. Also fixes `item_option_axes_drop_media`, which dropped `dependsOn`.
+  `products_snapshot` carries `sizes` per item (`item_sizes_public`); `public_item_sizes()` returns them for every live item at once (the page-the-views fallback).
+- Contract change for B07 (the Options step): the axis `scale` was form-only ("the scale is form-only" in `shared/src/options/editor.test.js`). It is now sent with the
+  axis, and each value's `scaleValue` (what `scales.parse` read) with the value, when `OPTION_SCALES_STORED` is true (default). Set it to false to go back to form-only.
+  `optionsFromServer` keeps both, so an edit does not lose them. Axes without a scale and values typed on them send nothing new.
+- Deploy order: apply migration 0100 before the seller app ships. If it is not applied yet, the editor's save retries once without scale data when the database answers
+  `invalid_options` (`saveWithScaleFallback`), so a seller can still save; the scale data is simply not stored until the migration is in.
+- `/api/products` reads `size=<canonical keys>` and `range=<scale>:<min>-<max>`; facets and counts include `sizes`; `sizes` is not sent per product. Size filters use the
+  canonical keys from `client/src/lib/sizeFilters.js` (shoe 42 EU = UK 8; 5 m = 500 cm).
+- `npm run migration:renumber -- <file>.sql --next [--write]` renumbers a migration that is not applied anywhere. It fixes the file name and header; when another migration
+  already has the old number it does NOT rewrite "migration NNNN" in words (it lists those places for review), so it cannot change another migration's mentions.
+- Not in this change: a seller entry point on the Price step for items with no options (main's Options step shows for typed items and items that already have options).

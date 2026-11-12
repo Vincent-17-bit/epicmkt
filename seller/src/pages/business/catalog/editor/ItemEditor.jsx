@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
+import { saveWithScaleFallback } from "./saveFallback.js";
 import { CUSTOM_SIZE_STORED, checkOptions, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
@@ -244,7 +245,7 @@ function EditorForm({ item, sections, category, business }) {
       // B07: `options` goes along only for an item that has (or had) options, so every other item saves exactly as before.
       const options = optionsPayload(form.options, hadOptions.current);
       const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
-      const id = await api.saveItem(item?.id ?? null, body);
+      const id = await saveWithScaleFallback((b) => api.saveItem(item?.id ?? null, b), body);
       await linkBrand(id, valueId, !!item?.brand);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);

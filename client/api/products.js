@@ -59,13 +59,20 @@ async function fromRpc() {
 
 // Fallback when the function is not installed yet or is slow: page the public views, with narrow columns.
 async function fromViews() {
-  const [rows, businesses, sales] = await Promise.all([
+  const [rows, businesses, sales, sizes] = await Promise.all([
     restAll(
       "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
-    restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => [])
+    restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => []),
+    // Stored scale values per item, so size filters keep working on this path (migration 0100). Missing or slow: no size facets, nothing else changes.
+    rpc("public_item_sizes", { p_limit: MAX_ITEMS }, { timeoutMs: 8_000 })
+      .then((map) => (map && typeof map === "object" && !Array.isArray(map) ? map : {}))
+      .catch((error) => {
+        console.warn(`[products] public_item_sizes unavailable (${error?.message ?? error}); size filters are off on this path`);
+        return {};
+      })
   ]);
   const best = new Map();
   for (const s of sales) {
@@ -92,7 +99,8 @@ async function fromViews() {
       sale_price: s?.sale_price ?? null,
       sale_starts_at: s?.starts_at ?? null,
       sale_ends_at: s?.ends_at ?? null,
-      sale_headline: s?.headline ?? null
+      sale_headline: s?.headline ?? null,
+      sizes: Array.isArray(sizes[r.id]) && sizes[r.id].length ? sizes[r.id] : null
     };
   });
   return { items, businesses, truncated: rows.length >= MAX_ITEMS };
@@ -151,6 +159,8 @@ function buildSnapshot({ items, businesses, truncated }) {
       business: store.shared,
       hay: normalizeText(`${row.name} ${description} ${row.section ?? ""} ${store.shared.name ?? ""} ${store.shared.town ?? ""}`)
     };
+    // Stored scale values of the item's size-like options (migration 0100), for the size filters. Absent for items without any.
+    if (Array.isArray(row.sizes) && row.sizes.length) product.sizes = row.sizes;
     if (row.sale_id && regular !== null && Number.isFinite(Number(row.sale_price))) {
       flashing.push({
         product,
@@ -256,7 +266,7 @@ const PAGE_CACHE = "public, max-age=15, s-maxage=60, stale-while-revalidate=300,
 const FACET_CACHE = "public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=3600";
 
 // Only what the grid shows leaves the function: no search text, no internal ids.
-const outgoing = ({ hay: _hay, ...product }) => product;
+const outgoing = ({ hay: _hay, sizes: _sizes, ...product }) => product;
 
 export default async function handler(req) {
   if (req.method !== "GET" && req.method !== "HEAD") return reply({ error: "method_not_allowed" }, 405, "no-store");

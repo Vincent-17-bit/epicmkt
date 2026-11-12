@@ -5,6 +5,7 @@
 
 import { EMPTY_FILTERS, SORTS } from "../../src/lib/productFilters.js";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../src/lib/productQuery.js";
+import { parseSizes } from "../../src/lib/sizeFilters.js";
 
 const OPS = new Set(["page", "facets", "counts"]);
 const SORT_IDS = new Set(SORTS.map((s) => s.id));
@@ -33,6 +34,10 @@ export function parseRequest(searchParams) {
     towns: list(get("town"))
   };
   for (const [name, key] of Object.entries(FLAGS)) filters[name] = get(key) === "1";
+  // Sizes (migration 0100): size=<canonical keys>, range=<scale>:<min>-<max>. parseSizes drops unknown scales and bad numbers; the lists are capped.
+  const sized = parseSizes(new URLSearchParams({ psize: String(get("size") ?? "").slice(0, 600), prange: String(get("range") ?? "").slice(0, 200) }));
+  filters.sizes = [...sized.sizes].sort().slice(0, 24);
+  filters.ranges = Object.fromEntries(Object.entries(sized.ranges).sort(([a], [b]) => a.localeCompare(b)).slice(0, 4));
   const page = Math.min(10_000, Math.max(1, Math.round(Number(get("page"))) || 1));
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.round(Number(get("pageSize"))) || PAGE_SIZE));
   return { op, filters, page, pageSize };
@@ -48,6 +53,9 @@ export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize
     if (filters.categories?.length) pairs.push(["cat", [...new Set(filters.categories)].sort().join(",")]);
     if (filters.towns?.length) pairs.push(["town", [...new Set(filters.towns)].sort().join(",")]);
     for (const [name, key] of Object.entries(FLAGS)) if (filters[name]) pairs.push([key, "1"]);
+    if (filters.sizes?.length) pairs.push(["size", [...new Set(filters.sizes)].sort().join(",")]);
+    const ranges = Object.entries(filters.ranges ?? {}).filter(([, r]) => r.min !== "" || r.max !== "").sort(([a], [b]) => a.localeCompare(b));
+    if (ranges.length) pairs.push(["range", ranges.map(([scale, r]) => `${scale}:${r.min}-${r.max}`).join(",")]);
   }
   if (op === "page") {
     if (page > 1) pairs.push(["page", String(page)]);
