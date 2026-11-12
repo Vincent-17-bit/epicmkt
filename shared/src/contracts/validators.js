@@ -7,6 +7,7 @@
 
 import { OPTION_DISPLAY_TYPES, OPTION_LIMITS, VARIANT_STATUSES } from "../seller/options.js";
 import { ITEM_PRICE_TYPES } from "../seller/itemForm.js";
+import { checkSpecRows } from "../specRules/rows.js";
 import { DIMENSION_UNITS, ITEM_FIELDS, PRODUCT_GROUPS, VARIANT_FIELDS } from "./types.js";
 
 const SLUG = /^[a-z0-9][a-z0-9_-]*$/;
@@ -135,6 +136,7 @@ export function checkProductType(t, path = "productType") {
   }
   if (!Array.isArray(t.variantFields) || t.variantFields.some((f) => !VARIANT_FIELDS.includes(f))) out.push(`${path}.variantFields: a subset of ${VARIANT_FIELDS.join(", ")}`);
   if (!Array.isArray(t.itemFields) || t.itemFields.some((f) => !ITEM_FIELDS.includes(f))) out.push(`${path}.itemFields: a subset of ${ITEM_FIELDS.join(", ")}`);
+  if (t.specRows !== undefined) out.push(...checkSpecRows(t.specRows, `${path}.specRows`));
   return out;
 }
 
