@@ -10,7 +10,7 @@ export const phone = () => {
     id: "fx-phone", productType: "phone", name: "Pulse X1 smartphone", brand: "Pulse", hue: 215, section: "Phones",
     description: "6.5 inch display, dual SIM and a 5,000 mAh battery. The price depends on the colour you pick; storage is your choice.",
     highlights: ["Dual SIM", "5,000 mAh battery", "One-year warranty"],
-    specs: [{ label: "Display", value: "6.5 inch" }, { label: "SIM", value: "Dual SIM" }, { label: "Battery", value: "5,000 mAh" }],
+    specs: [{ label: "Warranty", value: "One year" }, { label: "Display", value: "6.5 inch" }, { label: "SIM", value: "Dual SIM" }, { label: "Battery", value: "5,000 mAh" }],
     axes,
     variants: grid(axes, (c) => ({
       price: c.colour === "black" ? 25000 : 24000,

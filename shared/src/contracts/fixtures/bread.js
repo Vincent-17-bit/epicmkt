@@ -11,7 +11,7 @@ export const bread = () => {
     id: "fx-bread", productType: "bread", name: "Fresh baked bread", brand: null, hue: 38, section: "Bakery",
     description: "Baked every morning. Choose the loaf weight and the kind of flour.",
     highlights: ["Baked daily", "No preservatives"],
-    specs: [{ label: "Baked", value: "Every morning" }],
+    specs: [{ label: "Ingredients", value: "Wheat flour, water, yeast, salt" }, { label: "Allergens", value: "Contains gluten" }, { label: "Baked", value: "Every morning" }],
     axes,
     variants: grid(axes, (c) => ({ price: PRICES[c.weight][c.kind], ...(c.weight === "800-g" && c.kind === "wholemeal" && { status: "limited_stock", stock: 4 }) }))
   };

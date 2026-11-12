@@ -13,7 +13,7 @@ export const necklace = () => {
     id: "fx-necklace", productType: "gold-necklace", name: "Gold rope necklace", brand: null, hue: 45, section: "Jewellery",
     description: "A hand-finished gold rope necklace. Choose the purity and the length; the price follows the weight of gold.",
     highlights: ["Hallmarked", "Gift box included"],
-    specs: [{ label: "Style", value: "Rope chain" }],
+    specs: [{ label: "Material", value: "Gold" }, { label: "Style", value: "Rope chain" }],
     axes,
     variants: grid(axes, (c) => ({
       price: Math.round((GRAMS[c.length] * RATE_PER_GRAM[c.purity]) / 100) * 100,
