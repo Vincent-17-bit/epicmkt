@@ -4,6 +4,8 @@ import MediaStep from "./MediaStep.jsx";
 import BasicsStep from "./BasicsStep.jsx";
 import TypeStep from "./TypeStep.jsx";
 import OptionsStep from "./OptionsStep.jsx";
+import { optionEditorsOn } from "./optionFlag.js";
+export { optionEditorsOn };
 import PriceStep from "./PriceStep.jsx";
 import DetailsStep from "./DetailsStep.jsx";
 import ReviewStep from "./ReviewStep.jsx";
@@ -25,8 +27,9 @@ export const STEPS = [
   { id: "basics", label: "Basics", short: "Basics", component: BasicsStep, visibleWhen: always, issues: issuesFor("basics"), done: ({ form }) => String(form.name ?? "").trim().length >= 2 },
   // Shown only for an item that went through the type picker (the key is on the form, null meaning Other goods). Other items see no new step.
   { id: "type", label: "Type", short: "Type", component: TypeStep, visibleWhen: ({ form }) => "productTypeId" in form, issues: () => [], done: ({ form }) => "productTypeId" in form },
-  // Empty slot for B07 (item options). Hidden until then, so no screen changes. TODO(contract:B07)
-  { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: () => false, issues: issuesFor("options"), done: () => false },
+  // Option values per axis (1.4, 1.5 editors). Off unless VITE_OPTION_EDITORS=true: the values stay in the draft until the price and stock grid exists,
+  // so sellers see no new step. TODO(contract:B07)
+  { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: ({ form }) => optionEditorsOn() && Boolean(form.productTypeId), issues: issuesFor("options"), done: ({ form }) => Object.keys(form.optionValues ?? {}).length > 0 },
   { id: "price", label: "Price and stock", short: "Price", component: PriceStep, visibleWhen: always, issues: issuesFor("price"), done: ({ form }) => !PRICED.includes(form.priceType) || parseKes(form.price) !== null },
   { id: "details", label: "Details", short: "Details", component: DetailsStep, visibleWhen: always, issues: issuesFor("details"),
     done: ({ form }) => (form.highlights?.length ?? 0) + (form.specs?.length ?? 0) + (form.includes?.length ?? 0) > 0 || filled(form.packSize) || filled(form.terms) || filled(form.brand) },
