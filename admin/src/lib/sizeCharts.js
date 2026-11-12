@@ -9,6 +9,8 @@ export const SIZE_CHART_ERRORS = {
   chart_not_found: "That chart no longer exists. Reload the list.",
   size_chart_in_use: "An item or a product type still uses this chart. Release them first (or switch the chart off instead).",
   invalid_shoe_chart: "The shoe table does not pass the rules. Fix the rows marked in red and save again.",
+  item_not_found: "That item no longer exists. Search again.",
+  chart_inactive: "That chart is switched off. Switch it on first, or pick another.",
   forbidden: "Only the Owner can change size charts.",
 };
 

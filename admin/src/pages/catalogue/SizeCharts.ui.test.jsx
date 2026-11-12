@@ -12,7 +12,7 @@ vi.mock("../../auth/AuthContext.jsx", () => ({ useAuth: () => ({ admin: { role: 
 const chart = (over = {}) => ({ id: "c1", name: "Dresses and tops", category: null, unit: "cm", columns: ["Size", "Bust (cm)", "Waist (cm)"], rows: [["S", "84-88", "66"], ["M", "90", "72"]], active: true, updated_at: "2026-11-01T00:00:00Z", product_type_ids: ["dress"], items_using: 3, ...over });
 const api = {
   listSizeCharts: vi.fn(), listProductTypes: vi.fn(), listCategories: vi.fn(), saveSizeChart: vi.fn(), deleteSizeChart: vi.fn(),
-  getShoeConversion: vi.fn(), saveShoeConversion: vi.fn(),
+  getShoeConversion: vi.fn(), saveShoeConversion: vi.fn(), listItemsForSizeChart: vi.fn(), setItemSizeChart: vi.fn(),
 };
 vi.mock("../../api/index.js", () => ({ api, default: api }));
 
@@ -35,6 +35,10 @@ beforeEach(() => {
   api.deleteSizeChart.mockResolvedValue(undefined);
   api.getShoeConversion.mockResolvedValue({ chart: shoeChartRows(scales.SHOE_CHART), version: 4 });
   api.saveShoeConversion.mockResolvedValue(5);
+  api.listItemsForSizeChart.mockImplementation(async (chartId, q) => chartId
+    ? [{ id: "i1", name: "Linen sundress", business_name: "Zawadi Fashions", size_chart_id: "c1", size_chart_name: "Dresses and tops" }]
+    : /sundr|wrap/i.test(q) ? [{ id: "i1", name: "Linen sundress", business_name: "Zawadi Fashions", size_chart_id: "c1", size_chart_name: "Dresses and tops" }, { id: "i2", name: "Wrap dress", business_name: "Zawadi Fashions", size_chart_id: null, size_chart_name: null }] : []);
+  api.setItemSizeChart.mockResolvedValue(true);
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -166,6 +170,60 @@ describe("Size charts: editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add a row" }));
     fireEvent.click(screen.getByRole("button", { name: "Save chart" }));
     expect(await seriousViolations(container)).toEqual([]);
+  });
+});
+
+describe("Size charts: items on a chart", () => {
+  const open = async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /^(Edit|View) Dresses and tops/ }));
+    return screen.findByRole("region", { name: "Items on this chart" });
+  };
+
+  it("lists the items that use the chart and takes one off", async () => {
+    const box = await open();
+    expect(await within(box).findByText("Linen sundress")).toBeInTheDocument();
+    fireEvent.click(within(box).getByRole("button", { name: "Take Linen sundress off this chart" }));
+    await waitFor(() => expect(api.setItemSizeChart).toHaveBeenCalledWith("i1", null));
+    expect(await within(box).findByText("Linen sundress no longer uses this chart.", { selector: "p" })).toBeInTheDocument();
+  });
+
+  it("finds an item by name, shows its current chart, and puts it on this chart without submitting the form", async () => {
+    const box = await open();
+    const input = within(box).getByLabelText("Find an item by name");
+    fireEvent.change(input, { target: { value: "wrap" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    const row = await within(box).findByRole("button", { name: "Use this chart for Wrap dress" });
+    expect(within(box).getByText(/no chart of its own/)).toBeInTheDocument();
+    expect(within(box).queryByRole("button", { name: "Use this chart for Linen sundress" })).toBeNull(); // already on it
+    fireEvent.click(row);
+    await waitFor(() => expect(api.setItemSizeChart).toHaveBeenCalledWith("i2", "c1"));
+    expect(api.saveSizeChart).not.toHaveBeenCalled();
+  });
+
+  it("says in words when the database refuses", async () => {
+    const box = await open();
+    api.setItemSizeChart.mockRejectedValueOnce(apiError("chart_inactive"));
+    fireEvent.click(await within(box).findByRole("button", { name: "Take Linen sundress off this chart" }));
+    expect(await within(box).findByRole("alert")).toHaveTextContent("switched off");
+  });
+
+  it("is read-only without the owner role", async () => {
+    mockRole = "reviewer";
+    const box = await open();
+    expect(await within(box).findByText("Linen sundress")).toBeInTheDocument();
+    expect(within(box).queryByRole("button", { name: /off this chart/ })).toBeNull();
+    expect(within(box).queryByLabelText("Find an item by name")).toBeNull();
+    expect(within(box).getByText(/Only the Owner can change/)).toBeInTheDocument();
+  });
+
+  it("is free of serious accessibility violations", async () => {
+    const box = await open();
+    await within(box).findByText("Linen sundress");
+    fireEvent.change(within(box).getByLabelText("Find an item by name"), { target: { value: "wrap" } });
+    fireEvent.click(within(box).getByRole("button", { name: "Search" }));
+    await within(box).findByRole("button", { name: "Use this chart for Wrap dress" });
+    expect(await seriousViolations(box)).toEqual([]);
   });
 });
 

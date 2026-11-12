@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, asA, asAdmin } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, asA, asAdmin, ids } from "./db.mjs";
 import { SEED_SIZE_CHARTS, cleanShoeConversion, shoeChartFrom, shoeChartRows, convertShoe } from "../../shared/src/sizeCharts.js";
 import { SHOE_CHART } from "../../shared/src/scales/shoeChart.js";
 
@@ -247,4 +247,44 @@ test("the shoe table has one row only and cannot be written by a seller or anon"
   await rejects(c, asA, `update shoe_conversion set version = 99`, [], /permission denied/);
   await rejects(c, anon, `delete from shoe_conversion`, [], /permission denied/);
   assert.equal((await sql(c, `select count(*)::int as n from shoe_conversion`))[0].n, 1);
+});
+
+test("admin sets or clears one item's size chart: owner only, active chart, override dropped, audited, and the list follows", async () => {
+  await clean();
+  const chart = await save(asAdmin, null, chartFields({ name: "T-Item chart" }));
+  const other = await save(asAdmin, null, chartFields({ name: "T-Item other" }));
+  const off = await save(asAdmin, null, chartFields({ name: "T-Item off", active: false }));
+  const item = (await sql(c, `insert into items (business_id, name, price) values ('${ids.bizA}', 'T-Sundress', 900) returning id`))[0].id;
+  const chartOf = async () => (await sql(c, `select size_chart_id, size_chart_override from items where id = $1`, [item]))[0];
+  const set = (who, ch) => as(who, `select admin_set_item_size_chart($1, $2) as ok`, [item, ch]);
+
+  await rejects(c, asA, `select admin_set_item_size_chart($1, $2)`, [item, chart], /forbidden/);
+  await rejects(c, asAdmin, `select admin_set_item_size_chart($1, $2)`, ["00000000-0000-0000-0000-000000000000", chart], /item_not_found/);
+  await rejects(c, asAdmin, `select admin_set_item_size_chart($1, $2)`, [item, "00000000-0000-0000-0000-000000000000"], /chart_not_found/);
+  await rejects(c, asAdmin, `select admin_set_item_size_chart($1, $2)`, [item, off], /chart_inactive/);
+
+  assert.equal((await set(asAdmin, chart))[0].ok, true);
+  assert.equal((await chartOf()).size_chart_id, chart);
+  await sql(c, `update items set size_chart_override = $2::jsonb where id = $1`, [item, JSON.stringify({ rows: [["S", "85"], ["M", "91"]] })]);
+  assert.notEqual((await chartOf()).size_chart_override, null); // the item had its own rows
+  await set(asAdmin, other);
+  assert.deepEqual(await chartOf(), { size_chart_id: other, size_chart_override: null });
+  const audits = async () => (await sql(c, `select count(*)::int as n from audit_log where action = 'item.size_chart'`))[0].n;
+  const before = await audits();
+  await set(asAdmin, other); // same chart again: nothing to change, nothing to audit
+  assert.equal(await audits(), before);
+
+  const listed = (await as(asAdmin, `select admin_items_for_size_chart($1, null, 30) as r`, [other]))[0].r;
+  assert.deepEqual(listed.map((r) => [r.name, r.business_name, r.size_chart_name]), [["T-Sundress", "Shop A", "T-Item other"]]);
+  const found = (await as(asAdmin, `select admin_items_for_size_chart(null, 'sundr', 30) as r`))[0].r;
+  assert.equal(found[0].id, item);
+  assert.deepEqual((await as(asAdmin, `select admin_items_for_size_chart(null, null, 30) as r`))[0].r, []);
+  assert.deepEqual((await as(asAdmin, `select admin_items_for_size_chart(null, '%', 30) as r`))[0].r, []); // a wildcard is text, not a pattern
+  await rejects(c, asA, `select admin_items_for_size_chart(null, 'x', 30)`, [], /forbidden/);
+
+  await rejects(c, asAdmin, `select admin_delete_size_chart($1)`, [other], /size_chart_in_use/);
+  await set(asAdmin, null);
+  assert.deepEqual(await chartOf(), { size_chart_id: null, size_chart_override: null });
+  await sql(c, `delete from items where id = $1`, [item]);
+  await clean();
 });
