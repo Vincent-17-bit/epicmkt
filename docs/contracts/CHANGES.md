@@ -404,3 +404,15 @@ Entry format:
   - J01 (G03): call `item_check_media3d(item)` from `seller_check_item`; add the foreign key on option ids if wanted; make `item_options_apply` accept only photo/video ids as `mediaId` / `mediaIds`.
   - J02/J03 (client adapter): read `public_item_media3d` into `items.getDetail` (`view3d`, `view3dByOption`) with `resolveMedia3d`, and read `role` and `optionIds` from `media`.
 - Request files: docs/requests/2026-11-12-g06-to-g03-check-media3d-and-media-ids.md, docs/requests/2026-11-12-g06-to-client-media3d-payload.md
+
+## 2026-11-12 5.11: Admin spec rules editor (migration 0102)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.11
+- What changed:
+  - `admin_spec_rows_list()` (reviewer, support, owner) returns `[{id, name, specRows}]` for active product types; `admin_save_spec_rows(p_id, p_rows)` (owner only) replaces one type's `specRows` and writes an audit row (`spec_rows.update`). Errors: `forbidden`, `type_not_found`, `invalid_spec_rows`, `too_many_required`.
+  - SQL checks `spec_rows_valid` and `spec_condition_valid` mirror `checkSpecRows` and `checkCondition` in `shared/src/specRules`: slug keys, unique keys, level, input, label sets, choices, and conditions that point at another row of the same type.
+  - Admin page `/admin/spec-rules` (nav "Spec rules", permissions `specrules.view` and `specrules.edit`): rows per type, level, input, label set or choices, "required when" and "shown only when" rules (one test, all or any), a four-required-row counter, and a preview of the seller form that evaluates the rules on sample answers.
+- Not changed: the Product types page (Prompt 2.6) is not merged; the editor only changes `specRows`. Saving rules does not touch items that are already live; the gate applies when a seller next saves them.
+- Who must act: Prompt 2.6 may link to `/admin/spec-rules` from its type editor.
+- Request files: none

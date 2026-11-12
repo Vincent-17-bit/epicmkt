@@ -727,3 +727,8 @@ export const saveShoeConversion = (chart) => detailRpc("admin_save_shoe_conversi
 // -> [{ id, name, product_type_id, size_chart_id, size_chart_name, business_name }]. setItemSizeChart(itemId, chartId|null): owner only.
 export const listItemsForSizeChart = (chartId = null, query = "", limit = 30) => detailRpc("admin_items_for_size_chart", { p_chart: chartId, p_query: query || null, p_limit: limit });
 export const setItemSizeChart = (itemId, chartId = null) => detailRpc("admin_set_item_size_chart", { p_item: itemId, p_chart: chartId });
+
+// Spec rules per product type (migration 0102). listSpecTypes -> [{ id, name, specRows }]; saveSpecRows(id, rows) is owner only and returns the saved rows.
+// TODO(contract:2.6) the product types page will own the rest of a type; this only edits its specRows.
+export const listSpecTypes = () => detailRpc("admin_spec_rows_list");
+export const saveSpecRows = (id, rows) => detailRpc("admin_save_spec_rows", { p_id: id, p_rows: rows });
