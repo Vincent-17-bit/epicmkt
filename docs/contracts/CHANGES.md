@@ -231,3 +231,143 @@ Entry format:
   - The size chart link sits in the header line of the first size-like axis (key or label matches size, collar, shoe, waist, fit), else the first axis. It is hidden when `item.sizeChart` is null.
   - `ui` `Modal` gains `variant="sheet"`, a page scroll lock and focus return to the opener. Existing callers are unchanged (the defaults keep a centred card; scroll lock and focus return are on by default and harmless there).
   - The collar scale formats as `16"`; the item page shows `16 in` as the prompt asks.
+## 2026-11-12 — Seller: scale value editors (prompts 1.4 and 1.5)
+
+- `seller/src/components/values/scale/`: `ScaleValuesEditor` (any registered scale) and named wrappers for choice (`label` scale), count, volume, weight, duration, portion, voltage, power, ip-rating, colour temperature (1.4) and apparel alpha/numeric, kids age, collar, shoe, screen, storage, length, bed size, tyre, paper (1.5). `valuesEditorFor(scaleId)` picks one.
+- `DimensionsEditor` / `DimensionForm` / `OptionDimensionsEditor`: labels from the type (table L x W x H, sofa W x D x H, door W x H, round table Diameter x Height), unit cm/m/in/ft, plausibility warns and never blocks, one size per option for sofas.
+- `scales` now also exports `dimensionLabels`, `dimensionProfileId`, `DIMENSION_PROFILES` (additive; edge copy synced).
+- Values are always stored scale values; same size twice merges by sizeKey (and by base amount) with a quiet status message.
+## B07: Options step and dependent options editor (Prompts 3.2, 3.3)
+
+- New `shared/src/options/editor.js`, exported from `@epicmkt/shared`: `emptyOptionsForm`, axis/value/row operations, `dependentSets` and friends, `summarize`/`summaryText`, `checkOptions`, `optionsFromServer`, `optionsPayload`, `effectiveLimits`/`limitMessage`. No contract shape changed: the save still sends `options: { axes, variants, defaultChoice }` as in migration 0086.
+- Seller editor: the Options step is live (`steps/OptionsStep.jsx`, `steps/options/*`): axes, combinations, dependent lists, "Fill prices faster" (same price, by one option, base + difference) and plain price-typo warnings. Prices are always stored per combination.
+- Type axes: a product type's `axes` (`{ key, label, display, scale? }`) give a one-tap "Use the usual options" start; values on a scale axis go through `scales.parse/format`. Seller fixtures (`AddItem.fixtures.js`) now carry axes for Dress, Shoes, Perfume and Phone. `TODO(contract:A06)` until the real `seller_product_types` returns them.
+- Plan caps: the subscription's `limits[planKey].options` (`{ axes, values, variants }`) can lower the hard limits (3 / 40 / 200); the mock sends them for both plans. Missing means the hard limits.
+- Custom size (Prompts 3.4 and 3.7): `shared/src/options/customSize.js`, `client/src/components/item/CustomSize.jsx`, `steps/options/CustomSizeEditor.jsx`, all tested but OFF (`CUSTOM_SIZE_STORED = false`) until the data layer stores `customSize`: see `docs/requests/2026-11-07-b07-to-data-custom-size-storage.md`.
+
+## 2026-11-07 A-tiers: Quantity tier pricing (tiers.js, migration 0094, seller_save_item, priceFor)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, quantity tier pricing prompt
+- What changed:
+  - `shared/src/pricing/tiers.js`, exported from `@epicmkt/shared`: `validateTiers(tiers, mode)`, `priceTiered({tiers, mode, qty, adjust})`, `nextTierHint`, `tierIndex`, `kesText`, `TIER_MODES`, `TIER_LIMITS`.
+  - Tiers keep the contract shape `{minQty, maxQty, unitPrice}`; the mode is stored beside them: `whole` (the tier price applies to every unit) or `graduated` (each band at its own price).
+  - `priceFor` (shared/src/pricing.js, from the pricing core) now uses `tiers.js`: it reads `priceTierMode` (variant, else item, default `whole`), prices graduated bands (each band after the sale or flash price), and returns two new fields: `next` (`{from, more, unit, text}`, e.g. "Add 3 more for KES 7 each", or null) and `bands` (graduated only, else null). In graduated mode `unit` is the average per unit and `total` is exact; an offer is checked against that average. Invalid tiers fall back to the regular price. Existing results are unchanged for items without tiers or with whole tiers.
+  - Migration `0094_price_tiers.sql`: `items.price_tiers`, `items.price_tier_mode` (default `whole`), `item_variants.price_tiers`; `price_tiers_valid(jsonb)`; `seller_save_item` is wrapped again (the 0091 text is now `seller_save_item_typed`, no browser grant).
+  - `seller_save_item` accepts `priceTiers` (list or null), `priceTierMode`, and `options.variants[].priceTiers`. Key absent = leave alone; null = clear. Errors: `invalid_price_tiers`, `tiers_need_from_price`, `item_in_flash_sale`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - Tier prices are whole amounts of 1 or more, like the rest of the pricing core (integer shillings); at most 10 tiers; quantities up to 1,000,000; no extra keys on a tier; `maxQty` must be present (null on the last tier).
+  - The mode belongs to the item; a variant's own tiers use the item's mode unless the variant sets `priceTierMode`.
+  - An item with tiers (or with tiers on any combination) must be priced `from`, as the contract validator already says for items.
+  - Tiers cannot change while the item is in a scheduled or live flash sale (same rule as price).
+  - Flash with tiers: the sale price or flash price is applied to each tier's price (the lower of the two, as for any listed price); a flash sale price never raises a tier price.
+  - There is no save edge function; the save is SQL, so `supabase/functions/**` is unchanged. SQL and JS validation are kept equal by `supabase/tests/price-tiers.test.mjs`.
+  - Graduated tiers apply to whole quantities; a measured (fractional) quantity is priced as `whole`.
+- Who must act:
+  - Seller lane: send `priceTiers` and `priceTierMode` from the editor.
+  - Whoever builds `items.getDetail`: return `priceTiers`, `priceTierMode` and each variant's `priceTiers`.
+  - `seller_duplicate_item` does not copy tiers yet; `seller_check_item` does not report tier issues yet.
+- Request files: none
+
+## 2026-11-07 A-flash-combo: Flash sale per combination (migration 0095, validateFlashVariants)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, flash sale per combination prompt
+- What changed:
+  - Migration `0095_flash_per_combination.sql`: `flash_sales.variant_target` (`all` default | `chosen`); `variant_overrides` (0013) now carries `{combo, type, value}` entries, `type` being `percent | amount_off | sale_price`, `combo` the `item_variants.combo_key` (`colour=black|storage=64`). Older `{variantId, salePrice}` entries stay valid and are ignored.
+  - A trigger `t_flash_sales_variants` (the 0013 trigger is untouched) refuses bad overrides. Errors (P0001): `invalid_flash_overrides`, `flash_needs_combinations`, `invalid_flash_target`, `discount_too_large`, `sale_price_not_lower`. Changing `variant_target` after the sale starts is `flash_locked`, like the other flash fields.
+  - `public_flash_sales` gains two last columns: `variant_target` and `variant_flash` (`[{combo, choice, regularPrice, salePrice}]`, only combinations on sale, or null). `sale_price` for a sale with `chosen` or with overrides is the lowest price a buyer can pay across the sold combinations; a sale with neither is priced exactly as before.
+  - `public_item_options(item)` (renamed inner `public_item_options_base`) adds `flash` to every `optionVariants[]` entry while the item has a live sale: `{type, value, regularPrice, salePrice, endsAt}` or `null`. With no live sale the payload is unchanged.
+  - `shared/src/flash/validateFlashVariants.js`, exported from `@epicmkt/shared`: `validateFlashVariants(flash, item)` -> `{ok, errors:[{code, combo?}], targets:[{combo, regularPrice, salePrice}]}`, `flashComboPrice`, `overridesShapeValid`, `FLASH_TARGETS`, `FLASH_OVERRIDE_LIMIT`. Input `flash` is `{discountType, discountValue, variantTarget, variantOverrides}`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - A sold combination is a stored `item_variants` row with its own price whose status is not `unavailable` (the pricing core's `isSold`). Out of stock combinations can still be put on sale. A combination with no price of its own is not sold and cannot be targeted.
+  - A combination's regular price is its own price. Variant `sale_price` is ignored.
+  - With `all`, a discount that cannot lower a combination (amount off above its price, sale price above it) skips that combination instead of refusing the sale; an explicit override that cannot lower its combination is refused.
+  - With `chosen` the sale's own `discount_type` and `discount_value` are still required and are checked against the item price by the 0013 rules, but are not applied to combinations that are not listed.
+  - The database function cannot call the JS file, so the same rules are written in SQL and `supabase/tests/flash-per-combination.test.mjs` runs one table of cases through both.
+  - `priceFor` reads the new shape: `shared/src/pricing/deals.js` gains `flashTarget(sale, item, variant)`, which resolves `sale.variantTarget` and `sale.variantOverrides` entries `{combo, type, value}` through `comboKey` (this settles `TODO(contract:A01)`); older id entries behave as before. A tier price takes the combination's flash per unit.
+- Who must act:
+  - Seller lane: the flash form can send `variant_target` and `variant_overrides` in the existing insert.
+  - Client lane: show `optionVariants[].flash` and `variant_flash`.
+  - Whoever maps the public flash sale into `item.flash`: pass `variantTarget` (from `variant_target`) and `variantOverrides` (from `variant_overrides`) as they are; `priceFor` does the rest.
+  - Whoever builds `items.getDetail`: carry the per-variant `flash` where the buyer page wants it.
+- Request files: none
+
+## 2026-11-07 A-price-range: Denormalised price range and list payloads (migration 0096, mock getItemList)
+
+- Contract: v1 (additive; nothing existing changes)
+- Lane / author: Lane A, denormalised price range prompt
+- What changed:
+  - Migration `0096_price_range_columns.sql` adds to `items`: `price_min`, `price_high`, `has_options`, `department_id`, `has_3d`. `product_type_id` already existed (0091). The brief's `price_max` is NOT a new column: `items.price_max` already holds the seller's "range" top, so the highest price a buyer can pay is stored as `price_high` and is called `priceMax` in payloads.
+  - `price_min` / `price_high` are the lowest and highest price one unit costs a buyer now, following the pricing core's `priceBounds`: over sold combinations (own price, status not `unavailable`), in-stock ones first (all of them when none is in stock). Per combination: its sale price, the first quantity tier's price (quantity 1), and a live flash sale on that combination. Whole KES. Offers are not included. A `range` item keeps its seller range (`price_max` as the top); price types other than fixed, from and range, and items with no price, have null. Legacy id-shaped flash overrides count as 'all' in the database.
+  - Backfill: every existing item is computed once; an item with no options, tiers or flash gets `price_min = price_high = price` (a `range` item gets `price_max` as its top).
+  - Kept by triggers on `items` (every insert and update; a direct write to these columns is overwritten), `item_variants`, `flash_sales` and `product_types`, so `seller_save_item`, bulk edits, the flash sweep and admin changes are all covered. A flash that starts or ends by the clock shows when the sweep next runs (within a minute).
+  - `public_items` gains the last columns `price_min, price_high, has_options, department_id, product_type_id, has_3d`.
+  - `products_snapshot` items gain `price_min, price_max (= price_high), has_price_range, has_options, department_id, product_type_id, has_3d`. `search_businesses` and `search_facets` use `min(price_min)` for `from_price`, so the price filter and the price sorts use what a buyer can actually pay.
+  - Mock: `getItemList` and `getRelatedItems` cards carry `priceMin, priceMax, hasPriceRange, hasOptions, departmentId, productTypeId, has3d`; `getItemList` takes `minPrice`, `maxPrice` and `sort` (`price_asc` | `price_desc`) on `priceMin`.
+- Assumptions made where the brief left room (change them with a new entry, not by editing this one):
+  - `has_options` is true when the item has option axes or the older variants list. `department_id` is the product type's department, null when there is no type.
+  - `has_3d` stays false: nothing in the repo stores a 3D view yet (`view3d` is only named in the contract). Whoever adds it sets the column in the same change.
+  - `hasPriceRange` is `priceMin < priceMax`, worked out where the payload is built (the snapshot returns it as `has_price_range`).
+  - Fixture product types carry no `departmentId`, so the mock's `departmentId` is null (`TODO(contract:A-dept)`).
+  - The existing test `listings.test.mjs` pins the column list of `public_items`; its expected tail now includes the six new columns.
+- Who must act:
+  - Client lane: read `price_min`, `price_max`, `has_price_range`, `has_options`, `department_id`, `product_type_id`, `has_3d` from the snapshot; show "From" when `has_price_range`.
+  - Whoever builds `items.getList` for real: return the camelCase names above from `public_items`.
+- Request files: none
+
+## 2026-11-11 A-tiers-followup: duplicate keeps tiers (migration 0097)
+
+- Contract: v1 (additive)
+- What changed: `seller_duplicate_item` now also copies `price_tiers` and `price_tier_mode` of the item and `price_tiers` of each combination (the previous function is kept as `seller_duplicate_item_base`, service_role only). `seller_check_item` already reported `invalid_price_tiers`, `tiers_need_from_price` and `item_in_flash_sale` because it runs the real save; tests now pin that.
+
+## 2026-11-12 A-range-followup: legacy flash targets in the price range (migration 0098)
+
+- Contract: v1 (additive)
+- What changed: a flash sale saved with the older id entries (`{ variantId }`) now applies only to the listed combinations in `price_min`/`price_high` and in the `flash` of `public_item_options`, as `priceFor` does (new `flash_variant_price`). Items are recomputed once.
+- Decision: offers stay out of the stored range. They depend on the shop's time of day and weekday and mostly change the total for a quantity, so they are not a stable "from" price; they are shown as offer badges. The mock list range ignores offers to match.
+- Not changed: `public_flash_sales.variant_flash` still treats id entries as "all" (its rows carry no variant id yet); `has_3d` stays false and `test:fn` needs Deno.
+
+## 2026-11-12 5.2: Specification rules engine (specRows on product types)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.2
+- What changed:
+  - `ProductType` gains an optional `specRows: SpecRowDef[]` (`{key, label, level, input, choices?, requiredIf?, showIf?}`, at most 4 required). `checkProductType` validates it. Defined for `phone` (warranty required), `bread` (ingredients, allergens) and `drinking-water` (water type).
+  - New `shared/src/specRules/`: `specIssues(item, type, { grandfathered })` returns `{blockers, warnings, score}`; `GENERIC_GOODS_TEMPLATE` (nothing required) is used when the type is null or has no `specRows`; `checkSpecRows`. An issue is `{key, label, level, message}`.
+  - A row's value is the item's `specs` entry with the same label (case, accents and punctuation ignored); `brand`, `pack-size` and `includes` also read `item.brand`, `item.packSize`, `item.includes`.
+  - Fixtures `phone`, `bread`, `drinking-water` now carry the required spec values.
+- Not done: `requiredIf` and `showIf` are stored but not evaluated (5.3); server gate (5.4); `specIssues` is not yet in `sync-shared` (5.4 adds it).
+- Who must act: nobody.
+- Request files: none
+
+## 2026-11-12 5.3: Conditional rules and state label sets
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.3
+- What changed:
+  - `SpecRowDef.requiredIf` and `showIf` are now evaluated. A condition is `{row, equals | in | tag | present}`, or `{all: [...]}`, `{any: [...]}`, `{not: {...}}`. `requiredIf` true makes the row required; `showIf` false hides the row (no issue, not scored). Rows with `requiredIf` count toward the four-required limit. `checkSpecRows` validates conditions.
+  - `tag` conditions read the tags of the row's value from `specIssues(item, type, { tags })`, where `tags` is `{ [normalizeValueKey(value)]: string[] }` or `(value, row) => string[]`. Callers fill it from the open values dictionary.
+  - `SpecRowDef.labelSet` (`condition`, `authenticity`, `fragranceState`, `chargerKind`) gives a choice row a fixed list. `LABEL_SETS`, `labelFor`, `rowChoices` in `shared/src/specRules/labels.js`. Authenticity has only original and inspired.
+  - A choice row whose value is not in its list is an issue with `code: "invalid"` (blocker when required). Every issue now has `code: "missing" | "invalid"`.
+  - A row is also answered by an option axis with the same key (the necklace purity axis).
+  - `gold-necklace` gets rows (material required; purity required when the material has the tag `precious-metal`); `fragrance` gets authenticity (required) and fragrance state. Fixtures `necklace` and `fragrance` carry the matching spec values.
+- Who must act: whoever calls `specIssues` with real data (5.4) passes `tags` from `option_values`.
+- Request files: none
+
+## 2026-11-12 5.4: Publish gate on the server (migration 0099)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.4
+- What changed:
+  - `item_check_publish(item jsonb)` returns `{canSave: true, canPublish, grandfathered, blockers[], warnings[], score}`; issues are `{key, label, level, code: "missing"|"invalid", message}`, the same list `specIssues` gives. Input: `{id?, productTypeId, specs:[{label,value}], brand, packSize, includes, axes}`. Prompt 11.1 calls it. `item_spec_issues(item, grandfathered)` is the engine (service_role).
+  - SQL twin of `shared/src/specRules` (`spec_*` functions); `supabase/tests/publish-gate.test.mjs` runs both on the fixtures and on edge cases and requires equal answers. Change both together. In the database an empty `product_types.spec_rows` means "no rows defined" and uses the generic goods template.
+  - Trigger `items_spec_gate` on `items`: an item cannot become live (`draft = false and visible`), and a live item cannot have its type, specs, options, brand, pack size or includes changed, while a blocker exists. The error is `publish_blocked` (P0001) with the blocker list in `detail`. Drafts and hidden items always save. A tampered client or any other writer is covered because it is a table trigger.
+  - Grandfathering: `items.spec_gate_exempt` is true for every item that was not a draft when the migration ran. The first real edit (even while hidden) turns it off for good; until then the item stays live, can be renamed, repriced, hidden and shown, and `item_check_publish` reports its blockers as warnings with `grandfathered: true`.
+  - `seller_check_item` is unchanged unless the fields carry `publish`. With `publish` (true or false) the answer adds `spec` (the `item_check_publish` result); with `publish: true`, blockers also make `ok` false and add issues `{code: "spec_missing"|"spec_invalid", key, label, level, message}`. Fields not sent are read from the stored item.
+  - `product_types.spec_rows` may hold at most four required rows (a row with `requiredIf` counts); `fragrance` gets its rows. `specRules` and `openValues.js` are now copied to the edge functions by `sync:shared`.
+  - Tags for `requiredIf: {tag}` come from `option_values.tags`, following a merged value to its target.
+- Not changed: `seller_save_item` (A04 owns it). A new typed item reaches live through `seller_bulk_items('show')`, which now raises `publish_blocked` for the whole call when any item in it is blocked.
+- Existing test adjusted: `type-restrictions.test.mjs` retypes a live item to fragrance with a raw update; it now also sets the Authenticity spec the gate requires.
+- Who must act: J01 / 11.1 call `item_check_publish`; the seller editor (5.7) sends `publish` to `seller_check_item` and shows `spec` and `issues`; `seller_bulk_items` could skip blocked items instead of failing the call (see request).
+- Request files: docs/requests/2026-11-12-g05-to-j01-publish-gate-wiring.md

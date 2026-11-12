@@ -19,3 +19,16 @@ const source = useOpenValueSource();           // the seller api (findOptionValu
 - `source` is `{ search(kind, query, { limit }), add(kind, label, hex) }`. Tests inject a mock; `createLocalSource` is an in-memory stand-in.
 - Keyboard: Down/Up move (wrap), Alt+Down opens, Enter chooses or adds, Escape closes then clears. Focus goes to "Change" after choosing.
 - Text lives in `text.js` (the seller app has no i18n helper yet).
+
+# Scale value editors (1.4)
+
+`ScaleValuesEditor` (and one named wrapper per scale: `VolumeValuesEditor`, `WeightValuesEditor`, `CountValuesEditor`, `DurationValuesEditor`, `PortionValuesEditor`, `VoltageValuesEditor`, `PowerValuesEditor`, `IpRatingValuesEditor`, `ColorTemperatureValuesEditor`, `ChoiceValuesEditor`).
+
+```jsx
+<VolumeValuesEditor label="Size" values={list} onChange={setList} typeId="drinking-water" axisKey="size" />
+```
+
+- `values` is an array of stored scale values (`{scale, system?, value, unit?}`), never text. Typed text goes through the shared `parse`; chips and the buyer preview come from `format`.
+- "20" with no unit asks for one (tap a unit); "20 litres" reads as 20 L. The same size twice (1 L, 1000 ml) is kept once, with a quiet status message.
+- Chips keep the seller's order; each has Move earlier / later / Remove buttons and changes are announced. "Sort smallest first" uses the scale's `compare`.
+- `typeId` + `axisKey` turn on `plausible` warnings (warn, never block). Pure rules live in `scale/model.js`; wording in `scale/text.js`.
