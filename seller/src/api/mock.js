@@ -426,7 +426,7 @@ function resetBilling() {
   bill.seq = 0;
   bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
   bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
-  bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0101)
+  bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0103)
   bill.options = new Map();   // itemId -> { axes, variants, sizeChartId, sizeChartOverride } (migration 0084: option_axes, item_variants, size_chart_*)
   bill.now = null;
   bill.gallery = [];

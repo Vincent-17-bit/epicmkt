@@ -1,4 +1,4 @@
--- EpicMKT: sellers write their own size guide (migration 0101).
+-- EpicMKT: sellers write their own size guide (migration 0103).
 -- Run it ONCE, whole, in the Supabase SQL editor, AFTER catch-up-size-charts.sql (or migrations up to 0100). Safe to run again.
 -- It adds items.size_guide, two seller functions, and makes buyers see the seller's table first.
 

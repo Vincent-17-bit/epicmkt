@@ -1,5 +1,5 @@
 // The seller's own size guide for one item: a table the seller fills in on the item (columns they choose, one row per size they sell).
-// Pure code, no browser or Node APIs. Stored as items.size_guide = { unit, columns:[text], rows:[[text]] } (migration 0101);
+// Pure code, no browser or Node APIs. Stored as items.size_guide = { unit, columns:[text], rows:[[text]] } (migration 0103);
 // in the editor each row also has an id so the screen can keep its place: { unit, columns, rows:[{ id, cells:[text] }] }. The first column is the size.
 //   startGuide / guideFromChart / shoeGuide   three ways to begin: columns for the kind of item, an admin chart used as a template, shoe sizes converted
 //   syncSizes / orderBySizes                  keep one row per size the seller offers, in the order they offer them

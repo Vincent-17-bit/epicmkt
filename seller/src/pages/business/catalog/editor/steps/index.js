@@ -30,7 +30,7 @@ export const STEPS = [
   // Item options (B07). Shown for an item that went through the type picker or already has options; every other item sees no new step.
   { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: ({ form }) => "productTypeId" in form || Boolean(form.options),
     issues: issuesFor("options"), done: ({ form }) => (form.options?.rows ?? []).some((r) => r.sold) },
-  // The seller's own size table (migration 0101). Shown for clothing, shoes, anything that sells sizes, and any item that already has a guide.
+  // The seller's own size table (migration 0103). Shown for clothing, shoes, anything that sells sizes, and any item that already has a guide.
   { id: "sizeguide", label: "Size guide", short: "Sizes", component: SizeGuideStep,
     visibleWhen: ({ form, typeName }) => wantsGuide({ guide: form.sizeGuide, options: form.options, typeName, itemName: form.name }),
     issues: issuesFor("sizeguide"), done: ({ form }) => Boolean(form.sizeGuide?.rows?.length) },

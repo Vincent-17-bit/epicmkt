@@ -387,10 +387,39 @@ Entry format:
 - Who must act: J01 / 11.1 call `item_check_publish`; the seller editor (5.7) sends `publish` to `seller_check_item` and shows `spec` and `issues`; `seller_bulk_items` could skip blocked items instead of failing the call (see request).
 - Request files: docs/requests/2026-11-12-g05-to-j01-publish-gate-wiring.md
 
-## 2026-11-12 1.10: sellers write their own size guide (migration 0101)
+## 2026-11-12 1.10: sellers write their own size guide (migration 0103)
 - Contract: v1 (additive)
 - Lane / author: seller + data
 - What changed: `items.size_guide` (jsonb `{unit?, columns, rows}`, same shape rules as a size chart); `seller_set_item_size_guide(item, guide)` and `seller_item_size_guide(item)`; `item_size_chart_payload` returns the item's own guide first (`{id: null, own: true}`), else the admin chart as before. Shared: `shared/src/options/sizeGuide.js` (table logic, shoe conversion, checks, payload), `ownSizeChart` and a `guide` input on `publicOptions`. Seller API: `getItemSizeGuide`, `saveItemSizeGuide` (live and mock); `duplicateItem` copies the guide.
 - Why: size tables belong to the item and the seller who knows its measurements. Admin charts stay as templates sellers can copy, and as the fallback for items with no guide.
-- Who must act: data/admin: run migration 0101 (supabase/catch-up-seller-size-guide.sql for a project that ran the catch-up). Buyer apps need nothing: `item.sizeChart` already carries columns and rows.
+- Who must act: data/admin: run migration 0103 (supabase/catch-up-seller-size-guide.sql for a project that ran the catch-up). Buyer apps need nothing: `item.sizeChart` already carries columns and rows.
+
+## 2026-11-12 G06 A17: 3D data, media roles and signed uploads (migration 0101)
+
+- Contract: v1 (additive; nothing renamed or removed)
+- Lane / author: G06 (A17)
+- What changed:
+  - `item_media` gains `role` (`image | video | spin-frame | model-glb | poster`) and `option_ids text[]` (option VALUE ids, plain ids, no foreign key; J01 adds the link). `kind` gains `model`, `spin`, `poster` (one kind per role), so every existing query that filters `kind = 'image'` or `'video'` is unchanged. Existing rows get `role = kind`. A 3D asset has no option id (the whole item) or exactly one; a photo or video may have several. A photo or video with no option id belongs to the whole item.
+  - `public_items.media` now lists photos and videos only and every entry carries `id`, `role`, `optionIds` (only ids of values the item still has). The old keys `path`, `kind`, `duration` and the order are unchanged.
+  - `items.has_3d` (column from 0096) is now kept by triggers on `item_media`: true when a visible view exists.
+  - New public read `public_item_media3d(item uuid)`: `null` when the item is not public, else `{ view3d, view3dByOption }` made of PATHS: `view3d` = `{ model?: {path, size}, spin?: {frames: [path], count}, poster: path } | null`; `view3dByOption[valueId]` has the same shape for one option value. A view needs a poster AND (a model, or a spin of 12 to 72 frames); anything else is left out. `shared/src/media3d.js` `resolveMedia3d(payload, urlFor)` turns it into the Contract v1 `view3d` shape (`model.url`, `spin.frames` as urls, `poster` url). `view3dByOption` is the one addition to the item detail: the colour a buyer selects uses its own view when it has one, else `view3d`.
+  - New API (names in the contract list kept): edge function `seller-media-ticket` is `seller_media_upload_ticket(kind)`; body `{ kind: image|video|model-glb|spin-frame|poster, itemId, type, size, optionIds? }`. Limits: `.glb` 15 MB, pictures 10 MB, video 25 MB, spin 72 frames per scope, 500 3D rows per item. Wrong type 422 `unsupported_type`, too large 413 `too_large`, full 409 `limit_reached`, too many unfinished tickets for one item (160) 429 `too_many_pending`. A model ticket returns `{ path, token, contentType: "model/gltf-binary" }` (upload with that content type); picture tickets return the Cloudinary fields as before. `seller-media3d-finalize` finishes a poster, spin frame or model (the role comes from the ticket; a `.glb` is read back and checked byte by byte; anything refused is deleted). New DB functions: `attach_item_media3d` (service only), `seller_set_media_options(item, media, optionIds)` (photos and videos only), `seller_item_media3d(item)` (the seller's read for B13 and B14), `item_check_media3d(item jsonb)` (issues: `view3d_missing_poster`, `spin_too_few_frames`, `spin_too_many_frames`; for `seller_check_item`, wired by J01).
+  - `seller_item_media` lists photos and videos only (plus `role`, `optionIds`); `seller_reorder_item_media` and `seller_reorder_item_photos` ignore 3D rows.
+  - Files: the `seller-media` bucket now allows `model/gltf-binary`; `media_register_upload`, the media tables' checks, the garbage-collection trigger and queue, and the orphan sweep know the purposes `item_model`, `item_poster`, `item_spin`. `mediaGc.ts` sends a `.glb` to the bucket, not to Cloudinary. `seller-item-copy-media` (Duplicate item) now also copies the model, poster and spin frames as new files (frames keep their order) and keeps every photo's, video's and 3D asset's option value ids.
+- Why: B12 to B14 and C07 to C16 need media per option and a stored, validated 3D view.
+- Who must act:
+  - J01 (G03): call `item_check_media3d(item)` from `seller_check_item`; add the foreign key on option ids if wanted; make `item_options_apply` accept only photo/video ids as `mediaId` / `mediaIds`.
+  - J02/J03 (client adapter): read `public_item_media3d` into `items.getDetail` (`view3d`, `view3dByOption`) with `resolveMedia3d`, and read `role` and `optionIds` from `media`.
+- Request files: docs/requests/2026-11-12-g06-to-g03-check-media3d-and-media-ids.md, docs/requests/2026-11-12-g06-to-client-media3d-payload.md
+
+## 2026-11-12 5.11: Admin spec rules editor (migration 0102)
+
+- Contract: v1 (additive)
+- Lane / author: Group 5, Prompt 5.11
+- What changed:
+  - `admin_spec_rows_list()` (reviewer, support, owner) returns `[{id, name, specRows}]` for active product types; `admin_save_spec_rows(p_id, p_rows)` (owner only) replaces one type's `specRows` and writes an audit row (`spec_rows.update`). Errors: `forbidden`, `type_not_found`, `invalid_spec_rows`, `too_many_required`.
+  - SQL checks `spec_rows_valid` and `spec_condition_valid` mirror `checkSpecRows` and `checkCondition` in `shared/src/specRules`: slug keys, unique keys, level, input, label sets, choices, and conditions that point at another row of the same type.
+  - Admin page `/admin/spec-rules` (nav "Spec rules", permissions `specrules.view` and `specrules.edit`): rows per type, level, input, label set or choices, "required when" and "shown only when" rules (one test, all or any), a four-required-row counter, and a preview of the seller form that evaluates the rules on sample answers.
+- Not changed: the Product types page (Prompt 2.6) is not merged; the editor only changes `specRows`. Saving rules does not touch items that are already live; the gate applies when a seller next saves them.
+- Who must act: Prompt 2.6 may link to `/admin/spec-rules` from its type editor.
 - Request files: none

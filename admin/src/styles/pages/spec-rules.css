@@ -1,0 +1,4 @@
+.sr-cond { display: grid; gap: var(--space-2); border: 0; padding: 0; margin: 0; min-width: 0; }
+.sr-cond legend { padding: 0; font-weight: var(--fw-semibold); }
+.sr-badge { color: var(--text-muted); }
+.sr-head { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; justify-content: space-between; }

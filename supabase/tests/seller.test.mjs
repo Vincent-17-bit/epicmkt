@@ -444,7 +444,7 @@ test("storage: sellers touch only their own folder", async () => {
   const bucket = (await sql(c, `select * from storage.buckets where id = 'seller-media'`))[0];
   assert.equal(bucket.public, true);
   assert.equal(Number(bucket.file_size_limit), 25 * 1024 * 1024);
-  assert.deepEqual([...bucket.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm"]);
+  assert.deepEqual([...bucket.allowed_mime_types].sort(), ["image/jpeg", "image/png", "image/webp", "model/gltf-binary", "video/mp4", "video/webm"]);   // A17 added model/gltf-binary for .glb models
   await sql(c, `delete from storage.objects`);
 });
 

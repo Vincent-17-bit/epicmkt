@@ -56,6 +56,8 @@ export const ACTIONS = {
   // Sizes 1.9. Mirrors has_role(array['owner']) in admin_save_size_chart, admin_delete_size_chart and admin_save_shoe_conversion (migration 0093): the owner only.
   "sizecharts.view": { label: "see the size charts and the shoe conversion table", roles: ["reviewer", "support"] },
   "sizecharts.edit": { label: "change size charts and the shoe conversion table", roles: [] },
+  "specrules.view": { label: "see the spec rules of each product type", roles: ["reviewer", "support"] },
+  "specrules.edit": { label: "change the spec rules of each product type", roles: [] },
 };
 
 export function isRole(role) {

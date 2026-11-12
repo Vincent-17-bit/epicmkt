@@ -9,3 +9,6 @@
 2. Seller editor: send `publish: true` in the fields of `seller_check_item` before Publish and `publish: false` for the quality panel; render `spec` (`blockers`, `warnings`, `score`) and the `spec_missing` / `spec_invalid` issues. Show `publish_blocked` from a save or a bulk show in words (its `detail` is a JSON list of `{key, label, message}`).
 3. `seller_bulk_items('show')` fails the whole call when one item is blocked. If the UI should skip those items and report them, that change is in `seller_bulk_items` (not mine).
 4. A06: when product types are loaded from the real list, their `spec_rows` must follow `SpecRowDef` (shared/src/specRules/rows.js); the table refuses more than four required rows.
+
+## 5.8: spec overrides per combination
+The Specifications tab merges `option.variant.specOverrides` (a `{ label: value }` map or a `[{ label, value, group? }]` list; a blank value hides the row) over the item's specs, and the Top highlights follow it. The client does not map `variants[].specOverrides` from `items.getDetail` into the selected option yet (`TODO(contract:3.2)` in `Details.jsx`), so today the table shows the item's own specs.

@@ -12,7 +12,7 @@ import BuyerPreview from "./guide/BuyerPreview.jsx";
 import ed from "../editor.module.css";
 import s from "./guide/guide.module.css";
 
-// The seller's own size guide for this item (migration 0101). Sellers write the table; ready-made tables are only a place to start.
+// The seller's own size guide for this item (migration 0103). Sellers write the table; ready-made tables are only a place to start.
 export default function SizeGuideStep({ form, patch, errors, goTo }) {
   const { types } = useProductTypes();
   const guide = form.sizeGuide ?? null;

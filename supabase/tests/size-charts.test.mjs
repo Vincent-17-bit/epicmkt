@@ -289,7 +289,7 @@ test("admin sets or clears one item's size chart: owner only, active chart, over
   await clean();
 });
 
-// ---- Seller-owned size guide (0101) ----
+// ---- Seller-owned size guide (0103) ----
 const guideItem = async (biz = ids.bizA) => {
   const id = (await sql(c, `insert into items (business_id, name, price, price_type, availability, visible) values ($1, 'Runner', 1000, 'fixed', 'available', true) returning id`, [biz]))[0].id;
   await sql(c, `select attach_item_media($1, 'image', $2, 'image/jpeg', 100, 100, null, 1000)`, [id, `${biz}/${id}.jpg`]);

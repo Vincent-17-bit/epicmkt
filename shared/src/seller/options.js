@@ -368,7 +368,7 @@ export const sizeChartFor = (chart, override) => {
   return { id: chart.id, name: chart.name, category: chart.category ?? null, unit: chart.unit, columns: chart.columns, rows: fits ? override.rows : chart.rows, overridden: Boolean(fits) };
 };
 
-// The seller's own size guide ({ unit?, columns, rows }, migration 0101) as the buyer gets it, or null when it does not meet the database rules.
+// The seller's own size guide ({ unit?, columns, rows }, migration 0103) as the buyer gets it, or null when it does not meet the database rules.
 // Mirrors item_size_chart_payload: it takes the place of any admin chart.
 export const ownSizeChart = (guide) => {
   const text = (v, max) => typeof v === "string" && v.trim() !== "" && v.length <= max;

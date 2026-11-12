@@ -31,3 +31,5 @@ export const qualityChecks = (form, mediaCount = 0) =>
   CHECKS.filter((c) => !c.when || c.when(form)).map((c) => ({
     id: c.id, weight: c.weight, done: Boolean(c.isDone(form, mediaCount)), step: c.step, focus: c.focus, todo: c.todo, done_text: c.done_text,
   }));
+
+export { publishIssues } from "./publish.js";

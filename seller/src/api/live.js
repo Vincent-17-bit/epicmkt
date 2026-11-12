@@ -496,7 +496,7 @@ export const saveItem = async (id, fields) => rpc("seller_save_item", { p_id: id
 export const checkItem = (id, fields) => rpc("seller_check_item", { p_id: id ?? null, p_fields: itemRow(fields) });
 // The editor's read of an item's options: { axes, variants (with stock counts), availability, sizeChartId, sizeChartOverride }.
 export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
-// The seller's own size guide for one item (migration 0101): { unit, columns, rows } or null.
+// The seller's own size guide for one item (migration 0103): { unit, columns, rows } or null.
 export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id });
 export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
 // The size chart library (active charts). Admin keeps it; sellers copy one as the starting table of their own guide.
@@ -515,7 +515,7 @@ export const duplicateItem = async (id) => {
     /* the copy exists without (some of) its media */
   }
   try {
-    // The seller's own size guide (migration 0101) comes with the copy; seller_duplicate_item itself does not know about it.
+    // The seller's own size guide (migration 0103) comes with the copy; seller_duplicate_item itself does not know about it.
     const g = await rpc("seller_item_size_guide", { p_id: id });
     if (g) await rpc("seller_set_item_size_guide", { p_id: copyId, p_guide: g });
   } catch {

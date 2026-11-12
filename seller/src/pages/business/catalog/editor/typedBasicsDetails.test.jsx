@@ -9,9 +9,11 @@ import DetailsSection from "./DetailsSection.jsx";
 import BasicsStep from "./steps/BasicsStep.jsx";
 import DetailsStep from "./steps/DetailsStep.jsx";
 import { setMoreDetails } from "./detailMode.js";
-import { ownValue, withRow, rowsOf } from "./typedRows.js";
+import { ownValue, withRow, rowsOf, specLinks, valueKindOf } from "./typedRows.js";
 
 const mockTypes = vi.hoisted(() => ({ list: [] }));
+const mockSource = vi.hoisted(() => ({ current: null }));
+vi.mock("../../../../components/values/useOpenValueSource.js", () => ({ useOpenValueSource: () => mockSource.current }));
 vi.mock("./steps/useProductTypes.js", () => ({ useProductTypes: () => ({ types: mockTypes.list }) }));
 
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
@@ -30,6 +32,8 @@ const accessory = {
     { key: "fragile", label: "Fragile", level: "recommended", input: "boolean" },
     { key: "count", label: "Count", level: "optional", input: "number" },
     { key: "colour", label: "Colour", level: "optional", input: "openValue" },
+    { key: "material", label: "Material", level: "optional", input: "openValue" },
+    { key: "serial", label: "Serial", level: "optional", input: "openValue" },
     { key: "size", label: "Size", level: "optional", input: "dimension" }
   ]
 };
@@ -60,7 +64,13 @@ const specs = () => JSON.parse(screen.getByTestId("specs").textContent);
 beforeEach(() => {
   setMoreDetails(false);
   mockTypes.list = [water, accessory];
+  mockSource.current = {
+    search: vi.fn(async (kind, q) => ({ matches: kind === "material" && /^mahog/i.test(q) ? [V("m1", "Mahogany"), V("m2", "Mahogany veneer")] : [], canAdd: true, addLabel: null })),
+    add: vi.fn(async (kind, label) => ({ created: true, value: V("new", label, { status: "pending", kind }) }))
+  };
 });
+
+const V = (id, label, extra = {}) => ({ id, kind: "material", label, key: label.toLowerCase(), status: "approved", hex: null, tags: [], uses: 0, ...extra });
 
 describe("typed Basics: quick mode", () => {
   it("shows name, brand and the required rows only, with the rest behind Add more details", () => {
@@ -150,14 +160,55 @@ describe("row inputs write the item's specifications", () => {
     expect(screen.getByRole("combobox", { name: "Water type (required)" })).toHaveValue("Rain");
   });
 
-  it("boolean, number, open value and dimension rows are plain inputs for now", async () => {
+  it("boolean, number, dimension and unrecognised open value rows are plain inputs for now", async () => {
     render(<Harness Section={DetailsSection} initial={base({ productTypeId: "accessory" })} type={accessory} more onMore={() => {}} />);
     await userEvent.click(screen.getByRole("radio", { name: "Yes" }));
     await userEvent.type(screen.getByLabelText("Count (optional)"), "12");
-    await userEvent.type(screen.getByLabelText("Colour (optional)"), "Wine red");
     await userEvent.type(screen.getByLabelText("Size (optional)"), "10 x 5");
-    expect(specs().map((s) => [s.label, s.value])).toEqual([["Fragile", "Yes"], ["Count", "12"], ["Colour", "Wine red"], ["Size", "10 x 5"]]);
+    await userEvent.type(screen.getByLabelText("Serial (optional)"), "A1");
+    expect(specs().map((s) => [s.label, s.value])).toEqual([["Fragile", "Yes"], ["Count", "12"], ["Size", "10 x 5"], ["Serial", "A1"]]);
     expect(screen.getByLabelText("Count (optional)")).toHaveAttribute("inputmode", "decimal");
+  });
+
+  it("a material row is the open value combo: Mahog finds Mahogany and Mahogany veneer, choosing stores the label", async () => {
+    render(<Harness Section={DetailsSection} initial={base({ productTypeId: "accessory" })} type={accessory} more onMore={() => {}} />);
+    await userEvent.type(screen.getByRole("combobox", { name: /Material \(optional\)/ }), "Mahog");
+    expect(await screen.findByRole("option", { name: /Mahogany veneer/ })).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("option", { name: /^Mahogany$/ }));
+    expect(specs()).toEqual([{ group: "Features & Specs", label: "Material", value: "Mahogany" }]);
+  });
+
+  it("a value nobody has used is added as typed and pending, and its id is kept for linking", async () => {
+    let latest;
+    const Spy = () => {
+      const [form, setForm] = useState(base({ productTypeId: "accessory" }));
+      latest = form;
+      return <DetailsSection form={form} patch={(k, v) => setForm((f) => ({ ...f, [k]: v }))} errors={{}} focusOn={() => {}} type={accessory} more onMore={() => {}} />;
+    };
+    render(<Spy />);
+    await userEvent.type(screen.getByRole("combobox", { name: /Material \(optional\)/ }), "Teak oak");
+    await userEvent.click(await screen.findByRole("option", { name: /Add .Teak oak./ }));
+    expect(latest.specs).toEqual([{ group: "Features & Specs", label: "Material", value: "Teak oak" }]);
+    expect(specLinks(latest)).toEqual([{ slot: "spec", valueId: "new" }]);
+    expect(screen.getAllByText(/pending review/i).length).toBeGreaterThan(0);
+  });
+
+  it("a colour row is the colour picker with a palette", async () => {
+    render(<Harness Section={DetailsSection} initial={base({ productTypeId: "accessory" })} type={accessory} more onMore={() => {}} />);
+    expect(screen.getByText("Colour (optional)")).toBeInTheDocument();
+    expect(screen.getAllByRole("button").some((b) => /red/i.test(b.getAttribute("aria-label") ?? b.textContent))).toBe(true);
+  });
+
+  it("reads which dictionary list a row uses from its key", () => {
+    const kinds = ["brand", "colour", "container-material", "finish", "flavour", "serial"].map((key) => valueKindOf({ key }));
+    expect(kinds).toEqual(["brand", "color", "material", "finish", "flavour", null]);
+  });
+
+  it("a saved material shows as chosen without asking the dictionary", () => {
+    const form = base({ productTypeId: "accessory", specs: [{ group: "Features & Specs", label: "Material", value: "Mahogany" }] });
+    render(<Harness Section={DetailsSection} initial={form} type={accessory} more onMore={() => {}} />);
+    expect(screen.getByText("Mahogany")).toBeInTheDocument();
+    expect(mockSource.current.search).not.toHaveBeenCalled();
   });
 
   it("a conditional row becomes required when its condition is met", async () => {
