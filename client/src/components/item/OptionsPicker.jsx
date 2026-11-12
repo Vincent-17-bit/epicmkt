@@ -3,6 +3,7 @@ import { OptionCard, OptionSelect } from "@epicmkt/ui";
 import { axisCards, formatCapacityLabel } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import { kesText } from "../../lib/flash.js";
+import SizeChartLink from "./SizeChartModal.jsx";
 import styles from "./OptionsPicker.module.css";
 
 // More than this many values in a list that is not made of swatches or photos: a dropdown.
@@ -12,9 +13,13 @@ const cardStatus = (card) => (card.available ? "" : card.status === "out_of_stoc
 // "1024 GB" is read as "1 TB"; everything else is shown as the seller wrote it.
 const valueLabel = (value) => formatCapacityLabel(value.label);
 
+// The axis the "Size chart" link sits beside: the first one that looks like a size, else the first axis.
+const SIZE_AXIS = /size|collar|shoe|waist|fit/i;
+export const sizeAxisKey = (axes) => (axes.find((a) => SIZE_AXIS.test(a.key) || SIZE_AXIS.test(a.label ?? "")) ?? axes[0])?.key;
+
 const photoOf = (item, value) => (value.mediaId ? (item.images ?? []).find((m) => m.id === value.mediaId)?.url ?? "" : "");
 
-function Group({ item, option, axis }) {
+function Group({ item, option, axis, withChart }) {
   const headId = useId();
   const refs = useRef(new Map());
   const { values, showPrice } = axisCards(option.axes, option.variants, option.choice, axis.key);
@@ -31,11 +36,14 @@ function Group({ item, option, axis }) {
       {axis.label}: <strong className={styles.value}>{currentLabel}</strong>
     </span>
   );
+  // "Size chart" link beside the size selector; hidden when the item has no chart (SizeChartLink returns null).
+  const chartLink = withChart ? <SizeChartLink chart={item.sizeChart} selected={currentLabel} /> : null;
 
   if (asSelect) {
     return (
       <div className={styles.group}>
         <p className={styles.live} aria-live="polite" aria-atomic="true">{axis.label}: {currentLabel}</p>
+        {chartLink}
         <OptionSelect
           label={axis.label}
           value={current}
@@ -71,7 +79,10 @@ function Group({ item, option, axis }) {
 
   return (
     <div className={styles.group}>
-      <p className={styles.headLine}>{header}</p>
+      <p className={styles.headLine}>
+        {header}
+        {chartLink && <span className={styles.chartSlot}>{chartLink}</span>}
+      </p>
       <div role="radiogroup" aria-labelledby={headId} className={styles.cards}>
         {values.map((card, index) => {
           const value = card.value;
@@ -105,10 +116,11 @@ function Group({ item, option, axis }) {
 // for the choice before it. A combination the seller does not sell can still be picked (it is dashed, not hidden); then the page
 // says so and shows no price.
 export default function OptionsPicker({ item, option }) {
+  const chartAxis = sizeAxisKey(option.axes);
   return (
     <div className={styles.picker}>
       {option.axes.map((axis) => (
-        <Group key={axis.key} item={item} option={option} axis={axis} />
+        <Group key={axis.key} item={item} option={option} axis={axis} withChart={Boolean(item?.sizeChart) && axis.key === chartAxis} />
       ))}
       {!option.variant && (
         <p className={styles.note} role="status">

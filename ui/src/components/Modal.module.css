@@ -10,3 +10,31 @@
 .dialog::backdrop {
   background: var(--scrim);
 }
+
+/* Bottom sheet on a narrow screen, centred card from 40rem. Motion is off under prefers-reduced-motion. */
+.sheet {
+  max-height: min(90dvh, 40rem);
+  overflow: hidden;
+}
+
+@media (max-width: 39.99rem) {
+  .sheet {
+    width: 100%;
+    max-width: 100%;
+    margin: auto 0 0;
+    border-width: 2px 0 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+  }
+  .sheet[open] {
+    animation: sheet-up 220ms ease-out;
+  }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(2rem); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet[open] { animation: none; }
+}
