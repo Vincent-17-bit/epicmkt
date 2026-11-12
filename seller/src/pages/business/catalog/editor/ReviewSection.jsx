@@ -2,11 +2,14 @@ import { validateItemForm } from "@epicmkt/shared";
 import { errorList, priceSummary } from "./model.js";
 import { SectionCard } from "./parts.jsx";
 import QualityPanel from "./Quality.jsx";
+import { publishIssues } from "./checks/index.js";
 import styles from "./editor.module.css";
 
-export default function ReviewSection({ form, checks, isNew, onJump }) {
+export default function ReviewSection({ form, checks, isNew, onJump, type, grandfathered = false, colourPhotos, sizeChart, onPublish, busy = false }) {
   const check = validateItemForm(form);
   const problems = check.ok ? [] : errorList(check.errors);
+  const issues = publishIssues(form, { type, grandfathered, colourPhotos, sizeChart });
+  const ready = problems.length === 0 && (issues?.canPublish ?? true);
   const listed = [
     form.highlights.filter((h) => h.text.trim()).length && `${form.highlights.filter((h) => h.text.trim()).length} highlights`,
     form.specs.filter((s) => s.label.trim() && s.value.trim()).length && `${form.specs.filter((s) => s.label.trim() && s.value.trim()).length} specifications`,
@@ -30,6 +33,19 @@ export default function ReviewSection({ form, checks, isNew, onJump }) {
         </div>
       )}
 
+      {issues && (
+        <div className={styles.glance} data-testid="publish-state">
+          <h3 className={styles.subTitle}>Publishing</h3>
+          <p id="publish-reason">
+            {ready ? "Ready to publish." : `Not ready to publish: ${problems.length + issues.blockers.length} ${problems.length + issues.blockers.length === 1 ? "thing needs" : "things need"} fixing first.`}
+            {grandfathered && " This item is already live, so missing details show as suggestions until you change its details."}
+          </p>
+          {onPublish && (
+            <button type="button" className={styles.btnPrimary} disabled={!ready || busy} aria-describedby="publish-reason" onClick={onPublish}>Publish</button>
+          )}
+        </div>
+      )}
+
       <div className={styles.glance}>
         <h3 className={styles.subTitle}>What customers will see</h3>
         <p className={styles.glanceName}>{form.name.trim() || <span className={styles.muted}>No name yet</span>}</p>
@@ -39,7 +55,7 @@ export default function ReviewSection({ form, checks, isNew, onJump }) {
         {isNew && <p className={styles.hint}>New items are saved as drafts. Use Show when you are ready for customers to see them.</p>}
       </div>
 
-      <QualityPanel checks={checks} onJump={onJump} />
+      <QualityPanel checks={checks} onJump={onJump} issues={issues} />
     </SectionCard>
   );
 }

@@ -1,10 +1,10 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faChevronRight, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { qualityLabel, qualityScore } from "./model.js";
 import styles from "./editor.module.css";
 
 // The quality meter and what would raise it. Advisory: every suggestion is a link to the field, none of it blocks a save.
-export default function QualityPanel({ checks, onJump, showDone = true, headingLevel = "h3" }) {
+export default function QualityPanel({ checks, onJump, showDone = true, headingLevel = "h3", issues = null }) {
   const score = qualityScore(checks);
   const todo = checks.filter((c) => !c.done);
   const done = checks.filter((c) => c.done);
@@ -34,6 +34,38 @@ export default function QualityPanel({ checks, onJump, showDone = true, headingL
             ))}
           </ul>
         </>
+      )}
+      {issues && (
+        <div data-testid="spec-quality">
+          <Heading className={styles.subTitle}>Item details</Heading>
+          <p className={styles.hint} data-testid="spec-score">{issues.score}% of the recommended details are filled in.</p>
+          <div className={styles.track} role="progressbar" aria-label="Item details" aria-valuemin={0} aria-valuemax={100} aria-valuenow={issues.score} aria-valuetext={`${issues.score} percent`}>
+            <span className={styles.fill} style={{ inlineSize: `${issues.score}%` }} />
+          </div>
+          {issues.blockers.length > 0 && (
+            <ul className={styles.todoList} aria-label="Needed to publish">
+              {issues.blockers.map((b) => (
+                <li key={b.id}>
+                  <button type="button" className={`${styles.jump} ${styles.jumpBad}`} onClick={() => onJump(b.step, b.focus)}>
+                    <span><FontAwesomeIcon icon={faTriangleExclamation} aria-hidden="true" /> <strong>Needed to publish:</strong> {b.message}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {issues.warnings.length > 0 && (
+            <ul className={styles.todoList} aria-label="Suggested details">
+              {issues.warnings.map((w) => (
+                <li key={w.id}>
+                  <button type="button" className={styles.jump} onClick={() => onJump(w.step, w.focus)}>
+                    <span>{w.message}</span>
+                    <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       )}
       {showDone && done.length > 0 && (
         <ul className={styles.doneList} aria-label="Already done">

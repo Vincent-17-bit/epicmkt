@@ -6,10 +6,12 @@ const ORDER = { required: 0, recommended: 1, optional: 2 };
 
 export const hasTemplate = (type) => Array.isArray(type?.specRows) && type.specRows.length > 0;
 
-const itemOf = (form) => ({ specs: form.specs ?? [], brand: form.brand, packSize: form.packSize, includes: form.includes ?? [], axes: form.options?.axes ?? [] });
+export const itemOfForm = (form) => ({ specs: form.specs ?? [], brand: form.brand, packSize: form.packSize, includes: form.includes ?? [], axes: form.options?.axes ?? [] });
+
+export const tagsOfForm = (form) => (_value, row) => form.specValues?.[row.key]?.tags ?? [];
 
 export function rowsOf(form, type) {
-  const rows = hasTemplate(type) ? resolveRows(itemOf(form), type.specRows) : [];
+  const rows = hasTemplate(type) ? resolveRows(itemOfForm(form), type.specRows, { tags: tagsOfForm(form) }) : [];
   return {
     required: rows.filter((r) => r.level === "required"),
     extra: rows.filter((r) => r.level !== "required").sort((a, b) => ORDER[a.level] - ORDER[b.level])
