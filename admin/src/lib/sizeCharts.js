@@ -30,5 +30,5 @@ export function isSchemaMissing(error) {
 /** What to tell an admin when the database is behind the app. */
 export const SCHEMA_HELP = {
   title: "The database needs its size chart update",
-  body: "This page needs database migrations that have not been applied to this project yet: 0086 (size charts), 0091 (product types), 0093 (shoe conversion and chart types) and 0100 (one item\u2019s chart). Apply them with “supabase db push”, or run each file in the SQL editor in that order, then run “notify pgrst, 'reload schema';” and try again.",
+  body: "Open the Supabase SQL editor for this project, paste the whole file supabase/catch-up-size-charts.sql from the repository, and run it once. It adds the size chart functions (migrations 0086, 0091, 0093 and 0100) and reloads the API itself. Then press Try again.",
 };
