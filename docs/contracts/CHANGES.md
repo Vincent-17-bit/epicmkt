@@ -459,3 +459,10 @@ Entry format:
 - What changed: `errorText` blamed "your connection" for every error it had no message for (a database function that is not installed yet, a product-type rule, an unmapped code). Now only a real network failure says that; a missing database update says so; any other unknown code is named. Messages added for `invalid_product_type`, `unknown_product_type`, `invalid_variants`, `invalid_price_tiers`, `tiers_need_from_price`, `invalid_unit`, `invalid_status`, `forbidden`; `type_not_allowed` in the item editor reads as a product-type refusal. After the item is stored, re-reading the options and the size guide to refresh the form can no longer turn a successful "Save and stay" into an error.
 - Who must act: none (redeploy the seller app).
 - Request files: none
+
+## 2026-11-13 1.16: the editor sends the product type only when it changes
+- Contract: v1 (additive, no migration)
+- Lane / author: seller
+- What changed: `seller_save_item` re-validates any `productTypeId` it receives (the type must be active and sellable by the shop). Since 1.14 the editor sent the stored type on every edit, so an item whose type was later switched off or restricted could not be saved at all. The editor now sends `productTypeId` only for a new item or when the seller changed it. Added `supabase/diagnose-item-save.sql` (read-only checks of the functions and columns saving needs) and `supabase/tests/seller-save-roundtrip.test.mjs`.
+- Who must act: none for the app (redeploy the seller). Optional: run `supabase/diagnose-item-save.sql` in the SQL editor if saves still fail.
+- Request files: none
