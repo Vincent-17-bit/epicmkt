@@ -89,6 +89,8 @@ export const guideKindFor = (...names) => {
   const text = names.filter(Boolean).join(" ");
   return WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
 };
+/** Has the seller put a "Size" row in the item's specifications? (rows are { group, label, value }) */
+export const hasSizeSpec = (specs) => (Array.isArray(specs) ? specs : []).some((r) => /^\s*(sizes?|saizi)\s*$/i.test(String(r?.label ?? "")));
 /** Does this item deserve a Size guide step? It does when it has a guide, sells sizes, or is a kind of item that has one. */
 export const wantsGuide = ({ guide, options, typeName, itemName }) => Boolean(guide) || sizeLabels(options).length > 0 || guideKindFor(typeName, itemName) !== null;
 

@@ -216,4 +216,13 @@ describe("Size guide step (seller)", () => {
     await user.click(screen.getByRole("button", { name: /Only my own columns/ }));
     expect(spy.current.sizeGuide.rows.map((r) => r.cells[0])).toEqual(["A5", "A4"]);
   });
+
+  it("an item of no known kind sees every kind of table up front, not tucked away", async () => {
+    const { user, spy } = open({ name: "Fade cut" });
+    expect(screen.getByText("What kind of item is it?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Bottle sizes/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Furniture and fittings/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Handbags and purses/ }));
+    expect(spy.current.sizeGuide.rows.map((r) => r.cells[0])).toEqual(["Standard"]);
+  });
 });

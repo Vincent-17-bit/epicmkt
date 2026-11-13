@@ -1,10 +1,10 @@
 import { PRICED, filled, parseKes } from "../fields.js";
 import { errorList } from "../model.js";
-import { wantsGuide } from "@epicmkt/shared";
 import MediaStep from "./MediaStep.jsx";
 import BasicsStep from "./BasicsStep.jsx";
 import TypeStep from "./TypeStep.jsx";
 import OptionsStep from "./OptionsStep.jsx";
+import { hasSizeSpec, wantsGuide } from "@epicmkt/shared";
 import SizeGuideStep from "./SizeGuideStep.jsx";
 import PriceStep from "./PriceStep.jsx";
 import DetailsStep from "./DetailsStep.jsx";
@@ -30,9 +30,11 @@ export const STEPS = [
   // Item options (B07). Shown for an item that went through the type picker or already has options; every other item sees no new step.
   { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: ({ form }) => "productTypeId" in form || Boolean(form.options),
     issues: issuesFor("options"), done: ({ form }) => (form.options?.rows ?? []).some((r) => r.sold) },
-  // The seller's own size table (migration 0103). Shown for clothing, shoes, anything that sells sizes, and any item that already has a guide.
+  // The seller's own size table (migration 0103).
   { id: "sizeguide", label: "Size guide", short: "Sizes", component: SizeGuideStep,
-    visibleWhen: ({ form, typeName }) => wantsGuide({ guide: form.sizeGuide, options: form.options, typeName, itemName: form.name }),
+    // Shown for an item that sells sizes (a Size option, or a Size row in its specifications), is clothing, shoes, bags, drinks, food or wood, already has a guide,
+    // or whose seller asked for one with "Add a size guide" in Details. Every other item keeps its five steps.
+    visibleWhen: ({ form, typeName, guideAsked }) => Boolean(guideAsked) || hasSizeSpec(form.specs) || wantsGuide({ guide: form.sizeGuide, options: form.options, typeName, itemName: form.name }),
     issues: issuesFor("sizeguide"), done: ({ form }) => Boolean(form.sizeGuide?.rows?.length) },
   { id: "price", label: "Price and stock", short: "Price", component: PriceStep, visibleWhen: always, issues: issuesFor("price"), done: ({ form }) => !PRICED.includes(form.priceType) || parseKes(form.price) !== null },
   { id: "details", label: "Details", short: "Details", component: DetailsStep, visibleWhen: always, issues: issuesFor("details"),

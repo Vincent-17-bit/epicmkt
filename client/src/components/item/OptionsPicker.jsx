@@ -25,7 +25,10 @@ function valueLabelFor(item, axis, system) {
 
 // The axis the "Size chart" link sits beside: the first one that looks like a size, else the first axis.
 const SIZE_AXIS = /size|collar|shoe|waist|fit/i;
-export const sizeAxisKey = (axes) => (axes.find((a) => SIZE_AXIS.test(a.key) || SIZE_AXIS.test(a.label ?? "")) ?? axes[0])?.key;
+// Items sized by amount rather than by size: bottles (volume), loaves and packs (weight), timber and bags (length, capacity, dimensions).
+const AMOUNT_AXIS = /volume|weight|capacity|length|dimension|thickness|diameter|pack|bottle|loaf|width/i;
+const matches = (re) => (a) => re.test(a.key ?? "") || re.test(a.label ?? "");
+export const sizeAxisKey = (axes) => (axes.find(matches(SIZE_AXIS)) ?? axes.find(matches(AMOUNT_AXIS)) ?? axes[0])?.key;
 
 const photoOf = (item, value) => (value.mediaId ? (item.images ?? []).find((m) => m.id === value.mediaId)?.url ?? "" : "");
 

@@ -431,3 +431,10 @@ Entry format:
 - Why: a bottle of vodka, a loaf, a plank, a suitcase and a shoe are not sized the same way, and a numbers column is not always a length.
 - Who must act: data: run supabase/catch-up-seller-size-guide.sql (0103 and 0104, safe to repeat).
 - Request files: none
+
+## 2026-11-13 1.12: size guide is easy to find; buyers always see the Size chart link
+- Contract: v1 (additive, no migration)
+- Lane / author: seller + client
+- What changed: the seller "Size guide" step now also appears when the Specifications section has a Size row, and the Details step shows a "Does your item come in sizes?" card with an "Add a size guide" button for any item. An unknown item kind shows every kind's starting table up front. Buyers see a standalone "Size chart" link on items that have a guide but no size picker; the size axis detection no longer mistakes Volume/Weight amounts for colours.
+- Who must act: none (redeploy the seller and client apps).
+- Request files: none
