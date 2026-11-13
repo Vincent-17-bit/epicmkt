@@ -121,6 +121,8 @@ function EditorForm({ item, sections, category, business }) {
     if (form.sizeGuide === undefined) patch("sizeGuide", loaded);
   }, [guideRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const productTypes = useProductTypes();
+  const [guideAsked, setGuideAsked] = useState(false); // "Add a size guide" in Details opens the step for an item that would not show it
+
   const [errors, setErrors] = useState({});
   const [error, setError] = useState("");
   const [notice, setNotice] = useState(null);
@@ -146,7 +148,7 @@ function EditorForm({ item, sections, category, business }) {
   const checks = useMemo(() => qualityChecks(form, media.photoCount), [form, media.photoCount]);
   // The steps the seller sees (a step can hide itself with visibleWhen). Everything that numbers or steps through them reads this list.
   const typeName = productTypes.types.find((t) => t.id === form.productTypeId)?.name;
-  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount, typeName });
+  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount, typeName, guideAsked });
 
   // ---- Put the cursor somewhere, after the right step has had a chance to render ----
   const focusOn = useCallback((key) => {
@@ -384,7 +386,8 @@ function EditorForm({ item, sections, category, business }) {
 
   const onPublish = isNew || !live ? () => save({ stay: true, publish: true }) : undefined;
   const sizeChart = { needed: wantsGuide({ guide: null, options: form.options, typeName, itemName: form.name }), has: Boolean(form.sizeGuide) };
-  const stepProps = { form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart };
+  const askGuide = () => { setGuideAsked(true); setTimeout(() => goTo("sizeguide"), 0); };
+  const stepProps = { askGuide, guideShown: steps.some((x) => x.id === "sizeguide"), form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart };
   const renderSection = (st) => <st.component key={st.id} {...stepProps} />;
 
   const stepButtons = (variant) => (

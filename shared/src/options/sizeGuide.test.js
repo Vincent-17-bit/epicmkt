@@ -269,3 +269,11 @@ test("sizes can be named Volume, Weight, Length...; Size wins; colours are never
   assert.equal(wantsGuide({ options: opt(["Colour", ["Black", "Red"]]), typeName: "Pens", itemName: "Gel pen" }), false);
   assert.equal(wantsGuide({ options: opt(["Colour", ["Black", "Red"]]), typeName: "Furniture", itemName: "Coffee table" }), true);
 });
+
+test("a Size row in the specifications opens the guide step; other rows do not", async () => {
+  const { hasSizeSpec } = await import("./sizeGuide.js");
+  assert.equal(hasSizeSpec([{ group: "Measurements", label: "Size", value: "" }]), true);
+  assert.equal(hasSizeSpec([{ label: " sizes " }]), true);
+  assert.equal(hasSizeSpec([{ label: "Color" }, { label: "Screen size" }, { label: "Capacity" }]), false);
+  assert.equal(hasSizeSpec(undefined), false);
+});

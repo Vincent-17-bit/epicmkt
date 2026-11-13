@@ -75,11 +75,17 @@ export default function GuideStart({ kind, sizes, charts, chartsState, onStart, 
         </div>
       )}
 
-      {!shoe && !mine.length && (
+      {!kind && (
         <div className={s.panel}>
-          <p className={s.panelTitle}>Start with your own columns</p>
-          <p className={s.muted}>Name the columns yourself, for example Length, Weight or Fits. You can add more any time.</p>
+          <p className={s.panelTitle}>What kind of item is it?</p>
+          <p className={s.muted}>Pick the table that fits best, or start with your own columns.</p>
           <Templates list={[plain]} sizes={sizes} kind={kind} onStart={onStart} />
+          {groups.map((g) => (
+            <section key={g.id} aria-label={g.label}>
+              <p className={s.groupTitle}>{g.label}</p>
+              <Templates list={rest.filter((t) => t.kind === g.id)} sizes={sizes} kind={kind} onStart={onStart} />
+            </section>
+          ))}
         </div>
       )}
 
@@ -90,7 +96,7 @@ export default function GuideStart({ kind, sizes, charts, chartsState, onStart, 
         <div className={s.moreBody}>
           {!upfront && ready}
           {kind && kind !== "custom" && <Templates list={[plain]} sizes={sizes} kind={kind} onStart={onStart} />}
-          {groups.map((g) => (
+          {kind && groups.map((g) => (
             <section key={g.id} aria-label={g.label}>
               <p className={s.groupTitle}>{g.label}</p>
               <Templates list={rest.filter((t) => t.kind === g.id)} sizes={sizes} kind={kind} onStart={onStart} />
