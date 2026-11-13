@@ -176,6 +176,8 @@ const LIMITS = {
 const OFFLINE = "Something went wrong. Check your connection and try again.";
 const isOffline = (e) => /failed to fetch|networkerror|network request failed|load failed|timed? ?out/i.test(`${e?.code ?? ""} ${e?.message ?? ""}`) || e?.code === "TypeError";
 // The database has not had an update this feature needs (a function or column the app calls is not there yet).
+// What exactly is missing, for the administrator: the function or column named in the database message.
+const detail = (e) => String(e?.message ?? e?.code ?? "").replace(/\s+/g, " ").replace(/^Could not find the function /i, "missing function ").slice(0, 110).trim();
 const isOutOfDate = (e) => /could not find the function|schema cache|pgrst20\d|does not exist|function .* not found/i.test(`${e?.code ?? ""} ${e?.message ?? ""}`);
 export const errorText = (e, fallback) => {
   if (e?.code === "limit_reached") {
@@ -187,7 +189,7 @@ export const errorText = (e, fallback) => {
   if (fallback !== undefined) return fallback;
   // Only a real network failure says "check your connection"; anything else is named, so it can be fixed.
   if (!e || isOffline(e)) return OFFLINE;
-  if (isOutOfDate(e)) return "Your shop's database is missing a recent update, so this could not be saved. Ask the site administrator to run the latest database update.";
+  if (isOutOfDate(e)) return "Your shop's database is missing a recent update, so this could not be saved. Ask the site administrator to run the latest database update." + (detail(e) ? ` (${detail(e)})` : "");
   const code = String(e.code ?? "").trim();
   return code && code !== "request_failed" ? `We could not save that (${code}). Try again, and tell support if it keeps happening.` : OFFLINE;
 };
