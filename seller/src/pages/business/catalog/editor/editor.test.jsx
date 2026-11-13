@@ -430,6 +430,19 @@ describe("editing an item", () => {
     expect(router.state.location.pathname).toBe(`/business/catalog/${item.id}/edit`);
   });
 
+  it("Save changes saves and goes back to the list", async () => {
+    const user = userEvent.setup();
+    viewport(1000);
+    const { router } = await signedInApp("/business/catalog");
+    const item = M.state.items.find((i) => i.visible && !i.draft && !i.removedByAdmin && i.priceType === "fixed");
+    await act(async () => { router.navigate(`/business/catalog/${item.id}/edit`); });
+    await screen.findByRole("heading", { level: 1, name: "Edit item" });
+    await user.type(screen.getByLabelText("Name"), " III");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() => expect(M.state.items.find((i) => i.id === item.id).name).toMatch(/ III$/));
+    await waitFor(() => expect(router.state.location.pathname).toBe("/business/catalog"));
+  });
+
   it("says so when the item does not exist", async () => {
     viewport(1000);
     await signedInApp("/business/catalog/nope/edit");

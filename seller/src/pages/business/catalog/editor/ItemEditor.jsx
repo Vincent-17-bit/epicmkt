@@ -25,6 +25,8 @@ import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// "type_not_allowed" is also the code of a refused file upload elsewhere in the app; saving an item it means the shop may not sell the chosen product type.
+const saveErrorText = (err) => (err?.code === "type_not_allowed" ? "Your shop is not set up to sell that product type. Choose another type, or request it from the Type step." : errorText(err));
 const detailsKey = (f) => JSON.stringify([f.productTypeId ?? null, f.specs ?? [], f.brand ?? "", f.packSize ?? "", f.includes ?? [], f.options?.axes ?? []]);
 
 // The route element for both /business/catalog/new and /business/catalog/:itemId/edit.
@@ -280,7 +282,7 @@ function EditorForm({ item, sections, category, business }) {
           await api.saveItemSizeGuide(id, guidePayload(form.sizeGuide));
           hadGuide.current = Boolean(guidePayload(form.sizeGuide));
         } catch (err) {
-          guideProblem = `The size guide was not saved: ${blockedText(err) ?? errorText(err)}`;
+          guideProblem = `The size guide was not saved: ${blockedText(err) ?? saveErrorText(err)}`;
         }
       }
       const spec = await settleSpecLinks(form, type);
@@ -321,17 +323,23 @@ function EditorForm({ item, sections, category, business }) {
         // formFromItem knows nothing of the type or the options: carry them over, re-reading the options so ids and stock are the saved ones.
         if ("productTypeId" in form) next = { ...next, productTypeId: form.productTypeId };
         if (form.options) {
-          const again = optionsFromServer(await api.getItemOptions(id));
-          hadOptions.current = again.axes.length > 0;
-          if (again.axes.length > 0) next = { ...next, options: again };
+          try {
+            const again = optionsFromServer(await api.getItemOptions(id));
+            hadOptions.current = again.axes.length > 0;
+            if (again.axes.length > 0) next = { ...next, options: again };
+          } catch { next = { ...next, options: form.options }; }   // saved; the re-read only refreshes ids, so keep what is on screen
         }
       }
-      if (form.sizeGuide !== undefined) next = { ...next, sizeGuide: form.sizeGuide ? (guideFromServer(await api.getItemSizeGuide(id)) ?? null) : null };
+      if (form.sizeGuide !== undefined) {
+        let reread = form.sizeGuide;
+        if (form.sizeGuide && !guideProblem) { try { reread = guideFromServer(await api.getItemSizeGuide(id)) ?? null; } catch { /* keep what is on screen */ } }
+        next = { ...next, sizeGuide: form.sizeGuide ? reread : null };
+      }
       baseRef.current = JSON.stringify(next);
       replace(next);
       setNotice(result);
     } catch (err) {
-      const text = blockedText(err) ?? errorText(err);
+      const text = blockedText(err) ?? saveErrorText(err);
       if (savedId) {
         // The item is stored; only a later step failed. Refresh the list, and move a new item to its own page so a retry edits it instead of adding a second copy.
         try { await qc.invalidateQueries({ queryKey: ["catalog"] }); } catch { /* the list refreshes on its own later */ }

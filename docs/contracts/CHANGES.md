@@ -452,3 +452,10 @@ Entry format:
 - What changed: `seller_save_item` already accepted `productTypeId` (0091) but the seller app never sent it, and the catalog read never returned it, so the type chosen in Add item / Edit item was lost after saving (the size guide kind, type-specific specification rows and the publish check all depend on it). `itemRow` now sends it (absent keeps it, null is "Other goods") and `catalogItem` returns `productTypeId`. If a step after the item is stored fails (size guide, brand link, media), the editor now says the item was saved and, for a new item, opens it for editing, so a retry no longer creates a duplicate.
 - Who must act: none (redeploy the seller app).
 - Request files: none
+
+## 2026-11-13 1.15: save errors say what went wrong; the editor's re-reads after a save cannot fail it
+- Contract: v1 (additive, no migration)
+- Lane / author: seller
+- What changed: `errorText` blamed "your connection" for every error it had no message for (a database function that is not installed yet, a product-type rule, an unmapped code). Now only a real network failure says that; a missing database update says so; any other unknown code is named. Messages added for `invalid_product_type`, `unknown_product_type`, `invalid_variants`, `invalid_price_tiers`, `tiers_need_from_price`, `invalid_unit`, `invalid_status`, `forbidden`; `type_not_allowed` in the item editor reads as a product-type refusal. After the item is stored, re-reading the options and the size guide to refresh the form can no longer turn a successful "Save and stay" into an error.
+- Who must act: none (redeploy the seller app).
+- Request files: none

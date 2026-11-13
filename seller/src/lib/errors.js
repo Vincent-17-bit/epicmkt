@@ -82,6 +82,14 @@ const MESSAGES = {
   invalid_item: "Check the item details and try again.",
   item_in_flash_sale: "This item is in a flash sale, so its price cannot change until the sale ends. You can still edit everything else.",
   invalid_price: "Check the price. Use numbers only, and keep the sale price below the regular price.",
+  invalid_product_type: "That product type could not be used. Choose it again from the list.",
+  unknown_product_type: "That product type is no longer available. Choose another type on the Type step.",
+  invalid_variants: "Check the options: each needs a name, and options need a fixed or starting price.",
+  invalid_price_tiers: "Check the price tiers: each tier needs a quantity and a price.",
+  tiers_need_from_price: "Price tiers need the price type \"From\".",
+  invalid_unit: "Check the unit of sale.",
+  invalid_status: "Choose a valid availability.",
+  forbidden: "You do not have permission to do that.",
   invalid_name: "Use 2 to 120 characters for the name.",
   invalid_text: "One of the text fields is too long.",
   invalid_details: "Check the item details: brand, short description, highlights, specs, what's included, terms and pack size are over their limits or incomplete.",
@@ -165,11 +173,21 @@ const LIMITS = {
   gallery_photos: "You have used all the gallery photos your plan allows. Delete one to add another, or upgrade your plan.",
   flash_per_month: "You have used all the flash sales your plan allows this month.",
 };
-export const errorText = (e, fallback = "Something went wrong. Check your connection and try again.") => {
+const OFFLINE = "Something went wrong. Check your connection and try again.";
+const isOffline = (e) => /failed to fetch|networkerror|network request failed|load failed|timed? ?out/i.test(`${e?.code ?? ""} ${e?.message ?? ""}`) || e?.code === "TypeError";
+// The database has not had an update this feature needs (a function or column the app calls is not there yet).
+const isOutOfDate = (e) => /could not find the function|schema cache|pgrst20\d|does not exist|function .* not found/i.test(`${e?.code ?? ""} ${e?.message ?? ""}`);
+export const errorText = (e, fallback) => {
   if (e?.code === "limit_reached") {
     const key = String(e.message ?? "").split(":")[1] ?? "items";
     if (LIMITS[key]) return LIMITS[key];
     if (!e.message) return LIMITS.items;
   }
-  return MESSAGES[e?.code] ?? fallback;
+  if (MESSAGES[e?.code]) return MESSAGES[e.code];
+  if (fallback !== undefined) return fallback;
+  // Only a real network failure says "check your connection"; anything else is named, so it can be fixed.
+  if (!e || isOffline(e)) return OFFLINE;
+  if (isOutOfDate(e)) return "Your shop's database is missing a recent update, so this could not be saved. Ask the site administrator to run the latest database update.";
+  const code = String(e.code ?? "").trim();
+  return code && code !== "request_failed" ? `We could not save that (${code}). Try again, and tell support if it keeps happening.` : OFFLINE;
 };
