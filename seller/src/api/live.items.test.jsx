@@ -16,6 +16,17 @@ beforeEach(() => {
   rpc.mockResolvedValue({ data: "it-1", error: null });
 });
 
+describe("live saveItem and the product type", () => {
+  it("sends productTypeId (camelCase, as seller_save_item reads it), null for Other goods, and nothing when absent", async () => {
+    await live.saveItem("it-9", { ...base, productTypeId: "shoes" });
+    expect(sent().productTypeId).toBe("shoes");
+    await live.saveItem("it-9", { ...base, productTypeId: null });
+    expect(sent()).toHaveProperty("productTypeId", null);
+    await live.saveItem("it-9", base);
+    expect(sent()).not.toHaveProperty("productTypeId");
+  });
+});
+
 describe("live saveItem with the new fields", () => {
   it("sends only the old columns when the form has none of the new fields", async () => {
     await live.saveItem(null, base);

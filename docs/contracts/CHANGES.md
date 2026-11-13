@@ -431,3 +431,24 @@ Entry format:
 - Why: a bottle of vodka, a loaf, a plank, a suitcase and a shoe are not sized the same way, and a numbers column is not always a length.
 - Who must act: data: run supabase/catch-up-seller-size-guide.sql (0103 and 0104, safe to repeat).
 - Request files: none
+
+## 2026-11-13 1.12: size guide is easy to find; buyers always see the Size chart link
+- Contract: v1 (additive, no migration)
+- Lane / author: seller + client
+- What changed: the seller "Size guide" step now also appears when the Specifications section has a Size row, and the Details step shows a "Does your item come in sizes?" card with an "Add a size guide" button for any item. An unknown item kind shows every kind's starting table up front. Buyers see a standalone "Size chart" link on items that have a guide but no size picker; the size axis detection no longer mistakes Volume/Weight amounts for colours.
+- Who must act: none (redeploy the seller and client apps).
+- Request files: none
+
+## 2026-11-13 1.13: size guides for perfumes, paint, cement, nails, screws, bolts, wire, cable and tools
+- Contract: v1 (additive, no migration)
+- Lane / author: seller (shared)
+- What changed: perfume, fragrance, cologne, parfum and deodorant names now get the drink (volume) table, with a new "Perfumes and sprays" table. A new "Hardware, paint and tools" kind (paint, cement, nails, screws, bolts, wire, cable, tools and similar names) with tables for paint and liquids, cement and bulk, fasteners, wire and cable, and tools. Hardware tables have no length columns, so buyers never see a cm/inch switch on them.
+- Who must act: none (redeploy).
+- Request files: none
+
+## 2026-11-13 1.14: the item's product type is saved and read back; a failed later step no longer hides a saved item
+- Contract: v1 (additive, no migration)
+- Lane / author: seller
+- What changed: `seller_save_item` already accepted `productTypeId` (0091) but the seller app never sent it, and the catalog read never returned it, so the type chosen in Add item / Edit item was lost after saving (the size guide kind, type-specific specification rows and the publish check all depend on it). `itemRow` now sends it (absent keeps it, null is "Other goods") and `catalogItem` returns `productTypeId`. If a step after the item is stored fails (size guide, brand link, media), the editor now says the item was saved and, for a new item, opens it for editing, so a retry no longer creates a duplicate.
+- Who must act: none (redeploy the seller app).
+- Request files: none

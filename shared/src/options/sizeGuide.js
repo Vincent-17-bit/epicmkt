@@ -26,7 +26,8 @@ export const GUIDE_KINDS = Object.freeze([
   { id: "bag", label: "Bags and luggage", about: "Outside size, capacity and weight, so buyers know what fits and whether it can go on a plane." },
   { id: "dimensions", label: "Wood, furniture and building", about: "Length, width, height or thickness for each size or cut." },
   { id: "drink", label: "Drinks and bottles", about: "Bottle or pack volumes, so buyers can compare sizes." },
-  { id: "food", label: "Bread, cakes and food", about: "Weight, slices or servings for each size." }
+  { id: "food", label: "Bread, cakes and food", about: "Weight, slices or servings for each size." },
+  { id: "hardware", label: "Hardware, paint and tools", about: "Pack size, weight, volume, gauge or power for each size, so buyers pick the right one." }
 ]);
 export const kindLabel = (id) => GUIDE_KINDS.find((k) => k.id === id)?.label ?? "Other";
 
@@ -44,10 +45,16 @@ export const GUIDE_TEMPLATES = Object.freeze([
   { id: "furniture", name: "Furniture and fittings", kind: "dimensions", unit: "cm", columns: ["Size", "Length", "Width", "Height"] },
   { id: "flat", name: "Mattresses, rugs, curtains and sheets", kind: "dimensions", unit: "cm", columns: ["Size", "Length", "Width"] },
   { id: "bottles", name: "Bottle sizes", kind: "drink", unit: null, columns: ["Size", "Volume (ml)", "Servings"], fill: { col: 1, read: "volume" } },
+  { id: "perfume", name: "Perfumes and sprays", kind: "drink", unit: null, columns: ["Size", "Volume (ml)", "Type"], fill: { col: 1, read: "volume" } },
   { id: "packs", name: "Packs and crates", kind: "drink", unit: null, columns: ["Size", "Bottles in pack", "Volume (ml)"], fill: { col: 2, read: "volume" } },
   { id: "loaf", name: "Bread and loaves", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Slices"], fill: { col: 1, read: "weight" } },
   { id: "cake", name: "Cakes", kind: "food", unit: "in", columns: ["Size", "Diameter (in)", "Serves"] },
   { id: "weight", name: "Packs by weight", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Pieces"], fill: { col: 1, read: "weight" } },
+  { id: "paint", name: "Paint and liquids", kind: "hardware", unit: null, columns: ["Size", "Volume (L)", "Coverage (m²)", "Finish"] },
+  { id: "cement", name: "Cement, sand and bulk", kind: "hardware", unit: null, columns: ["Size", "Weight (kg)", "Pack of"] },
+  { id: "fasteners", name: "Nails, screws and bolts", kind: "hardware", unit: null, columns: ["Size", "Gauge", "Pack of", "Weight (kg)"] },
+  { id: "wire", name: "Wire and cable", kind: "hardware", unit: null, columns: ["Size", "Core size", "Rating", "Roll (m)"] },
+  { id: "tools", name: "Tools and equipment", kind: "hardware", unit: null, columns: ["Size", "Power (W)", "Voltage", "Weight (kg)"] },
   { id: "plain", name: "Only my own columns", kind: "custom", unit: "cm", columns: ["Size", "Measurement"] }
 ]);
 
@@ -57,7 +64,8 @@ export const GUIDE_COLUMN_IDEAS = Object.freeze({
   clothing: ["Chest", "Waist", "Hips", "Length", "Shoulder", "Sleeve"],
   bag: ["Height", "Width", "Depth", "Capacity (L)", "Weight (kg)", "Strap drop"],
   dimensions: ["Length", "Width", "Height", "Thickness", "Weight (kg)", "Fits"],
-  drink: ["Volume (ml)", "Servings", "Bottles in pack", "Alcohol (%)"],
+  drink: ["Volume (ml)", "Servings", "Bottles in pack", "Alcohol (%)", "Type"],
+  hardware: ["Pack of", "Weight (kg)", "Volume (L)", "Gauge", "Power (W)", "Voltage", "Coverage (m²)"],
   food: ["Weight (g)", "Slices", "Serves", "Pieces"],
   custom: ["Length", "Width", "Height", "Weight (kg)", "Volume (ml)", "Notes"]
 });
@@ -65,8 +73,9 @@ export const GUIDE_COLUMN_IDEAS = Object.freeze({
 const WORDS = [
   ["shoe", /\b(shoe|shoes|sneaker|sneakers|boot|boots|sandal|sandals|heel|heels|loafer|loafers|slipper|slippers|footwear|trainer|trainers|flip.?flops?)\b/i],
   ["bag", /\b(bag|bags|handbag|handbags|backpack|backpacks|suitcase|suitcases|luggage|duffel|duffle|tote|totes|purse|purses|wallet|wallets|satchel|briefcase|rucksack|trolley|clutch)\b/i],
-  ["drink", /\b(liquor|whisky|whiskey|vodka|gin|rum|wine|wines|beer|beers|lager|cider|spirit|spirits|brandy|tequila|champagne|cognac|juice|soda|water|drink|drinks|beverage|beverages|bottle|bottles|milk)\b/i],
+  ["drink", /\b(liquor|whisky|whiskey|vodka|gin|rum|wine|wines|beer|beers|lager|cider|spirit|spirits|brandy|tequila|champagne|cognac|juice|soda|water|perfume|perfumes|fragrance|fragrances|cologne|colognes|parfum|deodorant|drink|drinks|beverage|beverages|bottle|bottles|milk)\b/i],
   ["food", /\b(bread|loaf|loaves|bun|buns|cake|cakes|pastry|pastries|cookie|cookies|biscuit|biscuits|flour|sugar|rice|maize|meat|cheese|bakery|food|snack|snacks|butter|yogurt|honey|oil)\b/i],
+  ["hardware", /\b(hardware|paint|paints|varnish|cement|sand|nail|nails|screw|screws|bolt|bolts|nut|nuts|rivet|rivets|wire|wires|cable|cables|tool|tools|drill|drills|hammer|hammers|spanner|spanners|saw|saws|glue|adhesive|sealant|padlock|padlocks|hinge|hinges|bulb|bulbs)\b/i],
   ["dimensions", /\b(wood|wooden|timber|plank|planks|board|boards|lumber|plywood|mdf|beam|beams|post|posts|pole|poles|log|logs|furniture|table|tables|chair|chairs|sofa|sofas|bed|beds|mattress|door|doors|window|windows|pipe|pipes|tile|tiles|glass|sheet|sheets|carpet|rug|rugs|curtain|curtains|shelf|shelves|desk|desks|cabinet|wardrobe|frame|mirror|fabric|mat|mats)\b/i],
   ["clothing", /\b(shirt|t-?shirt|tee|dress|trouser|trousers|jean|jeans|skirt|jacket|coat|hoodie|sweater|top|tops|suit|blouse|short|shorts|kitenge|ankara|abaya|vest|uniform|leggings?|gown|wear|clothing)\b/i]
 ];
@@ -89,6 +98,8 @@ export const guideKindFor = (...names) => {
   const text = names.filter(Boolean).join(" ");
   return WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
 };
+/** Has the seller put a "Size" row in the item's specifications? (rows are { group, label, value }) */
+export const hasSizeSpec = (specs) => (Array.isArray(specs) ? specs : []).some((r) => /^\s*(sizes?|saizi)\s*$/i.test(String(r?.label ?? "")));
 /** Does this item deserve a Size guide step? It does when it has a guide, sells sizes, or is a kind of item that has one. */
 export const wantsGuide = ({ guide, options, typeName, itemName }) => Boolean(guide) || sizeLabels(options).length > 0 || guideKindFor(typeName, itemName) !== null;
 

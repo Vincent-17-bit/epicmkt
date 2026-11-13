@@ -93,6 +93,7 @@ export const catalogItem = (i) => ({
   priceConfirmedAt: i.price_confirmed_at ?? null, createdAt: i.created_at, updatedAt: i.updated_at,
   imagePaths: i.image_paths ?? [], imageCount: (i.image_paths ?? []).length, hasVideo: !!i.has_video,
   inFlashSale: !!i.in_flash_sale, specs: Array.isArray(i.specs) ? i.specs : [],
+  productTypeId: i.product_type_id ?? i.productTypeId ?? null,
   brand: i.brand ?? null, shortDescription: i.short_description ?? null, packSize: i.pack_size ?? null, terms: i.terms ?? null, includes: Array.isArray(i.includes) ? i.includes : [], highlights: Array.isArray(i.highlights) ? i.highlights : [],
 });
 

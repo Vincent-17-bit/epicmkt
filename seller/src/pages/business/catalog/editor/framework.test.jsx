@@ -155,3 +155,13 @@ describe("quality check registry", () => {
     expect(() => registerCheck({ id: "photo" })).toThrow(/already registered/);
   });
 });
+
+describe("size guide step visibility", () => {
+  const ids = (m) => visibleSteps({ form: emptyItemForm(), errors: {}, mediaCount: 0, ...m }).map((s) => s.id);
+  it("a plain item keeps its steps; a Size specification, a clothing name or a request adds the Size guide step", () => {
+    expect(ids({})).not.toContain("sizeguide");
+    expect(ids({ form: { ...emptyItemForm(), specs: [{ group: "Measurements", label: "Size", value: "" }] } })).toContain("sizeguide");
+    expect(ids({ form: { ...emptyItemForm(), name: "Leather handbag" } })).toContain("sizeguide");
+    expect(ids({ guideAsked: true })).toContain("sizeguide");
+  });
+});

@@ -277,3 +277,21 @@ describe("option picker", () => {
     });
   });
 });
+
+describe("size guide without a size picker, and amount-sized items", () => {
+  it("an item with a guide and no option groups still shows the Size chart link", async () => {
+    const { render, screen } = await import("@testing-library/react");
+    const { default: Options } = await import("./Options.jsx");
+    const item = { id: "x", sizeChart: { id: null, name: "Size guide", unit: null, columns: ["Size", "Height"], rows: [["Standard", "30 cm"]], own: true } };
+    render(<Options ctx={{}} slot={{ item }} />);
+    expect(screen.getByRole("button", { name: /size chart/i })).toBeInTheDocument();
+    const none = render(<Options ctx={{}} slot={{ item: { id: "y" } }} />);
+    expect(none.container.querySelector("button")).toBeNull();
+  });
+  it("the chart link goes on the Volume or Weight group when there is no Size group, and on Size when there is", async () => {
+    const { sizeAxisKey } = await import("./OptionsPicker.jsx");
+    expect(sizeAxisKey([{ key: "colour", label: "Colour" }, { key: "volume", label: "Volume" }])).toBe("volume");
+    expect(sizeAxisKey([{ key: "weight", label: "Weight" }, { key: "size", label: "Size" }])).toBe("size");
+    expect(sizeAxisKey([{ key: "colour", label: "Colour" }])).toBe("colour");
+  });
+});
