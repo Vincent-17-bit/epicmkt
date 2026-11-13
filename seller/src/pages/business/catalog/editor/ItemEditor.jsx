@@ -263,6 +263,7 @@ function EditorForm({ item, sections, category, business }) {
     setNotice(null);
     busyRef.current = true;
     setBusy(true);
+    let savedId = null;   // set once the item row itself is stored: a later step failing must not look like "nothing saved", or a retry makes a duplicate
     try {
       // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
       const { brand, valueId } = await settleBrand(form);   // A18: one dictionary value per brand, however it was typed
@@ -271,14 +272,21 @@ function EditorForm({ item, sections, category, business }) {
       const options = optionsPayload(form.options, hadOptions.current);
       const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await api.saveItem(item?.id ?? null, body);
+      savedId = id;
       // Size guide: written after the item exists. Nothing is sent for an item whose guide was never loaded or touched.
+      let guideProblem = "";
       if (form.sizeGuide !== undefined || hadGuide.current) {
-        await api.saveItemSizeGuide(id, guidePayload(form.sizeGuide));
-        hadGuide.current = Boolean(guidePayload(form.sizeGuide));
+        try {
+          await api.saveItemSizeGuide(id, guidePayload(form.sizeGuide));
+          hadGuide.current = Boolean(guidePayload(form.sizeGuide));
+        } catch (err) {
+          guideProblem = `The size guide was not saved: ${blockedText(err) ?? errorText(err)}`;
+        }
       }
       const spec = await settleSpecLinks(form, type);
       await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
       const { problems, leftover } = await media.flush(id);
+      if (guideProblem) problems.push(guideProblem);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       // "New items start as Visible": publish a brand-new item straight away, but only when it is complete enough to show:
@@ -296,7 +304,7 @@ function EditorForm({ item, sections, category, business }) {
       }
       if (published) await qc.invalidateQueries({ queryKey: ["catalog"] });
       const base = published ? (isNew ? "Item added and visible to customers." : "Item published.") : isNew ? "Item added as a draft." : "Item saved.";
-      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : refusal ? { tone: "error", text: `${base} ${refusal}` } : { tone: "ok", text: base };
+      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")}${leftover?.length ? " Retry the failed files below." : ""}` } : refusal ? { tone: "error", text: `${base} ${refusal}` } : { tone: "ok", text: base };
       if (!stay && problems.length === 0 && !refusal) {
         allow();
         navigate(backTo, { state: { notice: result } });
@@ -323,7 +331,15 @@ function EditorForm({ item, sections, category, business }) {
       replace(next);
       setNotice(result);
     } catch (err) {
-      setError(blockedText(err) ?? errorText(err));
+      const text = blockedText(err) ?? errorText(err);
+      if (savedId) {
+        // The item is stored; only a later step failed. Refresh the list, and move a new item to its own page so a retry edits it instead of adding a second copy.
+        try { await qc.invalidateQueries({ queryKey: ["catalog"] }); } catch { /* the list refreshes on its own later */ }
+        if (isNew) {
+          allow();
+          navigate(`${CATALOG}/${savedId}/edit`, { replace: true, state: { from: location.state?.from, step, notice: { tone: "error", text: `The item was saved, but a later step failed. ${text}` } } });
+        } else setError(`Your changes were saved, but a later step failed. ${text}`);
+      } else setError(text);
     } finally {
       busyRef.current = false;
       setBusy(false);

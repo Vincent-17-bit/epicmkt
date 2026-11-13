@@ -802,6 +802,7 @@ const prepareSave = async (id, f) => {
   const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
   if (!details.ok) throw new ApiError("invalid_details");
   Object.assign(fields, details.value);
+  if (f.productTypeId !== undefined) fields.productTypeId = f.productTypeId;
   if (f.variants !== undefined) {
     const options = storedVariants(f.variants);
     if (!options.ok) throw new ApiError("invalid_variants");

@@ -478,6 +478,8 @@ const itemRow = (f) => ({
   ...(f.options !== undefined && { options: f.options }), ...(f.sizeChartId !== undefined && { size_chart_id: f.sizeChartId }),
   ...(f.sizeChartOverride !== undefined && { size_chart_override: f.sizeChartOverride }),
   ...(Array.isArray(f.variants) && { variants: f.variants }),
+  // The product type (migration 0091) is read from camelCase `productTypeId`: absent keeps the stored type, null is "Other goods".
+  ...(f.productTypeId !== undefined && { productTypeId: f.productTypeId }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([
