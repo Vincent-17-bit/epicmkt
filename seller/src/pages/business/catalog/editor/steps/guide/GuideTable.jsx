@@ -1,17 +1,16 @@
 import { useId } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowDown, faArrowUp, faChevronLeft, faChevronRight, faClone, faPlus, faTrashCan, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { GUIDE_LIMITS, addColumn, addRow, canAddColumn, canAddRow, copyRow, moveColumn, moveRow, removeColumn, removeRow, setCell, setHeader } from "@epicmkt/shared";
+import { GUIDE_COLUMN_IDEAS, GUIDE_LIMITS, addColumn, addRow, canAddColumn, canAddRow, copyRow, moveColumn, moveRow, removeColumn, removeRow, setCell, setHeader } from "@epicmkt/shared";
 import ed from "../../editor.module.css";
 import s from "./guide.module.css";
 
-const SUGGESTED = ["Chest", "Waist", "Hips", "Length", "Shoulder", "Sleeve", "Inseam", "Height", "Weight", "Width"];
 
 // The table the seller fills in: one row per size, one column per measurement. The size column is fixed at the start.
 // Everything is a plain input, so a phone keyboard, tab and arrow keys all work; rows and columns have their own small buttons.
-export default function GuideTable({ guide, onChange, errors = {}, announce }) {
+export default function GuideTable({ guide, kind, onChange, errors = {}, announce }) {
   const uid = useId();
-  const free = SUGGESTED.filter((n) => !guide.columns.some((c) => c.trim().toLowerCase() === n.toLowerCase()));
+  const free = (GUIDE_COLUMN_IDEAS[kind] ?? GUIDE_COLUMN_IDEAS.custom).filter((n) => !guide.columns.some((c) => c.trim().toLowerCase() === n.toLowerCase()));
   const put = (next, said) => { onChange(next); if (said) announce(said); };
   const focusCell = (id, col) => requestAnimationFrame(() => document.getElementById(`${uid}-${id}-${col}`)?.focus());
 
@@ -73,7 +72,7 @@ export default function GuideTable({ guide, onChange, errors = {}, announce }) {
                       <td key={ci} className={`${s.td} ${ci === 0 ? s.stick : ""}`}>
                         <input
                           id={`${uid}-${r.id}-${ci}`} className={s.cell} value={r.cells[ci] ?? ""} maxLength={GUIDE_LIMITS.cell} autoComplete="off"
-                          inputMode={ci === 0 ? "text" : "decimal"} enterKeyHint={ri === guide.rows.length - 1 ? "done" : "next"} data-focus={`guide-rows.${r.id}.${ci}`}
+                          inputMode="text" enterKeyHint={ri === guide.rows.length - 1 ? "done" : "next"} data-focus={`guide-rows.${r.id}.${ci}`}
                           aria-label={ci === 0 ? `Size name, row ${ri + 1}` : `${c || `Column ${ci + 1}`} for ${size}`} aria-invalid={err ? "true" : undefined}
                           aria-describedby={err ? `${uid}-e-${r.id}-${ci}` : undefined} placeholder={ci === 0 ? "e.g. M" : "–"}
                           onChange={(e) => onChange(setCell(guide, r.id, ci, e.target.value))} onKeyDown={(e) => onKey(e, r, ci)}

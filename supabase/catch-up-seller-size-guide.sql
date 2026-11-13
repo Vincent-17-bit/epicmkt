@@ -1,4 +1,4 @@
--- EpicMKT: sellers write their own size guide (migration 0103).
+-- EpicMKT: sellers write their own size guide (migrations 0103 and 0104).
 -- Run it ONCE, whole, in the Supabase SQL editor, AFTER catch-up-size-charts.sql (or migrations up to 0100). Safe to run again.
 -- It adds items.size_guide, two seller functions, and makes buyers see the seller's table first.
 
@@ -81,6 +81,26 @@ language sql stable security definer set search_path = public as $$
   select case
     when p_item.size_guide is not null and public.size_guide_valid(p_item.size_guide) then jsonb_build_object(
       'id', null, 'name', 'Size guide', 'category', null, 'unit', coalesce(p_item.size_guide ->> 'unit', 'cm'),
+      'columns', p_item.size_guide -> 'columns', 'rows', p_item.size_guide -> 'rows', 'overridden', false, 'own', true)
+    when c.id is null then null
+    else jsonb_build_object(
+      'id', c.id, 'name', c.name, 'category', c.category, 'unit', c.unit, 'columns', c.columns,
+      'rows', case when p_item.size_chart_override is not null and public.size_chart_rows_valid(p_item.size_chart_override -> 'rows', jsonb_array_length(c.columns))
+                   then p_item.size_chart_override -> 'rows' else c.rows end,
+      'overridden', p_item.size_chart_override is not null and public.size_chart_rows_valid(p_item.size_chart_override -> 'rows', jsonb_array_length(c.columns))) end
+  from (select 1) one left join public.size_charts c on c.id = p_item.size_chart_id and c.active
+$$;
+revoke all on function public.item_size_chart_payload(public.items) from public;
+grant execute on function public.item_size_chart_payload(public.items) to service_role;
+
+notify pgrst, 'reload schema';
+
+-- 0104: a guide with no length column keeps no unit.
+create or replace function public.item_size_chart_payload(p_item public.items) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case
+    when p_item.size_guide is not null and public.size_guide_valid(p_item.size_guide) then jsonb_build_object(
+      'id', null, 'name', 'Size guide', 'category', null, 'unit', case when p_item.size_guide ->> 'unit' in ('cm', 'in') then p_item.size_guide -> 'unit' else null end,
       'columns', p_item.size_guide -> 'columns', 'rows', p_item.size_guide -> 'rows', 'overridden', false, 'own', true)
     when c.id is null then null
     else jsonb_build_object(

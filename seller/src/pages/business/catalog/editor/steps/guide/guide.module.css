@@ -88,3 +88,9 @@
 .rtd { font-weight: 400; }
 th.rtd { font-weight: 700; }
 tr[data-hit] .rtd, tr[data-hit] th.rtd { background: var(--primary-tint); color: var(--on-primary-tint); font-weight: 700; }
+
+/* ---------- other kinds ---------- */
+.more { border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface); }
+.more > summary { display: flex; align-items: center; min-block-size: var(--tap); padding: 0 var(--space-4); font-weight: 700; cursor: pointer; }
+.moreBody { display: grid; gap: var(--space-4); padding: 0 var(--space-4) var(--space-4); }
+.groupTitle { margin: 0 0 var(--space-2); font-size: var(--text-sm); font-weight: 700; color: var(--text-muted); }

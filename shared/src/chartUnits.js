@@ -25,13 +25,23 @@ export function convertCell(cell, from, to) {
   return raw;
 }
 
-/** A column is a measurement column when every non-empty cell in it is a number or a range. */
-export function measurementColumns(rows) {
+// Only a length can switch between cm and inches. A column of UK shoe sizes, litres, grams, an age or a count is numbers too, but never a length,
+// so the header decides: it must say cm, in or mm, or name a length (chest, width, thickness...), and must not name another unit.
+const OTHER_UNIT = /\b(ml|cl|l|ltr|litre|litres|liter|liters|g|kg|lb|lbs|oz|weight|capacity|volume|servings?|serves|slices|pieces?|pcs|age|years?|months?|abv|price|kes|ksh|stock|qty|quantity|eu|uk|us|size)\b|%/i;
+const LENGTH_WORD = /\b(cm|in|inch|inches|mm|chest|bust|waist|hips?|length|width|height|depth|thickness|inseam|sleeve|shoulder|collar|neck|diameter|foot|breadth|girth|rise|thigh|drop|handle|strap|measurement|dimensions?)\b/i;
+export const isLengthHeader = (header) => {
+  const h = String(header ?? "");
+  if (/\b(cm|in|inch|inches|mm)\b/i.test(h)) return true; // the header says so, whatever else it names
+  return LENGTH_WORD.test(h) && !OTHER_UNIT.test(h);
+};
+
+/** A column is a measurement column when every non-empty cell in it is a number or a range (and, when the headers are given, a length by its header). */
+export function measurementColumns(rows, columns) {
   const width = Math.max(0, ...rows.map((r) => r.length));
   const out = [];
   for (let c = 0; c < width; c++) {
     const cells = rows.map((r) => String(r[c] ?? "").trim()).filter(Boolean);
-    out.push(cells.length > 0 && cells.every((x) => RANGE.test(x) || SINGLE.test(x)));
+    out.push(cells.length > 0 && cells.every((x) => RANGE.test(x) || SINGLE.test(x)) && (!columns || isLengthHeader(columns[c])));
   }
   return out;
 }
@@ -40,7 +50,7 @@ export function measurementColumns(rows) {
 export function chartInUnit(chart, to) {
   const from = chart.unit === "in" ? "in" : "cm";
   if (from === to) return { ...chart, unit: to };
-  const isM = measurementColumns(chart.rows).map((m, i) => m && i > 0); // column 0 holds the size labels, never converted
+  const isM = measurementColumns(chart.rows, chart.columns).map((m, i) => m && i > 0); // column 0 holds the size labels, never converted
   const swap = (h) => String(h).replace(new RegExp(`\\b${from}\\b`, "gi"), to);
   return {
     ...chart,
@@ -51,7 +61,7 @@ export function chartInUnit(chart, to) {
 }
 
 /** True when a unit toggle makes sense (at least one measurement column and the chart says cm or in). */
-export const canToggleUnit = (chart) => (chart.unit === "cm" || chart.unit === "in") && measurementColumns(chart.rows).some((m, i) => m && i > 0);
+export const canToggleUnit = (chart) => (chart.unit === "cm" || chart.unit === "in") && measurementColumns(chart.rows, chart.columns).some((m, i) => m && i > 0);
 
 /** The row index whose first cell matches the selected size label ("M", "EU 42" vs "42"), or -1. */
 export function matchRow(chart, label) {

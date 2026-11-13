@@ -176,3 +176,96 @@ test("what a buyer gets from the shared public payload matches the editor's prev
   assert.equal(publicOptions({ chart, guide: { columns: ["A"], rows: [["1", "2"]] } }).sizeChart.id, "c", "a guide that breaks the rules is ignored, as in the database");
   assert.equal(publicOptions({ guide: null }).sizeChart, null);
 });
+
+import { GUIDE_COLUMN_IDEAS, GUIDE_KINDS, hasLengthColumn, parseVolumeMl, parseWeightG } from "./sizeGuide.js";
+import { canToggleUnit, chartInUnit } from "../chartUnits.js";
+const tpl = (id) => GUIDE_TEMPLATES.find((t) => t.id === id);
+
+test("kinds are read from the type and item names: drinks, bakery, wood and furniture, bags, shoes, clothing; a pen has none", () => {
+  const k = guideKindFor;
+  assert.equal(k("Liquor", "Smirnoff vodka"), "drink");
+  assert.equal(k("Bakery", "Brown bread"), "food");
+  assert.equal(k("Wood", "Mahogany plank"), "dimensions");
+  assert.equal(k("Furniture", "Dining table"), "dimensions");
+  assert.equal(k("Bags", "Leather handbag"), "bag");
+  assert.equal(k(null, "Travel suitcase"), "bag");
+  assert.equal(k("Shoes"), "shoe");
+  assert.equal(k("Clothing", "Kitenge dress"), "clothing");
+  assert.equal(k("Pens", "Blue pen"), null);
+  assert.ok(GUIDE_KINDS.every((x) => GUIDE_COLUMN_IDEAS[x.id]?.length));
+  assert.ok(GUIDE_TEMPLATES.every((t) => t.columns[0] === "Size" && t.columns.length <= GUIDE_LIMITS.columns));
+});
+
+test("a bakery or liquor item is never a shoe: no shoe columns come from their templates", () => {
+  for (const kind of ["drink", "food", "dimensions", "bag"]) {
+    for (const t of GUIDE_TEMPLATES.filter((x) => x.kind === kind)) assert.ok(!t.columns.some((c) => /^(EU|UK|US)\b/.test(c)), t.id);
+  }
+});
+
+test("amounts are read from size names", () => {
+  assert.equal(parseVolumeMl("750ml"), 750);
+  assert.equal(parseVolumeMl("75 cl"), 750);
+  assert.equal(parseVolumeMl("1.75 L"), 1750);
+  assert.equal(parseVolumeMl("2 litres"), 2000);
+  assert.equal(parseVolumeMl("1,5L"), 1500);
+  assert.equal(parseVolumeMl("Magnum"), null);
+  assert.equal(parseVolumeMl("Large"), null);
+  assert.equal(parseWeightG("400g"), 400);
+  assert.equal(parseWeightG("1.5 kg"), 1500);
+  assert.equal(parseWeightG("2 lb"), 907);
+  assert.equal(parseWeightG("8 oz"), 227);
+  assert.equal(parseWeightG("Family"), null);
+});
+
+test("bottle sizes: the volume column is filled from the names and the rest left to the seller; unreadable names stay blank, not guessed", () => {
+  const g = startGuide({ ...tpl("bottles"), sizes: ["250ml", "750 ml", "1L", "Magnum"] });
+  assert.equal(g.unit, null);
+  assert.deepEqual(cellsOf(g), [["250ml", "250", ""], ["750 ml", "750", ""], ["1L", "1000", ""], ["Magnum", "", ""]]);
+  const bread = startGuide({ ...tpl("loaf"), sizes: ["400g", "800 g", "1kg"] });
+  assert.deepEqual(cellsOf(bread).map((r) => r[1]), ["400", "800", "1000"]);
+  const packs = startGuide({ ...tpl("packs"), sizes: ["Crate 12 x 500ml"] });
+  assert.equal(packs.rows[0].cells[2], "500", "the amount goes in the column the template says");
+});
+
+test("a guide with no length column has no unit, so buyers get no cm / inches switch; a bag with a length column does", () => {
+  const bottles = startGuide({ ...tpl("bottles"), sizes: ["750ml"] });
+  assert.equal(hasLengthColumn(bottles), false);
+  assert.equal(guidePayload(setCell(bottles, bottles.rows[0].id, 2, "30")).unit, null);
+  assert.equal(guideForBuyer(bottles).unit, null);
+  assert.equal(canToggleUnit(guideForBuyer(bottles)), false);
+  const bag = startGuide({ ...tpl("travel"), sizes: ["Cabin", "Large"] });
+  assert.equal(hasLengthColumn(bag), true);
+  assert.equal(guidePayload(bag).unit, "cm");
+  assert.equal(guideFromServer(guidePayload(bottles)).unit, null, "no unit survives the round trip");
+  assert.equal(guideFromServer(guidePayload(bag)).unit, "cm");
+});
+
+test("the unit switch on a travel bag changes lengths only, never litres, kilos or text", () => {
+  let g = startGuide({ ...tpl("travel"), sizes: ["Cabin"] });
+  const id = g.rows[0].id;
+  ["55", "40", "20", "38", "2.6", "Yes"].forEach((v, i) => { g = setCell(g, id, i + 1, v); });
+  const inch = setUnit(g, "in");
+  assert.deepEqual(inch.rows[0].cells, ["Cabin", "21.7", "15.7", "7.9", "38", "2.6", "Yes"]);
+  assert.deepEqual(inch.columns, g.columns, "no header here says cm, so none changes");
+  const back = setUnit(inch, "cm");
+  assert.deepEqual(back.rows[0].cells.slice(1, 4), ["55.1", "39.9", "20.1"].map((x) => x), "converting back rounds to one decimal, as buyers see it");
+});
+test("a guide with no unit that gains a length column counts as centimetres", () => {
+  let g = startGuide({ ...tpl("bottles"), sizes: ["750ml"] });
+  g = addColumn(g, "Height");
+  g = setCell(g, g.rows[0].id, g.columns.length - 1, "30");
+  const inch = setUnit(g, "in");
+  assert.equal(inch.unit, "in");
+  assert.equal(inch.rows[0].cells.at(-1), "11.8");
+  assert.equal(inch.rows[0].cells[1], "750", "volume untouched");
+});
+
+test("sizes can be named Volume, Weight, Length...; Size wins; colours are never read as sizes", () => {
+  const opt = (...axes) => ({ axes: axes.map(([label, vals]) => ({ label, values: vals.map((l) => ({ label: l })) })) });
+  assert.deepEqual(sizeLabels(opt(["Colour", ["Black", "Red", "White"]], ["Size", ["S", "M"]])), ["S", "M"]);
+  assert.deepEqual(sizeLabels(opt(["Colour", ["Black", "Red"]], ["Volume", ["750ml", "1L"]])), ["750ml", "1L"]);
+  assert.deepEqual(sizeLabels(opt(["Weight", ["400g"]], ["Size", ["Small"]])), ["Small"]);
+  assert.deepEqual(sizeLabels(opt(["Colour", ["Black", "Red", "White"]])), []);
+  assert.equal(wantsGuide({ options: opt(["Colour", ["Black", "Red"]]), typeName: "Pens", itemName: "Gel pen" }), false);
+  assert.equal(wantsGuide({ options: opt(["Colour", ["Black", "Red"]]), typeName: "Furniture", itemName: "Coffee table" }), true);
+});

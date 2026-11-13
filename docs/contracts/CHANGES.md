@@ -423,3 +423,11 @@ Entry format:
 - Not changed: the Product types page (Prompt 2.6) is not merged; the editor only changes `specRows`. Saving rules does not touch items that are already live; the gate applies when a seller next saves them.
 - Who must act: Prompt 2.6 may link to `/admin/spec-rules` from its type editor.
 - Request files: none
+
+## 2026-11-13 1.11: size guides for drinks, bakery, wood, bags and shoes; lengths only convert (migration 0104)
+- Contract: v1 (additive)
+- Lane / author: seller + data
+- What changed: seller guide kinds (shoe, clothing, bag, dimensions, drink, food) with their own starting tables; volume and weight read from size names ("750ml", "1kg"); a guide with no length column keeps `unit: null` (migration 0104, and `ownSizeChart`); `chartInUnit` and `canToggleUnit` now convert only length columns by header, so UK/US sizes, litres, grams, ages and counts are never converted (this also fixes admin shoe charts under the buyer's cm/inches switch).
+- Why: a bottle of vodka, a loaf, a plank, a suitcase and a shoe are not sized the same way, and a numbers column is not always a length.
+- Who must act: data: run supabase/catch-up-seller-size-guide.sql (0103 and 0104, safe to repeat).
+- Request files: none
