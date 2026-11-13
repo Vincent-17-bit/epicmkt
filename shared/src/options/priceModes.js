@@ -2,7 +2,7 @@
 // Prices are always stored per combination (one absolute price per row). These helpers only decide which options the seller
 // types prices for, and write the typed price to every combination it covers. A warning is advice and never blocks a save.
 
-import { isMoney, liveRows, rowKeyOf } from "./editor.js";
+import { isMoney, liveRows, rowKeyOf, setSold } from "./editor.js";
 
 const clean = (v) => String(v ?? "").replace(/,/g, "").trim();
 const amount = (v) => (isMoney(v) ? Number(clean(v)) : null);
@@ -52,6 +52,19 @@ export const setGroupPrice = (options, priceAxes, choice, value) => {
   const text = String(value ?? "");
   return { ...options, rows: options.rows.map((r) => (rowKeyOf(options, r.choice) !== null && r.sold && group(options, keys, r) === want ? { ...r, price: text } : r)) };
 };
+
+const inGroup = (options, keys, choice) => {
+  const want = keys.map((k) => choice[k]).join("|");
+  return liveRows(options).filter((r) => group(options, keys, r) === want);
+};
+
+export const groupSold = (options, priceAxes, choice) => {
+  const rows = inGroup(options, onlyKnown(options, priceAxes), choice);
+  return rows.length === 0 || rows.some((r) => r.sold);
+};
+
+export const setGroupSold = (options, priceAxes, choice, sold) =>
+  inGroup(options, onlyKnown(options, priceAxes), choice).reduce((acc, r) => setSold(acc, rowKeyOf(acc, r.choice), sold), options);
 
 // The seller ticks which options change the price. An option that is NOT ticked stops changing the price: every combination
 // takes the price of the first one in its group (same value on the ticked options), so the saved prices match what is shown.

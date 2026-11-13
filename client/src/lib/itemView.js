@@ -5,6 +5,8 @@ export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHigh
 
 const keyOf = (label) => String(label ?? "").trim().toLowerCase();
 
+export const variantOverrides = (variant) => (variant?.specs?.length ? variant.specs : variant?.specOverrides);
+
 export function mergeSpecs(specs, overrides) {
   const list = Array.isArray(specs) ? specs : [];
   const extra = Array.isArray(overrides)

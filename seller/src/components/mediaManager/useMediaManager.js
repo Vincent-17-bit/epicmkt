@@ -12,7 +12,7 @@ let seq = 0;
 const nextKey = () => `m${++seq}`;
 
 const savedTile = (m) => ({
-  key: `saved:${m.path}`, kind: m.kind, source: "saved", status: "saved", path: m.path, url: mediaUrl(m.path),
+  key: `saved:${m.path}`, id: m.id ?? null, kind: m.kind, source: "saved", status: "saved", path: m.path, url: mediaUrl(m.path),
   durationSec: m.durationSec ?? m.duration ?? null, posterUrl: null, file: null, progress: null, error: "", removing: false,
 });
 
