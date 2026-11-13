@@ -11,6 +11,6 @@ export function publishIssues(form, { type, grandfathered = false, colourPhotos,
   if (Array.isArray(colourPhotos)) {
     colourPhotos.filter((c) => !c.count).forEach((c) => warnings.push({ id: `photo-${c.id}`, key: `photo-${c.id}`, label: `Photo of ${c.label}`, message: `Add a photo of the ${c.label} colour`, step: "media", focus: "media-add" }));
   }
-  if (sizeChart?.needed && !sizeChart.has) warnings.push({ id: "size-chart", key: "size-chart", label: "Size chart", message: "Add a size chart so customers can choose a size", step: "options", focus: "opt-sizeChart" });
+  if (sizeChart?.needed && !sizeChart.has) warnings.push({ id: "size-chart", key: "size-chart", label: "Size chart", message: "Add a size chart so customers can choose a size", step: "sizeguide", focus: null });
   return { blockers, warnings, score: r.score, canPublish: blockers.length === 0 };
 }

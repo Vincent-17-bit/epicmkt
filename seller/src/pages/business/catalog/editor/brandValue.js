@@ -4,6 +4,7 @@
 //   - an empty brand has no value.
 // A failure here never blocks the save: the item is saved with the brand as typed and without a link.
 import * as api from "../../../../api/index.js";
+import { hasTemplate, ownValue, valueKindOf } from "./typedRows.js";
 
 // -> { brand, valueId }. `brand` is the text to save (the dictionary's own spelling when the value already existed).
 export async function settleBrand(form) {
@@ -18,12 +19,29 @@ export async function settleBrand(form) {
   }
 }
 
-// Links the saved item. The links of an item are replaced as a whole, so this sends every dictionary use the editor owns (only the brand
-// today; TODO(contract:A01) add spec and option values when the editor stores them as dictionary values).
-// Nothing is sent for an item that never had a brand and still has none.
-export async function linkBrand(itemId, valueId, hadBrand) {
-  if (!valueId && !hadBrand) return;
+export async function settleSpecLinks(form, type) {
+  if (!hasTemplate(type)) return [];
+  const ids = [];
+  for (const row of type.specRows) {
+    const kind = valueKindOf(row);
+    if (row.input !== "openValue" || !kind || kind === "brand") continue;
+    const text = ownValue(form, row);
+    if (!text) continue;
+    const stored = form.specValues?.[row.key];
+    if (stored?.id && stored.label === text) { ids.push(stored.id); continue; }
+    try {
+      const { value } = await api.addOptionValue(kind, text);
+      ids.push(value.id);
+    } catch { /* the text is saved; the link is retried on the next save */ }
+  }
+  return [...new Set(ids)].map((valueId) => ({ slot: "spec", valueId }));
+}
+
+// The links of an item are replaced as a whole, so this sends the brand and the spec values together.
+export async function linkBrand(itemId, valueId, hadLinks, spec = []) {
+  const uses = [...(valueId ? [{ slot: "brand", valueId }] : []), ...spec];
+  if (uses.length === 0 && !hadLinks) return;
   try {
-    await api.linkItemValues(itemId, valueId ? [{ slot: "brand", valueId }] : []);
+    await api.linkItemValues(itemId, uses);
   } catch { /* the item is saved; the link is retried on the next save */ }
 }

@@ -267,6 +267,7 @@ describe("Add item page and Type step", () => {
     await user.click(await screen.findByRole("button", { name: /Clothing/ }));
     await user.click(within(screen.getByRole("list", { name: "Clothing" })).getByRole("button", { name: /Dress/ }));
     const step = () => document.getElementById("sec-type");
+    await waitFor(() => expect(step()).not.toBeNull());
     await user.click(await within(step()).findByRole("button", { name: "Change type" }));
     const picker = await screen.findByRole("dialog", { name: "Change the type" });
     await user.click(within(picker).getByRole("button", { name: /Shoes/ }));
