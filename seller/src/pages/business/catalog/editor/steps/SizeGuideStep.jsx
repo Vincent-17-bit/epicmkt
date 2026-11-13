@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleInfo, faTriangleExclamation } from "@fortawesome/free-solid-svg-icons";
-import { checkGuide, guideKindFor, orderBySizes, setUnit, sizeLabels, syncSizes, GUIDE_UNITS } from "@epicmkt/shared";
+import { checkGuide, guideKindFor, hasLengthColumn, orderBySizes, setUnit, sizeLabels, syncSizes, GUIDE_UNITS } from "@epicmkt/shared";
 import * as api from "../../../../../api/index.js";
 import { SectionCard } from "../parts.jsx";
 import { useProductTypes } from "./useProductTypes.js";
@@ -18,7 +18,8 @@ export default function SizeGuideStep({ form, patch, errors, goTo }) {
   const guide = form.sizeGuide ?? null;
   const sizes = useMemo(() => sizeLabels(form.options), [form.options]);
   const typeName = types.find((t) => t.id === form.productTypeId)?.name;
-  const kind = guideKindFor(typeName, form.name) ?? "clothing";
+  const kind = guideKindFor(typeName, form.name) ?? (sizes.length ? "custom" : null);
+  const hasColours = (form.options?.axes ?? []).some((a) => /colou?r/i.test(a.label ?? ""));
   const [said, setSaid] = useState("");
   const [note, setNote] = useState("");
   const [sure, setSure] = useState(false);
@@ -41,11 +42,13 @@ export default function SizeGuideStep({ form, patch, errors, goTo }) {
         <div className={s.editor}>
           {note && <p className={s.note} role="status"><FontAwesomeIcon icon={faCircleInfo} aria-hidden="true" /> {note}</p>}
           <div className={s.toolbar}>
-            <div role="radiogroup" aria-label="Measurements are in" className={s.seg}>
-              {GUIDE_UNITS.map((u) => (
-                <button key={u} type="button" role="radio" aria-checked={guide.unit === u} className={s.segBtn} onClick={() => changeUnit(u)}>{u === "cm" ? "Centimetres" : "Inches"}</button>
-              ))}
-            </div>
+            {hasLengthColumn(guide) ? (
+              <div role="radiogroup" aria-label="Lengths are in" className={s.seg}>
+                {GUIDE_UNITS.map((u) => (
+                  <button key={u} type="button" role="radio" aria-checked={(guide.unit ?? "cm") === u} className={s.segBtn} onClick={() => changeUnit(u)}>{u === "cm" ? "Centimetres" : "Inches"}</button>
+                ))}
+              </div>
+            ) : <span className={s.muted}>Amounts such as ml, g or litres stay as you type them.</span>}
             <div className={s.toolRight}>
               {sizes.length > 0 && <button type="button" className={s.pill} onClick={() => { set(orderBySizes(guide, sizes)); announce("Rows now follow your size order."); }}>Match my size order</button>}
               {!sure ? (
@@ -67,7 +70,8 @@ export default function SizeGuideStep({ form, patch, errors, goTo }) {
             </p>
           ))}
 
-          <GuideTable guide={guide} onChange={set} errors={errs} announce={announce} />
+          {hasColours && <p className={s.muted}>Colours share this guide, so you only need one row per size.</p>}
+          <GuideTable kind={kind} guide={guide} onChange={set} errors={errs} announce={announce} />
           {check.warnings.some((w) => w.code === "blank") && <p className={s.muted}>{check.warnings.find((w) => w.code === "blank").message}</p>}
 
           <BuyerPreview guide={guide} />

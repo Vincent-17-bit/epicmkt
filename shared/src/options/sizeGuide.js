@@ -8,7 +8,7 @@
 //   guidePayload / guideFromServer            the stored shape <-> the editor's
 import { convertShoe } from "../sizeCharts.js";
 import { parse } from "../scales/index.js";
-import { convertCell, measurementColumns } from "../chartUnits.js";
+import { convertCell, isLengthHeader, measurementColumns } from "../chartUnits.js";
 
 export const GUIDE_LIMITS = Object.freeze({ columns: 12, rows: 60, header: 30, cell: 20 });
 export const GUIDE_BLANK = "–"; // what an empty cell shows to buyers (the database does not keep empty cells)
@@ -19,34 +19,103 @@ export const SHOE_SYSTEMS = Object.freeze([
   { id: "us-m", label: "US men", header: "US men" }, { id: "us-w", label: "US women", header: "US women" }, { id: "cm", label: "Foot length", header: "Foot length (cm)" }
 ]);
 
-// Ready columns by kind. The first column is always the size the buyer picks.
+// What kind of item a guide is for decides which tables are suggested first. Every kind can still use any table.
+export const GUIDE_KINDS = Object.freeze([
+  { id: "shoe", label: "Shoes", about: "Shoe sizes change from one country to another, so each size is shown in EU, UK, US and foot length." },
+  { id: "clothing", label: "Clothing", about: "Body measurements for each size, so buyers can match their own." },
+  { id: "bag", label: "Bags and luggage", about: "Outside size, capacity and weight, so buyers know what fits and whether it can go on a plane." },
+  { id: "dimensions", label: "Wood, furniture and building", about: "Length, width, height or thickness for each size or cut." },
+  { id: "drink", label: "Drinks and bottles", about: "Bottle or pack volumes, so buyers can compare sizes." },
+  { id: "food", label: "Bread, cakes and food", about: "Weight, slices or servings for each size." }
+]);
+export const kindLabel = (id) => GUIDE_KINDS.find((k) => k.id === id)?.label ?? "Other";
+
+// Ready columns by kind. The first column is always the size the buyer picks. `unit` is for lengths (cm or in); a table with no length column has none.
+// `fill` fills a column from the size names when they say the amount ("750ml", "1.5 L", "400g", "1 kg").
 export const GUIDE_TEMPLATES = Object.freeze([
-  { id: "tops", name: "Tops and dresses", kind: "clothing", columns: ["Size", "Chest", "Waist", "Hips", "Length"] },
-  { id: "bottoms", name: "Trousers and skirts", kind: "clothing", columns: ["Size", "Waist", "Hips", "Inseam"] },
-  { id: "shirts", name: "Shirts with collar", kind: "clothing", columns: ["Size", "Collar", "Chest", "Sleeve"] },
-  { id: "kids", name: "Kids", kind: "clothing", columns: ["Size", "Age", "Height", "Chest"] },
-  { id: "plain", name: "Only my own columns", kind: "custom", columns: ["Size", "Measurement"] }
+  { id: "tops", name: "Tops and dresses", kind: "clothing", unit: "cm", columns: ["Size", "Chest", "Waist", "Hips", "Length"] },
+  { id: "bottoms", name: "Trousers and skirts", kind: "clothing", unit: "cm", columns: ["Size", "Waist", "Hips", "Inseam"] },
+  { id: "shirts", name: "Shirts with collar", kind: "clothing", unit: "cm", columns: ["Size", "Collar", "Chest", "Sleeve"] },
+  { id: "kids", name: "Kids", kind: "clothing", unit: "cm", columns: ["Size", "Age", "Height", "Chest"] },
+  { id: "handbag", name: "Handbags and purses", kind: "bag", unit: "cm", columns: ["Size", "Height", "Width", "Depth", "Fits"] },
+  { id: "travel", name: "Travel bags and suitcases", kind: "bag", unit: "cm", columns: ["Size", "Height", "Width", "Depth", "Capacity (L)", "Weight (kg)", "Cabin size"] },
+  { id: "backpack", name: "Backpacks", kind: "bag", unit: "cm", columns: ["Size", "Height", "Width", "Depth", "Capacity (L)", "Laptop fits"] },
+  { id: "timber", name: "Timber and boards", kind: "dimensions", unit: "cm", columns: ["Size", "Thickness", "Width", "Length"] },
+  { id: "furniture", name: "Furniture and fittings", kind: "dimensions", unit: "cm", columns: ["Size", "Length", "Width", "Height"] },
+  { id: "flat", name: "Mattresses, rugs, curtains and sheets", kind: "dimensions", unit: "cm", columns: ["Size", "Length", "Width"] },
+  { id: "bottles", name: "Bottle sizes", kind: "drink", unit: null, columns: ["Size", "Volume (ml)", "Servings"], fill: { col: 1, read: "volume" } },
+  { id: "packs", name: "Packs and crates", kind: "drink", unit: null, columns: ["Size", "Bottles in pack", "Volume (ml)"], fill: { col: 2, read: "volume" } },
+  { id: "loaf", name: "Bread and loaves", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Slices"], fill: { col: 1, read: "weight" } },
+  { id: "cake", name: "Cakes", kind: "food", unit: "in", columns: ["Size", "Diameter (in)", "Serves"] },
+  { id: "weight", name: "Packs by weight", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Pieces"], fill: { col: 1, read: "weight" } },
+  { id: "plain", name: "Only my own columns", kind: "custom", unit: "cm", columns: ["Size", "Measurement"] }
 ]);
 
-const SHOE_WORDS = /\b(shoe|shoes|sneaker|sneakers|boot|boots|sandal|sandals|heel|heels|loafer|loafers|slipper|slippers|footwear|trainer|trainers|flip.?flops?)\b/i;
-const SIZE_AXIS = /\b(size|sizes|saizi)\b/i;
-const WEAR_WORDS = /\b(shirt|t-?shirt|tee|dress|trouser|trousers|jean|jeans|skirt|jacket|coat|hoodie|sweater|top|tops|suit|blouse|short|shorts|kitenge|ankara|abaya|vest|uniform|leggings?|gown|wear|clothing)\b/i;
+// Column ideas to add, by kind.
+export const GUIDE_COLUMN_IDEAS = Object.freeze({
+  shoe: ["Width", "Heel height", "Fits"],
+  clothing: ["Chest", "Waist", "Hips", "Length", "Shoulder", "Sleeve"],
+  bag: ["Height", "Width", "Depth", "Capacity (L)", "Weight (kg)", "Strap drop"],
+  dimensions: ["Length", "Width", "Height", "Thickness", "Weight (kg)", "Fits"],
+  drink: ["Volume (ml)", "Servings", "Bottles in pack", "Alcohol (%)"],
+  food: ["Weight (g)", "Slices", "Serves", "Pieces"],
+  custom: ["Length", "Width", "Height", "Weight (kg)", "Volume (ml)", "Notes"]
+});
 
-export const isSizeAxisLabel = (label) => SIZE_AXIS.test(String(label ?? ""));
-/** The sizes the seller offers: the values of the option type called Size (or Sizes), in their order. */
-export const sizeLabels = (options) => {
-  const axis = (options?.axes ?? []).find((a) => isSizeAxisLabel(a.label));
-  return axis ? axis.values.map((v) => String(v.label ?? "").trim()).filter(Boolean) : [];
-};
-/** "shoe" | "clothing" | null for what a size guide helps: read from the product type's name and the item name. */
-export const guideKindFor = (...names) => {
-  const text = names.filter(Boolean).join(" ");
-  if (SHOE_WORDS.test(text)) return "shoe";
-  if (WEAR_WORDS.test(text)) return "clothing";
+const WORDS = [
+  ["shoe", /\b(shoe|shoes|sneaker|sneakers|boot|boots|sandal|sandals|heel|heels|loafer|loafers|slipper|slippers|footwear|trainer|trainers|flip.?flops?)\b/i],
+  ["bag", /\b(bag|bags|handbag|handbags|backpack|backpacks|suitcase|suitcases|luggage|duffel|duffle|tote|totes|purse|purses|wallet|wallets|satchel|briefcase|rucksack|trolley|clutch)\b/i],
+  ["drink", /\b(liquor|whisky|whiskey|vodka|gin|rum|wine|wines|beer|beers|lager|cider|spirit|spirits|brandy|tequila|champagne|cognac|juice|soda|water|drink|drinks|beverage|beverages|bottle|bottles|milk)\b/i],
+  ["food", /\b(bread|loaf|loaves|bun|buns|cake|cakes|pastry|pastries|cookie|cookies|biscuit|biscuits|flour|sugar|rice|maize|meat|cheese|bakery|food|snack|snacks|butter|yogurt|honey|oil)\b/i],
+  ["dimensions", /\b(wood|wooden|timber|plank|planks|board|boards|lumber|plywood|mdf|beam|beams|post|posts|pole|poles|log|logs|furniture|table|tables|chair|chairs|sofa|sofas|bed|beds|mattress|door|doors|window|windows|pipe|pipes|tile|tiles|glass|sheet|sheets|carpet|rug|rugs|curtain|curtains|shelf|shelves|desk|desks|cabinet|wardrobe|frame|mirror|fabric|mat|mats)\b/i],
+  ["clothing", /\b(shirt|t-?shirt|tee|dress|trouser|trousers|jean|jeans|skirt|jacket|coat|hoodie|sweater|top|tops|suit|blouse|short|shorts|kitenge|ankara|abaya|vest|uniform|leggings?|gown|wear|clothing)\b/i]
+];
+// Size-like option types: the one called Size first, then the others that say how big or how much.
+const SIZE_WORDS = [/\b(size|sizes|saizi)\b/i, /\b(volume|capacity|weight|length|dimensions?|thickness|diameter|pack|bottle|loaf|width)\b/i];
+
+export const isSizeAxisLabel = (label) => SIZE_WORDS.some((w) => w.test(String(label ?? "")));
+const sizeAxisOf = (options) => {
+  const axes = options?.axes ?? [];
+  for (const w of SIZE_WORDS) { const hit = axes.find((a) => w.test(String(a.label ?? ""))); if (hit) return hit; }
   return null;
 };
-/** Does this item deserve a Size guide step? It does when it has a guide, sells sizes, or is clothing or shoes. */
+/** The sizes the seller offers: the values of their Size option (or Volume, Weight, Length... when that is how the item is sized), in their order. */
+export const sizeLabels = (options) => {
+  const axis = sizeAxisOf(options);
+  return axis ? axis.values.map((v) => String(v.label ?? "").trim()).filter(Boolean) : [];
+};
+/** One of GUIDE_KINDS ids, or null, read from the product type's name and the item name (the first match in the order shoe, bag, drink, food, wood and furniture, clothing). */
+export const guideKindFor = (...names) => {
+  const text = names.filter(Boolean).join(" ");
+  return WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
+};
+/** Does this item deserve a Size guide step? It does when it has a guide, sells sizes, or is a kind of item that has one. */
 export const wantsGuide = ({ guide, options, typeName, itemName }) => Boolean(guide) || sizeLabels(options).length > 0 || guideKindFor(typeName, itemName) !== null;
+
+// ---- reading amounts from size names ----
+const num = (t) => Number(String(t).replace(",", "."));
+/** "750ml" -> 750, "1.5 L" -> 1500, "75cl" -> 750, "2 litres" -> 2000. null when the name does not say. */
+export const parseVolumeMl = (label) => {
+  const m = String(label ?? "").match(/(\d+(?:[.,]\d+)?)\s*(ml|cl|ltrs?|litres?|liters?|l)\b/i);
+  if (!m) return null;
+  const n = num(m[1]);
+  const u = m[2].toLowerCase();
+  const ml = u === "ml" ? n : u === "cl" ? n * 10 : n * 1000;
+  return Number.isFinite(ml) && ml > 0 ? Math.round(ml) : null;
+};
+/** "400g" -> 400, "1.5kg" -> 1500, "2 lb" -> 907, "8 oz" -> 227. null when the name does not say. */
+export const parseWeightG = (label) => {
+  const m = String(label ?? "").match(/(\d+(?:[.,]\d+)?)\s*(kgs?|kilos?|kilograms?|grams?|gms?|g|lbs?|pounds?|oz|ounces?)\b/i);
+  if (!m) return null;
+  const n = num(m[1]);
+  const u = m[2].toLowerCase();
+  const g = /^(kg|kilo)/.test(u) ? n * 1000 : /^(lb|pound)/.test(u) ? n * 453.592 : /^(oz|ounce)/.test(u) ? n * 28.3495 : n;
+  return Number.isFinite(g) && g > 0 ? Math.round(g) : null;
+};
+const READERS = { volume: parseVolumeMl, weight: parseWeightG };
+
+/** Does the guide have a column that holds a length (so a cm / inches switch means something)? */
+export const hasLengthColumn = (guide) => Boolean(guide) && guide.columns.some((c, i) => i > 0 && isLengthHeader(c));
 
 let counter = 0;
 const rid = () => `g${(counter += 1).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -54,18 +123,27 @@ const text = (v) => String(v ?? "").trim();
 const sameSize = (a, b) => text(a).toLowerCase().replace(/\s+/g, " ") === text(b).toLowerCase().replace(/\s+/g, " ");
 const row = (cells, width) => ({ id: rid(), cells: Array.from({ length: width }, (_, i) => text(cells?.[i]).slice(0, GUIDE_LIMITS.cell)) });
 
-export const emptyGuide = (unit = "cm") => ({ unit, columns: ["Size"], rows: [] });
+export const emptyGuide = (unit = null) => ({ unit, columns: ["Size"], rows: [] });
 
-/** Columns for a kind of item with one blank row per size the seller offers. */
-export function startGuide({ columns, sizes = [], unit = "cm" }) {
+/**
+ * Columns for a kind of item with one row per size the seller offers, the size filled in. `template.fill` also fills an amount column
+ * from the size names ("750ml" gives 750); a size that does not say its amount is left blank for the seller to type.
+ */
+export function startGuide({ columns, sizes = [], unit = "cm", fill }) {
   const cols = (columns?.length ? columns : ["Size", "Measurement"]).slice(0, GUIDE_LIMITS.columns);
-  return { unit, columns: cols, rows: sizes.slice(0, GUIDE_LIMITS.rows).map((s) => row([s], cols.length)) };
+  const read = fill ? READERS[fill.read] : null;
+  const rows = sizes.slice(0, GUIDE_LIMITS.rows).map((size) => {
+    const cells = [size];
+    if (read && fill.col > 0 && fill.col < cols.length) { const v = read(size); cells[fill.col] = v === null ? "" : String(v); }
+    return row(cells, cols.length);
+  });
+  return { unit, columns: cols, rows };
 }
 
 /** An admin chart used as a template: its columns and rows are copied, so later changes to the template never reach this item. */
 export function guideFromChart(chart, { sizes = [], keepRows = true } = {}) {
   const cols = (chart.columns ?? []).slice(0, GUIDE_LIMITS.columns).map((c) => text(c));
-  const unit = chart.unit === "in" ? "in" : "cm";
+  const unit = chart.unit === "in" ? "in" : chart.unit === "cm" ? "cm" : null;
   const rows = keepRows ? (chart.rows ?? []).slice(0, GUIDE_LIMITS.rows).map((r) => row(r, cols.length)) : sizes.map((s) => row([s], cols.length));
   return { unit, columns: cols, rows };
 }
@@ -116,12 +194,16 @@ export function orderBySizes(guide, sizes) {
   return { ...guide, rows };
 }
 
-/** The guide in the other unit: number and range cells (not the size column) are converted, and a header that says cm or in is switched too. */
+/**
+ * The guide in the other unit. Only length columns change (by their header: Chest, Width, Thickness, "(cm)"...); a column of UK sizes, litres, grams,
+ * slices or an age is never converted. Header words that say cm or in are switched too. A guide with no unit counts as cm.
+ */
 export function setUnit(guide, unit) {
-  if (!GUIDE_UNITS.includes(unit) || unit === guide.unit) return guide;
-  const from = guide.unit;
-  const isM = measurementColumns(guide.rows.map((r) => r.cells)).map((m, i) => m && i > 0);
-  const swap = (h) => String(h).replace(new RegExp(`\\b${from}\\b`, "gi"), unit);
+  if (!GUIDE_UNITS.includes(unit)) return guide;
+  const from = guide.unit ?? "cm";
+  if (unit === from) return guide.unit === unit ? guide : { ...guide, unit };
+  const isM = measurementColumns(guide.rows.map((r) => r.cells), guide.columns).map((m, i) => m && i > 0);
+  const swap = (h, i) => (i > 0 && isLengthHeader(h) ? String(h).replace(new RegExp(`\\b${from}\\b`, "gi"), unit) : h);
   return { ...guide, unit, columns: guide.columns.map(swap), rows: guide.rows.map((r) => ({ ...r, cells: r.cells.map((c, i) => (isM[i] ? convertCell(c, from, unit) : c)) })) };
 }
 export const setHeader = (guide, col, value) => ({ ...guide, columns: guide.columns.map((c, i) => (i === col ? String(value).slice(0, GUIDE_LIMITS.header) : c)) });
@@ -197,7 +279,7 @@ export function checkGuide(guide, sizes = []) {
 export function guidePayload(guide) {
   if (!guide || guide.rows.length === 0) return null;
   return {
-    unit: guide.unit === "in" ? "in" : "cm",
+    unit: hasLengthColumn(guide) ? (guide.unit === "in" ? "in" : "cm") : null, // no length column: no unit, so no cm / inches switch for buyers
     columns: guide.columns.map(text),
     rows: guide.rows.map((r) => guide.columns.map((_, i) => text(r.cells[i]) || GUIDE_BLANK))
   };
@@ -207,7 +289,7 @@ export function guidePayload(guide) {
 export function guideFromServer(data) {
   if (!data || !Array.isArray(data.columns) || !Array.isArray(data.rows)) return null;
   const cols = data.columns.map(text);
-  return { unit: data.unit === "in" ? "in" : "cm", columns: cols, rows: data.rows.map((r) => row((r ?? []).map((c) => (text(c) === GUIDE_BLANK ? "" : c)), cols.length)) };
+  return { unit: data.unit === "in" || data.unit === "cm" ? data.unit : null, columns: cols, rows: data.rows.map((r) => row((r ?? []).map((c) => (text(c) === GUIDE_BLANK ? "" : c)), cols.length)) };
 }
 
 /** What a buyer sees ({id, name, unit, columns, rows, own}), for the preview inside the editor. */

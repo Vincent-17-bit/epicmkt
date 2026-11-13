@@ -356,7 +356,18 @@ test("size guide: buyers get the seller's table first, the admin chart as before
 test("size guide: the buyer reads the same thing the shared helper builds for the editor's preview", async () => {
   const { guideFromServer, guideForBuyer } = await import("../../shared/src/options/sizeGuide.js");
   const id = await guideItem();
-  await setGuide(asA, id, guideOf());
+  await setGuide(asA, id, { unit: "cm", columns: ["Size", "Width"], rows: [["S", "30"], ["M", "–"]] });
   const fromDb = await publicChart(id);
   assert.deepEqual(fromDb, guideForBuyer(guideFromServer(await readGuide(asA, id))));
+});
+
+test("size guide: a guide with no unit (bottle volumes, loaf weights) reaches buyers with no unit; inches stay inches", async () => {
+  const id = await guideItem();
+  await setGuide(asA, id, { columns: ["Size", "Volume (ml)"], rows: [["750ml", "750"]] });
+  assert.equal((await publicChart(id)).unit, null);
+  await setGuide(asA, id, { unit: null, columns: ["Size", "Volume (ml)"], rows: [["750ml", "750"]] });
+  assert.equal((await publicChart(id)).unit, null);
+  await setGuide(asA, id, { unit: "in", columns: ["Size", "Width"], rows: [["S", "12"]] });
+  assert.equal((await publicChart(id)).unit, "in");
+  await clean();
 });

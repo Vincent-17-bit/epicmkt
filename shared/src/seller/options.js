@@ -377,7 +377,7 @@ export const ownSizeChart = (guide) => {
   if (new Set(guide.columns.map((c) => c.trim().toLowerCase())).size !== guide.columns.length) return null;
   if (guide.unit != null && guide.unit !== "cm" && guide.unit !== "in") return null;
   if (!Array.isArray(guide.rows) || guide.rows.length < 1 || guide.rows.length > 60 || !guide.rows.every((r) => Array.isArray(r) && r.length === guide.columns.length && r.every((c) => text(c, 20)))) return null;
-  return { id: null, name: "Size guide", category: null, unit: guide.unit ?? "cm", columns: guide.columns, rows: guide.rows, overridden: false, own: true };
+  return { id: null, name: "Size guide", category: null, unit: guide.unit ?? null, columns: guide.columns, rows: guide.rows, overridden: false, own: true };
 };
 
 // The public payload from stored rows. `item` supplies the inherited price and the stock-count switch.
