@@ -271,8 +271,11 @@ function EditorForm({ item, sections, category, business }) {
       const { brand, valueId } = await settleBrand(form);   // A18: one dictionary value per brand, however it was typed
       const fields = brand ? { ...check.value, brand } : check.value;   // empty brand: the form's own value, as before
       // B07: `options` goes along only for an item that has (or had) options, so every other item saves exactly as before.
+      // The database re-checks any product type it is sent (active, sellable by this shop), so send it only when it is new or changed:
+      // an unchanged type that was later switched off or restricted must not block every other edit of the item.
+      const typeChanged = "productTypeId" in form && (isNew || (form.productTypeId ?? null) !== (item?.productTypeId ?? null));
       const options = optionsPayload(form.options, hadOptions.current);
-      const body = { ...fields, ...("productTypeId" in form && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
+      const body = { ...fields, ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await api.saveItem(item?.id ?? null, body);
       savedId = id;
       // Size guide: written after the item exists. Nothing is sent for an item whose guide was never loaded or touched.
