@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { buildAvailability, cleanSizeChartOverride, comboKey, scalePrice, storedOptions } from "@epicmkt/shared";
+import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -27,6 +27,7 @@ const state = {
 const wait = () => new Promise((r) => setTimeout(r, 120));
 
 export const resetMock = () => {
+  gated.clear();
   state.password = DEMO.password;
   state.otp = null;
   state.signedIn = false;
@@ -802,6 +803,14 @@ const planOptions = async (id, f) => {
   };
 };
 const DETAIL_KEYS = ["brand", "shortDescription", "packSize", "terms", "includes", "highlights", "specs"];
+const gated = new Set();
+const GATED = ["productTypeId", "specs", "brand", "packSize", "includes"];
+const gateBlockers = (item, axes) => {
+  const type = productTypeById(item.productTypeId);
+  const filled = type?.specRows?.length ? type : undefined;
+  return specIssues({ specs: item.specs ?? [], brand: item.brand ?? null, packSize: item.packSize ?? null, includes: item.includes ?? [], axes: axes ?? [] }, filled).blockers;
+};
+const refusePublish = (blockers) => { throw new ApiError("publish_blocked", "publish_blocked", { details: JSON.stringify(blockers) }); };
 const sent = (f, k) => (k === "specs" ? Array.isArray(f.specs) : f[k] !== undefined);
 // Everything a save checks before it writes (the real save is one transaction, so a refused save changes nothing), shared by
 // saveItem and checkItem so the two cannot drift. Returns what saveItem needs to write.
@@ -810,6 +819,7 @@ const prepareSave = async (id, f) => {
   const details = storedItemDetails(Object.fromEntries(DETAIL_KEYS.filter((k) => sent(f, k)).map((k) => [k, f[k]])));
   if (!details.ok) throw new ApiError("invalid_details");
   Object.assign(fields, details.value);
+  if (f.productTypeId !== undefined) fields.productTypeId = f.productTypeId || null;
   if (f.variants !== undefined) {
     const options = storedVariants(f.variants);
     if (!options.ok) throw new ApiError("invalid_variants");
@@ -818,6 +828,8 @@ const prepareSave = async (id, f) => {
   if (fields.trackStock) fields.availability = statusFromCount(fields.stockCount, fields.lowStockThreshold);
   if (id && !bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
   const commitOptions = await planOptions(id, f);
+  const prevAxes = (id && bill.options.get(id)?.axes) || [];
+  const axes = f.options !== undefined ? storedOptions(f.options).value.axes : prevAxes;
   if (fields.variants?.length && !["fixed", "from"].includes(fields.priceType)) throw new ApiError("invalid_variants");
   let item = null;
   let priceChanged = false;
@@ -827,20 +839,27 @@ const prepareSave = async (id, f) => {
     const optionsChanged = fields.variants !== undefined && JSON.stringify(fields.variants) !== JSON.stringify(item.variants ?? []);
     if ((priceChanged || optionsChanged) && bill.flash.some((s) => s.itemId === id && ["scheduled", "live"].includes(s.status))) throw new ApiError("item_in_flash_sale");
   }
-  return { fields, commitOptions, item, priceChanged };
+  return { fields, commitOptions, item, priceChanged, axes, axesChanged: JSON.stringify(axes) !== JSON.stringify(prevAxes) };
 };
 export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
-  const { fields, commitOptions, item, priceChanged } = await prepareSave(id, f);
+  const { fields, commitOptions, item, priceChanged, axes, axesChanged } = await prepareSave(id, f);
   if (id) {
+    const edited = axesChanged || GATED.some((k) => fields[k] !== undefined && JSON.stringify(fields[k]) !== JSON.stringify(item[k] ?? (k === "productTypeId" ? null : undefined)));
+    if (!item.draft && item.visible && edited) {
+      const blockers = gateBlockers({ ...item, ...fields }, axes);
+      if (blockers.length) refusePublish(blockers);
+    }
+    if (edited) gated.add(item.id);
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     commitOptions(id);
     return id;
   }
   const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], variants: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
+  gated.add(made.id);
   commitOptions(made.id);
   return made.id;
 };
@@ -913,6 +932,13 @@ export const bulkItems = async (action, ids, args = {}) => {
   let skipped = ids.length - targets.length;
   let affected = 0;
   const now = clockNow().toISOString();
+  if (action === "show") {
+    for (const i of targets.filter((t) => !t.visible || t.draft)) {
+      if (!gated.has(i.id)) continue;
+      const blockers = gateBlockers(i, bill.options.get(i.id)?.axes);
+      if (blockers.length) refusePublish(blockers);
+    }
+  }
   if (action === "hide") targets.forEach((i) => { if (i.visible) { i.visible = false; affected += 1; } });
   else if (action === "show") targets.forEach((i) => { if (!i.visible || i.draft) { i.visible = true; i.draft = false; affected += 1; } });
   else if (action === "delete") {
@@ -996,6 +1022,7 @@ export const duplicateItem = async (id) => {
   const vids = demoVideos.get(src.id);
   if (vids?.length) demoVideos.set(copyOf.id, vids.map((p, n) => `${p}.copy${bill.seq}-${n}`));
   bill.items.push(copyOf);
+  gated.add(copyOf.id);
   // Axes, variants and the size chart come with the copy; picture references do not (the copy gets its own files, re-picked in the editor).
   const o = bill.options.get(src.id);
   if (o) {
@@ -1111,6 +1138,7 @@ export const importItems = async (rows) => {
     tags: r.tags ?? [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
   }));
   bill.items.push(...made);
+  made.forEach((m) => gated.add(m.id));
   return { created: made.length, skipped };
 };
 export const getSavedViews = async () => { signedIn(); await wait(); return copy(bill.views); };

@@ -1,3 +1,4 @@
+import { SPEC_GROUPS } from "@epicmkt/shared";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -402,4 +403,26 @@ test("size guide: the same rules as the database, and only the seller's own item
   await assert.rejects(() => mock.getItemSizeGuide("nope"), { code: "item_not_found" });
   assert.equal(await mock.saveItemSizeGuide("it-fade", guide({ unit: undefined })), true, "a missing unit is allowed");
   assert.equal(await mock.getItemSizeGuide("it-fade").then((g) => g.rows.length), 2);
+});
+
+test("the mock refuses a publish the real server would refuse, and lets it through once the required rows are filled", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const base = { name: "Pulse X1", priceType: "fixed", price: 9000, availability: "available", productTypeId: "phone" };
+  const id = await mock.saveItem(null, base);
+  await assert.rejects(mock.bulkItems("show", [id]), (e) => e.code === "publish_blocked" && JSON.parse(e.details).some((b) => b.label === "Warranty"));
+  assert.equal((await mock.getCatalog()).items.find((i) => i.id === id).visible, false);
+  await mock.saveItem(id, { ...base, specs: [{ group: SPEC_GROUPS[0], label: "Warranty", value: "1 year" }] });
+  assert.equal((await mock.bulkItems("show", [id])).affected, 1);
+  await assert.rejects(mock.saveItem(id, { ...base, specs: [] }), { code: "publish_blocked" });
+  assert.equal((await mock.getCatalog()).items.find((i) => i.id === id).specs.length, 1);
+});
+
+test("an item that was live before the gate stays live until its type or specs are edited", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const item = (await mock.getCatalog()).items.find((i) => i.id === "it-fade");
+  const form = { name: item.name, priceType: item.priceType, price: item.price + 50, availability: item.availability };
+  await mock.saveItem("it-fade", form);
+  await assert.rejects(mock.saveItem("it-fade", { ...form, productTypeId: "phone" }), { code: "publish_blocked" });
 });

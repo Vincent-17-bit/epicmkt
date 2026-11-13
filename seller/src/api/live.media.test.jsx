@@ -128,9 +128,9 @@ describe("live listItemMedia, getItemMedia and reorderItemMedia", () => {
     limits: { photos: { used: 1, max: 10 }, videos: { used: 1, max: 2 } },
   };
 
-  it("returns [{path, kind, sort, duration?}] in the database's order", async () => {
+  it("returns [{id, path, kind, sort, duration?}] in the database's order", async () => {
     rpc.mockResolvedValue({ data: reply, error: null });
-    expect(await live.listItemMedia(ITEM)).toEqual([{ path: "x/1", kind: "video", sort: 0, duration: 12.5 }, { path: "x/2", kind: "image", sort: 1 }]);
+    expect(await live.listItemMedia(ITEM)).toEqual([{ id: "a", path: "x/1", kind: "video", sort: 0, duration: 12.5 }, { id: "b", path: "x/2", kind: "image", sort: 1 }]);
     expect(rpc).toHaveBeenCalledWith("seller_item_media", { p_item: ITEM });
   });
 
