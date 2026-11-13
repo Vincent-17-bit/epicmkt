@@ -403,3 +403,20 @@ test("size guide: the same rules as the database, and only the seller's own item
   assert.equal(await mock.saveItemSizeGuide("it-fade", guide({ unit: undefined })), true, "a missing unit is allowed");
   assert.equal(await mock.getItemSizeGuide("it-fade").then((g) => g.rows.length), 2);
 });
+test("product type: saved with the item, read back from the catalog, kept when a later save does not send it", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const base = { name: "Red vodka", description: "", section: null, priceType: "fixed", price: 900, availability: "available" };
+  const id = await mock.saveItem(null, { ...base, productTypeId: "liquor" });
+  const read = async () => (await mock.getCatalog()).items.find((i) => i.id === id);
+  assert.equal((await read()).productTypeId, "liquor");
+  await mock.saveItem(id, { ...base, name: "Red vodka 1L" });
+  assert.equal((await read()).productTypeId, "liquor", "absent key leaves the type alone");
+  await mock.saveItem(id, { ...base, productTypeId: null });
+  assert.equal((await read()).productTypeId, null, "null is Other goods");
+});
+test("shape: the catalog item carries product_type_id as productTypeId", async () => {
+  const { catalogItem } = await import("./shape.js");
+  assert.equal(catalogItem({ id: "a", name: "x", price_type: "fixed", product_type_id: "shoes" }).productTypeId, "shoes");
+  assert.equal(catalogItem({ id: "a", name: "x", price_type: "fixed" }).productTypeId, null);
+});
