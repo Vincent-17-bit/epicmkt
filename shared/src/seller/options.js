@@ -38,6 +38,33 @@ export const SIZE_CHART_LIMITS = { name: 80, columns: 12, column: 30, rows: 60, 
 
 const SLUG = /^[a-z0-9][a-z0-9_-]*$/;
 const HEX = /^#[0-9a-fA-F]{6}$/;
+
+// Scale-aware options (migration 0100). An axis may name a scale id; a value may carry its stored scale value. Same rules as the database.
+const SCALE_ID = /^[a-z][a-z0-9-]{0,29}$/;
+const SCALE_VALUE_KEYS = ["scale", "system", "value", "unit", "width", "shape"];
+const SCALE_WORD = /^[A-Za-z0-9._/-]{1,20}$/;
+export const SCALE_WIDTHS = ["narrow", "regular", "wide"];
+export const SCALE_SHAPES = ["rectangular", "round"];
+/** The stored as the database cleans it: only its six keys, strings trimmed, nulls left out. Anything else is returned as sent (the check refuses it). */
+const cleanScaleValue = (sv) => {
+  if (!isRecord(sv)) return sv;
+  const out = {};
+  for (const k of SCALE_VALUE_KEYS) if (sv[k] !== undefined && sv[k] !== null) out[k] = typeof sv[k] === "string" ? sv[k].trim() : sv[k];
+  for (const k of Object.keys(sv)) if (!SCALE_VALUE_KEYS.includes(k)) out[k] = sv[k];
+  return out;
+};
+const cleanScaleId = (id) => (typeof id === "string" ? id.trim().toLowerCase() : id);
+/** true when the (cleaned) stored is well formed and belongs to the axis's scale. */
+const storedOk = (sv, axisScale) => {
+  if (!isRecord(sv) || Object.keys(sv).some((k) => !SCALE_VALUE_KEYS.includes(k))) return false;
+  if (typeof sv.scale !== "string" || !SCALE_ID.test(sv.scale) || sv.scale !== axisScale) return false;
+  if (typeof sv.value === "number") { if (!Number.isFinite(sv.value) || Math.abs(sv.value) > 1e9) return false; }
+  else if (typeof sv.value !== "string" || sv.value.length < 1 || sv.value.length > 60 || /[<>]/.test(sv.value)) return false;
+  for (const k of ["system", "unit"]) if (sv[k] !== undefined && !(typeof sv[k] === "string" && SCALE_WORD.test(sv[k]))) return false;
+  if (sv.width !== undefined && !SCALE_WIDTHS.includes(sv.width)) return false;
+  if (sv.shape !== undefined && !SCALE_SHAPES.includes(sv.shape)) return false;
+  return true;
+};
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
 
@@ -108,7 +135,7 @@ function check(options, { mediaIds } = {}) {
   const earlier = new Set();
   rawAxes.forEach((axis, a) => {
     const at = `axes.${a}`;
-    if (!isRecord(axis) || Object.keys(axis).some((k) => !["key", "label", "display", "values", "dependsOn"].includes(k))) {
+    if (!isRecord(axis) || Object.keys(axis).some((k) => !["key", "label", "display", "values", "dependsOn", "scale"].includes(k))) {
       add("invalid_options", at, "This option type is not valid.");
       return;
     }
@@ -117,6 +144,9 @@ function check(options, { mediaIds } = {}) {
     else keys.add(axis.key);
     if (present(axis, "dependsOn") && !(slugOk(axis.dependsOn, OPTION_LIMITS.axisKey) && earlier.has(axis.dependsOn))) {
       add("invalid_options", `${at}.dependsOn`, "Depend on an option type listed before this one.");
+    }
+    if (present(axis, "scale") && !(typeof cleanScaleId(axis.scale) === "string" && SCALE_ID.test(cleanScaleId(axis.scale)))) {
+      add("invalid_options", `${at}.scale`, "This option type names a scale that is not valid.");
     }
     if (slugOk(axis.key, OPTION_LIMITS.axisKey)) earlier.add(axis.key);
     if (!text(axis.label, OPTION_LIMITS.axisLabel)) add("invalid_options", `${at}.label`, `Name the option type in ${OPTION_LIMITS.axisLabel} characters or fewer.`);
@@ -129,7 +159,7 @@ function check(options, { mediaIds } = {}) {
     const ids = new Set();
     values.forEach((value, v) => {
       const vat = `${at}.values.${v}`;
-      if (!isRecord(value) || Object.keys(value).some((k) => !["id", "label", "color", "mediaId"].includes(k))) {
+      if (!isRecord(value) || Object.keys(value).some((k) => !["id", "label", "color", "mediaId", "stored"].includes(k))) {
         add("invalid_options", vat, "This value is not valid.");
         return;
       }
@@ -138,6 +168,9 @@ function check(options, { mediaIds } = {}) {
       else ids.add(value.id);
       if (!text(value.label, OPTION_LIMITS.valueLabel)) add("invalid_options", `${vat}.label`, `Name the value in ${OPTION_LIMITS.valueLabel} characters or fewer.`);
       if (present(value, "color") && !(typeof value.color === "string" && HEX.test(value.color))) add("invalid_options", `${vat}.color`, "Use a colour such as #1a2b3c.");
+      if (present(value, "stored") && !storedOk(cleanScaleValue(value.stored), present(axis, "scale") ? cleanScaleId(axis.scale) : undefined)) {
+        add("invalid_options", `${vat}.stored`, "This size or measurement is not valid for the option type.");
+      }
       if (present(value, "mediaId")) {
         if (typeof value.mediaId !== "string" || !UUID.test(value.mediaId) || !mediaKnown(value.mediaId)) add("invalid_options", `${vat}.mediaId`, "Pick one of this item's photos.");
       }
@@ -151,11 +184,13 @@ function check(options, { mediaIds } = {}) {
     label: axis.label.trim(),
     display: axis.display,
     ...(present(axis, "dependsOn") && { dependsOn: axis.dependsOn }),
+    ...(present(axis, "scale") && { scale: cleanScaleId(axis.scale) }),
     values: axis.values.map((v) => ({
       id: v.id,
       label: v.label.trim(),
       ...(present(v, "color") && { color: v.color.toLowerCase() }),
       ...(present(v, "mediaId") && { mediaId: v.mediaId.toLowerCase() }),
+      ...(present(v, "stored") && { stored: cleanScaleValue(v.stored) }),
     })),
   }));
 
@@ -285,9 +320,9 @@ export const cleanOptionAxes = (raw) => {
     const values = labels.map((v) => {
       const id = slugOk(v.id, OPTION_LIMITS.valueId) && !taken.includes(v.id) ? v.id : optionSlug(v.label, taken);
       taken.push(id);
-      return { id, label: String(v.label).trim(), ...(present(v, "color") && { color: v.color }), ...(present(v, "mediaId") && { mediaId: v.mediaId }) };
+      return { id, label: String(v.label).trim(), ...(present(v, "color") && { color: v.color }), ...(present(v, "mediaId") && { mediaId: v.mediaId }), ...(present(v, "stored") && { stored: v.stored }) };
     });
-    axes.push({ key: slugOk(axis.key, OPTION_LIMITS.axisKey) ? axis.key : optionSlug(label, axes.map((a) => a.key), OPTION_LIMITS.axisKey), label, display: axis.display, values });
+    axes.push({ key: slugOk(axis.key, OPTION_LIMITS.axisKey) ? axis.key : optionSlug(label, axes.map((a) => a.key), OPTION_LIMITS.axisKey), label, display: axis.display, ...(present(axis, "dependsOn") && { dependsOn: axis.dependsOn }), ...(present(axis, "scale") && { scale: axis.scale }), values });
   });
   return axes;
 };
@@ -394,7 +429,9 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     specs: v.specs ?? [],
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
-  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
+  // `scale` (a scale id from shared/src/scales) and a value's `stored` (its stored scale value) are passed through when a seller's axis has them,
+  // so the buyer page can show "1 TB" or "EU 42 · UK 8" from the data instead of from the typed label. Axes without them are unchanged.
+  const options = axes.map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), ...(a.scale && { scale: a.scale }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }), ...(v.stored && { stored: v.stored }) })) }));
   return { options, optionVariants: shown, optionAvailability: buildAvailability(axes, variants), defaultVariantId: defaultVariantId ?? null, sizeChart: ownSizeChart(guide) ?? sizeChartFor(chart, override) };
 };
 

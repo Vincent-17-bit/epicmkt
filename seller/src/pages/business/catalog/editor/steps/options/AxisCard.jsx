@@ -33,12 +33,14 @@ export default function AxisCard({ options, index, set, limits, announce, onRemo
     for (const raw of parts) {
       // An axis tied to a scale (Storage, clothing size) reads what was typed the one shared way: "128gb" -> "128 GB", "1024 GB" -> "1 TB".
       let p = raw;
+      let extras = {};
       if (axis.scale) {
         const read = scales.parse(axis.scale, raw, {});
         if (!read.ok) { problem = read.error.message; continue; }
         p = scales.format(read.value);
+        extras = { stored: read.value };   // kept with the value, so buyers read "1 TB" from data and sizes can be filtered
       }
-      const r = addValue(next, axis.key, p, {}, limits);
+      const r = addValue(next, axis.key, p, extras, limits);
       if (r.error === "duplicate") { problem = `${r.existing.label} is already listed.`; continue; }
       if (r.error) { problem = ERRORS[r.error] ?? limitMessage(r.error, limits, r.plan); break; }
       next = r.options;

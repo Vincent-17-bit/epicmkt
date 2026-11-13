@@ -135,6 +135,53 @@ describe("/api/products", () => {
     expect(counts.categories).toEqual([["bakeries", 1]]);
   });
 
+  describe("size values (migration 0104)", () => {
+    const shoe = (system, value) => ({ scale: "shoe", system, value });
+    const withSizes = () => {
+      payload = snapshotPayload();
+      payload.items[2] = { ...payload.items[2], name: "Loafer", size_values: [shoe("eu", 42), shoe("eu", 43)] };
+      payload.items[3] = { ...payload.items[3], name: "Trainer", size_values: [shoe("uk", 8)] }; // UK 8 is EU 42
+      payload.items[4] = { ...payload.items[4], name: "Strip light", size_values: [{ scale: "length", value: 5, unit: "m" }, { scale: "length", value: 10, unit: "m" }] };
+    };
+
+    it("filters a page by size, merging the same shoe in two systems", async () => {
+      withSizes();
+      const body = await (await call("op=page&psize=shoe%3Aeu%3A42")).json();
+      expect(body.items.map((p) => p.name).sort()).toEqual(["Loafer", "Trainer"]);
+      expect(body.items.every((p) => !("sizeValues" in p) && !("size_values" in p))).toBe(true);
+    });
+
+    it("filters a page by a length range", async () => {
+      withSizes();
+      const body = await (await call("op=page&prange=length%3A5-10")).json();
+      expect(body.items.map((p) => p.name)).toEqual(["Strip light"]);
+      expect((await (await call("op=page&prange=length%3A11-")).json()).items).toEqual([]);
+    });
+
+    it("answers size facets and live counts", async () => {
+      withSizes();
+      const facets = await (await call("op=facets")).json();
+      expect(facets.sizes.map((g) => g.scale)).toEqual(["shoe", "length"]);
+      expect(facets.sizes[0].options.map((o) => o.count)).toEqual([2, 1]);
+      expect(facets.sizes[1]).toMatchObject({ mode: "range", unit: "m", min: 5, max: 10 });
+      const counts = await (await call("op=counts")).json();
+      expect(new Map(counts.sizes).get("shoe:eu:42")).toBe(2);
+    });
+
+    it("an item without sizes never matches a size filter, and no filter changes anything", async () => {
+      withSizes();
+      const all = await (await call("op=page")).json();
+      expect(all.total).toBe(5);
+      const none = await (await call("op=page&psize=apparel-alpha%3AM")).json();
+      expect(none.items).toEqual([]);
+    });
+
+    it("the older snapshot without a sizes column still works and offers no size facets", async () => {
+      const facets = await (await call("op=facets")).json();
+      expect(facets.sizes).toEqual([]);
+    });
+  });
+
   it("builds the snapshot once for many requests", async () => {
     await call("op=page");
     await call("op=facets");
@@ -153,6 +200,54 @@ describe("/api/products", () => {
     });
     const body = await (await call("op=page")).json();
     expect(body.items[0]).toMatchObject({ name: "Loaf", imagePath: "b1/a.webp" });
+  });
+
+  describe("the page-the-views fallback and size values (migration 0104)", () => {
+    const shoe = (system, value) => ({ scale: "shoe", system, value });
+    const views = (sizesReply) => async (url) => {
+      const u = String(url);
+      if (u.includes("/rpc/products_snapshot")) return new Response("{}", { status: 500 });
+      if (u.includes("/rpc/public_item_size_values")) return sizesReply(u);
+      if (u.includes("public_items?")) {
+        return new Response(JSON.stringify([
+          { id: "i1", business_id: "b1", name: "Loafer", description: "", price: "3000", price_type: "fixed", availability: "available", created_at: "2026-02-02T00:00:00Z", image_paths: [] },
+          { id: "i2", business_id: "b1", name: "Mug", description: "", price: "300", price_type: "fixed", availability: "available", created_at: "2026-02-01T00:00:00Z", image_paths: [] },
+        ]), { status: 200 });
+      }
+      if (u.includes("public_businesses?")) return new Response(JSON.stringify([payload.businesses[0]]), { status: 200 });
+      return new Response("[]", { status: 200 });
+    };
+
+    it("keeps size filters working when the snapshot function is unavailable", async () => {
+      fetchMock.mockImplementation(views(() => new Response(JSON.stringify({ i1: [shoe("eu", 42), shoe("eu", 43)] }), { status: 200 })));
+      const facets = await (await call("op=facets")).json();
+      expect(facets.sizes.map((g) => g.scale)).toEqual(["shoe"]);
+      const body = await (await call("op=page&psize=shoe%3Aeu%3A42")).json();
+      expect(body.items.map((p) => p.name)).toEqual(["Loafer"]);
+      expect(body.items.every((p) => !("sizeValues" in p))).toBe(true);
+    });
+
+    it("asks for the sizes in one call, not one per item", async () => {
+      fetchMock.mockImplementation(views(() => new Response("{}", { status: 200 })));
+      await call("op=page");
+      expect(fetchMock.mock.calls.filter(([u]) => String(u).includes("/rpc/public_item_size_values"))).toHaveLength(1);
+    });
+
+    it.each([
+      ["is missing (404)", () => new Response("{}", { status: 404 })],
+      ["fails (500)", () => new Response("boom", { status: 500 })],
+      ["cannot be reached", () => { throw new Error("network"); }],
+    ])("the list still works, with no size facets, when the sizes function %s", async (_name, reply) => {
+      fetchMock.mockImplementation(views(reply));
+      const body = await (await call("op=page")).json();
+      expect(body.items.map((p) => p.name)).toEqual(["Loafer", "Mug"]);
+      expect((await (await call("op=facets")).json()).sizes).toEqual([]);
+    });
+
+    it("ignores a sizes reply of the wrong shape", async () => {
+      fetchMock.mockImplementation(views(() => new Response(JSON.stringify([1, 2, 3]), { status: 200 })));
+      expect((await (await call("op=facets")).json()).sizes).toEqual([]);
+    });
   });
 
   it("does not list a sold-out product, even when an older database still sends one", async () => {

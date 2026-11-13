@@ -18,6 +18,7 @@
     "build": "npm run build -w client && npm run build -w seller && npm run build -w admin",
     "test:api": "node backend/check.mjs",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "migration:renumber": "node scripts/renumber-migration.mjs",
     "seed": "node --env-file=scripts/.env scripts/seed.mjs",
     "sync:shared": "node scripts/sync-shared.mjs",
     "migrate:images": "node --env-file=scripts/.env scripts/migrate-images-to-cloudinary.mjs",

@@ -505,3 +505,17 @@ Entry format:
 - Not done (other prompts): the `items.getRelated(itemId, page)` client wrapper, the Recommend UI (8.5), the admin page (8.7).
 - Who must act: apply migration 0109.
 - Request files: `docs/requests/2026-11-14-8-1-to-client-items-get-related.md`
+## B13: scale data is stored, and the product list carries `sizeValues` (migration 0104)
+- Migration `0104_option_scales_sizes.sql` (renumbered from 0094 and 0100, which main took): an option axis may carry `scale` (a scale id) and each value `stored`
+  ({scale, system?, value, unit?, width?, shape?}), the two optional fields the buyer's scale labels already read (`client/src/lib/scaleLabels.js`). Validated, cleaned, shown by
+  `item_option_axes_public`, kept by Duplicate, remap and photo delete. Also fixes `item_option_axes_drop_media`, which dropped `dependsOn`.
+- `products_snapshot` carries `size_values` per item; `/api/products` returns it as `sizeValues` on each product (the field `sizeFilters.js` reads). `public_item_size_values(p_limit)`
+  returns every live item's values at once for the two fallback paths (the endpoint's page-the-views, and the browser's `getAllProducts`). Closes
+  `docs/requests/2026-11-07-sizes-to-client-list-size-values.md`.
+- `/api/products` now reads `psize` and `prange` (same parameters as the page address) and includes them in the canonical query.
+- Contract change for the Options step: the axis `scale` was form-only (`shared/src/options/editor.test.js` said so). It is now sent with the axis, and each value's `stored` (what
+  `scales.parse` read) with the value, when `OPTION_SCALES_STORED` is true (default; false returns to form-only). `optionsFromServer` keeps both, so an edit does not lose them.
+- Deploy order: apply migration 0104 before the seller app ships. If it is not applied yet, the editor retries a refused save once without scale data (`saveWithScaleFallback`),
+  so a seller can still save; the scale data is simply not stored until the migration is in. Items saved before have no `stored`, so they have no Size facets until saved again.
+- `npm run migration:renumber -- <file>.sql --next [--write]` renumbers a migration that is not applied anywhere. When another migration already has the old number it does
+  not rewrite "migration NNNN" in words (it lists those places), so it cannot change another migration's text.

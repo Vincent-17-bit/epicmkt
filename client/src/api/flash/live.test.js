@@ -616,6 +616,35 @@ describe("home products", () => {
     expect(first.flash).toBeNull();
   });
 
+  describe("size values (migration 0104)", () => {
+    const shop = () => { fake.current.state.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "standard", verification_level: "unverified" }]; };
+    const shoe = (system, value) => ({ scale: "shoe", system, value });
+
+    it("puts each item's stored size values on the product, from one call", async () => {
+      const db = fake.current.state;
+      shop();
+      db.items = [row(1), row(2)];
+      const calls = [];
+      db.rpc = { public_item_size_values: (args) => (calls.push(args), { "item-1": [shoe("eu", 42), shoe("eu", 43)] }) };
+      const items = await live.getAllProducts();
+      expect(items.find((p) => p.id === "item-1").sizeValues).toEqual([shoe("eu", 42), shoe("eu", 43)]);
+      expect("sizeValues" in items.find((p) => p.id === "item-2")).toBe(false);
+      expect(calls).toHaveLength(1);
+    });
+
+    it("lists products without sizes when the function is missing, fails, or answers the wrong shape", async () => {
+      for (const handler of [undefined, () => ({ error: { code: "42883", message: "function does not exist" } }), () => { throw new Error("network"); }, () => [1, 2]]) {
+        const db = fake.current.state;
+        shop();
+        db.items = [row(1), row(2)];
+        db.rpc = handler ? { public_item_size_values: handler } : {};
+        const items = await live.getAllProducts();
+        expect(items.map((p) => p.id).sort()).toEqual(["item-1", "item-2"]);
+        expect(items.every((p) => !("sizeValues" in p))).toBe(true);
+      }
+    });
+  });
+
   it("flags verified and featured stores", async () => {
     const db = fake.current.state;
     db.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "premium", verification_level: "verified" }];

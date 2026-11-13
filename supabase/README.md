@@ -277,3 +277,17 @@ How it works (`mpesa_ingest` and friends, migration `0015`):
 - Money is credit on the application or business. Whole months are taken from it, the rest waits. So short payments, top-ups, 3-month prepayments and overpayments are one mechanism.
 - Renewals for existing sellers apply automatically (`payments` row with `source = 'auto'`). A first payment waits for an admin's **Confirm** (that creates the login). Upgrades and category changes are applied automatically when the seller opened that payment in the portal.
 - The admin Payments page reads the `admin_payment_queue` view. Owner and finance can assign, ignore and reprocess (`admin_mpesa_*` functions).
+
+## Renumbering a migration that has not been applied yet
+
+When another branch takes your migration's number first, do not edit numbers by hand. From the repo root:
+
+```
+npm run migration:renumber -- <your_migration_file>.sql --next            # shows the plan, changes nothing
+npm run migration:renumber -- <your_migration_file>.sql --next --write    # renames it to the next free number
+```
+
+It renames the file, fixes the file name on its first line, rewrites every other mention of the old name or of "migration <number>" in tracked
+docs, tests and comments, and runs `npm run check:migrations`. It refuses a number that leaves a gap, sits below the last migration, is already used
+or reserved, and it never touches a migration that is not the one you named. Only a migration that has not reached any database may be
+renumbered: Supabase records each one by number.

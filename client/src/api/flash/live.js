@@ -376,9 +376,11 @@ const fetchPages = async (table, columns, order) => {
 // Every public product of every live store, for the home page. Filtering, sorting and paging happen in the client.
 // Sale pricing is decoration: if the flash sales cannot be read the products still show at their regular price.
 export async function getAllProducts() {
-  const [rows, businesses] = await Promise.all([
+  const [rows, businesses, sizeValues] = await Promise.all([
     fetchPages("public_items", CARD_COLUMNS, [["created_at", false], ["id", true]]),
-    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone", [["id", true]])
+    fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone", [["id", true]]),
+    // Stored scale values of every item's sizes (migration 0104), for the Size filter. Missing or failing: no size facets, nothing else changes.
+    supabase.rpc("public_item_size_values", { p_limit: 50000 }).then(({ data, error }) => (!error && data && typeof data === "object" && !Array.isArray(data) ? data : {})).catch(() => ({}))
   ]);
   if (!rows.length) return [];
   const byId = new Map(businesses.map((b) => [b.id, b]));
@@ -400,6 +402,7 @@ export async function getAllProducts() {
       {
         ...item,
         pricing,
+        ...(Array.isArray(sizeValues[row.id]) && sizeValues[row.id].length ? { sizeValues: sizeValues[row.id] } : {}),
         flash: entry ? flashParts(entry, live.now) : null,
         offer: chips.get(row.id) ?? null,
         business: {

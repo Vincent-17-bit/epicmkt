@@ -298,3 +298,87 @@ test("only available and limited-stock variants are purchasable", () => {
   assert.equal(isPurchasable(null), false);
   assert.equal(isPurchasable({}), false);
 });
+
+test("publicOptions passes an axis's scale and a value's stored through, and leaves other axes unchanged (B07)", async () => {
+  const { publicOptions } = await import("./options.js");
+  const axes = [
+    { key: "size", label: "Size", display: "button", scale: "shoe", values: [{ id: "eu-42", label: "EU 42", stored: { scale: "shoe", system: "eu", value: 42 } }] },
+    { key: "colour", label: "Colour", display: "button", values: [{ id: "red", label: "Red" }] },
+  ];
+  const variants = [{ id: "v1", choice: { size: "eu-42", colour: "red" }, price: 100, status: "available", stock: 3, mediaIds: [], specs: [] }];
+  const { options } = publicOptions({ axes, variants, item: { price: 100 } });
+  assert.equal(options[0].scale, "shoe");
+  assert.deepEqual(options[0].values[0].stored, { scale: "shoe", system: "eu", value: 42 });
+  assert.equal("scale" in options[1], false);
+  assert.equal("stored" in options[1].values[0], false);
+});
+
+// ---- Scale-aware options (migration 0100). The cases mirror supabase/tests/option-scales.test.mjs so the editor and the database agree. ----
+const eu = (n, extra = {}) => ({ id: `eu-${n}`, label: `EU ${n}`, stored: { scale: "shoe", system: "eu", value: n, ...extra } });
+const shoeAxes = (values = [eu(41), eu(42)]) => [
+  { key: "size", label: "Shoe size", display: "button", scale: "shoe", values },
+  { key: "colour", label: "Colour", display: "button", values: [{ id: "black", label: "Black" }, { id: "tan", label: "Tan" }] },
+];
+const shoeVariants = (axes) => axes[0].values.flatMap((s) => axes[1].values.map((k) => ({ choice: { size: s.id, colour: k.id } })));
+const shoeOptions = (axes = shoeAxes()) => ({ axes, variants: shoeVariants(axes) });
+
+test("validateOptions keeps an axis's scale and a value's stored, cleaned the way the database cleans them", async () => {
+  const { validateOptions } = await import("./options.js");
+  const axes = shoeAxes([eu(42, { width: "wide", unit: null })]);
+  axes[0].scale = " SHOE ";
+  axes[0].values[0].stored.scale = " shoe ";
+  const r = validateOptions(shoeOptions(axes));
+  assert.deepEqual(r.errors, {});
+  assert.equal(r.ok, true);
+  assert.equal(r.value.axes[0].scale, "shoe");
+  assert.deepEqual(r.value.axes[0].values[0].stored, { scale: "shoe", system: "eu", value: 42, width: "wide" });
+  assert.equal("scale" in r.value.axes[1], false);
+});
+
+test("validateOptions refuses the same bad scales the database refuses", async () => {
+  const { validateOptions } = await import("./options.js");
+  const bad = [
+    ["a key that is not ours", () => shoeAxes([eu(42, { evil: "x" })])],
+    ["a different scale than the axis", () => shoeAxes([{ id: "x", label: "X", stored: { scale: "volume", value: 20, unit: "l" } }])],
+    ["no scale on the axis", () => { const a = shoeAxes(); delete a[0].scale; return a; }],
+    ["a scale id with a space", () => { const a = shoeAxes(); a[0].scale = "Shoe Size"; return a; }],
+    ["a width that is not allowed", () => shoeAxes([eu(42, { width: "huge" })])],
+    ["a shape that is not allowed", () => shoeAxes([eu(42, { shape: "oval" })])],
+    ["an object as the value", () => shoeAxes([{ id: "x", label: "X", stored: { scale: "shoe", value: { a: 1 } } }])],
+    ["markup in the value", () => shoeAxes([{ id: "x", label: "X", stored: { scale: "shoe", value: "<b>42</b>" } }])],
+    ["an absurd number", () => shoeAxes([eu(1e12)])],
+    ["a list", () => shoeAxes([{ id: "x", label: "X", stored: [1, 2] }])],
+    ["no value", () => shoeAxes([{ id: "x", label: "X", stored: { scale: "shoe" } }])],
+  ];
+  for (const [why, build] of bad) {
+    const r = validateOptions(shoeOptions(build()));
+    assert.equal(r.ok, false, `refused: ${why}`);
+    assert.equal(r.code, "invalid_options", `invalid_options for: ${why}`);
+    assert.equal(r.value, null);
+  }
+});
+
+test("storedOptions round trips scale and stored, and publicOptions shows them to buyers", async () => {
+  const { storedOptions, publicOptions } = await import("./options.js");
+  const r = storedOptions(shoeOptions());
+  assert.equal(r.ok, true);
+  assert.equal(r.value.axes[0].scale, "shoe");
+  assert.deepEqual(r.value.axes[0].values[1].stored, { scale: "shoe", system: "eu", value: 42 });
+  const pub = publicOptions({ axes: r.value.axes, variants: r.value.variants.map((v, i) => ({ ...v, id: `v${i}`, price: 3000, status: "available", stock: 5, mediaIds: [], specs: [] })), item: { price: 3000 } });
+  assert.equal(pub.options[0].scale, "shoe");
+  assert.deepEqual(pub.options[0].values[0].stored, { scale: "shoe", system: "eu", value: 41 });
+});
+
+test("cleanOptionAxes (the editor helper) keeps scale, stored and dependsOn when it drops blank rows", async () => {
+  const { cleanOptionAxes } = await import("./options.js");
+  const raw = [
+    { key: "style", label: "Style", display: "button", values: [{ id: "a", label: "A" }] },
+    { key: "size", label: "Shoe size", display: "button", scale: "shoe", dependsOn: "style", values: [eu(42), { id: "blank", label: "  " }] },
+    { label: "", values: [] },
+  ];
+  const out = cleanOptionAxes(raw);
+  assert.equal(out.length, 2);
+  assert.equal(out[1].scale, "shoe");
+  assert.equal(out[1].dependsOn, "style");
+  assert.deepEqual(out[1].values, [eu(42)]);
+});
