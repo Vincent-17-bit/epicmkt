@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from "react";
-import { collapseToPriceAxes, formatKes as kes, groupPrice, liveRows, priceIssues, priceLayout, rowKeyOf, setBasePlusDifference, setGroupPrice, setRelativePrice, summarize } from "@epicmkt/shared";
+import { collapseToPriceAxes, formatKes as kes, groupPrice, groupSold, liveRows, priceIssues, priceLayout, rowKeyOf, setBasePlusDifference, setGroupPrice, setGroupSold, setRelativePrice, summarize } from "@epicmkt/shared";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
 
@@ -44,6 +44,9 @@ export default function PriceModes({ options, set, announce, itemPrice, priceAxe
 
   const input = (choice, label, extra = {}) => {
     const gkey = chosen.map((k) => choice[k]).join("|");
+    if (!groupSold(options, chosen, choice)) {
+      return <button type="button" className={s.notSold} data-price-group={`${uid}:${gkey}`} aria-label={`${label.replace(/ price$/, "")} is not sold. Put back on sale.`} onClick={() => { set(setGroupSold(options, chosen, choice, true)); announce(`${label.replace(/ price$/, "")} back on sale.`); }}>Not sold</button>;
+    }
     return <input data-price-group={`${uid}:${gkey}`} className={s.priceInput} inputMode="decimal" autoComplete="off" aria-label={label} value={groupPrice(options, chosen, choice)} onChange={(e) => put(choice, e.target.value)} {...extra} />;
   };
 

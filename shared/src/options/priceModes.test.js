@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { addAxis, addValue, emptyOptionsForm, rowKeyOf, setBasePlusDifference, setRow, setSold, checkOptions, optionsPayload } from "./editor.js";
-import { collapseToPriceAxes, groupPrice, inferPriceAxes, priceIssues, priceLayout, setGroupPrice, setRelativePrice } from "./priceModes.js";
+import { collapseToPriceAxes, groupPrice, groupSold, setGroupSold, inferPriceAxes, priceIssues, priceLayout, setGroupPrice, setRelativePrice } from "./priceModes.js";
 
 const build = (spec) => {
   let o = emptyOptionsForm();
@@ -95,4 +95,16 @@ test("warnings: a missing price and a far price are plain advice, never a block"
   assert.deepEqual(priceIssues(o, { itemPrice: "20000" }).filter((i) => i.kind === "missing"), [], "the item price covers a blank row");
   const sold = setSold(o, "color=blue|storage=128-gb", false);
   assert.equal(priceIssues(sold).some((i) => i.kind === "missing"), false, "a Not sold combination needs no price");
+});
+
+test("a combination that is not sold is reported as not sold, and can be put back on sale", () => {
+  let o = phone();
+  o = setSold(o, "color=grey|storage=256-gb", false);
+  assert.equal(groupSold(o, ["color", "storage"], { color: "grey", storage: "256-gb" }), false);
+  assert.equal(groupSold(o, ["color", "storage"], { color: "grey", storage: "128-gb" }), true);
+  assert.equal(groupSold(o, ["storage"], { storage: "256-gb" }), true);
+  o = setGroupSold(o, ["color", "storage"], { color: "grey", storage: "256-gb" }, true);
+  assert.equal(groupSold(o, ["color", "storage"], { color: "grey", storage: "256-gb" }), true);
+  o = setGroupSold(o, ["storage"], { storage: "512-gb" }, false);
+  assert.deepEqual(o.rows.filter((r) => !r.sold).map((r) => rowKeyOf(o, r.choice)).sort(), ["color=black|storage=512-gb", "color=blue|storage=512-gb", "color=grey|storage=512-gb"]);
 });

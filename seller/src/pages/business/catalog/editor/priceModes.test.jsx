@@ -106,4 +106,15 @@ describe("What changes the price?", () => {
     await tick(user, "Storage");
     expect((await axe(container)).violations).toEqual([]);
   });
+  it("a combination that is not sold shows Not sold in the grid and goes back on sale in one tap", async () => {
+    const { user, spy } = setup(phone());
+    await tick(user, "Color");
+    await tick(user, "Storage");
+    await user.click(screen.getByLabelText("Not sold: Grey / 256 GB"));
+    expect(screen.queryByLabelText("256 GB Grey price")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "256 GB Grey is not sold. Put back on sale." }));
+    expect(spy.current.options.rows.find((r) => rowKeyOf(spy.current.options, r.choice) === "color=grey|storage=256-gb").sold).toBe(true);
+    await user.type(screen.getByLabelText("256 GB Grey price"), "7000");
+    expect(priceOf(spy.current.options, "color=grey|storage=256-gb")).toBe("7000");
+  });
 });
