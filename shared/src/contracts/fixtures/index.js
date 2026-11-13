@@ -15,11 +15,12 @@ import { printing } from "./printing.js";
 import { butcher } from "./butcher.js";
 import { necklace } from "./necklace.js";
 import { fragrance } from "./fragrance.js";
+import { liquor } from "./liquor.js";
 import { legacy } from "./legacy.js";
 
 export { FIXTURE_BUSINESS_ID, fixtureBusinessCard } from "./build.js";
 
-const SPECS = [phone, memoryCard, shoes, table, sofa, bread, water, ledStrip, ledBulb, printing, butcher, necklace, fragrance, legacy];
+const SPECS = [phone, memoryCard, shoes, table, sofa, bread, water, ledStrip, ledBulb, printing, butcher, necklace, fragrance, liquor, legacy];
 
 let cache = null;
 

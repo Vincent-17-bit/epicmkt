@@ -22,19 +22,19 @@ test("items.getDetail refuses a fixture asked for under another business", async
   await assert.rejects(() => getItemDetail("fx-phone", { businessId: "b_001" }), NotFoundError);
 });
 
-test("items.getList serves all 14 fixtures as valid list cards, filters by type and pages", async () => {
+test("items.getList serves all 15 fixtures as valid list cards, filters by type and pages", async () => {
   const all = await getItemList();
-  assert.equal(all.total, 14);
+  assert.equal(all.total, 15);
   assert.deepEqual(all.items.map((c) => c.id), fixtures.map((f) => f.id));
   assert.ok(all.items.every(isItemListCard));
   const phones = await getItemList({ productType: "phone" });
   assert.deepEqual(phones.items.map((c) => c.id), ["fx-phone"]);
   assert.equal(phones.total, 1);
   const page = await getItemList({ limit: 5, offset: 10 });
-  assert.equal(page.total, 14);
-  assert.equal(page.items.length, 4);
+  assert.equal(page.total, 15);
+  assert.equal(page.items.length, 5);
   assert.deepEqual((await getItemList({ businessId: "nope" })).items, []);
-  assert.equal((await getItemList({ businessId: "fixture-store" })).total, 14);
+  assert.equal((await getItemList({ businessId: "fixture-store" })).total, 15);
 });
 
 test("items.getList cards carry the price range fields", async () => {
@@ -79,7 +79,7 @@ test("items.getRelated for a real item is the existing similar-items ranking", a
   assert.deepEqual(await getRelatedItems(row.id), await getSimilarItems(row.id, {}));
 });
 
-test("seller_product_types serves the 13 types, valid, as a copy", async () => {
+test("seller_product_types serves the 14 types, valid, as a copy", async () => {
   const types = await getSellerProductTypes();
   assert.deepEqual(types, PRODUCT_TYPES);
   assert.ok(types.every(isProductType));
