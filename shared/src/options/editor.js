@@ -31,6 +31,11 @@ export const AXIS_PRESETS = [
   { label: "Size", display: "button" },
   { label: "Storage", display: "button" },
   { label: "Style", display: "button" },
+  { label: "Volume", display: "button" },
+  { label: "Weight", display: "button" },
+  { label: "Pack size", display: "button" },
+  { label: "Flavour", display: "button" },
+  { label: "Length", display: "button" },
   { label: "Material", display: "text-card" },
 ];
 
