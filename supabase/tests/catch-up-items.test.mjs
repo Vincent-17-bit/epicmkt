@@ -86,3 +86,31 @@ test("saving an item works after the catch-up on a hand-patched database", async
     assert.equal(row.name, "Renamed"); assert.equal(Number(row.price), 150);
   } finally { await c.end(); }
 });
+
+test("the user's real state: 0084 + the size-chart catch-up (0086 view already in its 0093 shape) is repaired with no SKIPPED rows", async () => {
+  const c = await partial("0084~");
+  try {
+    await c.query(readFileSync(join(here, "..", "catch-up-size-charts.sql"), "utf8"));
+    await c.query(readFileSync(join(here, "..", "catch-up-seller-size-guide.sql"), "utf8"));
+    const rows = (await c.query(script)).at(-1).rows;
+    assert.deepEqual(rows.filter((r) => /^SKIPPED/.test(r.result)).map((r) => r.migration + ": " + r.result.slice(0, 100)), []);
+    const got = await schema(c);
+    const diff = (a, b) => Object.keys(a).filter((k) => a[k] !== b[k]);
+    assert.deepEqual(diff(full.fns, got.fns), [], "functions differ");
+    assert.deepEqual(diff(full.cols, got.cols), []);
+  } finally { await c.end(); }
+});
+
+test("the first published version of the script (0086 reported SKIPPED, already applied by the size-chart catch-up) left a database identical to a full migration", async () => {
+  const { readFileSync: rf } = await import("node:fs");
+  const c = await partial("0084~");
+  try {
+    await c.query(rf(join(here, "..", "catch-up-size-charts.sql"), "utf8"));
+    await c.query(rf(join(here, "..", "catch-up-seller-size-guide.sql"), "utf8"));
+    await c.query(script.replace("drop view if exists public.public_size_charts;\n", ""));   // approximates the first version: 0086 without the view drop
+    const got = await schema(c);
+    const diff = (a, b) => Object.keys(a).filter((k) => a[k] !== b[k]);
+    assert.deepEqual(diff(full.fns, got.fns), []);
+    assert.deepEqual(diff(full.cols, got.cols), []);
+  } finally { await c.end(); }
+});

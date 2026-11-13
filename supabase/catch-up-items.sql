@@ -7093,6 +7093,7 @@ grant select on public.public_items to anon, authenticated, service_role;
 
 $m_0085_item_variants$),
     ('0086_item_options', $m_0086_item_options$
+drop view if exists public.public_size_charts;
 -- 0086_item_options.sql
 -- Product options (up to 3 axes), variants (one row per sellable combination), an availability matrix, and an admin-owned size chart library.
 --
@@ -11864,7 +11865,20 @@ grant execute on function public.item_size_chart_payload(public.items) to servic
 
 notify pgrst, 'reload schema';
 
-$m_0104_size_guide_unit$)
+$m_0104_size_guide_unit$),
+    ('0105_liquor_type', $m_0105_liquor_type$
+insert into public.product_types (id, slug, name, kind, department_id, category_ids, restricted_to, quantity_mode) values
+  ('liquor', 'liquor', 'Liquor', 'good', 'food-drink', '{supermarket-minimart}', '{}', 'units')
+on conflict (id) do nothing;
+
+update public.product_types set
+  axes = jsonb_build_array(jsonb_build_object('key', 'volume', 'label', 'Volume', 'display', 'button')),
+  spec_rows = jsonb_build_array(
+    jsonb_build_object('key', 'authenticity', 'label', 'Authenticity', 'level', 'required', 'input', 'choice', 'labelSet', 'authenticity'),
+    jsonb_build_object('key', 'alcohol-strength', 'label', 'Alcohol strength', 'level', 'recommended', 'input', 'text'))
+  where id = 'liquor' and spec_rows = '[]'::jsonb;
+
+$m_0105_liquor_type$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;
