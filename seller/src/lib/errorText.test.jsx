@@ -10,7 +10,7 @@ describe("errorText names real save failures", () => {
     expect(errorText({ code: "unknown_product_type" })).toMatch(/no longer available/i);
   });
   it("says when the database is missing an update, and names an unknown code", () => {
-    expect(errorText({ code: "Could not find the function public.seller_set_item_size_guide(p_id, p_guide) in the schema cache", message: "Could not find the function" })).toMatch(/database update/i);
+    expect(errorText({ code: "Could not find the function public.seller_set_item_size_guide(p_id, p_guide) in the schema cache", message: "Could not find the function public.seller_set_item_size_guide(p_id, p_guide) in the schema cache" })).toMatch(/database update.*seller_set_item_size_guide/i);
     expect(errorText({ code: "weird_code", message: "weird_code" })).toContain("weird_code");
     expect(errorText({ code: "weird_code" }, "mine")).toBe("mine");
   });
