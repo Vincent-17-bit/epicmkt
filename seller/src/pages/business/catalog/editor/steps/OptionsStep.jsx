@@ -13,7 +13,7 @@ import s from "./options/options.module.css";
 
 // Item options: colours, sizes, storage, styles. Axes come from the product type; every combination has its own price and stock.
 // Items with no options never see this step (see steps/index.js), and saving without touching it changes nothing.
-export default function OptionsStep({ form, patch, errors }) {
+export default function OptionsStep({ form, patch, errors, media }) {
   const { types, planLimits } = useProductTypes();
   const [said, setSaid] = useState("");
   const options = form.options ?? emptyOptionsForm();
@@ -31,6 +31,8 @@ export default function OptionsStep({ form, patch, errors }) {
   const found = errors?.options ?? {};
   const roomForAxis = canAddAxis(options, limits);
   const itemPrice = String(form.price ?? "").replace(/,/g, "");
+  const photos = (media?.tiles ?? []).filter((t) => t.kind === "image" && t.status === "saved" && t.id).map((t) => ({ id: t.id, url: t.url }));
+  const unsavedPhotos = (media?.tiles ?? []).some((t) => t.kind === "image" && t.status !== "saved");
 
   const start = (p) => { set(addAxis(options, p, limits)); setSaid(`${p.label || "A new option"} added.`); };
 
@@ -58,7 +60,7 @@ export default function OptionsStep({ form, patch, errors }) {
           <>
             <ol className={s.axes}>
               {options.axes.map((a, i) => (
-                <AxisCard key={a.rid ?? a.key} options={options} index={i} set={set} limits={limits} errors={found} announce={setSaid} onRemove={(k) => set(removeAxis(options, k))} />
+                <AxisCard key={a.rid ?? a.key} options={options} index={i} set={set} limits={limits} errors={found} announce={setSaid} photos={photos} unsavedPhotos={unsavedPhotos} onRemove={(k) => set(removeAxis(options, k))} />
               ))}
             </ol>
             <div className={s.stack}>

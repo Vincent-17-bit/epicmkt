@@ -313,13 +313,21 @@ const mediaLimitsFor = (item, seq) => ({
   photos: { used: seq.filter((m) => m.kind === "image").length, max: bill.business.planKey === "premium" ? 15 : 7 },
   videos: { used: seq.filter((m) => m.kind === "video").length, max: bill.business.planKey === "premium" ? 3 : 1 },
 });
+const mediaUuid = (path) => {
+  let h = 0;
+  for (const c of String(path)) h = (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0;
+  const hex = (h.toString(16).padStart(8, "0") + "0".repeat(24)).slice(0, 32).split("");
+  hex[12] = "4";
+  hex[16] = "8";
+  return `${hex.slice(0, 8).join("")}-${hex.slice(8, 12).join("")}-${hex.slice(12, 16).join("")}-${hex.slice(16, 20).join("")}-${hex.slice(20, 32).join("")}`;
+};
 export const getItemMedia = async (itemId) => {
   signedIn();
   await wait();
   const item = bill.items.find((i) => i.id === itemId);
   if (!item) throw new ApiError("item_not_found");
   const seq = sequence(item);
-  return { media: seq.map((m) => ({ path: m.path, kind: m.kind, sort: m.sort, ...(demoDurations.has(m.path) ? { duration: demoDurations.get(m.path) } : {}) })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
+  return { media: seq.map((m) => ({ id: mediaUuid(m.path), path: m.path, kind: m.kind, sort: m.sort, ...(demoDurations.has(m.path) ? { duration: demoDurations.get(m.path) } : {}) })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
 };
 export const getMediaLimits = async () => {
   signedIn();

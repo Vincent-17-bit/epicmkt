@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { scales, DISPLAYS, OPTION_LIMITS, addValue, canAddValue, dependencyChoices, limitMessage, moveValue, removeValue, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
+import { scales, DISPLAYS, OPTION_LIMITS, addValue, canAddValue, dependencyChoices, limitMessage, isColourAxis, moveValue, removeValue, setValueMedia, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
 import DependentEditor from "./DependentEditor.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
@@ -9,7 +9,7 @@ import s from "./options.module.css";
 const ERRORS = { empty: "Type a value first.", long: `Use ${OPTION_LIMITS.valueLabel} characters or fewer.` };
 
 // One option type (Colour, Storage...): its name, how the buyer picks it, its values as chips, and the dependent-list switch.
-export default function AxisCard({ options, index, set, limits, announce, onRemove, errors = {} }) {
+export default function AxisCard({ options, index, set, limits, announce, onRemove, photos = [], unsavedPhotos = false, errors = {} }) {
   const axis = options.axes[index];
   const uid = useId();
   const [draft, setDraft] = useState("");
@@ -94,6 +94,32 @@ export default function AxisCard({ options, index, set, limits, announce, onRemo
               </li>
             ))}
           </ul>
+        )}
+        {isColourAxis(axis) && axis.values.length > 0 && (
+          <div className={s.stack} role="group" aria-label={`Photo for each ${label.toLowerCase()}`}>
+            <span className={ed.label}>Photo for each {label.toLowerCase()}</span>
+            {photos.length === 0 ? (
+              <p className={s.hint}>{unsavedPhotos ? "Save the item first. Then you can pick a photo for each one." : "Add photos in the Media step, then pick one for each one here."}</p>
+            ) : (
+              <ul className={s.photoRows}>
+                {axis.values.map((v) => {
+                  const pick = photos.find((ph) => ph.id === v.mediaId);
+                  return (
+                    <li key={v.id} className={s.photoRow}>
+                      {pick ? <img className={s.photoThumb} src={pick.url} alt="" /> : <span className={s.photoThumb} data-empty="" aria-hidden="true" />}
+                      <label className={s.photoLabel}>
+                        <span>{v.label}</span>
+                        <select className={s.priceInput} value={pick ? v.mediaId : ""} aria-label={`Photo for ${v.label}`} onChange={(e) => { set(setValueMedia(options, axis.key, v.id, e.target.value || null)); announce(e.target.value ? `Photo chosen for ${v.label}.` : `Photo cleared for ${v.label}.`); }}>
+                          <option value="">No photo</option>
+                          {photos.map((ph, n) => <option key={ph.id} value={ph.id}>Photo {n + 1}</option>)}
+                        </select>
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         )}
         <div className={s.addRow}>
           <div className={ed.field}>
