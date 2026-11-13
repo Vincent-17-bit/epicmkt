@@ -1,5 +1,5 @@
 import { ItemHeader } from "@epicmkt/ui";
-import { stateLabels } from "../../lib/itemView.js";
+import { stateLabels, variantOverrides } from "../../lib/itemView.js";
 import styles from "./Header.module.css";
 
 // Header slot: brand, title, short description and price. The title is the page's heading (h1 on a page, h2 in the sheet) and takes
@@ -7,7 +7,7 @@ import styles from "./Header.module.css";
 // charger kind show as text badges above the brand.
 export default function Header({ ctx, slot }) {
   if (!slot?.item) return null;
-  const labels = stateLabels(slot.item, ctx?.option?.variant?.specOverrides);
+  const labels = stateLabels(slot.item, variantOverrides(ctx?.option?.variant));
   return (
     <>
       {labels.length > 0 && (

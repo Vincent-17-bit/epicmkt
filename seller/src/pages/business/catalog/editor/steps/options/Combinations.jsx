@@ -1,5 +1,7 @@
 import { useId } from "react";
-import { formatKes as kes, liveRows, priceWarnings, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlus, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { OPTION_LIMITS, SPEC_GROUPS, formatKes as kes, liveRows, priceWarnings, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
 import PriceTools from "./PriceTools.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
@@ -64,6 +66,29 @@ export default function Combinations({ options, set, errors = {}, announce, item
                 {!hidePrice && warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}
                 {err("specs") && <span className={s.cellError} role="alert">{err("specs")}</span>}
               </div>
+              {r.sold && !options.axes.some((a) => a.dependsOn) && (
+                <details className={s.diff} open={(r.specs ?? []).length > 0 || undefined}>
+                  <summary>Details that differ{(r.specs ?? []).length > 0 ? ` (${r.specs.length})` : ""}<span className={ed.sr}>: {name}</span></summary>
+                  <p className={s.hint}>Buyers see these rows change when they pick {name}.</p>
+                  {(r.specs ?? []).length > 0 && (
+                    <ul className={s.specRows}>
+                      {r.specs.map((sp, i) => {
+                        const edit = (patch) => set(setRow(options, key, { specs: r.specs.map((x, n) => (n === i ? { ...x, ...patch } : x)) }));
+                        return (
+                          <li key={i} className={s.specRow}>
+                            <div className={ed.field}><label className={ed.label} htmlFor={`${uid}-${key}-l${i}`}>Detail name</label><input id={`${uid}-${key}-l${i}`} className={ed.input} value={sp.label} maxLength={60} autoComplete="off" onChange={(e) => edit({ label: e.target.value })} /></div>
+                            <div className={ed.field}><label className={ed.label} htmlFor={`${uid}-${key}-v${i}`}>Value for {name}</label><input id={`${uid}-${key}-v${i}`} className={ed.input} value={sp.value} maxLength={200} autoComplete="off" onChange={(e) => edit({ value: e.target.value })} /></div>
+                            <button type="button" className={s.chipBtn} style={{ inlineSize: "var(--tap)", blockSize: "var(--tap)" }} aria-label={`Remove detail ${sp.label || i + 1} for ${name}`} onClick={() => set(setRow(options, key, { specs: r.specs.filter((_, n) => n !== i) }))}><FontAwesomeIcon icon={faTrashCan} aria-hidden="true" /></button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  <button type="button" className={s.pill} disabled={(r.specs ?? []).length >= OPTION_LIMITS.specs} onClick={() => set(setRow(options, key, { specs: [...(r.specs ?? []), { group: SPEC_GROUPS[0], label: "", value: "" }] }))}>
+                    <FontAwesomeIcon icon={faPlus} aria-hidden="true" />Add a detail for {name}
+                  </button>
+                </details>
+              )}
               <div className={s.comboFoot}>
                 <label className={s.check}>
                   <input type="checkbox" checked={!r.sold} onChange={(e) => { set(setSold(options, key, !e.target.checked)); announce(`${name} ${e.target.checked ? "marked not sold" : "back on sale"}.`); }} />

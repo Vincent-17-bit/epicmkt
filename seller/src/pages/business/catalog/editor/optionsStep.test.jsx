@@ -60,6 +60,24 @@ describe("Options step", () => {
     expect(screen.getByText(/2 combinations/)).toBeInTheDocument();
   });
 
+  it("lets one combination carry its own detail rows and saves them", async () => {
+    const { user, spy } = setup();
+    await addAxis(user, "Colour");
+    await addValues(user, "Colour", "Black, Grey");
+    const summary = screen.getAllByText(/^Details that differ/)[0];
+    await user.click(summary);
+    await user.click(screen.getByRole("button", { name: /^Add a detail for Black$/ }));
+    await user.type(screen.getByLabelText("Detail name"), "Compatible devices");
+    await user.type(screen.getByLabelText("Value for Black"), "Camera");
+    expect(spy.current.options.rows[0].specs).toEqual([{ group: expect.any(String), label: "Compatible devices", value: "Camera" }]);
+    expect(spy.current.options.rows[1].specs ?? []).toEqual([]);
+    const payload = optionsPayload(spy.current.options);
+    expect(payload.variants[0].specs).toHaveLength(1);
+    expect(payload.variants[1].specs).toBeUndefined();
+    await user.click(screen.getByRole("button", { name: "Remove detail Compatible devices for Black" }));
+    expect(spy.current.options.rows[0].specs).toEqual([]);
+  });
+
   it("refuses a duplicate value and says so", async () => {
     const { user } = setup();
     await addAxis(user, "Colour");

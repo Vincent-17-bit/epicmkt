@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ItemDetails, ItemSpecs } from "@epicmkt/ui";
 import { t as clientT } from "../../i18n/index.js";
-import { specGroupsFor, topHighlights } from "../../lib/itemView.js";
+import { specGroupsFor, topHighlights, variantOverrides } from "../../lib/itemView.js";
 import ClientItemSpecs from "../ItemSpecs.jsx";
 import DetailsTabs from "./DetailsTabs.jsx";
 import styles from "./DetailsTabs.module.css";
@@ -14,8 +14,7 @@ function TypedDetails({ ctx, slot }) {
   const [reveal, setReveal] = useState(0);
   const category = ctx?.business?.category;
   const attributes = ctx?.business?.attributes;
-  // TODO(contract:3.2) variants[].specOverrides is not mapped into the client item yet
-  const overrides = ctx?.option?.variant?.specOverrides;
+  const overrides = variantOverrides(ctx?.option?.variant);
   const groups = specGroupsFor({ item, category, attributes, overrides });
   const top = topHighlights(groups);
   const hasSpecs = groups.length > 0 || (item.includes?.length ?? 0) > 0 || Boolean(item.terms);
