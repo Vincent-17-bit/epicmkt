@@ -192,6 +192,9 @@ test("kinds are read from the type and item names: drinks, bakery, wood and furn
   assert.equal(k("Shoes"), "shoe");
   assert.equal(k("Clothing", "Kitenge dress"), "clothing");
   assert.equal(k("Pens", "Blue pen"), null);
+  for (const n of ["Dior perfume", "Rose fragrance", "Cologne", "Body spray deodorant"]) assert.equal(k(null, n), "drink", n);
+  for (const n of ["Crown paint", "Bamburi cement", "Wood screws", "Steel nails", "Electric cable", "Copper wire", "Power tools", "Hex bolts"]) assert.equal(k(null, n), "hardware", n);
+  assert.equal(k("Furniture", "Wooden table"), "dimensions");
   assert.ok(GUIDE_KINDS.every((x) => GUIDE_COLUMN_IDEAS[x.id]?.length));
   assert.ok(GUIDE_TEMPLATES.every((t) => t.columns[0] === "Size" && t.columns.length <= GUIDE_LIMITS.columns));
 });
@@ -276,4 +279,11 @@ test("a Size row in the specifications opens the guide step; other rows do not",
   assert.equal(hasSizeSpec([{ label: " sizes " }]), true);
   assert.equal(hasSizeSpec([{ label: "Color" }, { label: "Screen size" }, { label: "Capacity" }]), false);
   assert.equal(hasSizeSpec(undefined), false);
+});
+
+test("hardware tables never offer a cm/inch switch or convert their numbers", () => {
+  for (const tpl of GUIDE_TEMPLATES.filter((x) => x.kind === "hardware" || x.id === "perfume")) {
+    assert.equal(tpl.unit, null, tpl.id);
+    assert.equal(hasLengthColumn({ columns: tpl.columns }), false, tpl.id);
+  }
 });

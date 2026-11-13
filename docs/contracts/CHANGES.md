@@ -438,3 +438,10 @@ Entry format:
 - What changed: the seller "Size guide" step now also appears when the Specifications section has a Size row, and the Details step shows a "Does your item come in sizes?" card with an "Add a size guide" button for any item. An unknown item kind shows every kind's starting table up front. Buyers see a standalone "Size chart" link on items that have a guide but no size picker; the size axis detection no longer mistakes Volume/Weight amounts for colours.
 - Who must act: none (redeploy the seller and client apps).
 - Request files: none
+
+## 2026-11-13 1.13: size guides for perfumes, paint, cement, nails, screws, bolts, wire, cable and tools
+- Contract: v1 (additive, no migration)
+- Lane / author: seller (shared)
+- What changed: perfume, fragrance, cologne, parfum and deodorant names now get the drink (volume) table, with a new "Perfumes and sprays" table. A new "Hardware, paint and tools" kind (paint, cement, nails, screws, bolts, wire, cable, tools and similar names) with tables for paint and liquids, cement and bulk, fasteners, wire and cable, and tools. Hardware tables have no length columns, so buyers never see a cm/inch switch on them.
+- Who must act: none (redeploy).
+- Request files: none
