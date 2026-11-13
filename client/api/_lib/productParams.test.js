@@ -40,4 +40,30 @@ describe("productParams", () => {
     expect(back.filters).toMatchObject({ q: "bread", sort: "price_asc", max: "500", categories: ["bakery"], flash: true, openNow: true });
     expect(back.page).toBe(3);
   });
+
+  it("reads psize and prange, dropping unknown scales, choice scales used as ranges, and bad numbers", () => {
+    const r = parse("op=page&psize=shoe%3Aeu%3A42,bogus%3A1,nocolon,apparel-alpha%3AM&prange=length%3A5-10,shoe%3A1-2,screen-inch%3Aabc-5,screen-inch%3A32-");
+    expect(r.filters.sizes).toEqual(["apparel-alpha:M", "shoe:eu:42"]);
+    expect(r.filters.ranges).toEqual({ length: { min: "5", max: "10" }, "screen-inch": { min: "32", max: "" } });
+  });
+
+  it("caps what a visitor can send for sizes", () => {
+    const many = Array.from({ length: 200 }, (_, i) => `shoe:eu:${i + 20}`).join(",");
+    expect(parse(`op=page&psize=${many}`).filters.sizes.length).toBeLessThanOrEqual(24);
+  });
+
+  it("sizes make one canonical url, whatever order they were picked in, and round trip", () => {
+    const a = canonicalQuery("page", { ...EMPTY_FILTERS, sizes: ["shoe:eu:42", "apparel-alpha:M"], ranges: { length: { min: "5", max: "10" }, "screen-inch": { min: "", max: "55" } } });
+    const b = canonicalQuery("page", { ...EMPTY_FILTERS, sizes: ["apparel-alpha:M", "shoe:eu:42"], ranges: { "screen-inch": { min: "", max: "55" }, length: { min: "5", max: "10" } } });
+    expect(a).toBe(b);
+    expect(a).toBe("op=page&prange=length%3A5-10%2Cscreen-inch%3A-55&psize=apparel-alpha%3AM%2Cshoe%3Aeu%3A42");
+    const back = parse(a).filters;
+    expect(back.sizes).toEqual(["apparel-alpha:M", "shoe:eu:42"]);
+    expect(back.ranges).toEqual({ length: { min: "5", max: "10" }, "screen-inch": { min: "", max: "55" } });
+  });
+
+  it("facets never carry the visitor's size filters (one cacheable url), and no sizes adds nothing", () => {
+    expect(canonicalQuery("facets", { ...EMPTY_FILTERS, sizes: ["shoe:eu:42"] })).toBe("op=facets");
+    expect(canonicalQuery("page", EMPTY_FILTERS)).toBe("op=page");
+  });
 });

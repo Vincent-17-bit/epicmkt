@@ -59,13 +59,21 @@ async function fromRpc() {
 
 // Fallback when the function is not installed yet or is slow: page the public views, with narrow columns.
 async function fromViews() {
-  const [rows, businesses, sales] = await Promise.all([
+  const [rows, businesses, sales, sizeValues] = await Promise.all([
     restAll(
       "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
-    restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => [])
+    restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => []),
+    // The stored scale values of every item's sizes, in one call (migration 0104), so the Size filter keeps working on this path. If the
+    // function is missing or slow there are simply no size facets; nothing else changes.
+    rpc("public_item_size_values", { p_limit: MAX_ITEMS }, { timeoutMs: 8_000 })
+      .then((map) => (map && typeof map === "object" && !Array.isArray(map) ? map : {}))
+      .catch((error) => {
+        console.warn(`[products] public_item_size_values unavailable (${error?.message ?? error}); size filters are off on this path`);
+        return {};
+      })
   ]);
   const best = new Map();
   for (const s of sales) {
@@ -88,6 +96,7 @@ async function fromViews() {
       created_at: r.created_at,
       image_path: r.image_paths?.[0] ?? null,
       video_paths: r.video_paths?.length ? r.video_paths : null,
+      size_values: Array.isArray(sizeValues[r.id]) && sizeValues[r.id].length ? sizeValues[r.id] : null,
       sale_id: s?.id ?? null,
       sale_price: s?.sale_price ?? null,
       sale_starts_at: s?.starts_at ?? null,
@@ -142,6 +151,8 @@ function buildSnapshot({ items, businesses, truncated }) {
       imagePath: row.image_path ?? null,
       imageUrl: row.image_path ?? null,
       videoPaths: Array.isArray(row.video_paths) ? row.video_paths : [],
+      // Stored scale values of the item's sizes (migration 0104): what the Size filter groups and counts. Absent for an item with none.
+      ...(Array.isArray(row.size_values) && row.size_values.length ? { sizeValues: row.size_values } : {}),
       priceType: row.price_type ?? "fixed",
       unit: row.unit ?? null,
       regularPrice: regular,
@@ -256,7 +267,7 @@ const PAGE_CACHE = "public, max-age=15, s-maxage=60, stale-while-revalidate=300,
 const FACET_CACHE = "public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=3600";
 
 // Only what the grid shows leaves the function: no search text, no internal ids.
-const outgoing = ({ hay: _hay, ...product }) => product;
+const outgoing = ({ hay: _hay, sizeValues: _sizeValues, ...product }) => product;   // sizeValues only feed the filters here, so they are not sent per product
 
 export default async function handler(req) {
   if (req.method !== "GET" && req.method !== "HEAD") return reply({ error: "method_not_allowed" }, 405, "no-store");

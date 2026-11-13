@@ -286,7 +286,8 @@ test("a type's usual options are added in one step, skipping ones already there 
   const r = addTypeAxes(emptyOptionsForm(), defs);
   assert.equal(r.added, 2);
   assert.equal(r.options.axes[1].scale, "storage");
-  assert.ok(!("scale" in optionsPayload(addValue(r.options, "storage", "128 GB").options, true).axes[1]), "the scale is form-only");
+  // Since migration 0100 stores them, the axis's scale goes to the database with the axis (it used to be form-only: OPTION_SCALES_STORED).
+  assert.equal(optionsPayload(addValue(r.options, "storage", "128 GB").options, true).axes[1].scale, "storage");
   assert.equal(addTypeAxes(r.options, defs).added, 0);
   assert.equal(addTypeAxes(emptyOptionsForm(), defs, effectiveLimits({ axes: 1 })).added, 1);
 });
@@ -327,4 +328,54 @@ test("a price far from the others gets a plain warning, not an error", () => {
   assert.deepEqual(Object.keys(w), ["storage=128-gb|colour=black"]);
   assert.match(w["storage=128-gb|colour=black"], /far below/);
   assert.equal(checkOptions(o).ok, true, "a warning never blocks a save");
+});
+
+// ---- stored scales (migration 0100) ----
+import { OPTION_SCALES_STORED, hasOptionScales, stripOptionScales } from "./editor.js";
+import * as scalesApi from "../scales/index.js";
+
+const withScale = (typed) => {
+  let o = addAxis(emptyOptionsForm(), { label: "Storage", display: "button", scale: "storage" });
+  for (const raw of typed) {
+    const read = scalesApi.parse("storage", raw, {});
+    o = addValue(o, "storage", scalesApi.format(read.value), { stored: read.value }).options;
+  }
+  return o;
+};
+
+test("a value on a scale axis keeps its stored scale value, and the payload sends scale and stored", () => {
+  assert.equal(OPTION_SCALES_STORED, true);
+  const p = optionsPayload(withScale(["1024 GB", "128gb"]), true);
+  assert.equal(p.axes[0].scale, "storage");
+  assert.deepEqual(p.axes[0].values.map((v) => [v.label, v.stored]), [["1 TB", { scale: "storage", value: 1024, unit: "GB" }], ["128 GB", { scale: "storage", value: 128, unit: "GB" }]]);
+});
+
+test("a stored that belongs to another scale is not sent, and an axis without a scale sends none", () => {
+  const o = withScale(["128 GB"]);
+  o.axes[0].values[0].stored = { scale: "volume", value: 20, unit: "l" };
+  assert.equal("stored" in optionsPayload(o, true).axes[0].values[0], false);
+  const plain = addValue(addAxis(emptyOptionsForm(), { label: "Colour", display: "button" }), "colour", "Red", { stored: { scale: "storage", value: 1 } }).options;
+  const q = optionsPayload(plain, true);
+  assert.equal("scale" in q.axes[0], false);
+  assert.equal("stored" in q.axes[0].values[0], false);
+});
+
+test("reading options back keeps scale and stored, so a re-save does not lose them", () => {
+  const sent = optionsPayload(withScale(["1024 GB"]), true);
+  const back = optionsFromServer({ axes: sent.axes, variants: sent.variants.map((v) => ({ ...v, id: "x" })), defaultVariantId: null });
+  assert.equal(back.axes[0].scale, "storage");
+  assert.deepEqual(back.axes[0].values[0].stored, { scale: "storage", value: 1024, unit: "GB" });
+  assert.deepEqual(optionsPayload(back, true).axes, sent.axes);
+});
+
+test("hasOptionScales and stripOptionScales: what an older database accepts", () => {
+  const p = optionsPayload(withScale(["1024 GB"]), true);
+  assert.equal(hasOptionScales(p), true);
+  const bare = stripOptionScales(p);
+  assert.equal(hasOptionScales(bare), false);
+  assert.deepEqual(bare.axes[0].values[0], { id: p.axes[0].values[0].id, label: "1 TB" });
+  assert.equal("scale" in bare.axes[0], false);
+  assert.equal(hasOptionScales(undefined), false);
+  assert.equal(stripOptionScales(undefined), undefined);
+  assert.equal("stored" in p.axes[0].values[0], true, "the original is not changed");
 });
