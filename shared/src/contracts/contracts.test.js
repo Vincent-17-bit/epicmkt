@@ -10,7 +10,7 @@ import { emptyOptions, selectableValues, statusForChoice } from "../seller/optio
 
 const EXPECTED = [
   "fx-phone", "fx-sandisk", "fx-shoes", "fx-table", "fx-sofa", "fx-bread", "fx-water",
-  "fx-led-strip", "fx-led-bulb", "fx-printing", "fx-butcher", "fx-necklace", "fx-fragrance", "fx-legacy"
+  "fx-led-strip", "fx-led-bulb", "fx-printing", "fx-butcher", "fx-necklace", "fx-fragrance", "fx-liquor", "fx-legacy"
 ];
 const fixtures = getFixtures();
 const clone = (v) => structuredClone(v);
@@ -22,9 +22,9 @@ test("contract version is 1 and is exported from @epicmkt/shared", () => {
   assert.equal(typeof shared.getFixtures, "function");
 });
 
-test("there are exactly the 14 fixtures, with unique ids, built once", () => {
+test("there are exactly the 15 fixtures, with unique ids, built once", () => {
   assert.deepEqual(fixtures.map((f) => f.id), EXPECTED);
-  assert.equal(new Set(fixtures.map((f) => f.id)).size, 14);
+  assert.equal(new Set(fixtures.map((f) => f.id)).size, 15);
   assert.equal(getFixtures(), fixtures);
   assert.equal(getFixture("fx-phone"), fixtures[0]);
   assert.equal(getFixture("nope"), null);
@@ -47,7 +47,7 @@ for (const id of EXPECTED) {
 }
 
 test("every product type is valid, unique, and used by exactly one fixture", () => {
-  assert.equal(PRODUCT_TYPES.length, 13);
+  assert.equal(PRODUCT_TYPES.length, 14);
   for (const t of PRODUCT_TYPES) assert.deepEqual(checkProductType(t), [], t.id);
   assert.ok(PRODUCT_TYPES.every(isProductType));
   assert.equal(new Set(PRODUCT_TYPES.map((t) => t.id)).size, PRODUCT_TYPES.length);

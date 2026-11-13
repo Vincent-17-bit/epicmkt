@@ -133,6 +133,15 @@ export const PRODUCT_TYPES = [
       row("fragrance-state", "Fragrance state", "recommended", "choice", { labelSet: "fragranceState" }),
       row("notes", "Notes", "recommended")
     ]
+  },
+  {
+    id: "liquor", name: "Liquor", group: "food-drink", priceType: "from", unit: null,
+    axes: [{ key: "volume", label: "Volume", display: "button", suggested: sizes("250 ml", "500 ml", "750 ml", "1 L") }],
+    variantFields: [], itemFields: [],
+    specRows: [
+      row("authenticity", "Authenticity", "required", "choice", { labelSet: "authenticity" }),
+      row("alcohol-strength", "Alcohol strength", "recommended")
+    ]
   }
 ];
 
