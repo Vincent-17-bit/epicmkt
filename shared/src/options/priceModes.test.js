@@ -108,3 +108,12 @@ test("a combination that is not sold is reported as not sold, and can be put bac
   o = setGroupSold(o, ["storage"], { storage: "512-gb" }, false);
   assert.deepEqual(o.rows.filter((r) => !r.sold).map((r) => rowKeyOf(o, r.choice)).sort(), ["color=black|storage=512-gb", "color=blue|storage=512-gb", "color=grey|storage=512-gb"]);
 });
+
+test("a drink priced by volume: 250 ml and 500 ml each keep their own price", () => {
+  let o = emptyOptionsForm();
+  o = addAxis(o, { label: "Volume", display: "button" });
+  for (const v of ["250 ml", "500 ml"]) o = addValue(o, "volume", v).options;
+  o = setGroupPrice(o, ["volume"], { volume: "250-ml" }, "300");
+  o = setGroupPrice(o, ["volume"], { volume: "500-ml" }, "700");
+  assert.deepEqual(o.rows.map((r) => r.price), ["300", "700"]);
+});
