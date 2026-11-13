@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { CUSTOM_SIZE_STORED, checkGuide, checkOptions, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, wantsGuide, checkGuide, checkOptions, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -18,11 +18,14 @@ import { firstErrorTarget, qualityChecks } from "./model.js";
 import { useItemModel } from "./model/useItemModel.js";
 import { visibleSteps } from "./steps/index.js";
 import { useProductTypes } from "./steps/useProductTypes.js";
-import { settleBrand, linkBrand } from "./brandValue.js";
+import { settleBrand, settleSpecLinks, linkBrand } from "./brandValue.js";
+import { blockedText } from "./publishWire.js";
+import { publishIssues } from "./checks/index.js";
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const detailsKey = (f) => JSON.stringify([f.productTypeId ?? null, f.specs ?? [], f.brand ?? "", f.packSize ?? "", f.includes ?? [], f.options?.axes ?? []]);
 
 // The route element for both /business/catalog/new and /business/catalog/:itemId/edit.
 export default function ItemEditor() {
@@ -136,6 +139,10 @@ function EditorForm({ item, sections, category, business }) {
   const dirty = formDirty || media.hasQueued;
   const { blocker, allow } = useUnsavedGuard(dirty);
 
+  const type = productTypes.types.find((t) => t.id === form.productTypeId) ?? null;
+  const live = Boolean(item) && !item.draft && Boolean(item.visible);
+  const grandfathered = live && detailsKey(form) === detailsKey(JSON.parse(baseRef.current));
+
   const checks = useMemo(() => qualityChecks(form, media.photoCount), [form, media.photoCount]);
   // The steps the seller sees (a step can hide itself with visibleWhen). Everything that numbers or steps through them reads this list.
   const typeName = productTypes.types.find((t) => t.id === form.productTypeId)?.name;
@@ -233,7 +240,7 @@ function EditorForm({ item, sections, category, business }) {
   }, [form, draftId]);
 
   // ---- Save ----
-  const save = useCallback(async ({ stay }) => {
+  const save = useCallback(async ({ stay, publish = false }) => {
     if (busyRef.current) return;
     const check = validateItemForm(form);
     const optionsCheck = checkOptions(form.options);
@@ -267,23 +274,28 @@ function EditorForm({ item, sections, category, business }) {
         await api.saveItemSizeGuide(id, guidePayload(form.sizeGuide));
         hadGuide.current = Boolean(guidePayload(form.sizeGuide));
       }
-      await linkBrand(id, valueId, !!item?.brand);
+      const spec = await settleSpecLinks(form, type);
+      await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
       const { problems, leftover } = await media.flush(id);
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       // "New items start as Visible": publish a brand-new item straight away, but only when it is complete enough to show:
       // it has a picture and nothing went wrong while saving. Otherwise it stays a draft, exactly as before.
       let published = false;
-      if (isNew && catalogDefaults.start_visible && media.photoCount > 0 && problems.length === 0) {
+      let refusal = "";
+      const auto = isNew && catalogDefaults.start_visible && media.photoCount > 0;
+      if ((publish || auto) && problems.length === 0) {
         try {
           await api.bulkItems("show", [id]);
           published = true;
-        } catch { /* it stays a draft; the seller can show it from the list */ }
+        } catch (err) {
+          if (publish) refusal = blockedText(err) ?? errorText(err);
+        }
       }
       if (published) await qc.invalidateQueries({ queryKey: ["catalog"] });
-      const base = isNew ? (published ? "Item added and visible to customers." : "Item added as a draft.") : "Item saved.";
-      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : { tone: "ok", text: base };
-      if (!stay && problems.length === 0) {
+      const base = published ? (isNew ? "Item added and visible to customers." : "Item published.") : isNew ? "Item added as a draft." : "Item saved.";
+      const result = problems.length ? { tone: "error", text: `${base} ${problems.join(" ")} Retry the failed files below.` } : refusal ? { tone: "error", text: `${base} ${refusal}` } : { tone: "ok", text: base };
+      if (!stay && problems.length === 0 && !refusal) {
         allow();
         navigate(backTo, { state: { notice: result } });
         return;
@@ -309,12 +321,12 @@ function EditorForm({ item, sections, category, business }) {
       replace(next);
       setNotice(result);
     } catch (err) {
-      setError(errorText(err));
+      setError(blockedText(err) ?? errorText(err));
     } finally {
       busyRef.current = false;
       setBusy(false);
     }
-  }, [form, item, media, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo, catalogDefaults]);
+  }, [form, type, item, media, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo, catalogDefaults]);
 
   // A save from the new-item route lands on the edit route; show what happened there.
   useEffect(() => {
@@ -370,7 +382,9 @@ function EditorForm({ item, sections, category, business }) {
 
   const saveState = busy ? "Saving..." : dirty ? "Unsaved changes" : isNew ? "New item" : "All changes saved";
 
-  const stepProps = { form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo };
+  const onPublish = isNew || !live ? () => save({ stay: true, publish: true }) : undefined;
+  const sizeChart = { needed: wantsGuide({ guide: null, options: form.options, typeName, itemName: form.name }), has: Boolean(form.sizeGuide) };
+  const stepProps = { form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart };
   const renderSection = (st) => <st.component key={st.id} {...stepProps} />;
 
   const stepButtons = (variant) => (
@@ -461,7 +475,7 @@ function EditorForm({ item, sections, category, business }) {
         {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
-            <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" />
+            <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" issues={publishIssues(form, { type, grandfathered, sizeChart })} />
           </aside>
         )}
       </div>

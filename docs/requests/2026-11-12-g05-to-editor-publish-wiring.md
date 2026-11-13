@@ -1,7 +1,7 @@
 # Wire the publish checks into the item editor shell
 
 - From: group 5 (5.7)      - To: the item editor shell (ItemEditor.jsx), groups 3 and 4 (media per option, size charts)      - Date: 2026-11-12
-- Status: open
+- Status: done for items 1 to 3 (ItemEditor sends onPublish, grandfathered and the side-panel issues); open only for colourPhotos and sizeChart, which need the option photo and size chart steps from groups 3 and 4
 
 ## Done in 5.7
 `ReviewStep` / `ReviewSection` now show the type's blockers (icon and words, each a jump to its field), the details score and suggestions, and a Publish button that is disabled while anything blocks. `checks/publish.js` (`publishIssues`) holds the logic.

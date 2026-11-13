@@ -23,7 +23,7 @@ const fn = async (name, body) => {
 
 const rpc = async (name, args) => {
   const { data, error } = await need().rpc(name, args);
-  if (error) throw new ApiError((error.message ?? "request_failed").split(":")[0], error.message);
+  if (error) throw new ApiError((error.message ?? "request_failed").split(":")[0], error.message, { details: error.details });
   return data;
 };
 
