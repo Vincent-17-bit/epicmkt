@@ -239,14 +239,14 @@ describe("Add item page and Type step", () => {
     const { router } = await signedInApp("/business/catalog/add");
     await screen.findByRole("heading", { level: 1, name: "What are you adding?" });
     await screen.findByRole("searchbox", { name: "Search for what you sell" });
-    await user.click(await screen.findByRole("button", { name: /Clothing/ }));
-    await user.click(within(screen.getByRole("list", { name: "Clothing" })).getByRole("button", { name: /Dress/ }));
+    await user.click(await screen.findByRole("button", { name: /Phones/ }));
+    await user.click(within(screen.getByRole("list", { name: "Phones" })).getByRole("button", { name: /^Phone/ }));
     await screen.findByRole("heading", { level: 1, name: "Add item" });
     expect(router.state.location.pathname).toBe("/business/catalog/new");
-    expect(router.state.location.state.productTypeId).toBe("pt-dress");
+    expect(router.state.location.state.productTypeId).toBe("phone");
     const step = document.getElementById("sec-type");
     expect(step).not.toBeNull();
-    expect(within(step).getByText("Dress")).toBeInTheDocument();
+    expect(within(step).getByText("Phone")).toBeInTheDocument();
   });
 
   it("goes on as Other goods with no type, and the editor shows Other goods", async () => {
@@ -264,8 +264,8 @@ describe("Add item page and Type step", () => {
     viewport(1000);
     const user = userEvent.setup();
     await signedInApp("/business/catalog/add");
-    await user.click(await screen.findByRole("button", { name: /Clothing/ }));
-    await user.click(within(screen.getByRole("list", { name: "Clothing" })).getByRole("button", { name: /Dress/ }));
+    await user.click(await screen.findByRole("button", { name: /Phones/ }));
+    await user.click(within(screen.getByRole("list", { name: "Phones" })).getByRole("button", { name: /^Phone/ }));
     const step = () => document.getElementById("sec-type");
     await waitFor(() => expect(step()).not.toBeNull());
     await user.click(await within(step()).findByRole("button", { name: "Change type" }));
@@ -274,15 +274,15 @@ describe("Add item page and Type step", () => {
     await user.click(within(within(picker).getByRole("list", { name: "Shoes" })).getByRole("button"));
     const ask = await screen.findByRole("dialog", { name: "Change the type?" });
     expect(ask).toHaveTextContent("will reset");
-    await user.click(within(ask).getByRole("button", { name: "Keep Dress" }));
+    await user.click(within(ask).getByRole("button", { name: "Keep Phone" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Change the type" })).not.toBeInTheDocument());
-    expect(within(step()).getByText("Dress")).toBeInTheDocument();
+    expect(within(step()).getByText("Phone")).toBeInTheDocument();
     await user.click(within(step()).getByRole("button", { name: "Change type" }));
     const again = await screen.findByRole("dialog", { name: "Change the type" });
     await user.click(within(again).getByRole("button", { name: /Shoes/ }));
     await user.click(within(within(again).getByRole("list", { name: "Shoes" })).getByRole("button"));
-    await user.click(within(await screen.findByRole("dialog", { name: "Change the type?" })).getByRole("button", { name: "Change to Shoes" }));
-    await waitFor(() => expect(within(step()).getByText("Shoes")).toBeInTheDocument());
+    await user.click(within(await screen.findByRole("dialog", { name: "Change the type?" })).getByRole("button", { name: "Change to Shoes (EU sizes)" }));
+    await waitFor(() => expect(within(step()).getByText("Shoes (EU sizes)")).toBeInTheDocument());
   });
 
   it("leaves an item with no type exactly as before: no Type step", async () => {

@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, specIssues, storedOptions } from "@epicmkt/shared";
+import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
 import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
@@ -330,6 +330,8 @@ export const getItemMedia = async (itemId) => {
   const seq = sequence(item);
   return { media: seq.map((m) => ({ id: mediaUuid(m.path), path: m.path, kind: m.kind, sort: m.sort, ...(demoDurations.has(m.path) ? { duration: demoDurations.get(m.path) } : {}) })), cover: seq.find((m) => m.kind === "image")?.path ?? null, limits: mediaLimitsFor(item, seq) };
 };
+export const sellerProductTypes = async () => structuredClone(sellerProductTypesPayload());
+export const sellerRequestType = async () => crypto.randomUUID();
 export const getMediaLimits = async () => {
   signedIn();
   await wait();

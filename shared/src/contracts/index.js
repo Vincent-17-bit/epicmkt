@@ -2,4 +2,5 @@
 export * from "./types.js";
 export * from "./productTypes.js";
 export * from "./validators.js";
+export * from "./placement.js";
 export { getFixtures, getFixture, FIXTURE_BUSINESS_ID, fixtureBusinessCard } from "./fixtures/index.js";
