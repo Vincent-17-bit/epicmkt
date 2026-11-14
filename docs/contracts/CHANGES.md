@@ -553,3 +553,10 @@ Entry format:
 - New RPC `admin_import_option_value(kind, label, fields)` (migration 0112; reviewer or owner; audited). Everything else reuses the existing save calls, so each change has its own audit row.
 - An import is not one transaction. If a step is refused it stops, says how far it got, and what was applied stays applied; reading the kit again lists only what is left.
 - Not done here: not checked in a real browser; the open values of a kit are global, since values belong to no category.
+
+## 2026-11-15 11.1: the database hooks, joined (migration 0113)
+
+- Checked, not changed: restriction (`items_restricted_type`), tier storage, flash validation (`flash_check_variants`), the price range and department columns, and the publish gate are triggers or steps of `seller_save_item` that every writer already passes through, so `seller_check_item` sees them too. `supabase/tests/wiring-fixtures.test.mjs` proves it with the phone, SanDisk, bread and printing fixtures.
+- Added: `seller_check_item` appends the 3D issues (`media3d_view3d_missing_poster`, `media3d_spin_too_few_frames`, `media3d_spin_too_many_frames`, level warning) when asked for the publish view. `item_options_apply` accepts only photos and videos as a value's or variant's media. A value removed from an item is dropped from its photos' `option_ids`. A relation must point at a type or department that exists, and deleting a type or department deletes its relations.
+- Not a foreign key, on purpose: media option ids and relation targets. The value lists live inside `items.option_axes`, and a relation names its target by kind, so a plain constraint cannot express them; triggers do. A direct insert of media with unknown option ids stays allowed as 0101 left it (its own test relies on it).
+- Closes the open points of `docs/requests/2026-11-12-g06-to-g03-check-media3d-and-media-ids.md` and the `seller_check_item` half of `...g05-to-j01-publish-gate-wiring.md`.
