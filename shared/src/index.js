@@ -70,3 +70,6 @@ export * from "./specRules/index.js";
 
 // A17: 3D data, media roles and signed upload tickets (MEDIA3D, TICKET_KINDS, checkTicketRequest, inspectGlb, buildView3d, resolveMedia3d).
 export * from "./media3d.js";
+
+// Product relations ("goes with") and related ranking (Prompt 8.1)
+export * from "./related/index.js";

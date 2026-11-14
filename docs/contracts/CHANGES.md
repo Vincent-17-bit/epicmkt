@@ -492,3 +492,16 @@ Entry format:
 - Not changed: spec rows stay on `/admin/spec-rules`. Saving a type does not touch items that are already live.
 - Who must act: nobody.
 - Request files: none
+
+## 2026-11-14 8.1: product relations and related ranking (migration 0109)
+
+- Contract: v1 (additive)
+- Lane / author: Group 8, Prompt 8.1
+- What changed:
+  - `product_relations` (type or department A "goes with" type or department B, weight 0-10, active). Ids are plain text with no foreign key (Prompt 11.1 adds them). Public read of active rows; written only by the admin functions.
+  - `admin_product_relations_list()` (reviewer, support, owner), `admin_save_product_relation(from_kind, from_id, to_kind, to_id, weight, active)` and `admin_delete_product_relation(id)` (owner only), all audited as `product_relation.create|update|delete`.
+  - `related_item_candidates(item_id, limit)` (anon): `{ item, relations, candidates }` for the buyer page; `null` when the item is not public. Candidates are listed, visible items of the related types and departments, this shop's first, never the item itself; sold-out, draft and hidden items are left out by `public_items`.
+  - `rankRelated(item, candidates, { relations, page, pageSize })` in `shared/src/related`, exported from `@epicmkt/shared`: returns `{ items, page, pageSize, hasMore, total }`. At least 1 in 5 results of each page come from the viewed item's shop (rounded up, never more than that shop has); each result carries `fromThisShop`. Pages never repeat or skip; short pages are never padded.
+- Not done (other prompts): the `items.getRelated(itemId, page)` client wrapper, the Recommend UI (8.5), the admin page (8.7).
+- Who must act: apply migration 0109.
+- Request files: `docs/requests/2026-11-14-8-1-to-client-items-get-related.md`
