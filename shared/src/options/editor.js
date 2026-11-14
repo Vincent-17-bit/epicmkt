@@ -39,6 +39,15 @@ export const AXIS_PRESETS = [
   { label: "Material", display: "text-card" },
 ];
 
+// Whether an axis's `scale` and each value's `stored` are sent to the database (migration 0100_option_scales_sizes.sql stores them).
+// While false the scale stays form-only, as before. Switch it off in one place if the migration has not been applied yet.
+export const OPTION_SCALES_STORED = true;
+
+/** true when a save payload carries any scale data. */
+export const hasOptionScales = (payload) => Boolean(payload?.axes?.some((a) => a.scale || a.values?.some((v) => v.stored)));
+/** The same payload without any scale data: what an older database (no migration 0100 yet) accepts. */
+export const stripOptionScales = (payload) => (!payload ? payload : { ...payload, axes: payload.axes.map(({ scale: _s, ...a }) => ({ ...a, values: a.values.map(({ stored: _v, ...v }) => v) })) });
+
 // A limit the shop's plan lowers (never raises). `plan` is { axes?, values?, variants? }; anything missing keeps the hard limit.
 export const effectiveLimits = (plan = {}) => {
   const pick = (hard, v) => (Number.isInteger(v) && v > 0 && v < hard ? v : hard);
@@ -299,7 +308,7 @@ export const summaryText = (s, fmt = (n) => `KES ${n.toLocaleString("en-KE")}`) 
 
 // What seller_item_options returns -> the form shape. Prices and stock become typed text.
 export const optionsFromServer = (data) => {
-  const axes = (data?.axes ?? []).map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
+  const axes = (data?.axes ?? []).map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), ...(a.scale && { scale: a.scale }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }), ...(v.stored && { stored: v.stored }) })) }));
   const text = (n) => (n === null || n === undefined ? "" : String(n));
   const sold = (data?.variants ?? []).map((v) => ({ choice: v.choice, price: text(v.price), salePrice: text(v.salePrice), stock: text(v.stock), sold: true, specs: v.specs ?? [], id: v.id, sku: v.sku ?? undefined, status: v.status, mediaIds: v.mediaIds ?? [] }));
   const base = reconcileRows({ axes, rows: sold, defaultKey: null });
@@ -318,7 +327,8 @@ export const optionsPayload = (options, hadOptions = false) => {
 };
 
 const buildPayload = (options) => {
-  const axes = options.axes.map((a) => ({ key: a.key, label: String(a.label ?? "").trim(), display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), values: a.values.map((v) => ({ id: v.id, label: String(v.label ?? "").trim(), ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }) })) }));
+  const stored = (a) => OPTION_SCALES_STORED && Boolean(a.scale);
+  const axes = options.axes.map((a) => ({ key: a.key, label: String(a.label ?? "").trim(), display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), ...(stored(a) && { scale: a.scale }), values: a.values.map((v) => ({ id: v.id, label: String(v.label ?? "").trim(), ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }), ...(stored(a) && v.stored && v.stored.scale === a.scale && { stored: v.stored }) })) }));
   const sold = liveRows(options).filter((r) => r.sold);
   const variants = sold.map((r) => {
     const out = { choice: r.choice };

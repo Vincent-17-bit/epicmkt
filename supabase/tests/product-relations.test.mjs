@@ -20,9 +20,10 @@ before(async () => {
       ('soundbar', 'soundbar', 'Soundbar', 'electronics'), ('smart-tv', 'smart-tv', 'Smart TV', 'electronics'),
       ('speakers', 'speakers', 'Speakers', 'electronics'), ('hdmi-cable', 'hdmi-cable', 'HDMI cable', 'cables-power'),
       ('candles', 'candles', 'Candles', 'home-kitchen')`);
+  // Shop A's TV is made a minute newer: all rows share one now(), and equal scores then fall to a random id, so the rank was a coin toss
   // shop A sells the soundbar, a TV and a gone TV; shop B sells a TV, a speaker, a cable, candles and a draft TV
   await sql(c, `${item("Samsung soundbar", ids.bizA, "soundbar")};
-    ${item("Shop A TV", ids.bizA, "smart-tv")};
+    ${item("Shop A TV", ids.bizA, "smart-tv", "created_at=now() + interval '1 minute'")};
     ${item("Sold out TV", ids.bizA, "smart-tv", "availability='out_of_stock'")};
     ${item("Shop B TV", ids.bizB, "smart-tv")};
     ${item("Shop B speaker", ids.bizB, "speakers")};

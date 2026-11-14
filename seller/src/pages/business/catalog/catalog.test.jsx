@@ -522,7 +522,7 @@ describe("quick actions", () => {
     await user.clear(within(edit).getByLabelText("Brand (optional)"));
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ brand: null, packSize: "Serves 10", highlights: [{ title: "Fresh", text: "Baked the same day" }] }));
-  });
+  }, 30_000);   // about 30 typed steps: roughly 7 s, over the 5 s default
 
   it("adds photos to a new item, to an existing item, and removes one", async () => {
     const user = userEvent.setup();

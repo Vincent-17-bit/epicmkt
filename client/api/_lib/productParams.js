@@ -5,6 +5,7 @@
 
 import { EMPTY_FILTERS, SORTS } from "../../src/lib/productFilters.js";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../src/lib/productQuery.js";
+import { parseSizes, writeSizes } from "../../src/lib/sizeFilters.js";
 
 const OPS = new Set(["page", "facets", "counts"]);
 const SORT_IDS = new Set(SORTS.map((s) => s.id));
@@ -33,6 +34,11 @@ export function parseRequest(searchParams) {
     towns: list(get("town"))
   };
   for (const [name, key] of Object.entries(FLAGS)) filters[name] = get(key) === "1";
+  // Sizes: the same two parameters as the page address (psize, prange), read by the Size filter's own parser, which drops unknown scales and
+  // bad numbers. The lists are capped, like every other list here.
+  const sized = parseSizes(new URLSearchParams({ psize: String(get("psize") ?? "").slice(0, 900), prange: String(get("prange") ?? "").slice(0, 200) }));
+  filters.sizes = [...new Set(sized.sizes)].sort().slice(0, 24);
+  filters.ranges = Object.fromEntries(Object.entries(sized.ranges).sort(([a], [b]) => a.localeCompare(b)).slice(0, 4));
   const page = Math.min(10_000, Math.max(1, Math.round(Number(get("page"))) || 1));
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.round(Number(get("pageSize"))) || PAGE_SIZE));
   return { op, filters, page, pageSize };
@@ -48,6 +54,9 @@ export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize
     if (filters.categories?.length) pairs.push(["cat", [...new Set(filters.categories)].sort().join(",")]);
     if (filters.towns?.length) pairs.push(["town", [...new Set(filters.towns)].sort().join(",")]);
     for (const [name, key] of Object.entries(FLAGS)) if (filters[name]) pairs.push([key, "1"]);
+    // Sorted, so the same sizes picked in another order are the same URL (the CDN caches by URL).
+    const sized = writeSizes(new URLSearchParams(), { sizes: [...new Set(filters.sizes ?? [])].sort(), ranges: Object.fromEntries(Object.entries(filters.ranges ?? {}).sort(([a], [b]) => a.localeCompare(b))) });
+    for (const key of ["psize", "prange"]) if (sized.has(key)) pairs.push([key, sized.get(key)]);
   }
   if (op === "page") {
     if (page > 1) pairs.push(["page", String(page)]);
