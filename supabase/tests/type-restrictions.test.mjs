@@ -184,12 +184,23 @@ test("a visitor who is not a seller cannot save with a type", async () => {
 
 test("seller_product_types leaves out types the shop may not sell and keeps the contract shape", async () => {
   const idsFor = async (k) => (await as(who(k), `select seller_product_types() as r`))[0].r;
+  const names = async (k) => (await idsFor(k)).types.map((t) => t.id);
+  // Not an exact list: the seeded general types (fragrance, stationery, liquor, bread, phone ...) grow over time. The rule is what is tested.
+  const open = ["fragrance", "stationery", "liquor"];           // no restriction: every shop is offered them
   const boutique = await idsFor("boutique");
-  // "liquor" (migration 0105) has no restriction, like fragrance and stationery, so every shop is offered it.
-  assert.deepEqual(boutique.types.map((t) => t.id).sort(), ["fragrance", "liquor", "stationery"]);
+  const chemist = await names("chemist");
+  const agrovet = await names("agrovet");
+  const boutiqueIds = boutique.types.map((t) => t.id);
+  for (const id of open) for (const list of [boutiqueIds, chemist, agrovet]) assert.ok(list.includes(id), `${id} is offered to every shop`);
+  for (const id of ["prescription-medicine", "agrochemicals", "vet-medicine"]) assert.ok(!boutiqueIds.includes(id), `a boutique is not offered ${id}`);
+  assert.ok(chemist.includes("prescription-medicine") && !chemist.includes("agrochemicals") && !chemist.includes("vet-medicine"));
+  assert.ok(agrovet.includes("agrochemicals") && agrovet.includes("vet-medicine") && !agrovet.includes("prescription-medicine"));
+  // The general rule, for every shop: a type that is restricted lists the shop's own category.
+  for (const k of ["boutique", "chemist", "agrovet"]) {
+    const category = (await sql(c, `select category_id from businesses where id = $1`, [shops[k][1]]))[0].category_id;
+    for (const t of (await idsFor(k)).types) if (t.restrictedTo) assert.ok(t.restrictedTo.includes(category), `${t.id} is restricted to ${t.restrictedTo} but was offered to a ${category}`);
+  }
   assert.ok(boutique.departments.length > 20 && boutique.departments[0].id && boutique.departments[0].name);
-  assert.deepEqual((await idsFor("chemist")).types.map((t) => t.id).sort(), ["fragrance", "liquor", "prescription-medicine", "stationery"]);
-  assert.deepEqual((await idsFor("agrovet")).types.map((t) => t.id).sort(), ["agrochemicals", "fragrance", "liquor", "stationery", "vet-medicine"]);
   const rx = (await idsFor("chemist")).types.find((t) => t.id === "prescription-medicine");
   assert.deepEqual(rx.restrictedTo, ["chemist"]);
   assert.equal(rx.departmentId, "medicine-health");
