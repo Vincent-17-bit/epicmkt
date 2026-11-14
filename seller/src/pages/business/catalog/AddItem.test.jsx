@@ -193,6 +193,13 @@ describe("picker", () => {
       expect(onRequestType).toHaveBeenCalledWith({ name: "hair dryer", note: "for salons" });
     });
 
+    it("offers Other goods directly without opening the request form", async () => {
+      const { user, onRequestType, onOther } = show(BOUTIQUE);
+      await user.click(screen.getByRole("button", { name: "Add as Other goods" }));
+      expect(onOther).toHaveBeenCalledWith({ name: "", note: "", requested: false });
+      expect(onRequestType).not.toHaveBeenCalled();
+    });
+
     it("asks for a name before sending", async () => {
       const { user, onRequestType } = show(BOUTIQUE);
       await user.click(screen.getByRole("button", { name: /Can.t find it/ }));

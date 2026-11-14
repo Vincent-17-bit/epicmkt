@@ -1,0 +1,1 @@
+update public.product_types set axes = $j$[{"key":"volume","label":"Volume","display":"button","suggested":[{"id":"250-ml","label":"250 ml"},{"id":"500-ml","label":"500 ml"},{"id":"750-ml","label":"750 ml"},{"id":"1-l","label":"1 L"}]}]$j$::jsonb where id = 'liquor' and not (axes->0 ? 'suggested');
