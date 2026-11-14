@@ -93,3 +93,24 @@ export async function mergeOptionValue(from, into) {
   b.hex = b.hex ?? a.hex;
   return { ...view(b), itemsUpdated: moved.size, mergedFrom: a.id };
 }
+
+// Category kit import (migration 0112): an approved value, or the one already there. Same rules as admin_import_option_value.
+export async function importOptionValue(kind, label, fields = null) {
+  await latency();
+  if (!["material", "color", "brand", "finish", "flavour"].includes(kind)) throw new ApiError("invalid_kind");
+  const r = validateOpenValue({ kind, label });
+  if (!r.ok) throw new ApiError("invalid_label");
+  const f = fields ?? {};
+  let v = rows.find((x) => x.kind === kind && x.key === r.value.key && x.status !== "merged");
+  let created = false;
+  if (!v) {
+    v = { id: `ov-${++seq}`, kind, key: r.value.key, label: r.value.label, status: "approved", hex: null, tags: [], mergedInto: null, createdByBusiness: null, createdAt: new Date().toISOString(), reviewedAt: new Date().toISOString() };
+    rows.push(v);
+    created = true;
+  } else if (v.status === "pending") { v.status = "approved"; v.reviewedAt = new Date().toISOString(); }
+  const patch = {};
+  if ("tags" in f && v.tags.length === 0) patch.tags = f.tags;
+  if ("hex" in f && !v.hex) patch.hex = f.hex;
+  if (Object.keys(patch).length) await updateOptionValue(v.id, patch);
+  return { created, value: view(v) };
+}

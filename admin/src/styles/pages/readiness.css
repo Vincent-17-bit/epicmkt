@@ -21,3 +21,8 @@
 .readiness-sandbox__payload { grid-column: 1 / -1; }
 .readiness-sandbox__payload pre { overflow: auto; max-block-size: 20rem; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); font-size: var(--fs-xs); }
 @media (prefers-reduced-motion: no-preference) { .readiness-card { transition: border-color 120ms; } }
+
+/* Category kits (Prompt 11.7) */
+.kit-row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-block: var(--space-3); }
+.kit-check { display: flex; gap: var(--space-2); align-items: center; min-block-size: 2.5rem; }
+.kit-pre { overflow: auto; max-block-size: 24rem; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); font-size: var(--fs-xs); }

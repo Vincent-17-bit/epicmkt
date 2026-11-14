@@ -29,6 +29,7 @@ import SizeChartsPage from "./pages/catalogue/SizeChartsPage.jsx";   // Sizes 1.
 import ProductTypesPage from "./pages/catalogue/ProductTypesPage.jsx";
 import SpecRulesPage from "./pages/catalogue/SpecRulesPage.jsx";   // Spec rules 5.11
 import ReadinessPage from "./pages/catalogue/ReadinessPage.jsx";   // 11.6
+import KitPage from "./pages/catalogue/KitPage.jsx";   // 11.7
 
 // /admin/table-test is a developer page for the data table. It exists in `vite dev` only: in a production build
 // import.meta.env.DEV is false, so this is `null`, the route below is not registered, and the page and its chunk are
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="product-types" element={<RoleGuard permission="producttypes.view"><ProductTypesPage /></RoleGuard>} />
           <Route path="spec-rules" element={<RoleGuard permission="specrules.view"><SpecRulesPage /></RoleGuard>} />
           <Route path="readiness" element={<RoleGuard permission="plans.view"><ReadinessPage /></RoleGuard>} />
+          <Route path="kits" element={<RoleGuard permission="producttypes.view"><KitPage /></RoleGuard>} />
           <Route path="analytics" element={<RoleGuard permission="analytics.view"><AnalyticsPage /></RoleGuard>} />
           <Route path="audit" element={<RoleGuard permission="audit.view"><AuditPage /></RoleGuard>} />
           <Route path="payments" element={<RoleGuard permission="payments.view"><PaymentsPage /></RoleGuard>} />
