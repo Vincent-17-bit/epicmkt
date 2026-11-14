@@ -126,9 +126,9 @@ describe("item slots", () => {
   });
 
   describe("Quantity and Delivery", () => {
-    it("render nothing yet", () => {
+    it("render nothing yet, and Delivery renders nothing without a seller", () => {
       expect(mount(<Quantity ctx={make()} />).container).toBeEmptyDOMElement();
-      expect(mount(<Delivery ctx={make()} />).container).toBeEmptyDOMElement();
+      expect(mount(<Delivery ctx={make({ seller: null })} />).container).toBeEmptyDOMElement();
     });
   });
 

@@ -123,6 +123,7 @@ const sellerCard = (business, origin) => ({
   townName: business.area,
   lat: business.lat,
   lng: business.lng,
+  delivery: business.delivery ?? null,
   phone: business.phone,
   whatsapp: business.whatsapp,
   isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,

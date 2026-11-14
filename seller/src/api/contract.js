@@ -10,6 +10,7 @@ export const SELLER_API = [
   "setTimezone",
   "saveWeeklyHours",
   "setLocation",
+  "setDelivery",
   "requestChange",
   "cancelChange",
   "listChanges",
