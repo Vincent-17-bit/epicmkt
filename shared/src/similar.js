@@ -349,3 +349,27 @@ function compose(scored, limit, perStore) {
   }
   return out.slice(0, limit);
 }
+
+export const SIMILAR_UNIT_WORDS = ["g", "kg", "mg", "gram", "grams", "kilogram", "kilograms", "ml", "cl", "l", "ltr", "ltrs", "litre", "litres", "liter", "liters", "oz", "lb", "lbs", "cm", "mm", "inch", "inches", "pc", "pcs", "piece", "pieces", "pack", "packs"];
+export const SIMILAR_COLOUR_WORDS = ["red", "blue", "green", "black", "white", "brown", "yellow", "orange", "pink", "purple", "grey", "gray", "silver", "gold", "beige", "navy", "cream", "maroon"];
+
+const VARYING = new Set([...SIMILAR_UNIT_WORDS, ...SIMILAR_COLOUR_WORDS]);
+const trimEdges = (word) => word.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, "");
+
+export function similarParts(name) {
+  const key = [];
+  const kept = [];
+  const varies = [];
+  for (const raw of String(name ?? "").trim().split(/\s+/)) {
+    const word = raw.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase();
+    if (!word) continue;
+    if (/\d/.test(word) || VARYING.has(word)) varies.push(trimEdges(raw));
+    else {
+      key.push(word);
+      kept.push(trimEdges(raw));
+    }
+  }
+  return { key: key.join(" ") || null, name: kept.join(" ") || null, varies: varies.join(" ") };
+}
+
+export const similarKey = (name) => similarParts(name).key;

@@ -492,3 +492,17 @@ Entry format:
 - Not changed: spec rows stay on `/admin/spec-rules`. Saving a type does not touch items that are already live.
 - Who must act: nobody.
 - Request files: none
+
+## 2026-11-14 9.1: merge similar items and undo (migration 0109)
+
+- Contract: v1 (additive)
+- Lane / author: Group 9, Prompt 9.1
+- What changed:
+  - `seller_similar_item_groups()` returns groups of two or more items with the same name once sizes, weights, colours and pack words are removed, and the same brand and product type. Items with options, a merge, or no fixed price are left out.
+  - `seller_merge_items(ids, plan)` with `plan = {name, axes, choices}` (`choices` maps each item id to one value per axis) creates one item with a variant per source, moves the photos, hides the sources and records a redirect per old id. All or nothing; refused across shops, in a flash sale, or when the combined item cannot be published.
+  - `seller_undo_merge(mergeId)` works for 24 hours.
+  - `public_item_redirect(oldId)` returns `{itemId, choice}` or null (read by Prompt 9.7).
+  - `unitPriceText(price, size)` in `shared/src/pricing/unitPrice.js`: "KES 144 per kg", "KES 4 per L". Named apart from the flash-price `unitPrice` in `pricing/deals.js`.
+  - `similarKey`, `similarParts` in `shared/src/similar.js`.
+- Who must act: nobody.
+- Request files: `docs/requests/2026-11-14-9-1-to-9-5-9-7-merge-contract.md`
