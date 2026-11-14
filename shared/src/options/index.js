@@ -18,3 +18,4 @@ export * from "./customSize.js";
 export * from "./priceModes.js";
 export * from "./colourPhotos.js";
 export * from "./sizeGuide.js";
+export * from "./optionPhotos.js";

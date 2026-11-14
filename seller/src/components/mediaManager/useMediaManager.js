@@ -112,6 +112,17 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
     return () => { live = false; };
   }, [tiles, patch, makeUrl]);
 
+  // A photo that has just been uploaded knows its path but not its id. The id is what an option value (a size, a type) points at,
+  // so read it back and put it on the tile. A failed read changes nothing; commit() tries again.
+  const syncIds = useCallback(async (id) => {
+    if (!id || !tilesRef.current.some((t) => t.path && !t.id && t.source !== "saved")) return;
+    try {
+      const list = await api.listItemMedia(id);
+      const byPath = new Map(list.filter((m) => m.id).map((m) => [m.path, m.id]));
+      setTiles((current) => current.map((t) => (t.path && !t.id && byPath.has(t.path) ? { ...t, id: byPath.get(t.path) } : t)));
+    } catch { /* the picker simply waits for the next try */ }
+  }, [setTiles]);
+
   const startUpload = useCallback((key) => {
     const tile = tilesRef.current.find((t) => t.key === key);
     const id = idRef.current;
@@ -123,13 +134,15 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
       .then(({ path }) => {
         serverOrder.current = [...serverOrder.current, path];
         patch(key, { status: "saved", path, progress: null, error: "" });
+        syncIds(idRef.current);
       })
       .catch((err) => patch(key, { status: "error", progress: null, error: errorText(err) }));
-  }, [patch]);
+  }, [patch, syncIds]);
 
   const addFiles = useCallback(async (files) => {
     const list = [...files];
-    if (!list.length) return;
+    if (!list.length) return [];
+    const added = [];
     setProblems([]);
     setChecking((n) => n + list.length);
     const issues = [];
@@ -152,6 +165,7 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
           durationSec: res.durationSec ?? null, posterUrl: res.poster ? makeUrl(res.poster) : null, progress: null, error: "", removing: false,
         };
         setTiles((current) => [...current, tile]);
+        added.push(tile.key);
         if (idRef.current) startUpload(tile.key);
       } finally {
         setChecking((n) => n - 1);
@@ -165,6 +179,7 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
     }
     setProblems(issues);
     setAnnouncement(issues.length ? `${issues.length} ${issues.length === 1 ? "problem" : "problems"} adding files.` : "Added.");
+    return added;
   }, [makeUrl, setTiles, startUpload]);
 
   const focusAfterMove = (to, dir, total, key) => {
@@ -227,6 +242,7 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
     idRef.current = id;
     tilesRef.current.filter((t) => t.status === "ready").forEach((t) => startUpload(t.key));
     await poolRef.current.whenIdle();
+    await syncIds(id);
     const paths = tilesRef.current.filter((t) => t.status === "saved" && t.path).map((t) => t.path);
     let orderError = "";
     const same = paths.length === serverOrder.current.length && paths.every((p, n) => p === serverOrder.current[n]);
@@ -238,8 +254,10 @@ export default function useMediaManager({ itemId = null, limits = null, fallback
         orderError = errorText(err);
       }
     }
-    return { failed: tilesRef.current.filter((t) => t.status === "error").length, orderError };
-  }, [startUpload]);
+    // tile key -> photo id, so a size or type that was given a photo before the item existed can be linked now.
+    const ids = Object.fromEntries(tilesRef.current.filter((t) => t.id).map((t) => [t.key, t.id]));
+    return { failed: tilesRef.current.filter((t) => t.status === "error").length, orderError, ids };
+  }, [startUpload, syncIds]);
 
   const failedFiles = useCallback(
     () => tilesRef.current.filter((t) => t.status === "error" && t.file).map((t) => ({ file: t.file, kind: t.kind, durationSec: t.durationSec })),

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SizeChartLink from "./SizeChartModal.jsx";
@@ -90,5 +90,32 @@ describe("size chart modal", () => {
     expect(await seriousViolations(container)).toEqual([]);
     await userEvent.click(screen.getByRole("button", { name: "Size chart" }));
     expect(await seriousViolations(document.body)).toEqual([]);
+  });
+});
+
+describe("size guide with photos", () => {
+  const bread = { id: "b", name: "Size guide", unit: "g", columns: ["Size", "Weight (g)", "Slices", "Serves (people)"], rows: [["Standard", "400g", "16", "4-6"], ["medium", "700g", "–", "–"], ["large", "900g", "–", "–"]] };
+  const photoFor = (row) => (row[1] === "700g" ? "p700.png" : null);
+
+  it("shows the chosen size's photo and only the details it has", async () => {
+    render(<SizeChartLink chart={bread} selected="400g" photoFor={photoFor} />);
+    await userEvent.click(screen.getByRole("button", { name: "Size chart" }));
+    expect(screen.getByRole("button", { name: /Standard/ })).toHaveAttribute("aria-pressed", "true");   // the buyer's own size, found by its weight
+    await userEvent.click(screen.getByRole("button", { name: /^Medium/ }));
+    const detail = screen.getByRole("region", { name: "Medium" });
+    expect(within(detail).getByRole("img", { name: "Medium" })).toHaveAttribute("src", "p700.png");
+    expect(within(detail).getByText("700g")).toBeInTheDocument();
+    expect(within(detail).queryByText("Slices")).toBeNull();   // empty cells are left out
+  });
+
+  it("lets the buyer choose the size from the guide", async () => {
+    const onPick = vi.fn();
+    render(<SizeChartLink chart={bread} selected="400g" onPick={onPick} pickable={() => true} />);
+    await userEvent.click(screen.getByRole("button", { name: "Size chart" }));
+    expect(screen.queryByRole("button", { name: /^Choose/ })).toBeNull();   // already the selected size
+    await userEvent.click(screen.getByRole("button", { name: /^Large/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Choose Large" }));
+    expect(onPick).toHaveBeenCalledWith(["large", "900g", "–", "–"]);
+    expect(document.querySelector("dialog")).not.toHaveAttribute("open");
   });
 });

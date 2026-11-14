@@ -20,12 +20,12 @@ export function useMediaSlot(item, { onPhotosChanged, seed = [] } = {}) {
   const { commit, failedFiles, tiles } = manager;
 
   const flush = useCallback(async (itemId) => {
-    const { failed, orderError } = await commit(itemId);
+    const { failed, orderError, ids } = await commit(itemId);
     const problems = [];
     if (failed) problems.push(`${failed} ${failed === 1 ? "file" : "files"} did not upload.`);
     if (orderError) problems.push(`The order could not be saved. ${orderError}`);
     onPhotosChanged?.();
-    return { problems, leftover: failedFiles() };
+    return { problems, leftover: failedFiles(), ids };
   }, [commit, failedFiles, onPhotosChanged]);
 
   const imageUrls = useMemo(() => tiles.filter((t) => t.kind === "image").map((t) => t.url ?? mediaUrl(t.path)).filter(Boolean), [tiles]);

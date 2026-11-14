@@ -165,3 +165,30 @@
 .diff { display: grid; gap: var(--space-2); padding-block-start: var(--space-2); }
 .diff summary { min-block-size: var(--tap); display: flex; align-items: center; font-size: var(--text-sm); font-weight: 600; color: var(--text-muted); cursor: pointer; }
 .diff[open] summary { color: var(--text); }
+
+/* ---- A photo for each option value ---- */
+.vpHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.vpTitle { font-size: var(--text-sm); font-weight: 700; }
+.vpCount { font-size: var(--text-xs); color: var(--text-muted); }
+.vpGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.vpCard { display: grid; gap: var(--space-2); align-content: start; padding: var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface-2); min-inline-size: 0; }
+.vpCard[data-has] { border-color: var(--text); }
+.vpFrame { position: relative; aspect-ratio: 1; border-radius: calc(var(--radius-card) - 2px); overflow: hidden; background: var(--surface-3); }
+.vpImg { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
+.vpEmpty { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: var(--space-1); border: 2px dashed var(--border-strong); border-radius: inherit; color: var(--text-muted); font-size: var(--text-xs); font-weight: 600; cursor: pointer; }
+.vpEmpty:hover { color: var(--text); border-color: var(--text-muted); }
+.vpEmpty svg { font-size: 1.25rem; }
+.vpBusy { position: absolute; inset: auto 0 0 0; padding: var(--space-1); text-align: center; background: var(--media-scrim); color: var(--on-media); font-size: var(--text-xs); font-weight: 600; }
+.vpTick { position: absolute; inset-block-start: var(--space-1); inset-inline-end: var(--space-1); display: grid; place-items: center; inline-size: 1.4rem; block-size: 1.4rem; border-radius: 50%; background: var(--surface); color: var(--ok-text); font-size: 1.1rem; }
+.vpName { margin: 0; font-size: var(--text-sm); font-weight: 700; overflow-wrap: anywhere; }
+.vpFile { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+.vpFile:focus-visible + .vpActions .vpBtn:first-child { outline: 2px solid currentColor; outline-offset: 2px; }
+.vpActions { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.vpBtn { display: inline-flex; align-items: center; gap: var(--space-1); min-block-size: 2.25rem; padding-inline: var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-xs); font-weight: 600; cursor: pointer; }
+.vpBtn:hover { background: var(--surface-3); }
+.vpBtn[data-danger] { color: var(--danger-text); }
+.vpPick { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.vpPickBtn { inline-size: 2.75rem; block-size: 2.75rem; padding: 0; border: 2px solid transparent; border-radius: var(--radius-card); overflow: hidden; cursor: pointer; background: var(--surface-3); }
+.vpPickBtn[data-on] { border-color: var(--text); }
+.vpPickBtn img { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
+.srOnly { position: absolute; inline-size: 1px; block-size: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

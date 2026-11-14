@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faLayerGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { AXIS_PRESETS, CUSTOM_SIZE_STORED, addAxis, addTypeAxes, canAddAxis, effectiveLimits, emptyOptionsForm, inferPriceAxes, limitMessage, priceLayout, removeAxis } from "@epicmkt/shared";
+import { AXIS_PRESETS, CUSTOM_SIZE_STORED, addAxis, addTypeAxes, canAddAxis, clearValuePhoto, pendingPhotoTiles, setValuePhoto, effectiveLimits, emptyOptionsForm, inferPriceAxes, limitMessage, priceLayout, removeAxis } from "@epicmkt/shared";
 import { SectionCard } from "../parts.jsx";
 import { useProductTypes } from "./useProductTypes.js";
 import AxisCard from "./options/AxisCard.jsx";
@@ -31,8 +31,28 @@ export default function OptionsStep({ form, patch, errors, media }) {
   const found = errors?.options ?? {};
   const roomForAxis = canAddAxis(options, limits);
   const itemPrice = String(form.price ?? "").replace(/,/g, "");
-  const photos = (media?.tiles ?? []).filter((t) => t.kind === "image" && t.status === "saved" && t.id).map((t) => ({ id: t.id, url: t.url }));
-  const unsavedPhotos = (media?.tiles ?? []).some((t) => t.kind === "image" && t.status !== "saved");
+  // A photo chosen for a value while it was still uploading is a marker. Once the upload has its id the marker becomes the real link;
+  // if the photo was removed from the item, the value simply has no photo any more.
+  const tiles = media?.tiles;
+  const listed = media?.manager ? !media.manager.loading && !media.manager.loadError && (tiles ?? []).filter((x) => x.status === "saved").every((x) => x.id) : false;
+  useEffect(() => {
+    if (!tiles) return;
+    let next = options;
+    let changed = false;
+    for (const a of options.axes) {
+      for (const v of a.values) {
+        if (v.photoTile && !v.mediaId) {
+          const t = tiles.find((x) => x.key === v.photoTile);
+          if (t?.id) { next = setValuePhoto(next, a.key, v.id, { mediaId: t.id }); changed = true; }
+          else if (!t) { next = clearValuePhoto(next, a.key, v.id); changed = true; }
+        } else if (v.mediaId && listed && !tiles.some((x) => x.id === v.mediaId)) {
+          next = clearValuePhoto(next, a.key, v.id);   // the photo was deleted in the Media step
+          changed = true;
+        }
+      }
+    }
+    if (changed) set(next);
+  }, [tiles, listed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const start = (p) => { set(addAxis(options, p, limits)); setSaid(`${p.label || "A new option"} added.`); };
 
@@ -60,7 +80,7 @@ export default function OptionsStep({ form, patch, errors, media }) {
           <>
             <ol className={s.axes}>
               {options.axes.map((a, i) => (
-                <AxisCard key={a.rid ?? a.key} options={options} index={i} set={set} limits={limits} errors={found} announce={setSaid} photos={photos} unsavedPhotos={unsavedPhotos} onRemove={(k) => set(removeAxis(options, k))} />
+                <AxisCard key={a.rid ?? a.key} options={options} index={i} set={set} limits={limits} errors={found} announce={setSaid} media={media} onRemove={(k) => set(removeAxis(options, k))} />
               ))}
             </ol>
             <div className={s.stack}>

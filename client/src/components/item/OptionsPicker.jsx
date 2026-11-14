@@ -1,6 +1,6 @@
-import { useId, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { OptionCard, OptionSelect } from "@epicmkt/ui";
-import { axisCards, formatCapacityLabel } from "@epicmkt/shared";
+import { axisCards, formatCapacityLabel, photoForRow, photosByLabel, valueForRow } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import { kesText } from "../../lib/flash.js";
 import SizeChartLink from "./SizeChartModal.jsx";
@@ -30,9 +30,14 @@ const AMOUNT_AXIS = /volume|weight|capacity|length|dimension|thickness|diameter|
 const matches = (re) => (a) => re.test(a.key ?? "") || re.test(a.label ?? "");
 export const sizeAxisKey = (axes) => (axes.find(matches(SIZE_AXIS)) ?? axes.find(matches(AMOUNT_AXIS)) ?? axes[0])?.key;
 
-const photoOf = (item, value) => (value.mediaId ? (item.images ?? []).find((m) => m.id === value.mediaId)?.url ?? "" : "");
+// The photo a value points at (`mediaId`), from the item's photos. Any option type can have them: a size, a loaf type, a colour.
+const itemPhotos = (item) => [...(item.images ?? []), ...(item.media ?? []).filter((m) => m.kind !== "video")].filter((m) => m?.id && m?.url);
+export const photoOf = (item, value) => {
+  if (!value?.mediaId) return "";
+  return itemPhotos(item).find((m) => m.id === value.mediaId)?.url ?? "";
+};
 
-function Group({ item, option, axis, withChart, system, onSystem }) {
+function Group({ item, option, axis, withChart, system, onSystem, guide }) {
   const valueLabel = valueLabelFor(item, axis, system);
   const shoe = isShoeAxis(item, axis);
   const headId = useId();
@@ -42,7 +47,9 @@ function Group({ item, option, axis, withChart, system, onSystem }) {
 
   const current = option.choice[axis.key];
   const currentLabel = valueLabel(axis.values.find((v) => v.id === current) ?? { label: "" });
-  const asSelect = axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER);
+  // A list whose values have photos is drawn as photo cards, whatever display the seller chose (a colour keeps its swatch).
+  const withPhotos = axis.display !== "swatch" && values.some((c) => photoOf(item, c.value));
+  const asSelect = !withPhotos && (axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER));
   const money = (n) => kesText(n);
 
   // "Color: Grey". Polite and atomic: when the choice changes a screen reader says the whole line once, and not on first load.
@@ -53,7 +60,7 @@ function Group({ item, option, axis, withChart, system, onSystem }) {
   );
   // "Size chart" link beside the size selector; hidden when the item has no chart (SizeChartLink returns null).
   const rawCurrent = axis.values.find((v) => v.id === current)?.label ?? "";
-  const chartLink = withChart ? <SizeChartLink chart={item.sizeChart} selected={rawCurrent} extra={shoe ? <ShoeConversionTable /> : null} /> : null;
+  const chartLink = withChart ? <SizeChartLink chart={item.sizeChart} selected={rawCurrent} extra={shoe ? <ShoeConversionTable /> : null} {...guide} /> : null;
   // The shoe system switch: the buyer's choice is remembered. The selected size does not change, only how it is written.
   const systemSwitch = shoe ? <ShoeSystemSwitch system={system} onChange={onSystem} /> : null;
 
@@ -98,10 +105,10 @@ function Group({ item, option, axis, withChart, system, onSystem }) {
 
   return (
     <div className={styles.group}>
-      <p className={styles.headLine}>
+      <div className={styles.headLine}>
         {header}
         {chartLink && <span className={styles.chartSlot}>{chartLink}</span>}
-      </p>
+      </div>
       {systemSwitch}
       <div role="radiogroup" aria-labelledby={headId} className={styles.cards}>
         {values.map((card, index) => {
@@ -119,8 +126,8 @@ function Group({ item, option, axis, withChart, system, onSystem }) {
               was={showPrice && card.was !== null ? money(card.was) : ""}
               wasLabel={t("item.was")}
               swatch={axis.display === "swatch" ? value.color || "" : ""}
-              imageUrl={axis.display === "image-card" ? photoOf(item, value) : ""}
-              compact={axis.display === "button" || (axis.display === "dropdown")}
+              imageUrl={withPhotos || axis.display === "image-card" ? photoOf(item, value) : ""}
+              compact={!withPhotos && (axis.display === "button" || axis.display === "dropdown")}
               tabIndex={selected ? 0 : -1}
               onSelect={() => option.select(axis.key, value.id)}
               onKeyDown={onKeyDown(index)}
@@ -146,10 +153,18 @@ export default function OptionsPicker({ item, option }) {
     saveShoeSystem(id);
   };
   const size = dimensionsText(option.variant?.dimensions);
+  // What the size guide needs from the page: each row's photo (the photo of the option value it stands for), whether a row can be
+  // chosen, and choosing it. A row stands for an option value when one of its cells names it ("Large", or "700g" in a weight column).
+  const photos = useMemo(() => photosByLabel(option.axes, itemPhotos(item)), [option.axes, item]);
+  const guide = {
+    photoFor: (row) => photoForRow(photos, row)?.url ?? null,
+    pickable: (row) => Boolean(valueForRow(option.axes, row)),
+    onPick: (row) => { const hit = valueForRow(option.axes, row); if (hit) option.select(hit.axisKey, hit.valueId); }
+  };
   return (
     <div className={styles.picker}>
       {option.axes.map((axis) => (
-        <Group key={axis.key} item={item} option={option} axis={axis} system={system} onSystem={onSystem} withChart={Boolean(item?.sizeChart) && axis.key === chartAxis} />
+        <Group key={axis.key} item={item} option={option} axis={axis} system={system} onSystem={onSystem} withChart={Boolean(item?.sizeChart) && axis.key === chartAxis} guide={guide} />
       ))}
       {size && (
         <p className={styles.headLine} data-testid="variant-dimensions">
