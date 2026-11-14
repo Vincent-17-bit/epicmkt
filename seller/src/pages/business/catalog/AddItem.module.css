@@ -8,3 +8,13 @@
 .primary, .ghost { min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-4); font: inherit; font-weight: 600; border-radius: var(--radius-sm); cursor: pointer; }
 .primary { color: var(--on-primary); background: var(--primary); border: 1px solid var(--primary); }
 .ghost { color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); }
+.block { display: grid; gap: var(--space-2); }
+.heading { margin: 0; font-size: var(--text-lg, 1.125rem); color: var(--text); }
+.list { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.entry { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-card); }
+.entryLink { display: grid; gap: 2px; flex: 1; min-inline-size: 0; color: var(--text); text-decoration: none; }
+.entryName { overflow-wrap: anywhere; font-weight: 600; }
+.entryNote { font-size: var(--text-sm); color: var(--text-muted, var(--text)); }
+.field { display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.input { min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-3); font: inherit; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }
+.chip { min-block-size: var(--tap, 44px); padding: var(--space-1) var(--space-3); font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: 999px; cursor: pointer; }

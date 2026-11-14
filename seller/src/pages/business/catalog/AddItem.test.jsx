@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { configureAxe } from "vitest-axe";
-import { signedInApp } from "../../../test/utils.jsx";
+import { signedInApp, M } from "../../../test/utils.jsx";
 import TypePicker from "./editor/steps/TypePicker.jsx";
 import { PRODUCT_TYPES, fixtureProductTypes } from "./AddItem.fixtures.js";
 import { canSell, groupByDepartment, recentTypeIds, searchTypes, sellableTypes, suggestedTypes } from "./AddItem.data.js";
@@ -304,5 +304,21 @@ describe("Add item page and Type step", () => {
     const { container } = await signedInApp("/business/catalog/add");
     await screen.findByRole("searchbox", { name: "Search for what you sell" });
     await noSeriousViolations(container);
+  });
+});
+
+describe("to finish and copy", () => {
+  it("lists a draft with what is missing, and copies an item into the editor", async () => {
+    const user = userEvent.setup();
+    const view = await signedInApp("/business/catalog/add", async () => {
+      Object.assign(M.state.items[0], { draft: true, visible: false, imageCount: 0, imagePaths: [] });
+    });
+    const finish = await screen.findByRole("heading", { name: /to finish$/ });
+    expect(within(finish.closest("section")).getByRole("link", { name: new RegExp(M.state.items[0].name) })).toHaveTextContent(/Missing: .*A photo/);
+    const copy = await screen.findByRole("heading", { name: "Copy an existing item" });
+    const section = copy.closest("section");
+    await noSeriousViolations(document.body);
+    await user.click(within(section).getAllByRole("button", { name: /^Copy / })[0]);
+    await waitFor(() => expect(view.router.state.location.pathname).toMatch(/^\/business\/catalog\/it-copy-.+\/edit$/));
   });
 });

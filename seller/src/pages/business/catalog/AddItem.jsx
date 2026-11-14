@@ -4,6 +4,9 @@ import * as api from "../../../api/index.js";
 import TypePicker from "./editor/steps/TypePicker.jsx";
 import { useProductTypes } from "./editor/steps/useProductTypes.js";
 import { pickerAvailable, recentTypeIds, requestType } from "./AddItem.data.js";
+import ToFinish from "./ToFinish.jsx";
+import CopyItem from "./CopyItem.jsx";
+import { toFinish } from "./toFinish.js";
 import styles from "./AddItem.module.css";
 
 const CATALOG = "/business/catalog";
@@ -16,6 +19,7 @@ export default function AddItem() {
   const { business, categoryId, types, departments, loading, error, retry } = useProductTypes();
   const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
   const from = location.state?.from ?? "";
+  const items = catalog.data?.items ?? [];
 
   if (!pickerAvailable()) return <Navigate to={`${CATALOG}/new`} replace state={location.state} />;
   if (business?.status === "suspended") return <Navigate to="/business/notifications" replace />;
@@ -29,6 +33,7 @@ export default function AddItem() {
     <main className={styles.page}>
       <Link className={styles.back} to={`${CATALOG}${from}`}>Back to your listings</Link>
       <h1 className={styles.title}>What are you adding?</h1>
+      <ToFinish drafts={toFinish(items, types)} from={from} />
       {loading ? (
         <p role="status">Loading</p>
       ) : error ? (
@@ -45,6 +50,7 @@ export default function AddItem() {
           onPick={pick} onRequestType={requestType} onOther={other}
         />
       )}
+      <CopyItem items={items} from={from} />
     </main>
   );
 }
