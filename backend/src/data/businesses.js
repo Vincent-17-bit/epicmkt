@@ -114,6 +114,7 @@ export const businesses = [
     county: "Kisumu", area: "Milimani", address: "Milimani Road, near Lake Basin Mall", lat: -0.1021, lng: 34.7523,
     hours: week(["06:00", "21:00"], ["06:00", "21:00"], ["07:00", "19:00"]),
     rating: 4.7, reviewCount: 73, hue: 190,
+    delivery: { offers: true, fee: 100, radiusKm: 6, area: "Milimani and Kisumu CBD", minOrder: 200, notes: "Orders before noon go out the same day." },
     tags: ["purified water", "refill", "delivery", "dispenser"],
     socials: { facebook: "aquafreshkisumu", instagram: "aquafresh.ksm" },
     services: [{ name: "20L refill", priceKes: 40 }, { name: "5L refill", priceKes: 15 }],
@@ -127,6 +128,7 @@ export const businesses = [
     county: "Nairobi", area: "Kasarani", address: "Kasarani Mwiki Road, Stage 3", lat: -1.2218, lng: 36.8994,
     hours: week(["06:00", "20:00"], ["06:00", "20:00"], ["06:00", "16:00"]),
     rating: 4.1, reviewCount: 28, hue: 198,
+    delivery: { offers: false },
     tags: ["drinking water", "refill", "jerrycan"],
     services: [{ name: "20L refill", priceKes: 25 }],
     gallery: gallery(198, ["Water point"])

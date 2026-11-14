@@ -1,5 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
+import { checkDeliverySetting, deliveryInfo } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
@@ -190,6 +191,16 @@ export const setLocation = async ({ lat, lng, address } = {}) => {
   bill.business.lng = round(lng);
   if (address != null) bill.business.address = String(address).trim() || null;
   return { lat: bill.business.lat, lng: bill.business.lng, address: bill.business.address ?? null };
+};
+// Mirrors seller_set_delivery: the same limits and the same error codes.
+export const setDelivery = async ({ offers, fee = null, radiusKm = null, area = null, minOrder = null, notes = null } = {}) => {
+  writer();
+  await wait();
+  const checked = checkDeliverySetting({ offers, fee, radiusKm, area, minOrder, notes });
+  if (!checked.ok) throw new ApiError(Object.values(checked.errors)[0]);
+  const v = checked.value;
+  Object.assign(bill.business, { delivers: v.offers, deliveryFee: v.fee, deliveryRadiusKm: v.radiusKm, deliveryArea: v.area, deliveryMinOrder: v.minOrder, deliveryNotes: v.notes });
+  return deliveryInfo({ delivery: { offers: v.offers, fee: v.fee, radiusKm: v.radiusKm, area: v.area, minOrder: v.minOrder, notes: v.notes } });
 };
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
@@ -400,7 +411,7 @@ export const getBusinessFacts = async () => {
   signedIn();
   await wait();
   const b = bill.business;
-  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng ?? null };
+  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng, delivers: b.delivers ?? null, delivery_fee: b.deliveryFee ?? null, delivery_radius_km: b.deliveryRadiusKm ?? null, delivery_area: b.deliveryArea ?? null, delivery_min_order: b.deliveryMinOrder ?? null, delivery_notes: b.deliveryNotes ?? null ?? null };
 };
 export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
 

@@ -53,6 +53,7 @@ const shuffleKey = (seed, id) => {
 
 const toSummary = (b, origin) => ({
   id: b.id,
+  delivery: b.delivery ?? null,
   slug: b.slug,
   name: b.name,
   tagline: b.tagline,

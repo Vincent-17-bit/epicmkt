@@ -1,4 +1,5 @@
 import ShopLocation from "./ShopLocation.jsx";
+import ShopDelivery from "./ShopDelivery.jsx";
 import HoursEditor from "./HoursEditor.jsx";
 import AccountSecurity from "./AccountSecurity.jsx";
 import NotificationPrefs from "./NotificationPrefs.jsx";
@@ -10,6 +11,7 @@ import styles from "./settings.module.css";
 
 const SECTIONS = [
   ["location", "Shop location"],
+  ["delivery", "Delivery"],
   ["hours", "Opening hours"],
   ["account", "Account and security"],
   ["notifications", "Notifications"],
@@ -32,6 +34,7 @@ export default function Settings() {
         </nav>
         <div className={styles.sections}>
           <ShopLocation />
+          <ShopDelivery />
           <HoursEditor />
           <AccountSecurity />
           <NotificationPrefs />

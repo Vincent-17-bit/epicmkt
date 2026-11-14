@@ -17,6 +17,7 @@ export const updateProfile = (...a) => impl.updateProfile(...a);
 export const setTimezone = (...a) => impl.setTimezone(...a);
 export const saveWeeklyHours = (...a) => impl.saveWeeklyHours(...a);
 export const setLocation = (...a) => impl.setLocation(...a);
+export const setDelivery = (...a) => impl.setDelivery(...a);
 export const requestChange = (...a) => impl.requestChange(...a);
 export const cancelChange = (...a) => impl.cancelChange(...a);
 export const listChanges = (...a) => impl.listChanges(...a);

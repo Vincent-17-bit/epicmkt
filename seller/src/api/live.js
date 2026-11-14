@@ -49,6 +49,9 @@ export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone
 export const saveWeeklyHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
 // Moves the shop pin on the map. `address` (the landmark text) is optional: leave it out to keep what is saved.
 export const setLocation = ({ lat, lng, address } = {}) => rpc("seller_set_location", { p_lat: lat, p_lng: lng, p_address: address ?? null });
+// The shop's own delivery setting (migration 0114). { offers, fee, radiusKm, area, minOrder, notes } -> the public object the buyer sees.
+export const setDelivery = ({ offers, fee = null, radiusKm = null, area = null, minOrder = null, notes = null } = {}) =>
+  rpc("seller_set_delivery", { p_offers: offers, p_fee: fee, p_radius_km: radiusKm, p_area: area, p_min_order: minOrder, p_notes: notes });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });
 const rows = async (q) => {
@@ -593,7 +596,7 @@ export const deleteOffer = (id) => rpc("seller_delete_offer", { p_id: id });
 // ---- Settings, help and onboarding ----
 // The few business columns the settings and setup screens read that the shared business shape does not carry.
 export const getBusinessFacts = async () => {
-  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path, county, town, address, lat, lng").maybeSingle());
+  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path, county, town, address, lat, lng, delivers, delivery_fee, delivery_radius_km, delivery_area, delivery_min_order, delivery_notes").maybeSingle());
   if (!b) throw new ApiError("not_a_seller");
   return b;
 };
