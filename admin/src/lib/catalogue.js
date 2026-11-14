@@ -1,4 +1,4 @@
-import { formatKes } from "@epicmkt/shared";
+import { FEATURE_SWITCHES, PLAN_LIMIT_RULES, checkPlanLimits, formatKes, planLimitValues, planSwitches } from "@epicmkt/shared";
 // Pure helpers for Plans, Categories and the template builder. They mirror the database's rules (migrations
 // 0026 and 0027) so the screen can say what is wrong before saving; the database still has the last word.
 
@@ -160,4 +160,96 @@ export const CATEGORY_ERRORS = {
   invalid_badge: "Choose a badge from the list.",
   three_benefits_required: "Write exactly three benefits.",
   invalid_benefit: "Each benefit must be 2 to 80 characters.",
+  invalid_limits: "A limit is outside what the plan allows, or a switch is not on or off.",
+  invalid_plan: "Choose Standard or Premium.",
+  limits_not_found: "The plan limits are not set up yet.",
+};
+
+// ---- Plan limits and feature switches (Prompt 11.5) --------------------------------------------------------------------------
+
+export const PLAN_NAMES = { standard: "Standard", premium: "Premium" };
+export const LIMIT_GROUPS = [
+  { key: "options", title: "Options and combinations", fields: Object.entries(PLAN_LIMIT_RULES.options).map(([key, r]) => ({ key, ...r })) },
+  { key: "threeD", title: "3D and 360 views", fields: Object.entries(PLAN_LIMIT_RULES.threeD).map(([key, r]) => ({ key, ...r })) },
+];
+export const SWITCHES = FEATURE_SWITCHES;
+
+/** The editing form for one plan: every limit as the number the plan has now (the hard limit when it lowers nothing), every switch as on or off. */
+export function limitsForm(globalLimits, plan) {
+  const v = planLimitValues(plan, globalLimits);
+  const f = planSwitches(plan, globalLimits);
+  return {
+    options: Object.fromEntries(Object.entries(v.options).map(([k, n]) => [k, String(n)])),
+    threeD: Object.fromEntries(Object.entries(v.threeD).map(([k, n]) => [k, String(n)])),
+    features: { ...f },
+  };
+}
+
+const whole = (t) => (/^\d+$/.test(String(t ?? "").trim()) ? Number(t) : NaN);
+
+/** What the form sends. A blank limit means "no lower than the hard limit". */
+export function limitsPayload(form) {
+  const group = (g) => Object.fromEntries(Object.entries(form?.[g] ?? {}).filter(([, t]) => String(t ?? "").trim() !== "").map(([k, t]) => [k, whole(t)]));
+  return { options: group("options"), threeD: group("threeD"), features: { ...(form?.features ?? {}) } };
+}
+
+/** Problems with the form, keyed like the shared rules ("options.axes"), in plain words. */
+export const limitsProblems = (form) => checkPlanLimits(limitsPayload(form)).errors;
+
+/** Live shops and plan versions on each plan, summed over every category. Plan limits are not versioned, so saving them never changes these. */
+export function planTotals(rows = []) {
+  const out = { standard: { live: 0, versions: 0, categories: 0 }, premium: { live: 0, versions: 0, categories: 0 } };
+  for (const r of rows) {
+    const t = out[r.plan_key];
+    if (!t) continue;
+    t.live += Number(r.live_businesses) || 0;
+    t.versions += Number(r.versions) || 0;
+    if (Number(r.live_businesses) > 0) t.categories += 1;
+  }
+  return out;
+}
+
+const shops = (n) => `${n} live ${n === 1 ? "shop" : "shops"}`;
+
+/**
+ * What a limits change will mean, in words, for the confirmation step.
+ * @param {string} plan  "standard" | "premium"
+ * @param {object} globalLimits  the stored limits for both plans, as admin_plan_limits returns them
+ * @param {object} form  the editing form
+ * @param {object[]} rows  the plan rows from listPlans, for the live counts
+ */
+export function limitsImpact(plan, globalLimits, form, rows = []) {
+  const live = planTotals(rows)[plan]?.live ?? 0;
+  const cats = planTotals(rows)[plan]?.categories ?? 0;
+  const was = planLimitValues(plan, globalLimits);
+  const wasOn = planSwitches(plan, globalLimits);
+  const next = checkPlanLimits(limitsPayload(form));
+  if (!next.ok) return [];
+  const now = planLimitValues(plan, { [plan]: next.value });
+  const nowOn = planSwitches(plan, { [plan]: next.value });
+  const lines = [];
+  for (const g of LIMIT_GROUPS) {
+    for (const f of g.fields) {
+      const a = was[g.key][f.key];
+      const b = now[g.key][f.key];
+      if (a === b) continue;
+      lines.push(b < a
+        ? `${f.label}: ${a} becomes ${b}. ${live === 0 ? "No live shops are on this plan." : `${shops(live)} in ${cats} ${cats === 1 ? "category" : "categories"} will be held to ${b} the next time they edit an item. Items already saved are not changed.`}`
+        : `${f.label}: ${a} becomes ${b}. ${live === 0 ? "No live shops are on this plan." : `${shops(live)} can use the higher limit straight away.`}`);
+    }
+  }
+  for (const sw of SWITCHES) {
+    if (wasOn[sw.key] === nowOn[sw.key]) continue;
+    lines.push(nowOn[sw.key]
+      ? `${sw.label} is switched on for ${PLAN_NAMES[plan]}. ${live === 0 ? "No live shops are on this plan." : `${shops(live)} get it straight away.`}`
+      : `${sw.label} is switched off for ${PLAN_NAMES[plan]}. ${live === 0 ? "No live shops are on this plan." : `${shops(live)} in ${cats} ${cats === 1 ? "category" : "categories"} lose it. Buyers stop seeing it.`}`);
+  }
+  return lines;
+}
+
+export const limitsChanged = (plan, globalLimits, form) => {
+  const next = checkPlanLimits(limitsPayload(form));
+  if (!next.ok) return false;
+  return JSON.stringify(planLimitValues(plan, { [plan]: next.value })) !== JSON.stringify(planLimitValues(plan, globalLimits))
+    || JSON.stringify(planSwitches(plan, { [plan]: next.value })) !== JSON.stringify(planSwitches(plan, globalLimits));
 };

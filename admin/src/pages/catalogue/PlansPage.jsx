@@ -4,6 +4,7 @@ import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import LoadError from "../../components/LoadError.jsx";
 import Modal from "../../components/Modal.jsx";
+import PlanLimitsPanel from "./PlanLimitsPanel.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { BADGES, groupPlans, planImpact, planProblems } from "../../lib/catalogue.js";
@@ -126,6 +127,7 @@ export default function PlansPage() {
           </div>
         )}
       </section>
+      <PlanLimitsPanel rows={data} />
       {editing && <EditDialog row={editing} onClose={() => setEditing(null)} />}
       {viewing && <HistoryDialog row={viewing} onClose={() => setViewing(null)} />}
     </div>

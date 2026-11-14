@@ -83,3 +83,83 @@ test("plan validation and grouping", () => {
   assert.equal(g.length, 2);
   assert.equal(g[0].plans.premium.price_kes, 1300);
 });
+
+// ---- Plan limits and feature switches (Prompt 11.5) ----
+import { LIMIT_GROUPS, SWITCHES, limitsChanged, limitsForm, limitsImpact, limitsPayload, limitsProblems, planTotals } from "./catalogue.js";
+
+const planRows = [
+  { category_id: "bakery", plan_key: "standard", live_businesses: 12, versions: 2 },
+  { category_id: "bakery", plan_key: "premium", live_businesses: 0, versions: 1 },
+  { category_id: "salon", plan_key: "standard", live_businesses: 3, versions: 1 },
+  { category_id: "salon", plan_key: "premium", live_businesses: 4, versions: 3 }
+];
+
+test("the form shows the number a plan has now, the hard limit where it lowers nothing, and every switch on by default", () => {
+  const f = limitsForm({ standard: { options: { axes: 2 }, features: { threeD: false } } }, "standard");
+  assert.deepEqual(f.options, { axes: "2", values: "40", variants: "200" });
+  assert.deepEqual(f.threeD, { models: "40", spinFrames: "72" });
+  assert.equal(f.features.threeD, false);
+  assert.ok(f.features.options && f.features.recommend && f.features.delivery && f.features.demand);
+  assert.equal(LIMIT_GROUPS.length, 2);
+  assert.equal(SWITCHES.length, 5);
+});
+
+test("what the form sends: numbers as numbers, a blank limit left out", () => {
+  const f = limitsForm({}, "premium");
+  f.options.axes = "2";
+  f.options.values = "";
+  assert.deepEqual(limitsPayload(f).options, { axes: 2, variants: 200 });
+});
+
+test("a limit outside the rules is reported by name; a clean form has no problems", () => {
+  const f = limitsForm({}, "standard");
+  assert.deepEqual(limitsProblems(f), {});
+  f.options.axes = "4";
+  f.threeD.spinFrames = "5";
+  f.options.variants = "12a";
+  assert.deepEqual(Object.keys(limitsProblems(f)).sort(), ["options.axes", "options.variants", "threeD.spinFrames"]);
+});
+
+test("changed is true only when the form differs from what is saved, and false for a form with a problem", () => {
+  const stored = { standard: { options: { axes: 2 } } };
+  const f = limitsForm(stored, "standard");
+  assert.equal(limitsChanged("standard", stored, f), false);
+  f.options.axes = "1";
+  assert.equal(limitsChanged("standard", stored, f), true);
+  f.options.axes = "9";
+  assert.equal(limitsChanged("standard", stored, f), false);
+});
+
+test("totals sum live shops and versions per plan over every category, so a limits change cannot shift them", () => {
+  const t = planTotals(planRows);
+  assert.deepEqual(t.standard, { live: 15, versions: 3, categories: 2 });
+  assert.deepEqual(t.premium, { live: 4, versions: 4, categories: 1 });
+  assert.deepEqual(planTotals([]).standard, { live: 0, versions: 0, categories: 0 });
+  const f = limitsForm({}, "standard");
+  f.options.axes = "1";
+  limitsImpact("standard", {}, f, planRows);
+  assert.deepEqual(planTotals(planRows), t, "building the preview does not touch the rows");
+});
+
+test("impact: a lowered limit says how many live shops and categories it reaches; a raised one and a feature switched off or on are worded too", () => {
+  const f = limitsForm({}, "standard");
+  f.options.axes = "2";
+  f.features.threeD = false;
+  const lines = limitsImpact("standard", {}, f, planRows);
+  assert.equal(lines.length, 2);
+  assert.match(lines[0], /Option types per item: 3 becomes 2.*15 live shops in 2 categories will be held to 2.*Items already saved are not changed/);
+  assert.match(lines[1], /3D and 360 views is switched off for Standard.*15 live shops in 2 categories lose it/);
+  const back = limitsForm({ standard: { options: { axes: 2 } } }, "standard");
+  back.options.axes = "3";
+  assert.match(limitsImpact("standard", { standard: { options: { axes: 2 } } }, back, planRows)[0], /2 becomes 3.*can use the higher limit straight away/);
+  const on = limitsForm({ premium: { features: { recommend: false } } }, "premium");
+  on.features.recommend = true;
+  assert.match(limitsImpact("premium", { premium: { features: { recommend: false } } }, on, planRows)[0], /switched on for Premium.*4 live shops get it straight away/);
+});
+
+test("impact on a plan with no live shops says so instead of a number", () => {
+  const f = limitsForm({}, "premium");
+  f.threeD.models = "0";
+  assert.match(limitsImpact("premium", {}, f, [{ plan_key: "premium", live_businesses: 0, versions: 1 }])[0], /No live shops are on this plan/);
+  assert.deepEqual(limitsImpact("premium", {}, limitsForm({}, "premium"), planRows), [], "no change, no lines");
+});

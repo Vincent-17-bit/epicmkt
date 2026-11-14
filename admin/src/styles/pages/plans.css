@@ -10,3 +10,15 @@
 .builder__flags { gap: var(--space-5); }
 .builder__tools { display: flex; gap: var(--space-2); }
 
+
+/* Limits and features by plan (Prompt 11.5) */
+.plan-limits__grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); }
+.plan-limits__card { display: grid; gap: var(--space-3); align-content: start; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); background: var(--surface); }
+.plan-limits__group { display: grid; gap: var(--space-3); border: 0; margin: 0; padding: 0; min-width: 0; }
+.plan-limits__group legend { font-weight: var(--fw-semibold); padding: 0; margin-bottom: var(--space-2); }
+.plan-limits__field { display: grid; gap: var(--space-1); }
+.plan-limits__field input { max-width: 8rem; }
+.plan-limits__switch { display: flex; gap: var(--space-3); align-items: flex-start; cursor: pointer; }
+.plan-limits__switch input { margin-top: 0.2rem; inline-size: 1.1rem; block-size: 1.1rem; flex: none; }
+.plan-limits__switch > span { display: grid; gap: 0.1rem; }
+.plan-limits__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }

@@ -73,3 +73,6 @@ export * from "./media3d.js";
 
 // Product relations ("goes with") and related ranking (Prompt 8.1)
 export * from "./related/index.js";
+
+// Prompt 11.5: per-plan limits and feature switches for options, 3D, recommend, delivery and demand.
+export * from "./planLimits.js";
