@@ -66,7 +66,7 @@ async function fromViews() {
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
     restAll("public_flash_sales?select=id,item_id,sale_price,starts_at,ends_at,headline&order=id").catch(() => []),
-    // The stored scale values of every item's sizes, in one call (migration 0104), so the Size filter keeps working on this path. If the
+    // The stored scale values of every item's sizes, in one call (migration 0109), so the Size filter keeps working on this path. If the
     // function is missing or slow there are simply no size facets; nothing else changes.
     rpc("public_item_size_values", { p_limit: MAX_ITEMS }, { timeoutMs: 8_000 })
       .then((map) => (map && typeof map === "object" && !Array.isArray(map) ? map : {}))
@@ -151,7 +151,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       imagePath: row.image_path ?? null,
       imageUrl: row.image_path ?? null,
       videoPaths: Array.isArray(row.video_paths) ? row.video_paths : [],
-      // Stored scale values of the item's sizes (migration 0104): what the Size filter groups and counts. Absent for an item with none.
+      // Stored scale values of the item's sizes (migration 0109): what the Size filter groups and counts. Absent for an item with none.
       ...(Array.isArray(row.size_values) && row.size_values.length ? { sizeValues: row.size_values } : {}),
       priceType: row.price_type ?? "fixed",
       unit: row.unit ?? null,

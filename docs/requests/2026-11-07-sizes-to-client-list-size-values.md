@@ -20,9 +20,9 @@ parse each value with `scales.parse` and keep the stored result. Keep the list p
 ## Meanwhile
 `facetsOf`, `applyFilters`, `countsFor` and the page address (`psize`, `prange`) already read `sizeValues`. Tests use fixtures. Search for `TODO(contract:4.14)` in `client/src/lib/sizeFilters.js`.
 
-## Done (migration 0104)
+## Done (migration 0109)
 - `products_snapshot` carries `size_values` per item and `/api/products` turns it into `sizeValues` on each product (not sent to the browser per product).
 - The server's page-the-views fallback and the browser's `getAllProducts` read `public_item_size_values()` in one call. If that function is missing or fails, products list as before with no Size section.
-- Where the values come from: an axis's `scale` and each value's `stored` (migration 0104 stores them; the Options step now saves both). Items saved before that carry no `stored`, so
+- Where the values come from: an axis's `scale` and each value's `stored` (migration 0109 stores them; the Options step now saves both). Items saved before that carry no `stored`, so
   they have no Size facets until the seller saves them again. Nothing is guessed from labels in SQL.
 - The endpoint reads `psize` and `prange` (the same parameters as the page address), through `parseSizes`.

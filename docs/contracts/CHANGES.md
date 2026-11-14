@@ -493,8 +493,8 @@ Entry format:
 - Who must act: nobody.
 - Request files: none
 
-## B13: scale data is stored, and the product list carries `sizeValues` (migration 0104)
-- Migration `0104_option_scales_sizes.sql` (renumbered from 0094 and 0100, which main took): an option axis may carry `scale` (a scale id) and each value `stored`
+## B13: scale data is stored, and the product list carries `sizeValues` (migration 0109)
+- Migration `0109_option_scales_sizes.sql` (renumbered as main took 0094 to 0108; `npm run migration:renumber` does it): an option axis may carry `scale` (a scale id) and each value `stored`
   ({scale, system?, value, unit?, width?, shape?}), the two optional fields the buyer's scale labels already read (`client/src/lib/scaleLabels.js`). Validated, cleaned, shown by
   `item_option_axes_public`, kept by Duplicate, remap and photo delete. Also fixes `item_option_axes_drop_media`, which dropped `dependsOn`.
 - `products_snapshot` carries `size_values` per item; `/api/products` returns it as `sizeValues` on each product (the field `sizeFilters.js` reads). `public_item_size_values(p_limit)`
@@ -503,7 +503,7 @@ Entry format:
 - `/api/products` now reads `psize` and `prange` (same parameters as the page address) and includes them in the canonical query.
 - Contract change for the Options step: the axis `scale` was form-only (`shared/src/options/editor.test.js` said so). It is now sent with the axis, and each value's `stored` (what
   `scales.parse` read) with the value, when `OPTION_SCALES_STORED` is true (default; false returns to form-only). `optionsFromServer` keeps both, so an edit does not lose them.
-- Deploy order: apply migration 0104 before the seller app ships. If it is not applied yet, the editor retries a refused save once without scale data (`saveWithScaleFallback`),
+- Deploy order: apply migration 0109 before the seller app ships. If it is not applied yet, the editor retries a refused save once without scale data (`saveWithScaleFallback`),
   so a seller can still save; the scale data is simply not stored until the migration is in. Items saved before have no `stored`, so they have no Size facets until saved again.
 - `npm run migration:renumber -- <file>.sql --next [--write]` renumbers a migration that is not applied anywhere. When another migration already has the old number it does
   not rewrite "migration NNNN" in words (it lists those places), so it cannot change another migration's text.

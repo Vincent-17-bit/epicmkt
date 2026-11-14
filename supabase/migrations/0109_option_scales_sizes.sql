@@ -1,4 +1,4 @@
--- 0104_option_scales_sizes.sql
+-- 0109_option_scales_sizes.sql
 -- Scale-aware options (the scales framework, the size filters and the buyer labels already read these fields).
 --   1. An option axis may name a scale (`scale`: "shoe", "volume", ...) and each value may carry its stored scale value (`stored`:
 --      {scale, system?, value, unit?, width?, shape?}). They are validated, cleaned, shown to buyers, copied by Duplicate and kept when a

@@ -616,7 +616,7 @@ describe("home products", () => {
     expect(first.flash).toBeNull();
   });
 
-  describe("size values (migration 0104)", () => {
+  describe("size values (migration 0109)", () => {
     const shop = () => { fake.current.state.businesses = [{ id: SHOP, slug: "shop-a", name: "Shop A", plan_key: "standard", verification_level: "unverified" }]; };
     const shoe = (system, value) => ({ scale: "shoe", system, value });
 

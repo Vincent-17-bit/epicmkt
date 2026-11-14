@@ -379,7 +379,7 @@ export async function getAllProducts() {
   const [rows, businesses, sizeValues] = await Promise.all([
     fetchPages("public_items", CARD_COLUMNS, [["created_at", false], ["id", true]]),
     fetchPages("public_businesses", "id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone", [["id", true]]),
-    // Stored scale values of every item's sizes (migration 0104), for the Size filter. Missing or failing: no size facets, nothing else changes.
+    // Stored scale values of every item's sizes (migration 0109), for the Size filter. Missing or failing: no size facets, nothing else changes.
     supabase.rpc("public_item_size_values", { p_limit: 50000 }).then(({ data, error }) => (!error && data && typeof data === "object" && !Array.isArray(data) ? data : {})).catch(() => ({}))
   ]);
   if (!rows.length) return [];

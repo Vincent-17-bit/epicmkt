@@ -1,4 +1,4 @@
-// Migration 0104: an option axis can name a scale and a value can carry its stored scale value; they survive save, read, duplicate and a
+// Migration 0109: an option axis can name a scale and a value can carry its stored scale value; they survive save, read, duplicate and a
 // deleted photo; and products_snapshot carries `size_values` for the buyer's size filters.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";

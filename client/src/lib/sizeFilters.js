@@ -2,7 +2,7 @@
 // productFilters.js (which uses them) also runs on the edge.
 //
 // A product exposes `sizeValues`: the stored scale values of its sizes ({scale, system?, value, unit?}).
-// The product list carries `sizeValues` since migration 0104 (see docs/requests/2026-11-07-sizes-to-client-list-size-values.md). A product without
+// The product list carries `sizeValues` since migration 0109 (see docs/requests/2026-11-07-sizes-to-client-list-size-values.md). A product without
 // the field simply has no sizes and the Size section stays hidden.
 //
 // Rules

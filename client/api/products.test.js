@@ -135,7 +135,7 @@ describe("/api/products", () => {
     expect(counts.categories).toEqual([["bakeries", 1]]);
   });
 
-  describe("size values (migration 0104)", () => {
+  describe("size values (migration 0109)", () => {
     const shoe = (system, value) => ({ scale: "shoe", system, value });
     const withSizes = () => {
       payload = snapshotPayload();
@@ -202,7 +202,7 @@ describe("/api/products", () => {
     expect(body.items[0]).toMatchObject({ name: "Loaf", imagePath: "b1/a.webp" });
   });
 
-  describe("the page-the-views fallback and size values (migration 0104)", () => {
+  describe("the page-the-views fallback and size values (migration 0109)", () => {
     const shoe = (system, value) => ({ scale: "shoe", system, value });
     const views = (sizesReply) => async (url) => {
       const u = String(url);
