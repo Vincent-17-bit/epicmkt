@@ -112,6 +112,7 @@ export default function TypePicker({ types, departments = [], categoryId, recent
       )}
 
       <section className={s.cant} aria-label="Can't find it?">
+        {!ask && <button type="button" className={s.ghost} onClick={() => onOther?.({ name: "", note: "", requested: false })}>Add as Other goods</button>}
         <button type="button" className={s.link} aria-expanded={ask} aria-controls={ids.ask} onClick={() => (ask ? setAsk(false) : openAsk())}>
           Can’t find it? Tell us what you sell
         </button>
