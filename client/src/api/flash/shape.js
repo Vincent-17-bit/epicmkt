@@ -109,8 +109,13 @@ export const pricingOf = (regularPrice, salePrice, priceType, unit, variants = [
 });
 
 export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt }) => {
-  const images = (imagePaths ?? []).map((path, index) => ({ id: `i${index + 1}`, url: mediaUrl(path), caption: name }));
-  const videos = (videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: name }));
+  // A photo's id is its database id when the card carries one (`media` entries have it). An option value points at a photo by that id
+  // (`mediaId`), so it has to survive here; the counting names i1, i2 are only for older data that has no ids.
+  const realIds = (kind) => (Array.isArray(mediaPaths) ? mediaPaths.filter((m) => m?.path && m.kind === kind).map((m) => (typeof m.id === "string" && m.id ? m.id : null)) : []);
+  const imageIds = realIds("image");
+  const videoIds = realIds("video");
+  const images = (imagePaths ?? []).map((path, index) => ({ id: imageIds.length === (imagePaths ?? []).length && imageIds[index] ? imageIds[index] : `i${index + 1}`, url: mediaUrl(path), caption: name }));
+  const videos = (videoPaths ?? []).map((path, index) => ({ id: videoIds.length === (videoPaths ?? []).length && videoIds[index] ? videoIds[index] : `v${index + 1}`, url: mediaUrl(path), caption: name }));
   // One ordered list of photos and videos, as the seller arranged them (the database's shared sequence). The ids match images[] and
   // videos[]. Without it (older cards) the photos come first, then the videos. A video has no poster picture yet, so none is set.
   const sequence = Array.isArray(mediaPaths) ? mediaPaths : [...(imagePaths ?? []).map((path) => ({ path, kind: "image" })), ...(videoPaths ?? []).map((path) => ({ path, kind: "video" }))];
@@ -118,7 +123,10 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
   let videoN = 0;
   const media = sequence
     .filter((m) => m?.path && (m.kind === "image" || m.kind === "video"))
-    .map((m) => ({ id: m.kind === "video" ? `v${++videoN}` : `i${++photoN}`, kind: m.kind, url: mediaUrl(m.path), caption: name }));
+    .map((m) => {
+      const n = m.kind === "video" ? ++videoN : ++photoN;
+      return { id: typeof m.id === "string" && m.id ? m.id : m.kind === "video" ? `v${n}` : `i${n}`, kind: m.kind, url: mediaUrl(m.path), caption: name };
+    });
   return {
     id,
     businessId,
