@@ -22,3 +22,11 @@ test("the seed map is read from the migrations", () => {
   assert.ok(map.phone.includes("phones-accessories"));
   assert.ok(map.printing.includes("cyber-cafe"));
 });
+
+import { readFileSync } from "node:fs";
+import { RESULT_FILE, resultData } from "./conformance.mjs";
+
+test("the stored result the admin readiness page reads is current: run `npm run conformance:write` after changing a category or a type", () => {
+  const stored = JSON.parse(readFileSync(RESULT_FILE, "utf8"));
+  assert.deepEqual(stored, JSON.parse(JSON.stringify(resultData(run()))));
+});

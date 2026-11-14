@@ -12,6 +12,7 @@ import { listScales } from "../scales/index.js";
 import { sampleSpecForType, sampleItemForType, sampleLegacyItem, sampleAnswersForCategory } from "./samples.js";
 
 export { sampleSpecForType, sampleItemForType, sampleLegacyItem, sampleAnswersForCategory } from "./samples.js";
+export { toListCard };
 export { scanForCategoryNames, ALLOWED_CATEGORY_NAME_FILES } from "./allowlist.js";
 
 export const STAGES = ["parse", "save", "price", "gate", "list"];

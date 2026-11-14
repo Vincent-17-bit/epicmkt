@@ -1,0 +1,255 @@
+{
+  "ok": true,
+  "categories": {
+    "water-refill": {
+      "ok": true,
+      "types": [
+        "drinking-water"
+      ],
+      "failures": []
+    },
+    "lpg-gas": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "bakery": {
+      "ok": true,
+      "types": [
+        "bread"
+      ],
+      "failures": []
+    },
+    "juice-shop": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "restaurant-cafe": {
+      "ok": true,
+      "types": [
+        "bread"
+      ],
+      "failures": []
+    },
+    "butchery": {
+      "ok": true,
+      "types": [
+        "meat-by-weight"
+      ],
+      "failures": []
+    },
+    "greengrocer": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "supermarket-minimart": {
+      "ok": true,
+      "types": [
+        "bread",
+        "drinking-water",
+        "meat-by-weight",
+        "fragrance",
+        "liquor"
+      ],
+      "failures": []
+    },
+    "chemist": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "clinic": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "optician": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "barbershop": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "salon-beauty": {
+      "ok": true,
+      "types": [
+        "gold-necklace",
+        "fragrance"
+      ],
+      "failures": []
+    },
+    "spa-massage": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "gym-fitness": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "agrovet": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "cyber-cafe": {
+      "ok": true,
+      "types": [
+        "printing"
+      ],
+      "failures": []
+    },
+    "phone-repair": {
+      "ok": true,
+      "types": [
+        "phone"
+      ],
+      "failures": []
+    },
+    "electronics-appliances": {
+      "ok": true,
+      "types": [
+        "phone",
+        "led-strip",
+        "led-bulb"
+      ],
+      "failures": []
+    },
+    "printing-stationery": {
+      "ok": true,
+      "types": [
+        "printing"
+      ],
+      "failures": []
+    },
+    "mpesa-airtime-agent": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "hardware-building": {
+      "ok": true,
+      "types": [
+        "led-strip",
+        "led-bulb"
+      ],
+      "failures": []
+    },
+    "plumbing-electrical": {
+      "ok": true,
+      "types": [
+        "led-strip",
+        "led-bulb"
+      ],
+      "failures": []
+    },
+    "furniture-carpentry": {
+      "ok": true,
+      "types": [
+        "table",
+        "sofa"
+      ],
+      "failures": []
+    },
+    "cleaning-laundry": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "tailor-boutique": {
+      "ok": true,
+      "types": [
+        "gold-necklace",
+        "fragrance"
+      ],
+      "failures": []
+    },
+    "shoes-cobbler": {
+      "ok": true,
+      "types": [
+        "shoes-eu"
+      ],
+      "failures": []
+    },
+    "garage-mechanic": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "car-wash": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "auto-spare-parts": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "photography-events": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "tuition-daycare": {
+      "ok": true,
+      "types": [],
+      "failures": []
+    },
+    "phones-accessories": {
+      "ok": true,
+      "types": [
+        "phone",
+        "memory-card"
+      ],
+      "failures": []
+    },
+    "electronics-computers": {
+      "ok": true,
+      "types": [
+        "phone",
+        "memory-card"
+      ],
+      "failures": []
+    },
+    "fashion-boutiques": {
+      "ok": true,
+      "types": [
+        "shoes-eu",
+        "gold-necklace",
+        "fragrance"
+      ],
+      "failures": []
+    },
+    "home-kitchen": {
+      "ok": true,
+      "types": [
+        "table"
+      ],
+      "failures": []
+    }
+  },
+  "types": {
+    "phone": true,
+    "memory-card": true,
+    "shoes-eu": true,
+    "table": true,
+    "sofa": true,
+    "bread": true,
+    "drinking-water": true,
+    "led-strip": true,
+    "led-bulb": true,
+    "printing": true,
+    "meat-by-weight": true,
+    "gold-necklace": true,
+    "fragrance": true,
+    "liquor": true
+  },
+  "hardCoded": []
+}

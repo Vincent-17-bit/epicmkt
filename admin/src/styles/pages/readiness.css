@@ -1,0 +1,23 @@
+/* styles/pages/readiness.css (Prompt 11.6) */
+.readiness-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+.readiness-card { display: grid; gap: var(--space-3); align-content: start; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); background: var(--surface); min-width: 0; }
+.readiness-card__head { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-3); flex-wrap: wrap; }
+.readiness-card__price { margin: 0; font-weight: var(--fw-semibold); }
+.readiness-card__preview { margin: 0; }
+.readiness-checks, .readiness-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.readiness-check { display: flex; gap: var(--space-3); align-items: flex-start; }
+.readiness-check__mark { flex: none; inline-size: 1.4rem; block-size: 1.4rem; display: inline-grid; place-items: center; border-radius: 50%; font-weight: var(--fw-semibold); font-size: var(--fs-xs); background: var(--surface-sunken); }
+.readiness-check--pass .readiness-check__mark { background: color-mix(in srgb, var(--success) 18%, transparent); color: var(--success); }
+.readiness-check--fail .readiness-check__mark { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.readiness-check--warn .readiness-check__mark { background: color-mix(in srgb, var(--warning) 22%, transparent); color: var(--text); }
+.readiness-filters { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-block: var(--space-3); }
+.readiness-filters .is-active { outline: 2px solid var(--primary); outline-offset: 1px; }
+.readiness-note { background: color-mix(in srgb, var(--warning) 10%, transparent); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); margin: 0; }
+.readiness-ok { color: var(--success); margin: 0; }
+.readiness-bad { color: var(--danger); margin: 0 0 var(--space-2); }
+.readiness-sandbox__controls { display: flex; gap: var(--space-4); align-items: flex-end; flex-wrap: wrap; margin-block: var(--space-3); }
+.readiness-sandbox__toggle { display: flex; gap: var(--space-2); align-items: center; min-block-size: 2.5rem; }
+.readiness-sandbox__grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); align-items: start; }
+.readiness-sandbox__payload { grid-column: 1 / -1; }
+.readiness-sandbox__payload pre { overflow: auto; max-block-size: 20rem; padding: var(--space-3); background: var(--surface-sunken); border-radius: var(--radius-md); font-size: var(--fs-xs); }
+@media (prefers-reduced-motion: no-preference) { .readiness-card { transition: border-color 120ms; } }

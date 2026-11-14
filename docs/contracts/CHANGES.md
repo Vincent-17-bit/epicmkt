@@ -535,3 +535,12 @@ Entry format:
 - New RPCs: `admin_plan_limits()` (any admin) and `admin_save_plan_limits(plan, limits, reason)` (owner and finance; a change needs a reason; audited as `plan.limits`). The database repeats the shared rules; a db test runs the same boundary values through both.
 - Admin: Plans page has a "Limits and features by plan" section with the live-shop impact shown before saving. Plan versions and the "N live, N versions" counts are untouched (limits are not plan versions).
 - Not done here, by design: seller enforcement of the `threeD` limits and the `features` switches beyond what Prompt 3.1 does. Whoever builds each feature reads `planSwitches` / `planLimitValues`; nothing reads them yet except the existing `options` limits.
+
+## 2026-11-15 11.6: category readiness and sandbox (admin)
+
+- What changed: admin page `/admin/readiness` (Catalogue, next to Spec rules). Per category: plans priced, product types defined, spec rules valid, conformance result, preview item. Switching an existing category on from the Categories dialog is refused until it is ready, with the reasons and a link; switching off, and saving a category that is already on, are never blocked.
+- Only a missing type does not block (most categories sell plain items); it shows as a note.
+- Conformance result stored as data: `admin/src/data/conformanceResult.json`, written by `npm run conformance:write` (no timestamps, so a stale file is a plain diff). `scripts/conformance.test.mjs` fails when it is out of date, so run the command after changing a category or a product type.
+- Sandbox: builds a throwaway item of a type in memory (card, options, price, publish gate, the payload the seller form would send); "leave the required answers empty" shows the seller's blocker messages. It saves nothing and touches no shop.
+- `@epicmkt/shared/conformance` subpath export added (sample builders, `toListCard`); the barrel is unchanged so no app bundle grows.
+- The database still checks only `plans_not_priced` on its own. The other readiness rules are the admin's, because the conformance result is a release artefact and not database data. Not done here: a database-level block, and a sandbox that writes a real draft item to a sandbox shop (it needs a sandbox business and a cleanup job; file a request if wanted).
