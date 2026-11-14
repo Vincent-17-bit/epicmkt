@@ -12,6 +12,7 @@
     "./constants": "./src/constants.js",
     "./template": "./src/template.js",
     "./options": "./src/options/index.js",
-    "./options/fixtures": "./src/options/fixtures.js"
+    "./options/fixtures": "./src/options/fixtures.js",
+    "./conformance": "./src/conformance/index.js"
   }
 }

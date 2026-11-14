@@ -14,6 +14,7 @@ const api = {
   listPlans: vi.fn(), getPlanHistory: vi.fn(async () => [{ id: 1, created_at: "2026-01-01T00:00:00Z", reason: "Inflation", price_kes: 500, top_benefits: ["a", "b", "c"], badge: null, changed_by_email: "owner@test" }]),
   savePlan: vi.fn(async () => 3), listCategories: vi.fn(), saveCategory: vi.fn(async () => true),
   getPlanLimits: vi.fn(async () => ({ standard: {}, premium: {} })), savePlanLimits: vi.fn(async () => ({})),
+  listTypeSettings: vi.fn(async () => ({ types: [] })), listSpecTypes: vi.fn(async () => []),
 };
 vi.mock("../../api/index.js", () => ({ api, default: api }));
 
@@ -129,14 +130,14 @@ describe("Categories and the template builder", () => {
     expect(within(dialog).getByRole("button", { name: "Save category" })).toBeEnabled();
   });
 
-  it("switching a live category off needs a reason; a server refusal is shown in words", async () => {
-    api.saveCategory.mockRejectedValueOnce(Object.assign(new Error("plans_not_priced"), { code: "plans_not_priced" }));
+  it("a category that is not ready cannot be switched on, and the dialog says what is missing; switching a live category off needs a reason", async () => {
     renderPage(<CategoriesPage />);
     fireEvent.click(await screen.findByRole("button", { name: "Edit Salon" }));
     let dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByLabelText(/Available to new applicants/));
-    fireEvent.click(within(dialog).getByRole("button", { name: "Save category" }));
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent(/Set a price on both plans/);
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(/Not ready to switch on: plans priced/);
+    expect(within(dialog).getByRole("link", { name: "See what is missing" })).toHaveAttribute("href", "/admin/readiness");
+    expect(within(dialog).getByRole("button", { name: "Save category" })).toBeDisabled();
     cleanup();
     renderPage(<CategoriesPage />);
     fireEvent.click(await screen.findByRole("button", { name: "Edit Bakery" }));

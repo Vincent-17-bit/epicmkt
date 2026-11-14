@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
@@ -7,7 +8,9 @@ import Modal from "../../components/Modal.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { CATEGORY_ERRORS, cleanField, docProblems, templateProblems } from "../../lib/catalogue.js";
+import { activationBlock } from "../../lib/readiness.js";
 import { DocsEditor, QuestionsEditor } from "./TemplateBuilder.jsx";
+import { useReadiness } from "./useReadiness.js";
 import { formatKes } from "@epicmkt/shared";
 
 const blank = { isNew: true, id: "", name: "", grp: "", icon: "store", tier: "B", sort: 100, active: false, template: [], extra_docs: [] };
@@ -22,7 +25,10 @@ function CategoryDialog({ initial, groups, onClose }) {
   const documentProblems = docProblems(form.extra_docs);
   const turningOff = !form.isNew && initial.active && !form.active;
   const idOk = /^[a-z0-9-]{2,50}$/.test(form.id);
-  const ready = idOk && form.name.trim().length >= 2 && form.grp.trim().length >= 2 && !Object.keys(fieldProblems).length && !Object.keys(documentProblems).length && (!turningOff || reason.trim().length >= 5);
+  // Prompt 11.6: an existing category that is off cannot be switched on until it is ready (Readiness page says why).
+  const { byId } = useReadiness();
+  const blocked = form.isNew ? null : activationBlock(byId[initial.id], { already: initial.active, turningOn: form.active });
+  const ready = !blocked && idOk && form.name.trim().length >= 2 && form.grp.trim().length >= 2 && !Object.keys(fieldProblems).length && !Object.keys(documentProblems).length && (!turningOff || reason.trim().length >= 5);
 
   const save = useMutation({
     mutationFn: () => api.saveCategory({
@@ -56,6 +62,7 @@ function CategoryDialog({ initial, groups, onClose }) {
           <label className="field">Order<input inputMode="numeric" value={form.sort} onChange={(e) => set({ sort: e.target.value.replace(/[^\d]/g, "") })} /></label>
         </div>
         <label><input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} /> Available to new applicants</label>
+        {blocked ? <p className="modal__error" role="alert">{blocked} <Link to="/admin/readiness" onClick={onClose}>See what is missing</Link></p> : null}
         {turningOff && (
           <label className="field">Why is it being switched off?<textarea value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} /></label>
         )}

@@ -38,7 +38,8 @@
     "lint:ui": "eslint ui/src",
     "test:visual": "node scripts/visual.mjs run",
     "test:ui": "npm test -w ui",
-    "test:conformance": "node scripts/conformance.mjs"
+    "test:conformance": "node scripts/conformance.mjs",
+    "conformance:write": "node scripts/conformance.mjs --write"
   },
   "devDependencies": {
     "pg": "^8.23.1",
