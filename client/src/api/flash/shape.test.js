@@ -209,3 +209,16 @@ describe("customer gallery, team, timetable and shop settings", () => {
       .toEqual({ whatsappGreeting: "Hi {item}", showClosesChip: false, partialClosureMessage: "Some items are out." });
   });
 });
+
+describe("photo ids", () => {
+  const base = { id: "it", businessId: "b", businessSlug: "s", name: "Loaf", description: "", price: 65, priceType: "fixed", unit: "loaf", section: null, availability: "available", stockLeft: null, variants: [], createdAt: "2026-01-01T00:00:00Z" };
+  it("keeps each photo's database id so an option's mediaId can find it", () => {
+    const item = itemOf({ ...base, imagePaths: ["a.jpg", "b.jpg"], videoPaths: [], mediaPaths: [{ id: "uuid-a", path: "a.jpg", kind: "image" }, { id: "uuid-b", path: "b.jpg", kind: "image" }] });
+    expect(item.images.map((m) => m.id)).toEqual(["uuid-a", "uuid-b"]);
+    expect(item.media.map((m) => m.id)).toEqual(["uuid-a", "uuid-b"]);
+  });
+  it("still counts i1, i2 for older data without ids", () => {
+    const item = itemOf({ ...base, imagePaths: ["a.jpg", "b.jpg"], videoPaths: [], mediaPaths: [{ path: "a.jpg", kind: "image" }, { path: "b.jpg", kind: "image" }] });
+    expect(item.images.map((m) => m.id)).toEqual(["i1", "i2"]);
+  });
+});
