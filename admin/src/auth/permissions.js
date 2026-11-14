@@ -58,6 +58,8 @@ export const ACTIONS = {
   "sizecharts.edit": { label: "change size charts and the shoe conversion table", roles: [] },
   "specrules.view": { label: "see the spec rules of each product type", roles: ["reviewer", "support"] },
   "specrules.edit": { label: "change the spec rules of each product type", roles: [] },
+  "producttypes.view": { label: "see the product types and their options", roles: ["reviewer", "support"] },
+  "producttypes.edit": { label: "create and change product types and their options", roles: [] },
 };
 
 export function isRole(role) {

@@ -732,3 +732,7 @@ export const setItemSizeChart = (itemId, chartId = null) => detailRpc("admin_set
 // TODO(contract:2.6) the product types page will own the rest of a type; this only edits its specRows.
 export const listSpecTypes = () => detailRpc("admin_spec_rows_list");
 export const saveSpecRows = (id, rows) => detailRpc("admin_save_spec_rows", { p_id: id, p_rows: rows });
+
+// Product types page (migration 0108). listTypeSettings -> { types, departments, categories }; saveTypeSettings(id, { name, departmentId, categoryIds, axes, active }) is owner only and creates the type when the id is new.
+export const listTypeSettings = () => detailRpc("admin_product_types_list");
+export const saveTypeSettings = (id, type) => detailRpc("admin_save_product_type", { p_id: id, p_type: type });

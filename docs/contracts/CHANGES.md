@@ -480,3 +480,15 @@ Entry format:
 - What changed: on a database that already had the size-chart catch-up, migration 0086 reported "SKIPPED: cannot drop columns from view" because the view `public_size_charts` already had its later (0093) columns. The generated script now drops that view before 0086 (0093 recreates it later in the same run), as `catch-up-size-charts.sql` already did. The earlier SKIPPED was harmless: the resulting functions and columns were identical to a full migration (tested).
 - Who must act: nobody who already ran the first version; their database is correct. New runs show no SKIPPED row.
 - Request files: none
+
+## 2026-11-14 2.6: admin Product types page (migration 0108)
+
+- Contract: v1 (additive)
+- Lane / author: Group 2, Prompt 2.6
+- What changed:
+  - `admin_product_types_list()` (reviewer, support, owner) returns `{ types, departments, categories }`; `admin_save_product_type(p_id, p_type)` (owner only) creates or updates a type's name, department, categories, options (`axes`, at most 3, with suggested values) and `active` flag, and audits it as `product_type.create` or `product_type.update`.
+  - `product_type_axes_valid` checks axis keys, labels, display kinds and suggested values.
+  - Admin page `/admin/product-types` (permissions `producttypes.view`, `producttypes.edit`).
+- Not changed: spec rows stay on `/admin/spec-rules`. Saving a type does not touch items that are already live.
+- Who must act: nobody.
+- Request files: none
