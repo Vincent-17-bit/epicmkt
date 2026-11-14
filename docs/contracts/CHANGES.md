@@ -544,3 +544,12 @@ Entry format:
 - Sandbox: builds a throwaway item of a type in memory (card, options, price, publish gate, the payload the seller form would send); "leave the required answers empty" shows the seller's blocker messages. It saves nothing and touches no shop.
 - `@epicmkt/shared/conformance` subpath export added (sample builders, `toListCard`); the barrel is unchanged so no app bundle grows.
 - The database still checks only `plans_not_priced` on its own. The other readiness rules are the admin's, because the conformance result is a release artefact and not database data. Not done here: a database-level block, and a sandbox that writes a real draft item to a sandbox shop (it needs a sandbox business and a cleanup job; file a request if wanted).
+
+## 2026-11-15 11.7: category kits (export, import, clone)
+
+- What changed: admin page `/admin/kits` (Catalogue). Export a category's kit (types with options and spec rules, the size charts those types use, optionally all approved open values) as JSON. Import reads a kit, shows a per-item diff (new, changes, same, with notes) and applies it step by step. Clone copies a type under a new name, switched off, with no size chart attached.
+- Kit format `epicmkt-kit` version 1: sorted and without environment ids, so the same category always exports the same text. `admin/src/lib/kit.js` holds the model and tests.
+- An import only adds: it never removes a category from a type, a type from a size chart, or a value. Importing twice changes nothing the second time. Existing tags and shades are filled in, never overwritten.
+- New RPC `admin_import_option_value(kind, label, fields)` (migration 0112; reviewer or owner; audited). Everything else reuses the existing save calls, so each change has its own audit row.
+- An import is not one transaction. If a step is refused it stops, says how far it got, and what was applied stays applied; reading the kit again lists only what is left.
+- Not done here: not checked in a real browser; the open values of a kit are global, since values belong to no category.

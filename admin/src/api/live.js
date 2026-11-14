@@ -708,6 +708,8 @@ export const updateOptionValue = (id, fields) => detailRpc("admin_update_option_
 // Rename and merge answer with the value plus `itemsUpdated` (how many items now show the new spelling).
 export const renameOptionValue = (id, label) => detailRpc("admin_rename_option_value", { p_id: id, p_label: label });
 export const mergeOptionValue = (from, into) => detailRpc("admin_merge_option_value", { p_from: from, p_into: into });
+// Category kit import (migration 0112): adds an approved value, or finds the one there. -> { created, value }
+export const importOptionValue = (kind, label, fields = null) => detailRpc("admin_import_option_value", { p_kind: kind, p_label: label, p_fields: fields });
 
 // ---- Size charts and the shoe conversion table (Sizes 1.9, migration 0093_size_chart_types_shoe_conversion.sql) ----
 // listSizeCharts -> [{ id, name, category, unit, columns, rows, active, updated_at, product_type_ids, items_using }]
