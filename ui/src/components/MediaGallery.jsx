@@ -170,7 +170,7 @@ function Thumb({ item, selected, id, panelId, tabIndex, label, duration, onDurat
  * A large stage and a rail of thumbnails (vertical from 1024 px, a scroll-snap row below). The stage keeps one fixed
  * shape so nothing moves while pictures load. Carousel + tabs pattern for assistive tech; arrows, Home and End work.
  */
-export default function MediaGallery({ media, images, videos, name = "", labels, className = "" }) {
+export default function MediaGallery({ media, images, videos, name = "", labels, className = "", focus = null }) {
   const text = { ...GALLERY_LABELS, ...labels };
   const uid = useId();
   const list = useMemo(() => normalizeMedia(media ? { media } : { images, videos }), [media, images, videos]);
@@ -203,6 +203,14 @@ export default function MediaGallery({ media, images, videos, name = "", labels,
     setActive(target);
     if (focusTab) tabs.current[target]?.focus();
   };
+
+  // `focus` = { id, n }: show the photo with that id. `n` changes on every pick, so choosing the same size again brings its photo back
+  // after the buyer has swiped away. An id that is not among the photos does nothing.
+  useEffect(() => {
+    if (!focus?.id) return;
+    const at = list.findIndex((entry) => entry.id === focus.id);
+    if (at >= 0) goTo(at);
+  }, [focus?.id, focus?.n]);
 
   // Keep the chosen thumbnail visible inside the rail without scrolling the page.
   useEffect(() => {

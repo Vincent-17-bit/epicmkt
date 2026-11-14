@@ -20,6 +20,6 @@ const galleryLabels = (t) => ({
 });
 
 // The Gallery slot: the item's photos and videos. ItemView keeps the wrapper that places it in the layout.
-export default function ItemGallery({ item, t = itemT }) {
-  return <MediaGallery key={`gallery-${item.id}`} media={item.media} images={item.images} videos={item.videos} name={item.name} labels={galleryLabels(t)} />;
+export default function ItemGallery({ item, t = itemT, focus = null }) {
+  return <MediaGallery key={`gallery-${item.id}`} media={item.media} images={item.images} videos={item.videos} name={item.name} labels={galleryLabels(t)} focus={focus} />;
 }

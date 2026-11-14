@@ -442,7 +442,8 @@ describe("queue and upload on save for a new item", () => {
     expect(photos).not.toHaveBeenCalled();
     let result;
     await act(async () => { result = await manager.commit(item.id); });
-    expect(result).toEqual({ failed: 0, orderError: "" });
+    expect(result).toMatchObject({ failed: 0, orderError: "" });
+    expect(Object.keys(result.ids)).toHaveLength(3);   // the one saved photo plus the two just uploaded: every photo now has its id
     expect(photos).toHaveBeenCalledTimes(2);
     const saved = await api.listItemMedia(item.id);
     expect(saved.map((m) => m.kind).slice(-3)).toEqual(["video", "image", "image"]);

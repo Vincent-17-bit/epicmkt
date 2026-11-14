@@ -48,7 +48,7 @@ export const GUIDE_TEMPLATES = Object.freeze([
   { id: "perfume", name: "Perfumes and sprays", kind: "drink", unit: null, columns: ["Size", "Volume (ml)", "Type"], fill: { col: 1, read: "volume" } },
   { id: "packs", name: "Packs and crates", kind: "drink", unit: null, columns: ["Size", "Bottles in pack", "Volume (ml)"], fill: { col: 2, read: "volume" } },
   { id: "loaf", name: "Bread and loaves", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Slices"], fill: { col: 1, read: "weight" } },
-  { id: "cake", name: "Cakes", kind: "food", unit: "in", columns: ["Size", "Diameter (in)", "Serves"] },
+  { id: "cake", name: "Cakes", kind: "food", unit: "in", columns: ["Size", "Diameter (in)", "Serves (people)"] },
   { id: "weight", name: "Packs by weight", kind: "food", unit: null, columns: ["Size", "Weight (g)", "Pieces"], fill: { col: 1, read: "weight" } },
   { id: "paint", name: "Paint and liquids", kind: "hardware", unit: null, columns: ["Size", "Volume (L)", "Coverage (m²)", "Finish"] },
   { id: "cement", name: "Cement, sand and bulk", kind: "hardware", unit: null, columns: ["Size", "Weight (kg)", "Pack of"] },
@@ -66,7 +66,7 @@ export const GUIDE_COLUMN_IDEAS = Object.freeze({
   dimensions: ["Length", "Width", "Height", "Thickness", "Weight (kg)", "Fits"],
   drink: ["Volume (ml)", "Servings", "Bottles in pack", "Alcohol (%)", "Type"],
   hardware: ["Pack of", "Weight (kg)", "Volume (L)", "Gauge", "Power (W)", "Voltage", "Coverage (m²)"],
-  food: ["Weight (g)", "Slices", "Serves", "Pieces"],
+  food: ["Weight (g)", "Slices", "Serves (people)", "Pieces"],
   custom: ["Length", "Width", "Height", "Weight (kg)", "Volume (ml)", "Notes"]
 });
 
@@ -309,3 +309,12 @@ export const guideForBuyer = (guide) => {
   return p ? { id: null, name: "Size guide", category: null, ...p, overridden: false, own: true } : null;
 };
 
+
+// One plain line for the columns sellers are most often unsure about, shown under the table so each cell gets the right kind of answer.
+export const GUIDE_COLUMN_HELP = [
+  [/^serves/i, "How many people it feeds, for example 4-6. Not a product name."],
+  [/^slices/i, "How many slices are in it, for example 16."],
+  [/^pieces/i, "How many pieces or units, for example 65."],
+  [/^weight/i, "How heavy it is, for example 400g."]
+];
+export const columnHelp = (name) => GUIDE_COLUMN_HELP.find(([re]) => re.test(String(name ?? "").trim()))?.[1] ?? "";

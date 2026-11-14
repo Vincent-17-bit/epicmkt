@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useParams } from "react-route
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
-import { CUSTOM_SIZE_STORED, colourPhotoStatus, wantsGuide, checkGuide, checkOptions, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, colourPhotoStatus, wantsGuide, checkGuide, checkOptions, attachPhotos, pendingPhotoTiles, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -290,8 +290,19 @@ function EditorForm({ item, sections, category, business }) {
       }
       const spec = await settleSpecLinks(form, type);
       await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
-      const { problems, leftover } = await media.flush(id);
+      const { problems, leftover, ids } = await media.flush(id);
       if (guideProblem) problems.push(guideProblem);
+      // Photos chosen for a size or type before the item existed (or while still uploading) have their ids only now: link them.
+      // The re-read of the options further down then shows what was really stored.
+      if (pendingPhotoTiles(form.options).length > 0) {
+        const r = attachPhotos(form.options, (k) => ids?.[k] ?? null);
+        try {
+          await api.saveItem(id, { ...body, options: optionsPayload(r.options, true) });
+        } catch (err) {
+          problems.push(`The photos for your options were not linked: ${blockedText(err) ?? saveErrorText(err)}`);
+        }
+        if (r.missing) problems.push(`${r.missing} option ${r.missing === 1 ? "photo" : "photos"} did not upload, so ${r.missing === 1 ? "that choice has" : "those choices have"} no photo.`);
+      }
       clearDraft(draftId);
       await qc.invalidateQueries({ queryKey: ["catalog"] });
       // "New items start as Visible": publish a brand-new item straight away, but only when it is complete enough to show:

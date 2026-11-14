@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowDown, faArrowUp, faChevronLeft, faChevronRight, faClone, faPlus, faTrashCan, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { GUIDE_COLUMN_IDEAS, GUIDE_LIMITS, addColumn, addRow, canAddColumn, canAddRow, copyRow, moveColumn, moveRow, removeColumn, removeRow, setCell, setHeader } from "@epicmkt/shared";
+import { GUIDE_COLUMN_IDEAS, GUIDE_LIMITS, columnHelp, addColumn, addRow, canAddColumn, canAddRow, copyRow, moveColumn, moveRow, removeColumn, removeRow, setCell, setHeader } from "@epicmkt/shared";
 import ed from "../../editor.module.css";
 import s from "./guide.module.css";
 
@@ -97,6 +97,11 @@ export default function GuideTable({ guide, kind, onChange, errors = {}, announc
         </table>
       </div>
 
+      {guide.columns.some((c) => columnHelp(c)) && (
+        <ul className={s.count} aria-label="What each column means" style={{ margin: 0, paddingInlineStart: "1.1rem" }}>
+          {guide.columns.filter((c) => columnHelp(c)).map((c) => <li key={c}><strong>{c}:</strong> {columnHelp(c)}</li>)}
+        </ul>
+      )}
       <p className={s.count}>Scroll sideways to see every column. The buttons at the end of each row move, copy or remove it.</p>
       {errors.rows && <p className={ed.error} data-focus="guide-rows">{errors.rows}</p>}
       {errors.columns && <p className={ed.error} data-focus="guide-columns">{errors.columns}</p>}

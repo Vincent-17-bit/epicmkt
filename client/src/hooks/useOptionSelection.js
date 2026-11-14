@@ -20,7 +20,7 @@ export function useOptionSelection(item, itemId) {
   // The link's value, read once per item (the first render for it), never again: later changes to the URL are our own.
   const fromUrl = useRef({ itemId, text: params.get("v") });
   if (fromUrl.current.itemId !== itemId) fromUrl.current = { itemId, text: null };
-  const [picked, setPicked] = useState({ itemId: null, raw: null });
+  const [picked, setPicked] = useState({ itemId: null, raw: null, axisKey: null, n: 0 });
 
   const raw = picked.itemId === itemId ? picked.raw : live ? choiceFromParam(axes, fromUrl.current.text) : null;
   const defaultVariantId = item?.defaultVariantId ?? null;
@@ -34,10 +34,13 @@ export function useOptionSelection(item, itemId) {
       variants,
       choice,
       variant,
+      // The option type the buyer picked last (null until they pick): its photo is the one the gallery shows. `n` counts the picks.
+      lastAxisKey: picked.itemId === itemId ? picked.axisKey : null,
+      pickCount: picked.itemId === itemId ? picked.n : 0,
       label: variant?.label || choiceLabel(axes, choice),
       select: (axisKey, valueId) => {
         const next = reconcileSelection(axes, variants, { ...choice, [axisKey]: valueId }, defaultVariantId);
-        setPicked({ itemId, raw: next });
+        setPicked((p) => ({ itemId, raw: next, axisKey, n: (p.itemId === itemId ? p.n : 0) + 1 }));
         const text = choiceToParam(axes, next);
         setParams(
           (prev) => {
@@ -50,5 +53,5 @@ export function useOptionSelection(item, itemId) {
         );
       }
     };
-  }, [live, axes, variants, choice, defaultVariantId, itemId, setParams, location.state]);
+  }, [live, axes, variants, choice, defaultVariantId, itemId, setParams, location.state, picked]);
 }
