@@ -28,7 +28,7 @@
     "test:db": "node --test --test-concurrency=1 \"supabase/tests/*.test.mjs\"",
     "test:fn": "deno test --no-check -A --node-modules-dir=none --ignore=\"supabase/tests/*-db.test.ts\" \"supabase/tests/*.test.ts\"",
     "test:fn:db": "deno test --no-check -A --node-modules-dir=none \"supabase/tests/*-db.test.ts\"",
-    "test:seller-backend": "npm run check:migrations && npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn && npm run test:fn:db",
+    "test:seller-backend": "npm run check:migrations && npm run test:conformance && npm run sync:shared -- --check && npm run test:shared && npm run test:db && npm run test:fn && npm run test:fn:db",
     "test:seller-ui": "npm test -w seller",
     "test:client": "npm test -w client",
     "test:all": "npm run test:seller-backend && npm run test:seller-ui && npm run test:client && npm run test:admin-ui && npm run test:ui",
@@ -37,7 +37,8 @@
     "test:admin-ui": "npm test -w admin",
     "lint:ui": "eslint ui/src",
     "test:visual": "node scripts/visual.mjs run",
-    "test:ui": "npm test -w ui"
+    "test:ui": "npm test -w ui",
+    "test:conformance": "node scripts/conformance.mjs"
   },
   "devDependencies": {
     "pg": "^8.23.1",
