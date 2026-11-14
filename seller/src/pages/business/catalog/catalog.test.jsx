@@ -24,7 +24,13 @@ const media = (desktop) => {
 const open = (path = "/business/catalog", prepare) => signedInApp(path, prepare);
 // The editor is a page of its own now. It is the whole document, so queries run against the body.
 const editorPage = async (title) => {
-  await screen.findByRole("heading", { level: 1, name: title });
+  const first = await screen.findByRole("heading", { level: 1, name: title === "Add item" ? /^(Add item|What are you adding\?)$/ : title });
+  if (first.textContent === "What are you adding?") {
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /Can.t find it/ }));
+    await user.click(await screen.findByRole("button", { name: "Add as Other goods without sending" }));
+    await screen.findByRole("heading", { level: 1, name: title });
+  }
   return document.body;
 };
 const names = () => screen.queryAllByTestId("listing").map((li) => li.querySelector("[data-card] span[class*='name']")?.textContent ?? li.textContent);
@@ -954,14 +960,15 @@ describe("item editor sections", () => {
   it("adds a specification from a preset chip, disables used presets, and keeps each row's group", async () => {
     const user = userEvent.setup();
     const dialog = await openForm(user);
-    await user.click(within(dialog).getByRole("button", { name: "Material" }));
+    const quick = within(within(dialog).getByRole("list", { name: "Quick add" }));
+    await user.click(quick.getByRole("button", { name: "Material" }));
     expect(within(dialog).getByLabelText("Label")).toHaveValue("Material");
-    expect(within(dialog).getByRole("button", { name: "Material" })).toBeDisabled();
-    await user.click(within(dialog).getByRole("button", { name: "Dimensions (D x W x H)" }));
+    expect(quick.getByRole("button", { name: "Material" })).toBeDisabled();
+    await user.click(quick.getByRole("button", { name: "Dimensions (D x W x H)" }));
     expect(within(dialog).getAllByLabelText("Group").map((g) => g.value)).toEqual(["Features & Specs", "Measurements"]);
     await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
     await user.type(within(dialog).getAllByLabelText("Label")[2], "weight");
-    expect(within(dialog).getByRole("button", { name: "Weight" })).toBeDisabled();
+    expect(quick.getByRole("button", { name: "Weight" })).toBeDisabled();
     expect(within(dialog).getByText("3 of 20")).toBeInTheDocument();
   });
 

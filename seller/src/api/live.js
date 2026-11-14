@@ -261,6 +261,8 @@ export const getItemMedia = async (itemId) => shape.itemMedia(await rpc("seller_
 export const listItemMedia = async (itemId) => (await getItemMedia(itemId)).media;
 export const getItemMediaLimits = async (itemId) => (await getItemMedia(itemId)).limits;
 // What the plan allows per item, in the same shape as getItemMedia().limits, for an item that does not exist yet.
+export const sellerProductTypes = () => rpc("seller_product_types");
+export const sellerRequestType = (name, note) => rpc("seller_request_type", { p_name: name, p_note: note || null });
 export const getMediaLimits = async () => {
   const sub = await getSubscription();
   const l = sub.limits[sub.business.planKey] ?? {};
