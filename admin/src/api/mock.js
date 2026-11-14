@@ -9,7 +9,7 @@ export { getSettings, saveSettings, setBusinessGrace } from "./mockSettings.js";
 export { getHealthConfig, saveHealthConfig } from "./mockHealth.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
-export { getPlanHistory, listCategories, listPlans, saveCategory, savePlan } from "./mockCatalogue.js";
+export { getPlanHistory, getPlanLimits, listCategories, listPlans, saveCategory, savePlan, savePlanLimits } from "./mockCatalogue.js";
 export { deleteSizeChart, getShoeConversion, listItemsForSizeChart, listProductTypes, listSizeCharts, saveShoeConversion, saveSizeChart, setItemSizeChart } from "./mockSizeCharts.js";   // Sizes 1.9
 export { listSpecTypes, saveSpecRows } from "./mockSpecRules.js";   // Spec rules 5.11
 export { listTypeSettings, saveTypeSettings } from "./mockProductTypes.js";

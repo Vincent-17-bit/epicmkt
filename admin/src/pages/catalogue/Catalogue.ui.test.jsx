@@ -13,6 +13,7 @@ const category = (over = {}) => ({ id: "bakery", name: "Bakery", grp: "Food", ic
 const api = {
   listPlans: vi.fn(), getPlanHistory: vi.fn(async () => [{ id: 1, created_at: "2026-01-01T00:00:00Z", reason: "Inflation", price_kes: 500, top_benefits: ["a", "b", "c"], badge: null, changed_by_email: "owner@test" }]),
   savePlan: vi.fn(async () => 3), listCategories: vi.fn(), saveCategory: vi.fn(async () => true),
+  getPlanLimits: vi.fn(async () => ({ standard: {}, premium: {} })), savePlanLimits: vi.fn(async () => ({})),
 };
 vi.mock("../../api/index.js", () => ({ api, default: api }));
 

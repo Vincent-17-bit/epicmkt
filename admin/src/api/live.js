@@ -665,6 +665,10 @@ export const getPlanHistory = ({ category, plan }) => detailRpc("admin_plan_hist
 export const savePlan = ({ category, plan, price, benefits, badge = null, reason = null }) =>
   detailRpc("admin_save_plan", { p_category: category, p_plan: plan, p_price: price, p_benefits: benefits, p_badge: badge || null, p_reason: reason });
 
+// Plan limits and feature switches (migration 0111_plan_limits_switches.sql)
+export const getPlanLimits = () => detailRpc("admin_plan_limits", {});
+export const savePlanLimits = ({ plan, limits, reason = null }) => detailRpc("admin_save_plan_limits", { p_plan: plan, p_limits: limits, p_reason: reason });
+
 export const listCategories = () => detailRpc("admin_categories_list", {});
 export const saveCategory = ({ id, name, group, icon = "store", tier, sort = 0, active, template, extraDocs, reason = null }) =>
   detailRpc("admin_save_category", {

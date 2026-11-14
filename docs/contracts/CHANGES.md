@@ -527,3 +527,11 @@ Entry format:
 - Allow-list: no category id may appear as a quoted string in source outside data, tests, mocks, seeds and fixtures. Four files name categories today and are listed with a reason in `ALLOWED_CATEGORY_NAME_FILES`; each is a request to remove it (`docs/requests/2026-11-15-categories-hard-coded-in-source.md`).
 - Release check: `npm run test:seller-backend` (and so `test:all`) now runs `test:conformance` after the migration check.
 - No migration and no change to any shared export; nothing for other apps to do.
+
+## 2026-11-15 11.5: plan limits and feature switches (migration 0111)
+
+- What changed: `global_limits.<plan>` (standard, premium) may now carry three more keys, each stored only when it differs from the default: `options` `{ axes, values, variants }` (the key the seller editor already reads through `effectiveLimits`), `threeD` `{ models, spinFrames }` and `features` `{ options, threeD, recommend, delivery, demand }`. A plan can only lower a hard limit; a switch is on unless it is `false`, so every shop keeps what it has today.
+- Read it with `planLimitValues(plan, limits)` and `planSwitches(plan, limits)` (`shared/src/planLimits.js`, exported from the barrel); validate with `checkPlanLimits`. `PLAN_LIMIT_RULES` takes its caps from `OPTION_LIMITS` and `MEDIA3D`, so they cannot drift.
+- New RPCs: `admin_plan_limits()` (any admin) and `admin_save_plan_limits(plan, limits, reason)` (owner and finance; a change needs a reason; audited as `plan.limits`). The database repeats the shared rules; a db test runs the same boundary values through both.
+- Admin: Plans page has a "Limits and features by plan" section with the live-shop impact shown before saving. Plan versions and the "N live, N versions" counts are untouched (limits are not plan versions).
+- Not done here, by design: seller enforcement of the `threeD` limits and the `features` switches beyond what Prompt 3.1 does. Whoever builds each feature reads `planSwitches` / `planLimitValues`; nothing reads them yet except the existing `options` limits.

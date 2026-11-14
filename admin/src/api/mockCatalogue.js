@@ -1,6 +1,7 @@
 // Demo data for Plans and Categories. Local development only; it enforces the same rules as the database.
 import { ApiError } from "./errors.js";
 import { docProblems, templateProblems } from "../lib/catalogue.js";
+import { checkPlanLimits } from "@epicmkt/shared";
 
 const latency = (ms = 120) => new Promise((resolve) => setTimeout(resolve, ms));
 const at = (offset) => new Date(Date.now() + offset).toISOString();
@@ -43,6 +44,31 @@ export async function savePlan({ category, plan, price, benefits, badge = null, 
   history[`${category}:${plan}`] = [{ id: Date.now(), created_at: at(0), reason, price_kes: price, top_benefits: next.top_benefits, badge: next.badge, changed_by_email: "you@epicmkt.test" }, ...(history[`${category}:${plan}`] ?? [])];
   plans = plans.map((p) => (p === old ? next : p));
   return next.versions;
+}
+
+// Plan limits and feature switches (Prompt 11.5). Stored the way global_limits is: one object per plan, and only what differs from the defaults.
+let planLimits = {
+  standard: { photosPerItem: 7, galleryPhotos: 5, activeOffers: 8 },
+  premium: { photosPerItem: 15, galleryPhotos: 20, activeOffers: null },
+};
+
+export async function getPlanLimits() {
+  await latency();
+  return { ...JSON.parse(JSON.stringify(planLimits)), updated_at: at(0) };
+}
+
+export async function savePlanLimits({ plan, limits, reason = null }) {
+  await latency();
+  if (!["standard", "premium"].includes(plan)) throw new ApiError("invalid_plan");
+  const checked = checkPlanLimits(limits);
+  if (!checked.ok) throw new ApiError("invalid_limits");
+  const old = planLimits[plan];
+  const { options, threeD, features, ...rest } = old;
+  const next = { ...rest, ...(Object.keys(checked.value.options).length && { options: checked.value.options }), ...(Object.keys(checked.value.threeD).length && { threeD: checked.value.threeD }), ...(Object.keys(checked.value.features).length && { features: checked.value.features }) };
+  if (JSON.stringify(next) === JSON.stringify(old)) return old;
+  if (String(reason ?? "").trim().length < 5) throw new ApiError("reason_required");
+  planLimits = { ...planLimits, [plan]: next };
+  return next;
 }
 
 export async function listCategories() {
