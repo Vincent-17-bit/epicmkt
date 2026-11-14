@@ -43,3 +43,14 @@ describe("a typed item, from the editor to the shop", () => {
     expect(saved.specs).toEqual([expect.objectContaining({ label: "Water type", value: "Spring" })]);
   });
 });
+
+describe("one way to add options", () => {
+  it("hides the old flat options list once colour or storage options are in use", async () => {
+    const user = userEvent.setup();
+    await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: water.id } });
+    await screen.findByRole("heading", { level: 1, name: "Add item" });
+    expect(screen.getByRole("button", { name: "Add an option" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^Use the usual options/ }));
+    expect(screen.queryByRole("button", { name: "Add an option" })).toBeNull();
+  });
+});

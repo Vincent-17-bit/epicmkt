@@ -48,7 +48,7 @@ export default function PriceSection({ form, patch, errors, focusOn }) {
           )}
         </div>
       )}
-      {OPTION_TYPES.includes(form.priceType) && (
+      {OPTION_TYPES.includes(form.priceType) && !((form.options?.axes?.length ?? 0) > 0 && (form.variants ?? []).length === 0) && (
         <div className={styles.subBlock} data-area="variants">
           <h3 className={styles.subTitle}>Options (optional)</h3>
           <p className={styles.hint}>Sizes or types that have their own price, like Small and Large. Customers pick one. Leave a stock number empty if you do not count that option; at 0 it is hidden from customers.</p>
