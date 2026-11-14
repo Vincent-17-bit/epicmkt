@@ -1,12 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { exampleShortFor, firstSentence, LIMITS } from "./model.js";
 import { Field, SectionCard } from "./parts.jsx";
 import ValueField from "./ValueField.jsx";
 import TypeRows from "./TypeRows.jsx";
+import { NameChips, DuplicateGuard } from "./NameChips.jsx";
 import { hasTemplate, rowsOf } from "./typedRows.js";
 import styles from "./editor.module.css";
 
-export default function BasicsSection({ form, patch, errors, category, sections, focusOn, type, more, onMore }) {
+export default function BasicsSection({ form, patch, errors, category, sections, focusOn, type, more, onMore, isNew }) {
+  const [checked, setChecked] = useState("");
   const suggestion = useMemo(() => (form.shortDescription.trim() ? "" : firstSentence(form.description)), [form.shortDescription, form.description]);
   const accept = () => {
     patch("shortDescription", suggestion);
@@ -19,8 +21,10 @@ export default function BasicsSection({ form, patch, errors, category, sections,
   return (
     <SectionCard id="basics" title="Basics" required why="Your name and descriptions are what customers read first, and what search matches against.">
       <div className={styles.grid}>
-        <Field name="name" label="Name" area="name" max={LIMITS.name} value={form.name} error={errors.name} onChange={(e) => patch("name", e.target.value)} autoComplete="off"
+        <Field name="name" label="Name" area="name" max={LIMITS.name} value={form.name} error={errors.name} onChange={(e) => patch("name", e.target.value)} onBlur={(e) => setChecked(e.target.value)} autoComplete="off"
           hint="Say what it is in plain words, like Men's fade cut or Chocolate cake, 1 kg." className={styles.span2} />
+        {isNew && <DuplicateGuard name={checked} />}
+        <NameChips name={form.name} rows={[...required, ...rowsOf(form, type).extra]} form={form} patch={patch} />
         <ValueField kind="brand" name="brand" label="Brand (optional)" area="brand" max={LIMITS.brand} value={form.brand} valueId={form.brandValueId} error={errors.brand} noun="brand"
           onChange={(text, v) => { patch("brand", text); patch("brandValueId", v?.id ?? null); }}
           hint="The maker or label, such as Nike or Brookside. Pick one from the list so it matches other shops, or type your own." />
