@@ -50,6 +50,10 @@ export default function AddItem() {
           onPick={pick} onRequestType={requestType} onOther={other}
         />
       )}
+      <section className={styles.block} aria-labelledby="many-items">
+        <h2 id="many-items" className={styles.heading}>Many of the same kind</h2>
+        <Link className={styles.ghost} to={`${CATALOG}/add/table`}>Add several items in a table</Link>
+      </section>
       <CopyItem items={items} from={from} />
     </main>
   );
