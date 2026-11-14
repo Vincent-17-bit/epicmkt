@@ -185,10 +185,11 @@ test("a visitor who is not a seller cannot save with a type", async () => {
 test("seller_product_types leaves out types the shop may not sell and keeps the contract shape", async () => {
   const idsFor = async (k) => (await as(who(k), `select seller_product_types() as r`))[0].r;
   const boutique = await idsFor("boutique");
-  assert.deepEqual(boutique.types.map((t) => t.id).sort(), ["fragrance", "stationery"]);
+  // "liquor" (migration 0105) has no restriction, like fragrance and stationery, so every shop is offered it.
+  assert.deepEqual(boutique.types.map((t) => t.id).sort(), ["fragrance", "liquor", "stationery"]);
   assert.ok(boutique.departments.length > 20 && boutique.departments[0].id && boutique.departments[0].name);
-  assert.deepEqual((await idsFor("chemist")).types.map((t) => t.id).sort(), ["fragrance", "prescription-medicine", "stationery"]);
-  assert.deepEqual((await idsFor("agrovet")).types.map((t) => t.id).sort(), ["agrochemicals", "fragrance", "stationery", "vet-medicine"]);
+  assert.deepEqual((await idsFor("chemist")).types.map((t) => t.id).sort(), ["fragrance", "liquor", "prescription-medicine", "stationery"]);
+  assert.deepEqual((await idsFor("agrovet")).types.map((t) => t.id).sort(), ["agrochemicals", "fragrance", "liquor", "stationery", "vet-medicine"]);
   const rx = (await idsFor("chemist")).types.find((t) => t.id === "prescription-medicine");
   assert.deepEqual(rx.restrictedTo, ["chemist"]);
   assert.equal(rx.departmentId, "medicine-health");
