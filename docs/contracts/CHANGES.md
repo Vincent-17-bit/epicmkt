@@ -519,3 +519,11 @@ Entry format:
   so a seller can still save; the scale data is simply not stored until the migration is in. Items saved before have no `stored`, so they have no Size facets until saved again.
 - `npm run migration:renumber -- <file>.sql --next [--write]` renumbers a migration that is not applied anywhere. When another migration already has the old number it does
   not rewrite "migration NNNN" in words (it lists those places), so it cannot change another migration's text.
+
+## 2026-11-15 11.4: conformance suite (`npm run test:conformance`)
+
+- What changed: `shared/src/conformance/` and `scripts/conformance.mjs`. Every live category (`client/src/data/categories.js`) and every product type (`PRODUCT_TYPES`) gets a generated sample item and goes through five stages: parse (the type and the scales it names), save (`storedOptions`, `checkItemDetail`, `checkItemAgainstProductType`), price (`priceFor`), publish gate (`specIssues`) and list payload (`checkItemListCard`). A category also sends a plain item with no type and no options through price, gate and list. The run prints one row per category and exits 1 on any failure; `--json` prints the result as data for the readiness page (Prompt 11.6).
+- Which types a category may sell is read from the `product_types` seed in the migrations (`shared/src/conformance/seedMap.js`), so the database stays the source.
+- Allow-list: no category id may appear as a quoted string in source outside data, tests, mocks, seeds and fixtures. Four files name categories today and are listed with a reason in `ALLOWED_CATEGORY_NAME_FILES`; each is a request to remove it (`docs/requests/2026-11-15-categories-hard-coded-in-source.md`).
+- Release check: `npm run test:seller-backend` (and so `test:all`) now runs `test:conformance` after the migration check.
+- No migration and no change to any shared export; nothing for other apps to do.
