@@ -190,7 +190,8 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const { item, business } = found;
   // Detail only, like the live API: lists keep their lean shape. The new keys (options, optionVariants, optionAvailability,
   // sizeChart) sit beside the item's own `availability` status and its legacy `variants` list, which pricing is built from.
-  const detail = optionsOf(business.services.find((svc) => svc.id === item.id) ?? {});
+  const svcOf = business.services.find((svc) => svc.id === item.id) ?? {};
+  const detail = { ...optionsOf(svcOf), ...(svcOf.customSize ? { customSize: svcOf.customSize } : {}) };
   const sale = liveSaleFor(item, business);
   return {
     ...item,

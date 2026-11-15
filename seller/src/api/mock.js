@@ -1,4 +1,5 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
+import { validateCustomSize } from "@epicmkt/shared";
 import { MEDIA3D, checkOptionIds, checkTicketRequest, hasView3d, inspectGlb, view3dIssues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
@@ -578,6 +579,7 @@ function resetBilling() {
   bill.variantTiers = new Map();   // itemId -> [{ choice, tiers }] (a combination's own quantity prices)
   bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
   bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
+  bill.customSizes = new Map(); // itemId -> the made-to-measure config (migration 0125)
   bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0103)
   bill.options = new Map();   // itemId -> { axes, variants, sizeChartId, sizeChartOverride } (migration 0084: option_axes, item_variants, size_chart_*)
   bill.now = null;
@@ -1095,6 +1097,21 @@ export const saveItemSizeGuide = async (id, guide) => {
   bill.guides.set(id, copy(guide));
   return true;
 };
+export const getItemCustomSize = async (id) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  return copy(bill.customSizes.get(id) ?? null);
+};
+export const saveItemCustomSize = async (id, config) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  if (config == null) { bill.customSizes.delete(id); return true; }
+  if (config.enabled !== true || !validateCustomSize(config).ok) throw new ApiError("invalid_custom_size");
+  bill.customSizes.set(id, copy(config));
+  return true;
+};
 export const listSizeCharts = async () => {
   signedIn();
   return demoSizeCharts();
@@ -1227,6 +1244,8 @@ export const duplicateItem = async (id) => {
   }
   const g = bill.guides.get(src.id);
   if (g) bill.guides.set(copyOf.id, copy(g));
+  const cs = bill.customSizes.get(src.id);
+  if (cs) bill.customSizes.set(copyOf.id, copy(cs));
   return copyOf.id;
 };
 // ---- Performance, History, Deals (demo data; the real numbers come from the rollup tables in Supabase) ----

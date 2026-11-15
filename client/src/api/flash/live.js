@@ -1,5 +1,5 @@
 import { withTiers } from "./tiers.js";
-import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -196,6 +196,15 @@ const quantityModeFor = async (typeId) => {
     return mode === "units" || mode === "measure" || mode === "none" ? mode : null;
   } catch { return null; }
 };
+// The made-to-measure setting of a listed item (migration 0125). Anything unexpected is "not offered": the page is complete without it.
+const customSizeFor = async (itemId) => {
+  if (!CUSTOM_SIZE_STORED) return null;
+  try {
+    const found = await supabase.rpc("public_item_custom_size", { p_item: itemId });
+    const cfg = found.error ? null : found.data;
+    return cfg && typeof cfg === "object" && validateCustomSize(cfg).ok ? cfg : null;
+  } catch { return null; }
+};
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   if (!isLiveId(itemId)) throw new NotFoundError("Item not found");
   const row = unwrap(await supabase.from("public_items").select("*").eq("id", itemId).maybeSingle());
@@ -203,7 +212,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const business = unwrap(await supabase.from("public_businesses").select("*").eq("id", row.business_id).maybeSingle());
   if (!business || (businessId && businessId !== business.id && businessId !== business.slug)) throw new NotFoundError("Item not found");
   const item = itemRow(row, business);
-  const [{ now, entries }, options, tiers, quantityMode] = await Promise.all([liveEntries(), optionsFor(itemId), tiersFor(itemId), quantityModeFor(row.product_type_id)]);
+  const [{ now, entries }, options, tiers, quantityMode, customSize] = await Promise.all([liveEntries(), optionsFor(itemId), tiersFor(itemId), quantityModeFor(row.product_type_id), customSizeFor(itemId)]);
   const entry = entries.find((e) => e.item.id === itemId);
   const { discount } = entry?.sale ?? {};
   const pricing = entry
@@ -216,6 +225,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
     ...item,
     ...options,
     ...(quantityMode ? { quantityMode } : {}),
+    ...(customSize ? { customSize } : {}),
     business: card,
     pricing,
     flash: entry ? flashParts(entry, now) : null,

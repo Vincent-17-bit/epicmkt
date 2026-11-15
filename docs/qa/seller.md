@@ -16,4 +16,4 @@ Seller entry chunk: 1,715 kB (530 gzip). Three, jsPDF, html2canvas and the map a
 
 - **Editor bundle within 10 percent of before the lanes:** no baseline build was recorded before the lanes started, so there is nothing to compare with. From here on, 1,715 kB / 530 kB gzip is the number to hold.
 - **360 px pass over the editor, real-browser axe, phone check:** not done (see above). Needs a scripted seller sign-in, or a person with a phone.
-- Known gaps, none filed as blockers: a custom size is not stored by the database (`CUSTOM_SIZE_STORED` is off); road distance is an estimate (straight line x 1.3) until `VITE_ROUTING_URL` is set; nothing was checked on a phone or in a headed or non-Chromium browser.
+- Known gaps, none filed as blockers: road distance is an estimate (straight line x 1.3) until `VITE_ROUTING_URL` is set; Firefox and WebKit could not be installed in the QA sandbox, so only Chromium (headless, headed under a virtual display, and phone emulation) was run; no real phone was used.

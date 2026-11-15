@@ -103,9 +103,9 @@ export const customSizeMessage = (itemName, cfg, values, price, fmt = (n) => `KE
   return [itemName, `Made to measure: ${parts.join(", ")}`, price === null || price === undefined ? null : fmt(price)].filter(Boolean).join(", ");
 };
 
-// Open gap: stays false until the database stores `customSize` (see docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
-// While false the seller editor shows no control and the buyer page shows no made-to-measure choice, so nothing is offered that would not be kept.
-export const CUSTOM_SIZE_STORED = false;
+// The database stores `customSize` (migration 0125: items.custom_size, seller_set_item_custom_size, public_item_custom_size). If a backend
+// that does not is ever used, switch this off: the seller editor then shows no control and the buyer page no made-to-measure choice.
+export const CUSTOM_SIZE_STORED = true;
 
 // Form (typed text) -> what is saved: numbers, no editing leftovers. null when the seller has it off.
 export const customSizePayload = (cfg) => {

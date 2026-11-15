@@ -2,6 +2,7 @@ import { ItemOptions } from "@epicmkt/ui";
 import OptionsPicker from "./OptionsPicker.jsx";
 import NoMatch from "./NoMatch.jsx";
 import SizeChartLink from "./SizeChartModal.jsx";
+import MadeToMeasure from "./MadeToMeasure.jsx";
 import View3dEntry from "./View3d/Entry.jsx";
 import styles from "./SizeChartModal.module.css";
 
@@ -12,8 +13,8 @@ const focusGallery = () => document.getElementById("item-gallery")?.scrollIntoVi
 // before, and an item with neither shows nothing.
 export default function Options({ ctx, slot }) {
   if (!slot?.item) return null;
-  if (ctx?.option) return <><OptionsPicker item={slot.item} option={ctx.option} /><View3dEntry item={slot.item} option={ctx.option} onFallback={focusGallery} /><NoMatch item={slot.item} seller={ctx.seller} option={ctx.option} /></>;
+  if (ctx?.option) return <><OptionsPicker item={slot.item} option={ctx.option} /><View3dEntry item={slot.item} option={ctx.option} onFallback={focusGallery} /><NoMatch item={slot.item} seller={ctx.seller} option={ctx.option} /><MadeToMeasure item={slot.item} custom={ctx.custom} /></>;
   // An item with a size guide but no option groups (a bag, a plank, a loaf sold in one size) still shows its guide: a Size chart link under the title block.
   const own = slot.item.sizeChart ? <div className={styles.standalone}><SizeChartLink chart={slot.item.sizeChart} /></div> : null;
-  return <><ItemOptions {...slot} /><View3dEntry item={slot.item} option={ctx?.option} onFallback={focusGallery} />{own}</>;
+  return <><ItemOptions {...slot} /><View3dEntry item={slot.item} option={ctx?.option} onFallback={focusGallery} />{own}<MadeToMeasure item={slot.item} custom={ctx?.custom} /></>;
 }

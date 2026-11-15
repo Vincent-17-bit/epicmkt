@@ -156,7 +156,7 @@ export default function ShopPhotos({ business }) {
 
       {/* The two ways to get a picture. Camera opens the phone camera straight away; Photo opens the gallery or files. */}
       <input ref={galleryRef} type="file" accept={ACCEPT} className={styles.hidden} tabIndex={-1} onChange={onPicked} data-testid="photo-input" />
-      <input ref={cameraRef} type="file" accept="image/*" capture={spec?.capture ?? "environment"} className={styles.hidden} tabIndex={-1} onChange={onPicked} data-testid="camera-input" />
+      <input ref={cameraRef} type="file" accept="image/*" capture={spec?.capture ?? "environment"} className={styles.hidden} tabIndex={-1} onChange={onPicked} data-testid="camera-input" aria-label="Take a photo" />
 
       <PhotoSourceSheet
         spec={spec}
