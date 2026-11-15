@@ -43,7 +43,8 @@ describe("ProductTile", () => {
     });
     render(<ProductTile item={onSale} href="/x" renderFlash={(cls) => <span className={cls}>CLOCK</span>} />);
     expect(screen.getByText("-20%")).toBeInTheDocument();
-    expect(screen.getByText(/KES\s?1,440/)).toBeInTheDocument();
+    // The price is drawn as a small "KES" and the amount, so it is read from the card's text.
+    expect(screen.getByRole("link")).toHaveTextContent(/KES\s?1,440/);
     expect(screen.getByText(/KES\s?1,800/)).toBeInTheDocument();
     expect(screen.getByText("CLOCK")).toBeInTheDocument();
   });
@@ -115,5 +116,44 @@ describe("ProductTile", () => {
     const link = document.querySelector("a");
     expect(link).not.toHaveAttribute("href");
     expect(link).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
+describe("ProductTile in search results", () => {
+  const base = { id: "s1", name: "JBL Flip 6", availability: "available", pricing: { regularPrice: 14500, salePrice: 14500, savings: 0, discountPercent: 0 }, business: { name: "Nakuru Electronics", isOpen: true } };
+
+  it("adds the item's own facts, colours, delivery line and button, still as one link", () => {
+    render(
+      <ProductTile
+        item={{ ...base, videos: [{ id: "v1", url: "https://x.test/v.mp4" }] }}
+        href="/b/n/i/s1"
+        facts={["Bluetooth", "30 W"]}
+        swatches={[{ id: "a", label: "Black", color: "#111" }, { id: "b", label: "Blue", color: "#24c" }, { id: "c", label: "Red", color: "#c22" }]}
+        delivery={{ kind: "delivery", text: "Delivery KES 300 · 15 km" }}
+        cta="See options"
+      />
+    );
+    const link = screen.getByRole("link");
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    expect(link).toHaveTextContent("Bluetooth · 30 W");
+    expect(screen.getByRole("img", { name: "3 colours" })).toBeInTheDocument();
+    expect(link).toHaveTextContent("Delivery KES 300 · 15 km");
+    expect(link).toHaveTextContent("See options");
+    expect(link).toHaveTextContent("Has video");
+    expect(screen.getByRole("img", { name: "Open now" })).toBeInTheDocument();
+  });
+
+  it("shows no extras when none are given, and asks for the price when there is none", () => {
+    const { container } = render(<ProductTile item={{ ...base, pricing: null }} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("Ask for the price");
+    expect(screen.queryByText("See options")).toBeNull();
+    expect(container.querySelector("[data-kind]")).toBeNull();
+  });
+
+  it("calls onClick when the card is opened", () => {
+    let opened = 0;
+    render(<ProductTile item={base} href="/x" onClick={(e) => { e.preventDefault(); opened += 1; }} />);
+    screen.getByRole("link").click();
+    expect(opened).toBe(1);
   });
 });

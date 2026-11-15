@@ -1,4 +1,6 @@
 import { formatKes, isListed } from "@epicmkt/shared";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faLocationDot, faPlay, faTruck } from "@fortawesome/free-solid-svg-icons";
 import { isPreview } from "./preview.js";
 import OfferChip from "./components/OfferChip.jsx";
 import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
@@ -17,8 +19,12 @@ const DEFAULT_LABELS = {
   optionsOne: "1 option",
   optionsMany: "{n} options",
   closed: "Closed",
+  open: "Open now",
   lowStock: "Low stock",
-  onlyLeft: "Only {n} left"
+  onlyLeft: "Only {n} left",
+  colours: "{n} colours",
+  videos: "Has video",
+  ask: "Ask for the price"
 };
 
 const plainLink = ({ href, children, ...rest }) => (
@@ -33,16 +39,23 @@ const inertLink = ({ href, children, ...rest }) => (
   </a>
 );
 
+const SWATCHES = 5;
+
 /**
- * A product card for lists of products from many stores. The picture takes two thirds of the card and the details
- * the last third: name, price and the store it is sold by, with a blue tick for a verified store and an amber star for
- * a featured one. The whole card is one link, so the store name is text, not a nested link.
+ * The one product card of the site: home lists, search results, "Goes well with", similar items. Every card has the same
+ * shape: a square picture, then the name (always the same number of lines, so prices line up across a row), an optional
+ * line of facts, the colours, the price at the foot, and the shop. The whole card is one link; the shop name is text.
  *
- * Availability: an available item shows nothing extra, an item running low shows a small "Low stock" (or "Only 3 left")
- * tag beside the price, and a sold-out item is not drawn at all. Sold-out items are not listed to customers, so a list
- * that still contains one is a bug elsewhere; the tile refuses to show it rather than put it in front of a customer.
+ * Optional, for search results (all of it read from the product, nothing invented):
+ *   facts      ["30 W", "12 h playtime"]  one muted line under the name
+ *   swatches   [{ label, color }]        up to five dots and "+3"
+ *   delivery   { kind: "delivery" | "pickup" | "place", text }   a truck for delivery, a pin otherwise
+ *   cta        "See options"             a quiet button at the foot (hidden on narrow cards)
+ *   titleLines 2 (default) or 3;  blurb false hides the short description after the name;  priority loads the picture first
+ *   onClick    called when the card is opened (search logs the position)
  *
- * `item.business` is `{ name, verified, featured }`. Everything that varies in wording comes in as `labels`.
+ * Availability: an available item shows nothing extra, one running low gets "Low stock" / "Only 3 left" on the picture, and a
+ * sold-out item is not drawn at all (sold-out items are not listed to customers, so one reaching here is a bug elsewhere).
  */
 export default function ProductTile({
   item,
@@ -51,73 +64,111 @@ export default function ProductTile({
   labels = DEFAULT_LABELS,
   renderFlash,
   mode = "live",
+  facts = null,
+  swatches = null,
+  delivery = null,
+  cta = null,
+  titleLines = 2,
+  blurb: showBlurb = true,
+  priority = false,
+  onClick,
   className = ""
 }) {
   const preview = isPreview(mode);
   const Link = preview ? inertLink : renderLink;
+  const text = { ...DEFAULT_LABELS, ...labels };
   const store = item.business ?? {};
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
   // Combinations priced differently: "From KES 24,000" (the lowest price now; with a flash sale running, the lowest flash price).
-  // A strike-through regular price would be the wrong comparison against a lowest price, so it is left out then, and so is the "-33%" badge:
-  // each option is discounted differently (or not at all), so one percentage would be wrong for most of them.
+  // A strike-through regular price would be the wrong comparison against a lowest price, so it is left out then, and so is the
+  // "-33%" badge: each option is discounted differently (or not at all), so one percentage would be wrong for most of them.
   const ranged = Boolean(pricing?.hasRange && Number.isFinite(pricing.priceMin));
   const count = Number(item.optionCount);
-  const optionsText = !item.hasOptions ? ""
-    : count === 1 ? (labels.optionsOne ?? DEFAULT_LABELS.optionsOne)
-    : count > 1 ? (labels.optionsMany ?? DEFAULT_LABELS.optionsMany).replace("{n}", String(count))
-    : (labels.options ?? DEFAULT_LABELS.options);
-  // A short line after the name. It shares the name's two lines, so it fills the space a short name leaves and is cut
-  // with an ellipsis when long: it can never push the price or the store out of the card.
-  const blurb = cardBlurb(item) || String(item.section ?? "").trim();
+  const optionsText = !item.hasOptions ? "" : count === 1 ? text.optionsOne : count > 1 ? text.optionsMany.replace("{n}", String(count)) : text.options;
+  // A short line after the name, sharing the name's lines: it fills the space a short name leaves and is cut when long.
+  const blurb = showBlurb ? cardBlurb(item) || String(item.section ?? "").trim() : "";
+  const dots = Array.isArray(swatches) ? swatches.filter((s) => s?.label) : [];
+  const hasVideo = (item.videos?.length ?? 0) > 0 || (item.media ?? []).some((m) => m?.kind === "video");
+  const amount = pricing ? (ranged ? pricing.priceMin : pricing.salePrice) : null;
 
   if (!isListed(item)) return null;
 
   return (
-    <Link
-      href={preview ? undefined : href}
-      className={`${styles.tile} ${className}`}
-      data-mode={preview ? "preview" : undefined}
-    >
+    <Link href={preview ? undefined : href} className={`${styles.tile} ${className}`} data-mode={preview ? "preview" : undefined} style={{ "--title-lines": titleLines }} onClick={preview ? undefined : onClick}>
       <span className={styles.media}>
-        <LazyImage fill src={coverUrl(item)} className={styles.img} />
+        <LazyImage fill src={coverUrl(item)} className={styles.img} priority={priority} />
         {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
-        <OfferChip offer={item.offer} className={styles.offer} labels={labels.offerChip} />
-        <StockTag item={item} labels={labels} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
+        <OfferChip offer={item.offer} className={styles.offer} labels={text.offerChip} />
+        <StockTag item={item} labels={text} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
+        {hasVideo && (
+          <span className={styles.video} title={text.videos}>
+            <FontAwesomeIcon icon={faPlay} aria-hidden="true" />
+            <span className="sr-only">{text.videos}</span>
+          </span>
+        )}
       </span>
 
       <span className={styles.body}>
         <span className={styles.copy}>
           <span className={styles.name}>{item.name}</span>
-          {blurb && <span className={styles.blurb}> {blurb}</span>}
+          {blurb && <span className={styles.blurb}>{blurb}</span>}
         </span>
-        <span className={styles.priceRow}>
+        {facts?.length > 0 && <span className={styles.facts}>{facts.join(" · ")}</span>}
+        {(dots.length > 1 || optionsText) && (
+          <span className={styles.variants}>
+            {dots.length > 1 ? (
+              <span className={styles.dots} role="img" aria-label={text.colours.replace("{n}", String(dots.length))}>
+                {dots.slice(0, SWATCHES).map((s) => (
+                  <span key={s.id ?? s.label} className={styles.dot} style={{ "--sw": s.color ?? "var(--surface-3)" }} title={s.label} />
+                ))}
+                {dots.length > SWATCHES && <span className={styles.moreDots}>+{dots.length - SWATCHES}</span>}
+              </span>
+            ) : null}
+            {optionsText && <span className={styles.options}>{optionsText}</span>}
+          </span>
+        )}
+
+        <span className={styles.foot}>
           {pricing ? (
             <span className={styles.prices}>
-              {ranged && <span className={styles.from}>{labels.from ?? DEFAULT_LABELS.from}</span>}
-              <span className={styles.price}>{formatKes(ranged ? pricing.priceMin : pricing.salePrice)}</span>
+              {ranged && <span className={styles.from}>{text.from}</span>}
+              {ranged && " "}
+              <span className={styles.price}>
+                <span className={styles.cur}>KES</span>
+                <span className="sr-only"> </span>
+                {formatKes(amount).replace(/^KES\s?/, "")}
+                {item.unit && <span className={styles.unit}>/{item.unit}</span>}
+              </span>
               {onSale && !ranged && (
                 <s className={styles.was}>
-                  <span className="sr-only">{labels.was} </span>
+                  <span className="sr-only">{text.was} </span>
                   {formatKes(pricing.regularPrice)}
                 </s>
               )}
             </span>
           ) : (
-            <span />
+            <span className={styles.ask}>{text.ask}</span>
           )}
-          {optionsText && <span className={styles.options}>{optionsText}</span>}
-        </span>
-        <span className={styles.store}>
-          {store.featured && <FeaturedMark label={labels.featured} />}
-          <span className={styles.storeName}>{store.name}</span>
-          {store.isOpen === false && (
-            <span className={styles.closed} title={store.statusLine ?? undefined}>
-              {labels.closed ?? DEFAULT_LABELS.closed}
+          {delivery?.text && (
+            <span className={styles.delivery} data-kind={delivery.kind}>
+              <FontAwesomeIcon icon={delivery.kind === "delivery" ? faTruck : faLocationDot} aria-hidden="true" className={styles.lineIcon} />
+              <span className={styles.lineText}>{delivery.text}</span>
             </span>
           )}
-          {store.verified && <VerifiedMark label={labels.verified} />}
+          <span className={styles.store}>
+            {store.featured && <FeaturedMark label={text.featured} />}
+            <span className={styles.storeName}>{store.name}</span>
+            {store.verified && <VerifiedMark label={text.verified} />}
+            {store.isOpen === false && (
+              <span className={styles.closed} title={store.statusLine ?? undefined}>
+                {text.closed}
+              </span>
+            )}
+            {store.isOpen === true && <span className={styles.openDot} title={text.open} aria-label={text.open} role="img" />}
+          </span>
+          {cta && <span className={styles.cta} aria-hidden="true">{cta}</span>}
         </span>
       </span>
     </Link>

@@ -9,6 +9,7 @@ import { t } from "../i18n/index.js";
 import { Button, Container, Skeleton, StateCard } from "@epicmkt/ui";
 import PageBanner from "../components/PageBanner.jsx";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
+import ProductTile from "../components/ProductTile.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Department.module.css";
 
@@ -21,20 +22,22 @@ export const priceLabel = (item) => {
   return `${from ? `${t("dept.from")} ` : ""}${formatKes(item.price, { decimals: 0 })}`;
 };
 
+/** A department row in the shape the site's product card reads, so this page shows the same card as everywhere else. */
+export const asCardItem = (item) => {
+  const from = item.price != null && (item.priceType === "from" || item.hasOptions || (item.priceMax != null && item.priceMax > item.price));
+  return {
+    id: item.id,
+    name: item.name,
+    hasOptions: item.hasOptions,
+    images: item.image ? [{ id: "i1", url: item.image, caption: item.name }] : [],
+    pricing: item.price == null ? null : { salePrice: item.price, regularPrice: item.price, savings: 0, discountPercent: 0, hasRange: from, priceMin: item.price },
+    business: item.shop ? { id: item.shop.id, slug: item.shop.slug, name: item.shop.name, town: item.shop.town } : null
+  };
+};
+
 function ItemTile({ item }) {
   const href = item.shop ? `/b/${item.shop.slug}/i/${item.id}` : "/";
-  return (
-    <Link to={href} className={styles.tile}>
-      <span className={styles.media}>
-        {item.image ? <img src={item.image} alt="" loading="lazy" className={styles.img} /> : <span className={styles.noimg} aria-hidden="true" />}
-      </span>
-      <span className={styles.text}>
-        <span className={styles.name}>{item.name}</span>
-        {item.shop && <span className={styles.shop}>{fill("dept.at", { shop: item.shop.name })}{item.shop.town ? ` · ${item.shop.town}` : ""}</span>}
-        {priceLabel(item) && <span className={styles.price}>{priceLabel(item)}</span>}
-      </span>
-    </Link>
-  );
+  return <ProductTile item={asCardItem(item)} href={href} delivery={item.shop?.town ? { kind: "place", text: item.shop.town } : null} />;
 }
 
 /** Everything in one department (/d/phones) or one type of it (/d/phones/phone), from every shop, whatever the shop's category. */
@@ -95,7 +98,7 @@ export default function Department() {
             </StateCard>
           ) : (
             <>
-              <ul className={styles.grid}>{entries.map((item) => <li key={item.id}><ItemTile item={item} /></li>)}</ul>
+              <ul className={styles.grid}>{entries.map((item) => <li key={item.id} className={styles.cell}><ItemTile item={item} /></li>)}</ul>
               {query.hasNextPage && (
                 <div className={styles.more}>
                   <Button variant="secondary" disabled={query.isFetchingNextPage} onClick={() => query.fetchNextPage()}>{t("dept.more")}</Button>

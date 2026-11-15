@@ -65,7 +65,7 @@
   display: none;
   align-items: center;
   gap: 0.5rem;
-  min-height: var(--tap, 2.75rem);
+  min-height: 2.5rem;
   padding: 0 0.875rem;
   border-radius: var(--radius-pill);
   border: 1px solid var(--border-strong);
@@ -90,6 +90,7 @@
 }
 .results {
   min-width: 0;
+  container: results / inline-size;
   transition: opacity var(--dur, 0.2s);
 }
 .results[data-loading] {
@@ -323,184 +324,35 @@
   font-size: var(--text-sm);
   color: var(--text-muted);
 }
+/* The results grid: the site's product card, as many across as the space gives (the results column's own width, not the
+   window's, so opening the filter column never squeezes a card). 2 on phones, 3 on small tablets, 4 on tablets and laptops,
+   5 on wide screens. */
 .list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(0.5rem, 1.6cqw, 0.875rem);
 }
-.row {
-  display: grid;
-  grid-template-columns: minmax(10rem, 18rem) minmax(0, 1fr);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  background: var(--surface);
-  transition: box-shadow var(--dur, 0.2s);
-}
-.row:hover {
-  box-shadow: var(--shadow-md);
-}
-.media {
-  position: relative;
-  display: grid;
-  place-items: center;
-  background: #f7f7f7;
-  aspect-ratio: 1;
-  min-height: 12rem;
-}
-:global([data-theme="dark"]) .media {
-  background: #e9e9ea;
-}
-.img {
-  width: 92%;
-  height: 92%;
-  object-fit: contain;
-  mix-blend-mode: multiply;
-}
-.noimg {
-  width: 60%;
-  height: 60%;
-  border-radius: 1rem;
-  background: var(--surface-3);
-}
-.badge {
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  z-index: 1;
-  padding: 0.1875rem 0.5rem;
-  border-radius: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #fff;
-  background: #232f3e;
-}
-.badge[data-tone="flash"] {
-  background: #cc0c39;
-}
-.badge[data-tone="sale"] {
-  background: #b12704;
-}
-.body {
-  padding: var(--space-3) var(--space-4);
-  display: grid;
-  align-content: start;
-  gap: 0.25rem;
-}
-.title {
-  margin: 0;
-  font-size: 1.125rem;
-  font-weight: 500;
-  line-height: 1.35;
-}
-.title a {
-  color: var(--text);
-  text-decoration: none;
-}
-.title a:hover {
-  color: #c45500;
-  text-decoration: underline;
-}
-.sub {
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.facts {
-  margin: 0.125rem 0 0;
-  font-size: var(--text-xs);
-  color: var(--text);
-  font-weight: 600;
-}
-.seller {
-  margin: 0.125rem 0 0;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+.cell {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.25rem;
+  min-width: 0;
 }
-.shopLink {
-  color: var(--link);
-  text-decoration: none;
-  font-weight: 600;
+@container results (min-width: 30rem) {
+  .list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
-.shopLink:hover {
-  text-decoration: underline;
+@container results (min-width: 42rem) {
+  .list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
-.verified {
-  color: var(--verified);
-}
-.open {
-  color: var(--status-ok);
-}
-.closed {
-  color: var(--text-muted);
-}
-.price {
-  margin: 0.375rem 0 0;
-  display: flex;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 0.125rem;
-  color: var(--text);
-  line-height: 1;
-}
-.from {
-  font-size: var(--text-sm);
-  align-self: center;
-  margin-right: 0.25rem;
-}
-.cur {
-  font-size: 0.75rem;
-  padding-top: 0.25rem;
-}
-.amount {
-  font-size: 1.75rem;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-.unit {
-  align-self: flex-end;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-.was {
-  align-self: flex-end;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-  margin-left: 0.375rem;
-}
-.save {
-  align-self: flex-end;
-  font-size: var(--text-sm);
-  color: #cc0c39;
-  margin-left: 0.375rem;
-}
-.ask {
-  margin: 0.375rem 0 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-.delivery,
-.pickup {
-  margin: 0.25rem 0 0;
-  font-size: var(--text-sm);
-  color: var(--text);
-  display: flex;
-  gap: 0.375rem;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.pickup {
-  color: var(--text-muted);
+@container results (min-width: 62rem) {
+  .list {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 .cta,
 .ctaGhost {
@@ -508,49 +360,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.25rem;
-  min-width: 13rem;
-  margin-top: 0.5rem;
+  min-height: 2.5rem;
   padding: 0 1.25rem;
   border-radius: var(--radius-pill);
-  border: 1px solid #8d9096;
+  border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: var(--text-sm);
+  font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 2px 5px rgb(213 217 217 / 0.5);
 }
 .cta:hover {
   background: var(--surface-2);
 }
 .ctaGhost {
   border-style: dashed;
-  box-shadow: none;
-}
-.rowSwatches {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-.dot {
-  width: 1.375rem;
-  height: 1.375rem;
-  border-radius: 50%;
-  border: 0;
-  padding: 0;
-  background: var(--sw);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.2);
-  cursor: pointer;
-}
-.dot[aria-pressed="true"] {
-  box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--text);
-}
-.moreSw {
-  font-size: var(--text-xs);
-  color: var(--link);
 }
 
 /* ---- empty and error ---- */
@@ -720,43 +546,77 @@
   }
 }
 
+/* Phones: the strip stops being sticky (with the header it would take a fifth of the screen), everything gets a little
+   tighter, and the grid stays two across with cards sized from their own width. */
 @media (max-width: 40rem) {
+  .strip {
+    position: static;
+    box-shadow: none;
+  }
   .stripInner {
     flex-wrap: wrap;
+    gap: var(--space-2);
+    min-height: 0;
+    padding-block: 0.625rem;
   }
   .summary {
     width: 100%;
+    font-size: var(--text-xs);
   }
   .stripTools {
     width: 100%;
     justify-content: space-between;
   }
-  .row {
-    grid-template-columns: 8.5rem minmax(0, 1fr);
+  .filtersBtn,
+  .sort select {
+    min-height: 2.375rem;
   }
-  .media {
-    min-height: 0;
-    aspect-ratio: auto;
-    align-self: stretch;
+  .layout {
+    padding-block: var(--space-3) var(--space-6);
   }
-  .body {
-    padding: var(--space-2) var(--space-3);
+  .tabs {
+    margin-bottom: var(--space-2);
   }
-  .title {
-    font-size: 1rem;
+  .tab,
+  .tabOn {
+    min-height: 2rem;
+    padding: 0 0.875rem;
+    font-size: var(--text-xs);
   }
-  .sub {
-    -webkit-line-clamp: 1;
+  .resultsTitle {
+    font-size: var(--text-lg);
   }
-  .amount {
-    font-size: 1.375rem;
+  .resultsTitle {
+    margin-bottom: var(--space-2);
   }
-  .cta {
-    min-width: 0;
-    width: 100%;
+  .resultsNote {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .empty {
+    padding: var(--space-5) var(--space-4);
+  }
+  .related {
+    margin-top: var(--space-5);
+  }
+  .relatedTitle {
+    font-size: var(--text-lg);
   }
   .relatedGrid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .relatedItem {
+    min-height: 2.75rem;
+    padding: 0 0.75rem;
+    gap: 0.5rem;
+    font-size: var(--text-xs);
+  }
+  .pager {
+    margin-top: var(--space-5);
   }
   .pageBtn:not(.pageOn),
   .gap {
@@ -764,8 +624,22 @@
   }
 }
 
+/* Very small phones (320 to 359 px). */
+@media (max-width: 22.4rem) {
+  .sort span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .relatedGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .row,
   .results {
     transition: none;
   }

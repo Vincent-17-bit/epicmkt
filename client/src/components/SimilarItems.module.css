@@ -63,7 +63,7 @@
   min-width: 0;
 }
 
-/* The same shape as a loaded card (ProductTile is 1 : 1.62), so the row does not change height when the cards arrive. */
+/* The same shape as a loaded card (a square picture and its details, about 1 : 1.58), so the row does not change height when the cards arrive. */
 .skeleton {
-  aspect-ratio: 1 / 1.62;
+  aspect-ratio: 1 / 1.58;
 }

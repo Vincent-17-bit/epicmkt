@@ -95,3 +95,11 @@ a {
   white-space: nowrap;
   border: 0;
 }
+
+/* Headings and regions the app moves focus to after a page change (tabindex="-1") are not controls: no focus ring on them. */
+h1[tabindex="-1"]:focus,
+h2[tabindex="-1"]:focus,
+main[tabindex="-1"]:focus,
+section[tabindex="-1"]:focus {
+  outline: none;
+}

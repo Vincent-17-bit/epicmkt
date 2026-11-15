@@ -10,22 +10,11 @@
 .n { color: var(--text-muted); font-weight: 600; }
 .chip[aria-current="page"] .n { color: inherit; opacity: 0.8; }
 .count { margin: 0 0 var(--space-3); color: var(--text-muted); font-size: var(--text-sm); font-weight: 700; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(0.5rem, 1.4vw, 0.875rem); margin: 0; padding: 0; list-style: none; }
+.cell { display: flex; min-width: 0; }
+@media (min-width: 34rem) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 46rem) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 62rem) { .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@media (min-width: 78rem) { .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .grid > li { min-width: 0; }
-@media (min-width: 48rem) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@media (min-width: 72rem) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-.tile {
-  display: flex; flex-direction: column; height: 100%; overflow: hidden; color: inherit; text-decoration: none;
-  border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface-2);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.tile:hover { transform: translateY(-2px); box-shadow: var(--shadow-2, 0 6px 18px rgb(0 0 0 / 12%)); }
-@media (prefers-reduced-motion: reduce) { .tile { transition: none; } .tile:hover { transform: none; } }
-.media { display: block; aspect-ratio: 1; background: var(--surface-3); }
-.img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.noimg { display: block; width: 100%; height: 100%; }
-.text { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3); }
-.name { font-weight: 700; overflow-wrap: anywhere; }
-.shop { color: var(--text-muted); font-size: var(--text-sm); }
-.price { font-weight: 800; }
 .more { display: flex; justify-content: center; padding-block: var(--space-5); }

@@ -121,7 +121,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
               <li key={svc.id} className={styles.service}>
                 <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
                   <span className={styles.serviceMedia}>
-                    <LazyImage src={svc.imageUrl} ratio="4 / 3" className={styles.serviceImg} width={480} />
+                    <LazyImage src={svc.imageUrl} ratio="1 / 1" className={styles.serviceImg} frameClassName={styles.serviceFrame} width={480} />
                     <OfferChip offer={svc.offer} className={styles.serviceOffer} />
                     <StockTag item={svc} labels={labels} className={styles.stockTag} onPicture />
                   </span>
