@@ -119,7 +119,7 @@ export const rangeOfRow = (row) => {
   return Number.isFinite(min) && Number.isFinite(max) && min < max ? { min, max } : null;
 };
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, priceRange }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, optionCount, priceRange }) => {
   // A photo's id is its database id when the card carries one (`media` entries have it). An option value points at a photo by that id
   // (`mediaId`), so it has to survive here; the counting names i1, i2 are only for older data that has no ids.
   const realIds = (kind) => (Array.isArray(mediaPaths) ? mediaPaths.filter((m) => m?.path && m.kind === kind).map((m) => (typeof m.id === "string" && m.id ? m.id : null)) : []);
@@ -171,6 +171,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     createdAt,
     // Migration 0096: the item has option axes, and its combinations are priced between priceRange.min and priceRange.max.
     ...(hasOptions ? { hasOptions: true } : {}),
+    ...(hasOptions && Number.isInteger(optionCount) && optionCount > 0 ? { optionCount } : {}),
     ...(priceRange ? { priceRange } : {})
   };
 };
@@ -362,6 +363,7 @@ export const serviceOf = (row) => ({
   priceType: row.price_type,
   unit: row.unit ?? null,
   section: row.section ?? null,
+  departmentId: row.department_id ?? null,
   status: "listed",
   availability: row.availability,
   stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,

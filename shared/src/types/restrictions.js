@@ -7,7 +7,7 @@
 // category is missing or not listed.
 //
 // REGULATED_TYPES is the one place the policy is written in code; a DB test checks that the seeded product_types rows agree.
-// TODO(contract:A06): when A06 owns the full product type list, this stays the list of regulated ids and nothing else.
+// The full product type list lives in the database (product_types); this stays the list of regulated ids and nothing else.
 
 export const REGULATED_TYPES = Object.freeze({
   "prescription-medicine": Object.freeze(["chemist"]),

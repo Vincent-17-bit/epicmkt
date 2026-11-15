@@ -14,6 +14,8 @@ const DEFAULT_LABELS = {
   offerChip: { offer: "Offer", more: "more" },
   from: "From",
   options: "Options",
+  optionsOne: "1 option",
+  optionsMany: "{n} options",
   closed: "Closed",
   lowStock: "Low stock",
   onlyLeft: "Only {n} left"
@@ -57,9 +59,14 @@ export default function ProductTile({
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
   // Combinations priced differently: "From KES 24,000" (the lowest price now; with a flash sale running, the lowest flash price).
-  // A strike-through regular price would be the wrong comparison against a lowest price, so it is left out then.
+  // A strike-through regular price would be the wrong comparison against a lowest price, so it is left out then, and so is the "-33%" badge:
+  // each option is discounted differently (or not at all), so one percentage would be wrong for most of them.
   const ranged = Boolean(pricing?.hasRange && Number.isFinite(pricing.priceMin));
-  const optionsText = item.hasOptions ? (labels.options ?? DEFAULT_LABELS.options) : "";
+  const count = Number(item.optionCount);
+  const optionsText = !item.hasOptions ? ""
+    : count === 1 ? (labels.optionsOne ?? DEFAULT_LABELS.optionsOne)
+    : count > 1 ? (labels.optionsMany ?? DEFAULT_LABELS.optionsMany).replace("{n}", String(count))
+    : (labels.options ?? DEFAULT_LABELS.options);
   // A short line after the name. It shares the name's two lines, so it fills the space a short name leaves and is cut
   // with an ellipsis when long: it can never push the price or the store out of the card.
   const blurb = cardBlurb(item) || String(item.section ?? "").trim();
@@ -74,7 +81,7 @@ export default function ProductTile({
     >
       <span className={styles.media}>
         <LazyImage fill src={coverUrl(item)} className={styles.img} />
-        {onSale && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
+        {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
         <OfferChip offer={item.offer} className={styles.offer} labels={labels.offerChip} />
         <StockTag item={item} labels={labels} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />

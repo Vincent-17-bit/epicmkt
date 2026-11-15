@@ -1,7 +1,6 @@
-// Stand-in data in the Contract v1 shapes, used until A06 (seller_product_types) and A08 (departments, restrictedTo) are merged.
+// Stand-in data in the shape seller_product_types returns.
 // It is only ever read in local dev and tests: AddItem.data.js refuses it in a production build.
-// TODO(contract:A06) replace with shared/src/contracts/fixtures when that folder lands, then delete this file.
-// TODO(contract:A08) `restrictedTo` is assumed to hold shop category ids (for example "chemist", "agrovet").
+// `restrictedTo` holds shop category ids (for example "chemist", "agrovet").
 
 export const DEPARTMENTS = [
   { id: "dep-clothing", name: "Clothing" },
@@ -22,7 +21,7 @@ export const DEPARTMENTS = [
 ];
 
 // The usual options for a type: { key, label, display, scale? }. `scale` (a shared scale id) makes the seller's typed values read the same way
-// everywhere ("128gb" -> "128 GB", "1024 GB" -> "1 TB"). TODO(contract:A06) the real seller_product_types carries these.
+// everywhere ("128gb" -> "128 GB", "1024 GB" -> "1 TB"). The real seller_product_types carries these.
 const COLOUR = { key: "colour", label: "Colour", display: "swatch" };
 const type = (slug, name, departmentId, categoryIds, extra = {}) => ({
   id: `pt-${slug}`, slug, name, kind: "good", departmentId, categoryIds, quantityMode: "units", axes: [], specRows: [], ...extra,

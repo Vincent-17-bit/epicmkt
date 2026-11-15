@@ -1,5 +1,5 @@
 // A03 helpers shared by the remaining measure scales. Pure code, no imports, safe for Deno and the browser.
-// TODO(contract:A02): A02 owns the scale registry and its own helpers. These stay private to shared/src/scales/remaining/
+// The scale registry owns its own helpers. These stay private to shared/src/scales/remaining/
 // and use the stored shape {scale, system?, value, unit?, width?, shape?} from Contract v1.
 
 export const round = (n, dp = 6) => Math.round(n * 10 ** dp) / 10 ** dp;

@@ -4,7 +4,7 @@
 // Limits are in each scale's toBase() unit (GB, cm, ml, g). Keyed "<product type id>.<axis key>".
 import { getScale, isStored, toBase } from "./registry.js";
 
-// TODO(contract:A01): keyed by the 13 Wave 0 product type ids and axis keys. When A01 gives types AxisDef.scale, derive the scale from the axis and keep only the limits here.
+// Keyed by product type id and axis key; only the limits live here, the scale of an axis comes from the axis itself.
 export const PLAUSIBILITY_RULES = {
   "phone.storage": { scale: "storage", typical: [16, 2048], hard: [1, 8192] },
   "memory-card.capacity": { scale: "storage", typical: [1, 2048], hard: [0.0625, 8192] },

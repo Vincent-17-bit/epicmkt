@@ -285,7 +285,7 @@ function EditorForm({ item, sections, category, business }) {
     setBusy(true);
     let savedId = null;   // set once the item row itself is stored: a later step failing must not look like "nothing saved", or a retry makes a duplicate
     try {
-      // TODO(contract:A06) validateItemForm drops productTypeId; send it here until shared and seller_save_item carry it (docs/requests).
+      // validateItemForm drops productTypeId, so it is added to the saved fields below.
       const { brand, valueId } = await settleBrand(form);   // A18: one dictionary value per brand, however it was typed
       const fields = brand ? { ...check.value, brand } : check.value;   // empty brand: the form's own value, as before
       // B07: `options` goes along only for an item that has (or had) options, so every other item saves exactly as before.

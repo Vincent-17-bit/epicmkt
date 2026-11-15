@@ -103,7 +103,7 @@ export const customSizeMessage = (itemName, cfg, values, price, fmt = (n) => `KE
   return [itemName, `Made to measure: ${parts.join(", ")}`, price === null || price === undefined ? null : fmt(price)].filter(Boolean).join(", ");
 };
 
-// TODO(contract:3.1) Stays false until the data prompt stores `customSize` (see docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
+// Open gap: stays false until the database stores `customSize` (see docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
 // While false the seller editor shows no control and the buyer page shows no made-to-measure choice, so nothing is offered that would not be kept.
 export const CUSTOM_SIZE_STORED = false;
 

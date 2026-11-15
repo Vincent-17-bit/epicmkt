@@ -46,7 +46,7 @@ function Row({ row, form, patch, source }) {
   if (row.input === "number") return <Field {...common} max={SPEC_LIMITS.value} inputMode="decimal" autoComplete="off" />;
   const kind = row.input === "openValue" ? valueKindOf(row) : null;
   if (kind) return <OpenRow row={row} kind={kind} label={label} form={form} patch={patch} source={source} />;
-  // TODO(contract:1.5) dimension: dimension editor
+  // a dimension row uses the plain text field
   return <Field {...common} max={SPEC_LIMITS.value} autoComplete="off" />;
 }
 

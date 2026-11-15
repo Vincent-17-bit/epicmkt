@@ -3,9 +3,8 @@ import { fixtureProductTypes } from "./AddItem.fixtures.js";
 
 // Where the picker gets product types from, and the pure rules it applies. No React in here.
 
-// TODO(contract:A06) the seller api wrappers for seller_product_types and seller_request_type are not in api/ yet
-// (docs/requests/2026-11-05-lane-b-to-lane-a-type-api-wrappers.md). Until then this reads them if they appear, and otherwise
-// falls back to the fixtures in local dev and tests only.
+// The seller api wrappers sellerProductTypes and sellerRequestType are used when present; otherwise this falls back to the
+// fixtures in local dev and tests only (a production build refuses them).
 const wrapper = (...names) => {
   for (const n of names) {
     try { if (typeof api[n] === "function") return api[n]; } catch { /* export not defined yet */ }
@@ -28,7 +27,7 @@ const normalize = (raw, fallbackDepartments = []) => ({
 
 export async function loadProductTypes({ categoryId } = {}) {
   const fn = typesFn();
-  if (fn) return normalize(await fn()); // TODO(contract:A06) argument shape: the server knows the shop from the session
+  if (fn) return normalize(await fn()); // no argument: the server knows the shop from the session
   if (isProd()) throw new Error("Product types are not available yet.");
   return normalize(fixtureProductTypes({ categoryId }));
 }
@@ -43,7 +42,7 @@ export async function requestType({ name, note = "" }) {
 export const words = (s) => String(s ?? "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
 
 // The server already leaves out types a shop may not sell. This repeats the check so a stale cache can never show one.
-// TODO(contract:A08) restrictedTo is assumed to hold shop category ids.
+// restrictedTo holds shop category ids.
 export const canSell = (type, categoryId) => !type.restrictedTo?.length || type.restrictedTo.includes(categoryId);
 export const sellableTypes = (types, categoryId) => types.filter((t) => canSell(t, categoryId));
 

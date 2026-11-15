@@ -1,5 +1,5 @@
 // A03: the remaining measure scales. Register them with A02's scale registry.
-// TODO(contract:A02): A02 owns shared/src/scales/index.js. Until it is merged this file stands alone; once it is merged, A02's index
+// The registry in shared/src/scales/index.js owns registration; this file stands alone and the registry's index
 // calls registerRemainingScales((id, scale) => ...) or spreads REMAINING_SCALES, and nothing here changes.
 import { UNIT_SCALES } from "./units.js";
 import { dimensions } from "./dimensions.js";

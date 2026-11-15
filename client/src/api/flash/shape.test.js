@@ -248,6 +248,8 @@ describe("list card pricing with a price range", () => {
     expect(itemOf({ id: "i", name: "Phone", price: 30000, hasOptions: true, priceRange: { min: 1, max: 2 } })).toMatchObject({ hasOptions: true, priceRange: { min: 1, max: 2 } });
     const legacy = itemOf({ id: "i", name: "Mug", price: 300 });
     expect("hasOptions" in legacy).toBe(false);
+    expect(itemOf({ id: "i", name: "Phone", price: 30000, hasOptions: true, optionCount: 6 })).toMatchObject({ optionCount: 6 });
+    expect("optionCount" in itemOf({ id: "i", name: "P", price: 1, optionCount: 6 })).toBe(false);
     expect("priceRange" in legacy).toBe(false);
   });
 });

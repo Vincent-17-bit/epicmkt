@@ -637,3 +637,11 @@ Entry format:
 - One quantity on the page (`ctx.qty`, `ctx.setQty`, `ctx.order`). A typed item that counts units or a measure (kg, m) gets a stepper with the total ("KES 48,000 for 2", "KES 800 per kg x 1.5 kg = KES 1,200"); minus stops at the least (1, or the measure's minimum), typed 0 and negatives are corrected, the maximum is the stock left. Quantity-tier items use the same quantity in their table.
 - The message to the seller says what was chosen once the quantity is not 1 (or the amount is measured): "Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT". Quantity 1 keeps the plain message. A seller's own greeting still wins.
 - Seller editor: a test builds the phone fixture (Black 25,000, Grey 24,000) through the real Options step and matches the contract fixture; seeded types drive axes and publish checks.
+
+## Gap fixes: option count, department chips on the shop page, greeting with quantity, flash on ranged items
+
+- Migration 0121: `public_items.option_count` (priced combinations that are not unavailable, or the older variants list; 0 with no options), carried by `products_snapshot`. Cards say "6 options" / "1 option" when the count is known and "Options" otherwise.
+- Shop page: a row of department chips ("All", "Fashion 12", "Electronics 3", "Other") when the shop sells in more than one department; it filters the shop's items. Items carry `departmentId`.
+- A seller's own greeting is kept; when the buyer chose a quantity other than 1 (or a measured amount) the choice follows it: "Hello! Is Fade in stock? (x3, KES 900)".
+- A card for a ranged item in a flash sale shows "From" and the lowest price now, with no percentage badge (the discount differs by option).
+- Stale `TODO(contract:*)` comments removed from code (migration history left as written).

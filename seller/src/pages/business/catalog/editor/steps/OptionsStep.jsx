@@ -25,7 +25,7 @@ export default function OptionsStep({ form, patch, errors, media }) {
   const set = (next) => patch("options", next);
   const limits = effectiveLimits(planLimits);
   const type = types.find((t) => t.id === form.productTypeId);
-  // A type's own axes ({ key, label, display, scale? }) when it has them, the common ones otherwise. TODO(contract:A06) real types carry axes.
+  // A type's own axes ({ key, label, display, scale? }) when it has them, the common ones otherwise. Real types carry axes.
   const typeAxes = Array.isArray(type?.axes) ? type.axes : [];
   const presets = (Array.isArray(type?.axes) && type.axes.length ? type.axes : AXIS_PRESETS).filter((p) => !options.axes.some((a) => a.label.toLowerCase() === p.label.toLowerCase()));
   const found = errors?.options ?? {};
