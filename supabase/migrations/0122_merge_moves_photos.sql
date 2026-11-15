@@ -13,6 +13,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_merge_items';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('v_moved' in v_def) = 0 then
     v_new := replace(v_def, E'  v_stock integer;\nbegin', E'  v_stock integer;\n  v_mrow public.item_media;\n  v_moved jsonb := ''[]''::jsonb;\n  v_first uuid;\n  v_vi integer;\nbegin');
     if v_new = v_def then raise exception 'seller_merge_items: declare block not found'; end if;
@@ -48,6 +49,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_undo_merge';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('item_media' in v_def) = 0 then
     v_new := replace(v_def, E'  delete from public.item_redirects where merge_id = m.id;\n',
       E'  for s in select jsonb_array_elements(coalesce(m.snapshot -> ''media'', ''[]''::jsonb)) loop\n' ||

@@ -12428,6 +12428,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'products_snapshot';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('item_size_values_public' in v_def) = 0 then
     v_new := replace(v_def, 'k.created_at, k.image_path, k.brand, k.video_paths,', 'k.created_at, k.image_path, k.brand, k.video_paths, public.item_size_values_public(k.id) as size_values,');
     if v_new = v_def then raise exception 'products_snapshot: item column list not found'; end if;
@@ -12601,9 +12602,10 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_check_item';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('item_check_media3d' in v_def) = 0 then
-    v_new := replace(v_def, $a$  v_issues := v_base -> 'issues';
-$a$, $b$  v_issues := v_base -> 'issues';
+    v_new := replace(v_def, replace($a$  v_issues := v_base -> 'issues';
+$a$, E'\r', ''), $b$  v_issues := v_base -> 'issues';
   if p_id is not null and v_old.id is not null then
     for e in select jsonb_array_elements(public.item_check_media3d(jsonb_build_object('id', p_id))) loop
       v_issues := v_issues || jsonb_build_array(jsonb_build_object('code', 'media3d_' || (e ->> 'code'), 'scope', e -> 'scope', 'level', 'warning'));
@@ -12616,6 +12618,7 @@ $b$);
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'item_options_apply';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('im.kind in' in v_def) = 0 then
     v_new := replace(v_def, 'and im.item_id = p_item) then', 'and im.item_id = p_item and im.kind in (''image'', ''video'')) then');
     if v_new = v_def then raise exception 'item_options_apply: media checks not found'; end if;
@@ -13405,6 +13408,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'products_snapshot';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('option_count' in v_def) = 0 then
     v_new := replace(v_def, 'i.has_options, i.department_id', 'i.has_options, i.option_count, i.department_id');
     if v_new = v_def then raise exception 'products_snapshot: capped column list not found'; end if;
@@ -13432,6 +13436,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_merge_items';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('v_moved' in v_def) = 0 then
     v_new := replace(v_def, E'  v_stock integer;\nbegin', E'  v_stock integer;\n  v_mrow public.item_media;\n  v_moved jsonb := ''[]''::jsonb;\n  v_first uuid;\n  v_vi integer;\nbegin');
     if v_new = v_def then raise exception 'seller_merge_items: declare block not found'; end if;
@@ -13467,6 +13472,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_undo_merge';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('item_media' in v_def) = 0 then
     v_new := replace(v_def, E'  delete from public.item_redirects where merge_id = m.id;\n',
       E'  for s in select jsonb_array_elements(coalesce(m.snapshot -> ''media'', ''[]''::jsonb)) loop\n' ||
@@ -13494,6 +13500,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_import_items';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('v_type' in v_def) = 0 then
     v_new := replace(v_def, E'  k text;\n', E'  k text;\n  v_type text;\n');
     if v_new = v_def then raise exception 'seller_import_items: declare block not found'; end if;
@@ -13575,6 +13582,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_set_delivery';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n',
       E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n' ||
@@ -13585,6 +13593,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_unmet_demand';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n',
       E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n' ||
@@ -13595,6 +13604,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'related_item_candidates';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if not found then return null; end if;\n',
       E'  if not found then return null; end if;\n' ||
