@@ -23,6 +23,8 @@ import { useProductTypes } from "./steps/useProductTypes.js";
 import { settleBrand, settleSpecLinks, linkBrand } from "./brandValue.js";
 import { blockedText } from "./publishWire.js";
 import { publishIssues } from "./checks/index.js";
+import { remember } from "../../../../lib/shopMemory.js";
+import { ownValue } from "./typedRows.js";
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
@@ -335,6 +337,10 @@ function EditorForm({ item, sections, category, business }) {
         } catch (err) {
           if (publish) refusal = blockedText(err) ?? errorText(err);
         }
+      }
+      if (form.productTypeId) {
+        const pick = (re) => { const row = (type?.specRows ?? []).find((r) => re.test(`${r.key} ${r.label}`.toLowerCase())); return row ? ownValue(form, row) : ""; };
+        remember(form.productTypeId, { brand: form.brand, warranty: pick(/warranty/), condition: pick(/condition/) });
       }
       if (published) await qc.invalidateQueries({ queryKey: ["catalog"] });
       const base = published ? (isNew ? "Item added and visible to customers." : "Item published.") : isNew ? "Item added as a draft." : "Item saved.";

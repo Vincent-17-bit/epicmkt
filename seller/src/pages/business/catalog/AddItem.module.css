@@ -8,3 +8,18 @@
 .primary, .ghost { min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-4); font: inherit; font-weight: 600; border-radius: var(--radius-sm); cursor: pointer; }
 .primary { color: var(--on-primary); background: var(--primary); border: 1px solid var(--primary); }
 .ghost { color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); }
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.way { display: grid; gap: var(--space-1); min-block-size: var(--tap, 44px); padding: var(--space-3); text-align: start; font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--border-strong); border-radius: var(--radius-card); cursor: pointer; text-decoration: none; }
+.way[aria-pressed="true"] { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary) inset; }
+.wayTitle { font-weight: 700; }
+.wayText { color: var(--text-muted); font-size: var(--text-sm); }
+.h2 { margin: 0; font-size: var(--text-lg); color: var(--text); }
+.finish { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface-2); }
+.finishList { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.finishLink { display: grid; gap: var(--space-1); min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-3); color: var(--text); text-decoration: none; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.finishName { font-weight: 700; overflow-wrap: anywhere; }
+.missing { color: var(--danger-text); font-size: var(--text-sm); }
+.ready { color: var(--text-muted); font-size: var(--text-sm); }
+.copyList { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.copyItem { inline-size: 100%; text-align: start; min-block-size: var(--tap, 44px); padding: var(--space-2) var(--space-3); font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; }
+.search { min-block-size: var(--tap, 44px); padding: 0 var(--space-3); font: inherit; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); }

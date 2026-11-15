@@ -1038,6 +1038,22 @@ export const listSizeCharts = async () => {
   signedIn();
   return demoSizeCharts();
 };
+export const setItemTypes = async (ids, typeId) => {
+  signedIn();
+  await wait();
+  if (!Array.isArray(ids) || ids.length === 0) throw new ApiError("no_items");
+  if (ids.length > 500) throw new ApiError("too_many_items");
+  if (!typeId) throw new ApiError("unknown_product_type");
+  let updated = 0;
+  const skipped = [];
+  for (const id of new Set(ids)) {
+    const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+    if (!item) skipped.push({ id, reason: "not_found" });
+    else if (item.productTypeId) skipped.push({ id, reason: "has_type" });
+    else { item.productTypeId = typeId; updated += 1; }
+  }
+  return { updated, skipped };
+};
 export const bulkItems = async (action, ids, args = {}) => {
   signedIn();
   await wait();

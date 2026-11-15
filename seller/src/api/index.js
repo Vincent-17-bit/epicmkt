@@ -81,6 +81,7 @@ export const listSizeCharts = (...a) => impl.listSizeCharts(...a);
 export const getItemSizeGuide = (...a) => impl.getItemSizeGuide(...a);
 export const saveItemSizeGuide = (...a) => impl.saveItemSizeGuide(...a);
 export const bulkItems = (...a) => impl.bulkItems(...a);
+export const setItemTypes = (...a) => impl.setItemTypes(...a);
 export const itemStock = (...a) => impl.itemStock(...a);
 export const reorderItems = (...a) => impl.reorderItems(...a);
 export const duplicateItem = (...a) => impl.duplicateItem(...a);
