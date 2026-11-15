@@ -164,15 +164,18 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
     .map((spec) => ({ "@type": "PropertyValue", name: spec.label.trim(), value: String(spec.value) }));
   if (properties.length) data.additionalProperty = properties;
   if (item.pricing) {
-    data.offers = {
-      "@type": "Offer",
+    const common = {
       url,
       priceCurrency: "KES",
-      price: item.pricing.salePrice,
       availability: AVAILABILITY[item.availability] ?? AVAILABILITY.available,
       seller,
       ...(item.flash ? { priceValidUntil: item.flash.sale.endsAt } : {})
     };
+    const { hasRange, priceMin, priceMax } = item.pricing;
+    // Options priced differently: one price would be wrong, so give the range (AggregateOffer).
+    data.offers = hasRange && Number.isFinite(priceMin) && Number.isFinite(priceMax) && priceMax > priceMin
+      ? { "@type": "AggregateOffer", ...common, lowPrice: priceMin, highPrice: priceMax }
+      : { "@type": "Offer", ...common, price: item.pricing.salePrice };
   }
   return data;
 }

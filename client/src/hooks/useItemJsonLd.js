@@ -6,7 +6,7 @@ const ID = "item-jsonld";
 
 export function useItemJsonLd(item) {
   const details = item ? `${item.brand ?? ""}|${(item.specs ?? []).map((spec) => `${spec.label}=${spec.value}`).join(";")}` : "";
-  const key = item ? `${item.id}|${item.pricing?.salePrice}|${item.flash?.sale.endsAt ?? ""}|${item.availability}|${details}` : "";
+  const key = item ? `${item.id}|${item.pricing?.salePrice}|${item.pricing?.priceMin ?? ""}|${item.pricing?.priceMax ?? ""}|${item.flash?.sale.endsAt ?? ""}|${item.availability}|${details}` : "";
 
   useEffect(() => {
     document.getElementById(ID)?.remove();

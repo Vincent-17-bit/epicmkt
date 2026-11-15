@@ -138,6 +138,17 @@ describe("buildItemJsonLd", () => {
     expect(data.offers.url).toBe("https://e.test/b/shop?item=a%20b");
   });
 
+  it("gives an AggregateOffer with the low and high price when options are priced differently", () => {
+    const data = buildItemJsonLd({ item: { ...base, kind: "product", pricing: { salePrice: 25000, hasRange: true, priceMin: 24000, priceMax: 25000 } }, siteUrl: "https://e.test" });
+    expect(data.offers).toMatchObject({ "@type": "AggregateOffer", lowPrice: 24000, highPrice: 25000, priceCurrency: "KES" });
+    expect(data.offers.price).toBeUndefined();
+  });
+
+  it("keeps a plain Offer when the range is flat or missing", () => {
+    const flat = buildItemJsonLd({ item: { ...base, pricing: { salePrice: 500, hasRange: true, priceMin: 500, priceMax: 500 } }, siteUrl: "https://e.test" });
+    expect(flat.offers).toMatchObject({ "@type": "Offer", price: 500 });
+  });
+
   it("builds a Service without priceValidUntil when no sale", () => {
     const data = buildItemJsonLd({ item: { ...base, kind: "service", availability: "available", pricing: { salePrice: 300 }, flash: null }, siteUrl: "https://e.test" });
     expect(data["@type"]).toBe("Service");
