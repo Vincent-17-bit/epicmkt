@@ -42,6 +42,8 @@ export default function BusinessPage({
   qr,
   shortUrl,
   hitSection,
+  departments,
+  departmentLabels,
   focusSection,
   focusItem,
   shareNote,
@@ -162,6 +164,8 @@ export default function BusinessPage({
               focusItem={focusItem}
               mode={mode}
               onOpenItem={onOpenItem}
+              departments={departments}
+              departmentLabels={departmentLabels}
             />
 
             {business.gallery.length > 0 && (

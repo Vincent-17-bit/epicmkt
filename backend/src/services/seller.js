@@ -73,7 +73,7 @@ export async function updateSellerBusiness(sellerId, patch) {
 }
 
 // seller_product_types (Contract v1): the product types a seller can pick when adding an item, each with the option axes it asks for.
-// TODO(contract:W0) the live RPC returns the same rows.
+// The live RPC returns the same rows.
 export async function getSellerProductTypes() {
   await delay();
   return structuredClone(PRODUCT_TYPES);

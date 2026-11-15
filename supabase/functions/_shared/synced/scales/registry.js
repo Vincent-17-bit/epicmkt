@@ -65,7 +65,7 @@ export const compare = (a, b) => {
 
 // A03 (and any lane) writes scales as plain objects {id, units, parse(raw, ctx), format, sizeKey, compare, toBase, plausible(typeId, axisKey, value)}
 // whose parse errors are strings. adoptScale() fits one to this registry: errors become { code, message }, ctx.defaultUnit is passed as ctx.unit.
-// TODO(contract:A03): when the A03 scales return { code, message, needs } themselves, drop the message sniffing below.
+// The message sniffing below maps older scale errors to codes; scales that return { code, message, needs } themselves skip it.
 const toError = (e) => {
   if (e && typeof e === "object") return e;
   const message = String(e ?? "Not a valid value");

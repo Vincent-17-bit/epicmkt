@@ -7,7 +7,7 @@ import { getFixture } from "./contracts/fixtures/index.js";
 
 const NOW = Date.parse("2026-11-06T12:00:00Z");
 const KG = { min: 0.5, step: 0.25, unit: "kg" };
-const FABRIC = { id: "fx-fabric", name: "Kitenge fabric", quantityMode: "measure", unit: "m", regularPrice: 450, quantity: { min: 0.5, step: 0.5, unit: "m" } }; // TODO(contract:measure): no fabric fixture in Contract v1
+const FABRIC = { id: "fx-fabric", name: "Kitenge fabric", quantityMode: "measure", unit: "m", regularPrice: 450, quantity: { min: 0.5, step: 0.5, unit: "m" } }; // a fabric sold by the metre, local to this test
 
 test("never 0 or negative, whatever is typed", () => {
   for (const mode of ["units", "measure", "none"]) {

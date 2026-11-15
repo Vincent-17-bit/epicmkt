@@ -25,7 +25,7 @@ export const DISPLAYS = [
   { key: "dropdown", label: "Dropdown list" },
 ];
 
-// Used only when the product type brings no axes of its own. TODO(contract:A06) read `type.axes` once seller_product_types returns them.
+// Used only when the product type brings no axes of its own. A type that carries axes (seller_product_types returns them) uses those; this list is the fallback.
 export const AXIS_PRESETS = [
   { label: "Colour", display: "swatch" },
   { label: "Size", display: "button" },

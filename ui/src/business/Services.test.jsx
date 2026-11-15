@@ -82,3 +82,41 @@ describe("Services on the store page", () => {
     expect(region.queryByText(/Nothing matches/)).toBeNull();
   });
 });
+
+describe("Services: browse the shop by department", () => {
+  const items = [
+    svc("a", "Dress", { departmentId: "fashion" }),
+    svc("b", "Shirt", { departmentId: "fashion" }),
+    svc("c", "Phone", { departmentId: "electronics" }),
+    svc("d", "Gift card", { departmentId: null })
+  ];
+  const depts = [{ id: "fashion", name: "Fashion", count: 2 }, { id: "electronics", name: "Electronics", count: 1 }, { id: null, name: "Other", count: 1 }];
+
+  it("shows no chips for a shop in one department or none", () => {
+    render(<Services services={items} departments={[{ id: "fashion", name: "Fashion", count: 4 }]} />);
+    expect(screen.queryByRole("group", { name: /department/i })).toBeNull();
+  });
+
+  it("filters to one department, counts it, and goes back to all", () => {
+    render(<Services services={items} departments={depts} />);
+    const group = screen.getByRole("group", { name: /department/i });
+    expect(within(group).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(within(group).getByRole("button", { name: /Fashion/ }));
+    expect(within(group).getByRole("button", { name: /Fashion/ })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Dress")).toBeInTheDocument();
+    expect(screen.queryByText("Phone")).toBeNull();
+    expect(screen.getByRole("region", { name: "All products (2)" })).toBeInTheDocument();
+    fireEvent.click(within(group).getByRole("button", { name: /Other/ }));
+    expect(screen.getByText("Gift card")).toBeInTheDocument();
+    expect(screen.queryByText("Dress")).toBeNull();
+    fireEvent.click(within(group).getByRole("button", { name: "All" }));
+    expect(screen.getByText("Phone")).toBeInTheDocument();
+  });
+
+  it("uses the caller's words", () => {
+    render(<Services services={items} departments={depts} departmentLabels={{ all: "Zote", other: "Nyingine", label: "Idara" }} />);
+    const group = screen.getByRole("group", { name: "Idara" });
+    expect(within(group).getByRole("button", { name: "Zote" })).toBeInTheDocument();
+    expect(within(group).getByRole("button", { name: /Nyingine/ })).toBeInTheDocument();
+  });
+});

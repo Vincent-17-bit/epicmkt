@@ -10,9 +10,17 @@ import ServiceFilter from "./ServiceFilter.jsx";
 import { EMPTY_FILTERS, PAGE_SIZE, applyServiceFilters, buildFacets, countActive, searchServices } from "./serviceFilters.js";
 import styles from "./Services.module.css";
 
-export default function Services({ services: all, count, hitSection, focusSection, focusItem, mode = "live", onOpenItem, labels }) {
+const DEPT_DEFAULTS = { all: "All", other: "Other", label: "Browse this shop by department" };
+
+export default function Services({ services: all, count, hitSection, focusSection, focusItem, mode = "live", onOpenItem, labels, departments = [], departmentLabels }) {
   // Out of stock items are not listed to customers. The database already leaves them out; this keeps one from showing.
-  const services = useMemo(() => listedOnly(all), [all]);
+  const listed = useMemo(() => listedOnly(all), [all]);
+  // A shop that sells in more than one department gets a row of chips; "other" is the items with no type (id null).
+  const dept = { ...DEPT_DEFAULTS, ...departmentLabels };
+  const [deptId, setDeptId] = useState(null);
+  const chips = departments.length > 1 ? departments : [];
+  const picked = chips.some((d) => (d.id ?? "other") === deptId) ? deptId : null;
+  const services = useMemo(() => (picked === null ? listed : listed.filter((s) => (s.departmentId ?? "other") === picked)), [listed, picked]);
   const preview = isPreview(mode);
   const act = actionProps(preview);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -57,10 +65,25 @@ export default function Services({ services: all, count, hitSection, focusSectio
 
   return (
     <BusinessSection
-      title={`All products (${total})`}
+      title={`All products (${picked === null ? total : services.length})`}
       id="services"
       action={canFilter ? <ServiceFilter facets={facets} filters={filters} onChange={setFilters} disabled={preview} /> : null}
     >
+      {chips.length > 0 && (
+        <div className={styles.depts} role="group" aria-label={dept.label}>
+          <button type="button" className={styles.dept} aria-pressed={picked === null} disabled={preview} onClick={() => setDeptId(null)}>
+            {dept.all}
+          </button>
+          {chips.map((d) => {
+            const id = d.id ?? "other";
+            return (
+              <button key={id} type="button" className={styles.dept} aria-pressed={picked === id} disabled={preview} onClick={() => setDeptId(id)}>
+                {d.id === null ? dept.other : d.name} <span className={styles.deptCount}>{d.count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {canFilter && (
         <input
           type="search"

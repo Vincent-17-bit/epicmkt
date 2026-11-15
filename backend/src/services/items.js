@@ -176,8 +176,8 @@ export async function getFlashForItem(itemId, businessId) {
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   await delay();
   runSweep();
-  // Contract v1 fixtures (shared/src/contracts/fixtures): served as written, before any store lookup. TODO(contract:W0) drop when the
-  // live items_detail returns product types.
+  // Contract v1 fixtures (shared/src/contracts/fixtures): served as written, before any store lookup. The live items_detail returns product
+  // types too; this mock serves the fixtures.
   const fixture = getFixture(itemId);
   if (fixture) {
     if (businessId && businessId !== fixture.detail.businessId && businessId !== fixture.detail.businessSlug) throw new NotFoundError("Item not found");
@@ -352,7 +352,7 @@ function priceRangeOf(detail) {
   return { priceMin: b?.min ?? null, priceMax: b?.max ?? null };
 }
 
-// TODO(contract:A-dept) fixtures carry no departmentId on their product type yet, so it is null until they do
+// The fixtures carry no departmentId on their product type, so it is null here (the live list fills it).
 const withListFields = (card, detail) => {
   const range = priceRangeOf(detail);
   return {
@@ -371,8 +371,8 @@ const LIST_SORTS = {
   price_desc: (a, b) => (b.priceMin ?? -Infinity) - (a.priceMin ?? -Infinity)
 };
 
-// Contract v1 list: the lean ItemListCard rows of the fixtures, optionally one product type, paged. TODO(contract:W0) the live list
-// returns the same rows; until then the real mock products stay on getAllProducts (their business block has a different shape).
+// Contract v1 list: the lean ItemListCard rows of the fixtures, optionally one product type, paged. The live list
+// returns the same rows; the real mock products stay on getAllProducts (their business block has a different shape).
 export async function getItemList({ productType = null, businessId = null, minPrice = null, maxPrice = null, sort = null, limit = 24, offset = 0 } = {}) {
   await delay();
   runSweep();

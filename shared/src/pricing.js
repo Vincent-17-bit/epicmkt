@@ -13,7 +13,7 @@
 //
 // Selecting a combination with no price, or one the seller switched off, is "not_sold". A legacy item (no options) is priced from the
 // item itself and behaves as before. A quantity is never 0 or negative: whole units go to at least 1; a measured item to at least its minimum.
-// TODO(contract:measure): quantity.js normalizeQuantity owns step rounding for measured items; this only keeps the amount positive.
+// quantity.js normalizeQuantity owns step rounding for measured items; this only keeps the amount positive.
 import { hasCombinations, inStock, isSold, resolveVariant, variantsOf } from "./pricing/combination.js";
 import { bestOffer, unitPrice } from "./pricing/deals.js";
 import { lineTotal, toMs, wholeAmount } from "./pricing/money.js";

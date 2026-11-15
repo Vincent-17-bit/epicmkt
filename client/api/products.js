@@ -72,7 +72,7 @@ async function fromRpc() {
 async function fromViews() {
   const [rows, businesses, sales, sizeValues] = await Promise.all([
     restAll(
-      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths,price_min,price_high,has_options&order=created_at.desc,id.asc",
+      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths,price_min,price_high,has_options,option_count&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
@@ -111,6 +111,7 @@ async function fromViews() {
       price_max: r.price_high ?? null,
       has_price_range: r.price_min !== null && r.price_min !== undefined && r.price_high !== null && r.price_high !== undefined ? Number(r.price_min) < Number(r.price_high) : false,
       has_options: r.has_options === true,
+      option_count: Number.isInteger(r.option_count) && r.option_count > 0 ? r.option_count : null,
       size_values: Array.isArray(sizeValues[r.id]) && sizeValues[r.id].length ? sizeValues[r.id] : null,
       sale_id: s?.id ?? null,
       sale_price: s?.sale_price ?? null,
@@ -173,6 +174,7 @@ function buildSnapshot({ items, businesses, truncated }) {
       regularPrice: regular,
       createdAt: row.created_at,
       hasOptions: row.has_options === true,
+      ...(Number.isInteger(row.option_count) && row.option_count > 0 ? { optionCount: row.option_count } : {}),
       ...(rangeOf(row) ? { priceRange: rangeOf(row) } : {}),
       pricing: regular === null ? null : pricing(regular, regular, row.price_type, row.unit, rangeOf(row)),
       flash: null,

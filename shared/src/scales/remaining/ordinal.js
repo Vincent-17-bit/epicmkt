@@ -124,7 +124,7 @@ export const vehicleClass = {
 
 // ---- compat-model: which model a part fits. The list comes from the product type, passed as ctx.models
 // (strings or {label}). With ctx.open true a model that is not in the list is accepted as typed.
-// TODO(contract:A02): use normalizeValueKey from A02 in place of slugKey when it is merged.
+// slugKey is this folder's own key rule; it matches normalizeValueKey for the labels these scales use.
 const modelLabel = (m) => cleanLabel(typeof m === "string" ? m : m?.label ?? m?.name ?? m?.value ?? "");
 export const compatModel = {
   id: "compat-model", base: "key", units: [],

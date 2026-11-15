@@ -273,3 +273,12 @@ test("another shop cannot flash my combinations", async () => {
   const id = await phone();
   await assert.rejects(make(id, { target: "chosen", overrides: [ov(BLACK_64, "percent", 10)] }, { sub: ids.userB }, ids.bizB), /item_not_found|row-level security/);
 });
+
+test("public_items says how many ways an item can be bought (option_count)", async () => {
+  const count = async (id) => (await tx(c, anon, (k) => sql(k, `select has_options, option_count from public_items where id = $1`, [id])))[0];
+  const id = await phone();
+  assert.deepEqual(await count(id), { has_options: true, option_count: 4 });
+  await sql(c, `update item_variants set status = 'unavailable' where item_id = $1 and combo_key = $2`, [id, GREY_128]);
+  assert.equal((await count(id)).option_count, 3);
+  assert.deepEqual(await count(await plain()), { has_options: false, option_count: 0 });
+});

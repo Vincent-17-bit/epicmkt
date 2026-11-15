@@ -5,6 +5,7 @@ import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/
 import { distanceKm, shopUrl } from "@epicmkt/shared";
 import { coarsenCoords } from "@epicmkt/backend";
 import { getBusiness, logContactEvent } from "../api/index.js";
+import { getShopDepartments } from "../api/departments.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { hoursCaption, hoursRows, socialLinks, statusText } from "../lib/businessView.js";
 import { t } from "../i18n/index.js";
@@ -53,6 +54,8 @@ export default function Business() {
     refetchOnWindowFocus: true
   });
   const data = useLiveStatus(loaded);
+  // The shop's items by department ("Fashion 12", "Electronics 3"), so a shop that sells across departments can be browsed by them.
+  const { data: departments } = useQuery({ queryKey: ["shop-departments", loaded?.id], queryFn: () => getShopDepartments(loaded.id), enabled: Boolean(loaded?.id), staleTime: 60_000 });
 
   usePageTitle(data ? `${data.name} | ${data.category?.name ?? ""}`.replace(/ \| $/, "") : undefined);
   usePageMeta(data ? { description: data.tagline || data.description, image: data.coverUrl || data.logoUrl, path: `/b/${data.slug}` } : undefined);
@@ -154,6 +157,8 @@ export default function Business() {
       socials={socialLinks(data.socials)}
       qr={<QrCode slug={data.slug} plan={data.plan} hasLogo={!!data.logoUrl} label={`QR code linking to ${data.name}`} />}
       shortUrl={shortUrl}
+      departments={departments ?? []}
+      departmentLabels={{ all: t("shop.dept.all"), other: t("shop.dept.other"), label: t("shop.dept.label") }}
       hitSection={hit}
       focusSection={sectionId}
       focusItem={itemId}

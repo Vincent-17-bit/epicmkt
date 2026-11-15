@@ -41,6 +41,23 @@ describe("ProductTile price: range and single", () => {
     const link = screen.getByRole("link");
     expect(link).toHaveTextContent(/From\s?KES\s?20,000/);
     expect(link.querySelector("s")).toBeNull();
+    expect(link).not.toHaveTextContent("-33%");
+  });
+
+  it("a single price in a flash sale keeps its percentage badge", () => {
+    render(<ProductTile item={item({ pricing: { regularPrice: 1000, salePrice: 800, savings: 200, discountPercent: 20 } })} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("-20%");
+  });
+
+  it("counts the options when the count is known", () => {
+    const { rerender } = render(<ProductTile item={item({ hasOptions: true, optionCount: 6, pricing: ranged() })} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("6 options");
+    rerender(<ProductTile item={item({ hasOptions: true, optionCount: 1, pricing: ranged() })} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("1 option");
+    rerender(<ProductTile item={item({ hasOptions: true, optionCount: 6, pricing: ranged() })} href="/x" labels={{ optionsMany: "Chaguo {n}" }} />);
+    expect(screen.getByRole("link")).toHaveTextContent("Chaguo 6");
+    rerender(<ProductTile item={item({ hasOptions: true, pricing: ranged() })} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("Options");
   });
 
   it("a flash sale on a single price still shows the regular price struck through", () => {
