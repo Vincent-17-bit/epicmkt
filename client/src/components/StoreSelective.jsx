@@ -7,6 +7,7 @@ import { items } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import ItemCard from "./ItemCard.jsx";
 import { Skeleton } from "@epicmkt/ui";
+import { visitSeed } from "../lib/visitSeed.js";
 import styles from "./StoreSelective.module.css";
 
 const LIMIT = 12;
@@ -18,9 +19,12 @@ export default function StoreSelective({ businessId, businessSlug, excludeItemId
   const [edges, setEdges] = useState({ left: false, right: false });
   const [dragging, setDragging] = useState(false);
 
+  // The same seed as the rest of this product's recommendations: the shop's items come in a different order on another visit,
+  // the same order for this one.
+  const seed = visitSeed(excludeItemId ?? businessId);
   const { data, isPending } = useQuery({
-    queryKey: ["store-selective", businessId, excludeItemId],
-    queryFn: () => items.getStoreSelective(businessId, { excludeItemId, limit: LIMIT }),
+    queryKey: ["store-selective", businessId, excludeItemId, seed],
+    queryFn: () => items.getStoreSelective(businessId, { excludeItemId, limit: LIMIT, seed }),
     staleTime: 30_000
   });
 

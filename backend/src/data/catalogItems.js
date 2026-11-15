@@ -144,7 +144,37 @@ const homeKitchenPack = [
   item("Gift basket for a new home", 5500, "Gift sets", "Cookware, towels and a dinner set in one hamper.", [["Contents", "Sufuria, set of plates, towels"], ["Packaging", "Gift wrapped"], ["Occasion", "Wedding or housewarming"], ["Delivery", "Available"]])
 ];
 
-const PACKS = { barbershops: barber, salons: salon, gyms: gym, chemists: chemist, agrovets: agro, hardware: kitchen, "phones-accessories": phonesPack, "electronics-computers": electronicsPack, "fashion-boutiques": fashionPack, "home-kitchen": homeKitchenPack };
+// Food, grocery, bakery and gas items, so the demo shows what goes with what: pilau with a soda or juice, bread with spreads and
+// tea, a gas cylinder with its regulator and hose. The same dishes and loaves in several shops make Similar items meaningful too.
+const eatery = [
+  item("Chicken pilau", 450, "Rice dishes", "Spiced pilau rice with tender chicken and kachumbari.", [["Serving", "1 plate"], ["Spice", "Mild"], ["Comes with", "Kachumbari"], ["Ready in", "15 minutes"]]),
+  item("Beef pilau", 400, "Rice dishes", "Coast-style beef pilau slow-cooked with whole spices.", [["Serving", "1 plate"], ["Spice", "Medium"], ["Comes with", "Kachumbari"], ["Ready in", "15 minutes"]]),
+  item("Chips and chicken quarter", 550, "Fast food", "Crispy chips with a fried chicken quarter.", [["Serving", "1 plate"], ["Chicken", "Quarter"], ["Comes with", "Tomato sauce"], ["Ready in", "20 minutes"]]),
+  item("Coca-Cola 500ml", 80, "Drinks", "Chilled Coca-Cola in a 500 ml bottle.", [["Size", "500 ml"], ["Pack", "Bottle"], ["Served", "Chilled"], ["Brand", "Coca-Cola"]], { brand: "Coca-Cola" }),
+  item("Fanta Orange 500ml", 80, "Drinks", "Chilled Fanta Orange soda.", [["Size", "500 ml"], ["Pack", "Bottle"], ["Served", "Chilled"], ["Brand", "Fanta"]], { brand: "Fanta" }),
+  item("Fresh mango juice 500ml", 150, "Drinks", "Freshly blended mango juice, no added water.", [["Size", "500 ml"], ["Fruit", "Mango"], ["Sugar", "Lightly sweetened"], ["Served", "Chilled"]]),
+  item("Mineral water 500ml", 50, "Drinks", "Still mineral water.", [["Size", "500 ml"], ["Type", "Still"], ["Pack", "Bottle"], ["Served", "Chilled"]])
+];
+const grocery = [
+  item("White bread 400g", 65, "Bakery", "Sliced white bread, baked daily.", [["Weight", "400 g"], ["Slices", "About 18"], ["Type", "White"], ["Best before", "4 days"]]),
+  item("Blue Band margarine 500g", 260, "Spreads", "Margarine spread for bread and baking.", [["Weight", "500 g"], ["Type", "Margarine"], ["Use", "Spread or baking"], ["Storage", "Cool place"]], { brand: "Blue Band" }),
+  item("Strawberry jam 400g", 320, "Spreads", "Strawberry jam for bread and pancakes.", [["Weight", "400 g"], ["Fruit", "Strawberry"], ["Pack", "Glass jar"], ["Storage", "Refrigerate after opening"]]),
+  item("Ketepa tea leaves 250g", 170, "Tea and coffee", "Kenyan black tea leaves.", [["Weight", "250 g"], ["Type", "Black tea"], ["Origin", "Kenya"], ["Cups", "About 125"]], { brand: "Ketepa" }),
+  item("Coca-Cola 2L", 220, "Drinks", "Coca-Cola in a 2 litre bottle for the family.", [["Size", "2 litres"], ["Pack", "Bottle"], ["Brand", "Coca-Cola"], ["Serves", "About 8 glasses"]], { brand: "Coca-Cola" }),
+  item("6kg gas cylinder refill", 1350, "Cooking gas", "Refill of a 6 kg LPG cylinder, any brand swapped.", [["Size", "6 kg"], ["Gas", "LPG"], ["Exchange", "Bring your cylinder"], ["Delivery", "Within the estate"]])
+];
+const bakeryPack = [
+  item("White bread loaf 600g", 90, "Bread", "Soft white loaf, sliced, baked this morning.", [["Weight", "600 g"], ["Type", "White"], ["Sliced", "Yes"], ["Best before", "4 days"]]),
+  item("Brown bread 400g", 70, "Bread", "Wholemeal brown bread, sliced.", [["Weight", "400 g"], ["Type", "Brown, wholemeal"], ["Sliced", "Yes"], ["Best before", "4 days"]])
+];
+const gasPack = [
+  item("6kg gas cylinder with gas", 3800, "Cooking gas", "New 6 kg LPG cylinder, filled and sealed.", [["Size", "6 kg"], ["Gas", "LPG"], ["Valve", "Screw type"], ["Includes", "Full gas"]]),
+  item("Gas regulator", 650, "Gas accessories", "Low-pressure regulator for 6 kg and 13 kg cylinders.", [["Fits", "6 kg and 13 kg cylinders"], ["Type", "Screw-on"], ["Pressure", "Low"], ["Warranty", "6 months"]]),
+  item("Gas hose pipe 1.5m", 250, "Gas accessories", "Rubber LPG hose with two clips.", [["Length", "1.5 m"], ["Material", "Reinforced rubber"], ["Clips", "2 included"], ["Use", "LPG only"]]),
+  item("Single gas burner with grill top", 900, "Gas accessories", "Burner that screws onto a 6 kg cylinder.", [["Fits", "6 kg cylinder"], ["Top", "Grill"], ["Ignition", "Manual"], ["Material", "Steel"]])
+];
+
+const PACKS = { barbershops: barber, salons: salon, gyms: gym, chemists: chemist, agrovets: agro, hardware: [...kitchen, ...gasPack], eateries: eatery, groceries: grocery, bakery: bakeryPack, "phones-accessories": phonesPack, "electronics-computers": electronicsPack, "fashion-boutiques": fashionPack, "home-kitchen": homeKitchenPack };
 const SERVICE_CATEGORIES = new Set(["barbershops", "salons", "gyms", "car-wash", "tailors", "mpesa", "mechanics", "phone-repair"]);
 const PADDING = [["Availability", "Ask the seller"], ["Payment", "M-Pesa or cash"], ["Contact", "WhatsApp or call"], ["Prices", "Confirm with the seller"]];
 

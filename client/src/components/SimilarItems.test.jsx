@@ -42,11 +42,11 @@ describe("SimilarItems", () => {
     mocks.getSimilar.mockResolvedValue(similar(3));
     const { container } = mount();
     expect(container.querySelector("[aria-busy='true']")).not.toBeNull();
-    expect(await screen.findByRole("heading", { name: "Similar items" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Similar products" })).toBeInTheDocument();
     expect(await screen.findByText("Other 0")).toBeInTheDocument();
     expect(screen.getByText("Shop 2")).toBeInTheDocument();
     expect(screen.getByText("KES 800")).toBeInTheDocument();
-    expect(mocks.getSimilar).toHaveBeenCalledWith("cur", expect.objectContaining({ limit: 12 }));
+    expect(mocks.getSimilar).toHaveBeenCalledWith("cur", expect.objectContaining({ limit: 24, seed: expect.any(String) }));
   });
 
   it("renders nothing with fewer than two results, on failure, or when empty", async () => {
@@ -54,21 +54,34 @@ describe("SimilarItems", () => {
       mocks.getSimilar.mockResolvedValue(answer);
       const { container, unmount } = mount();
       await waitFor(() => expect(container.querySelector("[aria-busy='true']")).toBeNull());
-      expect(screen.queryByRole("heading", { name: "Similar items" })).toBeNull();
+      expect(screen.queryByRole("heading", { name: "Similar products" })).toBeNull();
       unmount();
     }
     mocks.getSimilar.mockRejectedValue(new Error("down"));
     mount();
     await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
-    await waitFor(() => expect(screen.queryByRole("heading", { name: "Similar items" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Similar products" })).toBeNull());
   });
 
-  it("uses the same product card as the home grid: a link to the item in its own store, store name included", async () => {
+  it("each card links to the item in its own store, and names the store under the price", async () => {
     mocks.getSimilar.mockResolvedValue(similar(3));
     mount();
     const link = await screen.findByRole("link", { name: /Other 1/ });
     expect(link).toHaveAttribute("href", "/b/shop-1/i/s1");
-    expect(link).toHaveTextContent("Shop 1");
+    expect(link.closest("article")).toHaveTextContent("Shop 1");
+    expect(screen.getByText("-20%")).toBeInTheDocument();
+    expect(screen.getByText("KES 1,000").tagName).toBe("S");
+  });
+
+  it("asks with the same seed for the whole visit, so the order does not change under the visitor", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(3));
+    const { unmount } = mount();
+    await screen.findByText("Other 0");
+    const first = mocks.getSimilar.mock.calls[0][1].seed;
+    unmount();
+    mount();
+    await screen.findByText("Other 0");
+    expect(mocks.getSimilar.mock.calls.at(-1)?.[1].seed ?? first).toBe(first);
   });
 
   it("counts the click without stopping the link", async () => {
@@ -79,20 +92,24 @@ describe("SimilarItems", () => {
     expect(logEvent).toHaveBeenCalledWith("similar_item_click", { businessId: "b-cur", itemId: "cur", targetItemId: "s1", targetBusinessId: "b1", position: 2 });
   });
 
-  it("has scroll arrows that page the row, shown only while there is more to scroll to", async () => {
+  it("has arrows that page the row and says which page it is on", async () => {
     mocks.getSimilar.mockResolvedValue(similar(6));
     mount();
     await screen.findByText("Other 0");
-    const next = screen.getByRole("button", { name: "Scroll right" });
-    const prev = screen.getByRole("button", { name: "Scroll left" });
+    const next = screen.getByRole("button", { name: "Next page of Similar products" });
+    const prev = screen.getByRole("button", { name: "Previous page of Similar products" });
     expect(prev).toBeDisabled();
     const row = document.querySelector("[data-similar] ul");
     Object.defineProperties(row, { scrollWidth: { value: 2000, configurable: true }, clientWidth: { value: 400, configurable: true } });
     row.scrollBy = vi.fn();
     row.dispatchEvent(new Event("scroll"));
     await waitFor(() => expect(next).toBeEnabled());
+    expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
     await userEvent.click(next);
     expect(row.scrollBy).toHaveBeenCalledWith({ left: 400, behavior: "smooth" });
+    Object.defineProperty(row, "scrollLeft", { value: 800, configurable: true });
+    row.dispatchEvent(new Event("scroll"));
+    expect(await screen.findByText("Page 3 of 5")).toBeInTheDocument();
   });
 
   it("drops rows that cannot be opened", async () => {
@@ -134,14 +151,14 @@ describe("SimilarItems", () => {
       return el;
     });
     expect(section).toHaveAttribute("data-state", "loading");
-    expect(section.querySelectorAll("[class*='skeleton']").length).toBe(4);
+    expect(section.querySelectorAll("li[aria-hidden='true']").length).toBe(6);
   });
 
   it("is a heading with an accessible name tied to its section", async () => {
     mocks.getSimilar.mockResolvedValue(similar(3));
     mount();
     await screen.findByText("Other 0");
-    expect(screen.getByRole("region", { name: "Similar items" })).toHaveAttribute("data-state", "ready");
+    expect(screen.getByRole("region", { name: "Similar products" })).toHaveAttribute("data-state", "ready");
   });
 });
 

@@ -8,8 +8,8 @@ export const SECTIONS = [
   { id: "item-specs", label: "Specifications" },
   { id: "item-delivery", label: "Delivery" },
   { id: "item-store", label: "From the store" },
-  { id: "item-recommend", label: "Recommended" },
-  { id: "item-similar", label: "Similar items" }
+  { id: "item-recommend", label: "Goes well with" },
+  { id: "item-similar", label: "Similar products" }
 ];
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

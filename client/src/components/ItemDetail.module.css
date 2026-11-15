@@ -576,7 +576,7 @@
   margin-bottom: var(--space-3);
 }
 
-.root[data-variant="page"] .body > .similar {
+.root[data-variant="page"] .body .similar {
   max-width: 48rem;
   margin: var(--space-3) auto var(--space-4);
   overflow: hidden;
@@ -586,7 +586,7 @@
 }
 
 @media (min-width: 64rem) {
-  .root[data-variant="page"] .body > .similar {
+  .root[data-variant="page"] .body .similar {
     max-width: none;
     margin-inline: 0;
   }

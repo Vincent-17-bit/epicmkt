@@ -53,7 +53,7 @@ export default function ItemLayout({ ctx }) {
         after={selective}
       />
       <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
-      <div id="item-similar"><Recommend key={`similar-${item.id}`} ctx={ctx} /></div>
+      <Recommend key={`similar-${item.id}`} ctx={ctx} />
     </>
   );
 }

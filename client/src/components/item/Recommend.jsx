@@ -1,16 +1,19 @@
-import { useEffect, useRef, useState } from "react";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { Skeleton } from "@epicmkt/ui";
+import { useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { items as itemsApi, logEvent } from "../../api/index.js";
-import ProductTile from "../ProductTile.jsx";
+import { t } from "../../i18n/index.js";
+import { useNearViewport } from "../../hooks/useNearViewport.js";
+import { visitSeed } from "../../lib/visitSeed.js";
+import RecoCarousel, { RecoCard } from "../RecoCarousel.jsx";
 import SimilarItems from "../SimilarItems.jsx";
 import StoreSelective from "../StoreSelective.jsx";
 import styles from "../ItemDetail.module.css";
 import rec from "./Recommend.module.css";
 
-const PAGE_SIZE = 10;
+// Enough for the carousel's pages in one request; the ranking caps a page at 50.
+const PAGE_SIZE = 48;
 
-// Similar items: the last section of the page, after the details, description, highlights, specs and the seller card.
+// Similar products: the same kind of product from other shops, the last section of the page.
 // The caller keys it by the item so one product's results can never show under another.
 export default function Recommend({ ctx }) {
   const { item, business } = ctx;
@@ -35,96 +38,68 @@ export function StoreMore({ ctx }) {
   );
 }
 
-// Load only once the section is about a screen away, so the item's own data and first paint never wait for it.
-function useNear(ref) {
-  const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
-  useEffect(() => {
-    const node = ref.current;
-    if (near || !node) return undefined;
-    const io = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setNear(true), { rootMargin: "600px 0px" });
-    io.observe(node);
-    return () => io.disconnect();
-  }, [near, ref]);
-  return near;
-}
-
+// "Goes well with this" (C19): products that COMPLETE this one (a soda or a juice with a pilau, a regulator with a gas cylinder),
+// from any shop, at least 1 in 5 from this shop. One request per product per visit; the tab and the section share it.
 export function useRelated(itemId, businessId, enabled = true) {
-  return useInfiniteQuery({
-    queryKey: ["related-items", itemId],
-    queryFn: ({ pageParam, signal }) => itemsApi.getRelated(itemId, { businessId, page: pageParam, pageSize: PAGE_SIZE, signal }),
-    initialPageParam: 1,
-    getNextPageParam: (last) => (last?.hasMore ? last.page + 1 : undefined),
+  const seed = visitSeed(itemId);
+  return useQuery({
+    queryKey: ["related-items", itemId, seed],
+    queryFn: ({ signal }) => itemsApi.getRelated(itemId, { businessId, page: 1, pageSize: PAGE_SIZE, seed, signal }),
     enabled: enabled && Boolean(itemId),
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
     retry: false
   });
 }
 
-/**
- * "Recommended": products that go with this one (a soundbar for a TV, cables and a case for a phone), from any shop, at least
- * 1 in 5 from the shop being viewed (labelled "From this shop"), with "See more" for the next page (C19). `compact` is the
- * Recommended tab: the first five and a link down to the section.
- */
-function Cards({ ctx, query, compact, loading }) {
-  const { item } = ctx;
-  const rows = (query.data?.pages ?? []).flatMap((p) => p.items ?? []).filter((r) => r?.id && r.business?.slug);
-  const shown = compact ? rows.slice(0, 5) : rows;
-  const open = (row, index) => () => logEvent("related_item_click", { itemId: item.id, targetItemId: row.id, position: index + 1, fromThisShop: Boolean(row.fromThisShop) });
+const rowsOf = (query) => (query.data?.items ?? []).filter((r) => r?.id && r.business?.slug);
+const opened = (item) => (row, index) => logEvent("related_item_click", { itemId: item.id, targetItemId: row.id, position: index + 1, fromThisShop: Boolean(row.fromThisShop) });
+
+/** The tab: the first five, and a link down to the section. Says so when nothing goes with this item. */
+export function RecommendList({ ctx }) {
+  const query = useRelated(ctx.item?.id, ctx.business?.id, true);
+  if (!ctx.item) return null;
+  const rows = rowsOf(query);
+  if (query.isFetched && rows.length === 0) return <p className={rec.none}>{t("reco.nothing")}</p>;
+  const open = opened(ctx.item);
   return (
     <>
-      <ul className={rec.grid} aria-busy={loading || query.isFetchingNextPage ? "true" : undefined}>
-        {loading
-          ? Array.from({ length: 5 }, (_, i) => (
-              <li key={i}>
-                <Skeleton height="16rem" radius="var(--radius-card)" />
-              </li>
-            ))
-          : shown.map((row, index) => (
-              <li key={row.id} className={rec.cell} onClick={open(row, index)}>
-                {row.fromThisShop && <span className={rec.mine}>From this shop</span>}
-                <ProductTile item={row} />
+      <ul className={rec.grid} aria-busy={query.isPending || undefined}>
+        {query.isPending
+          ? null
+          : rows.slice(0, 5).map((row, index) => (
+              <li key={row.id} className={rec.cell} onClick={() => open(row, index)}>
+                <RecoCard item={row} />
               </li>
             ))}
       </ul>
-      {compact ? (
-        rows.length > 5 && (
-          <a className={rec.more} href="#item-recommend">
-            See all recommended items
-          </a>
-        )
-      ) : query.hasNextPage ? (
-        <button type="button" className={rec.more} onClick={() => query.fetchNextPage()} disabled={query.isFetchingNextPage}>
-          {query.isFetchingNextPage ? "Loading…" : "See more"}
-        </button>
-      ) : rows.length > PAGE_SIZE ? (
-        <p className={rec.end}>That is everything we can suggest for now.</p>
-      ) : null}
+      {rows.length > 5 && (
+        <a className={rec.more} href="#item-recommend">
+          {t("reco.seeAll")}
+        </a>
+      )}
     </>
   );
 }
 
-const countOf = (query) => (query.data?.pages ?? []).reduce((n, p) => n + (p.items?.length ?? 0), 0);
-
-export function RecommendList({ ctx, compact = false }) {
-  const query = useRelated(ctx.item?.id, ctx.business?.id, true);
-  if (!ctx.item) return null;
-  if (query.isFetched && countOf(query) === 0) return <p className={rec.none}>Nothing to suggest for this item yet.</p>;
-  return <Cards ctx={ctx} query={query} compact={compact} loading={query.isPending} />;
-}
-
+/** The section below the photos. Not there until it is near the screen, and not there at all when nothing goes with the item. */
 export function RecommendSection({ ctx }) {
   const marker = useRef(null);
-  const near = useNear(marker);
+  const near = useNearViewport(marker);
   const query = useRelated(ctx.item?.id, ctx.business?.id, near);
   if (!ctx.item) return null;
-  // Until it is near the screen it is a zero-height marker; when there is nothing to suggest it is gone.
-  if (!near) return <div ref={marker} aria-hidden="true" />;
-  if (query.isFetched && countOf(query) === 0) return null;
+  if (!near) return <div ref={marker} aria-hidden="true" data-goes-with-marker="" />;
+  const rows = rowsOf(query);
+  if (query.isFetched && rows.length === 0) return null;
   return (
-    <section id="item-recommend" className={rec.section} aria-labelledby="recommend-title">
-      <h3 id="recommend-title" className={rec.title}>Recommended with this item</h3>
-      <p className={rec.note}>Products that go with it, from shops across EpicMKT.</p>
-      <Cards ctx={ctx} query={query} compact={false} loading={query.isPending} />
-    </section>
+    <RecoCarousel
+      id="item-recommend"
+      title={t("reco.goesWith")}
+      note={t("reco.goesWithNote")}
+      rows={rows}
+      loading={query.isPending}
+      onOpen={opened(ctx.item)}
+      className={styles.similar}
+      dataAttr={{ "data-goes-with": "", "data-state": query.isPending ? "loading" : "ready" }}
+    />
   );
 }

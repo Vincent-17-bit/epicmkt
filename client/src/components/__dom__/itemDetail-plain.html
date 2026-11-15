@@ -289,65 +289,143 @@
 </div>
 </div>
 </div>
-<section id="item-recommend" class="section" aria-labelledby="X-title">
-<h3 id="X-title" class="title">Recommended with this item</h3>
-<p class="note">Products that go with it, from shops across EpicMKT.</p>
-<ul class="grid" aria-busy="true">
-<li>
-<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
-</span>
-</li>
-<li>
-<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
-</span>
-</li>
-<li>
-<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
-</span>
-</li>
-<li>
-<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
-</span>
-</li>
-<li>
-<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
-</span>
-</li>
-</ul>
-</section>
-<div id="item-similar">
-<section class="section similar" aria-labelledby="X-title" data-similar="" data-state="loading">
-<div class="frame scroller" style="--cell: clamp(148px, 42vw, 220px);" data-scrollable="false" data-header="true">
-<div class="header">
-<div class="heading">
-<h3 id="X-title" class="title">Similar items</h3>
+<section id="item-recommend" class="section similar" aria-labelledby="X-title" aria-busy="true" data-goes-with="" data-state="loading">
+<div class="head">
+<div class="headText">
+<h3 id="X-title" class="title">Goes well with this</h3>
+<p class="note">Products people buy with it, from this shop and others</p>
 </div>
 </div>
-<ul class="row " data-left="false" data-right="false" aria-busy="true">
-<li class="cell">
-<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
-</span>
-</li>
-<li class="cell">
-<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
-</span>
-</li>
-<li class="cell">
-<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
-</span>
-</li>
-<li class="cell">
-<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
-</span>
-</li>
-</ul>
-<button type="button" class="nav prev navTop" disabled="" aria-label="Scroll left" tabindex="-1">
+<div class="frame">
+<button type="button" class="arrow prev" disabled="" aria-label="Previous page of Goes well with this" aria-controls="item-recommend-track">
 <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-left" class="svg-inline--fa fa-chevron-left " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
 <path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z">
 </path>
 </svg>
 </button>
-<button type="button" class="nav next navTop" disabled="" aria-label="Scroll right" tabindex="-1">
+<ul id="item-recommend-track" class="track">
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+</ul>
+<button type="button" class="arrow next" disabled="" aria-label="Next page of Goes well with this" aria-controls="item-recommend-track">
+<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" class="svg-inline--fa fa-chevron-right " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
+<path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z">
+</path>
+</svg>
+</button>
+</div>
+</section>
+<div id="item-similar">
+<section id="similar-items" class="section similar" aria-labelledby="X-title" aria-busy="true" data-similar="" data-state="loading">
+<div class="head">
+<div class="headText">
+<h3 id="X-title" class="title">Similar products</h3>
+</div>
+</div>
+<div class="frame">
+<button type="button" class="arrow prev" disabled="" aria-label="Previous page of Similar products" aria-controls="similar-items-track">
+<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-left" class="svg-inline--fa fa-chevron-left " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
+<path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z">
+</path>
+</svg>
+</button>
+<ul id="similar-items-track" class="track">
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+<li class="cell" aria-hidden="true">
+<span aria-hidden="true" class="skeleton skeleton" style="width: 100%; height: auto; border-radius: var(--radius-card);">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 85%; height: 1rem;">
+</span>
+<span aria-hidden="true" class="skeleton " style="width: 55%; height: 1rem;">
+</span>
+</li>
+</ul>
+<button type="button" class="arrow next" disabled="" aria-label="Next page of Similar products" aria-controls="similar-items-track">
 <svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" class="svg-inline--fa fa-chevron-right " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
 <path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z">
 </path>

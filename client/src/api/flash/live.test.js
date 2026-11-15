@@ -469,6 +469,36 @@ describe("live item and business pages", () => {
       expect(next.hasMore).toBe(false);
     });
 
+    it("an item with no product type finds what goes with it by name: pilau finds sodas and juice, never another pilau", async () => {
+      setup();
+      const pilau = itemRow({ name: "Chicken pilau" });
+      const soda = at(1, B, { name: "Coca-Cola 500ml" });
+      const juice = at(2, C, { name: "Fresh mango juice" });
+      const other = at(3, B, { name: "Beef pilau" });
+      const mine = at(4, A, { name: "Fanta Orange 500ml" });
+      const ugali = at(5, A, { name: "Ugali and fish" });
+      db().items = [pilau, soda, juice, other, mine, ugali];
+      db().rpc.related_item_candidates = () => null;
+      const asked = [];
+      db().rpc.similar_item_candidates = (args) => {
+        asked.push(args);
+        return [soda, juice, other];
+      };
+      const page = await live.getRelatedPage(SEED, { page: 1, pageSize: 10, seed: "visit" });
+      expect(asked[0].p_terms).toEqual(expect.arrayContaining(["soda", "juice", "water"]));
+      expect(page.items.map((r) => r.name).sort()).toEqual(["Coca-Cola 500ml", "Fanta Orange 500ml", "Fresh mango juice"]);
+      expect(page.items.find((r) => r.name === "Fanta Orange 500ml").fromThisShop).toBe(true);
+    });
+
+    it("a haircut asks for nothing and has nothing", async () => {
+      setup();
+      db().items = [itemRow({ name: "Haircut" }), at(1, B, { name: "Coca-Cola 500ml" })];
+      db().rpc.related_item_candidates = () => null;
+      db().rpc.similar_item_candidates = vi.fn(() => []);
+      expect(await live.getRelatedPage(SEED)).toMatchObject({ items: [], total: 0 });
+      expect(db().rpc.similar_item_candidates).not.toHaveBeenCalled();
+    });
+
     it("is an empty first page for a hidden or unknown item and for a non-live id", async () => {
       setup();
       db().rpc.related_item_candidates = () => null;

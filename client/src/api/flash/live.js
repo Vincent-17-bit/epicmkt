@@ -1,5 +1,5 @@
 import { withTiers } from "./tiers.js";
-import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, orderStoreItems, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, complementGroupOf, complementSearchWords, orderStoreItems, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -233,7 +233,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   }, tiers);
 }
 
-export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {}) {
+export async function getStoreSelective(ref, { excludeItemId, limit = 12, seed = null } = {}) {
   const business = await findBusiness(ref);
   if (!business) return [];
   const rows = unwrap(await supabase.from("public_items").select(CARD_COLUMNS).eq("business_id", business.id).order("sort").order("created_at", { ascending: false })) ?? [];
@@ -249,7 +249,7 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
       return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
   // The closest to the item being viewed first (shared, so the demo orders the same way).
-  return orderStoreItems(current ?? null, shaped).slice(0, limit);
+  return orderStoreItems(current ?? null, shaped, { seed }).slice(0, limit);
 }
 
 const SIMILAR_STORES = 100;
@@ -308,7 +308,7 @@ const similarViaQueries = async ({ seed, base, terms, section, read }) => {
 // the same category is no reason to show its items. The database narrows the pool and the shared ranking decides what
 // qualifies and in what order, so the demo backend and live agree. Listed and public only (the views already hide the rest).
 // Throws on a failed read; the caller turns that into an empty row. `signal` cancels the reads.
-export async function getSimilarItems(itemId, { limit = 12, origin = null, signal = null } = {}) {
+export async function getSimilarItems(itemId, { limit = 12, origin = null, seed: visit = null, signal = null } = {}) {
   if (!isLiveId(itemId)) return [];
   // abortSignal belongs before maybeSingle() / await: it is not available on the builder maybeSingle() returns.
   const read = (query) => (signal ? query.abortSignal(signal) : query);
@@ -379,7 +379,8 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
       s
     })),
     origin: visitor,
-    limit
+    limit,
+    seed: visit
   });
   // The same business fields the home product grid gives its cards, so the card looks and behaves the same.
   return ranked.map(({ s }) => ({
@@ -401,16 +402,53 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
   }));
 }
 
-// "Recommended" (C19, items.getRelated): the database returns the item, its relations and a candidate pool (0109
-// related_item_candidates); the shared rankRelated picks the page (at least 1 in 5 from this shop); then only that page's rows
-// are read as cards, shaped exactly like Similar items so the same tile shows them.
-export async function getRelatedPage(itemId, { page = 1, pageSize = 10, signal = null } = {}) {
+// "Goes well with this" (C19, items.getRelated): products that complete this one, from any shop (a soda or a juice with a pilau,
+// a regulator with a gas cylinder), never more of the same kind (that is Similar items). Most live items carry no product type,
+// so the item's NAME decides what it goes with (the shared complement map), and the candidates are fetched by the partner
+// groups' words through the same name search Similar items uses, plus this shop's own items (at least 1 in 5 of a page is
+// from this shop), plus the typed candidates and admin relations of migration 0109 when that is deployed. The shared
+// rankRelated decides what qualifies and the order (`seed`: one per visit), then only the page shown is read as cards.
+// An item nothing goes with (a haircut) is an empty first page, so the section is not shown.
+const RELATED_OWN = 200;
+export async function getRelatedPage(itemId, { page = 1, pageSize = 10, seed = null, signal = null } = {}) {
   const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
   if (!isLiveId(itemId)) return empty;
   const read = (query) => (signal ? query.abortSignal(signal) : query);
-  const data = unwrap(await read(supabase.rpc("related_item_candidates", { p_item_id: itemId, p_limit: 200 })));
-  if (!data?.item) return empty;
-  const ranked = rankRelated(data.item, data.candidates ?? [], { relations: data.relations ?? [], page, pageSize });
+  const self = unwrap(await read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("id", itemId)).maybeSingle());
+  if (!self) return empty;
+  const asCandidate = (row) => ({
+    id: row.id,
+    businessId: row.business_id ?? row.businessId,
+    name: row.name,
+    brand: row.brand,
+    productTypeId: row.product_type_id ?? row.productTypeId ?? null,
+    departmentId: row.department_id ?? row.departmentId ?? null,
+    availability: row.availability,
+    price: row.price,
+    createdAt: row.created_at ?? row.createdAt ?? ""
+  });
+  const current = asCandidate(self);
+  const words = complementSearchWords(complementGroupOf(current));
+
+  // Typed candidates and the admin relations (0109). Optional: a database without the function still gets name matches.
+  let typed = { candidates: [], relations: [] };
+  const viaTypes = await read(supabase.rpc("related_item_candidates", { p_item_id: itemId, p_limit: 200 }));
+  if (!viaTypes.error && viaTypes.data?.item) typed = { candidates: viaTypes.data.candidates ?? [], relations: viaTypes.data.relations ?? [] };
+  else if (viaTypes.error && !MISSING_FUNCTION.has(viaTypes.error.code)) throw viaTypes.error;
+  if (!words.length && typed.relations.length === 0) return empty;
+
+  const [byName, own] = await Promise.all([
+    words.length
+      ? similarViaRpc(itemId, words, read).then((rows) => rows ?? similarViaQueries({ seed: self, base: { id: self.business_id }, terms: words, section: "", read }))
+      : Promise.resolve([]),
+    read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("business_id", self.business_id).neq("id", itemId).order("created_at", { ascending: false }).limit(RELATED_OWN)).then((r) => unwrap(r) ?? [])
+  ]);
+  const pool = new Map();
+  for (const row of [...typed.candidates, ...byName, ...own]) {
+    const candidate = asCandidate(row);
+    if (candidate.id && candidate.id !== itemId && !pool.has(candidate.id)) pool.set(candidate.id, candidate);
+  }
+  const ranked = rankRelated(current, [...pool.values()], { relations: typed.relations, page, pageSize, seed });
   const ids = ranked.items.map((c) => c.id);
   if (!ids.length) return { ...ranked, items: [] };
   const rows = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).in("id", ids))) ?? [];

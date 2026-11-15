@@ -29,14 +29,17 @@ test("the item itself, sold-out items and duplicates are left out", () => {
 });
 
 test("an inactive relation is ignored", () => {
-  const tv = make("tv", { productTypeId: "smart-tv" });
+  const tv = make("tv", { productTypeId: "smart-tv", name: "Display panel" }); // a name with no complement of its own
   assert.equal(relatedScore(soundbar, tv, [{ ...relations[0], active: false }]), 0);
 });
 
-test("with no relations only the same department or type qualifies", () => {
-  const sameDept = make("d", { departmentId: "electronics" });
-  assert.deepEqual(ids(rankRelated(soundbar, [sameDept, make("x")])), ["d"]);
-  assert.deepEqual(ids(rankRelated({ id: "legacy", businessId: "s" }, [make("a"), make("b")])), [], "an item with no type or department gets nothing");
+test("with no relations only complements qualify: the same department or type is not 'goes with'", () => {
+  const sameDept = make("d", { departmentId: "electronics", name: "Bluetooth speaker" });
+  const sameType = make("t", { productTypeId: "soundbar", name: "LG soundbar" });
+  const plug = make("p", { name: "Extension socket 4 way" });
+  const tv = make("tv", { name: "43 inch smart TV" });
+  assert.deepEqual(ids(rankRelated(soundbar, [sameDept, sameType, plug, tv, make("x")])), ["tv", "p"]);
+  assert.deepEqual(ids(rankRelated({ id: "legacy", businessId: "s" }, [make("a"), make("b")])), [], "an item with no group gets nothing");
 });
 
 const tvs = (count, { mine = 0 } = {}) =>
@@ -46,8 +49,8 @@ const tvs = (count, { mine = 0 } = {}) =>
 const fromShop = (r) => r.items.filter((x) => x.fromThisShop).length;
 
 test("1 in 5 from this shop: 5 results need 1, even when the shop's items score lower", () => {
-  // this shop's single item is a department-only match (low score); four others are strong relation matches
-  const weak = make("weak", { businessId: "shop-1", departmentId: "electronics" });
+  // this shop's single item is a weak complement (an extension socket for a soundbar); four others are strong relation matches
+  const weak = make("weak", { businessId: "shop-1", name: "Extension socket 4 way" });
   const got = rankRelated(soundbar, [weak, ...tvs(4)], { relations });
   assert.equal(got.items.length, 5);
   assert.equal(fromShop(got), 1);
@@ -55,14 +58,14 @@ test("1 in 5 from this shop: 5 results need 1, even when the shop's items score 
 });
 
 test("1 in 5 from this shop: 10 results need 2", () => {
-  const weak = ["w1", "w2", "w3"].map((n) => make(n, { businessId: "shop-1", departmentId: "electronics" }));
+  const weak = ["w1", "w2", "w3"].map((n) => make(n, { businessId: "shop-1", name: `Extension socket ${n}` }));
   const got = rankRelated(soundbar, [...weak, ...tvs(9)], { relations });
   assert.equal(got.items.length, 10);
   assert.equal(fromShop(got), 2);
 });
 
 test("1 in 5 from this shop: 3 results need 1", () => {
-  const weak = make("weak", { businessId: "shop-1", departmentId: "electronics" });
+  const weak = make("weak", { businessId: "shop-1", name: "Extension socket 4 way" });
   const got = rankRelated(soundbar, [weak, ...tvs(2)], { relations });
   assert.equal(got.items.length, 3);
   assert.equal(fromShop(got), 1);
@@ -85,7 +88,7 @@ test("a short page is never padded with unrelated items", () => {
 });
 
 test("paging: pages do not overlap, cover everything once, and say whether more exist", () => {
-  const weak = ["w1", "w2", "w3"].map((n) => make(n, { businessId: "shop-1", departmentId: "electronics" }));
+  const weak = ["w1", "w2", "w3"].map((n) => make(n, { businessId: "shop-1", name: `Extension socket ${n}` }));
   const all = [...weak, ...tvs(22)]; // 25 in total
   const one = rankRelated(soundbar, all, { relations, page: 1 });
   const two = rankRelated(soundbar, all, { relations, page: 2 });
@@ -114,4 +117,49 @@ test("a department-level relation and a heavier weight rank higher", () => {
   assert.deepEqual(ids(rankRelated(item, [a, b], { relations: rels })), ["b", "a"]);
   const dep = [{ fromKind: "department", fromId: "dx", toKind: "department", toId: "d1", weight: 0 }];
   assert.equal(rankRelated(item, [a], { relations: dep }).items.length, 1);
+});
+
+test("pilau goes with a soda, juice and water, not with another pilau; a haircut goes with nothing", () => {
+  const pilau = { id: "p0", businessId: "oxygen", name: "Chicken pilau" };
+  const rows = [
+    make("p1", { businessId: "munch", name: "Beef pilau" }),
+    make("soda", { businessId: "munch", name: "Coca-Cola 2L" }),
+    make("juice", { businessId: "x", name: "Fresh mango juice 500ml" }),
+    make("water", { businessId: "y", name: "Mineral water 500ml" }),
+    make("bread", { businessId: "y", name: "White bread 400g" }),
+    make("cut", { businessId: "z", name: "Haircut" })
+  ];
+  assert.deepEqual(ids(rankRelated(pilau, rows)), ["soda", "juice", "water"]);
+  assert.deepEqual(ids(rankRelated({ id: "h", businessId: "b", name: "Haircut" }, rows)), []);
+});
+
+test("a gas cylinder goes with its regulator, hose and burner first, then cooking pots", () => {
+  const gas = { id: "g", businessId: "s", name: "6kg gas cylinder with gas" };
+  const rows = [make("reg", { name: "Gas regulator" }), make("pot", { name: "Aluminium sufuria set 3 pcs" }), make("cyl", { name: "13kg gas cylinder refill" }), make("hose", { name: "Gas hose pipe 1.5m" })];
+  const got = ids(rankRelated(gas, rows));
+  assert.deepEqual(got.slice(0, 2).sort(), ["hose", "reg"]);
+  assert.equal(got[2], "pot");
+  assert.ok(!got.includes("cyl"), "another cylinder is similar, not a complement");
+});
+
+test("with a seed, equally strong items come in a different order per visit, but the same order for the whole visit", () => {
+  const meal = { id: "m", businessId: "s", name: "Chicken pilau" };
+  const sodas = Array.from({ length: 12 }, (_, i) => make(`s${i}`, { businessId: `b${i}`, name: `Soda ${i} 500ml` }));
+  const juice = make("j", { businessId: "j", name: "Mango juice" });
+  const a = ids(rankRelated(meal, [juice, ...sodas], { seed: "visit-a" }));
+  const again = ids(rankRelated(meal, [...sodas].reverse().concat(juice), { seed: "visit-a" }));
+  const b = ids(rankRelated(meal, [juice, ...sodas], { seed: "visit-b" }));
+  assert.deepEqual(a, again, "the same visit keeps its order, whatever order the data came in");
+  assert.notDeepEqual(a, b, "another visit sees another order");
+  assert.ok(a.slice(0, 10).every((x) => x.startsWith("s")), "the strongest pairing (soda, weight 10) still comes before juice (9)");
+  const pages = [1, 2].flatMap((page) => ids(rankRelated(meal, [juice, ...sodas], { seed: "visit-a", page })));
+  assert.equal(new Set(pages).size, 13, "paging with the same seed never repeats or skips");
+});
+
+test("variety first: every distinct product before the same product from more shops", () => {
+  const pilau = { id: "p0", businessId: "oxygen", name: "Chicken pilau" };
+  const coke = (n) => make(`c${n}`, { businessId: `shop${n}`, name: "Coca-Cola 500ml" });
+  const got = ids(rankRelated(pilau, [coke(1), coke(2), coke(3), make("f", { businessId: "f", name: "Fanta Orange 500ml" }), make("j", { businessId: "j", name: "Mango juice" }), make("w", { businessId: "w", name: "Mineral water" })]));
+  assert.deepEqual(got.slice(0, 4).map((x) => (x.startsWith("c") ? "c" : x)), ["c", "f", "j", "w"]);
+  assert.deepEqual(got.slice(4).sort(), ["c2", "c3"].filter((x) => !got.slice(0, 1).includes(x)).concat(got.slice(0, 1).includes("c1") ? [] : ["c1"]).sort());
 });
