@@ -10,9 +10,10 @@ import { errorText } from "../../../lib/errors.js";
 import { useMedia } from "../../../lib/useMedia.js";
 import { useSettings } from "../../../state/settings.js";
 import ui from "../../../styles/ui.module.css";
-import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog } from "./BulkBar.jsx";
+import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog, TypeDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
 import ImportDialog from "./ImportDialog.jsx";
+import { setTypeReport } from "@epicmkt/shared";
 import ItemInsights from "./ItemInsights.jsx";
 import PerformancePanel from "../PerformancePanel.jsx";
 import ListRow from "./ListRow.jsx";
@@ -55,7 +56,7 @@ export default function Catalog() {
   const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [draft, setDraft] = useState(query);
-  const [dialog, setDialog] = useState(null);
+  const [dialog, setDialog] = useState(() => (location.state?.openImport ? "import" : null));
   const [insightsFor, setInsightsFor] = useState(null);
   const [restocking, setRestocking] = useState(null);
   const [pending, setPending] = useState(() => new Set());
@@ -431,6 +432,11 @@ export default function Catalog() {
               />
             )}
 
+            {enriched.some((i) => i.draft) && (
+              <p className={styles.ok} data-testid="finish-banner">
+                {enriched.filter((i) => i.draft).length} {enriched.filter((i) => i.draft).length === 1 ? "item is" : "items are"} still drafts. <Link to="/business/catalog/add#to-finish" state={{ from: location.search }}>See what is missing</Link>
+              </p>
+            )}
             {notice && <p className={notice.tone === "error" ? ui.error : styles.ok} role={notice.tone === "error" ? "alert" : "status"}>{notice.text}</p>}
             {undo && (
               <p className={styles.undo} role="status" data-testid="undo-bar">
@@ -513,6 +519,7 @@ export default function Catalog() {
 
       {dialog === "prices" && <PriceDialog open items={selectedItems} onClose={() => setDialog(null)} onApply={(percent) => applyBulk(() => api.bulkItems("price_percent", selectedIds, { percent }), (r) => `${r.affected} prices changed.`)} />}
       {dialog === "section" && <SectionDialog open sections={sections} onClose={() => setDialog(null)} onApply={(section) => applyBulk(() => api.bulkItems("move_section", selectedIds, { section }), (r) => `${r.affected} moved.`)} />}
+      {dialog === "type" && <TypeDialog open count={selectedItems.length} untyped={selectedItems.filter((i) => !i.productTypeId).length} onClose={() => setDialog(null)} onApply={(typeId) => applyBulk(() => api.setItemTypes(selectedItems.filter((i) => !i.productTypeId).map((i) => i.id), typeId), setTypeReport)} />}
       {dialog === "availability" && <AvailabilityDialog open onClose={() => setDialog(null)} onApply={(availability) => applyBulk(() => api.bulkItems("set_availability", selectedIds, { availability }), (r) => `${r.affected} updated.`)} />}
       {insightsFor && <ItemInsights item={insightsFor} onClose={() => setInsightsFor(null)} />}
       {dialog === "import" && (

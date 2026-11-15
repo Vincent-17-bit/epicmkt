@@ -3,7 +3,7 @@ export const MAX_PERCENT_DOWN = -90;
 export const ROUNDING_RULE = "Prices are rounded to the nearest whole KES (halves round up) and never go below KES 1.";
 export const MAX_SAVED_VIEWS = 10;
 export const VIEW_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 ._&'()-]{0,29}$/;
-export const BULK_ACTIONS = ["hide", "show", "delete", "move_section", "set_availability", "price_percent", "confirm_prices"];
+export const BULK_ACTIONS = ["hide", "show", "delete", "move_section", "set_availability", "price_percent", "confirm_prices"];   // set_type is its own call, see seller_set_item_types
 
 export const validatePercent = (value) => {
   const n = typeof value === "string" ? Number(value.trim()) : value;
@@ -96,3 +96,47 @@ export const reorderIds = (ids, from, to) => {
   next.splice(to, 0, moved);
   return next;
 };
+
+// ---- Import by type and bulk set-type (B21) -------------------------------------------------------------------------
+import { specIssues } from "../specRules/index.js";
+
+export const BULK_SET_TYPE = "set_type";
+
+const requiredRowsOf = (type) => (Array.isArray(type?.specRows) ? type.specRows.filter((r) => r.level === "required") : []);
+const csvCell = (v) => (/[",\n\t]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+
+/** Column headings of an import file for a type: the shop's usual columns, then one `spec:` column for each required row. */
+export const typeTemplateHeaders = (type) => ["name", "price type", "price", "brand", ...requiredRowsOf(type).map((r) => `spec:${r.label}`)];
+
+/** A downloadable import file for a type: the headings and one example row to overwrite. */
+export function typeTemplateCsv(type) {
+  const example = ["Example item (replace me)", "fixed", "1500", "", ...requiredRowsOf(type).map((r) => (Array.isArray(r.choices) && r.choices[0]) || "")];
+  return `${typeTemplateHeaders(type).map(csvCell).join(",")}\n${example.map(csvCell).join(",")}\n`;
+}
+
+/**
+ * Rows of a checked import (validateImport's `valid`) that still lack a required row of the type: [{ row, missing: [label] }].
+ * They are imported as drafts all the same; this is for the preview, so the seller knows what is left to finish.
+ */
+export function importRowsToFinish(valid, type) {
+  if (!type || requiredRowsOf(type).length === 0) return [];
+  const out = [];
+  for (const v of valid ?? []) {
+    const specs = Array.isArray(v.value?.specs) ? v.value.specs : [];
+    const { blockers } = specIssues({ specs, brand: v.value?.brand ?? "", packSize: v.value?.pack_size ?? "", includes: v.value?.includes ?? [], axes: [] }, type);
+    if (blockers.length) out.push({ row: v.row, missing: blockers.map((b) => b.label) });
+  }
+  return out;
+}
+
+/** The sentence for the result of a bulk set-type: what changed, and what was left alone and why. */
+export function setTypeReport(result) {
+  const updated = result?.updated ?? 0;
+  const why = { has_type: 0, needs_details: 0, not_found: 0 };
+  for (const s of result?.skipped ?? []) if (s.reason in why) why[s.reason] += 1;
+  const parts = [`${updated} ${updated === 1 ? "item" : "items"} updated`];
+  if (why.needs_details) parts.push(`${why.needs_details} live ${why.needs_details === 1 ? "item needs" : "items need"} their details added in the editor first, so ${why.needs_details === 1 ? "it was" : "they were"} left as it was`);
+  if (why.has_type) parts.push(`${why.has_type} already had a type`);
+  if (why.not_found) parts.push(`${why.not_found} could not be found`);
+  return `${parts.join(". ")}.`;
+}

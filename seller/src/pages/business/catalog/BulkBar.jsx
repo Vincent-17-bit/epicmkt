@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { AVAILABILITY_OPTIONS, DB_AVAILABILITY, formatKes, previewPriceChange, ROUNDING_RULE, validatePercent } from "@epicmkt/shared";
 import Modal from "./Modal.jsx";
+import { useProductTypes } from "./editor/steps/useProductTypes.js";
 import { priceText } from "./cardItem.js";
 import styles from "./catalog.module.css";
 
@@ -134,6 +135,30 @@ export function AvailabilityDialog({ open, onClose, onApply }) {
   );
 }
 
+export function TypeDialog({ open, count, untyped, onClose, onApply }) {
+  const { types, loading, error } = useProductTypes();
+  const [value, setValue] = useState("");
+  const sorted = useMemo(() => [...types].sort((a, b) => String(a.name).localeCompare(String(b.name))), [types]);
+  return (
+    <PickDialog open={open} title="Set product type" labelId="type-title" onClose={onClose} onApply={() => onApply(value)} ready={Boolean(value) && untyped > 0}>
+      <p>
+        {untyped === 0
+          ? "Every selected item already has a type, so nothing would change."
+          : `${untyped} of the ${count} selected ${untyped === 1 ? "item has" : "items have"} no type. Only ${untyped === 1 ? "that one changes" : "those change"}. Prices and stock stay as they are, and items missing details for the new type are listed under "items to finish".`}
+      </p>
+      {error ? <p role="alert">We could not load the types. Close this and try again.</p> : (
+        <label className={styles.stack}>
+          <span>Product type</span>
+          <select className={styles.select} value={value} onChange={(e) => setValue(e.target.value)} aria-label="Product type" disabled={loading}>
+            <option value="">{loading ? "Loading" : "Choose a type"}</option>
+            {sorted.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </label>
+      )}
+    </PickDialog>
+  );
+}
+
 export default function BulkBar({ count, total, allSelected, busy, onSelectAll, onClear, onAction }) {
   return (
     <div className={styles.bulk} role="region" aria-label="Bulk actions" data-testid="bulk-bar">
@@ -144,6 +169,7 @@ export default function BulkBar({ count, total, allSelected, busy, onSelectAll, 
         <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("show")}>Show</button>
         <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("section")}>Move to section</button>
         <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("availability")}>Set availability</button>
+        <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("type")}>Set type</button>
         <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("prices")}>Change prices</button>
         <button type="button" className={styles.mini} disabled={busy} onClick={() => onAction("confirm")}>Confirm prices</button>
         <button type="button" className={`${styles.mini} ${styles.dangerBtn}`} disabled={busy} onClick={() => onAction("delete")}>Delete</button>

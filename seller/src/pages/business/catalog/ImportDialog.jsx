@@ -2,8 +2,9 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   IMPORT_FIELDS, IMPORT_LABELS, IMPORT_MAX_BYTES, IMPORT_MAX_ROWS, IMPORT_SPEC_HINT, IMPORT_TEMPLATE, checkImportFile, detectMapping, errorReportCsv,
-  parseDelimited, positionalMapping, toImportPayload, validateImport,
+  importRowsToFinish, parseDelimited, positionalMapping, toImportPayload, typeTemplateCsv, validateImport,
 } from "@epicmkt/shared";
+import { useProductTypes } from "./editor/steps/useProductTypes.js";
 import Modal from "./Modal.jsx";
 import { errorText } from "../../../lib/errors.js";
 import ui from "../../../styles/ui.module.css";
@@ -19,6 +20,19 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
   const [hasHeader, setHasHeader] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const { types } = useProductTypes();
+  const [typeId, setTypeId] = useState("");
+  const chosen = types.find((t) => t.id === typeId) ?? null;
+
+  const downloadTemplate = () => {
+    const blob = new Blob([typeTemplateCsv(chosen)], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `import-template-${chosen?.id ?? "items"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const result = useMemo(
     () => (parsed && mapping ? validateImport(parsed.rows, mapping, { hasHeader, premium, remaining }) : null),
@@ -97,6 +111,7 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
     );
   }
 
+  const unfinished = useMemo(() => (result && !result.message ? importRowsToFinish(result.valid, chosen) : []), [result, chosen]);
   const canImport = result && !result.locked && !result.tooMany && result.valid.length > 0 && !busy;
 
   return (
@@ -121,6 +136,17 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
             <button type="button" role="tab" aria-selected={tab === "csv"} className={styles.tab} onClick={() => setTab("csv")}>Upload CSV</button>
           </div>
           <p className={styles.hint}>Columns: {IMPORT_TEMPLATE.split("\t").join(", ")}. {IMPORT_SPEC_HINT} Up to {IMPORT_MAX_ROWS} rows and 2 MB. Imported items are saved as drafts, so nothing shows to customers until you choose Show.</p>
+          <div className={styles.stack} data-testid="import-template">
+            <label className={styles.stack}>
+              <span>Start from a template for a type of item (optional)</span>
+              <select className={styles.select} value={typeId} onChange={(e) => setTypeId(e.target.value)} aria-label="Template for">
+                <option value="">Any item</option>
+                {[...types].sort((a, b) => String(a.name).localeCompare(String(b.name))).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </label>
+            <p className={styles.hint}>The template has a column for each detail that type needs. Imported items start without a type: afterwards, select them in your list and choose Set type.</p>
+            <button type="button" className={styles.ghost} onClick={downloadTemplate}>{chosen ? `Download ${chosen.name} template` : "Download template"}</button>
+          </div>
           {tab === "paste" ? (
             <>
               <textarea className={ui.input} rows={8} value={text} onChange={(e) => setText(e.target.value)} aria-label="Paste rows" placeholder="Copy cells from Excel or Google Sheets and paste here" />
@@ -167,6 +193,14 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
             <p data-testid="import-summary" className={styles.summaryText}>
               {result.valid.length} ready to import, {result.rejected.length} rejected, {result.total} rows in total.
             </p>
+          )}
+          {unfinished.length > 0 && (
+            <div data-testid="import-unfinished">
+              <p className={styles.summaryText}>{unfinished.length} {unfinished.length === 1 ? "row is" : "rows are"} missing details a {chosen.name.toLowerCase()} needs. {unfinished.length === 1 ? "It is" : "They are"} still imported as drafts, listed under items to finish.</p>
+              <ul className={styles.hint}>
+                {unfinished.slice(0, 10).map((u) => <li key={u.row}>Row {u.row}: {u.missing.join(", ")}</li>)}
+              </ul>
+            </div>
           )}
           {result && result.rejected.length > 0 && (
             <>

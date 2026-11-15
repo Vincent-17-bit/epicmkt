@@ -522,6 +522,9 @@ export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide"
 // The size chart library (active charts). Admin keeps it; sellers copy one as the starting table of their own guide.
 export const listSizeCharts = async () => rows(need().from("public_size_charts").select("id, name, category, unit, columns, rows").order("name"));
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
+// Gives items that have no type a type. Only the type changes: price and stock are never touched. Returns { updated, skipped: [{ id, reason }] },
+// reason being has_type, needs_details (a live item the type's required rows would block) or not_found.
+export const setItemTypes = (ids, typeId) => rpc("seller_set_item_types", { p_ids: ids, p_type: typeId });
 // 'sold_out' marks an item out of stock. 'restock' lists it again; a counted item needs its new count.
 export const itemStock = (id, action, count = null) => rpc("seller_item_stock", { p_id: id, p_action: action, p_count: count });
 export const reorderItems = (ids) => rpc("seller_reorder_items", { p_ids: ids });

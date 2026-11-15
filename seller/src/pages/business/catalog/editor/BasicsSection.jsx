@@ -1,9 +1,14 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useInRouterContext } from "react-router-dom";
+import NameChips from "../../../../components/NameChips.jsx";
+import DuplicateGuard from "../../../../components/DuplicateGuard.jsx";
+import MemoryChips from "../../../../components/MemoryChips.jsx";
+import { memoryFieldOfRow } from "../../../../lib/shopMemory.js";
 import { exampleShortFor, firstSentence, LIMITS } from "./model.js";
 import { Field, SectionCard } from "./parts.jsx";
 import ValueField from "./ValueField.jsx";
 import TypeRows from "./TypeRows.jsx";
-import { hasTemplate, rowsOf } from "./typedRows.js";
+import { hasTemplate, ownValue, rowsOf, withRow } from "./typedRows.js";
 import styles from "./editor.module.css";
 
 export default function BasicsSection({ form, patch, errors, category, sections, focusOn, type, more, onMore }) {
@@ -15,12 +20,20 @@ export default function BasicsSection({ form, patch, errors, category, sections,
   const listId = "editor-sections";
   const typed = hasTemplate(type);
   const quick = typed && !more;
-  const { required } = rowsOf(form, type);
+  const { required, extra } = rowsOf(form, type);
+  const inRouter = useInRouterContext();
+  const [checked, setChecked] = useState("");
+  const memoryRows = [...required, ...extra].filter(memoryFieldOfRow);
   return (
     <SectionCard id="basics" title="Basics" required why="Your name and descriptions are what customers read first, and what search matches against.">
       <div className={styles.grid}>
         <Field name="name" label="Name" area="name" max={LIMITS.name} value={form.name} error={errors.name} onChange={(e) => patch("name", e.target.value)} autoComplete="off"
-          hint="Say what it is in plain words, like Men's fade cut or Chocolate cake, 1 kg." className={styles.span2} />
+          hint="Say what it is in plain words, like Men's fade cut or Chocolate cake, 1 kg." className={styles.span2}
+          onBlur={(e) => setChecked(e.target.value.trim())} />
+        <div className={styles.span2}>
+          {typed && <NameChips name={form.name} rows={[...required, ...extra]} has={(row) => Boolean(ownValue(form, row))} onAccept={(row, value) => patch("specs", withRow(form, row, value))} />}
+          {inRouter && checked && <DuplicateGuard checked={checked} />}
+        </div>
         <ValueField kind="brand" name="brand" label="Brand (optional)" area="brand" max={LIMITS.brand} value={form.brand} valueId={form.brandValueId} error={errors.brand} noun="brand"
           onChange={(text, v) => { patch("brand", text); patch("brandValueId", v?.id ?? null); }}
           hint="The maker or label, such as Nike or Brookside. Pick one from the list so it matches other shops, or type your own." />
@@ -28,6 +41,11 @@ export default function BasicsSection({ form, patch, errors, category, sections,
           hint="Groups items on your page, like Haircuts or Cakes. Pick one you use already or type a new one." />}
         {!quick && <datalist id={listId}>{sections.map((s) => <option key={s} value={s} />)}</datalist>}
       </div>
+
+      {typed && <MemoryChips typeId={form.productTypeId} field="brand" label="brands" current={form.brand} onPick={(v) => { patch("brand", v); patch("brandValueId", null); }} />}
+      {typed && memoryRows.map((row) => (
+        <MemoryChips key={row.key} typeId={form.productTypeId} field={memoryFieldOfRow(row)} label={row.label.toLowerCase()} current={ownValue(form, row)} onPick={(v) => patch("specs", withRow(form, row, v))} />
+      ))}
 
       {typed && required.length > 0 && (
         <div className={styles.subBlock} data-area="typerows">

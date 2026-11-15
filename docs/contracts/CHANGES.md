@@ -600,3 +600,12 @@ Entry format:
 - Client: routes `/d/:department` and `/d/:department/:type`; breadcrumbs Home > Phones > Phone. Category routes unchanged.
 - Admin: Departments and Type requests pages (uses the 0091 functions `admin_type_requests_list` and `admin_resolve_type_request`).
 - Not done: the C26 Relations page and the department sections on a shop front (the RPC `public_shop_departments` is ready for them).
+
+## B17 / B18 / B19 / B21: the add flow (migration 0119)
+- Add items page: four ways in (one item guided, many of the same kind, import a file, copy an item) and a "To finish" list of drafts with what each is missing (also live items that have a type but not its required rows).
+- Table add at `/business/catalog/add/table`: columns from the type's required rows; paste from a spreadsheet; valid rows are saved and shown, rows with something missing are saved as drafts, rows that cannot be saved stay in the table.
+- Fill from the name (`seller/src/lib/nameParse.js`): reads sizes with the scales and offers chips; nothing is saved until tapped. Duplicate guard on leaving the name box, from the shop's own list with `similarKey`.
+- Shop memory (`seller/src/lib/shopMemory.js`): last brand, warranty and condition per type, on this device.
+- `seller_set_item_types(p_ids uuid[], p_type text) -> { updated, skipped: [{ id, reason }] }` (reasons `has_type`, `needs_details`, `not_found`; errors `no_items`, `too_many_items`, `unknown_product_type`, `type_not_allowed`). Only `product_type_id` changes. A live item the type's required rows would block is skipped, not hidden.
+- Shared (`shared/src/seller/bulk.js`): `typeTemplateHeaders`, `typeTemplateCsv`, `importRowsToFinish`, `setTypeReport`. Seller API: `setItemTypes`.
+- Not done: imported rows do not get a type at import (the server import has no type field); photos cannot be pasted into the table.
