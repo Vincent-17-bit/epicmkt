@@ -250,6 +250,8 @@ async function addSearchFacts(snap) {
     if (typeof f.shortDescription === "string") p.shortDescription = f.shortDescription;
     if (Array.isArray(f.optionValues)) p.optionValues = f.optionValues;
     if (Array.isArray(f.swatches)) p.swatches = f.swatches;
+    if (typeof f.productTypeId === "string") p.productTypeId = f.productTypeId;
+    if (typeof f.departmentId === "string") p.departmentId = f.departmentId;
   }
 }
 

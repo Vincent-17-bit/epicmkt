@@ -286,8 +286,9 @@ grant execute on function public.admin_save_type_draft(text, jsonb), public.admi
 -- ===== 0127_search_facts =====
 -- Product search with filters (the /products page) and the colour filter on the home list read more of an item than the product
 -- snapshot carries: its spec rows (output power, battery life, screen size ...), its highlights and short description, the
--- labels of its option values and the colours of its swatches. This returns them for every live public item at once, as
--- { "<item id>": { specs, highlights, shortDescription, optionValues, swatches } }, capped so the answer stays small. The
+-- labels of its option values, the colours of its swatches, and its product type and department (so search files a typed item
+-- under the right kind exactly). This returns them for every live public item at once, as
+-- { "<item id>": { specs, highlights, shortDescription, optionValues, swatches, productTypeId, departmentId } }, capped. The
 -- /api/products endpoint reads it next to the snapshot and caches it with it. Same visibility rule as public_items.
 
 create or replace function public.item_search_facts(p_specs jsonb, p_highlights jsonb, p_short text, p_axes jsonb) returns jsonb
@@ -315,7 +316,8 @@ create or replace function public.public_item_search_facts(p_limit integer defau
 language sql stable security definer set search_path = public as $$
   select coalesce(jsonb_object_agg(x.id, x.facts), '{}'::jsonb)
   from (
-    select it.id, public.item_search_facts(it.specs, it.highlights, it.short_description, it.option_axes) as facts
+    select it.id, public.item_search_facts(it.specs, it.highlights, it.short_description, it.option_axes)
+             || jsonb_strip_nulls(jsonb_build_object('productTypeId', it.product_type_id, 'departmentId', it.department_id)) as facts
     from public.items it join public.public_items pi on pi.id = it.id
     order by it.created_at desc, it.id
     limit least(greatest(coalesce(p_limit, 50000), 1), 50000)

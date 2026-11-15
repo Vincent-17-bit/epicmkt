@@ -44,6 +44,17 @@ test("returns what search reads for a live item: specs, highlights, short descri
   assert.deepEqual(f.swatches, [{ label: "Black", color: "#111111" }, { label: "Blue", color: "#1d4ed8" }]);
 });
 
+test("carries the item's product type and department, so search files it under the right kind", async () => {
+  // A type with no required spec rows, so the publish gate lets the item stay live.
+  const dept = (await sql(c, `select id from departments order by id limit 1`))[0].id;
+  await sql(c, `insert into product_types (id, slug, name, kind, department_id, axes, spec_rows) values ('test-gadget', 'test-gadget', 'Test gadget', 'good', $1, '[]', '[]') on conflict (id) do nothing`, [dept]);
+  const id = await newItem({ name: "Gadget" });
+  await sql(c, `update items set product_type_id = 'test-gadget', department_id = $2 where id = $1`, [id, dept]);
+  const f = (await facts())[id];
+  assert.equal(f.productTypeId, "test-gadget");
+  assert.equal(f.departmentId, dept);
+});
+
 test("caps the rows, skips empty and malformed ones, and never fails on odd input", async () => {
   const one = async (specs, highlights = [], short = null, axes = []) =>
     (await sql(c, `select item_search_facts($1::jsonb, $2::jsonb, $3, $4::jsonb) as f`, [JSON.stringify(specs), JSON.stringify(highlights), short, JSON.stringify(axes)]))[0].f;
