@@ -14,6 +14,13 @@ const KNOWN = ["forbidden", "not_found", "invalid_status", "unauthorized", "rate
 
 // Errors the message and bulk-action functions raise, with text an admin can act on.
 export const ACTION_TEXT = {
+  invalid_name: "Give it a name of 2 to 60 characters.",
+  name_taken: "Another department already has that name.",
+  invalid_sort: "The order must be a whole number.",
+  department_in_use: "Items still sit in this department. Move them first.",
+  not_pending: "Someone already answered this request.",
+  invalid_type: "Pick the type that now covers it.",
+  note_required: "Tell the seller why, so they know what to do next.",
   reason_required: "A reason of at least 5 characters is required.",
   invalid_input: "Check the form and try again.",
   not_supported: "That action is not available.",

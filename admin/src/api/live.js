@@ -715,6 +715,16 @@ export const importOptionValue = (kind, label, fields = null) => detailRpc("admi
 // -> { period, total, rows: [{ categoryId, productTypeId, filters, count, shops: [{ id, slug, name, count }] }] }
 export const getUnmetDemand = (period = 7, category = null) => detailRpc("admin_unmet_demand", { p_period: period, p_category: category });
 
+// Departments (migration 0118) and what sellers asked for when no product type fit (migration 0091).
+// listDepartments -> [{ id, name, sort, active, types, items }]; saveDepartment(id, { name?, sort?, active? }) -> id
+export const listDepartments = () => detailRpc("admin_departments_list");
+export const saveDepartment = (id, fields) => detailRpc("admin_save_department", { p_id: id, p_fields: fields });
+// status: pending | resolved | declined | all -> [{ id, name, note, status, created_at, businessId, businessName, categoryId, alsoAskedBy, adminNote, resolvedTypeId }]
+export const listTypeRequests = (status = "pending") => detailRpc("admin_type_requests_list", { p_status: status });
+export const listRequestTypes = listProductTypes;
+// outcome: "resolved" (with the type that now covers it) or "declined" (with a note the seller sees)
+export const resolveTypeRequest = (id, outcome, typeId = null, note = null) => detailRpc("admin_resolve_type_request", { p_id: id, p_outcome: outcome, p_type_id: typeId, p_note: note });
+
 // ---- Size charts and the shoe conversion table (Sizes 1.9, migration 0093_size_chart_types_shoe_conversion.sql) ----
 // listSizeCharts -> [{ id, name, category, unit, columns, rows, active, updated_at, product_type_ids, items_using }]
 export const listSizeCharts = () => detailRpc("admin_size_charts_list");

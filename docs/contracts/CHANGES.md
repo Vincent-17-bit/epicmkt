@@ -592,3 +592,11 @@ Entry format:
 ## B15: flash sale per option, seller side
 - Shared: `seller/flashOptions.js` (`flashOptionRows`, `flashOptionTable`, `flashVariantFields`) on top of `validateFlashVariants`, the same rules as migration 0095. A single-price sale is unchanged.
 - Seller: the new-sale form shows "Which options" for an item with options: every option, or only some with a discount type and value per option, the before and after table and the lowest sale price. `createFlashSale` sends `variantTarget` and `variantOverrides`; sale rows report "On N options only".
+
+## A23 / C24 / B28: department browse and admin pages (migration 0118)
+- `public_departments()`, `public_department_browse(dept, type, limit, offset)` -> `{department, type, total, items}` (items carry `business`), `public_shop_departments(business)` ("Other" last). All readable by anon.
+- `admin_departments_list()` and `admin_save_department(id, fields)`; errors `invalid_id`, `invalid_name`, `name_taken`, `invalid_sort`, `invalid_active`, `department_in_use`; every change is audited.
+- Shared: `departmentTrail`, `groupItemsByDepartment`, `isMixedShop` (`shared/src/browse.js`).
+- Client: routes `/d/:department` and `/d/:department/:type`; breadcrumbs Home > Phones > Phone. Category routes unchanged.
+- Admin: Departments and Type requests pages (uses the 0091 functions `admin_type_requests_list` and `admin_resolve_type_request`).
+- Not done: the C26 Relations page and the department sections on a shop front (the RPC `public_shop_departments` is ready for them).
