@@ -4,6 +4,7 @@ import { t as clientT } from "../../i18n/index.js";
 import { specGroupsFor, topHighlights, variantOverrides } from "../../lib/itemView.js";
 import ClientItemSpecs from "../ItemSpecs.jsx";
 import DetailsTabs from "./DetailsTabs.jsx";
+import { RecommendList } from "./Recommend.jsx";
 import styles from "./DetailsTabs.module.css";
 
 const typed = (item) => Boolean(item?.productType);
@@ -16,7 +17,9 @@ function TypedDetails({ ctx, slot }) {
   const attributes = ctx?.business?.attributes;
   const overrides = variantOverrides(ctx?.option?.variant);
   const groups = specGroupsFor({ item, category, attributes, overrides });
-  const top = topHighlights(groups);
+  // Top highlights are the item's own facts only: the shop's profile (its "Main brands", "Products") belongs to the shop card,
+  // not above an item it may have nothing to do with.
+  const top = topHighlights(specGroupsFor({ item, category, attributes: null, overrides }));
   const hasSpecs = groups.length > 0 || (item.includes?.length ?? 0) > 0 || Boolean(item.terms);
   const specItem = overrides ? { ...item, specs: groups.flatMap((g) => g.rows.map((r) => ({ group: g.name, label: r.label, value: r.value }))) } : item;
   const bullets = { ...item, description: "", shortDescription: "" };
@@ -24,7 +27,8 @@ function TypedDetails({ ctx, slot }) {
   const more = hasSpecs ? () => { setActive("specs"); setReveal((n) => n + 1); } : undefined;
   const tabs = [
     { id: "description", label: t("item.description"), content: <ItemDetails item={prose} t={t} marks={marks} /> },
-    hasSpecs && { id: "specs", label: t("item.specs"), content: <ClientItemSpecs item={specItem} category={category} attributes={attributes} reveal={reveal} onExpand={(panel) => ctx?.track?.("spec_expand", { panel })} /> }
+    hasSpecs && { id: "specs", label: t("item.specs"), content: <ClientItemSpecs item={specItem} category={category} attributes={attributes} reveal={reveal} onExpand={(panel) => ctx?.track?.("spec_expand", { panel })} /> },
+    ctx?.item && { id: "recommend", label: "Recommended", content: <RecommendList ctx={ctx} compact /> }
   ].filter(Boolean);
   const hasProse = Boolean(item.description || item.shortDescription);
   const shown = hasProse ? tabs : tabs.filter((tab) => tab.id !== "description");

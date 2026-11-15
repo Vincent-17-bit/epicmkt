@@ -18,7 +18,9 @@ export default function Quantity({ ctx, slot }) {
   const variant = ctx?.option?.variant ?? null;
   if (tiersFor(item, variant)) return <Tiers item={item} variant={variant} qty={ctx?.qty ?? null} onQty={ctx?.setQty ?? null} />;
   const info = quantityInfo(item, variant);
-  if (!info || !ctx?.order) return null;
+  // A combination that cannot be bought (not sold, sold out, switched off) has no total to show: the no-match box above says
+  // so and offers the closest ones instead.
+  if (!info || !ctx?.order || ctx?.option?.unmatched) return null;
   return <Stepper item={item} info={info} ctx={ctx} />;
 }
 

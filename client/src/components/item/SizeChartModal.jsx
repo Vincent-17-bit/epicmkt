@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { Modal } from "@epicmkt/ui";
-import { rowForLabel } from "@epicmkt/shared";
+import { alignShoeChart, rowForLabel } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import { canToggleUnit, chartInUnit, matchRow } from "../../lib/chartUnits.js";
 import styles from "./SizeChartModal.module.css";
@@ -12,7 +12,9 @@ import styles from "./SizeChartModal.module.css";
 // Inside: a row of size chips (each with its photo when the seller added one), a detail card for the chip chosen (photo, then every
 // measurement as "label, value"), a button that picks that size on the item page, and the whole chart as a table to compare.
 //   photoFor(row)  the photo url of a guide row, or null     pickable(row) / onPick(row)  can this row be chosen on the page, and do it
-export default function SizeChartLink({ chart, selected = "", extra = null, photoFor = null, pickable = null, onPick = null }) {
+export default function SizeChartLink({ chart: given, selected = "", extra = null, photoFor = null, pickable = null, onPick = null }) {
+  // A shoe chart's UK, US and foot-length columns come from the same conversion as the size buttons, so they always agree.
+  const chart = useMemo(() => alignShoeChart(given), [given]);
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const linkRef = useRef(null);
