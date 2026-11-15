@@ -107,7 +107,7 @@ export function coloursOf(p) {
 }
 
 function conditionOf(p, text, k) {
-  if (p.kind === "service" || k?.service) return null;
+  if (p.kind === "service" || k?.service || (k && !k.condition)) return null;
   if (/refurbished|renewed|grade a|ex-?uk/i.test(text)) return "refurbished";
   if (/\bused\b|mitumba|second[- ]hand|pre-?owned/i.test(text)) return "used";
   return "new";

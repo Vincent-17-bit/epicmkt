@@ -221,7 +221,7 @@ export const FACETS = {
     choice("breakfast", "Breakfast and tea", "breakfast|chai|tea|coffee|eggs|pancake|toast")]),
   protein: facet("protein", "Main", [opt("beef", "Beef", "beef|nyama|steak|burger"), opt("chicken", "Chicken", "chicken|kuku"), opt("goat", "Goat and mutton", "goat|mbuzi|mutton|lamb"), opt("fish", "Fish and seafood", "fish|samaki|tilapia|omena|prawn|seafood"),
     opt("pork", "Pork", "pork|bacon|ham"), opt("veg", "Vegetarian", "beans|vegetable|veg|lentil|ndengu|githeri|veggie|mboga")]),
-  portion: facet("portion", "Portion", [choice("half", "Half plate / small", "half|small|\\bkid'?s\\b|1/2"), choice("full", "Full plate / regular", "full|regular|plate|portion"), choice("sharing", "Sharing / family", "sharing|family|platter|for (?:2|two|4|four)|large|kilo")]),
+  portion: facet("portion", "Portion", [opt("half", "Half plate / small", "half plate|half|small|kids?|1/2"), opt("full", "Full plate / regular", "full plate|full|regular|plate"), opt("sharing", "Sharing / family", "sharing|family|platter|for (?:2|two|4|four)|large|kilo")]),
   mealTime: facet("mealTime", "Meal", [choice("breakfast", "Breakfast", "breakfast|chai|tea|mandazi|eggs"), choice("lunch", "Lunch and dinner", "lunch|dinner|plate|pilau|biryani|ugali|rice|chips"), choice("snack", "Snacks", "snack|samosa|smokie|bhajia|chips")]),
   meatType: facet("meatType", "Meat", [opt("beef", "Beef", "beef|steak|mince"), opt("goat", "Goat", "goat|mbuzi"), opt("mutton", "Mutton and lamb", "mutton|lamb"), opt("chicken", "Chicken", "chicken|kienyeji|broiler"),
     opt("pork", "Pork", "pork|bacon"), opt("fish", "Fish", "fish|tilapia|omena|nile perch|samaki"), opt("sausage", "Sausages and smokies", "sausage|smokie|bacon")]),
@@ -364,7 +364,9 @@ const BY_NAME = ["accessoryType", "computerAccessory", "storageDevice", "printer
   "fashionAccessory", "garmentMade", "repairDevice", "beautyType", "barberService", "salonService", "massageType", "membership", "drinkType", "liquorType", "bakeType", "breadType",
   "meatType", "produceType", "groceryType", "sweetType", "flowerType", "arrangement", "furnitureType", "tableType", "kitchenType", "textileType", "rugType", "buildMaterial", "paintType",
   "woodType", "electricalType", "autoPart", "carService", "printService", "stationeryType", "penType", "laundryService", "shootType", "eventService", "healthService", "farmType",
-  "headphoneType", "speakerType", "agentService", "tuitionLevel", "subject", "drinkPack"];
+  "headphoneType", "speakerType", "agentService", "tuitionLevel", "subject", "drinkPack",
+  // sizes and shapes too: "Large double sided whiteboard" in a description is not the board size
+  "boardSize", "boardMount", "rugSize", "rugType", "bedSize", "timberSize", "tableShape", "shape", "portion", "sleeve", "mattressType", "lightBase", "cut", "soldBy"];
 for (const id of BY_NAME) FACETS[id].on = "name";
 
 // ---- kinds of product ------------------------------------------------------------------------------------------------
@@ -374,7 +376,10 @@ for (const id of BY_NAME) FACETS[id].on = "name";
 //   cats     shop categories (live ids, and the demo's older ids) that sell this kind; used to break ties and as a last resort
 //   service  true for services (a haircut, a print, a car wash): they are matched separately from goods
 // Order matters within goods and within services: the first kind whose words match wins, so a phone case comes before phones.
-const kind = (id, label, department, noun, alts, facets, { types = [], cats = [], service = false } = {}) => ({ id, label, department, noun, re: words(alts), facets, types, cats, service });
+// Goods that are also sold used or refurbished get the Condition filter (phones, laptops, furniture, mitumba clothes ...);
+// food, medicine and building materials do not.
+const SECOND_HAND = new Set(["headphones", "speakers", "tvs", "monitors", "storage-devices", "printers", "computer-accessories", "tablets", "phones", "laptops", "appliances", "batteries", "eyewear", "shoes", "bags", "jewellery", "clothing", "beds", "tables", "carpets", "furniture", "auto-parts", "phone-accessories", "fashion-accessories"]);
+const kind = (id, label, department, noun, alts, facets, { types = [], cats = [], service = false } = {}) => ({ id, label, department, noun, re: words(alts), facets, types, cats, service, condition: SECOND_HAND.has(id) });
 
 export const KINDS = [
   // ---- Electronics and phones (sound first: "speaker with power bank" is a speaker; accessories before the devices they fit)
