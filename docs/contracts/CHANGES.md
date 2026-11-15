@@ -588,3 +588,7 @@ Entry format:
 - New reads: `public_item_tiers(item)` (anon, public items only) and `seller_item_tiers(item)` (owner) return `{ tiers, mode, variants: [{ choice, tiers }] }`. Saving already worked (`seller_save_item` priceTiers / priceTierMode since 0094).
 - Seller: price step shows "Quantity prices" for the price type "Starting from" (whole order or each band, up to 10 rows, preview "50 pages = KES 350 (whole) or KES 380 (graduated)"). Tiers of single combinations are read and kept but not edited yet.
 - Buyer: item page shows the tier table with the buyer's tier marked, a quantity box with the total, and "Add N more for KES X each". The live detail carries `priceTiers`, `priceTierMode` and `optionVariants[].priceTiers`.
+
+## B15: flash sale per option, seller side
+- Shared: `seller/flashOptions.js` (`flashOptionRows`, `flashOptionTable`, `flashVariantFields`) on top of `validateFlashVariants`, the same rules as migration 0095. A single-price sale is unchanged.
+- Seller: the new-sale form shows "Which options" for an item with options: every option, or only some with a discount type and value per option, the before and after table and the lowest sale price. `createFlashSale` sends `variantTarget` and `variantOverrides`; sale rows report "On N options only".

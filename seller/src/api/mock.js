@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { checkDeliverySetting, deliveryInfo, similarGroups, validateTiers } from "@epicmkt/shared";
+import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
@@ -1281,6 +1281,13 @@ export const createFlashSale = async (input) => {
   flashCheckItem(item);
   const v = validateFlashSale({ ...input, itemPrice: item.price }, nowMs());
   if (!v.ok) throw new ApiError(v.error);
+  // Per option (migration 0095): a sale on chosen combinations needs an item with options, and every target must be a sold combination.
+  const opts = bill.options.get(item.id);
+  if (input.variantTarget === "chosen" || (input.variantOverrides ?? []).length > 0) {
+    if (!opts?.axes?.length) throw new ApiError("flash_needs_combinations");
+    const table = flashOptionTable({ axes: opts.axes, variants: opts.variants }, { discountType: input.discountType, discountValue: input.discountValue, variantTarget: input.variantTarget, variantOverrides: input.variantOverrides });
+    if (!table.ok) throw new ApiError(table.error);
+  }
   const { startsAt, endsAt } = v.value;
   const open = bill.flash.filter((s) => ["scheduled", "live"].includes(s.status));
   if (open.some((s) => s.itemId === item.id && s.startsAt < endsAt && startsAt < s.endsAt)) throw new ApiError("item_has_sale");
@@ -1289,6 +1296,7 @@ export const createFlashSale = async (input) => {
   if (flashQuota([...bill.flash, { status: "scheduled", startsAt, endsAt }], limits, nowMs()).monthlyUsed > limits.flashSalesPerMonth) throw new ApiError("limit_reached", "limit_reached:flash_per_month");
   const sale = {
     id: `fs-${++bill.seq}`, itemId: item.id, itemName: item.name, headline: v.value.headline, startsAt, endsAt, discountType: v.value.discountType, discountValue: v.value.discountValue,
+    variantTarget: input.variantTarget === "chosen" ? "chosen" : "all", variantOverrides: input.variantTarget === "chosen" ? copy(input.variantOverrides ?? []) : [],
     quantityNote: v.value.quantityNote, afterEnd: v.value.afterEnd, status: Date.parse(startsAt) <= nowMs() ? "live" : "scheduled", endedAt: null, endedReason: null, createdAt: clockNow().toISOString(),
   };
   bill.flash.push(sale);
