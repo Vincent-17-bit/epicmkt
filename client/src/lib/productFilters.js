@@ -1,5 +1,7 @@
 import { normalizeText } from "../../../shared/src/utils.js";
 import { normalizeValueKey } from "../../../shared/src/openValues.js";
+import { coloursOf } from "../../../shared/src/search/search.js";
+import { COLOURS } from "../../../shared/src/search/data/facetCatalog.js";
 import { matchesSizes, parseSizes, rangeCount, rangeText, sizeCounts, sizeFacets, writeSizes } from "./sizeFilters.js";
 
 // Everything a shopper can do to narrow or reorder the home page products. Pure functions over the product list, so
@@ -21,6 +23,7 @@ export const EMPTY_FILTERS = Object.freeze({
   categories: [],
   towns: [],
   brands: [],
+  colours: [],
   sizes: [],
   ranges: {},
   onSale: false,
@@ -34,9 +37,10 @@ export const EMPTY_FILTERS = Object.freeze({
 const FLAGS = { onSale: "psale", flash: "pflash", verified: "pver", featured: "pfeat", photo: "pphoto", openNow: "popen" };
 // "pstock" was the old In stock toggle. Sold-out products are no longer listed at all, so it is gone; it stays in this list
 // only so an old link's leftover parameter is dropped the next time the filters are written.
-const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", "pbrand", "psize", "prange", "pstock", ...Object.values(FLAGS)];
+const KEYS = ["pq", "psort", "pmin", "pmax", "pcat", "ptown", "pbrand", "pcolour", "psize", "prange", "pstock", ...Object.values(FLAGS)];
 
 const list = (value) => (value ? value.split(",").map((v) => v.trim()).filter(Boolean) : []);
+const COLOUR_IDS = new Set(COLOURS.map((c) => c.id));
 const amount = (value) => (/^\d{1,9}$/.test(value ?? "") ? value : "");
 
 export function parseFilters(params) {
@@ -51,6 +55,8 @@ export function parseFilters(params) {
     towns: list(params.get("ptown")),
     // A brand is its canonical key (A18), so "Samsung", "SAMSUNG" and "samsung" are one choice and one link.
     brands: list(params.get("pbrand")),
+    // A colour is one of the shared colour families (black, blue ...): a swatch named "Midnight" counts as black.
+    colours: list(params.get("pcolour")).filter((c) => COLOUR_IDS.has(c)),
     ...parseSizes(params)
   };
   for (const [name, key] of Object.entries(FLAGS)) filters[name] = params.get(key) === "1";
@@ -68,6 +74,7 @@ export function writeFilters(params, filters) {
   if (filters.categories.length) next.set("pcat", filters.categories.join(","));
   if (filters.towns.length) next.set("ptown", filters.towns.join(","));
   if (filters.brands.length) next.set("pbrand", filters.brands.join(","));
+  if (filters.colours?.length) next.set("pcolour", filters.colours.join(","));
   writeSizes(next, filters);
   for (const [name, key] of Object.entries(FLAGS)) if (filters[name]) next.set(key, "1");
   return next;
@@ -78,7 +85,7 @@ export function countActive(filters) {
   let n = 0;
   if (filters.q.trim()) n += 1;
   if (filters.min !== "" || filters.max !== "") n += 1;
-  n += filters.categories.length + filters.towns.length + filters.brands.length + (filters.sizes?.length ?? 0) + rangeCount(filters.ranges);
+  n += filters.categories.length + filters.towns.length + filters.brands.length + (filters.colours?.length ?? 0) + (filters.sizes?.length ?? 0) + rangeCount(filters.ranges);
   for (const name of Object.keys(FLAGS)) if (filters[name]) n += 1;
   return n;
 }
@@ -104,6 +111,7 @@ export function applyFilters(products, filters) {
   const towns = new Set(filters.towns.map(normalizeText));
   const categories = new Set(filters.categories);
   const brands = new Set(filters.brands);
+  const colours = filters.colours ?? [];
 
   const kept = products.filter((p) => {
     const store = p.business ?? {};
@@ -121,6 +129,10 @@ export function applyFilters(products, filters) {
     if (categories.size && !categories.has(store.categoryId)) return false;
     if (towns.size && !towns.has(normalizeText(store.town))) return false;
     if (brands.size && !brands.has(normalizeValueKey(p.brand))) return false;
+    if (colours.length) {
+      const has = coloursOf(p);
+      if (!colours.some((c) => has.has(c))) return false;
+    }
     if (!matchesSizes(p, filters.sizes, filters.ranges)) return false;
     if (filters.onSale && !(p.pricing?.savings > 0)) return false;
     if (filters.flash && !p.flash) return false;
@@ -144,6 +156,7 @@ export function facetsOf(products) {
   const categories = new Map();
   const towns = new Map();
   const brands = new Map();
+  const colours = new Map();
   let min = Infinity;
   let max = -Infinity;
   for (const p of products) {
@@ -162,6 +175,7 @@ export function facetsOf(products) {
       entry.spellings.set(p.brand.trim(), (entry.spellings.get(p.brand.trim()) ?? 0) + 1);
       brands.set(brandKey, entry);
     }
+    for (const c of coloursOf(p)) colours.set(c, (colours.get(c) ?? 0) + 1);
     const value = price(p);
     if (value !== null) {
       min = Math.min(min, value);
@@ -172,6 +186,8 @@ export function facetsOf(products) {
     categories: [...categories].map(([id, count]) => ({ id, count })).sort((a, b) => b.count - a.count),
     towns: [...towns.values()].sort((a, b) => a.name.localeCompare(b.name)),
     brands: [...brands.values()].map(({ slug, count, spellings }) => ({ slug, count, name: commonSpelling(spellings) })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
+    // In the shared colour order (black, white, grey ...), each with its swatch colour.
+    colours: COLOURS.filter((c) => colours.get(c.id)).map((c) => ({ id: c.id, name: c.label, hex: c.hex, count: colours.get(c.id) })),
     price: Number.isFinite(min) ? { min, max } : null,
     sizes: sizeFacets(products)
   };
@@ -188,6 +204,7 @@ export function chipsOf(filters, { categoryName = (id) => id, townName = (slug) 
   for (const id of filters.categories) chips.push({ key: `cat:${id}`, label: categoryName(id), clear: (f) => ({ ...f, categories: f.categories.filter((c) => c !== id) }) });
   for (const slug of filters.towns) chips.push({ key: `town:${slug}`, label: townName(slug), clear: (f) => ({ ...f, towns: f.towns.filter((t) => t !== slug) }) });
   for (const slug of filters.brands) chips.push({ key: `brand:${slug}`, label: brandName(slug), clear: (f) => ({ ...f, brands: f.brands.filter((b) => b !== slug) }) });
+  for (const id of filters.colours ?? []) chips.push({ key: `colour:${id}`, label: COLOURS.find((c) => c.id === id)?.label ?? id, clear: (f) => ({ ...f, colours: f.colours.filter((c) => c !== id) }) });
   for (const key of filters.sizes ?? []) chips.push({ key: `size:${key}`, label: sizeName(key), clear: (f) => ({ ...f, sizes: f.sizes.filter((k) => k !== key) }) });
   for (const [scale, r] of Object.entries(filters.ranges ?? {})) {
     if ((r?.min ?? "") === "" && (r?.max ?? "") === "") continue;
@@ -215,6 +232,11 @@ export function countsFor(products, filters) {
     categories: tally(without({ categories: [] }), (p) => p.business?.categoryId),
     towns: tally(without({ towns: [] }), (p) => normalizeText(p.business?.town)),
     brands: tally(without({ brands: [] }), (p) => normalizeValueKey(p.brand)),
+    colours: (() => {
+      const map = new Map();
+      for (const p of without({ colours: [] })) for (const c of coloursOf(p)) map.set(c, (map.get(c) ?? 0) + 1);
+      return map;
+    })(),
     sizes: sizeCounts(without({ sizes: [], ranges: {} })),
     flags
   };

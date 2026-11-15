@@ -408,6 +408,95 @@ export const setBasePlusDifference = (options, { baseAxis, diffAxis, base = {}, 
   return { ...r, price: priceText(b + d) };
 });
 
+// ---- paste from a spreadsheet and fill down (B09) ----
+const normal = (text) => String(text ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const cells = (line) => (line.includes("\t") ? line.split("\t") : line.split(/[,;]/)).map((c) => c.trim());
+const valueByLabel = (axis, text) => axis?.values.find((v) => normal(v.label) === normal(text) || v.id === normal(text)) ?? null;
+
+/**
+ * Prices pasted from a spreadsheet (tab-separated, or commas). Two shapes are understood:
+ *   a list   "Black<TAB>25000" per line: the first cell names a value of any one option, every combination with it gets the price;
+ *   a grid   a header row of one option's values and a first column of another's ("" Black Grey / 128 GB 22000 21000 ...).
+ * Thousands separators ("25,000") work in tab-separated text. Unknown labels and non-prices are skipped and counted.
+ * Returns { options, filled, skipped }.
+ */
+export const pastePrices = (options, text) => {
+  const lines = String(text ?? "").split(/\r?\n/).map((l) => l.replace(/\s+$/, "")).filter((l) => l.trim());
+  let filled = 0;
+  let skipped = 0;
+  if (!lines.length) return { options, filled, skipped };
+  const money = (raw) => amount(String(raw ?? "").replace(/(\d),(?=\d{3}\b)/g, "$1").replace(/^kes\s*/i, ""));
+  const axes = options.axes ?? [];
+  const head = cells(lines[0]);
+  // A grid: the header (after its first cell) names values of one axis, and the first column names values of another.
+  const colAxis = axes.find((a) => head.slice(1).filter(Boolean).length > 0 && head.slice(1).filter(Boolean).every((h) => valueByLabel(a, h)));
+  const rowAxis = colAxis && axes.find((a) => a !== colAxis && lines.slice(1).some((l) => valueByLabel(a, cells(l)[0])));
+  const prices = new Map();
+  if (colAxis && rowAxis) {
+    const cols = head.slice(1).map((h) => valueByLabel(colAxis, h));
+    for (const line of lines.slice(1)) {
+      const row = cells(line);
+      const rv = valueByLabel(rowAxis, row[0]);
+      if (!rv) {
+        skipped += 1;
+        continue;
+      }
+      row.slice(1).forEach((cell, i) => {
+        const n = money(cell);
+        if (!cols[i] || n === null || n <= 0) {
+          if (cell) skipped += 1;
+          return;
+        }
+        prices.set(`${rowAxis.key}=${rv.id}|${colAxis.key}=${cols[i].id}`, n);
+      });
+    }
+  } else {
+    for (const line of lines) {
+      const [label, ...rest] = cells(line);
+      const n = money(rest.filter(Boolean).pop());
+      const hit = axes.map((a) => [a, valueByLabel(a, label)]).find(([, v]) => v);
+      if (!hit || n === null || n <= 0) {
+        skipped += 1;
+        continue;
+      }
+      prices.set(`${hit[0].key}=${hit[1].id}`, n);
+    }
+  }
+  const next = mapSold(options, (r) => {
+    for (const [key, n] of prices) {
+      const parts = key.split("|").map((p) => p.split("="));
+      if (parts.every(([axis, id]) => r.choice[axis] === id)) {
+        filled += 1;
+        return { ...r, price: priceText(n) };
+      }
+    }
+    return r;
+  });
+  return { options: next, filled, skipped };
+};
+
+/**
+ * Fill down: every combination without a price takes the price of the combination above it in the list (same values on every
+ * option except the first one that differs), the way a spreadsheet's fill down works on the grid. Rows with a price are kept.
+ * Returns { options, filled }.
+ */
+export const fillDownPrices = (options) => {
+  let last = null;
+  let filled = 0;
+  const rows = options.rows.map((r) => {
+    if (rowKeyOf(options, r.choice) === null || !r.sold) return r;
+    const n = amount(r.price);
+    if (n !== null && n > 0) {
+      last = n;
+      return r;
+    }
+    if (last === null) return r;
+    filled += 1;
+    return { ...r, price: priceText(last) };
+  });
+  return { options: { ...options, rows }, filled };
+};
+
 // A plain warning (never a block) for a price far from the rest: 2,400 typed instead of 24,000. Keyed by combination.
 export const priceWarnings = (options) => {
   const rows = liveRows(options).filter((r) => r.sold && amount(r.price) !== null && amount(r.price) > 0);

@@ -235,6 +235,12 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
     [brands, counts, totals]
   );
 
+  // Colours keep the shared order (black, white, grey ...); the number is how many products each would leave.
+  const colourRows = useMemo(
+    () => (facets?.colours ?? []).map((c) => ({ ...c, count: liveCounts?.colours?.get(c.id) ?? c.count })),
+    [facets, liveCounts]
+  );
+
   const priceSummary = filters.min || filters.max ? `KES ${filters.min || "0"} – ${filters.max || "any"}` : null;
 
   return (
@@ -299,6 +305,30 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
       {brandRows.length > 1 && (
         <Section title="Brand" open={filters.brands.length > 0} summary={filters.brands.length ? `${filters.brands.length} selected` : null}>
           <CheckList rows={brandRows} selected={filters.brands} onToggle={(id) => onChange({ brands: toggle(filters.brands, id) })} noun="brands" />
+        </Section>
+      )}
+
+      {colourRows.length > 1 && (
+        <Section title="Colour" open={(filters.colours?.length ?? 0) > 0} summary={filters.colours?.length ? `${filters.colours.length} selected` : null}>
+          <div className={styles.swatches} role="group" aria-label="Colour">
+            {colourRows.map((c) => {
+              const on = (filters.colours ?? []).includes(c.id);
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  className={styles.swatch}
+                  data-multi={c.hex ? undefined : ""}
+                  style={c.hex ? { "--sw": c.hex } : undefined}
+                  aria-pressed={on}
+                  disabled={c.count === 0 && !on}
+                  aria-label={`${c.name}, ${c.count} ${c.count === 1 ? "product" : "products"}`}
+                  title={`${c.name} (${c.count})`}
+                  onClick={() => onChange({ colours: toggle(filters.colours ?? [], c.id) })}
+                />
+              );
+            })}
+          </div>
         </Section>
       )}
 

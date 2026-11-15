@@ -591,3 +591,23 @@
     margin-inline: 0;
   }
 }
+
+/* "Sold from": the shop's map, place and links (C17). */
+.soldWhere {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+}
+.soldMap {
+  aspect-ratio: 16 / 7;
+}
+.soldPlace,
+.soldLinks {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+.soldLink {
+  color: var(--link);
+  font-weight: 600;
+}

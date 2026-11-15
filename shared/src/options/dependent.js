@@ -9,15 +9,26 @@ import { findDefaultVariant } from "./defaultVariant.js";
 
 const sellable = (variant) => variant && variant.status !== "unavailable";
 
+// The key an axis depends on. Two shapes reach here and both mean the same: the stored form `dependsOn: "style"` (database,
+// editor, product types) and the item-detail contract form `dependsOn: { axis: "style", allowed: {...} }`.
+export const parentKeyOf = (axis) => {
+  const d = axis?.dependsOn;
+  if (typeof d === "string" && d) return d;
+  if (d && typeof d === "object" && typeof d.axis === "string" && d.axis) return d.axis;
+  return null;
+};
+
 // The axis a given axis depends on, chained up to the first axis: ["style"] for capacity, [] for style.
 // Stops on an unknown key or a repeat, so bad data can never loop.
 export const ancestorKeys = (axes, axisKey) => {
   const list = Array.isArray(axes) ? axes : [];
   const out = [];
   let axis = list.find((a) => a.key === axisKey);
-  while (axis?.dependsOn && !out.includes(axis.dependsOn) && axis.dependsOn !== axisKey) {
-    out.push(axis.dependsOn);
-    axis = list.find((a) => a.key === axis.dependsOn);
+  let parent = parentKeyOf(axis);
+  while (parent && !out.includes(parent) && parent !== axisKey) {
+    out.push(parent);
+    axis = list.find((a) => a.key === parent);
+    parent = parentKeyOf(axis);
   }
   return out;
 };
@@ -32,11 +43,14 @@ export const dependentValues = (axes, variants, axisKey, selection = {}) => {
   const list = Array.isArray(axes) ? axes : [];
   const axis = list.find((a) => a.key === axisKey);
   if (!axis) return [];
-  if (!axis.dependsOn) return axis.values;
+  const parent = parentKeyOf(axis);
+  if (!parent) return axis.values;
   const up = ancestorKeys(list, axisKey);
   const rows = (Array.isArray(variants) ? variants : []).filter((v) => sellable(v) && agrees(v, up, selection));
   const present = new Set(rows.map((v) => v.choice?.[axisKey]));
-  return axis.values.filter((v) => present.has(v.id));
+  // The contract form may also list, per parent value, which values exist at all: honour it as well.
+  const allowed = typeof axis.dependsOn === "object" && axis.dependsOn?.allowed && typeof selection?.[parent] === "string" ? axis.dependsOn.allowed[selection[parent]] : null;
+  return axis.values.filter((v) => present.has(v.id) && (!Array.isArray(allowed) || allowed.includes(v.id)));
 };
 
 // The buyer's choice made whole and consistent. Axes are walked in order. A value that is still on offer is kept (switching Style

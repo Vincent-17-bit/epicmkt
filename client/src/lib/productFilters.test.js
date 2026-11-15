@@ -248,3 +248,30 @@ describe("price filter and sort use the lowest price (priceMin)", () => {
     expect(ids(applyFilters([sale, budget], f({ sort: "price_asc" })))).toEqual(["On sale", "Budget phone"]);
   });
 });
+
+describe("colour (C21)", () => {
+  const shirt = p({ name: "Navy blue shirt" });
+  const flip = p({ name: "JBL Flip 6 Bluetooth speaker", swatches: [{ label: "Black", color: "#111" }, { label: "Teal", color: "#14857f" }] });
+  const cable = p({ name: "Bluetooth adapter" });
+  const all = [shirt, flip, cable];
+
+  it("narrows by colour family from swatches or the name, and never reads Bluetooth as blue", () => {
+    expect(ids(applyFilters(all, f({ colours: ["blue"] })))).toEqual(["Navy blue shirt"]);
+    expect(ids(applyFilters(all, f({ colours: ["green"] })))).toEqual(["JBL Flip 6 Bluetooth speaker"]);
+    expect(ids(applyFilters(all, f({ colours: ["black", "blue"] }))).sort()).toEqual(["JBL Flip 6 Bluetooth speaker", "Navy blue shirt"]);
+  });
+
+  it("lists the colours on offer with counts, counts them with the other filters on, and makes chips", () => {
+    expect(facetsOf(all).colours.map((c) => [c.id, c.count])).toEqual([["black", 1], ["green", 1], ["blue", 1]]);
+    expect(facetsOf(all).colours[0].hex).toMatch(/^#/);
+    expect(countsFor(all, f({ colours: ["blue"] })).colours.get("black")).toBe(1);
+    expect(chipsOf(f({ colours: ["blue"] })).map((c) => c.label)).toEqual(["Blue"]);
+    expect(countActive(f({ colours: ["blue", "black"] }))).toBe(2);
+  });
+
+  it("survives the page address and drops colours it does not know", () => {
+    const params = writeFilters(new URLSearchParams(), f({ colours: ["blue", "black"] }));
+    expect(params.get("pcolour")).toBe("blue,black");
+    expect(parseFilters(new URLSearchParams("pcolour=blue,sparkly")).colours).toEqual(["blue"]);
+  });
+});

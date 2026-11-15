@@ -67,3 +67,14 @@ describe("productParams", () => {
     expect(canonicalQuery("page", EMPTY_FILTERS)).toBe("op=page");
   });
 });
+
+describe("brand and colour reach the endpoint", () => {
+  it("reads and writes them, sorted, so the same choice is the same URL", () => {
+    const parsed = parseRequest(new URLSearchParams("op=page&brand=sony,jbl&colour=blue,black"));
+    expect(parsed.filters.brands).toEqual(["jbl", "sony"]);
+    expect(parsed.filters.colours).toEqual(["black", "blue"]);
+    const q = canonicalQuery("page", { ...EMPTY_FILTERS, brands: ["sony", "jbl"], colours: ["blue", "black"] });
+    expect(q).toContain("brand=jbl%2Csony");
+    expect(q).toContain("colour=black%2Cblue");
+  });
+});

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -81,7 +81,9 @@ describe("ItemDetail", () => {
     });
     const { container, unmount } = mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual(["Photo 1 of 3", "Video 2 of 3", "Photo 3 of 3"]);
+    // Photos go down the rail in the seller's order; the video is the "1 video" tile at the end of the same gallery (C07).
+    const rail = () => within(screen.getByRole("list", { name: "Images" })).getAllByRole("button").map((b) => b.getAttribute("aria-label"));
+    expect(rail()).toEqual(["Photo 1 of 2", "Photo 2 of 2", "1 video"]);
     expect(screen.queryByRole("button", { name: /Watch video/ })).toBeNull();
     expect(screen.queryByRole("region", { name: "Videos" })).toBeNull();
     container.querySelectorAll("video").forEach((v) => {
@@ -93,7 +95,7 @@ describe("ItemDetail", () => {
     mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300), images: [{ id: "i1", url: "https://x.test/1.jpg" }], videos: [{ id: "v1", url: "a.mp4" }] });
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(screen.getAllByRole("tab").map((tab) => tab.getAttribute("aria-label"))).toEqual(["Photo 1 of 2", "Video 2 of 2"]);
+    expect(rail()).toEqual(["Photo 1 of 1", "1 video"]);
   });
 
   it("shows information in order: brand, name, short description, price, pack size, highlights, description", async () => {

@@ -9,5 +9,13 @@ export default function Gallery({ ctx, slot }) {
   const id = option ? focusMediaId({ axes: option.axes, variant: option.variant, choice: option.choice, lastAxisKey: option.lastAxisKey }) : null;
   const focus = useMemo(() => (id ? { id, n: option?.pickCount ?? 0 } : null), [id, option?.pickCount]);
   if (!slot?.item) return null;
-  return <ItemGallery {...slot} focus={focus} />;
+  // "Colour: Black" for the full view, from the buyer's current pick.
+  const variantLabel = (option?.axes ?? [])
+    .map((axis) => {
+      const value = axis.values?.find((v) => v.id === option?.choice?.[axis.key]);
+      return value ? `${axis.label}: ${value.label}` : null;
+    })
+    .filter(Boolean)
+    .join(" · ");
+  return <ItemGallery {...slot} focus={focus} variantLabel={variantLabel} />;
 }

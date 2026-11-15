@@ -20,6 +20,7 @@ import ItemLayout from "./item/ItemLayout.jsx";
 import { StoreMore } from "./item/Recommend.jsx";
 import { Gone, LoadFailed, Loading } from "./item/States.jsx";
 import StickyNav from "./item/StickyNav.jsx";
+import SectionNav from "./item/SectionNav.jsx";
 import TopBar from "./item/TopBar.jsx";
 import styles from "./ItemDetail.module.css";
 
@@ -282,6 +283,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
           {failed && <LoadFailed ctx={ctx} />}
           {gone && <Gone ctx={ctx} />}
           {!current && !gone && !failed && <Loading ctx={ctx} />}
+          {current && <SectionNav scrollRef={isPage ? null : bodyRef} itemId={current.id} />}
           {current && <ItemLayout ctx={ctx} />}
         </div>
 

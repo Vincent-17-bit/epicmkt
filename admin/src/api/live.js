@@ -756,6 +756,10 @@ export const saveSpecRows = (id, rows) => detailRpc("admin_save_spec_rows", { p_
 // Product types page (migration 0108). listTypeSettings -> { types, departments, categories }; saveTypeSettings(id, { name, departmentId, categoryIds, axes, active }) is owner only and creates the type when the id is new.
 export const listTypeSettings = () => detailRpc("admin_product_types_list");
 export const saveTypeSettings = (id, type) => detailRpc("admin_save_product_type", { p_id: id, p_type: type });
+// Versions (migration 0126): a draft does not change live items; publishing makes it the live type with the next number.
+export const saveTypeDraft = (id, type) => detailRpc("admin_save_type_draft", { p_id: id, p_type: type });
+export const discardTypeDraft = (id) => detailRpc("admin_discard_type_draft", { p_id: id });
+export const publishTypeVersion = (id, note = null) => detailRpc("admin_publish_type_version", { p_id: id, p_note: note || null });
 
 // Relations page (migration 0109). listRelations -> { relations: [{ id, fromKind, fromId, fromName, toKind, toId, toName, weight, active }], types, departments }.
 // saveRelation({ fromKind, fromId, toKind, toId, weight 0-10, active }) and deleteRelation(id) are owner only and audited.

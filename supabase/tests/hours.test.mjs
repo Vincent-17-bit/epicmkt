@@ -171,6 +171,7 @@ test("hours_open_in agrees with the JavaScript rule in every zone Postgres accep
   ];
   const windows = [[2026, 3, 7], [2026, 3, 28], [2026, 10, 24], [2026, 11, 1], [2027, 3, 13], [2027, 3, 27]];
   let checked = 0;
+  let skipped = 0;
   for (const zone of names) {
     const instants = [];
     for (const [y, mo, d] of windows) {
@@ -178,12 +179,18 @@ test("hours_open_in agrees with the JavaScript rule in every zone Postgres accep
         for (let h = 0; h < 24; h += 1) for (const mi of [0, 30, 59]) instants.push(zonedTimeToUtc({ year: y, month: mo, day, hour: h, minute: mi }, zone));
       }
     }
-    const rows = await sql(c, `select t, hours_open_in($1::jsonb, $2::jsonb, t, $3) as open from unnest($4::timestamptz[]) t`, [JSON.stringify(hours), JSON.stringify(ex), zone, instants]);
+    const rows = await sql(c, `select t, hours_open_in($1::jsonb, $2::jsonb, t, $3) as open, to_char(t at time zone $3, 'YYYY-MM-DD HH24:MI') as wall from unnest($4::timestamptz[]) t`, [JSON.stringify(hours), JSON.stringify(ex), zone, instants]);
+    const wallJs = new Intl.DateTimeFormat("en-CA", { timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
     for (const row of rows) {
+      // This compares the opening rule, not the time zone databases. Where Postgres's zone data and Node's disagree about the local
+      // time at an instant (a zone whose rules changed between their releases, such as Morocco's Ramadan clock changes), skip it.
+      const p = Object.fromEntries(wallJs.formatToParts(new Date(row.t)).map((x) => [x.type, x.value]));
+      if (`${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}` !== row.wall) { skipped += 1; continue; }
       assert.equal(row.open, isOpenOn(hours, ex, new Date(row.t), zone), `${zone} ${new Date(row.t).toISOString()}`);
       checked += 1;
     }
   }
   assert.ok(names.length > 300, String(names.length));
   assert.ok(checked > 100000, String(checked));
+  assert.ok(skipped < checked / 100, `${skipped} instants skipped because the zone databases disagree`);
 });

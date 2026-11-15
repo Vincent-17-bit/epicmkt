@@ -12,7 +12,7 @@ export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
 export { getPlanHistory, getPlanLimits, listCategories, listPlans, saveCategory, savePlan, savePlanLimits } from "./mockCatalogue.js";
 export { deleteSizeChart, getShoeConversion, listItemsForSizeChart, listProductTypes, listSizeCharts, saveShoeConversion, saveSizeChart, setItemSizeChart } from "./mockSizeCharts.js";   // Sizes 1.9
 export { listSpecTypes, saveSpecRows } from "./mockSpecRules.js";   // Spec rules 5.11
-export { listTypeSettings, saveTypeSettings } from "./mockProductTypes.js";
+export { listTypeSettings, saveTypeSettings, saveTypeDraft, discardTypeDraft, publishTypeVersion } from "./mockProductTypes.js";
 export { getUnmetDemand } from "./mockDemand.js";   // A22
 export { deleteRelation, listRelations, saveRelation } from "./mockRelations.js";   // C26
 export { listDepartments, listRequestTypes, listTypeRequests, resolveTypeRequest, saveDepartment } from "./mockDepartments.js";   // B28

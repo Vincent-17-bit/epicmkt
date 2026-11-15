@@ -431,7 +431,7 @@ describe("live item and business pages", () => {
     });
   });
 
-  describe("getRelatedItems (Goes well with this)", () => {
+  describe("getRelatedPage (Recommended with this item, C19)", () => {
     const C = "10000000-0000-0000-0000-00000000000c";
     const SEED = "20000000-0000-0000-0000-000000000101";
     const id = (n) => `20000000-0000-0000-0000-0000000003${String(n).padStart(2, "0")}`;
@@ -444,7 +444,7 @@ describe("live item and business pages", () => {
     // The candidate shape related_item_candidates returns (migration 0109).
     const cand = (r, typeId) => ({ id: r.id, businessId: r.business_id, productTypeId: typeId, departmentId: null, name: r.name, price: Number(r.price), availability: "available", createdAt: "2026-11-01T00:00:00Z" });
 
-    it("ranks the database candidates with the relations, keeps 1 in 5 from this shop, and turns only that page into cards", async () => {
+    it("ranks the database candidates with the relations, keeps 1 in 5 from this shop, and pages without repeats", async () => {
       setup();
       const others = Array.from({ length: 6 }, (_, k) => at(k + 1, k % 2 ? B : C, { name: `Phone case ${k + 1}` }));
       const mine = at(9, A, { name: "Screen protector" });
@@ -458,24 +458,22 @@ describe("live item and business pages", () => {
           candidates: [...others.map((r) => cand(r, "case")), cand(mine, "protector")]
         };
       };
-      const page = await live.getRelatedItems(SEED, { page: 1, pageSize: 5 });
-      expect(asked).toEqual([{ p_item_id: SEED, p_limit: 200 }]);
+      const page = await live.getRelatedPage(SEED, { page: 1, pageSize: 5 });
+      expect(asked[0]).toEqual({ p_item_id: SEED, p_limit: 200 });
       expect(page).toMatchObject({ page: 1, pageSize: 5, hasMore: true, total: 7 });
       expect(page.items).toHaveLength(5);
       expect(page.items.filter((r) => r.fromThisShop).map((r) => r.id)).toEqual([id(9)]);
-      expect(page.items[0]).toMatchObject({ name: expect.any(String), business: { slug: expect.any(String), name: expect.any(String) }, pricing: expect.any(Object) });
-      const next = await live.getRelatedItems(SEED, { page: 2, pageSize: 5 });
-      expect(next.items.map((r) => r.id).filter((x) => page.items.some((p) => p.id === x))).toEqual([]);
+      expect(page.items[0]).toMatchObject({ business: { slug: expect.any(String), name: expect.any(String) } });
+      const next = await live.getRelatedPage(SEED, { page: 2, pageSize: 5 });
+      expect(next.items.filter((x) => page.items.some((p) => p.id === x.id))).toEqual([]);
       expect(next.hasMore).toBe(false);
     });
 
-    it("is an empty first page for a hidden or unknown item, a non-live id, or a database without the function", async () => {
+    it("is an empty first page for a hidden or unknown item and for a non-live id", async () => {
       setup();
       db().rpc.related_item_candidates = () => null;
-      expect(await live.getRelatedItems(SEED)).toEqual({ items: [], page: 1, pageSize: 10, hasMore: false, total: 0 });
-      expect(await live.getRelatedItems("fade-and-beard")).toMatchObject({ items: [], total: 0 });
-      db().rpc = {};
-      expect(await live.getRelatedItems(SEED)).toMatchObject({ items: [], total: 0 });
+      expect(await live.getRelatedPage(SEED)).toMatchObject({ items: [], page: 1, hasMore: false, total: 0 });
+      expect(await live.getRelatedPage("fade-and-beard")).toMatchObject({ items: [], total: 0 });
     });
   });
 

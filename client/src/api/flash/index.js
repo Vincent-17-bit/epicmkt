@@ -82,15 +82,14 @@ export const getSimilarItems = async (itemId, opts) => {
   }
 };
 
-// "Goes well with" (C19), one page at a time: { items, page, pageSize, hasMore, total }. Like Similar items it is a nicety, so any
-// failure is an empty first page and the section simply does not show. A live item is ranked from live data only.
-export const getRelatedItems = async (itemId, { page = 1, pageSize = 10, origin = null, signal = null } = {}) => {
-  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
+// "Recommended" items (C19): a page of items from any shop that go with this one. Like Similar items, any failure is an empty
+// page, so the section simply does not show. Demo ids are answered by the demo backend.
+export const getRelatedPage = async (itemId, opts = {}) => {
+  const empty = { items: [], page: opts.page ?? 1, pageSize: opts.pageSize ?? 10, hasMore: false, total: 0 };
   try {
-    if (!isLive()) return await backend.getRelatedPage(itemId, { page, pageSize, origin, signal });
+    if (!isLive()) return await backend.getRelatedPage(itemId, opts);
     const live = await liveAdapter();
-    const out = live.isLiveId(itemId) ? await live.getRelatedItems(itemId, { page, pageSize, signal }) : await backend.getRelatedPage(itemId, { page, pageSize, origin, signal });
-    return out && Array.isArray(out.items) ? out : empty;
+    return live.isLiveId(itemId) ? await live.getRelatedPage(itemId, opts) : await backend.getRelatedPage(itemId, opts);
   } catch (error) {
     if (error?.name === "AbortError" || /abort/i.test(String(error?.message))) return empty;
     console.warn("[related-items] could not load:", error?.message ?? error);

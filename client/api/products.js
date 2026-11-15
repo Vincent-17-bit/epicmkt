@@ -23,6 +23,7 @@ import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
+import { parseSearch, searchProducts } from "../../shared/src/search/search.js";
 import { cached } from "./_lib/redis.js";
 import { configured, restAll, rpc } from "./_lib/supabase.js";
 
@@ -232,6 +233,28 @@ function tick(snap, now) {
   snap.summary = null;
 }
 
+// What product search and the colour filter read beyond the snapshot (migration 0127): spec rows, highlights, short description,
+// option value labels and swatch colours, merged into each product. Missing or slow: search still works on names and prices.
+async function addSearchFacts(snap) {
+  const facts = await rpc("public_item_search_facts", { p_limit: MAX_ITEMS }, { timeoutMs: 8_000 })
+    .then((map) => (map && typeof map === "object" && !Array.isArray(map) ? map : {}))
+    .catch((error) => {
+      console.warn(`[products] public_item_search_facts unavailable (${error?.message ?? error}); search filters use names only`);
+      return {};
+    });
+  for (const p of snap.products) {
+    const f = facts[p.id];
+    if (!f) continue;
+    if (Array.isArray(f.specs)) p.specs = f.specs;
+    if (Array.isArray(f.highlights)) p.highlights = f.highlights;
+    if (typeof f.shortDescription === "string") p.shortDescription = f.shortDescription;
+    if (Array.isArray(f.optionValues)) p.optionValues = f.optionValues;
+    if (Array.isArray(f.swatches)) p.swatches = f.swatches;
+    if (typeof f.productTypeId === "string") p.productTypeId = f.productTypeId;
+    if (typeof f.departmentId === "string") p.departmentId = f.departmentId;
+  }
+}
+
 async function build() {
   const started = Date.now();
   let parts;
@@ -245,6 +268,7 @@ async function build() {
     parts = await fromViews();
   }
   const snap = Object.assign(buildSnapshot(parts), { at: parts.at ?? Date.now() });
+  await addSearchFacts(snap);
   if (snap.truncated) console.warn(`[products] catalogue larger than ${MAX_ITEMS} items; newest ${MAX_ITEMS} are served`);
   console.log(`[products] snapshot built via ${via}: ${snap.products.length} products, ${snap.stores.length} stores, ${Date.now() - started} ms`);
   return snap;
@@ -286,13 +310,27 @@ const PAGE_CACHE = "public, max-age=15, s-maxage=60, stale-while-revalidate=300,
 const FACET_CACHE = "public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=3600";
 
 // Only what the grid shows leaves the function: no search text, no internal ids.
-const outgoing = ({ hay: _hay, sizeValues: _sizeValues, ...product }) => product;   // sizeValues only feed the filters here, so they are not sent per product
+const outgoing = ({ hay: _hay, sizeValues: _sizeValues, specs: _specs, highlights: _highlights, optionValues: _optionValues, ...product }) => product;   // filter-only facts stay here; swatches are shown on the cards
 
 export default async function handler(req) {
   if (req.method !== "GET" && req.method !== "HEAD") return reply({ error: "method_not_allowed" }, 405, "no-store");
   if (!configured()) return reply({ error: "not_configured" }, 503, "no-store");
 
-  const parsed = parseRequest(new URL(req.url).searchParams);
+  const params = new URL(req.url).searchParams;
+  // op=search: the /products page (Amazon-style results with per-kind filters), answered from the same snapshot.
+  if (params.get("op") === "search") {
+    try {
+      const snap = await snapshot();
+      const now = Date.now();
+      tick(snap, now);
+      const result = searchProducts(snap.products, parseSearch(params));
+      return reply({ ...result, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
+    } catch (error) {
+      console.error(`[products] search unavailable: ${error?.message ?? error}`);
+      return reply({ error: "unavailable" }, 502, "no-store");
+    }
+  }
+  const parsed = parseRequest(params);
   if (!parsed) return reply({ error: "bad_request" }, 400, "public, s-maxage=60");
 
   try {

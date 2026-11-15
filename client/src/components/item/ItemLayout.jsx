@@ -10,7 +10,7 @@ import Header from "./Header.jsx";
 import Offers from "./Offers.jsx";
 import Options from "./Options.jsx";
 import Quantity from "./Quantity.jsx";
-import Recommend from "./Recommend.jsx";
+import Recommend, { RecommendSection } from "./Recommend.jsx";
 import SoldFrom from "./SoldFrom.jsx";
 import styles from "../ItemDetail.module.css";
 
@@ -36,23 +36,24 @@ export default function ItemLayout({ ctx }) {
         headingRef={titleRef}
         money={kesText}
         className={styles.layout}
-        gallery={(slot) => <Gallery ctx={ctx} slot={slot} />}
+        gallery={(slot) => <div id="item-overview"><Gallery ctx={ctx} slot={slot} /></div>}
         header={(slot) => <Header ctx={ctx} slot={slot} />}
         options={(slot) => <Options ctx={ctx} slot={slot} />}
-        details={(slot) => <Details ctx={ctx} slot={slot} />}
-        specs={(slot) => <Specs key={`specs-${slot.item.id}`} ctx={ctx} slot={slot} />}
+        details={(slot) => <div id="item-details"><Details ctx={ctx} slot={slot} /></div>}
+        specs={(slot) => <div id="item-specs"><Specs key={`specs-${slot.item.id}`} ctx={ctx} slot={slot} /></div>}
         flash={<Flash ctx={ctx} />}
         offers={
           <>
             <Offers key={item.id} ctx={ctx} />
             <Quantity ctx={ctx} slot={{ item }} />
-            <Delivery ctx={ctx} />
+            <div id="item-delivery"><Delivery ctx={ctx} /></div>
           </>
         }
         seller={<SoldFrom ctx={ctx} />}
         after={selective}
       />
-      <Recommend key={`similar-${item.id}`} ctx={ctx} />
+      <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
+      <div id="item-similar"><Recommend key={`similar-${item.id}`} ctx={ctx} /></div>
     </>
   );
 }

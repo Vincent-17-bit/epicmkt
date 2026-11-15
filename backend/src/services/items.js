@@ -1,4 +1,5 @@
-import { orderStoreItems, rankRelated } from "@epicmkt/shared";
+import { orderStoreItems, rankRelated, kindOf } from "@epicmkt/shared";
+import { DEMO_RELATIONS } from "../data/relations.js";
 import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
@@ -6,7 +7,6 @@ import { now } from "../clock.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
-import { demoRelations, demoTypeOf } from "../data/related.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
@@ -377,51 +377,6 @@ export async function getItemList({ productType = null, businessId = null, minPr
   return { items: structuredClone(rows.slice(offset, offset + limit)), total: rows.length };
 }
 
-// "Goes well with" (C19), one page: { items, page, pageSize, hasMore, total }, ranked by the shared rankRelated exactly as the live
-// adapter does (relations first, then the same type or department; at least 1 in 5 from this shop, each marked fromThisShop).
-// The demo items get their type and department from data/related.js. An unknown item is an empty first page.
-export async function getRelatedPage(itemId, { page = 1, pageSize = 10, origin = null, signal = null } = {}) {
-  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
-  await delay();
-  if (signal?.aborted) return empty;
-  runSweep();
-  const found = locate(itemId);
-  if (!found || found.business.status !== BUSINESS_STATUS.ACTIVE) return empty;
-  const from = originOf(origin);
-  const svcOf = (business, item) => business.services.find((svc) => svc.id === item.id) ?? {};
-  const asCandidate = (business, item) => ({
-    ...item,
-    businessId: business.id,
-    ...demoTypeOf(svcOf(business, item)),
-    availability: item.status === "listed" ? "available" : "out_of_stock",
-    price: item.regularPrice,
-    business
-  });
-  const current = asCandidate(found.business, found.item);
-  const pool = [];
-  for (const business of store.businesses) {
-    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
-    business.services.forEach((svc, index) => {
-      const item = toItem(business, svc, index);
-      if (item.status === "listed" && item.id !== current.id) pool.push(asCandidate(business, item));
-    });
-  }
-  const ranked = rankRelated(current, pool, { relations: demoRelations, page, pageSize });
-  return {
-    ...ranked,
-    items: ranked.items.map(({ business, businessId, productTypeId, departmentId, availability, price, ...item }) => {
-      const sale = liveSaleFor(item, business);
-      return {
-        ...item,
-        pricing: buildPricing(item, sale),
-        flash: sale ? flashParts(item, sale) : null,
-        offer: offerChipFor(item, business),
-        business: { ...sellerCard(business, from), featured: PLAN_FEATURES[business.plan]?.featured === true }
-      };
-    })
-  };
-}
-
 // Contract v1 related items: for a fixture, the other fixtures of the same product group (a bulb finds strip lights); for any other
 // item, the same-kind ranking getSimilarItems already does. Anything that goes wrong, or an aborted request, returns [].
 export async function getRelatedItems(itemId, { limit = 12, origin = null, signal = null } = {}) {
@@ -450,6 +405,7 @@ export async function getAllProducts() {
       const sale = liveSaleFor(item, business);
       rows.push({
         ...item,
+        ...optionSummary(svc),
         pricing: buildPricing(item, sale),
         flash: sale ? flashParts(item, sale) : null,
         offer: offerChipFor(item, business),
@@ -463,12 +419,35 @@ export async function getAllProducts() {
           town: business.area ?? "",
           county: business.county ?? "",
           isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
-          statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line
+          statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line,
+          ...(business.delivery ? { delivery: business.delivery } : {})
         }
       });
     });
   }
   return rows;
+}
+
+// What a list card and the product search need to know about an item's options, without the whole options payload: the price
+// range over what can be bought, the colour swatches (each with the photo it jumps to), how many combinations are on sale, and
+// every option value's label (so a search filter can match "Blue" or "55 inch"). Items without options get nothing at all, so
+// their rows are exactly as before.
+function optionSummary(svc) {
+  const axes = Array.isArray(svc.optionAxes) ? svc.optionAxes : [];
+  if (axes.length === 0) return {};
+  const sellable = (svc.optionVariants ?? []).filter((v) => v.status !== "unavailable" && v.status !== "out_of_stock" && v.stock !== 0);
+  const prices = sellable.map((v) => (Number.isFinite(v.salePrice) ? v.salePrice : v.price)).filter(Number.isFinite);
+  const colour = axes.find((a) => a.display === "swatch" || /^colou?r$/i.test(a.key));
+  const images = svc.images ?? [];
+  return {
+    hasOptions: true,
+    optionCount: sellable.length,
+    ...(prices.length && Math.min(...prices) < Math.max(...prices) ? { priceRange: { min: Math.min(...prices), max: Math.max(...prices) } } : {}),
+    ...(colour
+      ? { swatches: colour.values.map((v) => ({ id: v.id, label: v.label, color: v.color ?? null, imageUrl: images.find((m) => m.id === v.mediaId)?.url ?? null })) }
+      : {}),
+    optionValues: axes.flatMap((a) => a.values.map((v) => `${a.label}: ${v.label}`))
+  };
 }
 
 // A random window of each store's listed products, for the home page's featured cards. The caller picks from it, so a
@@ -611,4 +590,20 @@ export async function saveShoeConversion(chart) {
   }
   store.shoeConversion = { chart: r.value, version: (store.shoeConversion?.version ?? 0) + 1 };
   return store.shoeConversion.version;
+}
+
+// "Recommended" on the item page (C19): items from any shop that go with this one, ranked by the shared rankRelated with at
+// least 1 in 5 from the shop being viewed. The demo stands the search kinds in for product types and departments.
+export async function getRelatedPage(itemId, { businessId = null, page = 1, pageSize = 10, signal = null } = {}) {
+  await delay();
+  if (signal?.aborted) return { items: [], page, pageSize, hasMore: false, total: 0 };
+  const rows = await getAllProducts();
+  const typed = (row) => {
+    const kind = kindOf(row);
+    return { ...row, businessId: row.business?.slug ?? row.businessSlug, productTypeId: kind?.id ?? null, departmentId: kind?.department ?? null, price: row.regularPrice };
+  };
+  const self = rows.find((r) => r.id === itemId && (!businessId || [r.business?.slug, r.business?.id, r.businessSlug, r.businessId].includes(businessId)));
+  if (!self) return { items: [], page, pageSize, hasMore: false, total: 0 };
+  const result = rankRelated(typed(self), rows.map(typed), { relations: DEMO_RELATIONS, page, pageSize });
+  return structuredClone(result);
 }

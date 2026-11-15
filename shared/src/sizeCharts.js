@@ -148,3 +148,37 @@ export const SEED_SIZE_CHARTS = Object.freeze([
     rows: [["2-3 years", "98", "53", "52"], ["3-4 years", "104", "55", "53"], ["4-5 years", "110", "57", "54"], ["5-6 years", "116", "60", "55"], ["6-7 years", "122", "63", "56"], ["7-8 years", "128", "66", "58"], ["8-9 years", "134", "69", "59"], ["9-10 years", "140", "72", "61"]]
   }
 ]);
+
+/**
+ * A shoe size chart with its UK, US and foot-length cells worked out from its EU column by the shoe scale, so the size chart
+ * and the size buttons ("EU 40 · UK 6.5 · US 7.5") can never disagree: there is one conversion table (SHOE_CHART, or the
+ * admin's stored conversion passed as `chart`). A chart without an EU column, or with no UK / US / foot column, comes back as
+ * it was. US means women's sizes when the chart's name says women, else men's.
+ */
+export function alignShoeChart(sizeChart, chart = SHOE_CHART) {
+  if (!isRecord(sizeChart) || !Array.isArray(sizeChart.columns) || !Array.isArray(sizeChart.rows)) return sizeChart;
+  const cols = sizeChart.columns.map((c) => String(c ?? "").trim().toLowerCase());
+  const eu = cols.findIndex((c) => /^eu\b|^eur/.test(c));
+  if (eu < 0) return sizeChart;
+  const women = /women|ladies|female/i.test(String(sizeChart.name ?? ""));
+  const target = cols.map((c, i) => {
+    if (i === eu) return null;
+    if (/^uk\b/.test(c)) return "uk";
+    if (/^us\b/.test(c)) return /\bw\b|women/.test(c) ? "us-w" : /\bm\b|men/.test(c) ? "us-m" : women ? "us-w" : "us-m";
+    if (/foot|^cm\b|length/.test(c)) return "cm";
+    return null;
+  });
+  if (!target.some(Boolean)) return sizeChart;
+  const fmt = (n) => String(Math.round(n * 10) / 10);
+  const rows = sizeChart.rows.map((row) => {
+    const text = String(row?.[eu] ?? "").replace(/[^\d.]/g, "");
+    const size = text ? Number(text) : NaN;
+    if (!Number.isFinite(size)) return row;
+    return row.map((cell, i) => {
+      if (!target[i]) return cell;
+      const r = convertShoe({ system: "eu", value: size }, target[i], chart);
+      return r.ok ? fmt(r.value.value) : cell;
+    });
+  });
+  return { ...sizeChart, rows };
+}

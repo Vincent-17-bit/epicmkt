@@ -40,6 +40,23 @@ function Option({ icon, children, onClick }) {
 
 export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRef }) {
   const [term, setTerm] = useState("");
+  // What Enter searches: products (Amazon-style results with filters) or businesses. Remembered for the visit.
+  const [scope, setScope] = useState(() => {
+    try {
+      return sessionStorage.getItem("epicmkt-search-scope") === "businesses" ? "businesses" : "products";
+    } catch {
+      return "products";
+    }
+  });
+  const pickScope = (next) => {
+    setScope(next);
+    try {
+      sessionStorage.setItem("epicmkt-search-scope", next);
+    } catch {
+      /* private mode: the choice lasts until the panel closes */
+    }
+    inputRef.current?.focus();
+  };
   const [debounced, setDebounced] = useState("");
   const [recent, setRecent] = useState(getRecent);
   const normalized = normalizeTerm(term);
@@ -77,7 +94,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
     if (!clean) return;
     addRecent(clean);
     logSearch(clean);
-    onSelect(`/search?q=${encodeURIComponent(clean)}`);
+    onSelect(scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`);
   };
 
   const submit = (event) => {
@@ -130,7 +147,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
           <form role="search" className={styles.bar} onSubmit={submit}>
             <div className={styles.search}>
               <label htmlFor="search-input" className="sr-only">
-                Search businesses
+                {scope === "products" ? "Search products" : "Search businesses"}
               </label>
               <input
                 id="search-input"
@@ -138,7 +155,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                 type="search"
                 enterKeyHint="search"
                 autoComplete="off"
-                placeholder="Search businesses"
+                placeholder={scope === "products" ? "Search products: speakers, phones, cement…" : "Search businesses"}
                 value={term}
                 onChange={(event) => setTerm(event.target.value)}
                 className={styles.input}
@@ -148,6 +165,13 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
             </div>
             <IconButton icon={faXmark} label="Close search" onClick={onClose} />
           </form>
+          <div className={styles.scope} role="radiogroup" aria-label="Search in">
+            {[["products", "Products"], ["businesses", "Businesses"]].map(([id, label]) => (
+              <button key={id} type="button" role="radio" aria-checked={scope === id} className={styles.scopeBtn} onClick={() => pickScope(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
 
           {active ? (
             <div className={styles.results} aria-live="polite">

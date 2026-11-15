@@ -247,7 +247,10 @@ test("suggestions skip hidden shops and never list the same label twice", async 
   await shop({ name: "Dup Cuts", tags: ["fades"] });
   await shop({ name: "Dup Cuts 2", tags: ["Fades"] });
   const out = (await tx(c, anon, (k) => sql(k, `select search_suggestions('fades', 10) as r`)))[0].r;
-  assert.deepEqual(out.map((s) => s.label), ["Fades"]);
+  // One entry for the two spellings. Which spelling is kept follows the database's sort order (collation), which differs between
+  // installs, so only the word is checked.
+  assert.equal(out.length, 1);
+  assert.equal(out[0].label.toLowerCase(), "fades");
   assert.deepEqual((await tx(c, anon, (k) => sql(k, `select search_suggestions('secret', 10) as r`)))[0].r, []);
 });
 

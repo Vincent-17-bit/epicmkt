@@ -41,15 +41,16 @@ const run = async (Component, data) => {
   return html;
 };
 
-const expected = (name) => readFileSync(join(process.cwd(), "src/components/__dom__", `itemDetail-${name}.html`), "utf8");
+const file = (name) => join(process.cwd(), "src/components/__dom__", `itemDetail-${name}.html`);
+const expected = (name) => readFileSync(file(name), "utf8");
 
 describe("ItemDetail markup", () => {
   for (const name of Object.keys(cases)) {
     it(`${name} matches the page it replaced`, async () => {
-      const html = await run(ItemDetail, cases[name]);
-      // UPDATE_DOM=1 rewrites the saved pages after an intended change to the page (check the diff before committing).
-      if (process.env.UPDATE_DOM) writeFileSync(join(process.cwd(), "src/components/__dom__", `itemDetail-${name}.html`), html.replace(/></g, ">\n<"));
-      expect(html.replace(/></g, ">\n<")).toBe(expected(name));
+      const html = (await run(ItemDetail, cases[name])).replace(/></g, ">\n<");
+      // After an intended change to the page: UPDATE_DOM=1 npx vitest run src/components/ItemDetail.dom.test.jsx, then read the diff.
+      if (process.env.UPDATE_DOM === "1") writeFileSync(file(name), html);
+      expect(html).toBe(expected(name));
     });
   }
 });
