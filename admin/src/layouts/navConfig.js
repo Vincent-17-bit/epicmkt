@@ -3,7 +3,7 @@ import {
   faGear, faGears, faHourglassHalf, faLayerGroup, faShieldHalved, faSitemap, faStore, faUserCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { faBoxArchive, faMagnifyingGlassChart, faBoxesStacked, faClipboardCheck, faListCheck, faRulerCombined, faTags } from "@fortawesome/free-solid-svg-icons";
+import { faInbox, faBoxArchive, faMagnifyingGlassChart, faBoxesStacked, faClipboardCheck, faListCheck, faRulerCombined, faTags } from "@fortawesome/free-solid-svg-icons";
 
 // The sidebar, as data. A group's `label` is its section heading; the first group has none.
 export const navGroups = [
@@ -48,6 +48,8 @@ export const navGroups = [
       { label: "Spec rules", to: "/admin/spec-rules", icon: faListCheck, permission: "specrules.view" },
       { label: "Readiness", to: "/admin/readiness", icon: faClipboardCheck, permission: "plans.view" },
       { label: "Demand", to: "/admin/demand", icon: faMagnifyingGlassChart, permission: "plans.view" },
+      { label: "Departments", to: "/admin/departments", icon: faSitemap, permission: "producttypes.view" },
+      { label: "Type requests", to: "/admin/type-requests", icon: faInbox, permission: "producttypes.view", hint: "type requests from sellers" },
       { label: "Kits", to: "/admin/kits", icon: faBoxArchive, permission: "producttypes.view" },
     ],
   },

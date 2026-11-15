@@ -1,3 +1,4 @@
+import { departmentTrail } from "@epicmkt/shared";
 import { CASE_INSENSITIVE_PATHS, SEARCH_QUERY_MAX, STATIC_TRAILS } from "../config/breadcrumbs.js";
 import { t as translate } from "../i18n/index.js";
 
@@ -17,7 +18,7 @@ const townCrumb = (category, town) => ({
   to: `/c/${category.id}?town=${encodeURIComponent(town.slug)}`
 });
 
-export function getTrail({ pathname, search = "", categories, towns, business, t = translate }) {
+export function getTrail({ pathname, search = "", categories, towns, business, departments = { status: "success", data: [] }, t = translate }) {
   const path = pathname.replace(/\/+$/, "") || "/";
   const params = new URLSearchParams(search);
   const home = HOME(t);
@@ -49,6 +50,18 @@ export function getTrail({ pathname, search = "", categories, towns, business, t
     const town = towns.data?.find((x) => x.slug === townSlug);
     if (!town) return { status: "ready", trail: [home, { key: `c-${category.id}`, label: category.name }], invalidItem: false };
     return { status: "ready", trail: [home, categoryCrumb(category), { key: `t-${town.slug}`, label: town.name }], invalidItem: false };
+  }
+
+  const departmentMatch = /^\/d\/([^/]+)(?:\/([^/]+))?$/.exec(path);
+  if (departmentMatch) {
+    if (departments.status === "pending") return loading;
+    const dept = departments.data?.find((d) => d.id === decodeURIComponent(departmentMatch[1]));
+    if (!dept) return notFound;
+    const typeId = departmentMatch[2] && decodeURIComponent(departmentMatch[2]);
+    const type = typeId ? dept.types?.find((x) => x.id === typeId) : null;
+    if (typeId && !type) return notFound;
+    const trail = departmentTrail(dept, type).map((c) => ({ key: `d-${c.id}`, label: c.name, ...(c.to ? { to: c.to } : {}) }));
+    return { status: "ready", trail: [home, ...trail], invalidItem: false };
   }
 
   const businessMatch = /^\/b\/([^/]+)$/.exec(path);

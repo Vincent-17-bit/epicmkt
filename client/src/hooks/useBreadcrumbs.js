@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDepartments } from "../api/departments.js";
 import { getBusiness, getCategories, getSearchFacets, getTowns } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { getTrail } from "../utils/getTrail.js";
@@ -23,6 +24,9 @@ export function useBreadcrumbs() {
     enabled: Boolean(businessSlug)
   });
 
+  const onDepartment = /^\/d\//.test(pathname);
+  const departments = useQuery({ queryKey: ["departments"], queryFn: getDepartments, staleTime: STALE, enabled: onDepartment });
+
   const itemId = new URLSearchParams(search).get("item");
   const item = useQuery({ queryKey: ["item", business.data?.id, itemId], queryFn: skipToken });
   const itemVanished = Boolean(itemId) && item.isError && item.error?.name === "NotFoundError" && item.data !== undefined;
@@ -32,7 +36,8 @@ export function useBreadcrumbs() {
     search,
     categories: { status: categories.status, data: categories.data },
     towns: { status: towns.status, data: towns.data },
-    business: { status: business.status, data: business.data }
+    business: { status: business.status, data: business.data },
+    departments: { status: onDepartment ? departments.status : "success", data: departments.data }
   });
 
   const prefetch = useCallback(
