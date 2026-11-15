@@ -9,10 +9,14 @@
   "exports": {
     ".": "./src/index.js",
     "./tokens.css": "./src/styles/tokens.css",
-    "./reset.css": "./src/styles/reset.css"
+    "./reset.css": "./src/styles/reset.css",
+    "./view3d": "./src/view3d/index.js",
+    "./view3d/spin": "./src/view3d/spinEngine.js",
+    "./view3d/model": "./src/view3d/modelEngine.js"
   },
   "dependencies": {
-    "@epicmkt/shared": "*"
+    "@epicmkt/shared": "*",
+    "three": "^0.170.0"
   },
   "peerDependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.6.0",

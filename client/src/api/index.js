@@ -40,6 +40,7 @@ export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
   // Where an item the seller combined into another now lives: { itemId, param } or null.
   getRedirect: (itemId) => flashApi.getItemRedirect(itemId),
+  getView3d: (itemId) => flashApi.getItemView3d(itemId),
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
   // Items like this one from other stores of the same category, ranked; [] when none or on any failure.
   getSimilar: (itemId, opts) => flashApi.getSimilarItems(itemId, opts),

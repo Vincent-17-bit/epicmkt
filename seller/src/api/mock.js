@@ -1,4 +1,5 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
+import { MEDIA3D, checkOptionIds, checkTicketRequest, hasView3d, inspectGlb, view3dIssues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
@@ -337,6 +338,52 @@ export const uploadItemPhoto = async (itemId, file, { signal, onProgress } = {})
   item.imageCount = item.imagePaths.length;
   return { path };
 };
+// ---- 3D views (migration 0101), kept in memory per item ---------------------------------------------------------
+const media3d = () => (bill.media3d ??= new Map());
+const rows3d = (itemId) => media3d().get(itemId) ?? [];
+const ROLE_RULE = { "model-glb": "model", "spin-frame": "spin", poster: "poster" };
+export const getItemMedia3d = async (itemId) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  const media = rows3d(itemId);
+  return { media3d: copy(media), issues: view3dIssues(media), hasView: hasView3d(media), limits: { modelMaxBytes: MEDIA3D.modelMaxBytes, spinMinFrames: MEDIA3D.spinMinFrames, spinMaxFrames: MEDIA3D.spinMaxFrames, maxRows: MEDIA3D.maxRowsPerItem } };
+};
+export const uploadMedia3d = async (itemId, { role, file, optionIds = [], position }, { signal, onProgress } = {}) => {
+  signedIn();
+  checkpoint(signal);
+  onProgress?.(null, "preparing");
+  if (!bill.items.some((i) => i.id === itemId)) throw new ApiError("item_not_found");
+  const type = role === "model-glb" ? "glb" : file?.type;
+  const ticket = checkTicketRequest({ kind: role, type, size: file?.size });
+  if (!ticket.ok) throw new ApiError(ticket.error === "too_large" ? "model_too_large" : ticket.error);
+  const scope = checkOptionIds(role, optionIds);
+  if (!scope.ok) throw new ApiError(scope.error);
+  if (role === "model-glb") {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const seen = inspectGlb(bytes);
+    if (!seen.ok) throw new ApiError(seen.reason === "too_large" ? "model_too_large" : seen.reason);
+  }
+  await wait();
+  checkpoint(signal);
+  onProgress?.(0.5, "uploading");
+  const list = media3d().get(itemId) ?? [];
+  const at = scope.ids[0] ?? "";
+  const same = (r) => (r.optionIds?.[0] ?? "") === at;
+  let next = list;
+  if (role !== "spin-frame") next = list.filter((r) => !(r.role === role && same(r))); // a model or a poster replaces the one in its scope
+  if (role === "spin-frame" && list.filter((r) => r.role === role && same(r)).length >= MEDIA3D.spinMaxFrames) throw new ApiError("media3d_limit");
+  const path = `mock/${itemId}/${role}-${++bill.seq}`;
+  next = [...next, { id: `m3-${bill.seq}`, path, role, sort: position ?? next.filter((r) => r.role === role).length, optionIds: scope.ids, size: file.size, width: null, height: null }];
+  media3d().set(itemId, next);
+  onProgress?.(1, "finishing");
+  return { path };
+};
+export const removeMedia3d = async (path) => {
+  signedIn();
+  await wait();
+  for (const [itemId, list] of media3d()) media3d().set(itemId, list.filter((r) => r.path !== path));
+};
 export const removeItemPhoto = async (path) => {
   signedIn();
   await wait();
@@ -527,6 +574,7 @@ export const clockNow = () => (bill.now ? new Date(bill.now) : new Date());
 function resetBilling() {
   const now = Date.now();
   bill.seq = 0;
+  bill.media3d = new Map();   // itemId -> 3D rows (migration 0101)
   bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
   bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
   bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0103)

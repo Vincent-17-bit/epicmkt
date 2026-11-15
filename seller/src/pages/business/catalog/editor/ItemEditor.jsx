@@ -450,7 +450,7 @@ function EditorForm({ item, sections, category, business }) {
   const sizeChart = { needed: wantsGuide({ guide: null, options: form.options, typeName, itemName: form.name }), has: Boolean(form.sizeGuide) };
   const colourPhotos = colourPhotoStatus(form.options, media.tiles.filter((t) => t.kind === "image" && t.status === "saved" && t.id).map((t) => t.id));
   const askGuide = () => { setGuideAsked(true); setTimeout(() => goTo("sizeguide"), 0); };
-  const stepProps = { askGuide, guideShown: steps.some((x) => x.id === "sizeguide"), form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart, colourPhotos };
+  const stepProps = { itemId: item?.id ?? null, askGuide, guideShown: steps.some((x) => x.id === "sizeguide"), form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart, colourPhotos };
   const renderSection = (st) => <st.component key={st.id} {...stepProps} />;
 
   const stepButtons = (variant) => (
