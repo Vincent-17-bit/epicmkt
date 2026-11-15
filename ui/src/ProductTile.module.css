@@ -207,3 +207,19 @@
   font-weight: 700;
   line-height: 1.4;
 }
+
+/* "From" before a lowest price, and the small options hint at the end of the price row. */
+.from {
+  flex: none;
+  color: var(--text-muted);
+  font-size: clamp(0.625rem, 5.6cqw, 0.75rem);
+  font-weight: 600;
+}
+
+.options {
+  flex: none;
+  color: var(--text-muted);
+  font-size: clamp(0.625rem, 5.4cqw, 0.6875rem);
+  font-weight: 600;
+  white-space: nowrap;
+}

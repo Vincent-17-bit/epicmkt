@@ -83,7 +83,9 @@ export function countActive(filters) {
   return n;
 }
 
-const price = (p) => (Number.isFinite(p.pricing?.salePrice) ? p.pricing.salePrice : null);
+// The price a card is filtered and sorted by: the lowest one a buyer pays now (priceMin) when the item's combinations differ,
+// else the single price. An item with no price range behaves exactly as before.
+const price = (p) => (Number.isFinite(p.pricing?.priceMin) ? p.pricing.priceMin : Number.isFinite(p.pricing?.salePrice) ? p.pricing.salePrice : null);
 const newest = (a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdAt) || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
 const SORTERS = {

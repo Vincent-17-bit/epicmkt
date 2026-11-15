@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { businessOf, cardOfBusiness, cardOfFlash, itemOf } from "./shape.js";
+import { businessOf, cardOfBusiness, cardOfFlash, cardPricing, itemOf, pricingOf, rangeOfRow } from "./shape.js";
 import { hoursCaption, hoursRows, statusText } from "../../lib/businessView.js";
 import { toSummary } from "../browse/engine.js";
 import { setUserTimeZone } from "@epicmkt/shared";
@@ -220,5 +220,34 @@ describe("photo ids", () => {
   it("still counts i1, i2 for older data without ids", () => {
     const item = itemOf({ ...base, imagePaths: ["a.jpg", "b.jpg"], videoPaths: [], mediaPaths: [{ path: "a.jpg", kind: "image" }, { path: "b.jpg", kind: "image" }] });
     expect(item.images.map((m) => m.id)).toEqual(["i1", "i2"]);
+  });
+});
+
+describe("list card pricing with a price range", () => {
+  it("reads the range of a public_items row only when the lowest is under the highest", () => {
+    expect(rangeOfRow({ price_min: "24000", price_high: "52000" })).toEqual({ min: 24000, max: 52000 });
+    expect(rangeOfRow({ price_min: "500", price_high: "500" })).toBeNull();
+    expect(rangeOfRow({ price_min: null, price_high: null })).toBeNull();
+    expect(rangeOfRow({})).toBeNull();
+  });
+  it("prices a ranged item from its lowest price and a single-price item as before", () => {
+    expect(pricingOf(30000, 30000, "fixed", null, [], undefined, { min: 24000, max: 52000 })).toMatchObject({ hasRange: true, priceMin: 24000, priceMax: 52000 });
+    const legacy = pricingOf(150, 150, "fixed", null);
+    expect(legacy.hasRange).toBeUndefined();
+    expect(legacy.priceMin).toBeUndefined();
+  });
+  it("a running flash sale shows its lowest price; a ranged item keeps the From", () => {
+    const item = { regularPrice: 30000, priceType: "fixed", unit: null, priceRange: { min: 24000, max: 52000 } };
+    const entry = { pricing: pricingOf(30000, 20000, "fixed", null) };
+    expect(cardPricing(item, entry)).toMatchObject({ hasRange: true, priceMin: 20000, salePrice: 20000 });
+    expect(cardPricing({ ...item, priceRange: undefined }, entry).hasRange).toBeUndefined();
+    expect(cardPricing(item, null)).toMatchObject({ hasRange: true, priceMin: 24000 });
+    expect(cardPricing({ regularPrice: NaN }, null)).toBeNull();
+  });
+  it("itemOf keeps the options flag and the range, and leaves them out of a legacy item", () => {
+    expect(itemOf({ id: "i", name: "Phone", price: 30000, hasOptions: true, priceRange: { min: 1, max: 2 } })).toMatchObject({ hasOptions: true, priceRange: { min: 1, max: 2 } });
+    const legacy = itemOf({ id: "i", name: "Mug", price: 300 });
+    expect("hasOptions" in legacy).toBe(false);
+    expect("priceRange" in legacy).toBe(false);
   });
 });

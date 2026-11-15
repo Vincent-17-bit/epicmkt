@@ -12,6 +12,8 @@ const DEFAULT_LABELS = {
   verified: "Verified store",
   featured: "Featured store",
   offerChip: { offer: "Offer", more: "more" },
+  from: "From",
+  options: "Options",
   closed: "Closed",
   lowStock: "Low stock",
   onlyLeft: "Only {n} left"
@@ -54,6 +56,10 @@ export default function ProductTile({
   const store = item.business ?? {};
   const pricing = item.pricing;
   const onSale = Boolean(pricing && pricing.savings > 0);
+  // Combinations priced differently: "From KES 24,000" (the lowest price now; with a flash sale running, the lowest flash price).
+  // A strike-through regular price would be the wrong comparison against a lowest price, so it is left out then.
+  const ranged = Boolean(pricing?.hasRange && Number.isFinite(pricing.priceMin));
+  const optionsText = item.hasOptions ? (labels.options ?? DEFAULT_LABELS.options) : "";
   // A short line after the name. It shares the name's two lines, so it fills the space a short name leaves and is cut
   // with an ellipsis when long: it can never push the price or the store out of the card.
   const blurb = cardBlurb(item) || String(item.section ?? "").trim();
@@ -82,8 +88,9 @@ export default function ProductTile({
         <span className={styles.priceRow}>
           {pricing ? (
             <span className={styles.prices}>
-              <span className={styles.price}>{formatKes(pricing.salePrice)}</span>
-              {onSale && (
+              {ranged && <span className={styles.from}>{labels.from ?? DEFAULT_LABELS.from}</span>}
+              <span className={styles.price}>{formatKes(ranged ? pricing.priceMin : pricing.salePrice)}</span>
+              {onSale && !ranged && (
                 <s className={styles.was}>
                   <span className="sr-only">{labels.was} </span>
                   {formatKes(pricing.regularPrice)}
@@ -93,6 +100,7 @@ export default function ProductTile({
           ) : (
             <span />
           )}
+          {optionsText && <span className={styles.options}>{optionsText}</span>}
         </span>
         <span className={styles.store}>
           {store.featured && <FeaturedMark label={labels.featured} />}
