@@ -4,6 +4,7 @@ import { PRICED, priceSummary, stockStatusOf } from "./model.js";
 import { faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { LIMITS } from "./model.js";
 import { CheckRow, Field, RowList, SectionCard } from "./parts.jsx";
+import TiersEditor from "./TiersEditor.jsx";
 import styles from "./editor.module.css";
 
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
@@ -66,6 +67,9 @@ export default function PriceSection({ form, patch, errors, focusOn }) {
             )}
           />
         </div>
+      )}
+      {form.priceType === "from" && (
+        <TiersEditor state={form.tiers ?? null} onChange={(next) => patch("tiers", next)} unit={form.unit || "item"} serverError={typeof errors.tiers === "string" ? errors.tiers : ""} />
       )}
       {priced && !showSale && (
         <button type="button" className={styles.btnGhost} aria-expanded="false" onClick={() => setSaleOpen(true)}>Add a sale price</button>

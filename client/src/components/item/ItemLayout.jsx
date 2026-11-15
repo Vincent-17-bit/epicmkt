@@ -45,7 +45,7 @@ export default function ItemLayout({ ctx }) {
         offers={
           <>
             <Offers key={item.id} ctx={ctx} />
-            <Quantity ctx={ctx} />
+            <Quantity ctx={ctx} slot={{ item }} />
             <Delivery ctx={ctx} />
           </>
         }

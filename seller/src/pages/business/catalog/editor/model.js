@@ -11,14 +11,14 @@ export { PRICED, parseKes, qualityChecks };
 
 export const STEP_OF = {
   name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics", options: "options", sizeGuide: "sizeguide",
-  priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", availability: "price", stockCount: "price", lowStockThreshold: "price", variants: "price", variantsCount: "price",
+  priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", tiers: "price", availability: "price", stockCount: "price", lowStockThreshold: "price", variants: "price", variantsCount: "price",
   highlights: "details", highlightsCount: "details", specs: "details", specsCount: "details", includes: "details", includesCount: "details", packSize: "details", terms: "details",
 };
 
 // The order errors are looked for in, the same order the fields appear on screen.
 const ERROR_ORDER = [
   "name", "brand", "section", "shortDescription", "description", "options", "sizeGuide",
-  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants",
+  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants", "tiers",
   "highlightsCount", "highlights", "specsCount", "specs", "includesCount", "includes", "packSize", "terms",
 ];
 
@@ -53,7 +53,7 @@ export const firstErrorTarget = (errors) => {
 
 
 const FIELD_NAMES = {
-  name: "Name", brand: "Brand", section: "Section", shortDescription: "Short description", description: "Description",
+  name: "Name", tiers: "Quantity prices", brand: "Brand", section: "Section", shortDescription: "Short description", description: "Description",
   priceType: "Price type", price: "Price", priceMax: "Highest price", salePrice: "Sale price", unit: "Unit", availability: "Availability",
   stockCount: "Stock count", lowStockThreshold: "Low stock level", variantsCount: "Options", highlightsCount: "Highlights", specsCount: "Specifications", includesCount: "What is included",
   packSize: "Pack size", terms: "Terms",

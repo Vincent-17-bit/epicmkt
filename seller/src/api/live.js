@@ -54,6 +54,8 @@ export const setDelivery = ({ offers, fee = null, radiusKm = null, area = null, 
   rpc("seller_set_delivery", { p_offers: offers, p_fee: fee, p_radius_km: radiusKm, p_area: area, p_min_order: minOrder, p_notes: notes });
 // What shoppers asked for and did not find, for this shop only (migration 0115). period is 7 or 30 days.
 export const getUnmetDemand = (period = 7) => rpc("seller_unmet_demand", { p_period: period });
+// The item's quantity tiers (migration 0117): { tiers, mode, variants: [{ choice, tiers }] }. saveItem sends priceTiers and priceTierMode.
+export const getItemTiers = (id) => rpc("seller_item_tiers", { p_id: id });
 // Combine similar items (migration 0116). Groups: [{ key, productTypeId, items: [{ id, name, price, salePrice }] }].
 export const getSimilarGroups = () => rpc("seller_similar_item_groups");
 // spec: { name, axes: [{ key, label, labels: { [itemId]: "400 g" } }] }. The first id becomes the combined item. -> { mergeId, itemId, expiresAt }
@@ -494,6 +496,8 @@ const itemRow = (f) => ({
   ...(Array.isArray(f.variants) && { variants: f.variants }),
   // The product type (migration 0091) is read from camelCase `productTypeId`: absent keeps the stored type, null is "Other goods".
   ...(f.productTypeId !== undefined && { productTypeId: f.productTypeId }),
+  // Quantity prices (migration 0094): priceTiers null clears them; absent keeps what is stored.
+  ...(f.priceTiers !== undefined && { priceTiers: f.priceTiers }), ...(f.priceTierMode !== undefined && { priceTierMode: f.priceTierMode }),
 });
 export const getShopPreview = async () => {
   const [b, catalog, flashSales, offers, server] = await Promise.all([

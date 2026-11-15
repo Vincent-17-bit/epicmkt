@@ -19,6 +19,7 @@ export const saveWeeklyHours = (...a) => impl.saveWeeklyHours(...a);
 export const setLocation = (...a) => impl.setLocation(...a);
 export const setDelivery = (...a) => impl.setDelivery(...a);
 export const getUnmetDemand = (...a) => impl.getUnmetDemand(...a);
+export const getItemTiers = (...a) => impl.getItemTiers(...a);
 export const getSimilarGroups = (...a) => impl.getSimilarGroups(...a);
 export const mergeItems = (...a) => impl.mergeItems(...a);
 export const undoMerge = (...a) => impl.undoMerge(...a);

@@ -17,6 +17,7 @@ import { useSettings } from "../../../../state/settings.js";
 import { clearDraft, loadDraft, prefersCalm, storeDraft, useBreakpoint, useUnsavedGuard } from "./hooks.js";
 import { firstErrorTarget, qualityChecks } from "./model.js";
 import { useItemModel } from "./model/useItemModel.js";
+import { tierIssues, tiersFromServer, tiersPayload } from "./model/tiers.js";
 import { visibleSteps } from "./steps/index.js";
 import { useProductTypes } from "./steps/useProductTypes.js";
 import { settleBrand, settleSpecLinks, linkBrand } from "./brandValue.js";
@@ -123,6 +124,19 @@ function EditorForm({ item, sections, category, business }) {
     baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), sizeGuide: loaded });
     if (form.sizeGuide === undefined) patch("sizeGuide", loaded);
   }, [guideRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Quantity prices have their own read too (migration 0117), joined to the form and the starting point in one step.
+  const hadTiers = useRef(false);
+  const tiersRead = useQuery({ queryKey: ["itemTiers", item?.id], queryFn: () => api.getItemTiers(item.id), enabled: Boolean(item), retry: 1, staleTime: 0, gcTime: 0 });
+  const tiersLoaded = useRef(false);
+  useEffect(() => {
+    if (tiersLoaded.current || tiersRead.data === undefined) return;
+    tiersLoaded.current = true;
+    const loaded = tiersFromServer(tiersRead.data);
+    if (!loaded) return;
+    hadTiers.current = true;
+    baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), tiers: loaded });
+    if (form.tiers === undefined) patch("tiers", loaded);
+  }, [tiersRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
   const productTypes = useProductTypes();
   const [guideAsked, setGuideAsked] = useState(false); // "Add a size guide" in Details opens the step for an item that would not show it
 
@@ -252,9 +266,10 @@ function EditorForm({ item, sections, category, business }) {
     // Made to measure is checked only where the data layer can keep it (docs/requests/2026-11-07-b07-to-data-custom-size-storage.md).
     const customCheck = CUSTOM_SIZE_STORED ? validateCustomSize(form.customSize) : { ok: true, errors: {} };
     const guideCheck = form.sizeGuide ? checkGuide(form.sizeGuide) : { errors: {} };
+    const tierProblems = form.priceType === "from" && form.tiers ? tierIssues(form.tiers).list : [];
     const optionErrors = { ...(optionsCheck.ok ? {} : optionsCheck.errors), ...Object.fromEntries(Object.entries(customCheck.errors).map(([k, v]) => [`custom.${k}`, v])) };
-    if (!check.ok || Object.keys(optionErrors).length || Object.keys(guideCheck.errors).length) {
-      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}), ...(Object.keys(guideCheck.errors).length ? { sizeGuide: guideCheck.errors } : {}) };
+    if (!check.ok || Object.keys(optionErrors).length || Object.keys(guideCheck.errors).length || tierProblems.length) {
+      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}), ...(Object.keys(guideCheck.errors).length ? { sizeGuide: guideCheck.errors } : {}), ...(tierProblems.length ? { tiers: tierProblems[0] } : {}) };
       setErrors(found);
       setNotice(null);
       const target = firstErrorTarget(found);
@@ -276,9 +291,11 @@ function EditorForm({ item, sections, category, business }) {
       // an unchanged type that was later switched off or restricted must not block every other edit of the item.
       const typeChanged = "productTypeId" in form && (isNew || (form.productTypeId ?? null) !== (item?.productTypeId ?? null));
       const options = optionsPayload(form.options, hadOptions.current);
-      const body = { ...fields, ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
+      const tiersBody = tiersPayload(form.tiers, { priceType: form.priceType, had: hadTiers.current });
+      const body = { ...fields, ...(tiersBody ?? {}), ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await saveWithScaleFallback((b) => api.saveItem(item?.id ?? null, b), body);
       savedId = id;
+      if (tiersBody) hadTiers.current = Boolean(tiersBody.priceTiers);
       // Size guide: written after the item exists. Nothing is sent for an item whose guide was never loaded or touched.
       let guideProblem = "";
       if (form.sizeGuide !== undefined || hadGuide.current) {

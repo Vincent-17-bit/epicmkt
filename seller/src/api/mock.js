@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { checkDeliverySetting, deliveryInfo, similarGroups } from "@epicmkt/shared";
+import { checkDeliverySetting, deliveryInfo, similarGroups, validateTiers } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
@@ -935,11 +935,31 @@ const prepareSave = async (id, f) => {
   }
   return { fields, commitOptions, item, priceChanged, axes, axesChanged: JSON.stringify(axes) !== JSON.stringify(prevAxes) };
 };
+// Quantity tiers (migration 0094/0117): priceTiers null clears, an array replaces; they need the price type "from". Checked before anything is written.
+const tiersStore = () => (bill.tiers ??= new Map());
+const checkTiersIn = (f, priceType, existing) => {
+  if (f.priceTiers === undefined && f.priceTierMode === undefined) return null;
+  if (f.priceTiers === null) return { clear: true };
+  const tiers = f.priceTiers ?? existing?.tiers;
+  const mode = f.priceTierMode ?? existing?.mode ?? "whole";
+  if (!Array.isArray(tiers) || !validateTiers(tiers, mode).ok) throw new ApiError("invalid_price_tiers");
+  if (priceType !== "from") throw new ApiError("tiers_need_from_price");
+  return { tiers: copy(tiers), mode };
+};
+export const getItemTiers = async (id) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  const t = tiersStore().get(id);
+  return copy({ tiers: t?.tiers ?? null, mode: t?.mode ?? "whole", variants: [] });
+};
 export const saveItem = async (id, f) => {
   signedIn();
   await wait();
   const now = clockNow().toISOString();
   const { fields, commitOptions, item, priceChanged, axes, axesChanged } = await prepareSave(id, f);
+  const tiersIn = checkTiersIn(f, fields.priceType, id ? tiersStore().get(id) : null);
+  const keepTiers = (itemId) => { if (tiersIn?.clear) tiersStore().delete(itemId); else if (tiersIn) tiersStore().set(itemId, tiersIn); };
   if (id) {
     const edited = axesChanged || GATED.some((k) => fields[k] !== undefined && JSON.stringify(fields[k]) !== JSON.stringify(item[k] ?? (k === "productTypeId" ? null : undefined)));
     if (!item.draft && item.visible && edited) {
@@ -949,12 +969,14 @@ export const saveItem = async (id, f) => {
     if (edited) gated.add(item.id);
     Object.assign(item, fields, { updatedAt: now, priceConfirmedAt: priceChanged ? now : item.priceConfirmedAt });
     commitOptions(id);
+    keepTiers(id);
     return id;
   }
   const made = { id: `it-new-${++bill.seq}`, specs: [], brand: null, shortDescription: null, packSize: null, terms: null, includes: [], highlights: [], variants: [], ...fields, visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, availableFrom: null, season: null, sort: Math.max(0, ...bill.items.map((i) => i.sort)) + 1, tags: [], badge: null, priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false };
   bill.items.push(made);
   gated.add(made.id);
   commitOptions(made.id);
+  keepTiers(made.id);
   return made.id;
 };
 // seller_check_item: the issues a save would raise, without saving. { ok: true, issues: [] } or { ok: false, issues: [{ code }] }.

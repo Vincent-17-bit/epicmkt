@@ -1,3 +1,4 @@
+import { withTiers } from "./tiers.js";
 import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
@@ -163,6 +164,15 @@ export async function getItemRedirect(itemId) {
   return d && typeof d === "object" && typeof d.itemId === "string" ? { itemId: d.itemId, choice: d.choice ?? {}, param: typeof d.param === "string" ? d.param : "" } : null;
 }
 
+// Quantity tiers (migration 0117): { priceTiers, priceTierMode } of the item, and the tiers of the combinations that have their own, put on the
+// option variants they belong to. A database without the function, or any failure, shows no tiers: the plain price is still right.
+const tiersFor = async (itemId) => {
+  try {
+    const found = await supabase.rpc("public_item_tiers", { p_item: itemId });
+    if (found.error || !found.data || typeof found.data !== "object") return null;
+    return found.data;
+  } catch { return null; }
+};
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   if (!isLiveId(itemId)) throw new NotFoundError("Item not found");
   const row = unwrap(await supabase.from("public_items").select("*").eq("id", itemId).maybeSingle());
@@ -170,7 +180,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const business = unwrap(await supabase.from("public_businesses").select("*").eq("id", row.business_id).maybeSingle());
   if (!business || (businessId && businessId !== business.id && businessId !== business.slug)) throw new NotFoundError("Item not found");
   const item = itemRow(row, business);
-  const [{ now, entries }, options] = await Promise.all([liveEntries(), optionsFor(itemId)]);
+  const [{ now, entries }, options, tiers] = await Promise.all([liveEntries(), optionsFor(itemId), tiersFor(itemId)]);
   const entry = entries.find((e) => e.item.id === itemId);
   const { discount } = entry?.sale ?? {};
   const pricing = entry
@@ -179,14 +189,14 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
       ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit, item.variants)
       : null;
   const card = cardOfBusiness(business, origin);
-  return {
+  return withTiers({
     ...item,
     ...options,
     business: card,
     pricing,
     flash: entry ? flashParts(entry, now) : null,
     offers: await viewsForItem(item.id, business.id, card)
-  };
+  }, tiers);
 }
 
 export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {}) {
