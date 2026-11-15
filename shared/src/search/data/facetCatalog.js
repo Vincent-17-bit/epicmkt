@@ -181,19 +181,22 @@ export const KIND_BY_ID = Object.fromEntries(KINDS.map((k) => [k.id, k]));
 export const COMMON_FACETS = ["brand", "price", "colour", "condition", "deals", "delivery", "shop", "town", "store"];
 
 // The colour swatches, in Amazon's order. A product's colours come from its colour option's values, else from colour words.
+// Whole words only, so "Bluetooth" is not blue, "stand" is not tan and "face cream" is not a colour. Food words that are also
+// colours (coffee, chocolate, lemon, mint, wine) are left out: a coffee table is not brown by name.
+const word = (alts) => new RegExp(`\\b(?:${alts})\\b`, "i");
 export const COLOURS = [
-  { id: "black", label: "Black", hex: "#1f2328", re: rx("black|charcoal|midnight") },
-  { id: "white", label: "White", hex: "#ffffff", re: rx("white|ivory|cream") },
-  { id: "grey", label: "Grey", hex: "#9ca3af", re: rx("gr[ae]y|silver|graphite") },
-  { id: "brown", label: "Brown", hex: "#6b4f3a", re: rx("brown|tan|mahogany|coffee|chocolate") },
-  { id: "beige", label: "Beige", hex: "#d6c7a8", re: rx("beige|sand|khaki|nude|camel") },
-  { id: "red", label: "Red", hex: "#c0262d", re: rx("\\bred\\b|maroon|wine|burgundy") },
-  { id: "pink", label: "Pink", hex: "#f4b6c2", re: rx("pink|rose|blush") },
-  { id: "orange", label: "Orange", hex: "#f28c28", re: rx("orange|peach|coral") },
-  { id: "yellow", label: "Yellow", hex: "#f6e05e", re: rx("yellow|mustard|lemon") },
-  { id: "green", label: "Green", hex: "#3c9a3c", re: rx("green|olive|camo|mint|teal") },
-  { id: "blue", label: "Blue", hex: "#24508f", re: rx("blue|navy|denim|cyan") },
-  { id: "purple", label: "Purple", hex: "#8b45d6", re: rx("purple|violet|lilac|lavender") },
-  { id: "gold", label: "Gold", hex: "#d4b45c", re: rx("\\bgold") },
-  { id: "multi", label: "Multicolour", hex: null, re: rx("multi|rainbow|print(ed)?\\b|rgb") }
+  { id: "black", label: "Black", hex: "#1f2328", re: word("black|charcoal|midnight|jet black") },
+  { id: "white", label: "White", hex: "#ffffff", re: word("white|ivory|off-white") },
+  { id: "grey", label: "Grey", hex: "#9ca3af", re: word("gr[ae]y|silver|graphite|space gr[ae]y") },
+  { id: "brown", label: "Brown", hex: "#6b4f3a", re: word("brown|mahogany|walnut|espresso") },
+  { id: "beige", label: "Beige", hex: "#d6c7a8", re: word("beige|khaki|nude|camel|taupe") },
+  { id: "red", label: "Red", hex: "#c0262d", re: word("red|maroon|burgundy|crimson|scarlet") },
+  { id: "pink", label: "Pink", hex: "#f4b6c2", re: word("pink|rose|blush|fuchsia|magenta") },
+  { id: "orange", label: "Orange", hex: "#f28c28", re: word("orange|coral|amber") },
+  { id: "yellow", label: "Yellow", hex: "#f6e05e", re: word("yellow|mustard") },
+  { id: "green", label: "Green", hex: "#3c9a3c", re: word("green|olive|camo|teal|emerald|lime green") },
+  { id: "blue", label: "Blue", hex: "#24508f", re: word("blue|navy|denim|cyan|turquoise|sky blue") },
+  { id: "purple", label: "Purple", hex: "#8b45d6", re: word("purple|violet|lilac|lavender|plum") },
+  { id: "gold", label: "Gold", hex: "#d4b45c", re: word("gold|golden|champagne") },
+  { id: "multi", label: "Multicolour", hex: null, re: word("multi|multi-?colou?r(?:ed)?|rainbow|printed|rgb") }
 ];

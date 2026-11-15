@@ -467,3 +467,34 @@
 .sizeHead { margin: 0; font-size: var(--text-sm); font-weight: 700; }
 .rangeGroup { display: flex; flex-direction: column; gap: var(--space-1); }
 .rangeHint { margin: 0; color: var(--text-muted); font-size: var(--text-xs, 0.75rem); }
+
+/* Colour: one swatch per colour family, as on big shops; the ticked ones get a ring. */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 2rem);
+  gap: var(--space-2);
+}
+.swatch {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 0.2);
+  background: var(--sw);
+  cursor: pointer;
+  padding: 0;
+}
+.swatch[data-multi] {
+  background: conic-gradient(#e11d48 0 25%, #f59e0b 0 50%, #10b981 0 75%, #3b82f6 0);
+}
+.swatch[aria-pressed="true"] {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.swatch:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.swatch:focus-visible {
+  outline: 3px solid var(--focus, var(--primary));
+  outline-offset: 2px;
+}

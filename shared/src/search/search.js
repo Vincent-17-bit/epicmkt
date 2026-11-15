@@ -65,7 +65,8 @@ export function kindOf(p) {
   return KINDS.find((k) => k.re.test(head)) ?? KINDS.find((k) => k.cats.includes(p.business?.categoryId)) ?? null;
 }
 
-function coloursOf(p) {
+/** The colour ids a product comes in (its swatches, else a colour spec, else its name), whole words only. */
+export function coloursOf(p) {
   const found = new Set();
   const add = (text) => {
     for (const c of COLOURS) if (c.re.test(text)) found.add(c.id);

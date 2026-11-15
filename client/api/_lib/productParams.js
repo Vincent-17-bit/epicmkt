@@ -31,7 +31,10 @@ export function parseRequest(searchParams) {
     min: amount(get("min")),
     max: amount(get("max")),
     categories: list(get("cat")),
-    towns: list(get("town"))
+    towns: list(get("town")),
+    // Brands and colours were missing here, so in live mode the home list ignored them; they travel like the other lists now.
+    brands: list(get("brand")),
+    colours: list(get("colour"), 14)
   };
   for (const [name, key] of Object.entries(FLAGS)) filters[name] = get(key) === "1";
   // Sizes: the same two parameters as the page address (psize, prange), read by the Size filter's own parser, which drops unknown scales and
@@ -53,6 +56,8 @@ export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize
     if (filters.max !== "" && filters.max != null) pairs.push(["max", String(filters.max)]);
     if (filters.categories?.length) pairs.push(["cat", [...new Set(filters.categories)].sort().join(",")]);
     if (filters.towns?.length) pairs.push(["town", [...new Set(filters.towns)].sort().join(",")]);
+    if (filters.brands?.length) pairs.push(["brand", [...new Set(filters.brands)].sort().join(",")]);
+    if (filters.colours?.length) pairs.push(["colour", [...new Set(filters.colours)].sort().join(",")]);
     for (const [name, key] of Object.entries(FLAGS)) if (filters[name]) pairs.push([key, "1"]);
     // Sorted, so the same sizes picked in another order are the same URL (the CDN caches by URL).
     const sized = writeSizes(new URLSearchParams(), { sizes: [...new Set(filters.sizes ?? [])].sort(), ranges: Object.fromEntries(Object.entries(filters.ranges ?? {}).sort(([a], [b]) => a.localeCompare(b))) });
