@@ -341,3 +341,23 @@ console.log("items ok");
     Object.assign(shop, before);
   }
 }
+
+// ---- "Goes well with" (C19) and the Store Selective order ----
+{
+  const api = await import("./src/index.js");
+  const { store: st } = await import("./src/store.js");
+  const find = (name) => { for (const b of st.businesses) for (const s of b.services) if (s.name === name) return { b, s }; return null; };
+  const phone = find("Samsung Galaxy A15 128GB");
+  const p1 = await api.getRelatedPage(phone.s.id, { page: 1, pageSize: 10 });
+  assert.ok(p1.items.length === 10 && p1.hasMore, "a phone has a full first page and more");
+  assert.ok(p1.items.some((i) => i.fromThisShop) && p1.items.some((i) => !i.fromThisShop), "this shop and other shops");
+  assert.ok(p1.items.filter((i) => i.fromThisShop).length >= 2, "at least 1 in 5 from this shop");
+  assert.ok(/case|protector/i.test(p1.items[0].name), "the strongest relation comes first");
+  const p2 = await api.getRelatedPage(phone.s.id, { page: 2, pageSize: 10 });
+  assert.ok(p2.items.every((i) => !p1.items.some((j) => j.id === i.id)), "page 2 repeats nothing from page 1");
+  assert.equal((await api.getRelatedPage(find("Haircut").s.id)).total, 0, "an item with no type has nothing to suggest");
+  const dress = find("Ankara maxi dress");
+  const sel = await api.getStoreSelective(dress.b.id, { excludeItemId: dress.s.id });
+  assert.equal(sel[0].name, "Ladies Ankara dress", "the most alike item of the same store comes first");
+  console.log("related ok");
+}

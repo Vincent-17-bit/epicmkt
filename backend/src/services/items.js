@@ -1,3 +1,4 @@
+import { orderStoreItems, rankRelated } from "@epicmkt/shared";
 import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
@@ -5,6 +6,7 @@ import { now } from "../clock.js";
 import { NotFoundError, ValidationError } from "../errors.js";
 import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
+import { demoRelations, demoTypeOf } from "../data/related.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
 const MAX_SPECS = 20;
@@ -276,18 +278,7 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
         offer: offerChipFor(item, business)
       };
     });
-  const rank = (row) => [
-    current?.section && row.section === current.section ? 0 : 1,
-    row.flash ? 0 : 1,
-    -Date.parse(row.createdAt)
-  ];
-  rows.sort((a, b) => {
-    const ra = rank(a);
-    const rb = rank(b);
-    for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i] - rb[i];
-    return 0;
-  });
-  return rows.slice(0, limit);
+  return orderStoreItems(current ?? null, rows).slice(0, limit);
 }
 
 // Items of the same kind as this one (head noun, not store category) from any other store: a bread finds breads and loaves, never a
@@ -384,6 +375,51 @@ export async function getItemList({ productType = null, businessId = null, minPr
     .filter((c) => (minPrice === null || (c.priceMin !== null && c.priceMin >= minPrice)) && (maxPrice === null || (c.priceMin !== null && c.priceMin <= maxPrice)));
   if (LIST_SORTS[sort]) rows.sort(LIST_SORTS[sort]);
   return { items: structuredClone(rows.slice(offset, offset + limit)), total: rows.length };
+}
+
+// "Goes well with" (C19), one page: { items, page, pageSize, hasMore, total }, ranked by the shared rankRelated exactly as the live
+// adapter does (relations first, then the same type or department; at least 1 in 5 from this shop, each marked fromThisShop).
+// The demo items get their type and department from data/related.js. An unknown item is an empty first page.
+export async function getRelatedPage(itemId, { page = 1, pageSize = 10, origin = null, signal = null } = {}) {
+  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
+  await delay();
+  if (signal?.aborted) return empty;
+  runSweep();
+  const found = locate(itemId);
+  if (!found || found.business.status !== BUSINESS_STATUS.ACTIVE) return empty;
+  const from = originOf(origin);
+  const svcOf = (business, item) => business.services.find((svc) => svc.id === item.id) ?? {};
+  const asCandidate = (business, item) => ({
+    ...item,
+    businessId: business.id,
+    ...demoTypeOf(svcOf(business, item)),
+    availability: item.status === "listed" ? "available" : "out_of_stock",
+    price: item.regularPrice,
+    business
+  });
+  const current = asCandidate(found.business, found.item);
+  const pool = [];
+  for (const business of store.businesses) {
+    if (business.status !== BUSINESS_STATUS.ACTIVE) continue;
+    business.services.forEach((svc, index) => {
+      const item = toItem(business, svc, index);
+      if (item.status === "listed" && item.id !== current.id) pool.push(asCandidate(business, item));
+    });
+  }
+  const ranked = rankRelated(current, pool, { relations: demoRelations, page, pageSize });
+  return {
+    ...ranked,
+    items: ranked.items.map(({ business, businessId, productTypeId, departmentId, availability, price, ...item }) => {
+      const sale = liveSaleFor(item, business);
+      return {
+        ...item,
+        pricing: buildPricing(item, sale),
+        flash: sale ? flashParts(item, sale) : null,
+        offer: offerChipFor(item, business),
+        business: { ...sellerCard(business, from), featured: PLAN_FEATURES[business.plan]?.featured === true }
+      };
+    })
+  };
 }
 
 // Contract v1 related items: for a fixture, the other fixtures of the same product group (a bulb finds strip lights); for any other

@@ -1,0 +1,64 @@
+.marker { display: block; height: 1px; margin-bottom: -1px; pointer-events: none; }
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--border);
+  scroll-margin-bottom: calc(6rem + var(--safe-bottom, 0px));
+}
+
+.heading { min-width: 0; }
+.title { margin: 0; font-size: var(--text-lg); font-weight: 700; line-height: 1.2; }
+.why { margin: 2px 0 0; color: var(--text-muted); font-size: var(--text-sm); line-height: 1.3; }
+
+/* Two cards side by side on a phone, more as the page widens; every card the same width so the rows line up. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 36rem) { .grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+@media (min-width: 48rem) { .grid { gap: 12px; } }
+
+/* Each entry: a one-line label row, then the card. The row is there (empty) on every card, so the cards of a row stay level. */
+.entry { display: grid; grid-template-rows: auto 1fr; gap: 4px; min-width: 0; }
+.entry > :last-child { height: 100%; }
+.label { min-height: 1.4rem; display: flex; align-items: center; }
+
+/* "From this shop" sits just above its card, so it never hides the photo's own chips (sale, offer, stock). */
+.shopTag {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.skeleton { aspect-ratio: 3 / 4.4; width: 100%; margin-top: calc(1.4rem + 4px); }
+
+.footer { display: flex; justify-content: center; min-height: 0; }
+.more {
+  min-height: var(--tap, 44px);
+  padding: 0 var(--space-5, 1.5rem);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.more:hover:not(:disabled) { background: var(--surface-2, var(--surface)); }
+.more:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.more:disabled { cursor: progress; opacity: 0.7; }
+.end { margin: 0; color: var(--text-muted); font-size: var(--text-sm); }
+
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

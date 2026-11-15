@@ -1,13 +1,20 @@
+import GoesWith from "../GoesWith.jsx";
 import SimilarItems from "../SimilarItems.jsx";
 import StoreSelective from "../StoreSelective.jsx";
 import styles from "../ItemDetail.module.css";
 
-// Similar items: the last section of the page, after the details, description, highlights, specs and the seller card.
-// The caller keys it by the item so one product's results can never show under another.
+// The recommendations at the end of the page, after the details and the seller card: first what goes with this product ("Goes well
+// with this", C19), then the same kind of product from other stores ("Similar items"). The caller keys it by the item so one
+// product's results can never show under another.
 export default function Recommend({ ctx }) {
   const { item, business } = ctx;
   if (!item) return null;
-  return <SimilarItems itemId={item.id} businessId={business.id} name={item.name} brand={item.brand ?? ""} className={styles.similar} />;
+  return (
+    <>
+      <GoesWith itemId={item.id} businessId={business.id} className={styles.similar} />
+      <SimilarItems itemId={item.id} businessId={business.id} name={item.name} brand={item.brand ?? ""} className={styles.similar} />
+    </>
+  );
 }
 
 // More from this store. Shown in the loading and gone states too, and after the description when the item is there.
