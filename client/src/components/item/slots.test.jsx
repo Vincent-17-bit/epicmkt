@@ -20,6 +20,7 @@ import TopBar from "./TopBar.jsx";
 vi.mock("../FlashBanner.jsx", () => ({ default: ({ ended }) => <div data-testid="banner" data-ended={String(ended)} /> }));
 vi.mock("../FlashStickyBar.jsx", () => ({ default: ({ visible, price }) => <div data-testid="sticky-price" data-visible={String(visible)}>{price}</div> }));
 vi.mock("../SimilarItems.jsx", () => ({ default: ({ itemId, businessId }) => <div data-testid="similar" data-item={itemId} data-business={businessId} /> }));
+vi.mock("../GoesWith.jsx", () => ({ default: ({ itemId, businessId }) => <div data-testid="goes-with" data-item={itemId} data-business={businessId} /> }));
 vi.mock("../StoreSelective.jsx", () => ({
   default: ({ excludeItemId, onSelect, onSeeAll }) => (
     <div data-testid="selective" data-exclude={excludeItemId}>
@@ -175,6 +176,7 @@ describe("item slots", () => {
       mount(<Recommend ctx={make()} />);
       expect(screen.getByTestId("similar")).toHaveAttribute("data-item", "fade");
       expect(screen.getByTestId("similar")).toHaveAttribute("data-business", "b_001");
+      expect(screen.getByTestId("goes-with")).toHaveAttribute("data-item", "fade");
     });
     it("StoreMore excludes the open item and tracks a pick", async () => {
       const ctx = make();

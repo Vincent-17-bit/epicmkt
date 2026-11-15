@@ -1,19 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { analyseName } from "@epicmkt/shared";
 import { items, logEvent } from "../api/index.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
 import HScroller from "./HScroller.jsx";
+import { useNearViewport } from "../hooks/useNearViewport.js";
 import ProductTile from "./ProductTile.jsx";
 import { Skeleton } from "@epicmkt/ui";
 import styles from "./SimilarItems.module.css";
 
 const LIMIT = 12;
 const MIN_SHOWN = 2;
-// Start fetching about a screen before the section is reached, so it is usually ready by the time it is scrolled to, and
-// never competes with the item's own data or the first paint.
-const ROOT_MARGIN = "600px 0px";
 // Two cards and a peek of the third fit a phone; very small phones still show one and a half, so there is always a
 // visible hint to swipe.
 const CELL = "clamp(148px, 42vw, 220px)";
@@ -22,27 +20,6 @@ const CELL = "clamp(148px, 42vw, 220px)";
 const roundOf = (coords) =>
   coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng) ? { lat: Math.round(coords.lat * 100) / 100, lng: Math.round(coords.lng * 100) / 100 } : null;
 
-// True once `ref` has come within ROOT_MARGIN of the viewport, and stays true. Without IntersectionObserver (very old browsers)
-// it is true at once, so the row is never lost.
-export function useNearViewport(ref) {
-  const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
-  useEffect(() => {
-    const node = ref.current;
-    if (near || !node) return undefined;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          setNear(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: ROOT_MARGIN }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [near, ref]);
-  return near;
-}
 
 // "Similar items", the last section of the product page: the same KIND of product from other stores, best match first, as the
 // same product cards the home page shows. It is a nicety, so a failed or thin result (fewer than two) renders nothing at all,

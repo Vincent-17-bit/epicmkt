@@ -3,7 +3,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { items, logEvent } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import ProductTile from "./ProductTile.jsx";
-import { useNearViewport } from "./SimilarItems.jsx";
+import { useNearViewport } from "../hooks/useNearViewport.js";
 import { Skeleton } from "@epicmkt/ui";
 import styles from "./GoesWith.module.css";
 

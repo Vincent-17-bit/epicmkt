@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -47,6 +47,8 @@ describe("ItemDetail markup", () => {
   for (const name of Object.keys(cases)) {
     it(`${name} matches the page it replaced`, async () => {
       const html = await run(ItemDetail, cases[name]);
+      // UPDATE_DOM=1 rewrites the saved pages after an intended change to the page (check the diff before committing).
+      if (process.env.UPDATE_DOM) writeFileSync(join(process.cwd(), "src/components/__dom__", `itemDetail-${name}.html`), html.replace(/></g, ">\n<"));
       expect(html.replace(/></g, ">\n<")).toBe(expected(name));
     });
   }
