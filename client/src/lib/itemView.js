@@ -1,4 +1,4 @@
-import { LABEL_SETS, formatKes, greetingProblems, labelFor, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -44,7 +44,38 @@ export const topHighlights = (groups, limit = 4) => groups.flatMap((g) => g.rows
 const isBlank = (value) => value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
 
-export function chatMessage({ item, variant, pricing, greeting }) {
+/**
+ * The quantity control an item gets: { mode, rules } for a typed item whose type counts units or measures (the type says so), else null
+ * and the page has no stepper (an item without a type, or a type with no quantity, is exactly as before).
+ */
+export function quantityInfo(item, variant = null) {
+  const mode = item?.quantityMode;
+  if (mode !== "units" && mode !== "measure") return null;
+  const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
+  const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
+  return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
+}
+
+/**
+ * What the buyer is ordering: { qty, unit (price of one), total, measure, unitLabel }. The unit price is the one the page shows (flash and
+ * sale applied); quantity tiers price the whole order by their own rule. Null when there is nothing to order (no price).
+ */
+export function orderLine({ shown, tiers = null, info = null, qty }) {
+  const one = Number.isFinite(shown?.salePrice) ? shown.salePrice : Number.isFinite(shown?.regularPrice) ? shown.regularPrice : null;
+  if (one === null && !tiers) return null;
+  const total = tiers ? priceTiered({ tiers: tiers.tiers, mode: tiers.mode, qty }).total : lineTotal(one, qty);
+  return { qty, unit: one, total, measure: info?.mode === "measure", unitLabel: info?.unit ?? null };
+}
+
+// "Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000" (a measured item: "Fresh beef, Beef steak, 1.5 kg, KES 1,125").
+export function orderMessage({ item, variant, order }) {
+  const parts = [item.name, ...(variant?.label ? String(variant.label).split(" / ") : []), order.measure ? amountText(order.qty, order.unitLabel) : `x${order.qty}`, formatKes(order.total)];
+  return `Hi, I'd like ${parts.join(", ")} on EpicMKT`;
+}
+
+export function chatMessage({ item, variant, pricing, greeting, order = null }) {
+  // A quantity other than one (or any measured amount) says what the buyer wants, with the total. Quantity 1 keeps the plain message.
+  if (order && (order.measure || order.qty !== 1) && !(typeof greeting === "string" && greeting.trim() && greetingProblems(greeting).length === 0)) return orderMessage({ item, variant, order });
   const name = variant ? `${item.name} (${variant.label})` : item.name;
   const shown = variant ?? pricing;
   // The seller's own greeting wins when they saved a valid one. {item} and {price} are filled in; it never carries links or numbers.

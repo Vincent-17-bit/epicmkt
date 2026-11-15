@@ -1,0 +1,16 @@
+.root { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
+.heading { margin: 0; font-size: 1rem; }
+.picker { display: grid; gap: var(--space-1); }
+.label { font-weight: 600; }
+.stepper { display: inline-flex; align-items: stretch; gap: var(--space-1); }
+.step, .input { min-height: 2.75rem; min-width: 2.75rem; border: 1.5px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: inherit; font: inherit; }
+.step { cursor: pointer; font-size: 1.25rem; }
+.step:disabled { opacity: 0.5; cursor: not-allowed; }
+.input { width: 6.5rem; text-align: center; font-variant-numeric: tabular-nums; }
+.step:focus-visible, .input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.total { margin: 0; font-variant-numeric: tabular-nums; }
+.hint { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .step, .input { transition: none; }
+}

@@ -185,6 +185,16 @@ const tiersFor = async (itemId) => {
     return found.data;
   } catch { return null; }
 };
+// The quantity mode of the item's product type (units, measure or none; migration 0091). No type, or any failure, means no mode: the page
+// then behaves exactly as it did before quantities, with no stepper.
+const quantityModeFor = async (typeId) => {
+  if (!typeId) return null;
+  try {
+    const found = await supabase.from("product_types").select("quantity_mode").eq("id", typeId).maybeSingle();
+    const mode = found.error ? null : found.data?.quantity_mode;
+    return mode === "units" || mode === "measure" || mode === "none" ? mode : null;
+  } catch { return null; }
+};
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   if (!isLiveId(itemId)) throw new NotFoundError("Item not found");
   const row = unwrap(await supabase.from("public_items").select("*").eq("id", itemId).maybeSingle());
@@ -192,7 +202,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   const business = unwrap(await supabase.from("public_businesses").select("*").eq("id", row.business_id).maybeSingle());
   if (!business || (businessId && businessId !== business.id && businessId !== business.slug)) throw new NotFoundError("Item not found");
   const item = itemRow(row, business);
-  const [{ now, entries }, options, tiers] = await Promise.all([liveEntries(), optionsFor(itemId), tiersFor(itemId)]);
+  const [{ now, entries }, options, tiers, quantityMode] = await Promise.all([liveEntries(), optionsFor(itemId), tiersFor(itemId), quantityModeFor(row.product_type_id)]);
   const entry = entries.find((e) => e.item.id === itemId);
   const { discount } = entry?.sale ?? {};
   const pricing = entry
@@ -204,6 +214,7 @@ export async function getItemDetail(itemId, { businessId, origin } = {}) {
   return withTiers({
     ...item,
     ...options,
+    ...(quantityMode ? { quantityMode } : {}),
     business: card,
     pricing,
     flash: entry ? flashParts(entry, now) : null,
