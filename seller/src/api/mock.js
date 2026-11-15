@@ -202,6 +202,17 @@ export const setDelivery = async ({ offers, fee = null, radiusKm = null, area = 
   Object.assign(bill.business, { delivers: v.offers, deliveryFee: v.fee, deliveryRadiusKm: v.radiusKm, deliveryArea: v.area, deliveryMinOrder: v.minOrder, deliveryNotes: v.notes });
   return deliveryInfo({ delivery: { offers: v.offers, fee: v.fee, radiusKm: v.radiusKm, area: v.area, minOrder: v.minOrder, notes: v.notes } });
 };
+// Demo twin of seller_unmet_demand: a few shoppers' asks on the demo items, so the page has something to show.
+export const getUnmetDemand = async (period = 7) => {
+  signedIn();
+  await wait();
+  if (![7, 30].includes(period)) throw new ApiError("invalid_period");
+  const rows = [
+    { itemId: "demo-1", itemName: "Samsung Galaxy S26", filters: { brand: "samsung", storage: "512 gb" }, count: period === 30 ? 19 : 12 },
+    { itemId: "demo-1", itemName: "Samsung Galaxy S26", filters: { colour: "pink" }, count: period === 30 ? 7 : 3 }
+  ];
+  return { period, total: rows.reduce((n, r) => n + r.count, 0), rows };
+};
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {
   writer();

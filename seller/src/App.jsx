@@ -10,6 +10,7 @@ import Notifications from "./pages/business/Notifications.jsx";
 import Questions from "./pages/business/Questions.jsx";
 import Exceptions from "./pages/business/Exceptions.jsx";
 import Flash from "./pages/business/Flash.jsx";
+import Demand from "./pages/business/insights/Demand.jsx";
 import Offers from "./pages/business/Offers.jsx";
 import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
@@ -52,6 +53,7 @@ export default function App() {
           </Route>
           <Route path="flash" element={<Flash />} />
           <Route path="offers" element={<Offers />} />
+          <Route path="demand" element={<Demand />} />
           <Route path="preview" element={<Preview />} />
           <Route path="qr" element={<QrPoster />} />
           <Route path="gallery" element={<Gallery />} />

@@ -11,6 +11,7 @@ export const SELLER_API = [
   "saveWeeklyHours",
   "setLocation",
   "setDelivery",
+  "getUnmetDemand",
   "requestChange",
   "cancelChange",
   "listChanges",

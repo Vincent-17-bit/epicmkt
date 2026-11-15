@@ -569,3 +569,10 @@ Entry format:
 - Seller: Settings > Delivery (switch, fee, distance, minimum order, area, notes, a preview of what buyers read). `api.setDelivery` in live and mock.
 - Buyer: the item page's Delivery row shows no delivery (pickup line and Directions), delivers inside / outside / unknown, free or priced, with a live-region announcement and "Use my location" / "Choose your town" (only on a tap; nothing asks the browser by itself). A payload with no `delivery` object shows nothing, so older pages are unchanged.
 - Not done: delivery fee per order, couriers, address entry (out of scope). The item list payloads (`public_items`) do not carry the shop's delivery; the item page reads it from the business.
+
+## A22 / B23 / C21 / C30: unmet demand (migration 0115)
+- New table `unmet_demand` (one row per shopper hash, item, filter and day) and RPCs `log_unmet_demand`, `seller_unmet_demand(period)` and `admin_unmet_demand(period, category)`. Period is 7 or 30.
+- `log_unmet_demand` sends filters only (never a name or device id), is rate limited (12/min per shopper, 300/min overall) and fails silently.
+- Shared: `demand.js` (`noMatch`, `demandLine`, `demandSuggestion`, `demandCsv`).
+- Buyer: no-match box on the item page offers the closest combinations and a "Let the seller know" button.
+- Seller: `/business/demand`. Admin: `/admin/demand` with CSV export.

@@ -1,0 +1,10 @@
+.periods { display: inline-flex; gap: var(--space-2); flex-wrap: wrap; }
+.period { min-height: 2.75rem; padding: 0 var(--space-4); border: 1.5px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+.period[aria-checked="true"] { border-color: var(--text); font-weight: 600; box-shadow: inset 0 -3px 0 var(--text); }
+.period:focus-visible { outline: 2px solid var(--focus-ring, currentColor); outline-offset: 2px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-3); }
+.row { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; justify-content: space-between; padding-block: var(--space-3); border-top: 1px solid var(--border); }
+.row:first-child { border-top: 0; }
+.line, .tip { margin: 0; }
+.tip { color: var(--text-muted); }
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

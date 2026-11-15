@@ -424,3 +424,19 @@ export async function logContactEvent({ businessId, type, itemId = null }) {
   store.events.push({ businessId, type, itemId, at: new Date().toISOString() });
   return { ok: true };
 }
+
+// Demo twin of log_unmet_demand: one row per item and filter set for the session, never a person. Returns { ok } and nothing else.
+const unmet = new Map();
+export async function logUnmetDemand({ businessId, itemId, filters }) {
+  const clean = {};
+  for (const [k, v] of Object.entries(filters && typeof filters === "object" ? filters : {})) {
+    if (!/^[a-z][a-z0-9-]{0,29}$/.test(k) || typeof v !== "string" || !v.trim() || v.length > 40) return { ok: false };
+    clean[k] = v.trim().toLowerCase().replace(/\s+/g, " ");
+  }
+  const keys = Object.keys(clean).sort();
+  if (keys.length < 1 || keys.length > 6 || !businessId || !itemId) return { ok: false };
+  const key = `${businessId}|${itemId}|${keys.map((k) => `${k}=${clean[k]}`).join("|")}|${new Date().toISOString().slice(0, 10)}`;
+  unmet.set(key, { businessId, itemId, filters: clean });
+  return { ok: true };
+}
+export const unmetDemandCount = () => unmet.size;

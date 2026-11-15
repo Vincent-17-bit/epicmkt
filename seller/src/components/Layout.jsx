@@ -1,5 +1,5 @@
 import { NavLink, Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { faBell, faBolt, faCalendarXmark, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faImages, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faBolt, faCalendarXmark, faMagnifyingGlassChart, faCircleInfo, faCircleQuestion, faCreditCard, faEllipsis, faGear, faImages, faMoon, faQrcode, faRightFromBracket, faStore, faSun, faTag, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -102,7 +102,7 @@ export default function Layout() {
   // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
   // The bare /business address is allowed so it can send a suspended seller on to Notifications.
   const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname) || /^\/business\/?$/.test(pathname);
-  const moreActive = /^\/business\/(exceptions|flash|offers|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
+  const moreActive = /^\/business\/(exceptions|flash|offers|demand|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -153,6 +153,7 @@ export default function Layout() {
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>
+              <Item to="/business/demand" icon={faMagnifyingGlassChart}>What shoppers want</Item>
               <Item to="/business/gallery" icon={faImages}>Gallery</Item>
               <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>

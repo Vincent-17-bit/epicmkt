@@ -711,6 +711,10 @@ export const mergeOptionValue = (from, into) => detailRpc("admin_merge_option_va
 // Category kit import (migration 0112): adds an approved value, or finds the one there. -> { created, value }
 export const importOptionValue = (kind, label, fields = null) => detailRpc("admin_import_option_value", { p_kind: kind, p_label: label, p_fields: fields });
 
+// What shoppers asked for and did not find (migration 0115), across the platform. period is 7 or 30; category is optional.
+// -> { period, total, rows: [{ categoryId, productTypeId, filters, count, shops: [{ id, slug, name, count }] }] }
+export const getUnmetDemand = (period = 7, category = null) => detailRpc("admin_unmet_demand", { p_period: period, p_category: category });
+
 // ---- Size charts and the shoe conversion table (Sizes 1.9, migration 0093_size_chart_types_shoe_conversion.sql) ----
 // listSizeCharts -> [{ id, name, category, unit, columns, rows, active, updated_at, product_type_ids, items_using }]
 export const listSizeCharts = () => detailRpc("admin_size_charts_list");
