@@ -67,6 +67,7 @@ export const ownItem = (i) => ({
 export const flashSale = (s) => ({
   id: s.id, itemId: s.item_id, itemName: s.items?.name ?? s.item_name ?? "", regularPrice: s.items?.price === undefined || s.items?.price === null ? null : Number(s.items.price),
   headline: s.headline ?? null, startsAt: s.starts_at, endsAt: s.ends_at, discountType: s.discount_type, discountValue: Number(s.discount_value),
+  variantTarget: s.variant_target ?? "all", variantOverrides: Array.isArray(s.variant_overrides) ? s.variant_overrides : [],
   quantityNote: s.quantity_note ?? null, afterEnd: s.after_end, status: s.status, endedAt: s.ended_at ?? null, endedReason: s.ended_reason ?? null, createdAt: s.created_at,
 });
 

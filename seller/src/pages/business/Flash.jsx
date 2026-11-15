@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import FlashOptions from "./FlashOptions.jsx";
+import { flashOptionTable } from "@epicmkt/shared";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, formatKes, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
@@ -41,7 +43,12 @@ function SaleForm({ items, quota, onDone, onCancel }) {
   const [afterEnd, setAfterEnd] = useState("keep");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [target, setTarget] = useState("all");
+  const [chosen, setChosen] = useState({});
   const item = items.find((i) => i.id === itemId);
+  // An item with options can be put on sale for every option or only some (migration 0095); the read is the same one the editor uses.
+  const optionsRead = useQuery({ queryKey: ["itemOptions", itemId], queryFn: () => api.getItemOptions(itemId), enabled: Boolean(itemId), retry: false, staleTime: 0 });
+  const options = optionsRead.data?.axes?.length > 0 ? optionsRead.data : null;
   const live = schedule ? start : "";
   const startMs = live ? Date.parse(fromLocalInput(live)) : serverNow();
   const price = item && Number(value) > 0 ? flashPrice(type, Number(value), item.price) : null;
@@ -54,9 +61,13 @@ function SaleForm({ items, quota, onDone, onCancel }) {
     if (!item) return setError(errorText({ code: "item_not_found" }));
     const check = validateFlashSale({ itemPrice: item.price, discountType: type, discountValue: value, startsAt: live ? fromLocalInput(live) : null, endsAt: fromLocalInput(end), headline, quantityNote: note, afterEnd }, serverNow());
     if (!check.ok) return setError(errorText({ code: check.error }));
+    if (options) {
+      const table = flashOptionTable(options, { discountType: type, discountValue: value, variantTarget: target, variantOverrides: target === "chosen" ? Object.entries(chosen).map(([combo, c]) => ({ combo, type: c.type, value: Number(c.value) })) : [] });
+      if (!table.ok) return setError(errorText({ code: table.error }));
+    }
     setBusy(true);
     try {
-      await api.createFlashSale({ itemId, ...check.value });
+      await api.createFlashSale({ itemId, ...check.value, ...(options && { variantTarget: target, variantOverrides: target === "chosen" ? Object.entries(chosen).map(([combo, c]) => ({ combo, type: c.type, value: Number(c.value) })) : [] }) });
       await onDone();
     } catch (err) {
       setError(errorText(err));
@@ -86,8 +97,10 @@ function SaleForm({ items, quota, onDone, onCancel }) {
           <label className={ui.label} htmlFor="fs-value">{type === "percent" ? "Percent (1 to 99)" : type === "amount_off" ? "Amount off (KES)" : "Sale price (KES)"}</label>
           <input id="fs-value" className={ui.input} type="number" inputMode="numeric" min="1" value={value} onChange={(e) => setValue(e.target.value)} />
         </div>
-        {price !== null && <p className={styles.preview} data-testid="fs-preview">Customers pay {formatKes(price)} instead of {formatKes(item.price)}</p>}
+        {price !== null && !options && <p className={styles.preview} data-testid="fs-preview">Customers pay {formatKes(price)} instead of {formatKes(item.price)}</p>}
       </fieldset>
+
+      {options && <FlashOptions options={options} sale={{ type, value }} target={target} onTarget={setTarget} chosen={chosen} onChosen={setChosen} />}
 
       <fieldset className={styles.fieldset}>
         <legend>When</legend>
@@ -177,6 +190,7 @@ function SaleRow({ sale, now, onChanged }) {
           <span className={`${ui.pill} ${phase === "live" ? ui.tone_ok : phase === "scheduled" ? ui.tone_info : ui.tone_warning}`}>{phase === "live" ? "Live" : phase === "scheduled" ? "Scheduled" : phase === "cancelled" ? "Cancelled" : "Ended"}</span>
         </h2>
         <p>{discount}{price !== null && ` (${formatKes(price)})`}{sale.headline && `, ${sale.headline}`}</p>
+        {sale.variantTarget === "chosen" && sale.variantOverrides?.length > 0 && <p className={styles.note} data-testid="flash-options-note">On {sale.variantOverrides.length} {sale.variantOverrides.length === 1 ? "option" : "options"} only</p>}
         {sale.quantityNote && <p className={styles.note}>{sale.quantityNote}</p>}
         {phase === "live" && <p>Ends in <span className={styles.timer} data-testid="flash-timer">{remainingText(Date.parse(sale.endsAt) - now)}</span></p>}
         {phase === "scheduled" && <p>Starts {stamp(sale.startsAt)} and runs until {stamp(sale.endsAt)}</p>}

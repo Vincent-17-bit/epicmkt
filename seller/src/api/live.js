@@ -560,12 +560,13 @@ export const getFlashQuota = async () => {
   const { now } = await getServerTime();
   return flashQuota(sales, sub.limits[sub.business.planKey], Date.parse(now));
 };
-export const createFlashSale = async ({ itemId, discountType, discountValue, startsAt, endsAt, headline, quantityNote, afterEnd }) => {
+export const createFlashSale = async ({ itemId, discountType, discountValue, startsAt, endsAt, headline, quantityNote, afterEnd, variantTarget, variantOverrides }) => {
   const business = await flashRows(need().from("businesses").select("id").maybeSingle());
   if (!business) throw new ApiError("not_a_seller");
   const row = await flashRows(need().from("flash_sales").insert({
     business_id: business.id, item_id: itemId, discount_type: discountType, discount_value: discountValue, starts_at: startsAt ?? new Date().toISOString(),
     ends_at: endsAt, headline: headline || null, quantity_note: quantityNote || null, after_end: afterEnd,
+    ...(variantTarget === "chosen" && { variant_target: "chosen", variant_overrides: variantOverrides ?? [] }),
   }).select("*, items(name, price)").single());
   return shape.flashSale(row);
 };
