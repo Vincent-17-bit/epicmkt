@@ -616,3 +616,10 @@ Entry format:
 - Client: `items.getView3d(itemId)` returns `{view3d, view3dByOption}` with urls (`resolveMedia3d`). Item options render a "View in 3D" button; model falls back to spin, then to photos. Reduced motion turns auto-turn off.
 - Seller: `getItemMedia3d`, `uploadMedia3d`, `removeMedia3d` (contract, live, mock). A 3D view belongs to the whole item or to exactly one option value; a poster is required; model ≤ 15 MB, spin 12–72 pictures.
 - No database change (uses migration 0101 and the existing edge functions).
+
+## Seeds A24–A28: product types for fashion, electronics, cyber, food and health, home and auto
+
+- Migration 0120 adds `product_types.extras jsonb` (object): `tiers`, `priceGrid`, `compat`, `sizeChart`, `open`, `measureUnit`, `dimensionProfile`, `dimensionsPerOption`, `capacityByStyle`, `packs`, `priceRule`.
+- `validateProductType(type)` in shared (`{ ok, errors }`): axes (at most 3, scales exist, `dependsOn` names an earlier axis), spec rows (at most four required), tier shapes through `validateTiers`.
+- `scripts/seeds/{fashion,electronics,cyber,foodHealth,homeAuto}.mjs` (111 types), `scripts/seeds/index.mjs` (`ALL_TYPES`, `seedProductTypes(db)`), `npm run seed:types`. Idempotent: upsert by id, missing departments created, an admin's `active = false` is kept.
+- Where a table lists more than four required rows, the axes carry the first ones (colour, size, storage ...) and the rest of the spec rows are recommended.

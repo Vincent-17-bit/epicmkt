@@ -23,6 +23,7 @@
     "sync:shared": "node scripts/sync-shared.mjs",
     "migrate:images": "node --env-file=scripts/.env scripts/migrate-images-to-cloudinary.mjs",
     "test:tz": "node scripts/test-tz.mjs",
+    "seed:types": "node --env-file=scripts/.env scripts/seed-types.mjs",
     "seed:sellers": "node --env-file=scripts/.env scripts/seed-sellers.mjs",
     "test:shared": "node --test \"shared/src/**/*.test.js\" \"scripts/*.test.mjs\" \"seller/src/{api,lib}/*.test.js\" \"backend/src/**/*.test.js\"",
     "test:db": "node --test --test-concurrency=1 \"supabase/tests/*.test.mjs\"",

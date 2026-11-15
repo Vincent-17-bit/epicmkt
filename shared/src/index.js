@@ -44,6 +44,7 @@ export * from "./openValues.js";
 
 // Selling restrictions and type requests (A08).
 export * from "./types/restrictions.js";
+export * from "./types/validate.js";
 
 // A05: size charts and shoe conversion (convertShoe, cleanShoeConversion, shoeChartFrom, shoeTable, pickSizeChart, SEED_SIZE_CHARTS).
 export * from "./sizeCharts.js";
