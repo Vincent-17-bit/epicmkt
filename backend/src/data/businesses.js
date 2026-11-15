@@ -9,6 +9,9 @@ const week = (weekday, sat = weekday, sun = null) => ({
   mon: weekday, tue: weekday, wed: weekday, thu: weekday, fri: weekday, sat, sun
 });
 
+// Item photos with real ids (option values point at them with mediaId): [[id, hue, caption], ...].
+const photos = (list) => list.map(([id, hue, caption]) => ({ id, url: serviceArt(hue, caption), caption }));
+
 const gallery = (hue, labels) =>
   labels.map((caption, i) => {
     const h = (hue + i * 28) % 360;
@@ -627,9 +630,29 @@ export const businesses = [
         }
       },
       {
-        name: "Women's sandals", priceKes: 1300, sizeChartId: "chart-shoes-eu", showStockCount: true,
+        name: "Ankara maxi dress", priceKes: 2200, sizeChartId: "chart-tops",
+        description: "Floor-length Ankara maxi dress in two prints, lined bodice and side pockets. Sizes S to XL; check the size chart for your bust, waist and hip.",
+        images: photos([["a1b2c3d4-0001-4000-8000-000000000001", 335, "Ankara dress"], ["a1b2c3d4-0001-4000-8000-000000000002", 220, "Blue print"], ["a1b2c3d4-0001-4000-8000-000000000003", 2, "Red print"]]),
+        // Each print shows its own photo; XL costs more and L is on offer, so the price follows the size chosen.
         optionAxes: [
-          { key: "color", label: "Colour", display: "swatch", values: [{ id: "tan", label: "Tan", color: "#c8a27a" }, { id: "black", label: "Black", color: "#1b1b1b" }] },
+          { key: "color", label: "Print", display: "swatch", values: [{ id: "blue", label: "Blue print", color: "#2453a6", mediaId: "a1b2c3d4-0001-4000-8000-000000000002" }, { id: "red", label: "Red print", color: "#b3261e", mediaId: "a1b2c3d4-0001-4000-8000-000000000003" }] },
+          { key: "size", label: "Size", display: "button", values: [{ id: "s", label: "S" }, { id: "m", label: "M" }, { id: "l", label: "L" }, { id: "xl", label: "XL" }] }
+        ],
+        optionVariants: [
+          { choice: { color: "blue", size: "s" }, price: 2200, stock: 5 },
+          { choice: { color: "blue", size: "m" }, price: 2200, stock: 8 },
+          { choice: { color: "blue", size: "l" }, price: 2200, salePrice: 1900, stock: 3, status: "limited_stock" },
+          { choice: { color: "blue", size: "xl" }, price: 2500, stock: 4 },
+          { choice: { color: "red", size: "m" }, price: 2300, stock: 6 },
+          { choice: { color: "red", size: "l" }, price: 2300, stock: 6 },
+          { choice: { color: "red", size: "xl" }, price: 2600, stock: 2, status: "limited_stock" }
+        ],
+      },
+      {
+        name: "Women's sandals", priceKes: 1300, sizeChartId: "chart-shoes-eu", showStockCount: true,
+        images: photos([["a1b2c3d4-0002-4000-8000-000000000001", 30, "Women's sandals"], ["a1b2c3d4-0002-4000-8000-000000000002", 35, "Tan sandals"], ["a1b2c3d4-0002-4000-8000-000000000003", 250, "Black sandals"]]),
+        optionAxes: [
+          { key: "color", label: "Colour", display: "swatch", values: [{ id: "tan", label: "Tan", color: "#c8a27a", mediaId: "a1b2c3d4-0002-4000-8000-000000000002" }, { id: "black", label: "Black", color: "#1b1b1b", mediaId: "a1b2c3d4-0002-4000-8000-000000000003" }] },
           { key: "size", label: "Size", display: "button", values: [{ id: "38", label: "38" }, { id: "39", label: "39" }, { id: "40", label: "40" }] }
         ],
         optionVariants: [

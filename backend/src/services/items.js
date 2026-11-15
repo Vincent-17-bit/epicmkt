@@ -1,4 +1,4 @@
-import { rankRelated, kindOf } from "@epicmkt/shared";
+import { orderStoreItems, rankRelated, kindOf } from "@epicmkt/shared";
 import { DEMO_RELATIONS } from "../data/relations.js";
 import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
@@ -278,18 +278,7 @@ export async function getStoreSelective(businessId, { excludeItemId, limit = 12 
         offer: offerChipFor(item, business)
       };
     });
-  const rank = (row) => [
-    current?.section && row.section === current.section ? 0 : 1,
-    row.flash ? 0 : 1,
-    -Date.parse(row.createdAt)
-  ];
-  rows.sort((a, b) => {
-    const ra = rank(a);
-    const rb = rank(b);
-    for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i] - rb[i];
-    return 0;
-  });
-  return rows.slice(0, limit);
+  return orderStoreItems(current ?? null, rows).slice(0, limit);
 }
 
 // Items of the same kind as this one (head noun, not store category) from any other store: a bread finds breads and loaves, never a

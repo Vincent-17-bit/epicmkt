@@ -665,3 +665,8 @@ Entry format:
 - The switch sits under all the options, not beside one axis's values (`axisKey` is stored for a later layout).
 - Closes `docs/requests/2026-11-07-b07-to-data-custom-size-storage.md`.
 - Seller: the hidden file inputs of the media manager now have names ("Choose photos or videos", "Take a photo", "Record a video").
+
+## Store Selective order
+
+- Store Selective (more from this store) orders the store's items by the shared `orderStoreItems`: same section, then name likeness to the item being viewed (another Ankara dress before a jacket), then flash sale, then newest. Demo and live alike.
+- C19 ("Recommended", `items.getRelated`) is the version from the product search branch; an earlier separate "Goes well with this" section was folded into it when the two were merged, so the page has one recommendations section.

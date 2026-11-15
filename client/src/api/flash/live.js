@@ -1,5 +1,5 @@
 import { withTiers } from "./tiers.js";
-import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, orderStoreItems, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -248,18 +248,8 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
       const pricing = cardPricing(item, entry);
       return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
-  const rank = (row) => [
-    current?.section && row.section === current.section ? 0 : 1,
-    row.flash ? 0 : 1,
-    -Date.parse(row.createdAt)
-  ];
-  shaped.sort((a, b) => {
-    const ra = rank(a);
-    const rb = rank(b);
-    for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i] - rb[i];
-    return 0;
-  });
-  return shaped.slice(0, limit);
+  // The closest to the item being viewed first (shared, so the demo orders the same way).
+  return orderStoreItems(current ?? null, shaped).slice(0, limit);
 }
 
 const SIMILAR_STORES = 100;

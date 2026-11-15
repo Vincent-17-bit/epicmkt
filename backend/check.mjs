@@ -341,3 +341,14 @@ console.log("items ok");
     Object.assign(shop, before);
   }
 }
+
+// ---- Store Selective order ----
+{
+  const api = await import("./src/index.js");
+  const { store: st } = await import("./src/store.js");
+  const find = (name) => { for (const b of st.businesses) for (const s of b.services) if (s.name === name) return { b, s }; return null; };
+  const dress = find("Ankara maxi dress");
+  const sel = await api.getStoreSelective(dress.b.id, { excludeItemId: dress.s.id });
+  assert.equal(sel[0].name, "Ladies Ankara dress", "the most alike item of the same store comes first");
+  console.log("store selective order ok");
+}

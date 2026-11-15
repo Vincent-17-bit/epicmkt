@@ -1,7 +1,7 @@
 # Wire `items.getRelated(itemId, page)` to the live adapter
 
 - From: 8.1      - To: client (Prompt 8.5)      - Date: 2026-11-14
-- Status: open
+- Status: done (2026-11-15): `items.getRelated(itemId, { page })` in the client, live via `related_item_candidates` + `rankRelated`, demo via `getRelatedPage`; shown as "Recommended with this item" (C19).
 - Contract: v1, "8.1" in docs/contracts/CHANGES.md
 
 ## Need
