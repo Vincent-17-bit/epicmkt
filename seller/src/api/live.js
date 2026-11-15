@@ -283,6 +283,48 @@ export const getMediaLimits = async () => {
   const cap = (n) => (n == null ? null : Number(n));
   return { photos: { used: 0, max: cap(l.photosPerItem) }, videos: { used: 0, max: cap(l.videosPerItem) } };
 };
+// 3D views (migration 0101). A 3D asset is a model (.glb), the frames of a photo spin, or the poster that stands in while the view loads.
+// It belongs to the whole item (optionIds []) or to one option value (such as a colour).
+//   getItemMedia3d(itemId) -> { media3d: [{ id, path, role, sort, optionIds, size, width, height }], issues: [{ code, scope }], hasView, limits }
+export const getItemMedia3d = (itemId) => rpc("seller_item_media3d", { p_item: itemId });
+const POSTER_EXT = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const TICKET_ERRORS = { too_large: "model_too_large", unsupported_type: "unsupported_type", limit_reached: "media3d_limit", too_many_pending: "media3d_limit" };
+//   1. seller-media-ticket   checks type and size from what we declare, picks the file id, and signs one upload.
+//   2. the file goes straight to the bucket (model) or to Cloudinary (frame, poster).
+//   3. seller-media3d-finalize   reads the real bytes back and attaches the asset to the item.
+// role: "model-glb" | "spin-frame" | "poster". `position` places a spin frame (0-based). Cancel with `signal`.
+export const uploadMedia3d = async (itemId, { role, file, optionIds = [], position }, { signal, onProgress } = {}) => {
+  const type = role === "model-glb" ? "glb" : POSTER_EXT[file?.type];
+  if (!type) throw new ApiError("unsupported_type");
+  onProgress?.(null, "preparing");
+  let ticket;
+  try {
+    ticket = await raceAbort(fn("seller-media-ticket", { kind: role, itemId, type, size: file.size, optionIds }), signal);
+  } catch (e) {
+    throw TICKET_ERRORS[e?.code] ? new ApiError(TICKET_ERRORS[e.code]) : e;
+  }
+  let path;
+  let cloudinary;
+  if (ticket.token) {
+    path = ticket.path;
+    const stored = await raceAbort(need().storage.from(MEDIA_BUCKET).uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: ticket.contentType ?? "model/gltf-binary" }), signal);
+    if (stored?.error) throw new ApiError("file_not_uploaded", stored.error.message);
+  } else {
+    path = ticket.publicId;
+    cloudinary = hostedFacts(await sendToCloudinary(ticket, file, { signal, onProgress: onProgress ? (f) => onProgress(f, "uploading") : undefined }));
+  }
+  onProgress?.(1, "finishing");
+  try {
+    await raceAbort(fn("seller-media3d-finalize", { itemId, path, optionIds, ...(position === undefined ? {} : { position }), ...(cloudinary ? { cloudinary } : {}) }), signal);
+  } catch (e) {
+    if (e?.code === "already_attached") return { path };
+    throw TICKET_ERRORS[e?.code] ? new ApiError(TICKET_ERRORS[e.code]) : e;
+  }
+  return { path };
+};
+// A 3D row is removed like a photo: delete the row, then the file follows (the database queues it).
+export const removeMedia3d = (path) => removeItemPhoto(path);
+
 // `paths` must be every path of the item, once each, in the new order. Anything else is refused and nothing changes.
 export const reorderItemMedia = async (itemId, paths) => {
   const r = await rpc("seller_reorder_item_media", { p_item: itemId, p_paths: paths });

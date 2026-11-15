@@ -1,10 +1,10 @@
 import { withTiers } from "./tiers.js";
-import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, similarTerms, variantPricing } from "@epicmkt/shared";
+import { PLAN_FEATURES, emptyOptions, flashPrice, isListed, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
+import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -162,6 +162,16 @@ export async function getItemRedirect(itemId) {
   if (found.error) return null;
   const d = found.data;
   return d && typeof d === "object" && typeof d.itemId === "string" ? { itemId: d.itemId, choice: d.choice ?? {}, param: typeof d.param === "string" ? d.param : "" } : null;
+}
+
+// The 3D views of an item (migration 0101): { view3d, view3dByOption } with urls, or null when there is none or anything fails. A failure
+// is "no 3D view": the item page is complete without it.
+export async function getItemView3d(itemId) {
+  if (!isLiveId(itemId)) return null;
+  const found = await supabase.rpc("public_item_media3d", { p_item: itemId });
+  if (found.error || !found.data) return null;
+  const view = resolveMedia3d(found.data, (path) => mediaUrl(path));
+  return view.view3d || Object.keys(view.view3dByOption).length ? view : null;
 }
 
 // Quantity tiers (migration 0117): { priceTiers, priceTierMode } of the item, and the tiers of the combinations that have their own, put on the

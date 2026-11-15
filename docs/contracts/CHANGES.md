@@ -609,3 +609,10 @@ Entry format:
 - `seller_set_item_types(p_ids uuid[], p_type text) -> { updated, skipped: [{ id, reason }] }` (reasons `has_type`, `needs_details`, `not_found`; errors `no_items`, `too_many_items`, `unknown_product_type`, `type_not_allowed`). Only `product_type_id` changes. A live item the type's required rows would block is skipped, not hidden.
 - Shared (`shared/src/seller/bulk.js`): `typeTemplateHeaders`, `typeTemplateCsv`, `importRowsToFinish`, `setTypeReport`. Seller API: `setItemTypes`.
 - Not done: imported rows do not get a type at import (the server import has no type field); photos cannot be pasted into the table.
+
+## 3D views: viewer, model and spin uploads (B13, B14, C14–C16)
+
+- `@epicmkt/ui/view3d` (+ `/spin`, `/model`): engine contract `createEngine`, `mount`, `setZoom` (1–4, step 0.5), `rotateBy`, `setAutoRotate`, `getState`, `destroy`. New dependency `three ^0.170.0` in `ui`; it is loaded only when a shopper opens the viewer (three chunk 688 kB, 177 kB gzip; engine chunks ~4 kB each).
+- Client: `items.getView3d(itemId)` returns `{view3d, view3dByOption}` with urls (`resolveMedia3d`). Item options render a "View in 3D" button; model falls back to spin, then to photos. Reduced motion turns auto-turn off.
+- Seller: `getItemMedia3d`, `uploadMedia3d`, `removeMedia3d` (contract, live, mock). A 3D view belongs to the whole item or to exactly one option value; a poster is required; model ≤ 15 MB, spin 12–72 pictures.
+- No database change (uses migration 0101 and the existing edge functions).
