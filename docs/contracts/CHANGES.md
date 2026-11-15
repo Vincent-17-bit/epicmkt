@@ -583,3 +583,8 @@ Entry format:
 - Shared: `unitPrice(price, size)` ("KES 150 per kg", "KES 4 per L"), `similarKey`, `similarGroups`, `suggestAxes`, `mergePreview`.
 - Seller: `/business/catalog/merge`. Buyer: old item links redirect, and the Header slot shows the unit price line for weight and volume sizes.
 - Not done: photos of the hidden items are not moved to the combined item; the item list payloads do not show "From" yet (C20).
+
+## B11 / C13: quantity tiers, editor and display (migration 0117)
+- New reads: `public_item_tiers(item)` (anon, public items only) and `seller_item_tiers(item)` (owner) return `{ tiers, mode, variants: [{ choice, tiers }] }`. Saving already worked (`seller_save_item` priceTiers / priceTierMode since 0094).
+- Seller: price step shows "Quantity prices" for the price type "Starting from" (whole order or each band, up to 10 rows, preview "50 pages = KES 350 (whole) or KES 380 (graduated)"). Tiers of single combinations are read and kept but not edited yet.
+- Buyer: item page shows the tier table with the buyer's tier marked, a quantity box with the total, and "Add N more for KES X each". The live detail carries `priceTiers`, `priceTierMode` and `optionVariants[].priceTiers`.

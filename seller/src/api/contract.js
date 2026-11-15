@@ -12,6 +12,7 @@ export const SELLER_API = [
   "setLocation",
   "setDelivery",
   "getUnmetDemand",
+  "getItemTiers",
   "getSimilarGroups",
   "mergeItems",
   "undoMerge",

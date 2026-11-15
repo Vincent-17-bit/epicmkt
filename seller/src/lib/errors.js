@@ -66,6 +66,8 @@ const MESSAGES = {
   already_undone: "That combination was already undone.",
   merge_expired: "The 24 hours to undo this have passed. Edit the item's options instead.",
   merge_edited: "The combined item's options were changed since, so it cannot be undone. Edit it instead.",
+  invalid_price_tiers: "Check the quantity prices: the first starts at 1, each starts after the one before, and every price is a whole number of KES 1 or more.",
+  tiers_need_from_price: "Quantity prices need the price type “Starting from”.",
   item_not_found: "Choose one of your items.",
   item_has_sale: "This item already has a flash sale in that time.",
   invalid_window: "Choose an end time after the start.",

@@ -482,3 +482,13 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 }
 .yesNo { display: flex; flex-wrap: wrap; gap: var(--space-4); }
 .yesNo label { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: 2.75rem; }
+
+/* Quantity prices (B11) */
+.modeRow { display: flex; gap: var(--space-2); align-items: flex-start; min-height: 2.75rem; padding-block: var(--space-1); }
+.modeRow input { margin-top: 0.3rem; width: 1.25rem; height: 1.25rem; flex: none; }
+.tierTable { width: 100%; border-collapse: collapse; }
+.tierTable th { text-align: left; padding: var(--space-2); font-weight: 600; }
+.tierTable td { padding: var(--space-1) var(--space-2); vertical-align: top; }
+.errorList { margin: 0; padding-left: var(--space-5); color: var(--danger-text); display: grid; gap: var(--space-1); }
+.errorText { margin: 0; color: var(--danger-text); }
+.srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
