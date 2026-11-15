@@ -84,3 +84,6 @@ export * from "./demand.js";
 export * from "./unitPrice.js";   // A21
 export * from "./mergeItems.js";   // A21
 export * from "./browse.js";   // A23
+
+// Product search: Amazon-style results with per-kind filters (search page).
+export * from "./search/index.js";

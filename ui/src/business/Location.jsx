@@ -2,7 +2,7 @@ import { faMap } from "@fortawesome/free-solid-svg-icons";
 import { actionProps, isPreview } from "../preview.js";
 import Button from "../components/Button.jsx";
 import BusinessSection from "./BusinessSection.jsx";
-import { mapSrc } from "./groupServices.js";
+import ShopMap from "./ShopMap.jsx";
 import styles from "./Location.module.css";
 
 const external = { target: "_blank", rel: "noopener noreferrer" };
@@ -13,16 +13,13 @@ export default function Location({ name, lat, lng, directionsHref, mode = "live"
 
   return (
     <BusinessSection title="Location" id="location">
-      <div className={styles.map}>
-        <iframe
-          title={`Map showing ${name}`}
-          src={mapSrc(lat, lng)}
-          loading="lazy"
-          referrerPolicy="no-referrer"
-          className={styles.mapFrame}
-          {...(preview ? { inert: "" } : {})}
-        />
-      </div>
+      {preview ? (
+        <div {...{ inert: "" }}>
+          <ShopMap name={name} lat={lat} lng={lng} className={styles.mapBox} />
+        </div>
+      ) : (
+        <ShopMap name={name} lat={lat} lng={lng} className={styles.mapBox} />
+      )}
       <div className={styles.mapActions}>
         <Button as="a" variant="secondary" icon={faMap} {...act.link(directionsHref, onDirections, external)}>
           View on map

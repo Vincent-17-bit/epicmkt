@@ -1,0 +1,32 @@
+.map {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  /* Streets drawn in CSS: what shows while the map loads, or if it cannot load. */
+  background:
+    linear-gradient(90deg, transparent 47%, var(--surface) 47% 53%, transparent 53%) 0 0 / 7rem 7rem,
+    linear-gradient(0deg, transparent 47%, var(--surface) 47% 53%, transparent 53%) 0 0 / 5rem 5rem,
+    linear-gradient(35deg, transparent 49%, var(--border) 49% 51%, transparent 51%) 0 0 / 100% 100%,
+    var(--surface-3);
+}
+.frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.still .frame {
+  pointer-events: none;
+}
+.pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  font-size: 2rem;
+  color: #d93025;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.35));
+}

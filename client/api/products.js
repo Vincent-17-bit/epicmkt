@@ -23,6 +23,7 @@ import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { parseRequest } from "./_lib/productParams.js";
+import { parseSearch, searchProducts } from "../../shared/src/search/search.js";
 import { cached } from "./_lib/redis.js";
 import { configured, restAll, rpc } from "./_lib/supabase.js";
 
@@ -292,7 +293,21 @@ export default async function handler(req) {
   if (req.method !== "GET" && req.method !== "HEAD") return reply({ error: "method_not_allowed" }, 405, "no-store");
   if (!configured()) return reply({ error: "not_configured" }, 503, "no-store");
 
-  const parsed = parseRequest(new URL(req.url).searchParams);
+  const params = new URL(req.url).searchParams;
+  // op=search: the /products page (Amazon-style results with per-kind filters), answered from the same snapshot.
+  if (params.get("op") === "search") {
+    try {
+      const snap = await snapshot();
+      const now = Date.now();
+      tick(snap, now);
+      const result = searchProducts(snap.products, parseSearch(params));
+      return reply({ ...result, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
+    } catch (error) {
+      console.error(`[products] search unavailable: ${error?.message ?? error}`);
+      return reply({ error: "unavailable" }, 502, "no-store");
+    }
+  }
+  const parsed = parseRequest(params);
   if (!parsed) return reply({ error: "bad_request" }, 400, "public, s-maxage=60");
 
   try {

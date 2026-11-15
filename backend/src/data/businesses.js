@@ -1,3 +1,4 @@
+import { AUDIO_PRODUCTS, AUDIO_PRODUCTS_SECOND_SHOP } from "./audioCatalog.js";
 import { slugify } from "@epicmkt/shared";
 import { demoItemId } from "./itemIds.js";
 import { attributesById } from "./attributes.js";
@@ -582,8 +583,10 @@ export const businesses = [
           specs: [{ group: "Features & Specs", label: "Compatible devices", value: v.choice.style === "old" ? "Car navigation, computers, digital cameras, home theatre" : "Camera" }]
         })),
         optionDefault: { style: "old", capacity: "128gb" }
-      }
+      },
+      ...AUDIO_PRODUCTS_SECOND_SHOP
     ],
+    delivery: { offers: true, fee: 200, radiusKm: 8, area: "Kisumu CBD and Milimani", minOrder: 1000, notes: null },
     gallery: gallery(225, ["Laptop wall", "Printers", "Service bench", "Shopfront"])
   }),
   make(40, {
@@ -595,7 +598,8 @@ export const businesses = [
     hours: week(["08:00", "18:00"], ["08:00", "17:00"], null),
     rating: 4.2, reviewCount: 31, hue: 230,
     tags: ["tv", "electronics", "solar", "cctv", "sound system"],
-    services: [{ name: "43 inch smart TV", priceKes: 32500 }, { name: "Wi-Fi router dual band", priceKes: 4300 }],
+    services: [{ name: "43 inch smart TV", priceKes: 32500 }, { name: "Wi-Fi router dual band", priceKes: 4300 }, ...AUDIO_PRODUCTS],
+    delivery: { offers: true, fee: 300, radiusKm: 15, area: "Nakuru Town and Lanet", minOrder: 2000, notes: "Free installation for TVs in town" },
     gallery: gallery(230, ["TV wall", "Solar display"])
   }),
   make(41, {

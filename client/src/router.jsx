@@ -26,6 +26,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Home /> },
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
+          { path: "products", lazy: async () => ({ Component: (await import("./pages/ProductSearch.jsx")).default }) },
           { path: "flash", lazy: async () => ({ Component: (await import("./pages/FlashSales.jsx")).default }) },
           { path: "offers", lazy: async () => ({ Component: (await import("./pages/Offers.jsx")).default }) },
           { path: "featured", lazy: async () => ({ Component: (await import("./pages/Featured.jsx")).default }) },

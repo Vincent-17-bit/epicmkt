@@ -2,16 +2,26 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCommentDots, faFlag, faPhone, faShareNodes, faStore } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance, telLink } from "@epicmkt/shared";
+import { ShopMap } from "@epicmkt/ui";
+import { directionsHref } from "./Delivery.jsx";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
 import styles from "../ItemDetail.module.css";
 
 // The "Sold by" card: who sells it, whether they are open, and the visit / chat / call / share / report actions.
 export default function SoldFrom({ ctx }) {
-  const { seller, sellerCount, distanceKm, chatHref, onVisit, onChat, onCall, onShare, onReport } = ctx;
+  const { seller, sellerCount, distanceKm, chatHref, onVisit, onChat, onCall, onShare, onReport, business } = ctx;
   if (!seller) return null;
+  // Where the shop is: the same map as the shop page, as a still picture with words for screen readers and two links out.
+  const lat = Number(seller.lat);
+  const lng = Number(seller.lng);
+  const hasMap = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0);
+  const area = seller.townName || business?.area || "";
+  const county = business?.county && business.county !== area ? business.county : "";
+  const place = [area, county].filter(Boolean).join(", ");
+  const larger = hasMap ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}` : null;
   return (
-    <section className={styles.sold} aria-label={t("item.soldBy")}>
+    <section className={styles.sold} aria-label={t("item.soldBy")} id="item-store">
       <div className={styles.seller}>
         <span className={styles.logo}>
           {seller.logo ? <img src={seller.logo} alt="" className={styles.logoImg} decoding="async" /> : seller.name.slice(0, 1)}
@@ -34,6 +44,30 @@ export default function SoldFrom({ ctx }) {
           {!seller.isOpen && seller.statusLine && <p className={styles.sellerMeta}>{seller.statusLine}</p>}
         </div>
         <span className={seller.isOpen ? styles.open : styles.closed}>{seller.isOpen ? t("item.open") : t("item.closed")}</span>
+      </div>
+
+      <div className={styles.soldWhere} id="item-store-map">
+        {hasMap ? (
+          <>
+            <ShopMap name={seller.name} lat={lat} lng={lng} interactive={false} className={styles.soldMap} />
+            <p className="sr-only">{`Map: ${seller.name} is in ${place || "the pinned area"}.`}</p>
+          </>
+        ) : null}
+        <p className={styles.soldPlace}>
+          <strong>{place || seller.name}</strong>
+          {Number.isFinite(distanceKm) ? ` · ${formatDistance(distanceKm)} from you` : ""}
+        </p>
+        <p className={styles.soldLinks}>
+          {hasMap ? (
+            <>
+              <a href={directionsHref(seller)} {...external} className={styles.soldLink}>{t("delivery.directions")}</a>
+              <span aria-hidden="true"> · </span>
+              <a href={larger} {...external} className={styles.soldLink}>View larger map</a>
+            </>
+          ) : (
+            <a href={chatHref} {...external} className={styles.soldLink} onClick={onChat("where")}>Ask the shop for directions</a>
+          )}
+        </p>
       </div>
 
       <div className={styles.actions}>

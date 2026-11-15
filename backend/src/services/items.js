@@ -414,6 +414,7 @@ export async function getAllProducts() {
       const sale = liveSaleFor(item, business);
       rows.push({
         ...item,
+        ...optionSummary(svc),
         pricing: buildPricing(item, sale),
         flash: sale ? flashParts(item, sale) : null,
         offer: offerChipFor(item, business),
@@ -427,12 +428,35 @@ export async function getAllProducts() {
           town: business.area ?? "",
           county: business.county ?? "",
           isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
-          statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line
+          statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line,
+          ...(business.delivery ? { delivery: business.delivery } : {})
         }
       });
     });
   }
   return rows;
+}
+
+// What a list card and the product search need to know about an item's options, without the whole options payload: the price
+// range over what can be bought, the colour swatches (each with the photo it jumps to), how many combinations are on sale, and
+// every option value's label (so a search filter can match "Blue" or "55 inch"). Items without options get nothing at all, so
+// their rows are exactly as before.
+function optionSummary(svc) {
+  const axes = Array.isArray(svc.optionAxes) ? svc.optionAxes : [];
+  if (axes.length === 0) return {};
+  const sellable = (svc.optionVariants ?? []).filter((v) => v.status !== "unavailable" && v.status !== "out_of_stock" && v.stock !== 0);
+  const prices = sellable.map((v) => (Number.isFinite(v.salePrice) ? v.salePrice : v.price)).filter(Number.isFinite);
+  const colour = axes.find((a) => a.display === "swatch" || /^colou?r$/i.test(a.key));
+  const images = svc.images ?? [];
+  return {
+    hasOptions: true,
+    optionCount: sellable.length,
+    ...(prices.length && Math.min(...prices) < Math.max(...prices) ? { priceRange: { min: Math.min(...prices), max: Math.max(...prices) } } : {}),
+    ...(colour
+      ? { swatches: colour.values.map((v) => ({ id: v.id, label: v.label, color: v.color ?? null, imageUrl: images.find((m) => m.id === v.mediaId)?.url ?? null })) }
+      : {}),
+    optionValues: axes.flatMap((a) => a.values.map((v) => `${a.label}: ${v.label}`))
+  };
 }
 
 // A random window of each store's listed products, for the home page's featured cards. The caller picks from it, so a

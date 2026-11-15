@@ -14,7 +14,8 @@ const cleanEntry = (entry, kind, index) =>
         url: entry.url,
         poster: isUrl(entry.poster) ? entry.poster : undefined,
         caption: typeof entry.caption === "string" ? entry.caption : "",
-        duration: Number.isFinite(entry.duration) && entry.duration > 0 ? entry.duration : undefined
+        duration: Number.isFinite(entry.duration) && entry.duration > 0 ? entry.duration : undefined,
+        by: typeof entry.by === "string" && entry.by.trim() ? entry.by.trim() : undefined
       }
     : null;
 
