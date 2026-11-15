@@ -68,7 +68,7 @@ test("a draft does not change the live type until it is published, and each publ
 
   const cat = (await sql(c, `select id from categories order by id limit 1`))[0].id;
   await draft(asAdmin, "speaker", type({ name: "Speakers", kind: "good", quantityMode: "none", restrictedTo: [cat],
-    axes: [axis("power", { scale: "power", open: true, optional: false, affectsPrice: "auto" }), axis("colour", { display: "swatch", affectsPrice: false })] }));
+    axes: [axis("power", { scale: "power", open: true, optional: false, affectsPrice: "auto" }), axis("colour", { display: "swatch", open: "colour", affectsPrice: false, sizeChart: "apparel" })] }));
   assert.equal((await live("speaker")).name, "Speaker", "live type unchanged by a draft");
   const listed = (await list(asReviewer)).types.find((t) => t.id === "speaker");
   assert.equal(listed.draft.name, "Speakers");
@@ -82,6 +82,8 @@ test("a draft does not change the live type until it is published, and each publ
   assert.deepEqual(row.restricted_to, [cat]);
   assert.equal(row.axes[0].scale, "power");
   assert.equal(row.axes[1].affectsPrice, false);
+  assert.equal(row.axes[1].open, "colour", "the seeds' typed-value kind is kept");
+  assert.equal(row.axes[1].sizeChart, "apparel", "fields the page does not edit are kept");
   const after = (await list(asReviewer)).types.find((t) => t.id === "speaker");
   assert.equal(after.version, 2);
   assert.equal(after.draft, null);
@@ -119,7 +121,8 @@ test("the new fields are checked", async () => {
   await bad(type({ sizeChartId: "00000000-0000-0000-0000-000000000000" }), /invalid_size_chart/);
   await bad(type({ restrictedTo: ["nope"] }), /invalid_restricted_to/);
   await bad(type({ axes: [axis("a", { scale: "Not A Scale" })] }), /invalid_axes/);
-  await bad(type({ axes: [axis("a", { open: "yes" })] }), /invalid_axes/);
+  await bad(type({ axes: [axis("a", { open: 5 })] }), /invalid_axes/);
+  await bad(type({ axes: [axis("a", { open: "Not a kind" })] }), /invalid_axes/);
   await bad(type({ axes: [axis("a", { affectsPrice: "sometimes" })] }), /invalid_axes/);
   await bad(type({ axes: [axis("a", { dependsOn: "b" }), axis("b")] }), /invalid_axes/);
 });

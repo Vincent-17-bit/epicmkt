@@ -8,6 +8,8 @@ import { categories } from "../client/src/data/categories.js";
 import { PRODUCT_TYPES } from "../shared/src/contracts/productTypes.js";
 import { runConformance, formatTable, scanForCategoryNames } from "../shared/src/conformance/index.js";
 import { typeCategoriesFromSql } from "../shared/src/conformance/seedMap.js";
+import { seededForConformance } from "../shared/src/conformance/seeded.js";
+import { ALL_TYPES } from "./seeds/index.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -45,8 +47,24 @@ export function resultData(result) {
   };
 }
 
+/**
+ * Every type a seller can meet: the contract's examples, and every seeded type (A24 to A28, 111 of them) read in the contract
+ * shape (A29). A seeded type with the same id as a contract example is checked as "<id>--seeded", so both shapes are covered.
+ */
+export function allTypes() {
+  const fromSql = readTypeCategories();
+  const seeded = seededForConformance(ALL_TYPES);
+  const contractIds = new Set(PRODUCT_TYPES.map((t) => t.id));
+  const rename = (id) => (contractIds.has(id) ? `${id}--seeded` : id);
+  const types = [...PRODUCT_TYPES, ...seeded.types.map((t) => ({ ...t, id: rename(t.id) }))];
+  const typeCategories = { ...fromSql };
+  for (const [id, cats] of Object.entries(seeded.typeCategories)) typeCategories[rename(id)] = cats;
+  return { types, typeCategories };
+}
+
 export function run() {
-  const result = runConformance({ categories, types: PRODUCT_TYPES, typeCategories: readTypeCategories() });
+  const { types, typeCategories } = allTypes();
+  const result = runConformance({ categories, types, typeCategories });
   const names = categories.map((c) => c.id);
   const hardCoded = scanForCategoryNames(sourceFiles(), names);
   return { ...result, hardCoded, ok: result.ok && hardCoded.length === 0 };

@@ -3,7 +3,7 @@
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
 import { normalizeText } from "../utils.js";
 import { normalizeValueKey } from "../openValues.js";
-import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, readNumber, readers } from "./facetCatalog.js";
+import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, readNumber, readers } from "./data/facetCatalog.js";
 
 export const SEARCH_PAGE_SIZE = 16;
 export const SEARCH_SORTS = [

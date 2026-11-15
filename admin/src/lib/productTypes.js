@@ -31,6 +31,8 @@ export const typeId = (name) => slug(name, "-").replace(/^[0-9-]+/, "").slice(0,
 let seq = 0;
 const uid = () => `a${++seq}`;
 
+const EDITED = new Set(["key", "label", "display", "scale", "open", "optional", "affectsPrice", "suggested"]);
+
 // What the editor starts from: the saved draft when there is one (the admin carries on where they stopped), else the live type.
 export const sourceOf = (type) => (type?.draft ? { ...type, ...type.draft } : type);
 
@@ -53,16 +55,19 @@ export const toDraft = (given) => {
       label: a.label,
       display: a.display,
       scale: a.scale ?? "",
-      open: a.open === true,
+      // open is true or the kind of value sellers type ("colour", "material"): the box shows either as ticked, and a kind is kept.
+      open: Boolean(a.open),
+      openKind: typeof a.open === "string" ? a.open : null,
       optional: a.optional === true,
       affectsPrice: priceChoice(a.affectsPrice),
       suggestedText: (a.suggested ?? []).map((s) => s.label).join(", "),
-      extra: a.dependsOn ? { dependsOn: a.dependsOn } : {},
+      // Everything the form does not edit (dependsOn, the seeds' sizeChart ...) is carried through unchanged.
+      extra: Object.fromEntries(Object.entries(a).filter(([k]) => !EDITED.has(k))),
     })),
   };
 };
 
-export const blankAxis = () => ({ uid: uid(), key: "", label: "", display: "button", scale: "", open: false, optional: false, affectsPrice: "auto", suggestedText: "", extra: {} });
+export const blankAxis = () => ({ uid: uid(), key: "", label: "", display: "button", scale: "", open: false, openKind: null, optional: false, affectsPrice: "auto", suggestedText: "", extra: {} });
 
 const labels = (text) => [...new Set(String(text).split(",").map((s) => s.trim()).filter(Boolean))];
 
@@ -84,7 +89,7 @@ export const toType = (d) => ({
       label: a.label.trim(),
       display: a.display,
       ...(a.scale ? { scale: a.scale } : {}),
-      ...(a.open ? { open: true } : {}),
+      ...(a.open ? { open: a.openKind ?? true } : {}),
       ...(a.optional ? { optional: true } : {}),
       ...(a.affectsPrice && a.affectsPrice !== "auto" ? { affectsPrice: PRICE_FLAG[a.affectsPrice] } : {}),
       ...(suggested.length ? { suggested } : {}),
@@ -121,9 +126,10 @@ export const differsFromLive = (d, type) => {
   return JSON.stringify(toType(d)) !== JSON.stringify(toType(toDraft(liveOnly)));
 };
 
-// "Version 3, published 12 Nov 2026" / "Not published yet".
+// "Version 3, published 12 Nov 2026" / "Not published yet" / a live type from before versions were kept.
 export const versionText = (type, locale = "en-KE") => {
-  if (!type?.version) return "Not published yet";
+  if (!type || type.unpublished) return "Not published yet";
+  if (!type.version) return "Live since before versions were kept";
   const when = type.publishedAt ? new Date(type.publishedAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : null;
   return `Version ${type.version}${when ? `, published ${when}` : ""}`;
 };

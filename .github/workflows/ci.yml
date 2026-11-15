@@ -1,0 +1,81 @@
+# The wave gate (coordination file): every pull request and every push to main runs the same checks a lane must pass before
+# merging. One failing job blocks the merge.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  shared:
+    name: Migrations, shared code and conformance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Migration numbering
+        run: npm run check:migrations
+      - name: Edge functions use the current shared code
+        run: npm run sync:shared -- --check
+      - name: Conformance (every category and every product type, seeded ones included)
+        run: npm run test:conformance
+      - name: Shared, scripts, seller api and backend tests
+        run: npm run test:shared
+
+  workspaces:
+    name: App tests (client, seller, admin, ui)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Every workspace's tests
+        run: npm test --workspaces --if-present
+      - name: Admin UI tests
+        run: npm run test:ui -w admin
+
+  database:
+    name: Database and edge function tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: npm ci
+      - name: Database tests (every migration applied in order)
+        run: npm run test:db
+      - name: Edge function tests
+        run: npm run test:fn
+      - name: Edge function tests against the database
+        run: npm run test:fn:db

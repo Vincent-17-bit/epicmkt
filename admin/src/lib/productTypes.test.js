@@ -62,7 +62,8 @@ test("edits start from the saved draft, and Publish knows the draft differs from
   assert.equal(isDirty(d, t), false, "nothing new since the draft");
   assert.equal(differsFromLive(d, t), true, "but the draft is not live");
   assert.match(versionText(t), /^Version 2, published /);
-  assert.equal(versionText({ ...t, version: null }), "Not published yet");
+  assert.equal(versionText({ ...t, version: null, unpublished: true }), "Not published yet");
+  assert.equal(versionText({ ...t, version: null }), "Live since before versions were kept");
 });
 
 test("refuses an unknown kind or quantity mode", () => {
@@ -71,4 +72,13 @@ test("refuses an unknown kind or quantity mode", () => {
   d.quantityMode = "lots";
   const e = validate(d).errors;
   assert.ok(e.includes("Pick what kind of thing this type is.") && e.includes("Pick how buyers choose a quantity."));
+});
+
+test("keeps the seeds' typed-value kind and the axis fields the form does not edit", () => {
+  const t = { ...phone, axes: [{ key: "colour", label: "Colour", display: "swatch", open: "colour", sizeChart: "apparel", dependsOn: undefined }] };
+  const d = toDraft({ ...t, axes: [{ key: "colour", label: "Colour", display: "swatch", open: "colour", sizeChart: "apparel" }] });
+  assert.equal(d.axes[0].open, true);
+  assert.deepEqual(toType(d).axes[0], { key: "colour", label: "Colour", display: "swatch", open: "colour", sizeChart: "apparel" });
+  d.axes[0].open = false;
+  assert.equal(toType(d).axes[0].open, undefined);
 });

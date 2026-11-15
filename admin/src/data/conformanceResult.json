@@ -4,44 +4,57 @@
     "water-refill": {
       "ok": true,
       "types": [
-        "drinking-water"
+        "drinking-water",
+        "drinking-water--seeded"
       ],
       "failures": []
     },
     "lpg-gas": {
       "ok": true,
-      "types": [],
+      "types": [
+        "lpg-gas"
+      ],
       "failures": []
     },
     "bakery": {
       "ok": true,
       "types": [
-        "bread"
+        "bread",
+        "bread--seeded",
+        "cake",
+        "cupcakes-pastries"
       ],
       "failures": []
     },
     "juice-shop": {
       "ok": true,
-      "types": [],
+      "types": [
+        "juice"
+      ],
       "failures": []
     },
     "restaurant-cafe": {
       "ok": true,
       "types": [
-        "bread"
+        "bread",
+        "bread--seeded",
+        "restaurant-meal"
       ],
       "failures": []
     },
     "butchery": {
       "ok": true,
       "types": [
-        "meat-by-weight"
+        "meat-by-weight",
+        "meat-by-weight--seeded"
       ],
       "failures": []
     },
     "greengrocer": {
       "ok": true,
-      "types": [],
+      "types": [
+        "produce"
+      ],
       "failures": []
     },
     "supermarket-minimart": {
@@ -51,13 +64,30 @@
         "drinking-water",
         "meat-by-weight",
         "fragrance",
-        "liquor"
+        "liquor",
+        "fragrance--seeded",
+        "makeup-skincare",
+        "travel-adapter",
+        "extension-multi-plug",
+        "small-battery",
+        "pens-pencils-markers",
+        "notebooks-exercise-books",
+        "staplers-glue-tape-scissors",
+        "calculator",
+        "drinking-water--seeded",
+        "bread--seeded",
+        "meat-by-weight--seeded",
+        "packaged-food",
+        "liquor--seeded"
       ],
       "failures": []
     },
     "chemist": {
       "ok": true,
-      "types": [],
+      "types": [
+        "medicine",
+        "prescription-medicine"
+      ],
       "failures": []
     },
     "clinic": {
@@ -67,48 +97,84 @@
     },
     "optician": {
       "ok": true,
-      "types": [],
+      "types": [
+        "sunglasses",
+        "frames"
+      ],
       "failures": []
     },
     "barbershop": {
       "ok": true,
-      "types": [],
+      "types": [
+        "barbershop-service"
+      ],
       "failures": []
     },
     "salon-beauty": {
       "ok": true,
       "types": [
         "gold-necklace",
-        "fragrance"
+        "fragrance",
+        "necklace-chain-bracelet",
+        "earrings",
+        "ring",
+        "fragrance--seeded",
+        "makeup-skincare",
+        "hair-wigs",
+        "salon-service"
       ],
       "failures": []
     },
     "spa-massage": {
       "ok": true,
-      "types": [],
+      "types": [
+        "spa-treatment"
+      ],
       "failures": []
     },
     "gym-fitness": {
       "ok": true,
-      "types": [],
+      "types": [
+        "gym-membership"
+      ],
       "failures": []
     },
     "agrovet": {
       "ok": true,
-      "types": [],
+      "types": [
+        "vet-medicine",
+        "agrochemicals",
+        "agrovet-supplies"
+      ],
       "failures": []
     },
     "cyber-cafe": {
       "ok": true,
       "types": [
-        "printing"
+        "printing",
+        "printing--seeded",
+        "scanning",
+        "lamination",
+        "binding",
+        "typing-documents",
+        "passport-photos",
+        "banners-posters-cards",
+        "computer-internet-use",
+        "pens-pencils-markers",
+        "notebooks-exercise-books",
+        "paper-reams",
+        "envelopes-files-folders",
+        "staplers-glue-tape-scissors",
+        "calculator"
       ],
       "failures": []
     },
     "phone-repair": {
       "ok": true,
       "types": [
-        "phone"
+        "phone",
+        "phone--seeded",
+        "phone-repair"
       ],
       "failures": []
     },
@@ -117,14 +183,57 @@
       "types": [
         "phone",
         "led-strip",
-        "led-bulb"
+        "led-bulb",
+        "phone--seeded",
+        "tablet",
+        "laptop",
+        "mouse-keyboard",
+        "laptop-charger",
+        "phone-charger",
+        "cable",
+        "power-adapter",
+        "travel-adapter",
+        "extension-multi-plug",
+        "adapter-converter",
+        "phone-case",
+        "screen-protector",
+        "earphones-headphones",
+        "speaker-soundbar",
+        "tv",
+        "power-bank",
+        "memory-card--seeded",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
+        "printer",
+        "ink-toner",
+        "router-extender",
+        "appliance",
+        "socket-switch"
       ],
       "failures": []
     },
     "printing-stationery": {
       "ok": true,
       "types": [
-        "printing"
+        "printing",
+        "printer",
+        "ink-toner",
+        "printing--seeded",
+        "scanning",
+        "lamination",
+        "binding",
+        "typing-documents",
+        "passport-photos",
+        "banners-posters-cards",
+        "pens-pencils-markers",
+        "notebooks-exercise-books",
+        "paper-reams",
+        "envelopes-files-folders",
+        "staplers-glue-tape-scissors",
+        "calculator"
       ],
       "failures": []
     },
@@ -137,7 +246,25 @@
       "ok": true,
       "types": [
         "led-strip",
-        "led-bulb"
+        "led-bulb",
+        "cable",
+        "power-adapter",
+        "extension-multi-plug",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
+        "iron-sheet",
+        "timber",
+        "pipe",
+        "paint",
+        "cement-sand-bags",
+        "tiles",
+        "rope-wire-by-metre",
+        "electrical-wire",
+        "water-tank",
+        "door-window"
       ],
       "failures": []
     },
@@ -145,7 +272,21 @@
       "ok": true,
       "types": [
         "led-strip",
-        "led-bulb"
+        "led-bulb",
+        "cable",
+        "power-adapter",
+        "extension-multi-plug",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
+        "pipe",
+        "rope-wire-by-metre",
+        "electrical-wire",
+        "socket-switch",
+        "circuit-breaker",
+        "water-tank"
       ],
       "failures": []
     },
@@ -153,48 +294,94 @@
       "ok": true,
       "types": [
         "table",
-        "sofa"
+        "sofa",
+        "timber",
+        "tiles",
+        "table--seeded",
+        "chair",
+        "sofa--seeded",
+        "bed",
+        "mattress",
+        "door-window",
+        "wardrobe-cabinet"
       ],
       "failures": []
     },
     "cleaning-laundry": {
       "ok": true,
-      "types": [],
+      "types": [
+        "laundry-by-weight",
+        "laundry-by-item"
+      ],
       "failures": []
     },
     "tailor-boutique": {
       "ok": true,
       "types": [
         "gold-necklace",
-        "fragrance"
+        "fragrance",
+        "clothing",
+        "dress-shirt",
+        "kids-clothing",
+        "shoes",
+        "handbag",
+        "backpack-travel-bag",
+        "wallet-purse",
+        "belt",
+        "necklace-chain-bracelet",
+        "earrings",
+        "ring",
+        "watch",
+        "sunglasses",
+        "scarf-hat-cap",
+        "hair-wigs",
+        "fabric-by-metre",
+        "tailoring"
       ],
       "failures": []
     },
     "shoes-cobbler": {
       "ok": true,
       "types": [
-        "shoes-eu"
+        "shoes-eu",
+        "shoes",
+        "shoe-repair"
       ],
       "failures": []
     },
     "garage-mechanic": {
       "ok": true,
-      "types": [],
+      "types": [
+        "garage-service",
+        "engine-oil"
+      ],
       "failures": []
     },
     "car-wash": {
       "ok": true,
-      "types": [],
+      "types": [
+        "car-wash"
+      ],
       "failures": []
     },
     "auto-spare-parts": {
       "ok": true,
-      "types": [],
+      "types": [
+        "large-battery",
+        "tyre",
+        "car-battery",
+        "engine-oil",
+        "wiper-blade",
+        "spare-part"
+      ],
       "failures": []
     },
     "photography-events": {
       "ok": true,
-      "types": [],
+      "types": [
+        "passport-photos",
+        "photo-package"
+      ],
       "failures": []
     },
     "tuition-daycare": {
@@ -206,7 +393,24 @@
       "ok": true,
       "types": [
         "phone",
-        "memory-card"
+        "memory-card",
+        "phone--seeded",
+        "tablet",
+        "laptop",
+        "mouse-keyboard",
+        "laptop-charger",
+        "phone-charger",
+        "cable",
+        "travel-adapter",
+        "adapter-converter",
+        "phone-case",
+        "screen-protector",
+        "earphones-headphones",
+        "power-bank",
+        "memory-card--seeded",
+        "printer",
+        "ink-toner",
+        "router-extender"
       ],
       "failures": []
     },
@@ -214,7 +418,34 @@
       "ok": true,
       "types": [
         "phone",
-        "memory-card"
+        "memory-card",
+        "phone--seeded",
+        "tablet",
+        "laptop",
+        "mouse-keyboard",
+        "laptop-charger",
+        "phone-charger",
+        "cable",
+        "power-adapter",
+        "travel-adapter",
+        "extension-multi-plug",
+        "adapter-converter",
+        "phone-case",
+        "screen-protector",
+        "earphones-headphones",
+        "speaker-soundbar",
+        "tv",
+        "power-bank",
+        "memory-card--seeded",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
+        "printer",
+        "ink-toner",
+        "router-extender",
+        "calculator"
       ],
       "failures": []
     },
@@ -223,14 +454,38 @@
       "types": [
         "shoes-eu",
         "gold-necklace",
-        "fragrance"
+        "fragrance",
+        "clothing",
+        "dress-shirt",
+        "kids-clothing",
+        "shoes",
+        "handbag",
+        "backpack-travel-bag",
+        "wallet-purse",
+        "belt",
+        "necklace-chain-bracelet",
+        "earrings",
+        "ring",
+        "watch",
+        "sunglasses",
+        "scarf-hat-cap",
+        "fragrance--seeded",
+        "makeup-skincare",
+        "hair-wigs",
+        "fabric-by-metre"
       ],
       "failures": []
     },
     "home-kitchen": {
       "ok": true,
       "types": [
-        "table"
+        "table",
+        "appliance",
+        "table--seeded",
+        "chair",
+        "bed",
+        "mattress",
+        "wardrobe-cabinet"
       ],
       "failures": []
     }
@@ -249,7 +504,118 @@
     "meat-by-weight": true,
     "gold-necklace": true,
     "fragrance": true,
-    "liquor": true
+    "liquor": true,
+    "clothing": true,
+    "dress-shirt": true,
+    "kids-clothing": true,
+    "shoes": true,
+    "handbag": true,
+    "backpack-travel-bag": true,
+    "wallet-purse": true,
+    "belt": true,
+    "necklace-chain-bracelet": true,
+    "earrings": true,
+    "ring": true,
+    "watch": true,
+    "sunglasses": true,
+    "scarf-hat-cap": true,
+    "fragrance--seeded": true,
+    "makeup-skincare": true,
+    "hair-wigs": true,
+    "phone--seeded": true,
+    "tablet": true,
+    "laptop": true,
+    "mouse-keyboard": true,
+    "laptop-charger": true,
+    "phone-charger": true,
+    "cable": true,
+    "power-adapter": true,
+    "travel-adapter": true,
+    "extension-multi-plug": true,
+    "adapter-converter": true,
+    "phone-case": true,
+    "screen-protector": true,
+    "earphones-headphones": true,
+    "speaker-soundbar": true,
+    "tv": true,
+    "power-bank": true,
+    "memory-card--seeded": true,
+    "led-bulb--seeded": true,
+    "light-fitting": true,
+    "led-strip--seeded": true,
+    "small-battery": true,
+    "large-battery": true,
+    "printer": true,
+    "ink-toner": true,
+    "router-extender": true,
+    "printing--seeded": true,
+    "scanning": true,
+    "lamination": true,
+    "binding": true,
+    "typing-documents": true,
+    "passport-photos": true,
+    "banners-posters-cards": true,
+    "computer-internet-use": true,
+    "pens-pencils-markers": true,
+    "notebooks-exercise-books": true,
+    "paper-reams": true,
+    "envelopes-files-folders": true,
+    "staplers-glue-tape-scissors": true,
+    "calculator": true,
+    "drinking-water--seeded": true,
+    "lpg-gas": true,
+    "bread--seeded": true,
+    "cake": true,
+    "cupcakes-pastries": true,
+    "juice": true,
+    "restaurant-meal": true,
+    "meat-by-weight--seeded": true,
+    "produce": true,
+    "packaged-food": true,
+    "liquor--seeded": true,
+    "medicine": true,
+    "prescription-medicine": true,
+    "frames": true,
+    "vet-medicine": true,
+    "agrochemicals": true,
+    "agrovet-supplies": true,
+    "salon-service": true,
+    "spa-treatment": true,
+    "barbershop-service": true,
+    "gym-membership": true,
+    "phone-repair": true,
+    "appliance": true,
+    "iron-sheet": true,
+    "timber": true,
+    "pipe": true,
+    "paint": true,
+    "cement-sand-bags": true,
+    "tiles": true,
+    "rope-wire-by-metre": true,
+    "electrical-wire": true,
+    "socket-switch": true,
+    "circuit-breaker": true,
+    "water-tank": true,
+    "table--seeded": true,
+    "chair": true,
+    "sofa--seeded": true,
+    "bed": true,
+    "mattress": true,
+    "door-window": true,
+    "wardrobe-cabinet": true,
+    "laundry-by-weight": true,
+    "laundry-by-item": true,
+    "fabric-by-metre": true,
+    "tailoring": true,
+    "shoe-repair": true,
+    "garage-service": true,
+    "car-wash": true,
+    "tyre": true,
+    "car-battery": true,
+    "engine-oil": true,
+    "wiper-blade": true,
+    "spare-part": true,
+    "photo-package": true
   },
   "hardCoded": []
 }

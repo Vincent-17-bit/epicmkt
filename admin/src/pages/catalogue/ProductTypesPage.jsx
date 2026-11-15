@@ -82,7 +82,7 @@ function Status({ type, isNew }) {
   if (isNew) return <p className="pt-status"><span className="status-pill status-pill--neutral">New type</span> Save a draft, then publish it to let sellers use it.</p>;
   return (
     <p className="pt-status" aria-live="polite">
-      <span className={`status-pill ${type.version ? "status-pill--live" : "status-pill--neutral"}`}>{type.version ? `Live: version ${type.version}` : "Not published"}</span>
+      <span className={`status-pill ${type.unpublished ? "status-pill--neutral" : "status-pill--live"}`}>{type.unpublished ? "Not published" : type.version ? `Live: version ${type.version}` : "Live"}</span>
       {type.draft
         ? <span className="status-pill status-pill--degraded">Draft saved {when(type.draftUpdatedAt)}, not live yet</span>
         : <span className="muted">{M.versionText(type)}. Changes are kept as a draft until you publish them.</span>}
@@ -193,7 +193,7 @@ export default function ProductTypesPage() {
   const [picked, setPicked] = useState("");
   const data = useQuery({ queryKey: [KEY], queryFn: () => api.listTypeSettings() });
   // A new type saved as a draft only is listed too, so the admin can come back and publish it.
-  const pending = (data.data?.newDrafts ?? []).map((d) => ({ id: d.id, name: d.draft.name, version: null, draft: d.draft, draftUpdatedAt: d.draftUpdatedAt, items: 0, axes: [], categoryIds: [] }));
+  const pending = (data.data?.newDrafts ?? []).map((d) => ({ id: d.id, name: d.draft.name, unpublished: true, version: null, draft: d.draft, draftUpdatedAt: d.draftUpdatedAt, items: 0, axes: [], categoryIds: [] }));
   const list = [...(data.data?.types ?? []), ...pending];
   const adding = picked === NEW;
   const type = adding ? null : list.find((t) => t.id === picked) ?? list[0] ?? null;
@@ -243,7 +243,7 @@ export default function ProductTypesPage() {
             <div className="sc-row">
               <label className="field">Product type
                 <select value={adding ? NEW : type?.id ?? ""} onChange={(e) => { reset(); setPicked(e.target.value); }}>
-                  {list.map((t) => <option key={t.id} value={t.id}>{t.name}{t.version ? "" : " (draft, not published)"}{t.active === false ? " (hidden)" : ""}{t.version && t.draft ? " (draft waiting)" : ""}</option>)}
+                  {list.map((t) => <option key={t.id} value={t.id}>{t.name}{t.unpublished ? " (draft, not published)" : ""}{t.active === false ? " (hidden)" : ""}{!t.unpublished && t.draft ? " (draft waiting)" : ""}</option>)}
                   {canEdit && <option value={NEW}>New type</option>}
                 </select>
               </label>

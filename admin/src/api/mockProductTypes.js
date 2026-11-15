@@ -68,7 +68,7 @@ const SCALE_IDS = new Set(listScales().map((s) => s.id));
 const axesOk = (axes) => Array.isArray(axes) && axes.length <= 3 && new Set(axes.map((a) => a.key)).size === axes.length
   && axes.every((a, i) => /^[a-z][a-z0-9_]{0,29}$/.test(a.key ?? "") && a.label?.trim() && a.label.length <= 40 && AXIS_DISPLAYS.includes(a.display)
     && (a.scale === undefined || a.scale === null || SCALE_IDS.has(a.scale))
-    && (a.open === undefined || typeof a.open === "boolean") && (a.optional === undefined || typeof a.optional === "boolean")
+    && (a.open === undefined || typeof a.open === "boolean" || /^[a-z][a-z-]{1,30}$/.test(a.open)) && (a.optional === undefined || typeof a.optional === "boolean")
     && (a.affectsPrice === undefined || a.affectsPrice === "auto" || typeof a.affectsPrice === "boolean")
     && (typeof a.dependsOn !== "string" || axes.slice(0, i).some((b) => b.key === a.dependsOn))
     && (a.suggested ?? []).every((s) => /^[a-z0-9][a-z0-9-]{0,39}$/.test(s.id ?? "") && s.label?.trim()));

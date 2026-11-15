@@ -30,8 +30,8 @@ create unique index if not exists product_type_versions_number on public.product
 alter table public.product_type_versions enable row level security;
 revoke all on public.product_type_versions from public, anon, authenticated;
 
--- Options: the 0108 rules, plus the optional AxisDef fields. scale names a registered scale (shared/src/scales), open and optional
--- are booleans, affectsPrice is "auto" or a boolean, dependsOn names an earlier option of the same type.
+-- Options: the 0108 rules, plus the optional AxisDef fields. scale names a registered scale (shared/src/scales), open is a boolean
+-- or the kind of value typed, optional is a boolean, affectsPrice is "auto" or a boolean, dependsOn names an earlier option.
 create or replace function public.product_type_axes_valid(p jsonb) returns boolean
 language plpgsql immutable as $$
 declare
@@ -46,7 +46,8 @@ begin
     if btrim(coalesce(a ->> 'label', '')) = '' or char_length(a ->> 'label') > 40 then return false; end if;
     if coalesce(a ->> 'display', '') not in ('swatch', 'image-card', 'button', 'text-card', 'dropdown') then return false; end if;
     if a ? 'scale' and jsonb_typeof(a -> 'scale') <> 'null' and coalesce(a ->> 'scale', '') !~ '^[a-z][a-z-]{1,30}$' then return false; end if;
-    if a ? 'open' and jsonb_typeof(a -> 'open') <> 'boolean' then return false; end if;
+    -- open: true, or the kind of value sellers type ("colour", "material", "brand"), as the A24 to A28 seeds store it.
+    if a ? 'open' and not (jsonb_typeof(a -> 'open') = 'boolean' or coalesce(a ->> 'open', '') ~ '^[a-z][a-z-]{1,30}$') then return false; end if;
     if a ? 'optional' and jsonb_typeof(a -> 'optional') <> 'boolean' then return false; end if;
     if a ? 'affectsPrice' and not (jsonb_typeof(a -> 'affectsPrice') = 'boolean' or a -> 'affectsPrice' = '"auto"'::jsonb) then return false; end if;
     if a ? 'dependsOn' and jsonb_typeof(a -> 'dependsOn') = 'string' and not ((a ->> 'dependsOn') = any(keys)) then return false; end if;

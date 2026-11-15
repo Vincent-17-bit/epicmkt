@@ -30,3 +30,12 @@ test("the stored result the admin readiness page reads is current: run `npm run 
   const stored = JSON.parse(readFileSync(RESULT_FILE, "utf8"));
   assert.deepEqual(stored, JSON.parse(JSON.stringify(resultData(run()))));
 });
+
+test("every seeded type (A24 to A28) goes through the stages, not only the contract's examples (A29)", async () => {
+  const { ALL_TYPES } = await import("./seeds/index.mjs");
+  const r = run();
+  const checked = new Set(r.types.map((t) => t.id.replace(/--seeded$/, "")));
+  assert.ok(ALL_TYPES.length >= 100, "the seed has the full list");
+  assert.deepEqual(ALL_TYPES.map((t) => t.id).filter((id) => !checked.has(id)), []);
+  assert.deepEqual(r.types.filter((t) => !t.ok).map((t) => t.id), []);
+});
