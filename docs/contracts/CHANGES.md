@@ -665,3 +665,11 @@ Entry format:
 - The switch sits under all the options, not beside one axis's values (`axisKey` is stored for a later layout).
 - Closes `docs/requests/2026-11-07-b07-to-data-custom-size-storage.md`.
 - Seller: the hidden file inputs of the media manager now have names ("Choose photos or videos", "Take a photo", "Record a video").
+
+## Goes well with this (C19) and the Store Selective order
+
+- Client: `items.getRelated(itemId, { page, pageSize })` returns `{ items, page, pageSize, hasMore, total }`. Live: `related_item_candidates` (0109) ranked by the shared `rankRelated` with the admin relations, then only that page is read as cards (`public_items` + `public_businesses`, flash price and offer chip). Demo: `getRelatedPage` in the backend, same ranking; demo items get a type and department from `backend/src/data/related.js`, with the relations an admin would set. Failure or an unknown item gives an empty first page.
+- Item page: a "Goes well with this" section before "Similar items": two cards a row on a phone, more on wider screens, "From this shop" above the shop's own cards, "See more" for the next page (focus moves to the first new card and the count is announced), "That is everything we have to suggest." at the end, a loading state, and no section at all when there is nothing. Clicks are logged as `related_item_click` with position and `fromThisShop`. No reviews or ratings.
+- Not done: a Recommend tab in the details tabs. The same cards are one section below the tabs, so a tab would show them twice.
+- Store Selective (more from this store) now orders the store's items by the shared `orderStoreItems`: same section, then name likeness to the item being viewed (another Ankara dress before a jacket), then flash sale, then newest. Demo and live alike.
+- Closes `docs/requests/2026-11-14-8-1-to-client-items-get-related.md`.

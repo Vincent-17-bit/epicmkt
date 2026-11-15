@@ -1,5 +1,5 @@
 import { withTiers } from "./tiers.js";
-import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, orderStoreItems, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -248,18 +248,8 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
       const pricing = cardPricing(item, entry);
       return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
-  const rank = (row) => [
-    current?.section && row.section === current.section ? 0 : 1,
-    row.flash ? 0 : 1,
-    -Date.parse(row.createdAt)
-  ];
-  shaped.sort((a, b) => {
-    const ra = rank(a);
-    const rb = rank(b);
-    for (let i = 0; i < ra.length; i += 1) if (ra[i] !== rb[i]) return ra[i] - rb[i];
-    return 0;
-  });
-  return shaped.slice(0, limit);
+  // The closest to the item being viewed first (shared, so the demo orders the same way).
+  return orderStoreItems(current ?? null, shaped).slice(0, limit);
 }
 
 const SIMILAR_STORES = 100;
@@ -409,6 +399,59 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
       ...statusCard(s.business.hours, s.business.exceptions, s.business.timezone)
     }
   }));
+}
+
+// "Goes well with" (C19): products that go with this one, from any shop. The database gives the candidates (the item's own type and
+// department, plus the types and departments an admin related to them in product_relations, migration 0109); the shared rankRelated
+// picks the page and keeps at least 1 in 5 from this shop. Only the page shown is turned into cards, so a big pool costs one more
+// read, not a hundred. Returns { items, page, pageSize, hasMore, total }; an unknown or hidden item is an empty first page.
+const RELATED_POOL = 200;
+export async function getRelatedItems(itemId, { page = 1, pageSize = 10, signal = null } = {}) {
+  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
+  if (!isLiveId(itemId)) return empty;
+  const read = (query) => (signal ? query.abortSignal(signal) : query);
+  const found = await read(supabase.rpc("related_item_candidates", { p_item_id: itemId, p_limit: RELATED_POOL }));
+  if (found.error && MISSING_FUNCTION.has(found.error.code)) return empty;
+  const data = unwrap(found);
+  if (!data?.item) return empty;
+  const ranked = rankRelated(data.item, data.candidates ?? [], { relations: data.relations ?? [], page, pageSize });
+  if (!ranked.items.length) return { ...ranked, items: [] };
+  const ids = ranked.items.map((c) => c.id);
+  const rows = unwrap(await read(supabase.from("public_items").select(CARD_COLUMNS).in("id", ids))) ?? [];
+  const storeIds = [...new Set(rows.map((r) => r.business_id))];
+  const stores = new Map((unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).in("id", storeIds))) ?? []).map((b) => [b.id, b]));
+  let live = { now: Date.now(), entries: [] };
+  let chips = new Map();
+  try { live = await liveEntries(); } catch { /* regular prices */ }
+  try { chips = await chipsByItem(); } catch { /* no chips */ }
+  const sales = new Map(live.entries.map((entry) => [entry.item.id, entry]));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const items = ranked.items.flatMap((candidate) => {
+    const row = byId.get(candidate.id);
+    const business = row && stores.get(row.business_id);
+    if (!row || !business || !isListed(row)) return [];
+    const item = itemRow(row, business);
+    const entry = sales.get(row.id);
+    return [{
+      ...item,
+      pricing: cardPricing(item, entry),
+      flash: entry ? flashParts(entry, live.now) : null,
+      offer: chips.get(row.id) ?? null,
+      fromThisShop: candidate.fromThisShop,
+      business: {
+        id: business.id,
+        slug: business.slug,
+        name: business.name,
+        verified: business.verification_level === "verified",
+        featured: PLAN_FEATURES[business.plan_key]?.featured === true,
+        categoryId: business.category_id,
+        town: business.town ?? "",
+        county: business.county ?? "",
+        ...statusCard(business.hours, business.exceptions, business.timezone)
+      }
+    }];
+  });
+  return { ...ranked, items };
 }
 
 const PAGE = 1000;

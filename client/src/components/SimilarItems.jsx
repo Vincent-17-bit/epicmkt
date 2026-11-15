@@ -24,7 +24,7 @@ const roundOf = (coords) =>
 
 // True once `ref` has come within ROOT_MARGIN of the viewport, and stays true. Without IntersectionObserver (very old browsers)
 // it is true at once, so the row is never lost.
-function useNearViewport(ref) {
+export function useNearViewport(ref) {
   const [near, setNear] = useState(() => typeof IntersectionObserver === "undefined");
   useEffect(() => {
     const node = ref.current;

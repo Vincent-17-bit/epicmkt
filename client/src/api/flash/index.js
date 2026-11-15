@@ -82,6 +82,22 @@ export const getSimilarItems = async (itemId, opts) => {
   }
 };
 
+// "Goes well with" (C19), one page at a time: { items, page, pageSize, hasMore, total }. Like Similar items it is a nicety, so any
+// failure is an empty first page and the section simply does not show. A live item is ranked from live data only.
+export const getRelatedItems = async (itemId, { page = 1, pageSize = 10, origin = null, signal = null } = {}) => {
+  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
+  try {
+    if (!isLive()) return await backend.getRelatedPage(itemId, { page, pageSize, origin, signal });
+    const live = await liveAdapter();
+    const out = live.isLiveId(itemId) ? await live.getRelatedItems(itemId, { page, pageSize, signal }) : await backend.getRelatedPage(itemId, { page, pageSize, origin, signal });
+    return out && Array.isArray(out.items) ? out : empty;
+  } catch (error) {
+    if (error?.name === "AbortError" || /abort/i.test(String(error?.message))) return empty;
+    console.warn("[related-items] could not load:", error?.message ?? error);
+    return empty;
+  }
+};
+
 // Live data is authoritative: with Supabase configured an empty marketplace shows no products, never demo ones.
 export const getAllProducts = async () => (isLive() ? (await liveAdapter()).getAllProducts() : backend.getAllProducts());
 
