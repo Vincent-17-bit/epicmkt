@@ -44,6 +44,8 @@ export const items = {
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
   // Items like this one from other stores of the same category, ranked; [] when none or on any failure.
   getSimilar: (itemId, opts) => flashApi.getSimilarItems(itemId, opts),
+  // Items that go with this one, from any shop, one page at a time: { items, page, pageSize, hasMore, total } (C19).
+  getRelated: (itemId, opts) => flashApi.getRelatedPage(itemId, opts),
   getAll: () => flashApi.getAllProducts(),
   // The home grid asks the server for one page at a time, plus the filter options and live option counts.
   getPage: (filters, opts) => products.getPage(filters, opts),

@@ -1,3 +1,5 @@
+import { rankRelated, kindOf } from "@epicmkt/shared";
+import { DEMO_RELATIONS } from "../data/relations.js";
 import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
@@ -599,4 +601,20 @@ export async function saveShoeConversion(chart) {
   }
   store.shoeConversion = { chart: r.value, version: (store.shoeConversion?.version ?? 0) + 1 };
   return store.shoeConversion.version;
+}
+
+// "Recommended" on the item page (C19): items from any shop that go with this one, ranked by the shared rankRelated with at
+// least 1 in 5 from the shop being viewed. The demo stands the search kinds in for product types and departments.
+export async function getRelatedPage(itemId, { businessId = null, page = 1, pageSize = 10, signal = null } = {}) {
+  await delay();
+  if (signal?.aborted) return { items: [], page, pageSize, hasMore: false, total: 0 };
+  const rows = await getAllProducts();
+  const typed = (row) => {
+    const kind = kindOf(row);
+    return { ...row, businessId: row.business?.slug ?? row.businessSlug, productTypeId: kind?.id ?? null, departmentId: kind?.department ?? null, price: row.regularPrice };
+  };
+  const self = rows.find((r) => r.id === itemId && (!businessId || [r.business?.slug, r.business?.id, r.businessSlug, r.businessId].includes(businessId)));
+  if (!self) return { items: [], page, pageSize, hasMore: false, total: 0 };
+  const result = rankRelated(typed(self), rows.map(typed), { relations: DEMO_RELATIONS, page, pageSize });
+  return structuredClone(result);
 }

@@ -53,7 +53,14 @@ export default function SectionNav({ scrollRef = null, itemId }) {
         const y = yOf();
         const delta = y - last.current;
         if (y < 320) setVisible(false);
-        else if (delta > 4) setVisible(true);
+        else if (delta > 4) {
+          setVisible(true);
+          // Sections that load late (Recommended, Similar items) join the bar once they are on the page.
+          setPresent((was) => {
+            const now = SECTIONS.filter((s) => document.getElementById(s.id)?.offsetHeight > 0);
+            return now.length === was.length ? was : now;
+          });
+        }
         else if (delta < -4) setVisible(false);
         last.current = y;
       });

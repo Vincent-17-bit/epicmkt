@@ -8,9 +8,16 @@
 .holder[data-sheet] {
   top: 0;
 }
-.bar {
+/* In the item sheet the bar spans the sheet, not the window. */
+.holder[data-sheet] .bar {
   position: absolute;
-  inset: 0 0 auto;
+  top: 0;
+}
+.bar {
+  position: fixed;
+  top: var(--header-h, 4rem);
+  left: 0;
+  right: 0;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 6px rgb(0 0 0 / 0.08);
@@ -27,8 +34,9 @@
 }
 .list {
   list-style: none;
-  margin: 0;
-  padding: 0 var(--space-3);
+  margin: 0 auto;
+  max-width: var(--container-max, 80rem);
+  padding: 0 var(--space-4);
   display: flex;
   gap: var(--space-1);
   overflow-x: auto;

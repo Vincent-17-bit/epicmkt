@@ -1,5 +1,5 @@
 import { withTiers } from "./tiers.js";
-import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
@@ -409,6 +409,59 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
       ...statusCard(s.business.hours, s.business.exceptions, s.business.timezone)
     }
   }));
+}
+
+// "Recommended" (C19, items.getRelated): the database returns the item, its relations and a candidate pool (0109
+// related_item_candidates); the shared rankRelated picks the page (at least 1 in 5 from this shop); then only that page's rows
+// are read as cards, shaped exactly like Similar items so the same tile shows them.
+export async function getRelatedPage(itemId, { page = 1, pageSize = 10, signal = null } = {}) {
+  const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
+  if (!isLiveId(itemId)) return empty;
+  const read = (query) => (signal ? query.abortSignal(signal) : query);
+  const data = unwrap(await read(supabase.rpc("related_item_candidates", { p_item_id: itemId, p_limit: 200 })));
+  if (!data?.item) return empty;
+  const ranked = rankRelated(data.item, data.candidates ?? [], { relations: data.relations ?? [], page, pageSize });
+  const ids = ranked.items.map((c) => c.id);
+  if (!ids.length) return { ...ranked, items: [] };
+  const rows = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).in("id", ids))) ?? [];
+  const storeIds = [...new Set(rows.map((r) => r.business_id))];
+  const stores = new Map((unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).in("id", storeIds))) ?? []).map((b) => [b.id, b]));
+  let live = { now: Date.now(), entries: [] };
+  try {
+    live = await liveEntries();
+  } catch {
+    // regular prices
+  }
+  const sales = new Map(live.entries.map((entry) => [entry.item.id, entry]));
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const items = ranked.items
+    .map((c) => {
+      const row = byId.get(c.id);
+      const business = row && stores.get(row.business_id);
+      if (!row || !business) return null;
+      const item = itemRow(row, business);
+      const entry = sales.get(row.id);
+      return {
+        ...item,
+        brand: row.brand,
+        fromThisShop: c.fromThisShop,
+        pricing: cardPricing(item, entry),
+        flash: entry ? flashParts(entry, live.now) : null,
+        business: {
+          id: business.id,
+          slug: business.slug,
+          name: business.name,
+          verified: business.verification_level === "verified",
+          featured: PLAN_FEATURES[business.plan_key]?.featured === true,
+          categoryId: business.category_id,
+          town: business.town ?? "",
+          county: business.county ?? "",
+          ...statusCard(business.hours, business.exceptions, business.timezone)
+        }
+      };
+    })
+    .filter(Boolean);
+  return { ...ranked, items };
 }
 
 const PAGE = 1000;

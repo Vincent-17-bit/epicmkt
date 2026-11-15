@@ -82,6 +82,21 @@ export const getSimilarItems = async (itemId, opts) => {
   }
 };
 
+// "Recommended" items (C19): a page of items from any shop that go with this one. Like Similar items, any failure is an empty
+// page, so the section simply does not show. Demo ids are answered by the demo backend.
+export const getRelatedPage = async (itemId, opts = {}) => {
+  const empty = { items: [], page: opts.page ?? 1, pageSize: opts.pageSize ?? 10, hasMore: false, total: 0 };
+  try {
+    if (!isLive()) return await backend.getRelatedPage(itemId, opts);
+    const live = await liveAdapter();
+    return live.isLiveId(itemId) ? await live.getRelatedPage(itemId, opts) : await backend.getRelatedPage(itemId, opts);
+  } catch (error) {
+    if (error?.name === "AbortError" || /abort/i.test(String(error?.message))) return empty;
+    console.warn("[related-items] could not load:", error?.message ?? error);
+    return empty;
+  }
+};
+
 // Live data is authoritative: with Supabase configured an empty marketplace shows no products, never demo ones.
 export const getAllProducts = async () => (isLive() ? (await liveAdapter()).getAllProducts() : backend.getAllProducts());
 

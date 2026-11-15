@@ -304,6 +304,10 @@
     grid-row: 1;
     max-width: none;
     margin: 0;
+    /* The photos stay in view while the details column scrolls past them. */
+    position: sticky;
+    top: calc(var(--header-h, 4rem) + var(--space-4));
+    align-self: start;
   }
 
   .layout[data-variant="page"] .content {
