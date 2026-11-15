@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
 import { distanceKm } from "@epicmkt/shared";
-import { getBusiness } from "../api/index.js";
+import { getBusiness, items } from "../api/index.js";
 import { useGeoStore } from "../stores/geo.js";
 import ItemDetail from "../components/ItemDetail.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
@@ -21,6 +21,17 @@ export default function ItemPage() {
     queryFn: () => getBusiness(slug),
     retry: false
   });
+
+  // An item the seller combined into another (Bread 400g -> Bread) opens the combined item with the old choice picked.
+  const moved = useQuery({
+    queryKey: ["item-redirect", itemId],
+    queryFn: async () => (await items.getRedirect?.(itemId)) ?? null,
+    staleTime: 5 * 60 * 1000,
+    retry: false
+  });
+  if (moved.data?.itemId && moved.data.itemId !== itemId) {
+    return <Navigate replace to={`/b/${slug}/i/${encodeURIComponent(moved.data.itemId)}${moved.data.param ? `?v=${encodeURIComponent(moved.data.param)}` : ""}`} />;
+  }
 
   if (isError && error?.name === "NotFoundError") return <NotFound />;
   if (isError) return <BusinessPageError onRetry={() => refetch()} />;

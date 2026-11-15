@@ -38,6 +38,8 @@ export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, sc
 export const getServerTime = () => flashApi.getServerTime();
 export const items = {
   getDetail: (itemId, opts) => flashApi.getItemDetail(itemId, opts),
+  // Where an item the seller combined into another now lives: { itemId, param } or null.
+  getRedirect: (itemId) => flashApi.getItemRedirect(itemId),
   getStoreSelective: (businessId, opts) => flashApi.getStoreSelective(businessId, opts),
   // Items like this one from other stores of the same category, ranked; [] when none or on any failure.
   getSimilar: (itemId, opts) => flashApi.getSimilarItems(itemId, opts),

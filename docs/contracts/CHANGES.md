@@ -576,3 +576,10 @@ Entry format:
 - Shared: `demand.js` (`noMatch`, `demandLine`, `demandSuggestion`, `demandCsv`).
 - Buyer: no-match box on the item page offers the closest combinations and a "Let the seller know" button.
 - Seller: `/business/demand`. Admin: `/admin/demand` with CSV export.
+
+## A21 / B20 / C23: combine similar items and unit price (migration 0116)
+- New tables `item_merges`, `item_redirects` (closed to everyone but the service). New RPCs: `seller_similar_item_groups()`, `seller_merge_items(ids, spec)`, `seller_undo_merge(merge)`, `seller_recent_merges()`, `public_item_redirect(item)` (anon), helper `item_similar_key(text)`.
+- The FIRST id becomes the combined item (keeps photos, reviews and link); the others are hidden (`visible = false`) and redirect to it with the choice to preselect (`param` is the buyer's `?v=` text). Undo within 24 hours, refused once the options were edited.
+- Shared: `unitPrice(price, size)` ("KES 150 per kg", "KES 4 per L"), `similarKey`, `similarGroups`, `suggestAxes`, `mergePreview`.
+- Seller: `/business/catalog/merge`. Buyer: old item links redirect, and the Header slot shows the unit price line for weight and volume sizes.
+- Not done: photos of the hidden items are not moved to the combined item; the item list payloads do not show "From" yet (C20).

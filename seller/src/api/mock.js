@@ -1,6 +1,6 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
-import { checkDeliverySetting, deliveryInfo } from "@epicmkt/shared";
+import { checkDeliverySetting, deliveryInfo, similarGroups } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
@@ -212,6 +212,76 @@ export const getUnmetDemand = async (period = 7) => {
     { itemId: "demo-1", itemName: "Samsung Galaxy S26", filters: { colour: "pink" }, count: period === 30 ? 7 : 3 }
   ];
   return { period, total: rows.reduce((n, r) => n + r.count, 0), rows };
+};
+// ---- Combine similar items: the demo twin of migration 0116 (same checks and error names) ----
+const slug = (label) => String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40);
+const ownMergeable = () => bill.items.filter((i) => !i.removedByAdmin && i.visible && !i.draft && !(bill.options.get(i.id)?.axes?.length));
+export const getSimilarGroups = async () => {
+  signedIn();
+  await wait();
+  return copy(similarGroups(ownMergeable().filter((i) => !bill.redirects?.has(i.id)).map((i) => ({ ...i, productTypeId: i.productTypeId ?? null })))
+    .map((g) => ({ key: g.key, productTypeId: g.items[0].productTypeId ?? null, items: g.items.map((i) => ({ id: i.id, name: i.name, price: i.price, salePrice: i.salePrice ?? null, productTypeId: i.productTypeId ?? null })) })));
+};
+export const mergeItems = async (ids, spec) => {
+  writer();
+  await wait();
+  const list = Array.isArray(ids) ? ids : [];
+  if (list.length < 2 || list.length > 12 || new Set(list).size !== list.length) throw new ApiError("invalid_items");
+  const name = String(spec?.name ?? "").trim();
+  if (name.length < 2 || name.length > 120) throw new ApiError("invalid_name");
+  const axesIn = spec?.axes;
+  if (!Array.isArray(axesIn) || axesIn.length < 1 || axesIn.length > 2) throw new ApiError("invalid_axes");
+  const items = list.map((id) => bill.items.find((i) => i.id === id && !i.removedByAdmin));
+  if (items.some((i) => !i)) throw new ApiError("item_not_found");
+  for (const i of items) {
+    if (bill.options.get(i.id)?.axes?.length) throw new ApiError("has_options");
+    if (i.draft) throw new ApiError("item_is_draft");
+    if (!(i.price >= 0) || i.price === null) throw new ApiError("price_required");
+    if (bill.redirects?.has(i.id)) throw new ApiError("already_merged");
+  }
+  const axes = [];
+  for (const a of axesIn) {
+    if (!/^[a-z0-9][a-z0-9_-]{0,29}$/.test(a?.key ?? "") || !String(a.label ?? "").trim() || axes.some((x) => x.key === a.key)) throw new ApiError("invalid_axes");
+    const values = [];
+    for (const id of list) {
+      const label = String(a.labels?.[id] ?? "").trim();
+      if (!label || label.length > 40 || !slug(label)) throw new ApiError("invalid_label");
+      if (!values.some((v) => v.id === slug(label))) values.push({ id: slug(label), label });
+    }
+    axes.push({ key: a.key, label: String(a.label).trim(), display: "button", values });
+  }
+  const choices = list.map((id) => Object.fromEntries(axesIn.map((a) => [a.key, slug(a.labels[id])])));
+  const keys = choices.map((c) => comboKey(axes, c));
+  if (new Set(keys).size !== keys.length) throw new ApiError("duplicate_combination");
+  const target = items[0];
+  const merge = { id: `m${++bill.seq}`, itemId: target.id, name, count: list.length, createdAt: clockNow().toISOString(), expiresAt: new Date(clockNow().getTime() + 24 * 3600 * 1000).toISOString(), undone: false,
+    snapshot: { name: target.name, options: bill.options.get(target.id) ?? null, sources: items.slice(1).map((i) => ({ id: i.id, visible: i.visible })) }, axes };
+  bill.merges = [...(bill.merges ?? []), merge];
+  bill.redirects ??= new Map();
+  bill.options.set(target.id, { axes, variants: items.map((i, n) => ({ id: `v-${i.id}`, key: keys[n], choice: choices[n], price: i.price, salePrice: i.salePrice != null && i.salePrice < i.price ? i.salePrice : null, stock: i.trackStock ? i.stockCount : null, status: i.availability ?? "available", sku: null, mediaIds: [] })), defaultChoice: null, sizeChartId: null, sizeChartOverride: null });
+  target.name = name;
+  items.slice(1).forEach((i, n) => { i.visible = false; bill.redirects.set(i.id, { to: target.id, mergeId: merge.id, choice: choices[n + 1] }); });
+  return { mergeId: merge.id, itemId: target.id, expiresAt: merge.expiresAt };
+};
+export const undoMerge = async (mergeId) => {
+  writer();
+  await wait();
+  const m = (bill.merges ?? []).find((x) => x.id === mergeId);
+  if (!m) throw new ApiError("merge_not_found");
+  if (m.undone) throw new ApiError("already_undone");
+  if (clockNow().getTime() > Date.parse(m.expiresAt)) throw new ApiError("merge_expired");
+  if (JSON.stringify(bill.options.get(m.itemId)?.axes) !== JSON.stringify(m.axes)) throw new ApiError("merge_edited");
+  const target = bill.items.find((i) => i.id === m.itemId);
+  target.name = m.snapshot.name;
+  if (m.snapshot.options) bill.options.set(m.itemId, m.snapshot.options); else bill.options.delete(m.itemId);
+  for (const s of m.snapshot.sources) { const it = bill.items.find((i) => i.id === s.id); if (it) it.visible = s.visible; bill.redirects.delete(s.id); }
+  m.undone = true;
+  return { itemId: m.itemId, restored: m.count };
+};
+export const listRecentMerges = async () => {
+  signedIn();
+  await wait();
+  return copy((bill.merges ?? []).filter((m) => !m.undone && Date.parse(m.expiresAt) > clockNow().getTime()).map(({ id, itemId, name, count, createdAt, expiresAt }) => ({ id, itemId, name, count, createdAt, expiresAt })).reverse());
 };
 export const confirmPrices = async () => { writer(); await wait(); state.priceConfirmedAt = new Date().toISOString(); return 0; };
 export const pauseListing = async (pause) => {

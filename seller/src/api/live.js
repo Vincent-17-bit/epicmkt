@@ -54,6 +54,13 @@ export const setDelivery = ({ offers, fee = null, radiusKm = null, area = null, 
   rpc("seller_set_delivery", { p_offers: offers, p_fee: fee, p_radius_km: radiusKm, p_area: area, p_min_order: minOrder, p_notes: notes });
 // What shoppers asked for and did not find, for this shop only (migration 0115). period is 7 or 30 days.
 export const getUnmetDemand = (period = 7) => rpc("seller_unmet_demand", { p_period: period });
+// Combine similar items (migration 0116). Groups: [{ key, productTypeId, items: [{ id, name, price, salePrice }] }].
+export const getSimilarGroups = () => rpc("seller_similar_item_groups");
+// spec: { name, axes: [{ key, label, labels: { [itemId]: "400 g" } }] }. The first id becomes the combined item. -> { mergeId, itemId, expiresAt }
+export const mergeItems = (ids, spec) => rpc("seller_merge_items", { p_ids: ids, p_spec: spec });
+export const undoMerge = (mergeId) => rpc("seller_undo_merge", { p_merge: mergeId });
+// The merges that can still be undone: [{ id, itemId, name, count, createdAt, expiresAt }]
+export const listRecentMerges = () => rpc("seller_recent_merges");
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });
 const rows = async (q) => {
