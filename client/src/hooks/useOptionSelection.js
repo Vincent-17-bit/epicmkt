@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { choiceFromParam, choiceLabel, choiceToParam, reconcileSelection, variantForChoice } from "@epicmkt/shared";
+import { choiceFromParam, choiceLabel, choiceToParam, noMatch, reconcileSelection, variantForChoice } from "@epicmkt/shared";
 
 // The buyer's choice among an item's option axes (colour, size, storage, style...). Returns null for an item with no options, so every
 // caller can skip it and the item behaves exactly as before.
@@ -20,7 +20,7 @@ export function useOptionSelection(item, itemId) {
   // The link's value, read once per item (the first render for it), never again: later changes to the URL are our own.
   const fromUrl = useRef({ itemId, text: params.get("v") });
   if (fromUrl.current.itemId !== itemId) fromUrl.current = { itemId, text: null };
-  const [picked, setPicked] = useState({ itemId: null, raw: null, axisKey: null, n: 0 });
+  const [picked, setPicked] = useState({ itemId: null, raw: null, axisKey: null, n: 0, miss: null });
 
   const raw = picked.itemId === itemId ? picked.raw : live ? choiceFromParam(axes, fromUrl.current.text) : null;
   const defaultVariantId = item?.defaultVariantId ?? null;
@@ -37,10 +37,22 @@ export function useOptionSelection(item, itemId) {
       // The option type the buyer picked last (null until they pick): its photo is the one the gallery shows. `n` counts the picks.
       lastAxisKey: picked.itemId === itemId ? picked.axisKey : null,
       pickCount: picked.itemId === itemId ? picked.n : 0,
+      // What the buyer last asked for when nothing was on sale for it (null otherwise): { reason, filters, closest, wanted }. Cleared by the next pick.
+      unmatched: picked.itemId === itemId ? picked.miss : null,
+      dismissUnmatched: () => setPicked((p) => (p.itemId === itemId ? { ...p, miss: null } : p)),
       label: variant?.label || choiceLabel(axes, choice),
+      // Jump to a whole combination (the "closest match" buttons of the no-match box).
+      choose: (next) => {
+        const whole = reconcileSelection(axes, variants, next ?? {}, defaultVariantId);
+        setPicked((p) => ({ itemId, raw: whole, axisKey: null, n: (p.itemId === itemId ? p.n : 0) + 1, miss: null }));
+        const text = choiceToParam(axes, whole);
+        setParams((prev) => { const out = new URLSearchParams(prev); if (text) out.set("v", text); else out.delete("v"); return out; }, { replace: true, state: location.state });
+      },
       select: (axisKey, valueId) => {
         const next = reconcileSelection(axes, variants, { ...choice, [axisKey]: valueId }, defaultVariantId);
-        setPicked((p) => ({ itemId, raw: next, axisKey, n: (p.itemId === itemId ? p.n : 0) + 1 }));
+        const asked = { ...choice, [axisKey]: valueId };
+        const miss = noMatch(axes, variants, asked);
+        setPicked((p) => ({ itemId, raw: next, axisKey, n: (p.itemId === itemId ? p.n : 0) + 1, miss: miss ? { ...miss, wanted: asked } : null }));
         const text = choiceToParam(axes, next);
         setParams(
           (prev) => {

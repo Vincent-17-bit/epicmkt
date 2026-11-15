@@ -52,6 +52,8 @@ export const setLocation = ({ lat, lng, address } = {}) => rpc("seller_set_locat
 // The shop's own delivery setting (migration 0114). { offers, fee, radiusKm, area, minOrder, notes } -> the public object the buyer sees.
 export const setDelivery = ({ offers, fee = null, radiusKm = null, area = null, minOrder = null, notes = null } = {}) =>
   rpc("seller_set_delivery", { p_offers: offers, p_fee: fee, p_radius_km: radiusKm, p_area: area, p_min_order: minOrder, p_notes: notes });
+// What shoppers asked for and did not find, for this shop only (migration 0115). period is 7 or 30 days.
+export const getUnmetDemand = (period = 7) => rpc("seller_unmet_demand", { p_period: period });
 export const requestChange = async (field, value) => shape.change(await rpc("seller_request_change", { p_field: field, p_value: value }));
 export const cancelChange = (id) => rpc("seller_cancel_change", { p_id: id });
 const rows = async (q) => {

@@ -30,6 +30,7 @@ const quiet = (fn) => {
 };
 // Live: stored in Supabase (log_business_event), which feeds the seller Performance panel. Otherwise the in-memory backend.
 export const logContactEvent = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logBusinessEvent(event)) : backend.logContactEvent(event)));
+export const logUnmetDemand = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logUnmetDemand(event)) : backend.logUnmetDemand(event)));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
 export const reportBusiness = (report) => backend.reportBusiness(report);
 export const getTowns = () => browse.getTowns();
