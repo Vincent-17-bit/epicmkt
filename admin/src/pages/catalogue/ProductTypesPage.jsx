@@ -7,12 +7,13 @@ import LoadError from "../../components/LoadError.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import * as M from "../../lib/productTypes.js";
+import { formatDateTime } from "../../lib/time.js";
 
 const KEY = "admin-product-types";
 const NEW = "__new";
 // The scales an option can measure with (shared/src/scales): shoe sizes, storage, volume, screen size ...
 const SCALES = listScales().map((s) => [s.id, s.label ?? s.id]).sort((a, b) => a[1].localeCompare(b[1]));
-const when = (iso) => (iso ? new Date(iso).toLocaleString("en-KE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso) => (iso ? formatDateTime(iso) : "");
 
 function AxisCard({ axis, index, count, canEdit, onSet, onMove, onRemove }) {
   const uid = useId();

@@ -79,7 +79,7 @@
 /* Product types: live version and draft state, and the version note in the footer. */
 .pt-status { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
 .pt-note { flex: 1 1 16rem; min-inline-size: 0; }
-.pt-check > span { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--fw-regular, 400); }
+.pt-check > span { display: inline-flex; align-items: center; gap: var(--space-2); }
 .pt-check input[type="checkbox"] { inline-size: 1.1rem; block-size: 1.1rem; margin: 0; flex: none; }
 /* On a phone the actions sit at the end of the form instead of covering a third of the screen. */
 @media (max-width: 40rem) { .pt-footer { position: static; } }

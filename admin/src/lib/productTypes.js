@@ -1,3 +1,4 @@
+import { formatDate } from "./time.js";
 export const DISPLAYS = [
   ["button", "Buttons"],
   ["swatch", "Colour swatches"],
@@ -127,10 +128,10 @@ export const differsFromLive = (d, type) => {
 };
 
 // "Version 3, published 12 Nov 2026" / "Not published yet" / a live type from before versions were kept.
-export const versionText = (type, locale = "en-KE") => {
+export const versionText = (type) => {
   if (!type || type.unpublished) return "Not published yet";
   if (!type.version) return "Live since before versions were kept";
-  const when = type.publishedAt ? new Date(type.publishedAt).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : null;
+  const when = type.publishedAt ? formatDate(type.publishedAt) : null;
   return `Version ${type.version}${when ? `, published ${when}` : ""}`;
 };
 

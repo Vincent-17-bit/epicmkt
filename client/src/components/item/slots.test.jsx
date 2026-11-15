@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import Delivery from "./Delivery.jsx";
 import Flash from "./Flash.jsx";
@@ -74,7 +75,8 @@ const make = (over = {}) => {
   return ctx;
 };
 
-const mount = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>);
+// The item page always sits inside the app's QueryClientProvider (the Recommended section fetches through it).
+const mount = (ui) => render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><MemoryRouter>{ui}</MemoryRouter></QueryClientProvider>);
 
 describe("item slots", () => {
   describe("TopBar", () => {

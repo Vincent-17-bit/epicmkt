@@ -25,72 +25,36 @@
 <div class="body">
 <div class="layout">
 <div class="media">
-<div class="root " role="region" aria-roledescription="carousel" aria-label="Fade and beard">
+<div id="item-overview">
+<div class="wrap ">
+<div class="rail" role="list" aria-label="Images">
+<div role="listitem">
+<button type="button" class="thumb" aria-current="true" aria-label="Photo 1 of 2">
+<img src="a.png" alt="" loading="lazy" decoding="async">
+</button>
+</div>
+<div role="listitem">
+<button type="button" class="thumb" aria-label="Photo 2 of 2">
+<img src="b.png" alt="" loading="lazy" decoding="async">
+</button>
+</div>
+</div>
+<div class="stageCol">
 <div class="stage">
 <div class="track">
-<div id="X" class="slide" role="tabpanel" aria-roledescription="slide" aria-labelledby=":rX:-tab-0" data-kind="image" data-active="true">
-<button type="button" class="zoom" aria-label="Zoom photo 1 / 2">
-<span class="frame fill " data-state="loading">
-<img src="a.png" alt="" loading="eager" fetchpriority="high" decoding="async" draggable="false" class="img img">
-</span>
+<button type="button" class="slide" tabindex="0" aria-label="Click to see full view: Photo 1 of 2">
+<img src="a.png" alt="x" loading="eager" fetchpriority="high" decoding="async">
+</button>
+<button type="button" class="slide" tabindex="-1" aria-hidden="true" aria-label="Click to see full view: Photo 2 of 2">
+<img src="b.png" alt="y" loading="lazy" decoding="async">
 </button>
 </div>
-<div id="X" class="slide" role="tabpanel" aria-roledescription="slide" aria-labelledby=":rX:-tab-1" data-kind="image" data-active="false" aria-hidden="true" inert="">
-<button type="button" class="zoom" aria-label="Zoom photo 2 / 2">
-<span class="frame fill " data-state="loading">
-<img src="b.png" alt="" loading="lazy" decoding="async" draggable="false" class="img img">
-</span>
-</button>
+<span class="counter" aria-hidden="true">1 / 2</span>
+</div>
+<button type="button" class="fullView">Click to see full view</button>
 </div>
 </div>
-<p class="counter" aria-hidden="true">1 / 2</p>
-<button type="button" class="arrow prev" disabled="" aria-label="Previous">
-<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-left" class="svg-inline--fa fa-chevron-left " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-<path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z">
-</path>
-</svg>
-</button>
-<button type="button" class="arrow next" aria-label="Next">
-<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" class="svg-inline--fa fa-chevron-right " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-<path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z">
-</path>
-</svg>
-</button>
-<p class="sr-only" aria-live="polite" aria-atomic="true">Photo 1 of 2</p>
 </div>
-<div class="rail" role="tablist" aria-label="Choose a photo or video" aria-orientation="horizontal">
-<button id="X" type="button" role="tab" class="thumb current" aria-selected="true" aria-controls=":rX:-panel-0" aria-label="Photo 1 of 2" tabindex="0">
-<span class="frame fill " data-state="loading">
-<img src="a.png" alt="" loading="lazy" decoding="async" draggable="false" class="img thumbImg">
-</span>
-</button>
-<button id="X" type="button" role="tab" class="thumb " aria-selected="false" aria-controls=":rX:-panel-1" aria-label="Photo 2 of 2" tabindex="-1">
-<span class="frame fill " data-state="loading">
-<img src="b.png" alt="" loading="lazy" decoding="async" draggable="false" class="img thumbImg">
-</span>
-</button>
-</div>
-</div>
-<dialog class="dialog" aria-label="Photo gallery">
-<button type="button" class="btn close" aria-label="Close">
-<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="xmark" class="svg-inline--fa fa-xmark " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
-<path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z">
-</path>
-</svg>
-</button>
-<button type="button" class="btn prev" aria-label="Previous photo">
-<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-left" class="svg-inline--fa fa-chevron-left " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-<path fill="currentColor" d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z">
-</path>
-</svg>
-</button>
-<button type="button" class="btn next" aria-label="Next photo">
-<svg aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" class="svg-inline--fa fa-chevron-right " role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512">
-<path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z">
-</path>
-</svg>
-</button>
-</dialog>
 </div>
 <div class="content">
 <div class="details">
@@ -193,6 +157,8 @@
 </div>
 <button type="button" class="more" aria-expanded="false">See all 3</button>
 </section>
+<div id="item-delivery">
+</div>
 <div class="badges">
 <span class="tag">Cuts</span>
 <span class="offerTag offerBadge" data-offer-chip="">
@@ -208,7 +174,7 @@
 </span>
 </div>
 </div>
-<section class="sold" aria-label="Sold by">
+<section class="sold" aria-label="Sold by" id="item-store">
 <div class="seller">
 <span class="logo">F</span>
 <div class="sellerText">
@@ -225,6 +191,14 @@
 <p class="sellerMeta">Opens 8am</p>
 </div>
 <span class="closed">Closed</span>
+</div>
+<div class="soldWhere" id="item-store-map">
+<p class="soldPlace">
+<strong>Maseno</strong>
+</p>
+<p class="soldLinks">
+<a href="https://wa.me/254712555101?text=Hi%2C%20I%20saw%20the%20flash%20sale%20on%20Fade%20and%20beard%3A%20KES%20240%20(was%20KES%20300)%20on%20EpicMKT" target="_blank" rel="noopener noreferrer" class="soldLink">Ask the shop for directions</a>
+</p>
 </div>
 <div class="actions">
 <a class="outline" href="/b/fade-kings">
@@ -267,6 +241,7 @@
 </div>
 <p class="note">Contact the business to order. EpicMKT does not process orders or payments.</p>
 </section>
+<div id="item-details">
 <section class="about" aria-labelledby="item-about">
 <h3 id="item-about" class="aboutTitle">About this item</h3>
 <ul class="bullets">
@@ -290,7 +265,9 @@
 </div>
 </section>
 </div>
+</div>
 <div class="panels">
+<div id="item-specs">
 <section class="section" aria-label="Specifications">
 <div class="panel">
 <h3 class="heading">
@@ -400,6 +377,34 @@
 </div>
 </div>
 </div>
+</div>
+<section id="item-recommend" class="section" aria-labelledby="X-title">
+<h3 id="X-title" class="title">Recommended with this item</h3>
+<p class="note">Products that go with it, from shops across EpicMKT.</p>
+<ul class="grid" aria-busy="true">
+<li>
+<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
+</span>
+</li>
+<li>
+<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
+</span>
+</li>
+<li>
+<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
+</span>
+</li>
+<li>
+<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
+</span>
+</li>
+<li>
+<span aria-hidden="true" class="skeleton " style="width: 100%; height: 16rem; border-radius: var(--radius-card);">
+</span>
+</li>
+</ul>
+</section>
+<div id="item-similar">
 <section class="section similar" aria-labelledby="X-title" data-similar="" data-state="loading">
 <div class="frame scroller" style="--cell: clamp(148px, 42vw, 220px);" data-scrollable="false" data-header="true">
 <div class="header">
@@ -439,6 +444,7 @@
 </button>
 </div>
 </section>
+</div>
 </div>
 <footer class="footer">
 <a href="https://wa.me/254712555101?text=Hi%2C%20I%20saw%20the%20flash%20sale%20on%20Fade%20and%20beard%3A%20KES%20240%20(was%20KES%20300)%20on%20EpicMKT" target="_blank" rel="noopener noreferrer" class="chat">

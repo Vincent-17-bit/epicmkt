@@ -200,7 +200,7 @@
 }
 
 .paste {
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: var(--text-sm);
   min-height: 6rem;
   resize: vertical;

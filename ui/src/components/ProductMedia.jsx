@@ -68,7 +68,8 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
     if (track?.clientWidth) setActive(Math.round(track.scrollLeft / track.clientWidth));
   };
 
-  if (!list.length) return <div className={`${styles.wrap} ${styles.empty} ${className}`} aria-hidden="true" />;
+  // No photos and no videos: no gallery at all, as before (the page closes up around it).
+  if (!list.length) return null;
 
   const railPhotos = photos.length > RAIL_PHOTOS + 1 ? photos.slice(0, RAIL_PHOTOS) : photos;
   const rest = photos.length - railPhotos.length;
@@ -124,7 +125,7 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
                   aria-label={`${text.fullView}: ${fill(text.photo, { n: i + 1, total: photos.length })}`}
                   onClick={(e) => open("images", i, e)}
                 >
-                  <img src={resizedUrl(p.url, 1200)} alt={p.caption || name} loading={i === 0 ? "eager" : "lazy"} decoding="async" />
+                  <img src={resizedUrl(p.url, 1200)} alt={p.caption || name} loading={i === 0 ? "eager" : "lazy"} fetchpriority={i === 0 ? "high" : undefined} decoding="async" />
                 </button>
               ))}
             </div>
