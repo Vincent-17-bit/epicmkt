@@ -1,12 +1,44 @@
-import { useId, useState } from "react";
-import { setBasePlusDifference, setPricesByAxis, setSamePrice } from "@epicmkt/shared";
+import { useId, useRef, useState } from "react";
+import { fillDownPrices, pastePrices, setBasePlusDifference, setPricesByAxis, setSamePrice } from "@epicmkt/shared";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
 
-// "Fill prices faster": three ways to type prices where the seller thinks about them. Each one only fills the list below;
-// every price is stored per combination, so the seller can still change any single one afterwards.
+// "Fill prices faster": ways to type prices where the seller thinks about them, plus paste from a spreadsheet and fill down
+// (B09). Each one only fills the list below; every price is stored per combination, so the seller can still change any single
+// one afterwards. The last bulk change can be undone (one step).
 export default function PriceTools({ options, set, announce }) {
   const uid = useId();
+  const before = useRef(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [pasted, setPasted] = useState("");
+  // Every bulk change goes through here so it can be undone.
+  const bulk = (next, message) => {
+    before.current = options;
+    setCanUndo(true);
+    set(next);
+    announce(message);
+  };
+  const undo = () => {
+    if (!before.current) return;
+    set(before.current);
+    before.current = null;
+    setCanUndo(false);
+    announce("Last change undone.");
+  };
+  const paste = (text = pasted) => {
+    const r = pastePrices(options, text);
+    if (r.filled === 0) {
+      announce(r.skipped ? "None of the pasted rows matched an option on this item. Use the same names as above." : "Nothing to paste.");
+      return;
+    }
+    bulk(r.options, `${r.filled} price${r.filled === 1 ? "" : "s"} filled from the paste${r.skipped ? `, ${r.skipped} row${r.skipped === 1 ? "" : "s"} skipped` : ""}.`);
+    setPasted("");
+  };
+  const fillDown = () => {
+    const r = fillDownPrices(options);
+    if (r.filled === 0) announce("Every combination already has a price, or none has one to copy.");
+    else bulk(r.options, `${r.filled} empty price${r.filled === 1 ? "" : "s"} filled from the row above.`);
+  };
   const axes = options.axes;
   const [mode, setMode] = useState("same");
   const [same, setSame] = useState("");
@@ -26,10 +58,8 @@ export default function PriceTools({ options, set, announce }) {
   );
 
   const apply = () => {
-    if (mode === "same") set(setSamePrice(options, same));
-    else if (mode === "axis") set(setPricesByAxis(options, axisKey, byAxis));
-    else set(setBasePlusDifference(options, { baseAxis: baseKey, diffAxis: diffKey, base, diff }));
-    announce("Prices filled in. You can still change any single price below.");
+    const next = mode === "same" ? setSamePrice(options, same) : mode === "axis" ? setPricesByAxis(options, axisKey, byAxis) : setBasePlusDifference(options, { baseAxis: baseKey, diffAxis: diffKey, base, diff });
+    bulk(next, "Prices filled in. You can still change any single price below.");
   };
 
   return (
@@ -77,6 +107,34 @@ export default function PriceTools({ options, set, announce }) {
         )}
 
         <button type="button" className={`${s.pill} ${s.pillPrimary}`} style={{ justifySelf: "start" }} onClick={apply}>Fill the prices</button>
+
+        <div className={ed.field}>
+          <label className={ed.label} htmlFor={`${uid}-paste`}>Paste from a spreadsheet</label>
+          <p className={s.hint} id={`${uid}-paste-hint`}>
+            Copy two columns (an option and its price, such as "Black 25000") or a grid (one option across the top, another down the side) and paste it here.
+          </p>
+          <textarea
+            id={`${uid}-paste`}
+            className={`${ed.input} ${s.paste}`}
+            rows={4}
+            aria-describedby={`${uid}-paste-hint`}
+            value={pasted}
+            placeholder={"\tBlack\tGrey\n128 GB\t22000\t21000"}
+            onChange={(e) => setPasted(e.target.value)}
+            onPaste={(e) => {
+              const text = e.clipboardData?.getData("text/plain");
+              if (text && /\t|\n/.test(text)) {
+                e.preventDefault();
+                paste(text);
+              }
+            }}
+          />
+        </div>
+        <div className={s.toolRow}>
+          <button type="button" className={s.pill} onClick={() => paste()} disabled={!pasted.trim()}>Use the pasted prices</button>
+          <button type="button" className={s.pill} onClick={fillDown}>Fill down empty prices</button>
+          <button type="button" className={s.pill} onClick={undo} disabled={!canUndo}>Undo last change</button>
+        </div>
       </div>
     </details>
   );
