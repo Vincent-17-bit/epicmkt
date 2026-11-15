@@ -1,4 +1,5 @@
 import { AUDIO_PRODUCTS, AUDIO_PRODUCTS_SECOND_SHOP } from "./audioCatalog.js";
+import { EVERYDAY_ITEMS } from "./everydayCatalog.js";
 import { slugify } from "@epicmkt/shared";
 import { demoItemId } from "./itemIds.js";
 import { attributesById } from "./attributes.js";
@@ -48,7 +49,7 @@ const make = (i, b) => {
     logoUrl: logoArt(hue, b.name),
     ...b,
     townSlug: slugify(b.area),
-    services: completeServices(b.categoryId, b.services ?? [], i).map((svc, n) => ({
+    services: completeServices(b.categoryId, [...(b.services ?? []), ...(EVERYDAY_ITEMS[slugify(b.name)] ?? [])], i).map((svc, n) => ({
       ...svc,
       id: demoItemId(id, svc.id ?? slugify(svc.name)),
       imageUrl: svc.imageUrl ?? serviceArt((hue + n * 24) % 360, svc.name)
