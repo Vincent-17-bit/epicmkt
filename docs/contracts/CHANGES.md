@@ -630,3 +630,10 @@ Entry format:
 - `ProductTile` (ui) shows "From KES x" when `pricing.hasRange` (during a flash sale: the lowest flash price, with no struck-through regular price) and a small "Options" hint when `item.hasOptions`. Labels `from` and `options` are the caller's.
 - The price filter, sort and price facet use the lowest price (`priceMin`, else the sale price).
 - Size-aware filters (C22) were already in place: size keys group by scale, shoe system switch, length and screen-inch ranges, storage sorted with `compare`; covered by `sizeFilters.test.js` and `ProductFilters.sizes.test.jsx`.
+
+## Join: quantity on the item page, phone fixture through the editor (11.2, 11.3, C11, C12)
+
+- Item detail carries `quantityMode` ("units" | "measure" | "none") read from the item's product type (`product_types.quantity_mode`, public). No type or a failed read: no mode, and the page is as before.
+- One quantity on the page (`ctx.qty`, `ctx.setQty`, `ctx.order`). A typed item that counts units or a measure (kg, m) gets a stepper with the total ("KES 48,000 for 2", "KES 800 per kg x 1.5 kg = KES 1,200"); minus stops at the least (1, or the measure's minimum), typed 0 and negatives are corrected, the maximum is the stock left. Quantity-tier items use the same quantity in their table.
+- The message to the seller says what was chosen once the quantity is not 1 (or the amount is measured): "Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT". Quantity 1 keeps the plain message. A seller's own greeting still wins.
+- Seller editor: a test builds the phone fixture (Black 25,000, Grey 24,000) through the real Options step and matches the contract fixture; seeded types drive axes and publish checks.

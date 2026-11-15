@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, defaultVariantId } from "../lib/itemView.js";
+import { chatMessage, defaultVariantId, orderLine, quantityInfo } from "../lib/itemView.js";
+import { tiersFor } from "./item/Tiers.jsx";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
@@ -53,6 +54,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const [choice, setChoice] = useState({ itemId: null, variantId: null });
+  const [qtyChoice, setQtyChoice] = useState({ itemId: null, value: null });
 
   const { data: detail, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["item", business.id, itemId],
@@ -188,13 +190,20 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const shown = option ? (current?.flash ? current.pricing : option.variant ? optionPrice : null) : (legacyVariant ?? current?.pricing ?? null);
   const seller = useLiveStatus(current?.business ?? null);
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
-  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }) : "";
+  // One quantity for the page (units, a measure, or a quantity-tier order). It resets with the item and falls back to the least that can be bought.
+  const tiers = current ? tiersFor(current, option?.variant ?? null) : null;
+  const qtyInfo = current ? quantityInfo(current, option?.variant ?? null) : null;
+  const qtyDefault = qtyInfo?.rules.min ?? 1;
+  const qty = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : qtyDefault;
+  const setQty = (value) => setQtyChoice({ itemId, value });
+  const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
+  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order }) : "";
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
 
   const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
   const onChat = (placement) => () => {
     logContactEvent({ businessId: business.id, itemId, type: "whatsapp" });
-    track("chat_seller_click", { placement, variantId: variant?.id ?? null, flash: Boolean(current?.flash) });
+    track("chat_seller_click", { placement, variantId: variant?.id ?? null, flash: Boolean(current?.flash), ...(order ? { quantity: order.qty } : {}) });
   };
   const onVisit = (placement) => () => track("visit_store_click", { placement });
   const onCall = () => logContactEvent({ businessId: business.id, itemId, type: "call" });
@@ -226,6 +235,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     variant,
     option,
     activeId,
+    qty,
+    setQty,
+    order,
     selectVariant: (variantId) => setChoice({ itemId, variantId }),
     seller,
     sellerCount,
