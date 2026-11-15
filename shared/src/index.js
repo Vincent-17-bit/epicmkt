@@ -79,3 +79,5 @@ export * from "./planLimits.js";
 
 export * from "./delivery.js";
 export * from "./demand.js";
+export * from "./unitPrice.js";   // A21
+export * from "./mergeItems.js";   // A21

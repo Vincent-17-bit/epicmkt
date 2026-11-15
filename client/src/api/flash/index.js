@@ -46,6 +46,12 @@ export const getItemDetail = (itemId, opts) =>
     () => backend.getItemDetail(itemId, opts)
   );
 
+// Only the live data knows about combined items; the demo backend has none.
+export const getItemRedirect = async (itemId) => {
+  if (!isLive()) return null;
+  try { return await (await liveAdapter()).getItemRedirect(itemId); } catch { return null; }
+};
+
 export const getStoreSelective = async (businessId, opts) => {
   if (!isLive()) return backend.getStoreSelective(businessId, opts);
   const rows = await (await liveAdapter()).getStoreSelective(businessId, opts);

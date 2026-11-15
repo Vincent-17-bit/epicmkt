@@ -336,6 +336,7 @@ export default function Catalog() {
         </div>
         <div className={styles.headActions}>
           <button type="button" className={styles.primary} onClick={() => openEditor(null)}>Add item</button>
+          <Link className={styles.ghost} to="/business/catalog/merge">Combine similar</Link>
           <button type="button" className={styles.ghost} onClick={() => setDialog("import")}>Import items{shop.planKey !== "premium" ? " (Premium)" : ""}</button>
         </div>
       </header>

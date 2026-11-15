@@ -22,13 +22,13 @@ const detail = {
   business: { slug: "fade-kings", name: "Fade Kings", phone: "0712555101", whatsapp: "0712555101", townName: "Maseno", isOpen: true, verified: true }
 };
 
-const mocks = vi.hoisted(() => ({ getDetail: vi.fn(), getStoreSelective: vi.fn(), getBusiness: vi.fn(), getSimilar: vi.fn() }));
+const mocks = vi.hoisted(() => ({ getDetail: vi.fn(), getStoreSelective: vi.fn(), getBusiness: vi.fn(), getSimilar: vi.fn(), getRedirect: vi.fn() }));
 vi.mock("../api/index.js", () => ({
   getBusiness: mocks.getBusiness,
   logContactEvent: vi.fn(),
   logEvent: vi.fn(),
   reportBusiness: vi.fn(),
-  items: { getDetail: mocks.getDetail, getStoreSelective: mocks.getStoreSelective, getSimilar: mocks.getSimilar }
+  items: { getDetail: mocks.getDetail, getStoreSelective: mocks.getStoreSelective, getSimilar: mocks.getSimilar, getRedirect: mocks.getRedirect }
 }));
 
 const Where = () => {
@@ -128,5 +128,26 @@ describe("ItemPage", () => {
     await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
     await waitFor(() => expect(container.querySelector("[data-similar]")).toBeNull());
     expect(container.querySelector("[data-similar-marker]")).toBeNull();
+  });
+});
+
+describe("ItemPage: an item the seller combined into another", () => {
+  it("opens the combined item with the old choice in the link", async () => {
+    mocks.getBusiness.mockResolvedValue(biz);
+    mocks.getDetail.mockResolvedValue(detail);
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getRedirect.mockResolvedValue({ itemId: "bread", choice: { weight: "800-g" }, param: "800-g" });
+    mount("/b/fade-kings/i/old-bread");
+    await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/b/fade-kings/i/bread?v=800-g"));
+  });
+
+  it("leaves an item that was not combined alone", async () => {
+    mocks.getBusiness.mockResolvedValue(biz);
+    mocks.getDetail.mockResolvedValue(detail);
+    mocks.getStoreSelective.mockResolvedValue([]);
+    mocks.getRedirect.mockResolvedValue(null);
+    mount("/b/fade-kings/i/fade");
+    expect(await screen.findByRole("heading", { level: 1, name: "Fade and beard" })).toBeInTheDocument();
+    expect(screen.getByTestId("where")).toHaveTextContent("/b/fade-kings/i/fade");
   });
 });

@@ -153,6 +153,16 @@ const optionsFor = async (itemId) => {
   return sound ? { ...emptyOptions(), ...data } : emptyOptions();
 };
 
+// An item the seller combined into another one (migration 0116): { itemId, choice, param } of the combined item, or null.
+// Any failure is "no redirect": the item page then shows its own not-found state.
+export async function getItemRedirect(itemId) {
+  if (!isLiveId(itemId)) return null;
+  const found = await supabase.rpc("public_item_redirect", { p_item: itemId });
+  if (found.error) return null;
+  const d = found.data;
+  return d && typeof d === "object" && typeof d.itemId === "string" ? { itemId: d.itemId, choice: d.choice ?? {}, param: typeof d.param === "string" ? d.param : "" } : null;
+}
+
 export async function getItemDetail(itemId, { businessId, origin } = {}) {
   if (!isLiveId(itemId)) throw new NotFoundError("Item not found");
   const row = unwrap(await supabase.from("public_items").select("*").eq("id", itemId).maybeSingle());
