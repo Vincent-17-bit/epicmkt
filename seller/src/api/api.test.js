@@ -405,6 +405,19 @@ test("size guide: the same rules as the database, and only the seller's own item
   assert.equal(await mock.getItemSizeGuide("it-fade").then((g) => g.rows.length), 2);
 });
 
+test("made to measure is saved per item, checked, and copied with the item", async () => {
+  mock.resetMock();
+  await mock.login("es100001", "Demo-Passw0rd");
+  const cfg = { enabled: true, axisKey: "size", fields: [{ key: "bust", label: "Bust", unit: "cm", min: 60, max: 200, required: true }], price: { mode: "fixed", base: 4500 } };
+  assert.equal(await mock.getItemCustomSize("it-fade"), null);
+  assert.equal(await mock.saveItemCustomSize("it-fade", cfg), true);
+  assert.deepEqual(await mock.getItemCustomSize("it-fade"), cfg);
+  await assert.rejects(() => mock.saveItemCustomSize("it-fade", { ...cfg, fields: [] }), { code: "invalid_custom_size" });
+  await assert.rejects(() => mock.saveItemCustomSize("nope", cfg), { code: "item_not_found" });
+  await mock.saveItemCustomSize("it-fade", null);
+  assert.equal(await mock.getItemCustomSize("it-fade"), null);
+});
+
 test("the mock refuses a publish the real server would refuse, and lets it through once the required rows are filled", async () => {
   mock.resetMock();
   await mock.login("es100001", "Demo-Passw0rd");

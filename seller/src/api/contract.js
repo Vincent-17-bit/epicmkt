@@ -70,6 +70,8 @@ export const SELLER_API = [
   "getServerTime",
   "listItems",
   "getCatalog",
+  "getItemCustomSize",
+  "saveItemCustomSize",
   "bulkItems",
   "setItemTypes",
   "saveItem",

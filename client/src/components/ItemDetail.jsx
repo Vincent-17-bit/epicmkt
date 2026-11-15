@@ -55,6 +55,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   closeRef.current = onClose;
   const [choice, setChoice] = useState({ itemId: null, variantId: null });
   const [qtyChoice, setQtyChoice] = useState({ itemId: null, value: null });
+  // Made to measure: whether the buyer chose it for this item, and what they gave (see item/MadeToMeasure.jsx).
+  const [madeChoice, setMadeChoice] = useState({ itemId: null, on: false, result: null });
 
   const { data: detail, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["item", business.id, itemId],
@@ -197,7 +199,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const qty = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : qtyDefault;
   const setQty = (value) => setQtyChoice({ itemId, value });
   const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
-  const message = current ? chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order }) : "";
+  const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
+  const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
+  const message = !current ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order });
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
 
   const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
@@ -238,6 +242,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     qty,
     setQty,
     order,
+    custom: current?.customSize ? { config: current.customSize, on: made.on, result: made.result, setOn: (on) => setMadeChoice({ itemId, on, result: null }), setResult: (result) => setMadeChoice({ itemId, on: true, result }) } : null,
     selectVariant: (variantId) => setChoice({ itemId, variantId }),
     seller,
     sellerCount,

@@ -176,9 +176,9 @@ export default function MediaManager({ manager, hasItem, disabled = false }) {
         </ul>
       )}
       <p className={styles.sr} role="status" aria-live="polite" data-testid="media-live">{announcement}</p>
-      <input ref={pickRef} type="file" accept={PICK} multiple className={styles.sr} tabIndex={-1} onChange={onPick} data-testid="media-input" />
-      <input ref={photoRef} type="file" accept="image/*" capture="environment" className={styles.sr} tabIndex={-1} onChange={onCameraPhoto} data-testid="camera-photo" />
-      <input ref={videoRef} type="file" accept="video/*" capture="environment" className={styles.sr} tabIndex={-1} onChange={onCameraVideo} data-testid="camera-video" />
+      <input ref={pickRef} type="file" accept={PICK} multiple className={styles.sr} tabIndex={-1} onChange={onPick} data-testid="media-input" aria-label="Choose photos or videos" />
+      <input ref={photoRef} type="file" accept="image/*" capture="environment" className={styles.sr} tabIndex={-1} onChange={onCameraPhoto} data-testid="camera-photo" aria-label="Take a photo" />
+      <input ref={videoRef} type="file" accept="video/*" capture="environment" className={styles.sr} tabIndex={-1} onChange={onCameraVideo} data-testid="camera-video" aria-label="Record a video" />
       <MediaSourceSheet open={sheet} canPhoto={canAdd(usage, "image")} canVideo={canAdd(usage, "video")} onPhoto={chooseCameraPhoto} onVideo={chooseCameraVideo} onLibrary={chooseLibrary} onClose={() => setSheet(false)} />
       {job && <CropDialog key={job.photo.url} spec={ITEM_PHOTO_SPEC} photo={job.photo} onCancel={closeJob} onSave={saveCrop} />}
       <Modal open={Boolean(preview)} onClose={() => setPreview(null)} title="Video preview" labelId="media-preview-title">

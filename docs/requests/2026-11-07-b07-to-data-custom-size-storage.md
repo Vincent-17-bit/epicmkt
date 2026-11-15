@@ -1,3 +1,5 @@
+**Done in migration 0125 (see docs/contracts/CHANGES.md, "Made to measure is stored and on").**
+
 # Request: store a made-to-measure config on an item (from B07, Prompts 3.4 and 3.7, to the data prompt 3.1)
 
 **Why.** An optional "made to measure" choice for tailors and furniture makers needs a place to keep the measurements the buyer must give and the price rule. The existing option fields cannot hold it: `seller_save_item` (0086/0088) accepts only the axis, value and variant keys it lists and raises `invalid_option` for anything else.

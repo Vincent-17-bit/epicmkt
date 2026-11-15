@@ -51,7 +51,7 @@ export default function RelationsPage() {
 
   return (
     <section className="panel" aria-labelledby={`${uid}-t`}>
-      <div className="panel__header"><h1 className="heading-sm" id={`${uid}-t`}>Relations</h1></div>
+      <div className="panel__header"><h2 className="heading-sm" id={`${uid}-t`}>Relations</h2></div>
       <p className="muted">When a shopper looks at an item, these pairs decide what else is shown beside it. A higher strength shows it sooner. Turn a relation off to keep it without using it.</p>
 
       {canEdit ? (

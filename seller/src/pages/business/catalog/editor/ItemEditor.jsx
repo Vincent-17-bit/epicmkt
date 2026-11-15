@@ -127,6 +127,18 @@ function EditorForm({ item, sections, category, business }) {
     baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), sizeGuide: loaded });
     if (form.sizeGuide === undefined) patch("sizeGuide", loaded);
   }, [guideRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Made to measure has its own read and write (migration 0125), joined to the form the same way.
+  const hadCustom = useRef(false);
+  const customRead = useQuery({ queryKey: ["itemCustomSize", item?.id], queryFn: () => api.getItemCustomSize(item.id), enabled: Boolean(item) && CUSTOM_SIZE_STORED, retry: 1, staleTime: 0, gcTime: 0 });
+  const customLoaded = useRef(false);
+  useEffect(() => {
+    if (customLoaded.current || customRead.data === undefined) return;
+    customLoaded.current = true;
+    if (!customRead.data) return;
+    hadCustom.current = true;
+    baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), customSize: customRead.data });
+    if (form.customSize === undefined) patch("customSize", customRead.data);
+  }, [customRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
   // Quantity prices have their own read too (migration 0117), joined to the form and the starting point in one step.
   const hadTiers = useRef(false);
   const tiersRead = useQuery({ queryKey: ["itemTiers", item?.id], queryFn: () => api.getItemTiers(item.id), enabled: Boolean(item), retry: 1, staleTime: 0, gcTime: 0 });
@@ -312,7 +324,7 @@ function EditorForm({ item, sections, category, business }) {
       const sendable = form.options && form.priceType !== "from" ? { ...form.options, rows: form.options.rows.map(({ tiers, tiersWas, ...r }) => (tiersWas ? { ...r, tiers: [], tiersWas } : r)) } : form.options;
       const options = optionsPayload(sendable, hadOptions.current);
       const tiersBody = tiersPayload(form.tiers, { priceType: form.priceType, had: hadTiers.current });
-      const body = { ...fields, ...(tiersBody ?? {}), ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
+      const body = { ...fields, ...(tiersBody ?? {}), ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }) };
       const id = await saveWithScaleFallback((b) => api.saveItem(item?.id ?? null, b), body);
       savedId = id;
       if (tiersBody) hadTiers.current = Boolean(tiersBody.priceTiers);
@@ -326,10 +338,20 @@ function EditorForm({ item, sections, category, business }) {
           guideProblem = `The size guide was not saved: ${blockedText(err) ?? saveErrorText(err)}`;
         }
       }
+      let customProblem = "";
+      if (CUSTOM_SIZE_STORED && (form.customSize !== undefined || hadCustom.current)) {
+        try {
+          await api.saveItemCustomSize(id, customSizePayload(form.customSize));
+          hadCustom.current = Boolean(customSizePayload(form.customSize));
+        } catch (err) {
+          customProblem = `Made to measure was not saved: ${blockedText(err) ?? saveErrorText(err)}`;
+        }
+      }
       const spec = await settleSpecLinks(form, type);
       await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
       const { problems, leftover, ids } = await media.flush(id);
       if (guideProblem) problems.push(guideProblem);
+      if (customProblem) problems.push(customProblem);
       // Photos chosen for a size or type before the item existed (or while still uploading) have their ids only now: link them.
       // The re-read of the options further down then shows what was really stored.
       if (pendingPhotoTiles(form.options).length > 0) {

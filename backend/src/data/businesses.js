@@ -609,7 +609,19 @@ export const businesses = [
     tags: ["boutique", "dresses", "shoes", "handbags", "ankara", "kids wear"],
     socials: { instagram: "urbanthreadskisumu", tiktok: "urbanthreads.ke" },
     services: [
-      { name: "Ladies Ankara dress", priceKes: 2200, sizeChartId: "chart-tops" },
+      {
+        name: "Ladies Ankara dress", priceKes: 2200, sizeChartId: "chart-tops",
+        // Made to measure: the buyer gives bust, waist and hips; the seller's price for it is fixed.
+        customSize: {
+          enabled: true, axisKey: "size",
+          fields: [
+            { key: "bust", label: "Bust", unit: "cm", min: 60, max: 200, required: true },
+            { key: "waist", label: "Waist", unit: "cm", min: 40, max: 200, required: true },
+            { key: "hips", label: "Hips", unit: "cm", min: 60, max: 220, required: true }
+          ],
+          price: { mode: "fixed", base: 3200 }
+        }
+      },
       {
         name: "Women's sandals", priceKes: 1300, sizeChartId: "chart-shoes-eu", showStockCount: true,
         optionAxes: [

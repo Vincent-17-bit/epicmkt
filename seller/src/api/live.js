@@ -561,6 +561,9 @@ export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
 // The seller's own size guide for one item (migration 0103): { unit, columns, rows } or null.
 export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id });
 export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
+// The made-to-measure setting of one item (migration 0125): the saved config or null. saveItemCustomSize(id, null) clears it.
+export const getItemCustomSize = (id) => rpc("seller_item_custom_size", { p_id: id });
+export const saveItemCustomSize = (id, config) => rpc("seller_set_item_custom_size", { p_id: id, p_config: config ?? null });
 // The size chart library (active charts). Admin keeps it; sellers copy one as the starting table of their own guide.
 export const listSizeCharts = async () => rows(need().from("public_size_charts").select("id, name, category, unit, columns, rows").order("name"));
 export const bulkItems = (action, ids, args = {}) => rpc("seller_bulk_items", { p_action: action, p_ids: ids, p_args: args });
