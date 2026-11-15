@@ -12,6 +12,7 @@
 
 import { OPTION_LIMITS, VARIANT_STATUSES, comboKey, optionSlug, validateOptions } from "../seller/options.js";
 import { generateCombinations } from "./combinations.js";
+import { rowTiersProblem, rowTiersToStored } from "./rowTiers.js";
 
 const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
 const clean = (v) => String(v ?? "").replace(/,/g, "").trim();
@@ -339,6 +340,8 @@ const buildPayload = (options) => {
     if (r.sku) out.sku = r.sku;
     if (r.mediaIds?.length) out.mediaIds = r.mediaIds;
     if (r.specs?.length) out.specs = r.specs;
+    // Own quantity prices: untouched (undefined) sends nothing, an emptied list clears them, otherwise the stored tiers.
+    if (Array.isArray(r.tiers)) out.priceTiers = r.tiers.length === 0 ? null : rowTiersToStored(r.tiers);
     return out;
   });
   const defaultRow = options.defaultKey ? sold.find((r) => comboKey(options.axes, r.choice) === options.defaultKey) : null;
@@ -357,6 +360,10 @@ export const checkOptions = (options) => {
   if (Object.keys(errors).length) return { ok: false, errors };
   if (options.axes.length > 0 && liveRows(options).every((r) => !r.sold)) errors.rows = "Sell at least one combination, or remove the options.";
   const { payload, sold } = buildPayload(options);
+  for (const r of sold) {
+    const problem = rowTiersProblem(r.tiers);
+    if (problem) errors[`row:${comboKey(options.axes, r.choice)}:tiers`] = problem;
+  }
   const res = validateOptions(payload);
   for (const [path, message] of Object.entries(res.errors)) {
     const m = /^variants\.(\d+)\.(\w+)$/.exec(path);

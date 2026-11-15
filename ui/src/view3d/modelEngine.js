@@ -122,6 +122,18 @@ export function createModelEngine({ url, libs, raf, caf } = {}) {
       controls.update?.();
     },
     setAutoRotate(on) { auto = Boolean(on); if (controls) controls.autoRotate = auto; },
+    /**
+     * A still picture of what the viewer shows now, as a Blob (PNG, with the background transparent), or null when it is not ready.
+     * It renders once just before reading the canvas, so a picture is never blank after the frame was cleared. { size } scales it (long side).
+     */
+    async capture({ type = "image/png", quality = 0.92 } = {}) {
+      if (!ready || destroyed || !renderer || !scene || !camera || !canvas) return null;
+      controls?.update?.();
+      renderer.render(scene, camera);
+      return new Promise((resolve) => {
+        try { canvas.toBlob((blob) => resolve(blob ?? null), type, quality); } catch { resolve(null); }
+      });
+    },
     getState: () => ({ zoom, autoRotate: auto, ready }),
     destroy() {
       if (destroyed) return;

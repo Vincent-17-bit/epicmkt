@@ -84,7 +84,7 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
     setBusy(true);
     setError("");
     try {
-      await onImport(toImportPayload(result.valid));
+      await onImport(toImportPayload(result.valid).map((row) => (chosen ? { ...row, product_type_id: chosen.id } : row)));
       setText("");
       reset();
     } catch (e) {
@@ -144,7 +144,7 @@ export default function ImportDialog({ open, premium, remaining, onClose, onImpo
                 {[...types].sort((a, b) => String(a.name).localeCompare(String(b.name))).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </label>
-            <p className={styles.hint}>The template has a column for each detail that type needs. Imported items start without a type: afterwards, select them in your list and choose Set type.</p>
+            <p className={styles.hint}>The template has a column for each detail that type needs. Every imported item gets this type. Leave it empty to import without a type; you can choose Set type for them afterwards.</p>
             <button type="button" className={styles.ghost} onClick={downloadTemplate}>{chosen ? `Download ${chosen.name} template` : "Download template"}</button>
           </div>
           {tab === "paste" ? (

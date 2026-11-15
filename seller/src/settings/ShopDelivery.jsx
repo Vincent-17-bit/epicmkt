@@ -5,6 +5,7 @@ import { DELIVERY_LIMITS, checkDeliverySetting, deliveryInfo, formatKes } from "
 import * as api from "../api/index.js";
 import { errorText } from "../lib/errors.js";
 import { FACTS_KEY, useBusinessFacts } from "../lib/useBusinessFacts.js";
+import { usePlanFeatures } from "../lib/usePlanFeatures.js";
 import { showToast } from "../state/toast.js";
 import { Row, Section, Switch } from "./controls.jsx";
 import styles from "./settings.module.css";
@@ -34,6 +35,7 @@ export function previewLine(value, shopArea) {
 export default function ShopDelivery() {
   const qc = useQueryClient();
   const facts = useBusinessFacts().data;
+  const planHasDelivery = usePlanFeatures().delivery;
   const uid = useId();
   const saved = useMemo(() => fromFacts(facts), [facts]);
   const [value, setValue] = useState(saved);
@@ -82,8 +84,9 @@ export default function ShopDelivery() {
   return (
     <Section id="delivery" title="Delivery" intro="Tell buyers whether you deliver. This shows on every item page of your shop.">
       <Row label="I deliver" hint={value.offers ? "Buyers see your fee, area and distance." : "Buyers see “No delivery” and where to pick up."}>
-        <Switch checked={value.offers} onChange={(on) => setValue((v) => ({ ...v, offers: on }))} label="I deliver" disabled={busy} />
+        <Switch checked={value.offers} onChange={(on) => setValue((v) => ({ ...v, offers: on }))} label="I deliver" disabled={busy || (!planHasDelivery && !value.offers)} />
       </Row>
+      {!planHasDelivery && <p className={styles.note} role="note">Delivery is not part of your plan{value.offers ? ", so buyers no longer see it. You can switch it off here." : "."}</p>}
       {value.offers && (
         <>
           <Row label="Fee and distance" hint="Leave the fee empty if it depends on the place. Enter 0 for free delivery." stack>

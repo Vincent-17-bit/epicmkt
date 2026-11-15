@@ -90,7 +90,7 @@ function GroupCard({ group, onDone }) {
                   </tbody>
                 </table>
               </div>
-              <p className={ui.muted}>“{first?.name}” keeps its photos and its link and becomes “{name.trim()}”. The other items are hidden, and their old links open the combined item with the right option picked, so nothing you shared stops working. You can undo this for 24 hours.</p>
+              <p className={ui.muted}>“{first?.name}” keeps its link and becomes “{name.trim()}”. The photos of the other items move onto it, each one shown when its option is picked. The other items are hidden, and their old links open the combined item with the right option picked, so nothing you shared stops working. You can undo this for 24 hours.</p>
             </div>
           )}
           {mutation.isError && <p role="alert" className={styles.error}>{errorText(mutation.error)}</p>}

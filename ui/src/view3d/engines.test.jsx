@@ -138,6 +138,21 @@ describe("model", () => {
     e.destroy();
   });
 
+  it("takes a still picture of the viewer once it is ready, and none before or after", async () => {
+    const { libs } = make();
+    const el = box();
+    const e = createModelEngine({ url: "x.glb", libs, raf: () => 1, caf: () => {} });
+    expect(await e.capture()).toBeNull();
+    await e.mount(el);
+    const canvas = el.querySelector("canvas");
+    canvas.toBlob = vi.fn((cb, type) => cb(new Blob(["x"], { type })));
+    const blob = await e.capture();
+    expect(blob).toBeInstanceOf(Blob);
+    expect(canvas.toBlob).toHaveBeenCalledWith(expect.any(Function), "image/png", 0.92);
+    e.destroy();
+    expect(await e.capture()).toBeNull();
+  });
+
   it("disposes geometry, textures, materials, controls and the renderer on destroy", async () => {
     const { libs, log } = make();
     const el = box();

@@ -56,7 +56,7 @@ describe("Delivery states", () => {
   it("inside: says so with the distance, and no longer offers 'Use my location'", () => {
     at(north(3));
     mount(delivers());
-    expect(screen.getByText(/Delivers to you/)).toHaveTextContent("about 3 km away");
+    expect(screen.getByText(/Delivers to you/)).toHaveTextContent("about 3.9 km by road");
     expect(screen.queryByRole("button", { name: "Use my location" })).toBeNull();
     expect(screen.getByRole("button", { name: "Change location" })).toBeInTheDocument();
   });
@@ -64,13 +64,13 @@ describe("Delivery states", () => {
   it("outside: says so in words", () => {
     at(north(15));
     mount(delivers());
-    expect(screen.getByText(/Outside this shop's delivery distance/)).toHaveTextContent("about 15 km away");
+    expect(screen.getByText(/Outside this shop's delivery distance/)).toHaveTextContent("about 20 km by road");
   });
 
   it("a chosen town labels the distance as based on that town", () => {
     at(north(2), { source: "town", town: "Kisumu" });
     mount(delivers());
-    expect(screen.getByText(/Delivers to you/)).toHaveTextContent("about 2 km away, based on Kisumu");
+    expect(screen.getByText(/Delivers to you/)).toHaveTextContent("about 2.6 km by road, based on Kisumu");
   });
 
   it("free delivery, a fee that depends on the place, and no radius", () => {

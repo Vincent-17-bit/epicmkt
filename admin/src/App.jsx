@@ -30,6 +30,7 @@ import ProductTypesPage from "./pages/catalogue/ProductTypesPage.jsx";
 import SpecRulesPage from "./pages/catalogue/SpecRulesPage.jsx";   // Spec rules 5.11
 import ReadinessPage from "./pages/catalogue/ReadinessPage.jsx";   // 11.6
 import KitPage from "./pages/catalogue/KitPage.jsx";   // 11.7
+import RelationsPage from "./pages/catalogue/RelationsPage.jsx";   // C26
 import DepartmentsPage from "./pages/catalogue/DepartmentsPage.jsx";   // B28
 import TypeRequestsPage from "./pages/catalogue/TypeRequestsPage.jsx";   // B28
 import DemandPage from "./pages/catalogue/DemandPage.jsx";   // C30
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="spec-rules" element={<RoleGuard permission="specrules.view"><SpecRulesPage /></RoleGuard>} />
           <Route path="readiness" element={<RoleGuard permission="plans.view"><ReadinessPage /></RoleGuard>} />
           <Route path="departments" element={<RoleGuard permission="producttypes.view"><DepartmentsPage /></RoleGuard>} />
+          <Route path="relations" element={<RoleGuard permission="producttypes.view"><RelationsPage /></RoleGuard>} />
           <Route path="type-requests" element={<RoleGuard permission="producttypes.view"><TypeRequestsPage /></RoleGuard>} />
           <Route path="demand" element={<RoleGuard permission="plans.view"><DemandPage /></RoleGuard>} />
           <Route path="kits" element={<RoleGuard permission="producttypes.view"><KitPage /></RoleGuard>} />

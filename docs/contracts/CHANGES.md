@@ -599,7 +599,7 @@ Entry format:
 - Shared: `departmentTrail`, `groupItemsByDepartment`, `isMixedShop` (`shared/src/browse.js`).
 - Client: routes `/d/:department` and `/d/:department/:type`; breadcrumbs Home > Phones > Phone. Category routes unchanged.
 - Admin: Departments and Type requests pages (uses the 0091 functions `admin_type_requests_list` and `admin_resolve_type_request`).
-- Not done: the C26 Relations page and the department sections on a shop front (the RPC `public_shop_departments` is ready for them).
+- Done later: the C26 Relations page (see "Seller gap fixes"). The department sections on a shop front use `public_shop_departments`.
 
 ## B17 / B18 / B19 / B21: the add flow (migration 0119)
 - Add items page: four ways in (one item guided, many of the same kind, import a file, copy an item) and a "To finish" list of drafts with what each is missing (also live items that have a type but not its required rows).
@@ -645,3 +645,14 @@ Entry format:
 - A seller's own greeting is kept; when the buyer chose a quantity other than 1 (or a measured amount) the choice follows it: "Hello! Is Fade in stock? (x3, KES 900)".
 - A card for a ranged item in a flash sale shows "From" and the lowest price now, with no percentage badge (the discount differs by option).
 - Stale `TODO(contract:*)` comments removed from code (migration history left as written).
+
+## Seller gap fixes: photos on merge, per-combination tiers, typed import, photos in the add table, poster capture
+
+- Migration 0122: merging similar items MOVES the hidden items' photos to the combined item (after its own), links each to its option (`value.mediaId` on the first axis, `option_ids` on the photo), and undo moves them back. The plan's photo limit still applies.
+- Per-combination quantity prices are editable: each row of "Prices and stock" has "Own quantity prices" (only for the price type "Starting from"). The row sends `priceTiers` (null clears); `validateOptions` accepts the key; the mock stores and returns them (`getItemTiers().variants`).
+- Migration 0123: an imported row may carry `product_type_id`; a type the shop may not sell, or an unknown one, skips only that row (reasons `type_not_allowed`, `unknown_product_type`). The import dialog gives every row the type chosen for the template.
+- The add table takes photos: paste a picture into any cell of a row or use "+ Photo" (up to 5 per row, JPG/PNG/WebP). They are sent after the item is saved; one that fails is reported, the item stays.
+- The model engine has `capture()` (a PNG of what the viewer shows); the 3D upload makes the poster from the preview by itself and has "Make the poster from the preview" / "Take a new poster from the preview".
+- Migration 0124: plan switches are enforced. `global_limits.<plan>.features` (options, threeD, recommend, delivery, demand) can turn a feature off for a plan: the seller save refuses it, and buyers no longer see it (`business_delivery`, `public_item_media3d` and `related_item_candidates` answer as if the shop had none). Seller screens hide or explain the feature (`usePlanFeatures`).
+- Delivery distance is by road. The shared `deliveryReach(shop, buyer, { roadKm })` uses the road distance when given, otherwise the straight line x 1.3 (`ROAD_FACTOR`, `basis: "estimate"`), and also returns `straightKm`. The shop page asks an OSRM-compatible service only when `VITE_ROUTING_URL` is set (two points, no cookies, 4 s timeout, cached); with none set nothing is sent. The text reads "about 4 km by road". The delivery fee follows the same distance.
+- Admin Relations page (C26) at `/admin/relations`: lists, adds, re-weights, switches off and removes the type/department pairs behind "You may also like" (`admin_product_relations_list`, `admin_save_product_relation`, `admin_delete_product_relation`, migration 0109). Reviewers and support read; owners write.

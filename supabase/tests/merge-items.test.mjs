@@ -116,3 +116,19 @@ test("the redirect is not shown for a combined item that is not public, and anon
   await rejects(c, { role: "anon" }, `select seller_merge_items('{}'::uuid[], '{}'::jsonb)`, [], /permission denied/);
   await rejects(c, { role: "anon" }, `select * from item_redirects`, [], /permission denied/);
 });
+
+test("photos of the hidden items move to the combined item, tagged with their option, and undo moves them back", async () => {
+  const a = await add(ids.bizA, "Bread 400g", 60), b = await add(ids.bizA, "Bread 800g", 110);
+  const photo = (item, path, sort) => sql(c, `insert into item_media (item_id, business_id, kind, path, mime, sort) values ($1, $2, 'image', $3, 'image/jpeg', $4)`, [item, ids.bizA, path, sort]);
+  await photo(a, "p-own", 0); await photo(b, "p-b0", 0); await photo(b, "p-b1", 1);
+  const r = await merge(asA, [a, b], breadSpec(a, b));
+  const rows = await sql(c, `select path, item_id, option_ids from item_media order by sort`);
+  assert.deepEqual(rows.map((x) => [x.path, x.item_id, x.option_ids]), [["p-own", a, []], ["p-b0", a, ["800-g"]], ["p-b1", a, ["800-g"]]]);
+  const [{ option_axes: axes }] = await sql(c, `select option_axes from items where id = $1`, [a]);
+  const mediaId = (await sql(c, `select id from item_media where path = 'p-b0'`))[0].id;
+  assert.equal(axes[0].values.find((v) => v.id === "800-g").mediaId, mediaId);
+  assert.equal(axes[0].values.find((v) => v.id === "400-g").mediaId, undefined);
+  await run(asA, `select seller_undo_merge($1::uuid)`, [r.mergeId]);
+  const back = await sql(c, `select path, item_id, option_ids, sort from item_media order by path`);
+  assert.deepEqual(back.map((x) => [x.path, x.item_id, x.option_ids, x.sort]), [["p-b0", b, [], 0], ["p-b1", b, [], 1], ["p-own", a, [], 0]]);
+});

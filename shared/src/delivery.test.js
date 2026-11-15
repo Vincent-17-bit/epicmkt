@@ -35,14 +35,23 @@ test("negative, NaN, infinite, boolean and text numbers become null, never a bad
   assert.equal(deliveryInfo({ delivery: { offers: true, radiusKm: 0 } }).radiusKm, null, "zero radius is no radius");
   assert.equal(deliveryInfo({ delivery: { offers: true, radiusKm: 100000 } }).radiusKm, null, "beyond the cap is refused");
 });
-test("reach: inside, outside, and the edge tolerance", () => {
+test("reach: inside, outside, and the edge tolerance (the distance is by road: the straight line times 1.3 until a real one is known)", () => {
   const b = { ...shop, delivery: { offers: true, radiusKm: 5 } };
-  assert.equal(deliveryReach(b, north(3)).status, "inside");
+  assert.equal(deliveryReach(b, north(3)).status, "inside");   // about 3.9 km by road
+  assert.equal(deliveryReach(b, north(4.2)).status, "outside"); // about 5.5 km by road, past the radius and its tolerance
   assert.equal(deliveryReach(b, north(9)).status, "outside");
-  assert.equal(deliveryReach(b, north(5.1)).status, "inside", "within the tolerance past the radius");
-  assert.equal(deliveryReach(b, north(5.6)).status, "outside");
   const r = deliveryReach(b, north(3));
-  assert.equal(r.radiusKm, 5); assert.ok(Math.abs(r.distanceKm - 3) < 0.15);
+  assert.equal(r.radiusKm, 5); assert.equal(r.basis, "estimate");
+  assert.ok(Math.abs(r.straightKm - 3) < 0.15); assert.ok(Math.abs(r.distanceKm - 3.9) < 0.2);
+});
+test("reach: a real road distance wins over the estimate, and the edge tolerance applies to it", () => {
+  const b = { ...shop, delivery: { offers: true, radiusKm: 5 } };
+  const near = deliveryReach(b, north(3), { roadKm: 4.4 });
+  assert.deepEqual([near.status, near.distanceKm, near.basis], ["inside", 4.4, "road"]);
+  assert.equal(deliveryReach(b, north(1), { roadKm: 5.1 }).status, "inside", "within the tolerance past the radius");
+  assert.equal(deliveryReach(b, north(1), { roadKm: 5.6 }).status, "outside", "a long road beats a short straight line");
+  assert.equal(deliveryReach(b, north(3), { roadKm: Number.NaN }).basis, "estimate", "a bad road figure is ignored");
+  assert.equal(deliveryReach(b, null, { roadKm: 3 }).distanceKm, 3, "a road figure alone is enough to answer");
 });
 test("reach: none without delivery; unknown without a radius, a buyer position or a shop position", () => {
   assert.deepEqual(deliveryReach({ ...shop, delivery: { offers: false } }, north(1)), { status: "none", distanceKm: null, radiusKm: null });

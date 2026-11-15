@@ -15,6 +15,7 @@
 
 import { SPEC_GROUPS, SPEC_LIMITS } from "./itemForm.js";
 import { generateCombinations } from "../options/combinations.js";
+import { validateTiers } from "../pricing/tiers.js";
 
 export const OPTION_DISPLAY_TYPES = ["swatch", "image-card", "button", "dropdown", "text-card"];
 export const VARIANT_STATUSES = ["available", "limited_stock", "out_of_stock", "unavailable"];
@@ -208,7 +209,7 @@ function check(options, { mediaIds } = {}) {
   rawVariants.forEach((row, i) => {
     const at = `variants.${i}`;
     const bad = (path, message) => add("invalid_variant", `${at}.${path}`, message);
-    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds", "specs"].includes(k))) {
+    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds", "specs", "priceTiers"].includes(k))) {
       add("invalid_variant", at, "This variant is not valid.");
       return;
     }
@@ -272,6 +273,8 @@ function check(options, { mediaIds } = {}) {
         }
       }
     }
+    // Own quantity prices travel with the row but are saved by their own step in seller_save_item (migration 0094).
+    if (row.priceTiers !== undefined && row.priceTiers !== null && !validateTiers(row.priceTiers, "whole").ok) bad("priceTiers", "Check this combination's quantity prices.");
     if (present(row, "specs")) {
       const cleaned = cleanSpecOverrides(row.specs);
       if (cleaned === null) bad("specs", `Use up to ${OPTION_LIMITS.specs} rows, each with a group from the list, a label and a value.`);

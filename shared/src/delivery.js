@@ -1,7 +1,7 @@
 // Delivery (Prompt A18). The shop's own setting decides: it delivers or it does not. Nothing here guesses.
 //
 //   deliveryInfo(business)         -> { offers, fee, radiusKm, area, minOrder, notes }
-//   deliveryReach(business, from)  -> { status: inside | outside | unknown | none, distanceKm, radiusKm }
+//   deliveryReach(business, from, { roadKm })  -> { status: inside | outside | unknown | none, distanceKm (by road), straightKm, basis: road | estimate, radiusKm }
 //
 // `business` may carry the public `delivery` object ({ offers, fee, radiusKm, area, minOrder, notes }, what public_businesses returns), the
 // database columns (`delivers`, `delivery_fee`, `delivery_radius_km`, `delivery_area`, `delivery_min_order`, `delivery_notes`), or the
@@ -13,6 +13,8 @@ import { distanceKm } from "./utils.js";
 export const DELIVERY_LIMITS = Object.freeze({ feeMax: 100000, radiusMax: 500, minOrderMax: 10000000, areaMax: 120, notesMax: 300 });
 /** How far past the radius still counts as inside, in km: GPS and a chosen town are never exact. */
 export const REACH_TOLERANCE_KM = 0.2;
+// Roads are longer than the straight line between two points; 1.3 is the usual figure for towns and their roads. Used until a real road distance is known.
+export const ROAD_FACTOR = 1.3;
 
 const pick = (o, ...keys) => {
   for (const k of keys) if (o && o[k] !== undefined) return o[k];
@@ -61,16 +63,21 @@ const point = (p) => {
 
 /**
  * Is the buyer inside the shop's delivery radius? `none`: the shop does not deliver. `unknown`: no radius set, or no position for the shop
- * or the buyer. Distance is straight-line, rounded to 0.1 km, and a buyer within REACH_TOLERANCE_KM past the radius still counts as inside.
+ * or the buyer. The distance is BY ROAD: the real one when the caller has it (`opts.roadKm`, from a routing service), otherwise the straight
+ * line times ROAD_FACTOR, which is said to be an estimate (`basis`). Rounded to 0.1 km; a buyer within REACH_TOLERANCE_KM past the radius
+ * still counts as inside. `straightKm` is always the straight line.
  */
-export function deliveryReach(business, origin) {
+export function deliveryReach(business, origin, opts = {}) {
   const info = deliveryInfo(business);
   if (!info.offers) return { status: "none", distanceKm: null, radiusKm: null };
   const shop = point(business);
   const from = point(origin);
-  const km = shop && from ? Math.round(distanceKm(shop, from) * 10) / 10 : null;
-  if (info.radiusKm == null || km == null) return { status: "unknown", distanceKm: km, radiusKm: info.radiusKm };
-  return { status: km <= info.radiusKm + REACH_TOLERANCE_KM ? "inside" : "outside", distanceKm: km, radiusKm: info.radiusKm };
+  const straight = shop && from ? Math.round(distanceKm(shop, from) * 10) / 10 : null;
+  const real = Number.isFinite(opts?.roadKm) && opts.roadKm >= 0 ? Math.round(opts.roadKm * 10) / 10 : null;
+  const km = real ?? (straight === null ? null : Math.round(straight * ROAD_FACTOR * 10) / 10);
+  const basis = km === null ? null : real !== null ? "road" : "estimate";
+  if (info.radiusKm == null || km == null) return { status: "unknown", distanceKm: km, straightKm: straight, basis, radiusKm: info.radiusKm };
+  return { status: km <= info.radiusKm + REACH_TOLERANCE_KM ? "inside" : "outside", distanceKm: km, straightKm: straight, basis, radiusKm: info.radiusKm };
 }
 
 /** What `seller_set_delivery` accepts, checked the way the database checks it. Returns { ok, value } or { ok: false, errors: { field: code } }. */

@@ -14,7 +14,23 @@ export const columnsFor = (type) => [
   ...rowsOf({ specs: [] }, type).required.map((r) => ({ key: `spec:${r.key}`, label: r.label, kind: "spec", row: r }))
 ];
 
-export const blankRow = () => ({ name: "", price: "", stock: "", specs: {} });
+export const blankRow = () => ({ name: "", price: "", stock: "", specs: {}, photos: [] });
+
+// Photos of a row: pasted from the clipboard or chosen, sent after the item is saved.
+export const ROW_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+export const MAX_ROW_PHOTOS = 5;
+/** Adds picture files to a row. Returns the new row and what was left out: { notPictures, tooMany }. Nothing is read or uploaded here. */
+export function addRowPhotos(row, files, makeUrl = (f) => URL.createObjectURL(f)) {
+  const list = [...files];
+  const pictures = list.filter((f) => ROW_PHOTO_TYPES.includes(f?.type));
+  const room = Math.max(0, MAX_ROW_PHOTOS - (row.photos ?? []).length);
+  const taken = pictures.slice(0, room);
+  return {
+    row: { ...row, photos: [...(row.photos ?? []), ...taken.map((file) => ({ file, url: makeUrl(file) }))] },
+    notPictures: list.length - pictures.length,
+    tooMany: pictures.length - taken.length
+  };
+}
 export const isBlank = (r) => !r.name.trim() && !r.price.trim() && !r.stock.trim() && Object.values(r.specs).every((v) => !String(v).trim());
 
 const cellOf = (r, col) => (col.kind === "spec" ? r.specs[col.row.key] ?? "" : r[col.key]);

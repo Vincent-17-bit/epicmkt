@@ -1,10 +1,11 @@
+import { usePlanFeatures } from "../../../../lib/usePlanFeatures.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheck, faChevronLeft, faCircle, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { saveWithScaleFallback } from "./saveFallback.js";
-import { CUSTOM_SIZE_STORED, colourPhotoStatus, wantsGuide, checkGuide, checkOptions, attachPhotos, pendingPhotoTiles, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, validateCustomSize, validateItemForm } from "@epicmkt/shared";
+import { CUSTOM_SIZE_STORED, colourPhotoStatus, wantsGuide, checkGuide, checkOptions, attachPhotos, pendingPhotoTiles, guideFromServer, guidePayload, customSizePayload, emptyItemForm, formFromItem, formatDateTime, optionsFromServer, optionsPayload, rowTiersFromStored, comboKey, validateCustomSize, validateItemForm } from "@epicmkt/shared";
 import * as api from "../../../../api/index.js";
 import { errorText } from "../../../../lib/errors.js";
 import { ShopMark } from "../../../../components/Layout.jsx";
@@ -139,6 +140,20 @@ function EditorForm({ item, sections, category, business }) {
     baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), tiers: loaded });
     if (form.tiers === undefined) patch("tiers", loaded);
   }, [tiersRead.data]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A combination's own quantity prices (the same read) join the option rows once both reads are in.
+  const rowTiersMerged = useRef(false);
+  useEffect(() => {
+    if (rowTiersMerged.current || tiersRead.data === undefined || !form.options) return;
+    rowTiersMerged.current = true;
+    const own = Array.isArray(tiersRead.data?.variants) ? tiersRead.data.variants : [];
+    if (own.length === 0) return;
+    const withTiers = (o) => ({ ...o, rows: o.rows.map((r) => {
+      const hit = own.find((v) => comboKey(o.axes, v.choice) === comboKey(o.axes, r.choice));
+      return hit ? { ...r, tiers: rowTiersFromStored(hit.tiers), tiersWas: true } : r;
+    }) });
+    baseRef.current = JSON.stringify({ ...JSON.parse(baseRef.current), options: withTiers(JSON.parse(baseRef.current).options ?? form.options) });
+    patch("options", withTiers(form.options));
+  }, [tiersRead.data, form.options]); // eslint-disable-line react-hooks/exhaustive-deps
   const productTypes = useProductTypes();
   const [guideAsked, setGuideAsked] = useState(false); // "Add a size guide" in Details opens the step for an item that would not show it
 
@@ -167,7 +182,8 @@ function EditorForm({ item, sections, category, business }) {
   const checks = useMemo(() => qualityChecks(form, media.photoCount), [form, media.photoCount]);
   // The steps the seller sees (a step can hide itself with visibleWhen). Everything that numbers or steps through them reads this list.
   const typeName = productTypes.types.find((t) => t.id === form.productTypeId)?.name;
-  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount, typeName, guideAsked });
+  const features = usePlanFeatures();
+  const steps = visibleSteps({ form, errors, mediaCount: media.photoCount, typeName, guideAsked, features });
 
   // ---- Put the cursor somewhere, after the right step has had a chance to render ----
   const focusOn = useCallback((key) => {
@@ -292,7 +308,9 @@ function EditorForm({ item, sections, category, business }) {
       // The database re-checks any product type it is sent (active, sellable by this shop), so send it only when it is new or changed:
       // an unchanged type that was later switched off or restricted must not block every other edit of the item.
       const typeChanged = "productTypeId" in form && (isNew || (form.productTypeId ?? null) !== (item?.productTypeId ?? null));
-      const options = optionsPayload(form.options, hadOptions.current);
+      // A combination keeps its own quantity prices only while the item is priced "Starting from"; otherwise the ones it had are cleared.
+      const sendable = form.options && form.priceType !== "from" ? { ...form.options, rows: form.options.rows.map(({ tiers, tiersWas, ...r }) => (tiersWas ? { ...r, tiers: [], tiersWas } : r)) } : form.options;
+      const options = optionsPayload(sendable, hadOptions.current);
       const tiersBody = tiersPayload(form.tiers, { priceType: form.priceType, had: hadTiers.current });
       const body = { ...fields, ...(tiersBody ?? {}), ...(typeChanged && { productTypeId: form.productTypeId }), ...(options !== undefined && { options }), ...(CUSTOM_SIZE_STORED && form.customSize !== undefined && { customSize: customSizePayload(form.customSize) }) };
       const id = await saveWithScaleFallback((b) => api.saveItem(item?.id ?? null, b), body);

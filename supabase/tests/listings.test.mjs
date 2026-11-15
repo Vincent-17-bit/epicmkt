@@ -640,3 +640,21 @@ test("the seller catalog carries the details only when an item has them", async 
   const bytes = (await sql(c, `select length(to_jsonb(i)::text) - length((to_jsonb(i) - 'brand' - 'short_description' - 'highlights' - 'specs' - 'includes' - 'terms' - 'pack_size')::text) as n from items i where id = $1`, [worst]))[0].n;
   assert.ok(bytes < 9000, `the largest item adds ${bytes} bytes`);
 });
+
+test("an imported row can carry a product type; a type the shop may not sell, or none, skips only that row", async () => {
+  await sql(c, `delete from items where business_id = $1`, [ids.bizB]);
+  await sql(c, `update plans set items_limit = 600 where category_id = 'barber'`);
+  await sql(c, `insert into product_types (id, slug, name, kind, active) values ('import-test-type', 'import-test-type', 'Import test', 'good', true) on conflict (id) do nothing`);
+  const open = "import-test-type";
+  const rows = JSON.stringify([
+    { name: "Typed row", price_type: "fixed", price: 50, product_type_id: open },
+    { name: "Untyped row", price_type: "fixed", price: 60 },
+    { name: "Regulated row", price_type: "fixed", price: 70, product_type_id: "prescription-medicine" },
+    { name: "Unknown row", price_type: "fixed", price: 80, product_type_id: "no-such-type" },
+  ]);
+  const res = (await as(asB, `select seller_import_items($1::jsonb) as r`, [rows]))[0].r;
+  assert.equal(res.created, 2);
+  assert.deepEqual(res.skipped.map((s) => [s.row, s.error]), [[3, "type_not_allowed"], [4, "unknown_product_type"]]);
+  const made = await sql(c, `select name, product_type_id, draft from items where business_id = $1 order by name`, [ids.bizB]);
+  assert.deepEqual(made.map((m) => [m.name, m.product_type_id, m.draft]), [["Typed row", open, true], ["Untyped row", null, true]]);
+});

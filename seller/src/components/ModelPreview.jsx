@@ -4,7 +4,7 @@ import styles from "./media3d.module.css";
 const defaultLoad = async (url) => (await import("@epicmkt/ui/view3d/model")).createModelEngine({ url });
 
 /** A small preview of a .glb that turns with the finger or mouse. The 3D library is only fetched when a preview is shown. */
-export default function ModelPreview({ url, load = defaultLoad }) {
+export default function ModelPreview({ url, load = defaultLoad, onEngine }) {
   const box = useRef(null);
   const [state, setState] = useState("loading");
   useEffect(() => {
@@ -19,12 +19,13 @@ export default function ModelPreview({ url, load = defaultLoad }) {
         if (cancelled) return;
         engine.setAutoRotate(true);
         setState("ready");
+        onEngine?.(engine);
       } catch {
         if (!cancelled) setState("failed");
       }
     })();
-    return () => { cancelled = true; engine?.destroy(); };
-  }, [url, load]);
+    return () => { cancelled = true; onEngine?.(null); engine?.destroy(); };
+  }, [url, load]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className={styles.preview}>
       <div ref={box} className={styles.previewBox} role="img" aria-label="Preview of the 3D model. Drag to turn it." />

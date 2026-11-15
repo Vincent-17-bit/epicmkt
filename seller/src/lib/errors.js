@@ -90,6 +90,7 @@ const MESSAGES = {
   invalid_percent: "Enter a percentage from -90 to 300, other than 0.",
   price_too_large: "That change would make a price too large. Nothing was changed.",
   premium_required: "Paste and CSV import is part of the Premium plan.",
+  feature_off: "Your plan does not include this. See Plans to change it.",
   no_rows: "There are no rows to import.",
   too_many_rows: "Import at most 500 rows at a time.",
   formula_rejected: "A cell starts with = + - or @. Remove that character and try again.",
