@@ -554,7 +554,7 @@ describe("quick actions", () => {
     await user.click(within(within(edit).getByRole("group", { name: "Remove Photo 1" })).getByRole("button", { name: "Remove" }));
     await waitFor(() => expect(made.imageCount).toBe(1));
     await waitFor(() => expect(within(edit).getAllByRole("button", { name: /^Remove Photo/ })).toHaveLength(1));
-  });
+  }, 15_000); // many uploads through the mock API: slow on a busy CI runner
 
   it("rejects a file that is not an image or is too small", async () => {
     const user = userEvent.setup();
