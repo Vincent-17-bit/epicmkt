@@ -266,6 +266,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: start;
+    /* Row 1: the item column; row 2: Features & Specs under it. Spare height (when the photos are taller) goes below both. */
+    grid-template-rows: auto 1fr;
     gap: var(--space-3) var(--space-4);
   }
 }
@@ -299,9 +301,12 @@
 }
 
 @media (min-width: 64rem) {
+  /* The photos take the left column for the whole height of the item: everything about the item (header, options, seller,
+     description, Features & Specs, Item details) is in the right column beside them, so nothing ever scrolls under the sticky
+     photos. Only the recommendations, outside this grid, run the full width below. */
   .layout[data-variant="page"] .media {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 1 / span 2;
     max-width: none;
     margin: 0;
     /* The photos stay in view while the details column scrolls past them. */
@@ -329,7 +334,9 @@
 
   .layout[data-variant="page"] .panels {
     --spec-section-border: 0;
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
   }
 
   .layout[data-variant="page"] .panels:empty {

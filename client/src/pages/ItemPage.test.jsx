@@ -93,7 +93,7 @@ describe("ItemPage", () => {
   const similarRows = (n) =>
     Array.from({ length: n }, (_, i) => ({ id: `s${i + 1}`, name: `Other ${i + 1}`, imageUrl: "b.png", availability: "available", pricing: detail.pricing, business: { id: `b${i + 1}`, slug: `shop-${i + 1}`, name: `Shop ${i + 1}`, verified: false } }));
 
-  it("puts Similar items last: after the description, the specs and the seller card, and just before the action bar", async () => {
+  it("puts Similar products last: after the description, the specs and the seller card, and just before the action bar", async () => {
     mocks.getBusiness.mockResolvedValue(biz);
     mocks.getDetail.mockResolvedValue({ ...detail, highlights: ["Fast"], specs: [{ label: "Time", value: "30 min" }] });
     mocks.getStoreSelective.mockResolvedValue([]);
@@ -114,8 +114,8 @@ describe("ItemPage", () => {
     // Nothing of the item page comes after it except the sticky action bar.
     const body = similar.parentElement;
     expect(body.lastElementChild).toBe(similar);
-    expect(similar).toHaveAttribute("aria-labelledby", "similar-items-title");
-    expect(document.getElementById("similar-items-title")).toHaveTextContent("Similar items");
+    expect(similar).toHaveAttribute("aria-labelledby", "item-similar-title");
+    expect(document.getElementById("item-similar-title")).toHaveTextContent("Similar products");
   });
 
   it("leaves nothing behind when there are fewer than two similar items: no section, no gap", async () => {

@@ -65,7 +65,7 @@ describe("ItemDetail", () => {
     first.unmount();
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(screen.queryByText(/products?$/)).toBeNull();
+    expect(screen.queryByText(/^\d+ products?$/)).toBeNull();
   });
 
   it("puts photos and videos in one gallery in the seller's order, with no separate videos section", async () => {

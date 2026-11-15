@@ -30,3 +30,14 @@ test("without the current item it is flash, newest, id", () => {
   const out = orderStoreItems(null, [row("b", "B"), row("a", "A"), row("c", "C", { flash: {} })]);
   assert.deepEqual(out.map((r) => r.id), ["c", "a", "b"]);
 });
+
+test("with a seed the equally close items are shuffled per visit, but the closest still lead and a visit keeps its order", () => {
+  const current = { id: "x", name: "Ankara maxi dress" };
+  const rows = [row("d", "Ladies Ankara dress"), ...Array.from({ length: 10 }, (_, i) => row(`o${i}`, `Other thing ${i}`))];
+  const a = orderStoreItems(current, rows, { seed: "a" }).map((r) => r.id);
+  const b = orderStoreItems(current, rows, { seed: "b" }).map((r) => r.id);
+  assert.equal(a[0], "d");
+  assert.equal(b[0], "d");
+  assert.notDeepEqual(a, b);
+  assert.deepEqual(orderStoreItems(current, [...rows].reverse(), { seed: "a" }).map((r) => r.id), a);
+});

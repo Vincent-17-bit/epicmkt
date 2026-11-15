@@ -32,7 +32,7 @@ describe("section bar (C10)", () => {
     render(<Page />);
     await flush();
     const links = screen.getAllByRole("link", { hidden: true }).map((a) => a.textContent);
-    expect(links).toEqual(["Overview", "Details", "From the store", "Similar items"]);
+    expect(links).toEqual(["Overview", "Details", "From the store", "Similar products"]);
   });
 
   it("slides in when scrolling down past the top, and hides at once when scrolling up", async () => {

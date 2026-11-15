@@ -283,3 +283,15 @@ test("band helpers", () => {
   assert.equal(distanceBand(500), 4);
   assert.equal(distanceBand(null), 5);
 });
+
+test("with a seed, equally good matches are shuffled per visit; the best stay first and a visit keeps its order", () => {
+  const current = { id: "w", name: "White Bread Loaf", businessId: "jovia", price: 60 };
+  const loaves = Array.from({ length: 10 }, (_, i) => ({ id: `l${i}`, name: "White bread 400g", businessId: `shop${i}`, price: 60 }));
+  const cake = { id: "c", name: "Chocolate cake", businessId: "other", price: 60 };
+  const a = rankSimilar({ current, candidates: [cake, ...loaves], seed: "visit-a", limit: 10 }).map((r) => r.id);
+  const b = rankSimilar({ current, candidates: [cake, ...loaves], seed: "visit-b", limit: 10 }).map((r) => r.id);
+  assert.equal(a.length, 10);
+  assert.ok(!a.includes("c"), "a cake is never similar to bread");
+  assert.notDeepEqual(a, b, "another visit, another order");
+  assert.deepEqual(rankSimilar({ current, candidates: [...loaves].reverse(), seed: "visit-a", limit: 10 }).map((r) => r.id), a);
+});
