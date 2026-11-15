@@ -39,15 +39,26 @@ const shorten = (text) => {
   return `${cut.slice(0, cut.lastIndexOf(" ")).replace(/[,;:.\s]+$/, "")}…`;
 };
 
-const pricing = (regular, sale, priceType, unit) => ({
-  regularPrice: regular,
-  salePrice: sale,
-  savings: regular - sale,
-  discountPercent: regular > 0 ? Math.round(((regular - sale) / regular) * 100) : 0,
-  unit: unit ?? null,
-  priceType: priceType ?? "fixed",
-  variants: []
-});
+// `range` is { min, max } when the item's combinations are priced differently (migration 0096), else null. priceMin is the lowest price a
+// buyer pays now: the flash price while a sale runs (it is the lowest flash price of the item), else the lowest combination, else the price.
+const pricing = (regular, sale, priceType, unit, range = null) => {
+  const ranged = range && Number.isFinite(range.min) && Number.isFinite(range.max) && range.min < range.max;
+  return {
+    regularPrice: regular,
+    salePrice: sale,
+    savings: regular - sale,
+    discountPercent: regular > 0 ? Math.round(((regular - sale) / regular) * 100) : 0,
+    unit: unit ?? null,
+    priceType: priceType ?? "fixed",
+    variants: [],
+    ...(ranged ? { hasRange: true, priceMin: sale < regular ? Math.min(sale, range.min) : range.min, priceMax: range.max } : {})
+  };
+};
+const rangeOf = (row) => {
+  const min = row.price_min === null || row.price_min === undefined ? NaN : Number(row.price_min);
+  const max = row.price_max === null || row.price_max === undefined ? NaN : Number(row.price_max ?? row.price_high);
+  return Number.isFinite(min) && Number.isFinite(max) && (row.has_price_range === undefined || row.has_price_range === true) ? { min, max } : null;
+};
 
 // Normal path: the whole snapshot in one round trip.
 async function fromRpc() {
@@ -61,7 +72,7 @@ async function fromRpc() {
 async function fromViews() {
   const [rows, businesses, sales, sizeValues] = await Promise.all([
     restAll(
-      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths&order=created_at.desc,id.asc",
+      "public_items?select=id,business_id,name,description,section,price,price_type,unit,availability,brand,created_at,image_paths,video_paths,price_min,price_high,has_options&order=created_at.desc,id.asc",
       { max: MAX_ITEMS }
     ),
     restAll("public_businesses?select=id,slug,name,plan_key,verification_level,category_id,town,county,hours,exceptions,timezone&order=id"),
@@ -96,6 +107,10 @@ async function fromViews() {
       created_at: r.created_at,
       image_path: r.image_paths?.[0] ?? null,
       video_paths: r.video_paths?.length ? r.video_paths : null,
+      price_min: r.price_min ?? null,
+      price_max: r.price_high ?? null,
+      has_price_range: r.price_min !== null && r.price_min !== undefined && r.price_high !== null && r.price_high !== undefined ? Number(r.price_min) < Number(r.price_high) : false,
+      has_options: r.has_options === true,
       size_values: Array.isArray(sizeValues[r.id]) && sizeValues[r.id].length ? sizeValues[r.id] : null,
       sale_id: s?.id ?? null,
       sale_price: s?.sale_price ?? null,
@@ -157,7 +172,9 @@ function buildSnapshot({ items, businesses, truncated }) {
       unit: row.unit ?? null,
       regularPrice: regular,
       createdAt: row.created_at,
-      pricing: regular === null ? null : pricing(regular, regular, row.price_type, row.unit),
+      hasOptions: row.has_options === true,
+      ...(rangeOf(row) ? { priceRange: rangeOf(row) } : {}),
+      pricing: regular === null ? null : pricing(regular, regular, row.price_type, row.unit, rangeOf(row)),
       flash: null,
       business: store.shared,
       hay: normalizeText(`${row.name} ${description} ${row.section ?? ""} ${store.shared.name ?? ""} ${store.shared.town ?? ""}`)
@@ -203,10 +220,10 @@ function tick(snap, now) {
     const running = f.startMs <= now && now < f.endMs && f.salePrice > 0 && f.salePrice < f.product.regularPrice;
     const p = f.product;
     if (running) {
-      p.pricing = pricing(p.regularPrice, f.salePrice, p.priceType, p.unit);
+      p.pricing = pricing(p.regularPrice, f.salePrice, p.priceType, p.unit, p.priceRange);
       p.flash = { sale: f.sale, pricing: p.pricing, remainingMs: f.endMs - now };
     } else {
-      p.pricing = pricing(p.regularPrice, p.regularPrice, p.priceType, p.unit);
+      p.pricing = pricing(p.regularPrice, p.regularPrice, p.priceType, p.unit, p.priceRange);
       p.flash = null;
     }
   }

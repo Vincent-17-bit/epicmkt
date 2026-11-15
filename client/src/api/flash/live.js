@@ -4,7 +4,7 @@ import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, serviceOf } from "./shape.js";
+import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, cardPricing, rangeOfRow, serviceOf } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -112,7 +112,7 @@ const findBusiness = async (ref) => {
   return unwrap(await supabase.from("public_businesses").select("*").eq(columnFor(ref), ref).maybeSingle());
 };
 
-const CARD_COLUMNS = "id,business_id,name,description,price,price_type,unit,section,availability,stock_left,image_paths,video_paths,media,sort,created_at";
+const CARD_COLUMNS = "id,business_id,name,description,price,price_type,unit,section,availability,stock_left,image_paths,video_paths,media,sort,created_at,price_min,price_high,has_options";
 
 const itemRow = (row, business) =>
   itemOf({
@@ -130,6 +130,8 @@ const itemRow = (row, business) =>
     packSize: row.pack_size,
     variants: row.variants,
     price: row.price === null ? NaN : Number(row.price),
+    hasOptions: row.has_options === true,
+    priceRange: rangeOfRow(row),
     priceType: row.price_type,
     unit: row.unit,
     section: row.section,
@@ -221,7 +223,7 @@ export async function getStoreSelective(ref, { excludeItemId, limit = 12 } = {})
     .map((row) => {
       const item = itemRow(row, business);
       const entry = entries.find((e) => e.item.id === row.id);
-      const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+      const pricing = cardPricing(item, entry);
       return { ...item, pricing, flash: entry ? flashParts(entry, now) : null, offer: chips.get(row.id) ?? null };
     });
   const rank = (row) => [
@@ -344,7 +346,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, signa
     const business = stores.get(row.business_id);
     const item = itemRow(row, business);
     const entry = sales.get(row.id);
-    const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+    const pricing = cardPricing(item, entry);
     return { item, business, entry, pricing, brand: row.brand };
   });
   const seedPrice = seed.price === null ? NaN : Number(seed.price);
@@ -427,7 +429,7 @@ export async function getAllProducts() {
     if (!business || !isListed(row)) return [];
     const item = itemRow(row, business);
     const entry = sales.get(row.id);
-    const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+    const pricing = cardPricing(item, entry);
     return [
       {
         ...item,
@@ -496,7 +498,7 @@ export async function getShowcaseProducts(businessIds = [], { pool = 24, rng = M
         items: rows.filter(isListed).map((row) => {
           const item = itemRow(row, { slug: slugOf.get(id) });
           const entry = sales.get(row.id);
-          const pricing = entry?.pricing ?? (Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit) : null);
+          const pricing = cardPricing(item, entry);
           return { ...item, pricing, flash: entry ? flashParts(entry, live.now) : null };
         })
       }

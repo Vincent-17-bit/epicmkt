@@ -623,3 +623,10 @@ Entry format:
 - `validateProductType(type)` in shared (`{ ok, errors }`): axes (at most 3, scales exist, `dependsOn` names an earlier axis), spec rows (at most four required), tier shapes through `validateTiers`.
 - `scripts/seeds/{fashion,electronics,cyber,foodHealth,homeAuto}.mjs` (111 types), `scripts/seeds/index.mjs` (`ALL_TYPES`, `seedProductTypes(db)`), `npm run seed:types`. Idempotent: upsert by id, missing departments created, an admin's `active = false` is kept.
 - Where a table lists more than four required rows, the axes carry the first ones (colour, size, storage ...) and the rest of the spec rows are recommended.
+
+## List cards: "From" price, options hint, lowest-price filter and sort (C20, C22)
+
+- Product list rows carry `hasOptions` and `pricing.{hasRange, priceMin, priceMax}` (from `price_min`, `price_high`/`price_max`, `has_options`, migration 0096) on the products endpoint, its views fallback and the browser fallback. Items without a range carry none of them and are drawn and sorted exactly as before.
+- `ProductTile` (ui) shows "From KES x" when `pricing.hasRange` (during a flash sale: the lowest flash price, with no struck-through regular price) and a small "Options" hint when `item.hasOptions`. Labels `from` and `options` are the caller's.
+- The price filter, sort and price facet use the lowest price (`priceMin`, else the sale price).
+- Size-aware filters (C22) were already in place: size keys group by scale, shoe system switch, length and screen-inch ranges, storage sorted with `compare`; covered by `sizeFilters.test.js` and `ProductFilters.sizes.test.jsx`.

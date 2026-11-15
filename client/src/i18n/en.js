@@ -94,6 +94,8 @@ export default {
   "item.disclaimer": "Contact the business to order. EpicMKT does not process orders or payments.",
   "item.loadFailed": "We could not load this item. Check your connection and try again.",
   "item.gone": "This item is no longer available",
+  "item.from": "From",
+  "item.options": "Options",
   "item.goneHint": "It may have been sold out, removed or ended. More from this store:",
   "item.flash": "Flash sale",
   "flash.label": "Flash sale",

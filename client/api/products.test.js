@@ -182,6 +182,54 @@ describe("/api/products", () => {
     });
   });
 
+  describe("price range and options (migration 0096)", () => {
+    it("carries the lowest price, the highest and the options flag, and the card prices from the lowest", async () => {
+      payload.items.push(item(90, { name: "Phone", price: "30000", price_min: "24000", price_max: "52000", has_price_range: true, has_options: true }));
+      const body = await (await call("op=page&sort=price_asc")).json();
+      const phone = body.items.find((p) => p.name === "Phone");
+      expect(phone.hasOptions).toBe(true);
+      expect(phone.pricing).toMatchObject({ hasRange: true, priceMin: 24000, priceMax: 52000, salePrice: 30000 });
+    });
+
+    it("an item whose combinations cost the same, or an older snapshot without the columns, has no range", async () => {
+      payload.items.push(item(91, { name: "Same price", price: "500", price_min: "500", price_max: "500", has_price_range: false, has_options: true }));
+      const body = await (await call("op=page")).json();
+      const same = body.items.find((p) => p.name === "Same price");
+      expect(same.pricing.hasRange).toBeUndefined();
+      expect(same.hasOptions).toBe(true);
+      const plain = body.items.find((p) => p.name === "Fresh bread");
+      expect(plain.pricing.priceMin).toBeUndefined();
+      expect(plain.hasOptions).toBe(false);
+    });
+
+    it("sorts and filters by the lowest price", async () => {
+      payload.items.push(item(92, { name: "Ranged", price: "900", price_min: "50", price_max: "900", has_price_range: true }));
+      const asc = await (await call("op=page&sort=price_asc")).json();
+      expect(asc.items[0].name).toBe("Ranged");
+      const cheap = await (await call("op=page&max=60")).json();
+      expect(cheap.items.map((p) => p.name)).toContain("Ranged");
+    });
+
+    it("the page-the-views fallback asks for the range columns and builds the same range", async () => {
+      const asked = [];
+      fetchMock.mockImplementation(async (url) => {
+        const u = String(url);
+        if (u.includes("/rpc/products_snapshot")) return new Response("{}", { status: 500 });
+        if (u.includes("/rpc/")) return new Response("{}", { status: 404 });
+        if (u.includes("public_items?")) {
+          asked.push(u);
+          return new Response(JSON.stringify([{ id: "i1", business_id: "b1", name: "Phone", description: "", price: "30000", price_type: "fixed", availability: "available", created_at: "2026-01-01T00:00:00Z", image_paths: [], price_min: "24000", price_high: "52000", has_options: true }]), { status: 200 });
+        }
+        if (u.includes("public_businesses")) return new Response(JSON.stringify(payload.businesses), { status: 200 });
+        return new Response("[]", { status: 200 });
+      });
+      const body = await (await call("op=page")).json();
+      expect(asked[0]).toMatch(/price_min,price_high,has_options/);
+      expect(body.items[0].pricing).toMatchObject({ hasRange: true, priceMin: 24000, priceMax: 52000 });
+      expect(body.items[0].hasOptions).toBe(true);
+    });
+  });
+
   it("builds the snapshot once for many requests", async () => {
     await call("op=page");
     await call("op=facets");

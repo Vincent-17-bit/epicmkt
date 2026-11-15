@@ -98,17 +98,28 @@ const distanceFrom = (origin, lat, lng) => {
   return from && Number.isFinite(lat) && Number.isFinite(lng) ? distanceKm(from, { lat, lng }) : null;
 };
 
-export const pricingOf = (regularPrice, salePrice, priceType, unit, variants = [], priceFor) => ({
-  regularPrice,
-  salePrice,
-  savings: regularPrice - salePrice,
-  discountPercent: regularPrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0,
-  unit: unit ?? null,
-  priceType: priceType ?? "fixed",
-  variants: variantPricing(variants, priceFor)
-});
+// `range` is { min, max } when the item's combinations are priced differently (migration 0096). priceMin is the lowest price a buyer pays now.
+export const pricingOf = (regularPrice, salePrice, priceType, unit, variants = [], priceFor, range = null) => {
+  const ranged = range && Number.isFinite(range.min) && Number.isFinite(range.max) && range.min < range.max;
+  return {
+    regularPrice,
+    salePrice,
+    savings: regularPrice - salePrice,
+    discountPercent: regularPrice > 0 ? Math.round(((regularPrice - salePrice) / regularPrice) * 100) : 0,
+    unit: unit ?? null,
+    priceType: priceType ?? "fixed",
+    variants: variantPricing(variants, priceFor),
+    ...(ranged ? { hasRange: true, priceMin: salePrice < regularPrice ? Math.min(salePrice, range.min) : range.min, priceMax: range.max } : {})
+  };
+};
+/** The price range of a public_items row, or null when every combination costs the same. */
+export const rangeOfRow = (row) => {
+  const min = row?.price_min === null || row?.price_min === undefined ? NaN : Number(row.price_min);
+  const max = row?.price_high === null || row?.price_high === undefined ? NaN : Number(row.price_high);
+  return Number.isFinite(min) && Number.isFinite(max) && min < max ? { min, max } : null;
+};
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, priceRange }) => {
   // A photo's id is its database id when the card carries one (`media` entries have it). An option value points at a photo by that id
   // (`mediaId`), so it has to survive here; the counting names i1, i2 are only for older data that has no ids.
   const realIds = (kind) => (Array.isArray(mediaPaths) ? mediaPaths.filter((m) => m?.path && m.kind === kind).map((m) => (typeof m.id === "string" && m.id ? m.id : null)) : []);
@@ -157,8 +168,20 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     stockLeft: Number.isInteger(stockLeft) && stockLeft > 0 ? stockLeft : null,
     variants: variantsOf(variants),
     specs: specsOf(specs),
-    createdAt
+    createdAt,
+    // Migration 0096: the item has option axes, and its combinations are priced between priceRange.min and priceRange.max.
+    ...(hasOptions ? { hasOptions: true } : {}),
+    ...(priceRange ? { priceRange } : {})
   };
+};
+
+/** The price a list card shows: the running flash sale's (lowest flash price), else the regular price; "From" when combinations differ. */
+export const cardPricing = (item, entry) => {
+  if (entry?.pricing) {
+    const range = item.priceRange;
+    return range && !entry.pricing.hasRange ? { ...entry.pricing, hasRange: true, priceMin: entry.pricing.salePrice < entry.pricing.regularPrice ? entry.pricing.salePrice : range.min, priceMax: range.max } : entry.pricing;
+  }
+  return Number.isFinite(item.regularPrice) ? pricingOf(item.regularPrice, item.regularPrice, item.priceType, item.unit, [], undefined, item.priceRange ?? null) : null;
 };
 
 export const cardOfFlash = (row, origin) => ({

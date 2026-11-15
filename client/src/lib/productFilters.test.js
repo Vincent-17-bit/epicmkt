@@ -221,3 +221,30 @@ describe("brand filter", () => {
     expect([...countsFor(all, f()).brands].sort()).toEqual([["nike", 1], ["samsung", 3]]);
   });
 });
+
+describe("price filter and sort use the lowest price (priceMin)", () => {
+  const range = (name, min, max, over = {}) => p({ name, pricing: { regularPrice: max, salePrice: max, savings: 0, discountPercent: 0, hasRange: true, priceMin: min, priceMax: max }, ...over });
+  const phone = range("Phone with options", 24000, 52000);
+  const budget = p({ name: "Budget phone", pricing: { regularPrice: 18000, salePrice: 18000, savings: 0, discountPercent: 0 } });
+  const mid = p({ name: "Mid phone", pricing: { regularPrice: 30000, salePrice: 30000, savings: 0, discountPercent: 0 } });
+  const all = [phone, budget, mid];
+
+  it("sorts low to high by the lowest price, and high to low by it too", () => {
+    expect(ids(applyFilters(all, f({ sort: "price_asc" })))).toEqual(["Budget phone", "Phone with options", "Mid phone"]);
+    expect(ids(applyFilters(all, f({ sort: "price_desc" })))).toEqual(["Mid phone", "Phone with options", "Budget phone"]);
+  });
+
+  it("a minimum and maximum compare against the lowest price", () => {
+    expect(ids(applyFilters(all, f({ min: "20000", max: "25000" })))).toEqual(["Phone with options"]);
+    expect(ids(applyFilters(all, f({ max: "20000" })))).toEqual(["Budget phone"]);
+  });
+
+  it("the price facet runs from the cheapest lowest price to the dearest", () => {
+    expect(facetsOf(all).price).toEqual({ min: 18000, max: 30000 });
+  });
+
+  it("an item without a range sorts and filters exactly as before (its sale price)", () => {
+    const sale = p({ name: "On sale", pricing: { regularPrice: 1800, salePrice: 1440, savings: 360, discountPercent: 20 } });
+    expect(ids(applyFilters([sale, budget], f({ sort: "price_asc" })))).toEqual(["On sale", "Budget phone"]);
+  });
+});
