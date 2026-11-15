@@ -40,6 +40,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'products_snapshot';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('option_count' in v_def) = 0 then
     v_new := replace(v_def, 'i.has_options, i.department_id', 'i.has_options, i.option_count, i.department_id');
     if v_new = v_def then raise exception 'products_snapshot: capped column list not found'; end if;

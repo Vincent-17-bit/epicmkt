@@ -55,6 +55,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_set_delivery';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n',
       E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n' ||
@@ -65,6 +66,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_unmet_demand';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n',
       E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n' ||
@@ -75,6 +77,7 @@ begin
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'related_item_candidates';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('plan_feature_on' in v_def) = 0 then
     v_new := replace(v_def, E'  if not found then return null; end if;\n',
       E'  if not found then return null; end if;\n' ||

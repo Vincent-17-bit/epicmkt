@@ -23,9 +23,10 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_check_item';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('item_check_media3d' in v_def) = 0 then
-    v_new := replace(v_def, $a$  v_issues := v_base -> 'issues';
-$a$, $b$  v_issues := v_base -> 'issues';
+    v_new := replace(v_def, replace($a$  v_issues := v_base -> 'issues';
+$a$, E'\r', ''), $b$  v_issues := v_base -> 'issues';
   if p_id is not null and v_old.id is not null then
     for e in select jsonb_array_elements(public.item_check_media3d(jsonb_build_object('id', p_id))) loop
       v_issues := v_issues || jsonb_build_array(jsonb_build_object('code', 'media3d_' || (e ->> 'code'), 'scope', e -> 'scope', 'level', 'warning'));
@@ -38,6 +39,7 @@ $b$);
 
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'item_options_apply';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('im.kind in' in v_def) = 0 then
     v_new := replace(v_def, 'and im.item_id = p_item) then', 'and im.item_id = p_item and im.kind in (''image'', ''video'')) then');
     if v_new = v_def then raise exception 'item_options_apply: media checks not found'; end if;

@@ -11,6 +11,7 @@ declare
 begin
   select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname = 'seller_import_items';
+  v_def := replace(v_def, E'\r', ''); -- a pasted script may carry Windows line breaks
   if position('v_type' in v_def) = 0 then
     v_new := replace(v_def, E'  k text;\n', E'  k text;\n  v_type text;\n');
     if v_new = v_def then raise exception 'seller_import_items: declare block not found'; end if;
