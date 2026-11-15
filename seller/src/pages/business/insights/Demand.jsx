@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { demandLine, demandSuggestion } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
+import { usePlanFeatures } from "../../../lib/usePlanFeatures.js";
 import { errorText } from "../../../lib/errors.js";
 import ui from "../../../styles/ui.module.css";
 import styles from "./demand.module.css";
@@ -12,8 +13,18 @@ const PERIODS = [{ days: 7, label: "Last 7 days" }, { days: 30, label: "Last 30 
 /** What shoppers looked for on this shop's items and did not find (Samsung 512 GB, a colour you do not stock), with the option to add. */
 export default function Demand() {
   const [period, setPeriod] = useState(7);
-  const q = useQuery({ queryKey: ["unmet-demand", period], queryFn: () => api.getUnmetDemand(period), retry: false });
+  const features = usePlanFeatures();
+  const q = useQuery({ queryKey: ["unmet-demand", period], queryFn: () => api.getUnmetDemand(period), retry: false, enabled: features.demand });
   const rows = q.data?.rows ?? [];
+
+  if (!features.demand) {
+    return (
+      <div className={ui.page}>
+        <header className={ui.pageHead}><h1>What shoppers want</h1></header>
+        <section className={ui.card} role="note"><p>This is not part of your plan.</p><Link to="/business/subscription" className={ui.btn}>See plans</Link></section>
+      </div>
+    );
+  }
 
   return (
     <div className={ui.page}>

@@ -70,6 +70,19 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
   };
 
   const needsPoster = !poster && !posterFile;
+  // The poster can be taken from the model itself: once the preview is showing, one tap (or none, for a new model with no poster yet).
+  const engine = useRef(null);
+  const [engineReady, setEngineReady] = useState(false);
+  const onEngine = (e) => { engine.current = e; setEngineReady(typeof e?.capture === "function"); };
+  const capturePoster = async (quiet = false) => {
+    const blob = await engine.current?.capture?.({ type: "image/png" });
+    if (!blob) { if (!quiet) setError("The picture could not be taken from the preview. Choose a poster picture instead."); return; }
+    setError("");
+    setPosterFile(new File([blob], "model-poster.png", { type: "image/png" }));
+  };
+  useEffect(() => {
+    if (engineReady && file && needsPoster) capturePoster(true);
+  }, [engineReady, file]); // eslint-disable-line react-hooks/exhaustive-deps
   const canSave = !busy && Boolean(file ? poster || posterFile : posterFile);
 
   const save = async () => {
@@ -110,7 +123,7 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
       <h3 id={`${uid}-t`} className={styles.h3}>3D model (.glb)</h3>
       <p className={styles.hint}>Up to {MEDIA3D.modelMaxBytes / MB} MB. Export a binary glTF (.glb) with everything inside it. Shoppers see your poster picture while it loads.</p>
 
-      {shown && <ModelPreview url={shown} load={previewLoad} />}
+      {shown && <ModelPreview url={shown} load={previewLoad} onEngine={onEngine} />}
       {model && !file && <p className={styles.status}>A model is uploaded{model.size ? ` (${(model.size / MB).toFixed(1)} MB)` : ""}.</p>}
 
       <div className={styles.row}>
@@ -123,8 +136,14 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
           <input type="file" accept="image/jpeg,image/png,image/webp" className={styles.input} onChange={pickPoster} disabled={busy} aria-label="Poster picture" />
         </label>
       </div>
+      {engineReady && !busy && (
+        <div className={styles.row}>
+          <button type="button" className={styles.btn} onClick={() => capturePoster()}>{poster || posterFile ? "Take a new poster from the preview" : "Make the poster from the preview"}</button>
+          <span className={styles.hint}>Turn the model to the view you want first.</span>
+        </div>
+      )}
       {(posterUrl || poster) && <img className={styles.thumb} src={posterUrl || mediaUrl(poster.path)} alt="Poster picture" />}
-      {file && needsPoster && <p className={styles.note} role="status">Choose a poster picture to go with this model.</p>}
+      {file && needsPoster && <p className={styles.note} role="status">{engineReady ? "Making a poster from the preview… or choose your own picture." : "Choose a poster picture to go with this model."}</p>}
       {busy && <p role="status" className={styles.status}>{progress === null ? "Preparing…" : `Uploading ${Math.round(progress * 100)}%`}{progress !== null && <progress className={styles.progress} value={progress} max={1} aria-label="Upload progress" />}</p>}
       {error && <p role="alert" className={styles.error}>{error}</p>}
 

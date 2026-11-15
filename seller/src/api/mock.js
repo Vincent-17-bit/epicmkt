@@ -575,6 +575,7 @@ function resetBilling() {
   const now = Date.now();
   bill.seq = 0;
   bill.media3d = new Map();   // itemId -> 3D rows (migration 0101)
+  bill.variantTiers = new Map();   // itemId -> [{ choice, tiers }] (a combination's own quantity prices)
   bill.values = [];           // open values dictionary (migration 0090): { id, kind, key, label, status, hex, tags, mergedInto }
   bill.valueLinks = new Map(); // itemId -> [{ slot, valueId }]
   bill.guides = new Map();    // itemId -> { unit, columns, rows } the seller's own size guide (migration 0103)
@@ -985,6 +986,9 @@ const prepareSave = async (id, f) => {
 };
 // Quantity tiers (migration 0094/0117): priceTiers null clears, an array replaces; they need the price type "from". Checked before anything is written.
 const tiersStore = () => (bill.tiers ??= new Map());
+// A combination's own quantity prices, by item: [{ choice, tiers }] (migration 0094/0117).
+const variantTiersStore = () => (bill.variantTiers ??= new Map());
+const rowTiersOf = (f) => (Array.isArray(f?.options?.variants) ? f.options.variants.filter((v) => v && Object.prototype.hasOwnProperty.call(v, "priceTiers")) : []);
 const checkTiersIn = (f, priceType, existing) => {
   if (f.priceTiers === undefined && f.priceTierMode === undefined) return null;
   if (f.priceTiers === null) return { clear: true };
@@ -999,7 +1003,7 @@ export const getItemTiers = async (id) => {
   await wait();
   if (!bill.items.some((i) => i.id === id && !i.removedByAdmin)) throw new ApiError("item_not_found");
   const t = tiersStore().get(id);
-  return copy({ tiers: t?.tiers ?? null, mode: t?.mode ?? "whole", variants: [] });
+  return copy({ tiers: t?.tiers ?? null, mode: t?.mode ?? "whole", variants: variantTiersStore().get(id) ?? [] });
 };
 export const saveItem = async (id, f) => {
   signedIn();
@@ -1007,7 +1011,16 @@ export const saveItem = async (id, f) => {
   const now = clockNow().toISOString();
   const { fields, commitOptions, item, priceChanged, axes, axesChanged } = await prepareSave(id, f);
   const tiersIn = checkTiersIn(f, fields.priceType, id ? tiersStore().get(id) : null);
-  const keepTiers = (itemId) => { if (tiersIn?.clear) tiersStore().delete(itemId); else if (tiersIn) tiersStore().set(itemId, tiersIn); };
+  const rowTiers = rowTiersOf(f);
+  if (rowTiers.length && fields.priceType !== undefined && fields.priceType !== "from") throw new ApiError("tiers_need_from_price");
+  const keepTiers = (itemId) => {
+    if (tiersIn?.clear) tiersStore().delete(itemId); else if (tiersIn) tiersStore().set(itemId, tiersIn);
+    if (rowTiers.length) {
+      const same = (a, b) => JSON.stringify(Object.entries(a ?? {}).sort()) === JSON.stringify(Object.entries(b ?? {}).sort());
+      const kept = (variantTiersStore().get(itemId) ?? []).filter((v) => !rowTiers.some((r) => same(r.choice, v.choice)));
+      variantTiersStore().set(itemId, [...kept, ...rowTiers.filter((r) => r.priceTiers).map((r) => ({ choice: r.choice, tiers: r.priceTiers }))]);
+    }
+  };
   if (id) {
     const edited = axesChanged || GATED.some((k) => fields[k] !== undefined && JSON.stringify(fields[k]) !== JSON.stringify(item[k] ?? (k === "productTypeId" ? null : undefined)));
     if (!item.draft && item.visible && edited) {
@@ -1316,6 +1329,7 @@ export const importItems = async (rows) => {
     availability: r.availability ?? "available", visible: false, draft: true, hiddenByAdmin: false, removedByAdmin: false, adminHideReason: null, description: "",
     section: r.section ?? null, stockCount: null, trackStock: false, lowStockThreshold: 3, showStockCount: false, availableFrom: null, season: null, sort: (sort += 1),
     tags: r.tags ?? [], badge: null, variants: [], priceConfirmedAt: now, createdAt: now, updatedAt: now, imageCount: 0, imagePaths: [], hasVideo: false,
+    productTypeId: typeof r.product_type_id === "string" && r.product_type_id ? r.product_type_id : null,
   }));
   bill.items.push(...made);
   made.forEach((m) => gated.add(m.id));

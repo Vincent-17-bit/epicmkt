@@ -756,3 +756,9 @@ export const saveSpecRows = (id, rows) => detailRpc("admin_save_spec_rows", { p_
 // Product types page (migration 0108). listTypeSettings -> { types, departments, categories }; saveTypeSettings(id, { name, departmentId, categoryIds, axes, active }) is owner only and creates the type when the id is new.
 export const listTypeSettings = () => detailRpc("admin_product_types_list");
 export const saveTypeSettings = (id, type) => detailRpc("admin_save_product_type", { p_id: id, p_type: type });
+
+// Relations page (migration 0109). listRelations -> { relations: [{ id, fromKind, fromId, fromName, toKind, toId, toName, weight, active }], types, departments }.
+// saveRelation({ fromKind, fromId, toKind, toId, weight 0-10, active }) and deleteRelation(id) are owner only and audited.
+export const listRelations = () => detailRpc("admin_product_relations_list");
+export const saveRelation = (r) => detailRpc("admin_save_product_relation", { p_from_kind: r.fromKind, p_from_id: r.fromId, p_to_kind: r.toKind, p_to_id: r.toId, p_weight: r.weight ?? 0, p_active: r.active ?? true });
+export const deleteRelation = (id) => detailRpc("admin_delete_product_relation", { p_id: id });

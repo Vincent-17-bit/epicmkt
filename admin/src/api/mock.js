@@ -14,6 +14,7 @@ export { deleteSizeChart, getShoeConversion, listItemsForSizeChart, listProductT
 export { listSpecTypes, saveSpecRows } from "./mockSpecRules.js";   // Spec rules 5.11
 export { listTypeSettings, saveTypeSettings } from "./mockProductTypes.js";
 export { getUnmetDemand } from "./mockDemand.js";   // A22
+export { deleteRelation, listRelations, saveRelation } from "./mockRelations.js";   // C26
 export { listDepartments, listRequestTypes, listTypeRequests, resolveTypeRequest, saveDepartment } from "./mockDepartments.js";   // B28
 export { approveOptionValue, importOptionValue, listOptionValues, mergeOptionValue, renameOptionValue, updateOptionValue } from "./mockValues.js";   // A18
 export {

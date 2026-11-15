@@ -532,10 +532,18 @@ export default function Catalog() {
             const out = await api.importItems(rows);
             await refresh();
             const skipped = Array.isArray(out.skipped) ? out.skipped : [];
-            const rowsText = skipped.slice(0, 5).map((k) => k.row).join(", ") + (skipped.length > 5 ? " and more" : "");
+            const rowsOf = (list) => list.slice(0, 5).map((k) => k.row).join(", ") + (list.length > 5 ? " and more" : "");
+            const typeSkips = skipped.filter((k) => k.error === "type_not_allowed" || k.error === "unknown_product_type");
+            const detailSkips = skipped.filter((k) => !typeSkips.includes(k));
+            const was = (list) => (list.length === 1 ? "row was" : "rows were");
+            const fix = skipped.length === 1 ? "it" : "them";
+            const why = [
+              detailSkips.length ? `${detailSkips.length} ${was(detailSkips)} skipped because a detail was not valid (row ${rowsOf(detailSkips)})` : "",
+              typeSkips.length ? `${typeSkips.length} ${was(typeSkips)} skipped because your shop cannot sell that type (row ${rowsOf(typeSkips)})` : "",
+            ].filter(Boolean).join(". ");
             setNotice({
               tone: skipped.length ? "error" : "ok",
-              text: `${out.created} items imported as drafts.${skipped.length ? ` ${skipped.length} ${skipped.length === 1 ? "row was" : "rows were"} skipped because a detail was not valid (row ${rowsText}). Fix ${skipped.length === 1 ? "it" : "them"} and import again.` : ""}`,
+              text: `${out.created} items imported as drafts.${skipped.length ? ` ${why}. Fix ${fix} and import again.` : ""}`,
             });
             setDialog(null);
           }}

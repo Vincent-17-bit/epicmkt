@@ -49,6 +49,7 @@ export const navGroups = [
       { label: "Readiness", to: "/admin/readiness", icon: faClipboardCheck, permission: "plans.view" },
       { label: "Demand", to: "/admin/demand", icon: faMagnifyingGlassChart, permission: "plans.view" },
       { label: "Departments", to: "/admin/departments", icon: faSitemap, permission: "producttypes.view" },
+      { label: "Relations", to: "/admin/relations", icon: faSitemap, permission: "producttypes.view", hint: "related products" },
       { label: "Type requests", to: "/admin/type-requests", icon: faInbox, permission: "producttypes.view", hint: "type requests from sellers" },
       { label: "Kits", to: "/admin/kits", icon: faBoxArchive, permission: "producttypes.view" },
     ],

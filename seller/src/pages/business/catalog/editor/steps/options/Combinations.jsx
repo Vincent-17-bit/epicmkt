@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlus, faTrashCan } from "@fortawesome/free-solid-svg-icons";
-import { OPTION_LIMITS, SPEC_GROUPS, formatKes as kes, liveRows, priceWarnings, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
+import { OPTION_LIMITS, SPEC_GROUPS, TIER_LIMITS, formatKes as kes, liveRows, priceWarnings, rowKeyOf, setDefault, setRow, setSold, summarize, summaryText } from "@epicmkt/shared";
 import PriceTools from "./PriceTools.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
@@ -25,7 +25,7 @@ export function SummaryTiles({ options, itemPrice }) {
 }
 
 // One row per combination. This list is the single source of truth: prices, stock, "Not sold" and the default all live here.
-export default function Combinations({ options, set, errors = {}, announce, itemPrice, hidePrice = false }) {
+export default function Combinations({ options, set, errors = {}, announce, itemPrice, hidePrice = false, tiersAllowed = false }) {
   const uid = useId();
   const rows = liveRows(options);
   if (rows.length === 0) return null;
@@ -87,6 +87,35 @@ export default function Combinations({ options, set, errors = {}, announce, item
                   <button type="button" className={s.pill} disabled={(r.specs ?? []).length >= OPTION_LIMITS.specs} onClick={() => set(setRow(options, key, { specs: [...(r.specs ?? []), { group: SPEC_GROUPS[0], label: "", value: "" }] }))}>
                     <FontAwesomeIcon icon={faPlus} aria-hidden="true" />Add a detail for {name}
                   </button>
+                </details>
+              )}
+              {r.sold && tiersAllowed && (
+                <details className={s.diff} open={(r.tiers ?? []).length > 0 || undefined} data-area="row-tiers">
+                  <summary>Own quantity prices{(r.tiers ?? []).length > 0 ? ` (${r.tiers.length})` : ""}<span className={ed.sr}>: {name}</span></summary>
+                  <p className={s.hint}>{(r.tiers ?? []).length > 0 ? `${name} has its own table. ` : `${name} uses the item's quantity prices. `}Add rows to give it different ones.</p>
+                  {(r.tiers ?? []).length > 0 && (
+                    <ul className={s.specRows}>
+                      {r.tiers.map((t, i) => {
+                        const edit = (patch) => set(setRow(options, key, { tiers: r.tiers.map((x, n) => (n === i ? { ...x, ...patch } : x)) }));
+                        return (
+                          <li key={i} className={s.specRow}>
+                            <div className={ed.field}><label className={ed.label} htmlFor={`${uid}-${key}-tf${i}`}>From quantity</label><input id={`${uid}-${key}-tf${i}`} className={ed.input} inputMode="numeric" value={t.from} maxLength={7} autoComplete="off" aria-label={`${name} tier ${i + 1} from quantity`} onChange={(e) => edit({ from: e.target.value })} /></div>
+                            <div className={ed.field}><label className={ed.label} htmlFor={`${uid}-${key}-tp${i}`}>Price each (KES)</label><input id={`${uid}-${key}-tp${i}`} className={ed.input} inputMode="numeric" value={t.price} maxLength={10} autoComplete="off" aria-label={`${name} tier ${i + 1} price each`} onChange={(e) => edit({ price: e.target.value })} /></div>
+                            <button type="button" className={s.chipBtn} style={{ inlineSize: "var(--tap)", blockSize: "var(--tap)" }} aria-label={`Remove quantity price ${i + 1} for ${name}`} onClick={() => set(setRow(options, key, { tiers: r.tiers.filter((_, n) => n !== i) }))}><FontAwesomeIcon icon={faTrashCan} aria-hidden="true" /></button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {err("tiers") && <span className={s.cellError} role="alert">{err("tiers")}</span>}
+                  <div className={s.cells}>
+                    <button type="button" className={s.pill} disabled={(r.tiers ?? []).length >= TIER_LIMITS.tiers} onClick={() => set(setRow(options, key, { tiers: [...(r.tiers ?? []), { from: (r.tiers ?? []).length === 0 ? "1" : "", price: "" }] }))}>
+                      <FontAwesomeIcon icon={faPlus} aria-hidden="true" />Add a quantity price for {name}
+                    </button>
+                    {(r.tiers ?? []).length > 0 && (
+                      <button type="button" className={s.pill} onClick={() => { set(setRow(options, key, { tiers: [] })); announce(`${name} uses the item's quantity prices.`); }}>Use the item's quantity prices</button>
+                    )}
+                  </div>
                 </details>
               )}
               <div className={s.comboFoot}>

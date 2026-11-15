@@ -13415,7 +13415,212 @@ begin
   end if;
 end $$;
 
-$m_0121_option_count$)
+$m_0121_option_count$),
+    ('0122_merge_moves_photos', $m_0122_merge_moves_photos$
+-- 0122_merge_moves_photos.sql
+-- Merging similar items now brings the hidden items' photos along (0116 left them behind).
+--   Each photo of a hidden item MOVES to the combined item (not copied, so one file is never shared by two rows and cleanup stays safe),
+--   after the combined item's own photos, tagged with the option it belonged to, so choosing "800 g" shows the 800 g photos first.
+--   The plan's photo limit still applies: photos past it stay on the hidden item.
+--   Undo moves exactly those photos back and clears the tag.
+-- The two functions are patched in place (their other behaviour is unchanged).
+
+do $$
+declare
+  v_def text;
+  v_new text;
+begin
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'seller_merge_items';
+  if position('v_moved' in v_def) = 0 then
+    v_new := replace(v_def, E'  v_stock integer;\nbegin', E'  v_stock integer;\n  v_mrow public.item_media;\n  v_moved jsonb := ''[]''::jsonb;\n  v_first uuid;\n  v_vi integer;\nbegin');
+    if v_new = v_def then raise exception 'seller_merge_items: declare block not found'; end if;
+    v_def := v_new;
+    v_new := replace(v_def, E'  update public.items set name = v_name, option_axes = v_axes, updated_at = now() where id = p_ids[1];\n',
+      E'  update public.items set name = v_name, option_axes = v_axes, updated_at = now() where id = p_ids[1];\n' ||
+      E'  -- Photos of the hidden items move to the combined item, tagged with the option they belonged to (the first axis).\n' ||
+      E'  foreach v_id in array p_ids[2:v_n] loop\n' ||
+      E'    v_first := null;\n' ||
+      E'    for v_mrow in select * from public.item_media where item_id = v_id and kind = ''image'' order by sort, created_at, id loop\n' ||
+      E'      exit when not public.media_limit_ok(p_ids[1], ''image'');\n' ||
+      E'      update public.item_media set item_id = p_ids[1],\n' ||
+      E'             sort = (select coalesce(max(x.sort) + 1, 0) from public.item_media x where x.item_id = p_ids[1]),\n' ||
+      E'             option_ids = array[(v_choices -> v_id::text) ->> (v_axes -> 0 ->> ''key'')]\n' ||
+      E'       where id = v_mrow.id;\n' ||
+      E'      v_moved := v_moved || jsonb_build_array(jsonb_build_object(''id'', v_mrow.id, ''itemId'', v_id, ''sort'', v_mrow.sort));\n' ||
+      E'      v_first := coalesce(v_first, v_mrow.id);\n' ||
+      E'    end loop;\n' ||
+      E'    -- The option\'s own photo (value.mediaId) is the first one that moved, unless it already has one.\n' ||
+      E'    if v_first is not null then\n' ||
+      E'      select t.n - 1 into v_vi from jsonb_array_elements(v_axes -> 0 -> ''values'') with ordinality as t(e, n)\n' ||
+      E'       where t.e ->> ''id'' = (v_choices -> v_id::text) ->> (v_axes -> 0 ->> ''key'');\n' ||
+      E'      if v_vi is not null and (v_axes -> 0 -> ''values'' -> v_vi) -> ''mediaId'' is null then\n' ||
+      E'        v_axes := jsonb_set(v_axes, array[''0'', ''values'', v_vi::text, ''mediaId''], to_jsonb(v_first::text));\n' ||
+      E'      end if;\n' ||
+      E'    end if;\n' ||
+      E'  end loop;\n' ||
+      E'  update public.items set option_axes = v_axes where id = p_ids[1];\n' ||
+      E'  update public.item_merges set snapshot = snapshot || jsonb_build_object(''media'', v_moved), merged_axes = v_axes where id = v_merge;\n');
+    if v_new = v_def then raise exception 'seller_merge_items: final update not found'; end if;
+    execute v_new;
+  end if;
+
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'seller_undo_merge';
+  if position('item_media' in v_def) = 0 then
+    v_new := replace(v_def, E'  delete from public.item_redirects where merge_id = m.id;\n',
+      E'  for s in select jsonb_array_elements(coalesce(m.snapshot -> ''media'', ''[]''::jsonb)) loop\n' ||
+      E'    update public.item_media set item_id = (s ->> ''itemId'')::uuid, sort = (s ->> ''sort'')::integer, option_ids = ''{}''\n' ||
+      E'     where id = (s ->> ''id'')::uuid and item_id = m.target_id;\n' ||
+      E'  end loop;\n' ||
+      E'  delete from public.item_redirects where merge_id = m.id;\n');
+    if v_new = v_def then raise exception 'seller_undo_merge: redirect delete not found'; end if;
+    execute v_new;
+  end if;
+end $$;
+
+$m_0122_merge_moves_photos$),
+    ('0123_import_with_type', $m_0123_import_with_type$
+-- 0123_import_with_type.sql
+-- Imported rows can carry a product type: a row's optional "product_type_id" is stored on the new draft item (0056 left every import untyped,
+-- so the seller had to select them afterwards and choose Set type). A type the shop may not sell, or one that does not exist, skips that
+-- row with the reason ('unknown_product_type' or 'type_not_allowed'), exactly like any other bad detail. Rows without one import as before.
+-- The function is patched in place; everything else it does is unchanged.
+
+do $$
+declare
+  v_def text;
+  v_new text;
+begin
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'seller_import_items';
+  if position('v_type' in v_def) = 0 then
+    v_new := replace(v_def, E'  k text;\n', E'  k text;\n  v_type text;\n');
+    if v_new = v_def then raise exception 'seller_import_items: declare block not found'; end if;
+    v_def := v_new;
+    v_new := replace(v_def, E'    if v_err is not null then\n      v_skipped :=',
+      E'    v_type := nullif(btrim(coalesce(r ->> ''product_type_id'', '''')), '''');\n' ||
+      E'    if v_err is null and v_type is not null then\n' ||
+      E'      if not exists (select 1 from public.product_types t where t.id = v_type and t.active) then v_err := ''unknown_product_type'';\n' ||
+      E'      elsif not public.shop_can_sell_type(v_id, v_type) then v_err := ''type_not_allowed''; end if;\n' ||
+      E'    end if;\n\n' ||
+      E'    if v_err is not null then\n      v_skipped :=');
+    if v_new = v_def then raise exception 'seller_import_items: skip block not found'; end if;
+    v_def := v_new;
+    v_new := replace(v_def, E'specs, low_stock_threshold, show_stock_count)\n    values (v_id,', E'specs, low_stock_threshold, show_stock_count, product_type_id)\n    values (v_id,');
+    if v_new = v_def then raise exception 'seller_import_items: insert columns not found'; end if;
+    v_def := v_new;
+    v_new := replace(v_def, 'v_hl, v_specs, v_thr, v_show);', 'v_hl, v_specs, v_thr, v_show, v_type);');
+    if v_new = v_def then raise exception 'seller_import_items: insert values not found'; end if;
+    execute v_new;
+  end if;
+end $$;
+
+$m_0123_import_with_type$),
+    ('0124_plan_switch_enforcement', $m_0124_plan_switch_enforcement$
+-- 0124_plan_switch_enforcement.sql
+-- The plan feature switches of 0111 (global_limits.<plan>.features: options, threeD, recommend, delivery, demand) were stored and shown in the
+-- admin but nothing read them. Now they are enforced. A switch is on unless a plan sets it to false, and turning one off never takes away what a
+-- shop already has: it stops NEW use and hides the feature from shoppers.
+--
+--   plan_feature_on(business, key)   the one place that answers "does this shop's plan have it?"
+--   writes (a seller adds it):       options     an item that had no options gets some          -> 'feature_off' (detail: options)
+--                                    threeD      a model, spin frame or poster is attached      -> 'feature_off' (detail: threeD)
+--                                    delivery    seller_set_delivery(offers = true)             -> 'feature_off' (detail: delivery)
+--                                    demand      seller_unmet_demand                            -> 'feature_off' (detail: demand)
+--   reads (a shopper looks):         delivery    business_delivery says { offers: false }
+--                                    threeD      public_item_media3d answers null (no viewer)
+--                                    recommend   related_item_candidates answers null (no related items)
+-- Options already on an item keep working and stay editable (prices, stock, values); only adding options to an item without them is refused.
+
+create or replace function public.plan_feature_on(p_business uuid, p_key text) returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((
+    select coalesce((case when b.plan_key = 'premium' then g.premium else g.standard end) -> 'features' ->> p_key, 'true') <> 'false'
+      from public.businesses b cross join public.global_limits g
+     where b.id = p_business and g.id = 1), true)
+$$;
+revoke all on function public.plan_feature_on(uuid, text) from public;
+grant execute on function public.plan_feature_on(uuid, text) to anon, authenticated, service_role;
+
+-- ---- writes ---------------------------------------------------------------------------------------------------------------------------
+create or replace function public.items_feature_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if jsonb_typeof(new.option_axes) = 'array' and jsonb_array_length(new.option_axes) > 0
+     and (tg_op = 'INSERT' or old.option_axes is null or jsonb_typeof(old.option_axes) <> 'array' or jsonb_array_length(old.option_axes) = 0)
+     and not public.plan_feature_on(new.business_id, 'options') then
+    raise exception 'feature_off' using errcode = 'P0001', detail = 'options';
+  end if;
+  return new;
+end $$;
+drop trigger if exists t_items_feature_guard on public.items;
+create trigger t_items_feature_guard before insert or update of option_axes on public.items for each row execute function public.items_feature_guard();
+
+create or replace function public.item_media_feature_guard() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.kind in ('model', 'spin', 'poster') and not public.plan_feature_on(new.business_id, 'threeD') then
+    raise exception 'feature_off' using errcode = 'P0001', detail = 'threeD';
+  end if;
+  return new;
+end $$;
+drop trigger if exists t_item_media_feature_guard on public.item_media;
+create trigger t_item_media_feature_guard before insert on public.item_media for each row execute function public.item_media_feature_guard();
+
+do $$
+declare
+  v_def text;
+  v_new text;
+begin
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'seller_set_delivery';
+  if position('plan_feature_on' in v_def) = 0 then
+    v_new := replace(v_def, E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n',
+      E'  if p_offers is null then raise exception ''invalid_offers'' using errcode = ''P0001''; end if;\n' ||
+      E'  if p_offers and not public.plan_feature_on(v_biz, ''delivery'') then raise exception ''feature_off'' using errcode = ''P0001'', detail = ''delivery''; end if;\n');
+    if v_new = v_def then raise exception 'seller_set_delivery: offers check not found'; end if;
+    execute v_new;
+  end if;
+
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'seller_unmet_demand';
+  if position('plan_feature_on' in v_def) = 0 then
+    v_new := replace(v_def, E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n',
+      E'  if v_biz is null then raise exception ''not_a_seller'' using errcode = ''42501''; end if;\n' ||
+      E'  if not public.plan_feature_on(v_biz, ''demand'') then raise exception ''feature_off'' using errcode = ''P0001'', detail = ''demand''; end if;\n');
+    if v_new = v_def then raise exception 'seller_unmet_demand: seller check not found'; end if;
+    execute v_new;
+  end if;
+
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'related_item_candidates';
+  if position('plan_feature_on' in v_def) = 0 then
+    v_new := replace(v_def, E'  if not found then return null; end if;\n',
+      E'  if not found then return null; end if;\n' ||
+      E'  if not public.plan_feature_on(v_item.business_id, ''recommend'') then return null; end if;\n');
+    if v_new = v_def then raise exception 'related_item_candidates: lookup not found'; end if;
+    execute v_new;
+  end if;
+end $$;
+
+-- ---- reads ----------------------------------------------------------------------------------------------------------------------------
+create or replace function public.business_delivery(b public.businesses) returns jsonb
+language sql stable as $$
+  select case when coalesce(b.delivers, false) and public.plan_feature_on(b.id, 'delivery')
+    then jsonb_strip_nulls(jsonb_build_object('offers', true, 'fee', b.delivery_fee, 'radiusKm', b.delivery_radius_km,
+           'area', nullif(btrim(b.delivery_area), ''), 'minOrder', b.delivery_min_order, 'notes', nullif(btrim(b.delivery_notes), '')))
+    else jsonb_build_object('offers', false) end
+$$;
+
+create or replace function public.public_item_media3d(p_item uuid) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select case when exists (select 1 from public.public_items pi where pi.id = p_item and public.plan_feature_on(pi.business_id, 'threeD'))
+    then jsonb_build_object('view3d', public.item_view3d_raw(p_item) -> '', 'view3dByOption', public.item_view3d_raw(p_item) - '')
+    else null end
+$$;
+
+$m_0124_plan_switch_enforcement$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;

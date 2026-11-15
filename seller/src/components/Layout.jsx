@@ -4,6 +4,7 @@ import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import * as api from "../api/index.js";
+import { usePlanFeatures } from "../lib/usePlanFeatures.js";
 import { getTheme, setTheme, setThemePending, watchSystemTheme } from "../lib/theme.js";
 import { useSettings } from "../state/settings.js";
 import { useToasts } from "../state/toast.js";
@@ -74,6 +75,7 @@ export default function Layout() {
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
   const suspended = business?.status === "suspended";
+  const features = usePlanFeatures();
   // The seller's saved settings (appearance, defaults). Loaded once, then kept in the settings store.
   const settingsQuery = useQuery({ queryKey: ["settings"], queryFn: api.getSettings, retry: false, staleTime: Infinity, refetchOnWindowFocus: false });
   const loadSettings = useSettings((s) => s.load);
@@ -153,7 +155,7 @@ export default function Layout() {
               <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
               <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
               <Item to="/business/offers" icon={faTag}>Offers</Item>
-              <Item to="/business/demand" icon={faMagnifyingGlassChart}>What shoppers want</Item>
+              {features.demand && <Item to="/business/demand" icon={faMagnifyingGlassChart}>What shoppers want</Item>}
               <Item to="/business/gallery" icon={faImages}>Gallery</Item>
               <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
               <Item to="/business/qr" icon={faQrcode}>QR poster</Item>

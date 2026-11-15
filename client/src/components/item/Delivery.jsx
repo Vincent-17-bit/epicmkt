@@ -1,3 +1,4 @@
+import { fetchRoadKm } from "../../lib/roadDistance.js";
 import { useEffect, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleExclamation, faCircleQuestion, faLocationDot, faTruck } from "@fortawesome/free-solid-svg-icons";
@@ -25,7 +26,16 @@ export default function Delivery({ ctx }) {
   const live = useRef(null);
   const [announce, setAnnounce] = useState("");
   const info = seller ? deliveryInfo(seller) : null;
-  const reach = seller ? deliveryReach(seller, geo.coords) : null;
+  // The distance is by road: a routing service when one is configured, otherwise the straight line times 1.3 (shared deliveryReach).
+  const [roadKm, setRoadKm] = useState(null);
+  useEffect(() => {
+    setRoadKm(null);
+    if (!seller || !geo.coords || !Number.isFinite(Number(seller.lat)) || !Number.isFinite(Number(seller.lng))) return undefined;
+    let alive = true;
+    fetchRoadKm({ lat: Number(seller.lat), lng: Number(seller.lng) }, geo.coords).then((km) => { if (alive && km !== null) setRoadKm(km); });
+    return () => { alive = false; };
+  }, [seller?.lat, seller?.lng, geo.coords?.lat, geo.coords?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  const reach = seller ? deliveryReach(seller, geo.coords, { roadKm }) : null;
   const status = reach?.status ?? "none";
 
   // Tell a screen reader when the answer changes after the buyer shares or changes a location (not on first render).

@@ -100,6 +100,44 @@ describe("table add", () => {
     await waitFor(() => expect(onDone).toHaveBeenCalledWith({ tone: "ok", text: "2 added." }));
   });
 
+  it("takes a picture pasted into a cell as a photo of that row, and sends it after the item is saved", async () => {
+    await ready();
+    URL.createObjectURL = vi.fn((f) => `blob:${f.name}`);
+    URL.revokeObjectURL = vi.fn();
+    const upload = vi.spyOn(mock, "uploadItemPhoto");
+    vi.spyOn(mock, "bulkItems").mockResolvedValue({ affected: 1 });
+    const onDone = vi.fn();
+    render(wrap(<Grid type={BULB} onChange={() => {}} onDone={onDone} />));
+    const png = new File(["x"], "shot.png", { type: "image/png" });
+    const pdf = new File(["x"], "scan.pdf", { type: "application/pdf" });
+    fireEvent.paste(screen.getByLabelText("Name, row 1"), { clipboardData: { getData: () => "", files: [png, pdf] } });
+    expect(await screen.findByAltText("Photo 1, row 1")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(/Added 1 photo to row 1\. 1 file was not a JPG, PNG or WebP picture/);
+    fireEvent.change(screen.getByLabelText("Name, row 1"), { target: { value: "Bulb A" } });
+    fireEvent.change(screen.getByLabelText("Price (KES), row 1"), { target: { value: "100" } });
+    fireEvent.change(screen.getByLabelText("Wattage, row 1"), { target: { value: "9 W" } });
+    fireEvent.change(screen.getByLabelText("Base, row 1"), { target: { value: "E27" } });
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Save 1 item" }));
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith({ tone: "ok", text: "1 added." }));
+    expect(upload).toHaveBeenCalledTimes(1);
+    expect(upload.mock.calls[0][1]).toBe(png);
+  });
+
+  it("lets a photo be removed, caps a row, and reports a photo that could not be sent", async () => {
+    await ready();
+    URL.createObjectURL = vi.fn((f) => `blob:${f.name}`);
+    URL.revokeObjectURL = vi.fn();
+    render(wrap(<Grid type={BULB} onChange={() => {}} onDone={() => {}} />));
+    const pics = Array.from({ length: 7 }, (_, i) => new File(["x"], `p${i}.jpg`, { type: "image/jpeg" }));
+    fireEvent.paste(screen.getByLabelText("Name, row 2"), { clipboardData: { getData: () => "", files: pics } });
+    expect(await screen.findAllByAltText(/, row 2$/)).toHaveLength(5);
+    expect(screen.getByRole("status")).toHaveTextContent("2 left out (up to 5 photos for a row)");
+    expect(screen.queryByLabelText("Add photos, row 2")).toBeNull();
+    await userEvent.setup().click(screen.getByRole("button", { name: "Remove photo 1 from row 2" }));
+    expect(screen.getAllByAltText(/, row 2$/)).toHaveLength(4);
+    expect(screen.getByLabelText("Add photos, row 2")).toBeInTheDocument();
+  });
+
   it("has no serious accessibility violations", async () => {
     await ready();
     const { container } = render(wrap(<Grid type={BULB} onChange={() => {}} onDone={() => {}} />));

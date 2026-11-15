@@ -52,6 +52,28 @@ describe("import by type", () => {
   });
 });
 
+describe("import with a type", () => {
+  it("gives every imported item the chosen type, and none when no type is chosen", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog", async () => M.setBusiness({ planKey: "premium" }));
+    const spy = vi.spyOn(mock, "importItems");
+    const run = async (typeId) => {
+      await user.click(await screen.findByRole("button", { name: /^Import items/ }));
+      const dialog = await screen.findByRole("dialog", { name: "Import items" });
+      if (typeId) await user.selectOptions(within(dialog).getByLabelText("Template for"), typeId);
+      fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: "name\tprice type\tprice\nPlain shirt\tfixed\t500" } });
+      await user.click(within(dialog).getByRole("button", { name: "Preview" }));
+      await user.click(await within(dialog).findByRole("button", { name: /^Import 1 item$/ }));
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Import items" })).toBeNull());
+    };
+    await run("pt-shirt");
+    expect(spy.mock.calls[0][0][0]).toMatchObject({ name: "Plain shirt", product_type_id: "pt-shirt" });
+    expect((await api.getCatalog()).items.find((i) => i.name === "Plain shirt")).toMatchObject({ productTypeId: "pt-shirt" });
+    await run("");
+    expect("product_type_id" in spy.mock.calls[1][0][0]).toBe(false);
+  });
+});
+
 describe("bulk set type", () => {
   const selectFirst = async (n = 2) => {
     const user = userEvent.setup();

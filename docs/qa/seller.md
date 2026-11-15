@@ -16,4 +16,4 @@ Seller entry chunk: 1,715 kB (530 gzip). Three, jsPDF, html2canvas and the map a
 
 - **Editor bundle within 10 percent of before the lanes:** no baseline build was recorded before the lanes started, so there is nothing to compare with. From here on, 1,715 kB / 530 kB gzip is the number to hold.
 - **360 px pass over the editor, real-browser axe, phone check:** not done (see above). Needs a scripted seller sign-in, or a person with a phone.
-- Known gaps, none filed as blockers: imported rows get no type at import (use Set type afterwards); photos cannot be pasted into the add table; delivery fee and distance are straight-line; seller plan-switch enforcement; photos of hidden merged items are not moved; combination-level tiers are not editable; the model poster has no auto-capture.
+- Known gaps, none filed as blockers: a custom size is not stored by the database (`CUSTOM_SIZE_STORED` is off); road distance is an estimate (straight line x 1.3) until `VITE_ROUTING_URL` is set; nothing was checked on a phone or in a headed or non-Chromium browser.

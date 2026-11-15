@@ -28,7 +28,7 @@ export const STEPS = [
   // Shown only for an item that went through the type picker (the key is on the form, null meaning Other goods). Other items see no new step.
   { id: "type", label: "Type", short: "Type", component: TypeStep, visibleWhen: ({ form }) => "productTypeId" in form, issues: () => [], done: ({ form }) => "productTypeId" in form },
   // Item options (B07). Shown for an item that went through the type picker or already has options; every other item sees no new step.
-  { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: ({ form }) => "productTypeId" in form || Boolean(form.options),
+  { id: "options", label: "Options", short: "Options", component: OptionsStep, visibleWhen: ({ form, features }) => ("productTypeId" in form || Boolean(form.options)) && (features?.options !== false || (form.options?.axes?.length ?? 0) > 0),
     issues: issuesFor("options"), done: ({ form }) => (form.options?.rows ?? []).some((r) => r.sold) },
   // The seller's own size table (migration 0103).
   { id: "sizeguide", label: "Size guide", short: "Sizes", component: SizeGuideStep,

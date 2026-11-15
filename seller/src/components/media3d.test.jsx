@@ -204,3 +204,36 @@ describe("the 3D section of the editor", () => {
     expect(await screen.findByText("Add a poster picture, or this 3D view will not be shown.", {}, { timeout: 12000 })).toBeInTheDocument();
   }, 20000);
 });
+
+describe("poster taken from the model", () => {
+  const makeLoad = (capture) => vi.fn(async () => ({ mount: vi.fn(async () => {}), setAutoRotate: vi.fn(), destroy: vi.fn(), capture }));
+  const glb = () => {
+    const bytes = new Uint8Array(20);
+    bytes.set([0x67, 0x6c, 0x54, 0x46], 0);
+    return new File([bytes], "chair.glb", { type: "model/gltf-binary" });
+  };
+
+  it("makes the poster from the preview on its own, and the seller can take a new one", async () => {
+    const capture = vi.fn(async () => new Blob(["png"], { type: "image/png" }));
+    const load = makeLoad(capture);
+    const user = userEvent.setup({ applyAccept: false });
+    vi.spyOn(await import("@epicmkt/shared"), "inspectGlb").mockReturnValue({ ok: true });
+    render(<ModelUpload itemId={ITEM} onChanged={() => {}} previewLoad={load} />);
+    await user.upload(screen.getByLabelText("Model file (.glb)"), glb());
+    await waitFor(() => expect(capture).toHaveBeenCalledTimes(1));
+    expect(await screen.findByAltText("Poster picture")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Take a new poster from the preview" }));
+    await waitFor(() => expect(capture).toHaveBeenCalledTimes(2));
+  });
+
+  it("says so, and keeps the choose-a-picture way, when the picture cannot be taken", async () => {
+    const load = makeLoad(vi.fn(async () => null));
+    const user = userEvent.setup({ applyAccept: false });
+    vi.spyOn(await import("@epicmkt/shared"), "inspectGlb").mockReturnValue({ ok: true });
+    render(<ModelUpload itemId={ITEM} onChanged={() => {}} previewLoad={load} />);
+    await user.upload(screen.getByLabelText("Model file (.glb)"), glb());
+    await user.click(await screen.findByRole("button", { name: "Make the poster from the preview" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Choose a poster picture instead/);
+    expect(screen.getByLabelText("Poster picture")).toBeInTheDocument();
+  });
+});
