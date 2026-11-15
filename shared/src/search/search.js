@@ -3,7 +3,10 @@
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
 import { normalizeText } from "../utils.js";
 import { normalizeValueKey } from "../openValues.js";
-import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, readNumber, readers } from "./data/facetCatalog.js";
+import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, KIND_BY_TYPE, SERVICE_CATEGORIES, readNumber, readers } from "./data/facetCatalog.js";
+
+const SERVICE_KINDS = KINDS.filter((k) => k.service);
+const GOODS_KINDS = KINDS.filter((k) => !k.service);
 
 export const SEARCH_PAGE_SIZE = 16;
 export const SEARCH_SORTS = [
@@ -29,10 +32,12 @@ const CONDITIONS = [
 ];
 
 const SYNONYMS = {
-  tv: ["television"], television: ["tv"], phone: ["smartphone", "mobile"], mobile: ["phone"], fridge: ["refrigerator"],
+  tv: ["television"], television: ["tv"], phone: ["smartphone"], smartphone: ["phone"], fridge: ["refrigerator"], soda: ["soft drink"],
   sofa: ["couch", "seater"], couch: ["sofa"], perfume: ["fragrance", "cologne", "parfum"], earphone: ["earbud", "headphone"],
   earbud: ["earphone"], laptop: ["notebook"], speaker: ["soundbar", "sound"], soundbar: ["speaker"], shoe: ["sneaker", "sandal"],
-  trouser: ["pant", "jean"], jean: ["denim", "trouser"], cooker: ["jiko"], jiko: ["cooker"], mabati: ["iron sheet"], tyre: ["tire"]
+  trouser: ["pant", "jean"], jean: ["denim", "trouser"], cooker: ["jiko"], jiko: ["cooker"], mabati: ["iron sheet"], tyre: ["tire"],
+  usb: ["flash"], flash: ["usb"], carpet: ["rug"], rug: ["carpet"], massage: ["spa"], cyber: ["printing", "photocopy"], chocolate: ["sweet"],
+  wood: ["timber"], timber: ["wood"], bulb: ["light"]
 };
 
 // "speakers" -> "speaker", "batteries" -> "battery", "shoes" -> "shoe"; short words stay as they are.
@@ -48,6 +53,9 @@ const tokensOf = (text) => normalizeText(text).split(" ").filter(Boolean).map(st
 // ---- reading one product ------------------------------------------------------------------------------------------
 const cache = new WeakMap();
 
+// The name plus the values of spec rows that say what the product is: "Type", "Item", or a row named like the filter.
+const TYPE_ROW = /^(?:type|item|kind|product|style|treatment|service|what is made|main|flowers|wood|pen type|drink|clothing|table|bed|carpet|appliance|arrangement|stationery|board)$/i;
+const ownText = (p, label) => `${p.name ?? ""} · ${(p.specs ?? []).filter((s) => TYPE_ROW.test(String(s.label ?? "").trim()) || String(s.label ?? "").trim().toLowerCase() === String(label).toLowerCase()).map((s) => s.value).join(" · ")}`;
 const specText = (p) => (p.specs ?? []).map((s) => `${s.label ?? ""}: ${s.value ?? ""}`).join(" · ");
 const priceOf = (p) => {
   if (p.priceRange && Number.isFinite(p.priceRange.min)) return p.priceRange.min;
@@ -56,13 +64,31 @@ const priceOf = (p) => {
   return Number.isFinite(p.regularPrice) ? p.regularPrice : null;
 };
 
+// Words that say "this is work done for you", whatever the shop: "dress making", "phone repair", "tent hire".
+const SERVICE_WORDS = /\b(?:making|made[- ]to[- ]measure|custom[- ]made|alterations?|repairs?|servic(?:e|ing)|install(?:ation)?|hire|lessons?|tuition|treatments?|consultation|appointment|per session|wash(?:ing)?|cleaning|refill)\b/i;
+
+/**
+ * The kind of a product, used for its department and its filters. In order:
+ *   1. its product type: every seeded type belongs to exactly one kind;
+ *   2. the words in its name and section: among the kinds that match, one its shop's category sells wins, else the first;
+ *      a service (or anything in a service shop) looks at service kinds first;
+ *   3. its shop's category.
+ */
 export function kindOf(p) {
-  const head = `${p.name ?? ""} ${p.section ?? ""} ${p.brand ?? ""}`;
-  if (p.kind === "service") {
-    const special = KINDS.find((k) => (k.id === "printing" || k.id === "auto") && k.re.test(head));
-    return special ?? KIND_BY_ID.services;
+  const typed = p.productTypeId ? KIND_BY_TYPE[p.productTypeId] : null;
+  if (typed) return typed;
+  const head = `${p.name ?? ""} ${p.section ?? ""}`;
+  const cat = p.business?.categoryId ?? null;
+  const serviceFirst = p.kind === "service" || (p.kind !== "product" && (SERVICE_CATEGORIES.has(cat) || SERVICE_WORDS.test(head)));
+  const pools = p.kind === "service" ? [SERVICE_KINDS] : p.kind === "product" ? [GOODS_KINDS] : serviceFirst ? [SERVICE_KINDS, GOODS_KINDS] : [GOODS_KINDS, SERVICE_KINDS];
+  const hits = pools.flatMap((pool) => pool.filter((k) => k.id !== "services" && k.re.test(head)));
+  const pick = hits.find((k) => k.cats.includes(cat)) ?? hits[0];
+  if (pick) return pick;
+  for (const pool of pools) {
+    const byShop = pool.find((k) => k.cats.includes(cat));
+    if (byShop) return byShop;
   }
-  return KINDS.find((k) => k.re.test(head)) ?? KINDS.find((k) => k.cats.includes(p.business?.categoryId)) ?? null;
+  return p.kind === "service" || KIND_BY_ID.services.re.test(head) ? KIND_BY_ID.services : null;
 }
 
 /** The colour ids a product comes in (its swatches, else a colour spec, else its name), whole words only. */
@@ -80,8 +106,8 @@ export function coloursOf(p) {
   return found;
 }
 
-function conditionOf(p, text) {
-  if (p.kind === "service") return null;
+function conditionOf(p, text, k) {
+  if (p.kind === "service" || k?.service) return null;
   if (/refurbished|renewed|grade a|ex-?uk/i.test(text)) return "refurbished";
   if (/\bused\b|mitumba|second[- ]hand|pre-?owned/i.test(text)) return "used";
   return "new";
@@ -102,7 +128,9 @@ export function describe(p) {
       const bucket = n === null ? null : f.values.find((v) => n >= v.min && (v.max === null || n <= v.max));
       facetValues[id] = bucket ? new Set([bucket.id]) : new Set();
     } else {
-      facetValues[id] = new Set(f.values.filter((v) => v.re.test(text)).map((v) => v.id));
+      // "What is it" filters read the name and the product's own type rows; a value marked onName reads the name only.
+      const own = f.on === "name" ? ownText(p, f.label) : text;
+      facetValues[id] = new Set(f.values.filter((v) => v.re.test(v.onName ? p.name ?? "" : own)).map((v) => v.id));
     }
   }
   const brand = p.brand ?? (p.specs ?? []).find((s) => /^brand$/i.test(s.label ?? ""))?.value ?? null;
@@ -115,7 +143,7 @@ export function describe(p) {
     brand,
     price: priceOf(p),
     colours: coloursOf(p),
-    condition: conditionOf(p, text),
+    condition: conditionOf(p, text, k),
     facetValues,
     onSale: Boolean(p.pricing?.savings > 0) || Boolean(p.flash),
     flash: Boolean(p.flash),
@@ -173,15 +201,22 @@ export function writeSearch(search) {
 }
 
 // ---- matching -----------------------------------------------------------------------------------------------------
+// A search word matches a product word when they are the same word, or the product word only adds an ending ("print" finds
+// "printing" and "printer"). A longer word that merely starts the same is a different thing: "table" is not "tablets",
+// "pen" is not "pencil" or "pendant", "cup" is not "cupcake", "bed" is not "bedsheet".
+const ENDING = /^(?:e?s|ing|ed|er|ers|y|ies)$/;
+const wordMatches = (word, wanted) => word === wanted || (word.startsWith(wanted) && ENDING.test(word.slice(wanted.length)));
 function textScore(d, tokens) {
   if (!tokens.length) return 1;
   let score = 0;
   for (const t of tokens) {
     const options = [t, ...(SYNONYMS[t] ?? []).map(stem)];
-    const inName = options.some((o) => [...d.name].some((w) => w.startsWith(o)));
-    const inHay = inName || options.some((o) => [...d.hay].some((w) => w.startsWith(o)));
+    // The word itself in the name counts most; a synonym in the name ("light" for "bulb") less; anywhere else least.
+    const exactName = [...d.name].some((w) => wordMatches(w, t));
+    const inName = exactName || options.some((o) => [...d.name].some((w) => wordMatches(w, o)));
+    const inHay = inName || options.some((o) => [...d.hay].some((w) => wordMatches(w, o)));
     if (!inHay) return 0;
-    score += inName ? 3 : 1;
+    score += exactName ? 3 : inName ? 2 : 1;
     if (d.brandKey && options.some((o) => d.brandKey.startsWith(o))) score += 2;
   }
   return score;
@@ -243,10 +278,41 @@ function countBy(rows, fn) {
   return counts;
 }
 
-function dominantKinds(rows, search) {
+// A strong match names the thing searched for (in its name, or its kind is called that: "phone" finds the Tecno Spark). The
+// filters follow the strong matches, so a word in a description ("print from your phone") does not decide what is shown.
+const kindWordCache = new Map();
+const kindWords = (k) => {
+  if (!k) return [];
+  if (!kindWordCache.has(k.id)) kindWordCache.set(k.id, tokensOf(`${k.label} ${k.noun}`));
+  return kindWordCache.get(k.id);
+};
+// A search word that names one of the product's own filter values ("soda" for a drink whose type is "Soda and soft drinks",
+// "gel" for a gel pen) is a sign it is the thing wanted: +1 per such word.
+const valueWordCache = new Map();
+const valueWords = (facetId, value) => {
+  const key = `${facetId}:${value.id}`;
+  if (!valueWordCache.has(key)) valueWordCache.set(key, tokensOf(value.label));
+  return valueWordCache.get(key);
+};
+function valueBonus(d, tokens) {
+  let bonus = 0;
+  for (const t of tokens) {
+    const hit = Object.entries(d.facetValues).some(([id, have]) => FACETS[id]?.type !== "range" && FACETS[id].values.some((v) => have.has(v.id) && valueWords(id, v).some((w) => wordMatches(w, t))));
+    if (hit) bonus += 1;
+  }
+  return bonus;
+}
+
+const isStrong = (d, tokens) => !tokens.length || tokens.some((t) => [...d.name].some((w) => wordMatches(w, t)) || kindWords(d.kind).some((w) => wordMatches(w, t)));
+
+function dominantKinds(all, search) {
   if (search.kind) return [KIND_BY_ID[search.kind]];
-  const counts = countBy(rows, (r) => [r.d.kind?.id]);
-  const total = rows.length || 1;
+  const strong = all.filter((r) => r.strong);
+  const rows = strong.length ? strong : all;
+  // A shopper typing a word usually wants the thing: a service with the same word ("sugar test") counts half.
+  const counts = new Map();
+  for (const r of rows) if (r.d.kind) counts.set(r.d.kind.id, (counts.get(r.d.kind.id) ?? 0) + (r.d.kind.service ? 0.5 : 1));
+  const total = [...counts.values()].reduce((a, b) => a + b, 0) || 1;
   return [...counts]
     .sort((a, b) => b[1] - a[1])
     .filter(([, n], i) => n / total >= (i === 0 ? 0.3 : 0.35))
@@ -367,8 +433,11 @@ export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEA
     const score = textScore(d, tokens) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
     // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
     const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
-    if (score > 0) matched.push({ p, d, score: score + quality });
+    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });
   }
+  // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
+  const [first, second] = dominantKinds(matched, { ...s, kind: "" });
+  for (const r of matched) r.score += r.d.kind && r.d.kind === first ? 1.5 : r.d.kind && r.d.kind === second ? 0.75 : 0;
   const kept = matched.filter((r) => passes(r.p, r.d, s));
   kept.sort(SORTERS[s.sort] ?? SORTERS.featured);
   const pages = Math.max(1, Math.ceil(kept.length / pageSize));
@@ -378,6 +447,18 @@ export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEA
 }
 
 // The short facts a result row shows under the title ("30 W · 12 h · IP67 waterproof"), read from the same filter values.
+// A number as a buyer reads it: 0.5 litres is "500 ml", 0.25 kg is "250 g", 64 on a storage filter is "64 GB", 60 minutes is "60 min".
+const UNIT_OF = { gb: "GB", ramGb: "GB RAM", minutes: "min", count: "pcs", feet: "ft", seats: "seats", hz: "Hz", mm2: "mm²", thickInch: "in", shoeEu: "" };
+function amountText(n, f) {
+  const fmt = (x) => x.toLocaleString("en-KE", { maximumFractionDigits: 2 });
+  if (f.reader === "litres") return n < 1 ? `${fmt(n * 1000)} ml` : `${fmt(n)} L`;
+  if (f.reader === "kg") return n < 1 ? `${fmt(n * 1000)} g` : `${fmt(n)} kg`;
+  if (f.reader === "gb" && n >= 1024) return `${fmt(n / 1024)} TB`;
+  if (f.reader === "shoeEu") return `EU ${fmt(n)}`;
+  const unit = f.unit || UNIT_OF[f.reader] || "";
+  return `${fmt(n)}${unit ? ` ${unit}` : ""}`;
+}
+
 function rowFacts(p, d) {
   const facts = [];
   for (const id of d.kind?.facets ?? []) {
@@ -386,10 +467,13 @@ function rowFacts(p, d) {
     if (!f || !have?.size) continue;
     if (f.type === "range") {
       const n = readNumber(readers[f.reader], p);
-      if (n !== null) facts.push(`${n.toLocaleString("en-KE")}${f.unit ? ` ${f.unit}` : ""}${id === "battery" ? " playtime" : ""}`);
+      if (n !== null) facts.push(`${amountText(n, f)}${id === "battery" ? " playtime" : ""}`);
     } else {
-      const first = f.values.find((v) => have.has(v.id));
-      if (first && facts.length < 4) facts.push(first.label.replace(/ \(.*\)$/, ""));
+      const on = f.values.filter((v) => have.has(v.id));
+      // Sizes read as a span ("S to XL"); anything else shows its first value.
+      const text = f.sizes && on.length > 1 ? `${on[0].label} to ${on[on.length - 1].label}` : on[0]?.label;
+      const clean = text?.replace(/ \(.*\)$/, "");
+      if (clean && facts.length < 4 && !facts.includes(clean)) facts.push(clean);
     }
     if (facts.length >= 4) break;
   }
