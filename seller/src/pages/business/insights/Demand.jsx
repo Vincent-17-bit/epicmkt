@@ -5,6 +5,7 @@ import { demandLine, demandSuggestion } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { usePlanFeatures } from "../../../lib/usePlanFeatures.js";
 import { errorText } from "../../../lib/errors.js";
+import Intro from "../../../components/Intro.jsx";
 import ui from "../../../styles/ui.module.css";
 import styles from "./demand.module.css";
 
@@ -30,7 +31,7 @@ export default function Demand() {
     <div className={ui.page}>
       <header className={ui.pageHead}>
         <h1>What shoppers want</h1>
-        <p className={ui.muted}>When a shopper picks a combination you do not sell and taps “Let the seller know”, it is counted here. Nobody is named: you only see how many different shoppers asked.</p>
+        <Intro>When a shopper picks a combination you do not sell and taps “Let the seller know”, it is counted here. Nobody is named: you only see how many different shoppers asked.</Intro>
       </header>
 
       <div className={styles.periods} role="radiogroup" aria-label="Period">

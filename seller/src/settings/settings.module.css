@@ -725,7 +725,7 @@ button.dangerBtn {
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 80rem) {
   .layout {
     grid-template-columns: 14rem minmax(0, 1fr);
     align-items: start;
@@ -733,7 +733,7 @@ button.dangerBtn {
   }
 
   .nav {
-    top: calc(var(--header-h) + var(--space-3));
+    top: var(--space-4);
     flex-direction: column;
     gap: 2px;
     margin: 0;

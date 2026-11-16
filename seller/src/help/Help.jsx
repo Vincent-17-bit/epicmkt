@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { telLink, whatsappLink } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { FAQ, GUIDES } from "./helpContent.js";
+import ui from "../styles/ui.module.css";
 import styles from "./help.module.css";
 
 export default function Help() {
@@ -19,7 +20,7 @@ export default function Help() {
   const any = c.whatsapp || c.phone || c.email;
 
   return (
-    <div className={styles.page}>
+    <div className={`${ui.page} ${styles.page}`}>
       <h1>Help</h1>
 
       <section className={styles.section} aria-labelledby="faq-h">
