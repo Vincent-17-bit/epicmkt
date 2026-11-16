@@ -7,7 +7,7 @@ import { useBusinessFacts } from "../lib/useBusinessFacts.js";
 import { showToast } from "../state/toast.js";
 import { phoneSchema, validateField } from "../lib/settingsSchema.js";
 import Dialog from "../components/Dialog.jsx";
-import { Row, Section } from "./controls.jsx";
+import { Disclosure, Row, Section } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 // A sign-in is an instant, so it is shown in the viewer's own time zone.
@@ -37,41 +37,37 @@ export default function AccountSecurity() {
 
   return (
     <Section id="account" title="Account and security">
-      <Row label="Seller ID" hint="Used to sign in. It cannot be changed."><strong>{facts?.seller_id ?? "…"}</strong></Row>
-      <Row label="Registered phone" hint="Codes are sent here. A change needs admin confirmation." stack>
-        <strong aria-label="Registered phone, masked">{facts?.phone ? maskPhone(facts.phone) : "…"}</strong>
+      <Row label="Seller ID"><strong className={styles.value}>{facts?.seller_id ?? "…"}</strong></Row>
+      <Row label="Registered phone">
+        <strong className={styles.value} aria-label="Registered phone, masked">{facts?.phone ? maskPhone(facts.phone) : "…"}</strong>
         <button type="button" className={styles.linkBtn} onClick={() => setPhoneOpen(true)} disabled={Boolean(pending)}>Request change</button>
-        {pending && (
-          <p className={styles.note} role="status">
-            A change to <strong>{maskPhone(pending.newValue ?? pending.new_value)}</strong> is waiting for admin confirmation.{" "}
-            <button type="button" className={styles.linkBtn} onClick={cancelPending}>Cancel request</button>
-          </p>
-        )}
       </Row>
-      <Row label="Sign-in email and password" hint="Add a verified email and change your password on the Account page, where each change is confirmed with a code.">
+      {pending && (
+        <p className={styles.note} role="status">
+          A change to <strong>{maskPhone(pending.newValue ?? pending.new_value)}</strong> is waiting for admin confirmation.{" "}
+          <button type="button" className={styles.linkBtn} onClick={cancelPending}>Cancel request</button>
+        </p>
+      )}
+      <Row label="Email and password">
         <Link className={styles.linkBtn} to="/business/account">Go to Account</Link>
       </Row>
-      <Row label="Other devices" hint="Signs out every device except this one.">
-        <Button variant="secondary" onClick={() => setSignOutOpen(true)}>Sign out other devices</Button>
+      <Row label="Other devices">
+        <Button size="sm" variant="secondary" onClick={() => setSignOutOpen(true)}>Sign out other devices</Button>
       </Row>
-      <Row label="Recent sign-ins" stack>
-        {history === null ? <p className={styles.muted}>Loading…</p> : history.error ? <p className={styles.muted}>We could not load your sign-in history.</p> : (
-          <div>
-            {history.failedSinceLastSuccess > 0 && <p className={styles.note} role="status">{history.failedSinceLastSuccess} failed {history.failedSinceLastSuccess === 1 ? "attempt" : "attempts"} since your last successful sign-in.</p>}
-            {history.rows.length === 0 ? <p className={styles.muted}>No sign-ins recorded yet.</p> : (
-              <ul className={styles.history} aria-label="Sign-in history">
-                {history.rows.map((r) => (
-                  <li key={r.id}>
-                    <time dateTime={r.at}>{formatDateTime(r.at, { year: "numeric" })}</time>
-                    <span>{r.device} · {r.success ? "Signed in" : "Failed attempt"}</span>
-                    {r.success && r.failedBefore > 0 && <span className={styles.danger}>{r.failedBefore} failed {r.failedBefore === 1 ? "attempt" : "attempts"} before this sign-in</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      {history?.failedSinceLastSuccess > 0 && <p className={styles.note} role="status">{history.failedSinceLastSuccess} failed {history.failedSinceLastSuccess === 1 ? "attempt" : "attempts"} since your last successful sign-in.</p>}
+      <Disclosure title="Recent sign-ins">
+        {history === null ? <p className={styles.muted}>Loading…</p> : history.error ? <p className={styles.muted}>We could not load your sign-in history.</p> : history.rows.length === 0 ? <p className={styles.muted}>No sign-ins recorded yet.</p> : (
+          <ul className={styles.history} aria-label="Sign-in history">
+            {history.rows.map((r) => (
+              <li key={r.id}>
+                <time dateTime={r.at}>{formatDateTime(r.at, { year: "numeric" })}</time>
+                <span>{r.device} · {r.success ? "Signed in" : "Failed attempt"}</span>
+                {r.success && r.failedBefore > 0 && <span className={styles.danger}>{r.failedBefore} failed {r.failedBefore === 1 ? "attempt" : "attempts"} before this sign-in</span>}
+              </li>
+            ))}
+          </ul>
         )}
-      </Row>
+      </Disclosure>
 
       <PhoneDialog open={phoneOpen} onClose={() => setPhoneOpen(false)} onSent={() => { setPhoneOpen(false); loadPending(); showToast("Request sent. An admin will confirm it."); }} />
       <SignOutDialog open={signOutOpen} onClose={() => setSignOutOpen(false)} />
@@ -101,7 +97,7 @@ function PhoneDialog({ open, onClose, onSent }) {
   };
   return (
     <Dialog open={open} onClose={onClose} title="Request a phone change">
-      <form onSubmit={submit} noValidate className={styles.page}>
+      <form onSubmit={submit} noValidate className={styles.stack}>
         <p className={styles.muted}>Your number only changes after an admin confirms it. Until then, codes go to your current number.</p>
         <div className={styles.field}>
           <label className={styles.fieldLabel} htmlFor="new-phone">New phone number</label>

@@ -57,14 +57,14 @@ export default function DataAccount() {
 
   return (
     <Section id="data" title="Data and account">
-      <Row label="Download my data" hint="A JSON file with your listing, items, settings and history.">
-        <Button variant="secondary" onClick={download} disabled={busy}>Download my data</Button>
+      <Row label="Download my data">
+        <Button size="sm" variant="secondary" onClick={download} disabled={busy}>Download my data</Button>
       </Row>
-      <Row label="Pause listing" hint={status === "paused" ? "Your listing is hidden from customers until you resume." : "Hides your listing from customers. Your items and settings stay as they are."}>
-        {status === "paused" ? <Button onClick={() => pause(false)} disabled={busy}>Resume listing</Button> : <Button variant="secondary" onClick={() => pause(true)} disabled={busy || status !== "live"}>Pause listing</Button>}
+      <Row label="Pause listing" hint={status === "paused" ? "Hidden from customers." : undefined}>
+        {status === "paused" ? <Button size="sm" onClick={() => pause(false)} disabled={busy}>Resume listing</Button> : <Button size="sm" variant="secondary" onClick={() => pause(true)} disabled={busy || status !== "live"}>Pause listing</Button>}
       </Row>
-      <Row label="Delete account" hint="Hides your listing and asks the team to delete your account. This cannot be undone from here.">
-        <Button variant="secondary" onClick={() => setDel(true)}>Delete account</Button>
+      <Row label="Delete account">
+        <Button size="sm" variant="secondary" className={styles.dangerBtn} onClick={() => setDel(true)}>Delete account</Button>
       </Row>
       <DeleteDialog open={del} onClose={() => setDel(false)} name={b.name} onDone={async () => { setDel(false); await signOut(); navigate("/login", { replace: true }); }} />
     </Section>
@@ -92,7 +92,7 @@ function DeleteDialog({ open, onClose, name, onDone }) {
   };
   return (
     <Dialog open={open} onClose={onClose} title="Delete your account?">
-      <form onSubmit={go} className={styles.page} noValidate>
+      <form onSubmit={go} className={styles.stack} noValidate>
         <p className={styles.muted}>Your listing will be hidden right away and the team will delete your account. To confirm, type your business name: <strong>{name}</strong></p>
         <div className={styles.field}>
           <label className={styles.fieldLabel} htmlFor="delete-name">Business name</label>

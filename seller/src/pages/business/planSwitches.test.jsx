@@ -45,7 +45,7 @@ describe("pages", () => {
 
   it("will not let a shop that does not deliver start, but lets one that does switch it off", async () => {
     withSwitches({ delivery: false });
-    await signedInApp("/business/settings", async () => M.setBusiness({ planKey: "premium" }));
+    await signedInApp("/business/settings#delivery", async () => M.setBusiness({ planKey: "premium" }));
     const section = (await screen.findByRole("heading", { name: "Delivery" })).closest("section");
     expect(within(section).getByRole("note")).toHaveTextContent("Delivery is not part of your plan.");
     expect(within(section).getByRole("switch", { name: "I deliver" })).toBeDisabled();

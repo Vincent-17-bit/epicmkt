@@ -12,18 +12,20 @@ beforeEach(() => {
 });
 
 const open = async () => {
-  await signedInApp("/business/settings");
+  await signedInApp("/business/settings#hours");
   await screen.findByRole("heading", { level: 1, name: "Settings" });
   return screen.findByRole("region", { name: "Opening hours" });
 };
 
 describe("opening hours editor", () => {
-  it("sits in Settings with the shop clock and a customer preview", async () => {
+  it("sits in Settings with a customer preview behind a toggle", async () => {
+    const user = userEvent.setup();
     const section = await open();
-    expect(within(section).getByTestId("shop-clock")).toHaveTextContent(/at your shop/);
+    expect(within(section).queryByRole("table")).toBeNull();
+    await user.click(within(section).getByRole("button", { name: "How customers see it" }));
     expect(within(section).getByRole("combobox", { name: "Customer's time zone" })).toBeInTheDocument();
     expect(within(section).getByRole("table")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Opening hours" })).toHaveAttribute("href", "#hours");
+    expect(screen.getByRole("link", { name: "Opening hours" })).toHaveAttribute("aria-current", "page");
   });
 
   it("saves, reloads the same values, and undoes", async () => {

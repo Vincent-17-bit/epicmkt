@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, HoursTable } from "@epicmkt/ui";
-import { WEEK_DAYS, hoursRowsFor, isFullDay, isOvernight, safeShopZone, shopTimeNote, shopZoneLabel, validateWeeklyHours, zonedParts } from "@epicmkt/shared";
+import { WEEK_DAYS, hoursRowsFor, isFullDay, isOvernight, safeShopZone, shopTimeNote, shopZoneLabel, validateWeeklyHours } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { errorText } from "../lib/errors.js";
 import { showToast } from "../state/toast.js";
-import { Row, Section, Select, Switch } from "./controls.jsx";
+import { Disclosure, Section, Select, Switch } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 const UNDO_MS = 8000;
@@ -21,11 +21,6 @@ const fromHours = (hours) =>
 
 const toHours = (draft) =>
   Object.fromEntries(WEEK_DAYS.filter((d) => draft[d].open).map((d) => [d, draft[d].full ? ["00:00", "23:59"] : [draft[d].start, draft[d].end]]));
-
-const clockIn = (zone, at) => {
-  const p = zonedParts(at, zone);
-  return p ? `${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}` : "";
-};
 
 export default function HoursEditor() {
   const qc = useQueryClient();
@@ -98,70 +93,62 @@ export default function HoursEditor() {
   };
 
   return (
-    <Section id="hours" title="Opening hours" intro="Customers see these hours on your shop page, as open or closed, in your shop's time and in their own.">
-      <Row label="Shop time" hint={zone} stack>
-        <p className={styles.note} data-testid="shop-clock">It is {clockIn(zone, at)} {shopZoneLabel(at, zone)} at your shop. To change the time zone, open Account.</p>
-      </Row>
-      <Row label="Quick set" stack>
-        <div className={styles.actions}>
-          <Button variant="secondary" onClick={() => copyFrom(["tue", "wed", "thu", "fri"])} disabled={busy}>Copy Monday to weekdays</Button>
-          <Button variant="secondary" onClick={() => copyFrom(WEEK_DAYS.slice(1))} disabled={busy}>Copy Monday to all days</Button>
-          <Button variant="secondary" onClick={allDay} disabled={busy}>Open 24 hours every day</Button>
-        </div>
-      </Row>
-      {WEEK_DAYS.map((day) => {
-        const d = draft[day];
-        const next = d.open && !d.full && isOvernight([d.start, d.end]) && d.start !== d.end;
-        return (
-          <Row key={day} label={NAMES[day]} id={`hours-${day}`} stack>
-            <div className={styles.hoursDay}>
+    <Section id="hours" title="Opening hours">
+      <div className={styles.actions}>
+        <Button size="sm" variant="secondary" onClick={() => copyFrom(["tue", "wed", "thu", "fri"])} disabled={busy}>Copy Monday to weekdays</Button>
+        <Button size="sm" variant="secondary" onClick={() => copyFrom(WEEK_DAYS.slice(1))} disabled={busy}>Copy Monday to all days</Button>
+        <Button size="sm" variant="secondary" onClick={allDay} disabled={busy}>Open 24 hours every day</Button>
+      </div>
+      <div className={styles.hoursList}>
+        {WEEK_DAYS.map((day) => {
+          const d = draft[day];
+          const next = d.open && !d.full && isOvernight([d.start, d.end]) && d.start !== d.end;
+          return (
+            <div key={day} className={styles.hoursRow} role="group" aria-labelledby={`hours-${day}`}>
               <Switch checked={d.open} onChange={(open) => edit(day, { open })} label={`Open on ${NAMES[day]}`} disabled={busy} />
-              {!d.open && <span className={styles.muted}>Closed</span>}
-              {d.open && !d.full && (
-                <div className={styles.timeRow}>
-                  <label className={styles.fieldLabel}>
-                    <span className={styles.srOnly}>{NAMES[day]} opens</span>
-                    <input type="time" className={styles.time} value={d.start} onChange={(e) => edit(day, { start: e.target.value })} disabled={busy} />
-                  </label>
-                  <span aria-hidden="true">to</span>
-                  <label className={styles.fieldLabel}>
-                    <span className={styles.srOnly}>{NAMES[day]} closes</span>
-                    <input type="time" className={styles.time} value={d.end} onChange={(e) => edit(day, { end: e.target.value })} disabled={busy} />
-                  </label>
-                  {next && <span className={styles.muted}>closes next day</span>}
-                </div>
-              )}
-              {d.open && d.full && <span>Open 24 hours</span>}
-              {d.open && (
-                <label className={styles.hoursFull}>
+              <span className={styles.dayName} id={`hours-${day}`}>{NAMES[day]}</span>
+              <div className={styles.hoursTimes}>
+                {d.open && !d.full && (
+                  <>
+                    <label>
+                      <span className={styles.srOnly}>{NAMES[day]} opens</span>
+                      <input type="time" className={styles.time} value={d.start} onChange={(e) => edit(day, { start: e.target.value })} disabled={busy} />
+                    </label>
+                    <span className={styles.muted} aria-hidden="true">to</span>
+                    <label>
+                      <span className={styles.srOnly}>{NAMES[day]} closes</span>
+                      <input type="time" className={styles.time} value={d.end} onChange={(e) => edit(day, { end: e.target.value })} disabled={busy} />
+                    </label>
+                    {next && <span className={styles.muted}>closes next day</span>}
+                  </>
+                )}
+              </div>
+              {d.open ? (
+                <label className={`${styles.hoursFull} ${styles.hoursFlag}`}>
                   <input type="checkbox" checked={d.full} onChange={(e) => edit(day, { full: e.target.checked })} disabled={busy} />
                   <span>24 hours</span>
                 </label>
-              )}
+              ) : <span className={`${styles.muted} ${styles.hoursFlag}`}>Closed</span>}
             </div>
-          </Row>
-        );
-      })}
-      <Row label="Save" stack>
-        <div className={styles.page}>
-          {error && <p className={styles.error} role="alert">{error}</p>}
-          <p className={styles.note} role="status" aria-live="polite">{status || (dirty ? "You have unsaved changes." : "No changes to save.")}</p>
-          <div className={styles.actions}>
-            <Button onClick={save} disabled={!dirty || busy}>{busy ? "Saving…" : "Save opening hours"}</Button>
-            {dirty && !busy && <button type="button" className={styles.linkBtn} onClick={discard}>Discard changes</button>}
-            {undo && !dirty && !busy && <button type="button" className={styles.linkBtn} onClick={() => persist(undo, null)}>Undo</button>}
-          </div>
+          );
+        })}
+      </div>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <div className={styles.saveBar}>
+        <p className={styles.note} role="status" aria-live="polite">{status || (dirty ? "You have unsaved changes." : "")}</p>
+        <div className={styles.actions}>
+          <Button size="sm" onClick={save} disabled={!dirty || busy}>{busy ? "Saving…" : "Save opening hours"}</Button>
+          {dirty && !busy && <button type="button" className={styles.linkBtn} onClick={discard}>Discard changes</button>}
+          {undo && !dirty && !busy && <button type="button" className={styles.linkBtn} onClick={() => persist(undo, null)}>Undo</button>}
         </div>
-      </Row>
-      <Row label="How customers see it" hint="Pick where a customer is looking from." stack>
-        <div className={styles.page}>
-          <Select value={viewerZone} onChange={setViewer} options={zoneOptions} label="Customer's time zone" />
-          <div className={styles.preview}>
-            <strong>{shopTimeNote(at, { shopZone: zone, viewerZone })}</strong>
-            <HoursTable rows={rows} />
-          </div>
+      </div>
+      <Disclosure title="How customers see it">
+        <Select value={viewerZone} onChange={setViewer} options={zoneOptions} label="Customer's time zone" />
+        <div className={styles.preview}>
+          <strong>{shopTimeNote(at, { shopZone: zone, viewerZone })}</strong>
+          <HoursTable rows={rows} />
         </div>
-      </Row>
+      </Disclosure>
     </Section>
   );
 }
