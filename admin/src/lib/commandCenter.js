@@ -70,3 +70,40 @@ export const sum = (values) => (values ?? []).reduce((total, v) => total + (Numb
 export function lastDays(rows, key, days) {
   return (rows ?? []).slice(-days).map((row) => Number(row?.[key]) || 0);
 }
+
+/** "Good morning", "Good afternoon" or "Good evening", from the admin's own clock. */
+export function greeting(date = new Date()) {
+  const hour = date.getHours();
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
+
+/** The name to greet: the first word of the display name, or of the email's local part; "" when there is neither. */
+export function firstName(admin) {
+  const name = String(admin?.displayName ?? "").trim() || String(admin?.email ?? "").split("@")[0].replace(/[._-]+/g, " ").trim();
+  const first = name.split(/\s+/)[0] ?? "";
+  return first ? first.charAt(0).toUpperCase() + first.slice(1) : "";
+}
+
+/** Each attention row's share of the busiest one, 0-100, for the small bar beside it. */
+export function shareOfMax(value, max) {
+  return max > 0 ? Math.max(6, Math.min(100, Math.round((value / max) * 100))) : 0;
+}
+
+// The pages worth one tap from the Command Center, in this order. Only the ones the role may open are shown.
+export const SHORTCUT_PATHS = [
+  "/admin/businesses",
+  "/admin/applications",
+  "/admin/payments",
+  "/admin/moderation",
+  "/admin/messages",
+  "/admin/broadcasts",
+  "/admin/flash-sales",
+  "/admin/plans",
+  "/admin/analytics",
+  "/admin/settings",
+];
+
+export function shortcutItems(groups, can = () => true) {
+  const all = groups.flatMap((group) => group.items);
+  return SHORTCUT_PATHS.map((to) => all.find((item) => item.to === to)).filter((item) => item && (!item.permission || can(item.permission)));
+}

@@ -60,3 +60,16 @@ export function describeActivity(row) {
     }
   }
 }
+
+/** Which icon a feed row gets: a key the panel maps to a drawing. Unknown kinds get "bell", never nothing. */
+export function activityIconKey(row) {
+  const kind = String(row?.kind ?? "").toLowerCase();
+  const text = typeof row?.text === "string" ? row.text.toLowerCase() : "";
+  const has = (word) => kind.includes(word) || text.includes(word);
+  if (has("payment")) return "payment";
+  if (has("application")) return "application";
+  if (has("flag") || has("report")) return "flag";
+  if (has("remind") || has("message") || has("broadcast")) return "message";
+  if (has("business") || has("listing") || has("change") || has("deletion") || has("seller")) return "store";
+  return "bell";
+}
