@@ -4,6 +4,7 @@
 // and the CDN caches by URL, so the same question must always be the same URL (sorted keys, empty values dropped).
 
 import { DEFAULT_SORT, EMPTY_FILTERS, SORTS } from "../../src/lib/productFilters.js";
+import { clampVariant } from "../../src/lib/feed.js";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../src/lib/productQuery.js";
 import { parseSizes, writeSizes } from "../../src/lib/sizeFilters.js";
 
@@ -46,10 +47,12 @@ export function parseRequest(searchParams) {
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.round(Number(get("pageSize"))) || PAGE_SIZE));
   // The rotation hour of a recommended list (lib/feed.js). Only digits; the endpoint clamps it to the last few hours.
   const epoch = /^\d{1,9}$/.test(get("epoch") ?? "") ? Number(get("epoch")) : null;
-  return { op, filters, page, pageSize, epoch };
+  // Which of the hour's few orders (lib/feed.js FEED_VARIANTS) this visit drew; anything else is the first.
+  const variant = clampVariant(get("variant"));
+  return { op, filters, page, pageSize, epoch, variant };
 }
 
-export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize = PAGE_SIZE, epoch = null } = {}) {
+export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize = PAGE_SIZE, epoch = null, variant = 0 } = {}) {
   const pairs = [["op", op]];
   if (op !== "facets") {
     if (String(filters.q ?? "").trim()) pairs.push(["q", String(filters.q).trim().slice(0, 80)]);
@@ -70,6 +73,7 @@ export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize
     if (pageSize !== PAGE_SIZE) pairs.push(["pageSize", String(pageSize)]);
     // One cache entry per rotation hour: everyone browsing in the same hour shares it at the CDN.
     if ((filters.sort ?? DEFAULT_SORT) === DEFAULT_SORT && Number.isInteger(epoch)) pairs.push(["epoch", String(epoch)]);
+    if ((filters.sort ?? DEFAULT_SORT) === DEFAULT_SORT && clampVariant(variant) > 0) pairs.push(["variant", String(clampVariant(variant))]);
   }
   pairs.sort((a, b) => (a[0] === "op" ? -1 : b[0] === "op" ? 1 : a[0].localeCompare(b[0])));
   return pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");
