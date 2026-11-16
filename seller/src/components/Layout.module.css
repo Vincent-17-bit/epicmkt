@@ -327,7 +327,13 @@
 
   .moreLinks a {
     background: transparent;
+    color: var(--text-muted);
     font-weight: inherit;
+  }
+
+  .moreLinks a:hover {
+    color: var(--text);
+    background: var(--link-hover-bg);
   }
 
   .moreLinks a[aria-current="page"] {
