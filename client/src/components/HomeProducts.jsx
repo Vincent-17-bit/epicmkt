@@ -7,9 +7,10 @@ import { getCategories, items } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { EMPTY_FILTERS, chipsOf, countActive, parseFilters, writeFilters } from "../lib/productFilters.js";
 import { FEED_MAX_PAGES, PAGE_SIZE, countsFromJson, pageSizeFor } from "../lib/productQuery.js";
-import { feedEpoch } from "../lib/feedEpoch.js";
+import { feedVisit } from "../lib/feedEpoch.js";
 import { useOpenSearch } from "../hooks/useOpenSearch.js";
 import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { useStableList } from "../hooks/useStableList.js";
 import { Button, Container, Skeleton } from "@epicmkt/ui";
 import ProductTile from "./ProductTile.jsx";
 import Pagination from "./Pagination.jsx";
@@ -85,9 +86,11 @@ export default function HomeProducts() {
 
   const filters = useMemo(() => parseFilters(params), [params]);
   const serialized = writeFilters(new URLSearchParams(), filters).toString();
-  // The visit's rotation hour: the recommended order is frozen for this visit, however long the visitor pages through it.
-  const [epoch] = useState(() => feedEpoch());
-  const hour = filters.sort === "recommended" ? epoch : null;
+  // The visit's rotation hour and variant: the recommended order is frozen for this visit, however long the visitor pages through it.
+  const [visit] = useState(() => feedVisit());
+  const recommended = filters.sort === "recommended";
+  const hour = recommended ? visit.epoch : null;
+  const variant = recommended ? visit.variant : null;
   const start = pageOfParam(params.get("ppage"));
 
   // The pages on screen: from `start` (the page the visitor jumped to, 1 by default) to `end`. A new list starts over.
@@ -97,8 +100,8 @@ export default function HomeProducts() {
   const setEnd = (next) => setShown({ key: listKey, end: next });
 
   const pageQuery = (n) => ({
-    queryKey: ["products-page", serialized, hour, pageSize, n],
-    queryFn: () => items.getPage(filters, { page: n, pageSize, ...(hour === null ? {} : { epoch: hour }) }),
+    queryKey: ["products-page", serialized, hour, variant, pageSize, n],
+    queryFn: () => items.getPage(filters, { page: n, pageSize, ...(hour === null ? {} : { epoch: hour, variant }) }),
     staleTime: 5 * 60_000
   });
   // While a new filter loads, the grid keeps the previous products instead of flashing back to skeletons.
@@ -118,17 +121,19 @@ export default function HomeProducts() {
 
   const { data, isPending, isError, refetch, isPlaceholderData } = first;
   // Every product once, even if a page boundary moved between two requests (at most 192 cards: cheap to rebuild).
-  const visible = [];
+  const fresh = [];
   const seenKeys = new Set();
   for (const page of [data, ...more.map((q) => q.data)]) {
     for (const item of page?.items ?? []) {
       const key = keyOf(item);
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
-        visible.push(item);
+        fresh.push(item);
       }
     }
   }
+  // Whatever a refetch brings, what is on screen stays where it is.
+  const visible = useStableList(listKey, fresh, keyOf);
   const loadingMore = more.some((q) => q.isPending);
   const moreFailed = more.find((q) => q.isError);
   const total = data?.total ?? 0;

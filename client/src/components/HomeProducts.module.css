@@ -15,8 +15,12 @@
    The cards size their own type from their width, so a smaller card is still easy to read. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.5rem, 1.4vw, 0.875rem);
+  --cols: 2;
+  --gap: clamp(0.5rem, 1.4vw, 0.875rem);
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--gap);
+  /* The cards below read this width to guess their own height (see .cell). */
+  container-type: inline-size;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -27,12 +31,15 @@
   min-width: 0;
   /* Cards far off screen skip layout and paint until they come near: a long grid stays smooth on low-end phones. */
   content-visibility: auto;
-  contain-intrinsic-size: auto 340px;
+  contain-intrinsic-size: auto 280px;
+  /* A card is about 1.55 times as tall as it is wide (246px at 154 wide ... 370px at 249 wide). Reserving that, not a fixed
+     height, means a card scrolling into view takes the room it was given and nothing below it moves. */
+  contain-intrinsic-size: auto calc((100cqw - (var(--cols) - 1) * var(--gap)) / var(--cols) * 1.55);
 }
 
 .skeleton {
   width: 100%;
-  aspect-ratio: 1 / 1.58;
+  aspect-ratio: 1 / 1.55;
   overflow: hidden;
   border-radius: var(--radius-card);
 }
@@ -112,13 +119,13 @@
 
 @media (min-width: 34rem) {
   .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    --cols: 3;
   }
 }
 
 @media (min-width: 46rem) {
   .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    --cols: 4;
   }
 }
 
@@ -126,7 +133,7 @@
    2, 3, 4 and 6 all divide 24, so every row is full at every width. */
 @media (min-width: 78rem) {
   .grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    --cols: 6;
   }
 }
 

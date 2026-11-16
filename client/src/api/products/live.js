@@ -80,8 +80,8 @@ export function invalidateProducts() {
   list = null;
 }
 
-export async function getProductsPage(filters = EMPTY_FILTERS, { page = 1, pageSize, epoch } = {}) {
-  const opts = { page, ...(pageSize ? { pageSize } : {}), ...(Number.isInteger(epoch) ? { epoch } : {}) };
+export async function getProductsPage(filters = EMPTY_FILTERS, { page = 1, pageSize, epoch, variant } = {}) {
+  const opts = { page, ...(pageSize ? { pageSize } : {}), ...(Number.isInteger(epoch) ? { epoch } : {}), ...(Number.isInteger(variant) ? { variant } : {}) };
   const result = await viaEndpoint(canonicalQuery("page", filters, opts), async () => pageOf(await fullList(), filters, opts));
   return { ...result, items: result.items.map(shaped) };
 }

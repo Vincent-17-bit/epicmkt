@@ -12,7 +12,7 @@ Builds on `docs/browse-performance.md` (snapshots, CDN, Redis), which stays true
 | eBay | Numbered pages, up to 200 per page | 10,000 results at most ("refine your search") | Promoted listings at the top and mixed into results | Query suggestions |
 | Kilimall | App-first, numbered pages on web | Shallow | Promoted items | Query suggestions |
 
-What carries over: **no one lets a shopper page endlessly**; past a few pages they push refining. **Featured items are mixed in at a fixed share and labelled**, not stacked on top (a study of 2M Amazon results found top sponsored rows pushing better organic matches down; we avoid that). Usability research (Baymard) finds **"Load more" beats both pagination and pure infinite scroll** for product lists, and that **autocomplete works best with at most ~10 suggestions, the completion highlighted, arrow keys copying a suggestion into the box, and misspellings corrected**.
+What carries over: **no one lets a shopper page endlessly**; past a few pages they push refining. **Featured items are mixed in at a fixed share (half of the first page here) and labelled**, not stacked on top (a study of 2M Amazon results found top sponsored rows pushing better organic matches down; we avoid that). Usability research (Baymard) finds **"Load more" beats both pagination and pure infinite scroll** for product lists, and that **autocomplete works best with at most ~10 suggestions, the completion highlighted, arrow keys copying a suggestion into the box, and misspellings corrected**.
 
 ## The layers
 
@@ -41,12 +41,17 @@ Every request does a bounded amount of work, whatever the size of the catalogue:
 2. **Nothing created during that hour joins it.** A product a seller adds now cannot push the list down for someone on page 4;
    it joins the next hour's order (and appears at once under "Newest first", in search and in "Recently added").
    A young catalogue (fewer than 48 older products) is exempt: a list that short cannot shift anyway.
-3. **Score** = 50% a per-hour random draw + 30% freshness + 20% a complete listing (picture, discount, verified shop).
-   The draw is why **no product owns the top spot**: each product's place changes every hour.
-4. **Featured (Premium) products**: 1 place in 5 on the first page (2nd, 7th, 12th, 17th, 22nd), 1 in 7 after it. 5 and 7
-   share no factor with 2, 3, 4 or 6 columns, so featured cards fall on a diagonal, never in one column and never all at the top.
-   They keep the "Featured store" mark. No featured product left: the place goes to the next product, and the other way round.
-5. **Variety**: at most 2 products of one shop in any 12 places in a row.
+3. **Score** = 80% a random draw (per hour, per visit variant, per product) + 10% freshness + 10% a complete listing (picture,
+   discount, verified shop). The draw decides almost everything, so **no product owns the top spot** and a product from deep in
+   the catalogue can open the feed; the other 20% only nudges better listings up a little.
+   **Variants**: each visit draws one of 8 orders for its hour (and keeps it), so two visitors in one hour do not both see the same
+   first product, while the CDN still answers every repeat from cache (the page request carries `epoch` and `variant`).
+4. **Featured (Premium) products**: on the first page exactly **half** the places (one of every pair, which of the two drawn per pair),
+   so half the first page is featured but a featured product is no more likely to be first than an ordinary one, and never more
+   than two in a row. After the first page, one place in seven at a drawn position in each seven. They keep the "Featured store"
+   mark. No featured product left: the place goes to the next product, and the other way round.
+5. **Variety**: a shop appears at most once in any 10 places in a row (looking ahead up to 120 products for another shop). A
+   catalogue with too few shops for that alternates them instead of running one shop after another.
 6. **Pool** (catalogue bigger than the snapshot): `products_feed_pool(epoch)` in SQL gives 240 featured (12 of each featured
    shop's 60 newest, a new draw every hour), 360 freshest (6 per shop) and 480 from a slice of the long tail that starts at a
    different place every hour, so every product comes round. Each part reads an index. The order is worked out once per hour

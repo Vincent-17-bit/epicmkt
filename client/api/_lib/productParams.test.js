@@ -78,3 +78,15 @@ describe("brand and colour reach the endpoint", () => {
     expect(q).toContain("colour=black%2Cblue");
   });
 });
+
+describe("the visit's order variant", () => {
+  it("is read as a whole number 0-7, anything else is the first, and only a recommended list carries it", () => {
+    expect(parseRequest(new URLSearchParams("op=page&variant=5")).variant).toBe(5);
+    expect(parseRequest(new URLSearchParams("op=page&variant=99")).variant).toBe(0);
+    expect(parseRequest(new URLSearchParams("op=page&variant=x")).variant).toBe(0);
+    expect(parseRequest(new URLSearchParams("op=page")).variant).toBe(0);
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS }, { epoch: 493000, variant: 5 })).toContain("variant=5");
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS }, { epoch: 493000, variant: 0 })).not.toContain("variant");
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS, sort: "newest" }, { epoch: 493000, variant: 5 })).not.toContain("variant");
+  });
+});
