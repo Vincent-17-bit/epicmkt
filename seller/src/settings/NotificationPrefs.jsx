@@ -16,7 +16,7 @@ export default function NotificationPrefs() {
   const setChannel = (event, channel, value) => update({ notifications: { events: { [event]: { [channel]: value } } } });
 
   return (
-    <Section id="notifications" title="Notifications" intro="Choose how you hear about each event. Critical events always reach you in the app.">
+    <Section id="notifications" title="Notifications">
       <div className={styles.matrix} role="group" aria-label="Notification channels per event">
         <div className={styles.matrixHead} aria-hidden="true">
           <span>Event</span>
@@ -28,15 +28,14 @@ export default function NotificationPrefs() {
             <div key={e.key} className={styles.matrixRow} role="group" aria-label={e.label}>
               <p className={styles.eventName}>
                 {e.label}
-                <small>{e.hint}{e.critical ? " Critical." : ""}</small>
+                <small>{e.hint}</small>
               </p>
               {CHANNELS.map((c) => {
                 const locked = c.key === "in_app" && e.critical;
                 return (
                   <span key={c.key} className={styles.cell}>
-                    <span className={styles.cellLabel} aria-hidden="true">{c.label}</span>
-                    <Switch checked={v[c.key]} disabled={locked} label={`${e.label}: ${c.label}`} onChange={(next) => setChannel(e.key, c.key, next)} />
-                    {locked && <span className={styles.cellNote}>Required</span>}
+                    <span className={styles.cellLabel} aria-hidden="true">{locked ? "Always on" : c.label}</span>
+                    <Switch checked={v[c.key]} disabled={locked} title={locked ? "Always on for this event" : undefined} label={`${e.label}: ${c.label}`} onChange={(next) => setChannel(e.key, c.key, next)} />
                   </span>
                 );
               })}

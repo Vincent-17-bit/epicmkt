@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import styles from "./settings.module.css";
 
-export function Section({ id, title, intro, children }) {
+export function Section({ id, title, children }) {
   return (
     <section id={id} className={styles.section} aria-labelledby={`${id}-h`}>
       <h2 id={`${id}-h`} className={styles.sectionTitle}>{title}</h2>
-      {intro && <p className={styles.intro}>{intro}</p>}
       <div className={styles.rows}>{children}</div>
     </section>
   );
@@ -14,18 +15,34 @@ export function Section({ id, title, intro, children }) {
 export function Row({ label, hint, children, stack, id }) {
   return (
     <div className={styles.row} data-stack={stack ? "true" : undefined}>
-      <div className={styles.rowText}>
-        <p className={styles.rowLabel} id={id}>{label}</p>
-        {hint && <p className={styles.rowHint}>{hint}</p>}
-      </div>
+      {label && (
+        <div className={styles.rowText}>
+          <p className={styles.rowLabel} id={id}>{label}</p>
+          {hint && <p className={styles.rowHint}>{hint}</p>}
+        </div>
+      )}
       <div className={styles.rowControl}>{children}</div>
     </div>
   );
 }
 
-export function Switch({ checked, onChange, label, disabled, describedBy }) {
+export function Disclosure({ title, children }) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} aria-describedby={describedBy} disabled={disabled} className={styles.switch} onClick={() => onChange(!checked)}>
+    <div className={styles.disclosure}>
+      <button type="button" className={styles.disclosureBtn} aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>
+        <span>{title}</span>
+        <FontAwesomeIcon icon={faChevronDown} className={styles.chevron} aria-hidden="true" />
+      </button>
+      {open && <div id={id} className={styles.disclosureBody}>{children}</div>}
+    </div>
+  );
+}
+
+export function Switch({ checked, onChange, label, disabled, describedBy, title }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} aria-describedby={describedBy} disabled={disabled} title={title} className={styles.switch} onClick={() => onChange(!checked)}>
       <span className={styles.knob} aria-hidden="true" />
     </button>
   );
@@ -54,7 +71,7 @@ export function Select({ value, onChange, options, label, disabled }) {
 }
 
 // A text box that saves when you leave it or press Enter, and shows why a value is not accepted.
-export function CommitField({ label, value, onCommit, validate, multiline, maxLength, hint, placeholder, disabled, type = "text", inputMode, rows = 3, liveError, counter, onDraft }) {
+export function CommitField({ label, value, onCommit, validate, multiline, maxLength, hint, placeholder, disabled, type = "text", inputMode, rows = 3, liveError, counter, onDraft, hideLabel }) {
   const id = useId();
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState(null);
@@ -79,7 +96,7 @@ export function CommitField({ label, value, onCommit, validate, multiline, maxLe
   };
   return (
     <div className={styles.field}>
-      <label htmlFor={id} className={styles.fieldLabel}>{label}</label>
+      <label htmlFor={id} className={hideLabel ? styles.srOnly : styles.fieldLabel}>{label}</label>
       {multiline ? <textarea rows={rows} {...common} /> : <input type={type} {...common} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); commit(); } }} />}
       {counter && <p className={styles.counter} aria-live="off">{draft.length} / {maxLength}</p>}
       {hint && !shown && <p id={`${id}-h`} className={styles.rowHint}>{hint}</p>}
