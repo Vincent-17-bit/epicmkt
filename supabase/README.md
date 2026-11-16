@@ -79,6 +79,15 @@ per query and returns at most 100 results per page. Open now uses `hours_open()`
 `shared/src/utils.js` (exceptions and overnight hours included); `supabase/tests/search.test.mjs` keeps the two equal.
 Until the migration is applied, the client falls back to filtering in the browser.
 
+Product search at catalogue scale is `0128_search_index.sql` (design: `docs/catalog-scale.md`). It enables `pg_trgm` and
+`fuzzystrmatch` and adds the indexed product search (`search_product_candidates`), the type-ahead dictionary (`search_terms`,
+`search_suggest`), the hourly trending list (`top_searches_hourly`) and the home feed pool (`products_feed_pool`).
+`0129_items_search_trgm_idx.sql` and `0130_items_search_doc_idx.sql` each build one index on `items` with
+`CREATE INDEX CONCURRENTLY`, so they must run as single statements outside a transaction (as `supabase db push` does with a
+one-statement file). Then schedule the hourly `search-rollups` job (`supabase/cron/schedule.sql`), or run
+`select public.refresh_search_rollups();` once by hand. Until the dictionary exists, suggestions come from the product snapshot.
+`supabase/tests/search-index.test.mjs` covers visibility, ranking, typo correction, the dictionary and the feed pool.
+
 ### 3. First admin
 
 Create the user in Supabase Auth, then make them the owner:

@@ -7,7 +7,10 @@ import { matchesSizes, parseSizes, rangeCount, rangeText, sizeCounts, sizeFacets
 // Everything a shopper can do to narrow or reorder the home page products. Pure functions over the product list, so
 // the same rules apply to demo and live data and are easy to test. The state lives in the page address (?psort=...).
 
+// "Recommended" is the default: the blended, hourly-rotating feed of lib/feed.js (featured shops' products spread through it).
+export const DEFAULT_SORT = "recommended";
 export const SORTS = [
+  { id: "recommended", label: "Recommended" },
   { id: "newest", label: "Newest first" },
   { id: "price_asc", label: "Price: low to high" },
   { id: "price_desc", label: "Price: high to low" },
@@ -17,7 +20,7 @@ export const SORTS = [
 
 export const EMPTY_FILTERS = Object.freeze({
   q: "",
-  sort: "newest",
+  sort: DEFAULT_SORT,
   min: "",
   max: "",
   categories: [],
@@ -48,7 +51,7 @@ export function parseFilters(params) {
   const filters = {
     ...EMPTY_FILTERS,
     q: (params.get("pq") ?? "").slice(0, 80),
-    sort: SORTS.some((s) => s.id === sort) ? sort : "newest",
+    sort: SORTS.some((s) => s.id === sort) ? sort : DEFAULT_SORT,
     min: amount(params.get("pmin")),
     max: amount(params.get("pmax")),
     categories: list(params.get("pcat")),
@@ -68,7 +71,7 @@ export function writeFilters(params, filters) {
   const next = new URLSearchParams(params);
   for (const key of KEYS) next.delete(key);
   if (filters.q.trim()) next.set("pq", filters.q.trim());
-  if (filters.sort !== "newest") next.set("psort", filters.sort);
+  if (filters.sort !== DEFAULT_SORT) next.set("psort", filters.sort);
   if (filters.min !== "") next.set("pmin", filters.min);
   if (filters.max !== "") next.set("pmax", filters.max);
   if (filters.categories.length) next.set("pcat", filters.categories.join(","));
@@ -97,6 +100,8 @@ const newest = (a, b) => (Date.parse(b.createdAt) || 0) - (Date.parse(a.createdA
 
 const SORTERS = {
   newest,
+  // The blend itself happens in productQuery.pageOf (it needs the rotation hour); filtered here, a recommended list is newest first.
+  recommended: newest,
   price_asc: (a, b) => (price(a) ?? Infinity) - (price(b) ?? Infinity) || newest(a, b),
   price_desc: (a, b) => (price(b) ?? -Infinity) - (price(a) ?? -Infinity) || newest(a, b),
   discount: (a, b) => (b.pricing?.discountPercent ?? 0) - (a.pricing?.discountPercent ?? 0) || newest(a, b),

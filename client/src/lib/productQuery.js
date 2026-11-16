@@ -5,22 +5,39 @@
 //   - the browser runs it over a full list only as the fallback when that endpoint is unreachable, and in demo mode.
 // It must stay free of browser, Node and Supabase imports so it runs anywhere.
 import { EMPTY_FILTERS, applyFilters, countsFor, facetsOf } from "./productFilters.js";
+import { FEED_MAX_PAGES, blendFeed, epochOf, pagesOf } from "./feed.js";
 
 export const PAGE_SIZE = 24;
 export const MAX_PAGE_SIZE = 48;
+export { FEED_MAX_PAGES };
 
-export function pageOf(products, filters, { page = 1, pageSize = PAGE_SIZE } = {}) {
+/**
+ * One page of the list. Shallow on purpose: at most `maxPages` pages exist (lib/feed.js); `capped` says more products match
+ * than those pages hold, so the page can invite the visitor to narrow the list instead of paging on.
+ * A recommended list is the blended feed of `epoch` (the visitor's rotation hour); every other sort is a plain sort.
+ */
+export function pageOf(products, filters, { page = 1, pageSize = PAGE_SIZE, epoch = null, maxPages = FEED_MAX_PAGES } = {}) {
   const size = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.round(pageSize) || PAGE_SIZE));
   const number = Math.max(1, Math.round(page) || 1);
-  const rows = applyFilters(products, filters);
+  const recommended = (filters?.sort ?? EMPTY_FILTERS.sort) === "recommended";
+  const hour = Number.isInteger(epoch) ? epoch : epochOf();
+  const rows = applyFilters(products, recommended ? { ...filters, sort: "newest" } : filters);
+  const ordered = recommended ? blendFeed(rows, { epoch: hour, pageSize: size, limit: maxPages * size }) : rows;
+  // A recommended list leaves out what was added during its hour (it joins the next hour's order), so it counts its own pool.
+  const count = recommended ? ordered.poolSize : rows.length;
+  const pages = pagesOf(count, size, maxPages);
+  const reachable = Math.min(count, pages * size);
   const start = (number - 1) * size;
   return {
-    items: rows.slice(start, start + size),
-    total: rows.length,
+    items: number <= pages ? ordered.slice(start, Math.min(start + size, reachable)) : [],
+    total: count,
     catalogTotal: products.length,
     page: number,
     pageSize: size,
-    hasMore: start + size < rows.length
+    pages,
+    hasMore: number < pages && start + size < reachable,
+    capped: count > reachable,
+    ...(recommended ? { epoch: hour } : {})
   };
 }
 

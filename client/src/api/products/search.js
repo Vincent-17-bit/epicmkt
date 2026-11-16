@@ -4,6 +4,7 @@
 import * as backend from "@epicmkt/backend";
 import { searchProducts, writeSearch } from "@epicmkt/shared";
 import { isLive } from "../flash/mode.js";
+import { buildSuggestIndex, correctWord, suggestKey } from "../../lib/suggest.js";
 import * as flashApi from "../flash/index.js";
 
 const ENDPOINT = "/api/products";
@@ -29,11 +30,25 @@ async function viaEndpoint(search) {
   return res.json();
 }
 
+// Nothing found: try once more with each unknown word corrected against the catalogue's own words ("mlik" -> "milk"), as the
+// endpoint does, and say so with `corrected`.
+const indexes = new WeakMap();
+function searchCorrecting(products, search) {
+  const result = searchProducts(products, search);
+  if (result.total || !String(search.q ?? "").trim()) return result;
+  if (!indexes.has(products)) indexes.set(products, buildSuggestIndex(products));
+  const typed = suggestKey(search.q);
+  const fixed = typed.split(" ").map((w) => correctWord(indexes.get(products), w) ?? w).join(" ");
+  if (fixed === typed) return result;
+  const again = searchProducts(products, { ...search, q: fixed });
+  return again.total ? { ...again, corrected: fixed } : result;
+}
+
 export async function searchCatalog(search) {
-  if (!isLive()) return searchProducts(await backend.getAllProducts(), search);
+  if (!isLive()) return searchCorrecting(await backend.getAllProducts(), search);
   try {
     return await viaEndpoint(search);
   } catch {
-    return searchProducts(await fullList(), search);
+    return searchCorrecting(await fullList(), search);
   }
 }

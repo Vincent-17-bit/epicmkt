@@ -43,10 +43,16 @@ describe("products live client", () => {
     expect(items[1]).toMatchObject({ images: [], videos: [], media: [] });
   });
 
+  it("a recommended list carries the visit's rotation hour, so everyone in that hour shares one cached answer", async () => {
+    fetchMock.mockResolvedValue(json({ items: [], total: 0, catalogTotal: 0, page: 2, pageSize: 24, hasMore: false }));
+    await live.getProductsPage({ q: "", sort: "recommended", min: "", max: "", categories: [], towns: [], onSale: false }, { page: 2, epoch: 493712 });
+    expect(String(fetchMock.mock.calls[0][0])).toBe("/api/products?op=page&epoch=493712&page=2");
+  });
+
   it("asks the endpoint for one canonical question and turns picture paths into urls", async () => {
     fetchMock.mockResolvedValue(json({ items: [{ id: "i1", name: "Loaf", imagePath: "b1/a.webp", imageUrl: "b1/a.webp" }], total: 1, catalogTotal: 9, page: 1, pageSize: 24, hasMore: false }));
     const page = await live.getProductsPage({ q: "", sort: "newest", min: "", max: "", categories: [], towns: [], onSale: true });
-    expect(String(fetchMock.mock.calls[0][0])).toBe("/api/products?op=page&sale=1");
+    expect(String(fetchMock.mock.calls[0][0])).toBe("/api/products?op=page&sale=1&sort=newest");
     expect(page.items[0].imageUrl).toContain("b1/a.webp");
     expect(page.items[0].images).toHaveLength(1);
   });

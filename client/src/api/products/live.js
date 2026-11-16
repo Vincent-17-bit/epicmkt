@@ -8,6 +8,7 @@ import { mediaUrl } from "../flash/shape.js";
 import * as flashApi from "../flash/index.js";
 import { EMPTY_FILTERS } from "../../lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../../lib/productQuery.js";
+import { buildSuggestIndex, suggestFrom } from "../../lib/suggest.js";
 import { canonicalQuery } from "../../../api/_lib/productParams.js";
 
 const ENDPOINT = "/api/products";
@@ -89,8 +90,8 @@ export function invalidateProducts() {
   list = null;
 }
 
-export async function getProductsPage(filters = EMPTY_FILTERS, { page = 1, pageSize } = {}) {
-  const opts = { page, ...(pageSize ? { pageSize } : {}) };
+export async function getProductsPage(filters = EMPTY_FILTERS, { page = 1, pageSize, epoch } = {}) {
+  const opts = { page, ...(pageSize ? { pageSize } : {}), ...(Number.isInteger(epoch) ? { epoch } : {}) };
   const result = await viaEndpoint(canonicalQuery("page", filters, opts), async () => pageOf(await fullList(), filters, opts));
   return { ...result, items: result.items.map(shaped) };
 }
@@ -99,3 +100,28 @@ export const getProductFacets = () => viaEndpoint(canonicalQuery("facets"), asyn
 
 export const getProductCounts = (filters = EMPTY_FILTERS) =>
   viaEndpoint(canonicalQuery("counts", filters), async () => countsSummary(await fullList(), filters));
+
+// Type-ahead: the endpoint answers from the database dictionary (or its snapshot). Unreachable: the same rules over the full list,
+// built once per list. Pictures come back as storage paths, turned into urls here like the grid's.
+let localIndex = null;
+const withPicture = (result) => ({
+  ...result,
+  products: (result.products ?? []).map((p) => ({ ...p, image: p.image && !/^https?:\/\//.test(p.image) ? mediaUrl(p.image) : p.image ?? null }))
+});
+
+export async function getSuggest(prefix) {
+  const q = String(prefix ?? "").trim().slice(0, 60);
+  const result = await viaEndpoint(`op=suggest&q=${encodeURIComponent(q.toLowerCase())}`, async () => {
+    const products = await fullList();
+    if (localIndex?.products !== products) localIndex = { products, index: buildSuggestIndex(products) };
+    return { ...suggestFrom(localIndex.index, q), source: "local" };
+  });
+  return withPicture(result);
+}
+
+// Trending searches for the menu, worked out on the hour. Unreachable: nothing (the menu simply leaves the list out).
+export const getTrending = () =>
+  viaEndpoint("op=trending", async () => ({ computedAt: null, live: true, items: [] })).then((data) => ({
+    ...data,
+    items: (data.items ?? []).map((i) => ({ ...i, image: i.image && !/^https?:\/\//.test(i.image) ? mediaUrl(i.image) : i.image ?? null }))
+  }));

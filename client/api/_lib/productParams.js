@@ -3,7 +3,7 @@
 // Same two jobs as browseParams.js: this endpoint is public, so every number is clamped and every string length-limited;
 // and the CDN caches by URL, so the same question must always be the same URL (sorted keys, empty values dropped).
 
-import { EMPTY_FILTERS, SORTS } from "../../src/lib/productFilters.js";
+import { DEFAULT_SORT, EMPTY_FILTERS, SORTS } from "../../src/lib/productFilters.js";
 import { MAX_PAGE_SIZE, PAGE_SIZE } from "../../src/lib/productQuery.js";
 import { parseSizes, writeSizes } from "../../src/lib/sizeFilters.js";
 
@@ -27,7 +27,7 @@ export function parseRequest(searchParams) {
   const filters = {
     ...EMPTY_FILTERS,
     q: String(get("q") ?? "").trim().slice(0, 80),
-    sort: SORT_IDS.has(sort) ? sort : "newest",
+    sort: SORT_IDS.has(sort) ? sort : DEFAULT_SORT,
     min: amount(get("min")),
     max: amount(get("max")),
     categories: list(get("cat")),
@@ -44,14 +44,16 @@ export function parseRequest(searchParams) {
   filters.ranges = Object.fromEntries(Object.entries(sized.ranges).sort(([a], [b]) => a.localeCompare(b)).slice(0, 4));
   const page = Math.min(10_000, Math.max(1, Math.round(Number(get("page"))) || 1));
   const pageSize = Math.min(MAX_PAGE_SIZE, Math.max(1, Math.round(Number(get("pageSize"))) || PAGE_SIZE));
-  return { op, filters, page, pageSize };
+  // The rotation hour of a recommended list (lib/feed.js). Only digits; the endpoint clamps it to the last few hours.
+  const epoch = /^\d{1,9}$/.test(get("epoch") ?? "") ? Number(get("epoch")) : null;
+  return { op, filters, page, pageSize, epoch };
 }
 
-export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize = PAGE_SIZE } = {}) {
+export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize = PAGE_SIZE, epoch = null } = {}) {
   const pairs = [["op", op]];
   if (op !== "facets") {
     if (String(filters.q ?? "").trim()) pairs.push(["q", String(filters.q).trim().slice(0, 80)]);
-    if (filters.sort && filters.sort !== "newest" && op === "page") pairs.push(["sort", filters.sort]);
+    if (filters.sort && filters.sort !== DEFAULT_SORT && op === "page") pairs.push(["sort", filters.sort]);
     if (filters.min !== "" && filters.min != null) pairs.push(["min", String(filters.min)]);
     if (filters.max !== "" && filters.max != null) pairs.push(["max", String(filters.max)]);
     if (filters.categories?.length) pairs.push(["cat", [...new Set(filters.categories)].sort().join(",")]);
@@ -66,6 +68,8 @@ export function canonicalQuery(op, filters = EMPTY_FILTERS, { page = 1, pageSize
   if (op === "page") {
     if (page > 1) pairs.push(["page", String(page)]);
     if (pageSize !== PAGE_SIZE) pairs.push(["pageSize", String(pageSize)]);
+    // One cache entry per rotation hour: everyone browsing in the same hour shares it at the CDN.
+    if ((filters.sort ?? DEFAULT_SORT) === DEFAULT_SORT && Number.isInteger(epoch)) pairs.push(["epoch", String(epoch)]);
   }
   pairs.sort((a, b) => (a[0] === "op" ? -1 : b[0] === "op" ? 1 : a[0].localeCompare(b[0])));
   return pairs.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join("&");

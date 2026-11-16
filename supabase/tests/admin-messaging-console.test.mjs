@@ -128,7 +128,7 @@ test("automation status says plainly when pg_cron is not installed, and the cont
   const s = await call(asSupport, `select admin_automation_status() as r`);
   assert.equal(s.cron_installed, false);
   assert.deepEqual(s.jobs, []);
-  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc"], "all four scheduled jobs are watched");
+  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups"], "all five scheduled jobs are watched");
   assert.equal(typeof s.queue.queued, "number");
   await rejects(c, asAdmin, `select admin_set_job_active('dispatch-messages', false)`, [], /cron_not_installed/);
   await rejects(c, asAdmin, `select admin_run_job('dispatch-messages')`, [], /automation_not_configured/);
@@ -198,7 +198,11 @@ test("run now posts to the function URL with the cron secret, and only the owner
     assert.equal(last.url, `https://abc.supabase.co/functions/v1/${name}`);
     assert.equal(last.headers["x-cron-secret"], "s3cret");
   }
-  assert.deepEqual((await sql(c, `select action, target_id from audit_log where action = 'job.run' order by id`)).map((r) => r.target_id), ["dispatch-messages", "proofs-purge", "media-gc"]);
+  // search-rollups runs inside the database: Run now calls it directly, with no HTTP request.
+  const before = Number((await sql(c, `select count(*) as n from net.calls`))[0].n);
+  assert.equal(Number(await call(asAdmin, `select admin_run_job('search-rollups') as r`)), 0);
+  assert.equal(Number((await sql(c, `select count(*) as n from net.calls`))[0].n), before);
+  assert.deepEqual((await sql(c, `select action, target_id from audit_log where action = 'job.run' order by id`)).map((r) => r.target_id), ["dispatch-messages", "proofs-purge", "media-gc", "search-rollups"]);
   await rejects(c, asReviewer, `select admin_run_job('dispatch-messages')`, [], /forbidden/);
   await rejects(c, asReviewer, `select admin_run_job('media-gc')`, [], /forbidden/);
   await rejects(c, asAdmin, `select admin_run_job('drop-everything')`, [], /unknown_job/);

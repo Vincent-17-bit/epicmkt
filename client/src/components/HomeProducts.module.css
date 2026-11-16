@@ -1,5 +1,6 @@
 .section {
-  padding-block: clamp(var(--space-4), 3vw, var(--space-5));
+  padding-block: clamp(var(--space-3), 2.4vw, var(--space-5));
+  scroll-margin-top: var(--space-5);
 }
 
 .heading {
@@ -24,6 +25,9 @@
 .cell {
   display: flex;
   min-width: 0;
+  /* Cards far off screen skip layout and paint until they come near: a long grid stays smooth on low-end phones. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 340px;
 }
 
 .skeleton {
@@ -33,10 +37,147 @@
   border-radius: var(--radius-card);
 }
 
-.more {
+/* The point the next page is fetched from, about a screen before the visitor gets there (IntersectionObserver). */
+.sentinel {
+  height: 1px;
+}
+
+.footer {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.progress {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.moreBtn {
+  min-width: min(100%, 16rem);
+}
+
+.moreError {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-3);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.endCard {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  width: min(100%, 34rem);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  text-align: center;
+}
+
+.endTitle {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.endText {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.endActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Page links: few by design (the list is shallow), so every number fits; the pages on screen are marked. */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.pageList {
   display: flex;
   justify-content: center;
-  margin-top: var(--space-4);
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pageBtn,
+.pageNav {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, color var(--dur) ease;
+}
+
+.pageBtn[data-on] {
+  background: var(--text);
+  color: var(--text-inverse);
+}
+
+.pageNav {
+  border-color: var(--border-strong);
+}
+
+.pageNav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pageBtn:focus-visible,
+.pageNav:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Phones: all eight numbers and both arrows on one line. */
+@media (max-width: 30rem) {
+  .pager,
+  .pageList {
+    gap: 2px;
+  }
+
+  .pageBtn,
+  .pageNav {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.25rem;
+  }
+}
+
+@media (hover: hover) {
+  .pageBtn:not([data-on]):hover,
+  .pageNav:not(:disabled):hover {
+    border-color: var(--border-strong);
+    background: var(--primary-tint);
+  }
 }
 
 .error {

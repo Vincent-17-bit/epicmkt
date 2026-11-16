@@ -96,7 +96,7 @@ describe("parseFilters and writeFilters", () => {
 
   it("ignores junk: unknown sort, non-numeric prices, over-long search", () => {
     const parsed = parseFilters(new URLSearchParams(`psort=hack&pmin=abc&pmax=-5&pq=${"x".repeat(200)}`));
-    expect(parsed.sort).toBe("newest");
+    expect(parsed.sort).toBe("recommended");
     expect(parsed.min).toBe("");
     expect(parsed.max).toBe("");
     expect(parsed.q).toHaveLength(80);
