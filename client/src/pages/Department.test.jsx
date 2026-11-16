@@ -40,7 +40,8 @@ describe("Department page", () => {
     view("/d/phones");
     const link = await screen.findByRole("link", { name: /Galaxy A15/ });
     expect(link).toHaveAttribute("href", "/b/cyber-hub/i/i1");
-    expect(link).toHaveTextContent("at Cyber Hub · Kisumu");
+    expect(link).toHaveTextContent("Cyber Hub");
+    expect(link).toHaveTextContent("Kisumu");
     expect(link).toHaveTextContent(/From KES 18,500/);
     expect(screen.getByRole("heading", { name: "Phones" })).toBeInTheDocument();
   });

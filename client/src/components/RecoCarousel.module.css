@@ -1,5 +1,5 @@
 /* The recommendation rows at the end of the item page, after the Amazon "Customers who viewed this item" row: a heading with
-   "Page 1 of 7", a row of plain cards (picture, name link, price, shop), round arrows at the sides. */
+   "Page 1 of 7", a row of the site's product cards, round arrows at the sides. */
 
 .section {
   display: grid;
@@ -29,7 +29,7 @@
   grid-auto-flow: column;
   /* Two cards and a peek on a phone, then as many ~190px cards as fit. Each card snaps to the left edge. */
   grid-auto-columns: clamp(140px, 42%, 200px);
-  gap: var(--space-4);
+  gap: var(--space-3);
   margin: 0;
   padding: 2px 2px var(--space-2);
   overflow-x: auto;
@@ -39,8 +39,8 @@
   list-style: none;
 }
 .track::-webkit-scrollbar { display: none; }
-@media (min-width: 48rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 4 * var(--space-4)) / 5)); } }
-@media (min-width: 80rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 6 * var(--space-4)) / 7)); } }
+@media (min-width: 48rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 4 * var(--space-3)) / 5)); } }
+@media (min-width: 80rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 6 * var(--space-3)) / 7)); } }
 
 .cell { display: grid; align-content: start; gap: 6px; min-width: 0; scroll-snap-align: start; }
 
@@ -65,34 +65,8 @@
   .arrow { display: none; }
 }
 
-.card { display: grid; align-content: start; gap: 4px; min-width: 0; }
-.link { display: grid; gap: 6px; color: var(--link); text-decoration: none; border-radius: var(--radius-control, 8px); }
-.link:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
-.media { position: relative; display: block; aspect-ratio: 1 / 1; overflow: hidden; border-radius: var(--radius-card); background: var(--surface-2); }
-.img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.25s ease; }
-@media (hover: hover) { .link:hover .img { transform: scale(1.03); } }
-@media (prefers-reduced-motion: reduce) { .img { transition: none; } }
-.flash { position: absolute; top: 8px; left: 8px; padding: 2px 8px; border-radius: var(--radius-pill, 999px); background: var(--flash-price-sale); color: var(--flash-band-text); font-size: var(--text-xs, 0.75rem); font-weight: 700; }
-.mine { justify-self: start; padding: 1px 8px; border-radius: var(--radius-pill, 999px); background: var(--primary-tint); color: var(--on-primary-tint); font-size: var(--text-xs, 0.75rem); font-weight: 700; }
-.name {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1.35;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-}
-@media (hover: hover) { .link:hover .name { text-decoration: underline; text-decoration-color: var(--link-underline); text-underline-offset: 3px; } }
-
-.priceLine { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 2px 0 0; }
-.off { color: var(--status-bad-fg); font-weight: 700; font-size: var(--text-base); }
-.from { color: var(--text-muted); font-size: var(--text-sm); }
-.price { font-size: var(--text-lg); font-weight: 800; line-height: 1.1; }
-.was { margin: 0; color: var(--text-muted); font-size: var(--text-xs, 0.75rem); }
-.shop { display: flex; align-items: center; gap: 4px; min-width: 0; margin: 2px 0 0; font-size: var(--text-sm); }
-.shopName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meta { margin: 0; color: var(--text-muted); font-size: var(--text-xs, 0.75rem); }
-.closed { color: var(--status-bad-fg); font-weight: 600; }
+/* The card itself is the site's ProductTile; a card cell stretches so every card in the row is the same height. */
+.cell:has(> article) { align-content: stretch; }
+.card { display: flex; min-width: 0; }
 
 .skeleton { aspect-ratio: 1 / 1; width: 100%; }

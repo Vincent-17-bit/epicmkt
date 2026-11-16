@@ -10,23 +10,25 @@
   letter-spacing: -0.01em;
 }
 
-/* Every product, listed down the page: 2 across on phones, up to 6 on wide screens. */
+/* Every product, listed down the page: 2 across on phones, 3 on small tablets, 4 on tablets, 5 on laptops, 6 on wide screens.
+   The cards size their own type from their width, so a smaller card is still easy to read. */
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: clamp(0.5rem, 1.4vw, 0.875rem);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .cell {
+  display: flex;
   min-width: 0;
 }
 
 .skeleton {
   width: 100%;
-  aspect-ratio: 1 / 1.62;
+  aspect-ratio: 1 / 1.58;
   overflow: hidden;
   border-radius: var(--radius-card);
 }
@@ -44,20 +46,25 @@
   text-align: center;
 }
 
-@media (min-width: 40rem) {
+@media (min-width: 34rem) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-3);
   }
 }
 
-@media (min-width: 64rem) {
+@media (min-width: 46rem) {
   .grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 80rem) {
+@media (min-width: 62rem) {
+  .grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 78rem) {
   .grid {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
@@ -79,14 +86,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: var(--tap);
-  padding: 0 var(--space-4);
-  border: 2px solid var(--text);
+  min-height: 2.5rem;
+  padding: 0 0.875rem;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--text);
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: background-color var(--dur) ease, box-shadow var(--dur) ease, transform var(--dur) ease;
 }

@@ -1,161 +1,314 @@
 /*
- * Two thirds picture, one third details. The tile has a fixed shape (its width sets its height), so the split
- * holds on every screen, and the type scales with the tile's own width (cqw) so the details always fit in
- * their third. Inter, already loaded for the site, with tabular figures for prices.
+ * The one product card. Same shape everywhere: a square picture showing the whole product (never cropped), then the name
+ * on a fixed number of lines, optional facts and colours, and a foot pinned to the bottom with the price, delivery and
+ * shop. Cards in a row stretch to the tallest, and the foot sits at the bottom of each, so prices line up across a row.
+ * Type and spacing follow the card's own width (cqw), so a card two-up on a 320 px phone and one five-up on a desktop
+ * both read well without breakpoints of their own.
  */
 .tile {
-  --pad: clamp(6px, 4.4cqw, 10px);
+  --pad: clamp(8px, 5.2cqw, 14px);
+  --ink-soft: color-mix(in srgb, var(--text) 62%, transparent);
   position: relative;
-  display: grid;
-  grid-template-rows: 2fr 1fr;
+  display: flex;
+  flex-direction: column;
   container-type: inline-size;
   width: 100%;
-  aspect-ratio: 1 / 1.62;
+  height: 100%;
+  min-width: 0;
   overflow: hidden;
-  border: 2px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-card);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   color: var(--text);
   text-decoration: none;
   transition: transform var(--dur) ease, border-color var(--dur) ease, box-shadow var(--dur) ease;
 }
 
+/* ---- picture ---- */
 .media {
   position: relative;
   display: block;
-  min-height: 0;
+  flex: none;
+  aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: var(--surface-3);
+  background: #f5f5f6;
 }
 
-.img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+/* Product photos are made on white; a light grey stage keeps them from melting into the card, in dark mode too. */
+:global([data-theme="dark"]) .media {
+  background: #ececee;
+}
+
+/* Once the photo is in, the loading artwork behind it goes, so the grey stage shows around a photo that is not square. */
+.media > span[data-state="loaded"] {
+  background: transparent;
+}
+
+.media .img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  transition: transform 320ms ease, opacity 260ms ease;
   user-select: none;
 }
 
 .sale {
   position: absolute;
-  top: var(--space-2);
-  left: var(--space-2);
+  top: clamp(6px, 3.6cqw, 10px);
+  left: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
   padding: 2px 7px;
-  border-radius: var(--radius-pill);
-  font-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.sale {
+  border-radius: 6px;
   background: var(--primary);
   color: var(--on-primary);
+  font-size: clamp(0.6875rem, 5.6cqw, 0.75rem);
+  font-weight: 800;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
 }
 
 .flash {
   position: absolute;
-  bottom: var(--space-2);
-  left: var(--space-2);
+  bottom: clamp(6px, 3.6cqw, 10px);
+  left: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
 }
 
-/* The offer tag sits in the picture's top right, so the discount tag (top left), the flash timer (bottom left) and the
-   bottom edge keep their places. It is an overlay: it takes no room from the name, price or store. */
+/* The offer tag sits top right, so the discount (top left) and the flash timer (bottom left) keep their places. */
 .offer {
-  --offer-chip-size: clamp(0.625rem, 5.6cqw, 0.75rem);
+  --offer-chip-size: clamp(0.625rem, 5.4cqw, 0.75rem);
   position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  max-width: 72%;
-  z-index: 1;
+  top: clamp(6px, 3.6cqw, 10px);
+  right: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
+  max-width: 70%;
 }
 
-.body {
-  display: grid;
-  grid-template-rows: auto auto auto;
-  align-content: space-between;
-  gap: clamp(1px, 1.2cqw, 3px);
-  min-height: 0;
-  padding: var(--pad);
+.offerLow {
+  top: calc(clamp(6px, 3.6cqw, 10px) + 1.75em);
 }
 
-.copy {
-  display: -webkit-box;
+.tag {
+  position: absolute;
+  top: clamp(6px, 3.6cqw, 10px);
+  right: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
+  max-width: 70%;
   overflow: hidden;
-  font-size: clamp(0.75rem, 7.4cqw, 0.9375rem);
-  line-height: 1.18;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.name {
-  font-weight: 650;
-  letter-spacing: -0.01em;
-}
-
-.blurb {
-  color: var(--text-muted);
-  font-size: 0.9em;
-  font-weight: 400;
-}
-
-.blurb::before {
-  content: "\00B7\00A0";
-}
-
-.priceRow {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.prices {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: baseline;
-  gap: 0 6px;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.price {
-  flex: none;
-  font-size: clamp(0.8125rem, 8.6cqw, 1.0625rem);
-  font-variant-numeric: tabular-nums;
-  font-weight: 800;
-  letter-spacing: -0.015em;
-  line-height: 1.15;
-}
-
-.was {
-  overflow: hidden;
-  color: var(--text-muted);
-  font-size: clamp(0.625rem, 5.6cqw, 0.75rem);
-  font-variant-numeric: tabular-nums;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgb(17 17 17 / 0.82);
+  color: #fff;
+  font-size: clamp(0.625rem, 5.2cqw, 0.75rem);
+  font-weight: 700;
+  line-height: 1.45;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* "Low stock" / "Only 3 left" sits on the picture, bottom left (above the flash timer when there is one), so the price
-   always has the whole row. It is sized from the tile, like the rest of the type. */
 .stockTag {
-  --stock-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
+  --stock-size: clamp(0.6875rem, 5.6cqw, 0.75rem);
   --stock-over: calc(var(--text-xs) * 1.4 + 8px);
+  z-index: 2;
 }
 
+/* A small play mark when the item has a video, bottom right of the picture. */
+.video {
+  position: absolute;
+  right: clamp(6px, 3.6cqw, 10px);
+  bottom: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: clamp(22px, 13cqw, 28px);
+  height: clamp(22px, 13cqw, 28px);
+  border-radius: 50%;
+  background: rgb(17 17 17 / 0.72);
+  color: #fff;
+  font-size: clamp(0.5625rem, 4.6cqw, 0.6875rem);
+  backdrop-filter: blur(4px);
+}
+
+.video svg {
+  margin-left: 2px;
+}
+
+/* ---- details ---- */
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: clamp(3px, 2cqw, 6px);
+  min-height: 0;
+  padding: var(--pad) var(--pad) calc(var(--pad) + 1px);
+}
+
+/* The name block always takes the same height, whatever the name's length, so every card in a row lines up. */
+.copy {
+  --lh: 1.3em;
+  display: -webkit-box;
+  min-height: calc(var(--lh) * var(--title-lines, 2));
+  overflow: hidden;
+  font-size: clamp(0.8125rem, 6.6cqw, 0.9688rem);
+  line-height: var(--lh);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--title-lines, 2);
+}
+
+.name {
+  font-weight: 600;
+  letter-spacing: -0.006em;
+}
+
+.blurb {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.blurb::before {
+  content: "\00A0\00B7\0020";
+}
+
+.facts {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: clamp(0.6875rem, 5.4cqw, 0.8125rem);
+  font-weight: 500;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.variants {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 16px;
+}
+
+.dots {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.dot {
+  width: clamp(12px, 7.4cqw, 15px);
+  height: clamp(12px, 7.4cqw, 15px);
+  border-radius: 50%;
+  background: var(--sw);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.18);
+}
+
+.moreDots,
+.options {
+  color: var(--text-muted);
+  font-size: clamp(0.6875rem, 5.2cqw, 0.75rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.options {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- foot: price, delivery, shop, button ---- */
+.foot {
+  display: grid;
+  gap: clamp(2px, 1.6cqw, 4px);
+  margin-top: auto;
+  padding-top: clamp(2px, 1.6cqw, 4px);
+}
+
+.prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  min-width: 0;
+}
+
+.price {
+  display: inline-flex;
+  flex: none;
+  align-items: flex-start;
+  font-size: clamp(1.0625rem, 10cqw, 1.375rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+/* "KES" sits small and high before the amount, the way prices are printed on shelf labels. */
+.cur {
+  margin: 0.14em 2px 0 0;
+  font-size: 0.5em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.unit {
+  align-self: flex-end;
+  margin-left: 2px;
+  color: var(--text-muted);
+  font-size: 0.56em;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.ask {
+  font-size: clamp(0.8125rem, 6.2cqw, 0.9375rem);
+  font-weight: 700;
+}
+
+.from {
+  flex: none;
+  color: var(--text-muted);
+  font-size: clamp(0.6875rem, 5.4cqw, 0.75rem);
+  font-weight: 600;
+}
+
+.was {
+  color: var(--text-muted);
+  font-size: clamp(0.6875rem, 5.4cqw, 0.75rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.delivery,
 .store {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   min-width: 0;
-  color: var(--text-muted);
-  font-size: clamp(0.6875rem, 6.2cqw, 0.8125rem);
-  font-weight: 600;
-  line-height: 1.25;
+  font-size: clamp(0.6875rem, 5.4cqw, 0.8125rem);
+  line-height: 1.3;
 }
 
+.delivery {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.delivery:not([data-kind="delivery"]) {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.lineIcon {
+  flex: none;
+  width: 0.95em;
+  color: var(--status-ok);
+}
+
+.delivery:not([data-kind="delivery"]) .lineIcon {
+  color: var(--text-muted);
+}
+
+.lineText,
 .storeName {
   min-width: 0;
   overflow: hidden;
@@ -163,21 +316,78 @@
   white-space: nowrap;
 }
 
+.store {
+  color: var(--text-muted);
+  font-weight: 500;
+}
 
+.closed {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text-muted);
+  font-size: 0.86em;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.openDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-ok-dot, var(--status-ok));
+}
+
+.cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: clamp(4px, 2.4cqw, 8px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--text);
+  font-size: clamp(0.75rem, 5.6cqw, 0.8125rem);
+  font-weight: 650;
+  transition: background var(--dur) ease, border-color var(--dur) ease, color var(--dur) ease;
+}
+
+/* A narrow card is a tap target already: the button would only take room from the picture. */
+@container (max-width: 199px) {
+  .cta {
+    display: none;
+  }
+}
+
+/* ---- states ---- */
 @media (hover: hover) {
   .tile:hover {
     transform: translateY(-2px);
-    border-color: var(--text);
+    border-color: var(--border-strong);
     box-shadow: var(--shadow-md);
   }
 
   .tile:hover .img {
-    transform: scale(1.045);
+    transform: scale(1.04);
+  }
+
+  .tile:hover .name {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .tile:hover .cta {
+    border-color: var(--text);
+    background: var(--text);
+    color: var(--surface);
   }
 }
 
 .tile:active {
-  transform: scale(0.98);
+  transform: scale(0.985);
 }
 
 .tile:focus-visible {
@@ -192,34 +402,8 @@
   }
 
   .tile:hover,
-  .tile:hover .img {
+  .tile:hover .img,
+  .tile:active {
     transform: none;
   }
-}
-
-.closed {
-  flex: none;
-  padding: 1px 6px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  color: var(--text-muted);
-  font-size: clamp(0.625rem, 5cqw, 0.75rem);
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-/* "From" before a lowest price, and the small options hint at the end of the price row. */
-.from {
-  flex: none;
-  color: var(--text-muted);
-  font-size: clamp(0.625rem, 5.6cqw, 0.75rem);
-  font-weight: 600;
-}
-
-.options {
-  flex: none;
-  color: var(--text-muted);
-  font-size: clamp(0.625rem, 5.4cqw, 0.6875rem);
-  font-weight: 600;
-  white-space: nowrap;
 }

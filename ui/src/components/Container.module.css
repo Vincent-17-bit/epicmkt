@@ -2,8 +2,9 @@
   width: 100%;
   max-width: var(--content-width);
   margin-inline: auto;
-  padding-left: max(var(--space-4), var(--safe-left));
-  padding-right: max(var(--space-4), var(--safe-right));
+  /* 16 px on a phone, a little less on the smallest phones (12.8 px at 320 px wide), where every pixel goes to the content. */
+  padding-left: max(clamp(0.75rem, 4vw, var(--space-4)), var(--safe-left));
+  padding-right: max(clamp(0.75rem, 4vw, var(--space-4)), var(--safe-right));
 }
 
 @media (min-width: 48rem) {

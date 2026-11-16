@@ -45,7 +45,8 @@ describe("SimilarItems", () => {
     expect(await screen.findByRole("heading", { name: "Similar products" })).toBeInTheDocument();
     expect(await screen.findByText("Other 0")).toBeInTheDocument();
     expect(screen.getByText("Shop 2")).toBeInTheDocument();
-    expect(screen.getByText("KES 800")).toBeInTheDocument();
+    // The card prints a small "KES" before the amount, so the price is read from the card's text.
+    expect(screen.getByRole("link", { name: /Other 0/ })).toHaveTextContent(/KES\s?800/);
     expect(mocks.getSimilar).toHaveBeenCalledWith("cur", expect.objectContaining({ limit: 24, seed: expect.any(String) }));
   });
 
@@ -70,7 +71,7 @@ describe("SimilarItems", () => {
     expect(link).toHaveAttribute("href", "/b/shop-1/i/s1");
     expect(link.closest("article")).toHaveTextContent("Shop 1");
     expect(screen.getByText("-20%")).toBeInTheDocument();
-    expect(screen.getByText("KES 1,000").tagName).toBe("S");
+    expect(screen.getByText(/KES\s?1,000/).tagName).toBe("S");
   });
 
   it("asks with the same seed for the whole visit, so the order does not change under the visitor", async () => {
