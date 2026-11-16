@@ -11,6 +11,7 @@ import { serverNow } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import { useServerClock, useServerNow } from "../../lib/useServerNow.js";
+import Intro from "../../components/Intro.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./offers.module.css";
 
@@ -355,7 +356,7 @@ export default function Offers() {
           <button type="button" className={ui.btn} onClick={() => startNew("product")} disabled={Boolean(editing) || !q.canCreate || choices.length === 0}>New product offer</button>
         </div>
       </div>
-      <p className={ui.muted}>A shop offer covers your whole shop, like free delivery over a set spend. A product offer belongs to the products you pick and shows its tag on those products only. Your shop card shows an Offer tag while either kind is running.</p>
+      <Intro>A shop offer covers your whole shop, like free delivery over a set spend. A product offer belongs to the products you pick and shows its tag on those products only. Your shop card shows an Offer tag while either kind is running.</Intro>
       {!q.canCreate && <p className={ui.error} role="status">Your plan limit is reached. End an offer or upgrade to add another.</p>}
       {choices.length === 0 && !items.isLoading && <p className={ui.muted}>Add a product first to make a product offer. Shop offers need no products.</p>}
 

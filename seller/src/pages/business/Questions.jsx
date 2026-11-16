@@ -10,6 +10,7 @@ import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
 import useMarkRead from "../../lib/useMarkRead.js";
 import { useRealtime } from "../../lib/useRealtime.js";
+import Intro from "../../components/Intro.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./questions.module.css";
 
@@ -137,7 +138,7 @@ export default function Questions() {
     <div className={ui.page}>
       <div className={ui.pageHead}>
         <h1>Questions from EpicMKT</h1>
-        <p className={ui.muted}>Answer in plain text. You can attach up to 3 proof files. EpicMKT staff can open them; you cannot download them again.</p>
+        <Intro>Answer in plain text. You can attach up to 3 proof files. EpicMKT staff can open them; you cannot download them again.</Intro>
       </div>
       {threads.length > 0 && (
         <ul className={styles.list} aria-label="Conversations">

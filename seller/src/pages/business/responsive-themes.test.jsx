@@ -93,10 +93,10 @@ describe("responsive", () => {
     expect(small).toMatch(/\.pay > div\s*{[^}]*grid-template-columns:\s*1fr/);
   });
 
-  it("the navigation is a bottom bar on phones and a sidebar from 48rem, and wide content never scrolls the page", () => {
+  it("the navigation is a bottom bar on phones and a sidebar from 64rem, and wide content never scrolls the page", () => {
     const layout = read("src/components/Layout.module.css");
     expect(layout).toMatch(/\.nav\s*{[^}]*position:\s*fixed[^}]*bottom:\s*0/);
-    expect(layout).toMatch(/@media \(min-width: 48rem\)[\s\S]*\.nav\s*{[^}]*position:\s*static/);
+    expect(layout).toMatch(/@media \(min-width: 64rem\)[\s\S]*\.nav\s*{[^}]*position:\s*static/);
     expect(layout).toMatch(/@media \(max-width: 19.99rem\)/);
     expect(read("src/pages/business/subscription.module.css")).toMatch(/\.tableWrap\s*{[^}]*overflow-x:\s*auto/);
     expect(read("src/styles/ui.module.css")).toMatch(/\.card\s*{[^}]*min-width:\s*0/);
