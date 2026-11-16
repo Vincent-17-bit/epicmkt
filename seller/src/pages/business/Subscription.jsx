@@ -76,6 +76,11 @@ export default function Subscription() {
     payRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   }, []);
 
+  // A "Pay now" prompt was paid: fetch the new payment (the realtime feed does too; this makes it immediate).
+  const refreshAfterPayment = useCallback(() => {
+    for (const key of ["payments", "instructions", "subscription", "changes", "shop-preview"]) qc.invalidateQueries({ queryKey: [key] });
+  }, [qc]);
+
   const applyCredit = async () => {
     await api.applyCredit({ purpose: mode.purpose, targetPlan: mode.targetPlan ?? null, category: mode.category ?? null, changeId: mode.changeId ?? null });
     await Promise.all([qc.invalidateQueries({ queryKey: ["payments"] }), qc.invalidateQueries({ queryKey: ["instructions"] }), qc.invalidateQueries({ queryKey: ["subscription"] })]);
@@ -126,7 +131,7 @@ export default function Subscription() {
         {instr.error && !open && !received ? (
           <section className={ui.card}><p className={ui.error} role="alert">{instr.error.code === "renew_first" ? "Renew your subscription first." : "We could not load the payment details."}</p></section>
         ) : (
-          <PaymentCard instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)} />
+          <PaymentCard instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)} mode={mode} onPaid={refreshAfterPayment} />
         )}
       </div>
 

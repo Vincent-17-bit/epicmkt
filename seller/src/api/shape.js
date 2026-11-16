@@ -24,6 +24,7 @@ export const instructions = (r) => ({
   listingState: r.listing_state, quote: r.quote ?? null, configured: !!r.configured,
   method: r.method ?? null, number: r.number ?? null, name: r.name ?? null, hasOpenSubmission: !!r.has_open_submission,
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
+  stk: !!r.stk, phone: r.phone ?? null,
 });
 
 // One row of an item's media sequence, and the plan limits beside it. Live and mock return the same shape.

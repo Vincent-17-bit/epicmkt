@@ -1,8 +1,9 @@
 # Cron runbook: turning the scheduled jobs on
 
-Four jobs keep EpicMKT moving. Without them, queued SMS and email never leave, renewal reminders are never sent and
-old proof uploads are never deleted, and nothing in the app fails loudly. The **Automation** page in the admin shows
-whether all four jobs are scheduled, active and running, and lets the owner pause or run each one.
+Five jobs keep EpicMKT moving. Without them, queued SMS and email never leave, renewal reminders are never sent,
+old proof uploads are never deleted and late M-Pesa phone payments are not finished, and nothing in the app fails loudly.
+The **Automation** page in the admin shows whether all five jobs are scheduled, active and running, and lets the owner
+pause or run each one.
 
 | Job | Runs | What it does |
 | --- | --- | --- |
@@ -10,6 +11,7 @@ whether all four jobs are scheduled, active and running, and lets the owner paus
 | `daily-lifecycle` | 04:00 UTC (07:00 Nairobi) | Queues renewal reminders, moves listings into grace and expiry |
 | `proofs-purge` | 01:00 UTC (04:00 Nairobi) | Deletes proof uploads 90 days after their flag was resolved, and uploads that were never finalized |
 | `media-gc` | every 10 minutes | Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos, deleted shops) and settles unfinished uploads. See `docs/cloudinary-images.md` |
+| `pay-reconcile` | every 2 minutes | M-Pesa "Pay now" (STK Push): finishes Safaricom answers that were stored but not processed, asks Safaricom about prompts whose answer is late, expires prompts nobody answered. See `docs/PAYMENTS.md` |
 
 The schedule is **not a migration** because it needs secrets that differ per project. Do this once per environment.
 
@@ -22,7 +24,7 @@ The schedule is **not a migration** because it needs secrets that differ per pro
    ```
 4. Run `supabase/cron/schedule.sql` in the SQL editor. It is safe to run again, and it stops with a plain message if an extension or a Vault secret is missing. Before it, make sure the function secrets put messaging in live mode (`APP_ENV=production` or `MESSAGING_MODE=live`, plus `AT_API_KEY`, `AT_USERNAME`, `RESEND_API_KEY`, `MAIL_FROM`); otherwise the dispatcher marks messages sent without sending them.
 5. Run `supabase/cron/verify.sql`. The last-run column on the Automation page only says the request was queued; `verify.sql` shows what the functions answered (200 is good, 401 is a secret mismatch, 404 is a function that is not deployed).
-6. Open **Admin > Automation**. All four jobs should read Active. Press **Run now** on each and confirm the last run succeeds. A job missing from `cron.job` reads "Not scheduled": run `supabase/cron/schedule.sql` again.
+6. Open **Admin > Automation**. All five jobs should read Active. Press **Run now** on each and confirm the last run succeeds. A job missing from `cron.job` reads "Not scheduled": run `supabase/cron/schedule.sql` again.
 7. To see what a job answered (and not only that the request was queued), use `supabase/cron/verify.sql`. For example `select status, return_message, start_time from cron.job_run_details d join cron.job j using (jobid) where j.jobname = 'proofs-purge' order by start_time desc limit 5;`
    should show a succeeded run the morning after.
 

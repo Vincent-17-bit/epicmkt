@@ -16,7 +16,7 @@ const fn = async (name, body) => {
   if (error) {
     let payload = null;
     try { payload = await error.context?.json?.(); } catch { payload = null; }
-    throw new ApiError(payload?.error ?? "request_failed", payload?.message, { status: error.context?.status, retryAfter: payload?.retryAfter, problems: payload?.problems });
+    throw new ApiError(payload?.error ?? "request_failed", payload?.message, { status: error.context?.status, retryAfter: payload?.retryAfter, problems: payload?.problems, request: payload?.request ?? null });
   }
   return data;
 };
@@ -387,6 +387,11 @@ export const applyCredit = async ({ purpose = null, targetPlan = null, category 
 export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
   await rpc("seller_set_payment_intent", { p_purpose: purpose, p_target_plan: targetPlan, p_category: category, p_change_id: changeId });
 };
+// M-Pesa "Pay now" (STK Push): the PIN prompt goes to `phone`. Only what is being paid for is sent; the server works out the amount.
+const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
+export const startStkPayment = ({ phone, months = 1, purpose = null, targetPlan = null, category = null, changeId = null } = {}) =>
+  fn("pay-stk-start", defined({ phone, months, purpose, targetPlan, category, changeId }));
+export const getStkPayment = (requestId) => fn("pay-stk-status", { requestId });
 export const listPayments = async () => (await rows(need().from("payments").select("*").order("created_at", { ascending: false }).limit(200))).map(shape.payment);
 export const getReceipt = async (id) => {
   const p = await rows(need().from("payments").select("*").eq("id", id).maybeSingle());

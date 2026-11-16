@@ -173,6 +173,23 @@ export async function ignorePayment({ txId }) {
   return { outcome: "ignored" };
 }
 
+let mockStk = [
+  { id: "s1", status: "paid", purpose: "renewal", months: 3, amount: 1500, phone: "254712345678", account: "ES100210", businessName: "Pwani Pastries", reference: "ES100210", town: "Mombasa", businessId: "b1", applicationId: null, receipt: "SK41PQ7RT2", paidAmount: 1500, resultCode: "0", resultDesc: "The service request is processed successfully.", message: "Payment received. Thank you.", verification: "query_ok", note: null, outcome: "applied", by: "seller", at: "2026-10-18T09:10:00Z", sentAt: "2026-10-18T09:10:02Z", completedAt: "2026-10-18T09:10:31Z" },
+  { id: "s2", status: "failed", purpose: "first", months: 1, amount: 500, phone: "254722000111", account: "2026QRS552", businessName: "Bustani Foods", reference: "EPM-2026-QRS552", town: "Nakuru", businessId: null, applicationId: "a4", receipt: null, paidAmount: null, resultCode: "1032", resultDesc: "Request cancelled by user", message: "You cancelled the M-Pesa request. Nothing was charged.", verification: null, note: null, outcome: null, by: "applicant", at: "2026-10-18T08:55:00Z", sentAt: "2026-10-18T08:55:01Z", completedAt: "2026-10-18T08:55:20Z" },
+  { id: "s3", status: "disputed", purpose: "renewal", months: 1, amount: 500, phone: "254733000222", account: "ES100301", businessName: "Kilele Hardware", reference: "ES100301", town: "Nyeri", businessId: "b3", applicationId: null, receipt: null, paidAmount: 5000, resultCode: "0", resultDesc: "The service request is processed successfully.", message: "We are checking this payment with Safaricom. We will confirm it shortly; do not pay again.", verification: "query_ok", note: "the amount (5000) differs from the amount asked (500)", outcome: null, by: "seller", at: "2026-10-18T07:30:00Z", sentAt: "2026-10-18T07:30:02Z", completedAt: null },
+];
+export async function getStkRequests() {
+  await latency(80);
+  return copy(mockStk);
+}
+export async function resolveStkRequest({ id, action, receipt, amount, reason }) {
+  await latency();
+  if (String(reason ?? "").trim().length < 3) throw new Error("Write a short reason.");
+  if (action === "credit" && !/^[A-Z0-9]{10}$/.test(String(receipt ?? "").toUpperCase())) throw new Error("The M-Pesa receipt is 10 letters and numbers, like SK12AB34CD.");
+  mockStk = mockStk.map((r) => (r.id === id ? { ...r, status: action === "credit" ? "paid" : "failed", receipt: action === "credit" ? String(receipt).toUpperCase() : r.receipt, paidAmount: action === "credit" ? Number(amount) : r.paidAmount, verification: "admin", note: reason } : r));
+  return { outcome: action === "credit" ? "applied" : "closed" };
+}
+
 export async function reprocessCallback() { await latency(); return { outcome: "needs_assignment" }; }
 export async function dismissCallback() { await latency(); }
 

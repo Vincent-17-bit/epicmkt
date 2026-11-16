@@ -32,6 +32,7 @@ function paymentView(rec) {
   return {
     method: 'paybill', number: '123456', account: rec.referenceNo, name: 'EpicMKT (demo)', amount: price,
     received, balance: Math.max(price - received, 0), months: price > 0 ? Math.floor(received / price) : 0, code: rec.paymentCode ?? null,
+    stk: rec.status === 'approved', maxMonths: 12,
   };
 }
 
@@ -320,4 +321,48 @@ export function simSeed() {
   }));
   writeJson('epicmkt.mock.applications', [...kept, ...demos]);
   return demos.map((d) => d.referenceNo);
+}
+
+// ---- M-Pesa "Pay now" (demo). The prompt "is answered" on the third status check: a phone ending in 0 cancels, any other pays.
+const stkRequests = new Map();
+const stkPhoneOf = (p) => { const m = String(p ?? '').replace(/[^0-9+]/g, '').match(/^(?:\+?254|0)?([71][0-9]{8})$/); return m ? `254${m[1]}` : null; };
+
+export async function startStkPayment(session, { phone, months = 1 }) {
+  await wait(400);
+  const rec = sessionRecord(session);
+  const normalized = stkPhoneOf(phone);
+  if (!normalized) throw Object.assign(new Error('Enter a Safaricom M-Pesa number, like 0712 345 678.'), { code: 'invalid_phone' });
+  if (rec.status !== 'approved') throw Object.assign(new Error('This application cannot be paid yet. Wait for approval.'), { code: 'not_payable' });
+  const n = Math.min(Math.max(1, Number(months) || 1), 12);
+  const amount = Math.max(rec.priceAtSubmission * n - (rec.creditKes ?? 0), 1);
+  const request = { id: `stk-${Date.now()}`, status: 'pending', message: 'Check your phone and enter your M-Pesa PIN to pay.', amount, months: n,
+    phone: normalized, account: rec.referenceNo.replace(/-/g, '').replace(/^EPM/, ''), purpose: 'first', checks: 0, ref: rec.referenceNo };
+  stkRequests.set(request.id, request);
+  const { checks: _c, ref: _r, ...out } = request;
+  return { request: out };
+}
+
+export async function getStkPayment(session, requestId) {
+  await wait(200);
+  sessionRecord(session);
+  const r = stkRequests.get(requestId);
+  if (!r) throw Object.assign(new Error('not_found'), { code: 'not_found' });
+  r.checks += 1;
+  if (r.status === 'pending' && r.checks >= 3) {
+    if (r.phone.endsWith('0')) {
+      Object.assign(r, { status: 'failed', resultCode: '1032', message: 'You cancelled the M-Pesa request. Nothing was charged.' });
+    } else {
+      const receipt = `SK${String(Date.now()).slice(-8)}`;
+      Object.assign(r, { status: 'paid', receipt, message: 'Payment received. Thank you.', outcome: { outcome: 'ready' } });
+      updateApplication(r.ref, (x) => {
+        x.creditKes = (x.creditKes ?? 0) + r.amount;
+        x.paymentCode = receipt;
+        x.status = 'payment_confirming';
+        pushEvent(x, 'payment_submitted');
+        return x;
+      });
+    }
+  }
+  const { checks: _c, ref: _r, ...out } = r;
+  return { request: out };
 }

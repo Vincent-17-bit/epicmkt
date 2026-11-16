@@ -104,6 +104,7 @@ export const JOB_INFO = {
   "daily-lifecycle": { label: "Daily reminders and expiry", every: "07:00 Nairobi time", what: "Queues renewal reminders, moves listings into grace and expiry, and sends the notices.", staleAfter: 26 * 60, firstRun: "07:00 Nairobi time" },
   "proofs-purge": { label: "Clear old proof uploads", every: "04:00 Nairobi time", what: "Deletes proof files 90 days after their question was resolved, and uploads that were never finished.", staleAfter: 26 * 60, firstRun: "04:00 Nairobi time" },
   "media-gc": { label: "Clean up unused pictures", every: "Every 10 minutes", what: "Deletes pictures nothing uses any more from the image store and settles uploads that were never attached.", staleAfter: 60, firstRun: "within 10 minutes of being scheduled" },
+  "pay-reconcile": { label: "Check M-Pesa phone payments", every: "Every 2 minutes", what: "Finishes Pay now (STK) payments whose Safaricom answer was late or lost, and expires prompts nobody answered.", staleAfter: 15, firstRun: "within 2 minutes of being scheduled" },
 };
 
 export function minutesAgo(iso, now = Date.now()) {
