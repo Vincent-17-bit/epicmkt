@@ -56,3 +56,18 @@ test("search words for the partners are plain words, strongest partners first, n
   assert.ok(words.length <= 24 && words.every((w) => /^[a-z][a-z0-9]{2,}$/.test(w)));
   assert.deepEqual(complementSearchWords("services"), []);
 });
+
+test("words that look like food in other things: chocolate is not milk, a coffee table is not coffee, a kettle is not tea", () => {
+  assert.equal(group("Toblerone milk chocolate 100g"), "confectionery");
+  assert.equal(group("Cadbury Dairy Milk chocolate bar 80g"), "confectionery");
+  assert.equal(group("Glass coffee table"), "table");
+  assert.equal(group("Electric kettle 1.7L"), "appliance");
+  assert.equal(group("Coffee maker"), "appliance");
+  assert.equal(group("Fresh milk 500ml"), "milk");
+  assert.equal(group("Nescafe Classic 100g"), "tea-coffee");
+  assert.equal(group("Hot chocolate drink"), "tea-coffee");
+  assert.equal(group("Chocolate milkshake"), "juice");
+  assert.equal(group("Chocolate cake"), "cake");
+  assert.equal(complementWeight({ name: "White bread 400g" }, { name: "Toblerone milk chocolate 100g" }), 0);
+  assert.equal(complementWeight({ name: "White bread 400g" }, { name: "Glass coffee table" }), 0);
+});

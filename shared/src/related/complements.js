@@ -65,7 +65,9 @@ export function complementSearchWords(group, max = 24) {
   // Words that say nothing about what a product is: they would only fill the pool with unrelated rows.
   const VAGUE = new Set(["soft", "drink", "drinks", "red", "energy", "minute", "maid", "bull", "fresh", "set", "pack", "special", "top", "with", "and", "for", "the"]);
   const lists = complementsOf(group).map(({ group: partner }) => {
-    const phrases = PHRASES.find(([g]) => g === partner)?.[1] ?? [partner.replace(/-/g, " ")];
+    // A group can be listed twice (an early entry for words that must win over other groups): use all its words, main list first.
+    const lists = PHRASES.filter(([g]) => g === partner);
+    const phrases = lists.length ? [...lists].reverse().flatMap(([, p]) => p) : [partner.replace(/-/g, " ")];
     const out = [];
     for (const phrase of phrases) {
       for (const w of norm(phrase).split(/[^a-z0-9]+/)) if (w.length >= 3 && !/^\d/.test(w) && !VAGUE.has(w) && !out.includes(w)) out.push(w);
