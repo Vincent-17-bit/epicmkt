@@ -355,14 +355,18 @@ async function feedPool(epoch) {
 
 function feedPage(entry, epoch, { page, pageSize }, now) {
   tick(entry.snap, now);
-  entry.order ??= blendFeed(entry.snap.products, { epoch, pageSize, limit: FEED_MAX_PAGES * pageSize }).map((p) => p.id);
-  const pages = pagesOf(entry.order.length, pageSize);
+  // One order per page size: the grid's page size depends on the screen (about 50 cards), and the order's length and its featured
+  // places are counted in pages of that size.
+  entry.orders ??= new Map();
+  if (!entry.orders.has(pageSize)) entry.orders.set(pageSize, blendFeed(entry.snap.products, { epoch, pageSize, limit: FEED_MAX_PAGES * pageSize }).map((p) => p.id));
+  const order = entry.orders.get(pageSize);
+  const pages = pagesOf(order.length, pageSize);
   const start = (page - 1) * pageSize;
-  const items = page <= pages ? entry.order.slice(start, start + pageSize).map((id) => entry.byId.get(id)).filter(Boolean) : [];
+  const items = page <= pages ? order.slice(start, start + pageSize).map((id) => entry.byId.get(id)).filter(Boolean) : [];
   return {
     items,
-    total: entry.order.length,
-    catalogTotal: Math.max(entry.order.length, entry.snap.products.length),
+    total: order.length,
+    catalogTotal: Math.max(order.length, entry.snap.products.length),
     page,
     pageSize,
     pages,

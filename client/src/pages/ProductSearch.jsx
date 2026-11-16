@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faMagnifyingGlass, faSliders, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faSliders, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { EMPTY_SEARCH, SEARCH_SORTS, parseSearch, writeSearch } from "@epicmkt/shared";
 import { Container, Skeleton } from "@epicmkt/ui";
 import { searchCatalog } from "../api/products/search.js";
@@ -12,6 +12,7 @@ import { useNoindex } from "../hooks/useRouteSeo.js";
 import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../hooks/useFocusTrap.js";
 import FilterSidebar from "../components/search/FilterSidebar.jsx";
 import ResultRow from "../components/search/ResultRow.jsx";
+import Pagination from "../components/Pagination.jsx";
 import styles from "../components/search/ProductSearch.module.css";
 
 // Shallow on purpose, like the 7 pages Amazon shows for a keyword: past this the shopper is better served by a filter.
@@ -159,6 +160,10 @@ export default function ProductSearch() {
                   <ResultRow key={item.id} item={item} position={(data.page - 1) * data.pageSize + i + 1} onOpen={(it, pos) => logEvent("product_search_open", { itemId: it.id, position: pos })} />
                 ))}
               </ol>
+              <Pagination className={styles.pagerSpace} page={Math.min(data.page, pages)} pages={pages} onPage={(page) => go({ page }, { keepPage: true })} label="Result pages" />
+              {deep && data.page >= pages && (
+                <p className={styles.resultsNote}>That is as deep as the results go. Add a filter or a more specific word to see the rest.</p>
+              )}
               {data.related?.length > 0 && (
                 <section className={styles.related} aria-labelledby="related-title">
                   <h2 id="related-title" className={styles.relatedTitle}>Related searches</h2>
@@ -172,10 +177,6 @@ export default function ProductSearch() {
                     ))}
                   </ul>
                 </section>
-              )}
-              {pages > 1 && <Pager page={Math.min(data.page, pages)} pages={pages} onPage={(page) => go({ page }, { keepPage: true })} />}
-              {deep && data.page >= pages && (
-                <p className={styles.resultsNote}>That is as deep as the results go. Add a filter or a more specific word to see the rest.</p>
               )}
             </>
           )}
@@ -208,34 +209,6 @@ function chipsOf(facets, search) {
     out.push({ key: "price-own", label: `KES ${search.min ?? 0} to ${search.max ?? "any"}`, price: true });
   }
   return out;
-}
-
-function Pager({ page, pages, onPage }) {
-  const nums = [...new Set([1, 2, 3, page - 1, page, page + 1, pages].filter((n) => n >= 1 && n <= pages))].sort((a, b) => a - b);
-  const items = [];
-  nums.forEach((n, i) => {
-    if (i > 0 && n - nums[i - 1] > 1) items.push(`gap-${n}`);
-    items.push(n);
-  });
-  return (
-    <nav className={styles.pager} aria-label="Result pages">
-      <button type="button" className={styles.pageNav} disabled={page <= 1} onClick={() => onPage(page - 1)}>
-        <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" /> Previous
-      </button>
-      {items.map((n) =>
-        typeof n === "string" ? (
-          <span key={n} className={styles.gap} aria-hidden="true">…</span>
-        ) : (
-          <button key={n} type="button" className={n === page ? styles.pageOn : styles.pageBtn} aria-current={n === page ? "page" : undefined} aria-label={`Page ${n}`} onClick={() => onPage(n)}>
-            {n}
-          </button>
-        )
-      )}
-      <button type="button" className={styles.pageNav} disabled={page >= pages} onClick={() => onPage(page + 1)}>
-        Next <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
-      </button>
-    </nav>
-  );
 }
 
 function FilterDrawer({ onClose, total, children }) {

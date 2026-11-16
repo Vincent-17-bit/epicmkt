@@ -2,11 +2,11 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { items } from "../api/index.js";
 import HomeProducts from "./HomeProducts.jsx";
 import { itemPagePath } from "./ProductTile.jsx";
-import { countsSummary, facetsSummary, pageOf } from "../lib/productQuery.js";
+import { GRID_PAGE_SIZES, countsSummary, facetsSummary, pageOf } from "../lib/productQuery.js";
 
 vi.mock("../api/index.js", () => ({ items: { getPage: vi.fn(), getFacets: vi.fn(), getCounts: vi.fn() }, getCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "hardware", name: "Hardware" }]), logContactEvent: vi.fn() }));
 
@@ -50,6 +50,21 @@ const serve = (list) => {
   vi.mocked(items.getCounts).mockImplementation(async (filters) => countsSummary(list, filters));
 };
 
+// A screen `px` wide, for the media queries the grid reads (jsdom has none: with it unset the grid is the 2-column phone layout).
+const realMatchMedia = window.matchMedia;
+const atWidth = (px) => {
+  window.matchMedia = vi.fn((query) => {
+    const min = /min-width:\s*([\d.]+)rem/.exec(query);
+    const max = /max-width:\s*([\d.]+)rem/.exec(query);
+    const matches = min ? px >= Number(min[1]) * 16 : max ? px <= Number(max[1]) * 16 : false;
+    return { matches, media: query, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} };
+  });
+};
+
+afterEach(() => {
+  window.matchMedia = realMatchMedia;
+});
+
 beforeEach(() => {
   for (const fn of [items.getPage, items.getFacets, items.getCounts]) vi.mocked(fn).mockReset();
   serve([]);
@@ -81,45 +96,71 @@ describe("HomeProducts", () => {
   const many = (n) => Array.from({ length: n }, (_, i) => product(i + 1, { createdAt: new Date(Date.UTC(2026, 0, 1) + i * 3_600_000).toISOString() }));
   const cards = () => screen.queryAllByRole("link", { name: /Product \d+/ });
 
-  it("lists every product, 24 at a time", async () => {
-    serve(many(30));
+  it("lists every product, 50 at a time on a phone", async () => {
+    serve(many(60));
     view();
-    await waitFor(() => expect(cards()).toHaveLength(24));
+    await waitFor(() => expect(cards()).toHaveLength(50));
     await userEvent.click(screen.getByRole("button", { name: "Show more products" }));
-    await waitFor(() => expect(cards()).toHaveLength(30));
-    expect(new Set(cards().map((a) => a.textContent)).size).toBe(30);
+    await waitFor(() => expect(cards()).toHaveLength(60));
+    expect(new Set(cards().map((a) => a.textContent)).size).toBe(60);
     expect(screen.queryByRole("button", { name: "Show more products" })).not.toBeInTheDocument();
   });
 
-  it("offers page links, and a page link jumps straight to that page", async () => {
-    serve(many(60));
+  it.each([
+    [390, 2, 50],
+    [600, 3, 51],
+    [800, 4, 52],
+    [1100, 4, 52],
+    [1400, 6, 54]
+  ])("on a %ipx screen (%i columns) a page is %i cards, a whole number of rows", async (px, columns, size) => {
+    atWidth(px);
+    expect(GRID_PAGE_SIZES[columns]).toBe(size);
+    expect(size % columns).toBe(0);
+    serve(many(200));
     view();
-    await waitFor(() => expect(cards()).toHaveLength(24));
+    await waitFor(() => expect(cards()).toHaveLength(size));
+    expect(vi.mocked(items.getPage).mock.calls.every(([, opts]) => opts.pageSize === size)).toBe(true);
+  });
+
+  it("offers page links, and a page link jumps straight to that page", async () => {
+    serve(many(150));
+    view();
+    await waitFor(() => expect(cards()).toHaveLength(50));
     const pager = screen.getByRole("navigation", { name: "Product pages" });
     expect(within(pager).getAllByRole("button", { name: /^Page / }).map((b) => b.textContent)).toEqual(["1", "2", "3"]);
     expect(within(pager).getByRole("button", { name: "Page 1" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByText("Showing 1–24 of 60")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1–50 of 150")).toBeInTheDocument();
     await userEvent.click(within(pager).getByRole("button", { name: "Page 3" }));
-    await waitFor(() => expect(cards()).toHaveLength(12));
+    await waitFor(() => expect(cards()).toHaveLength(50));
     expect(within(pager).getByRole("button", { name: "Page 3" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByText("Showing 49–60 of 60")).toBeInTheDocument();
+    expect(screen.getByText("Showing 101–150 of 150")).toBeInTheDocument();
+  });
+
+  it("has Previous and Next beside the numbers", async () => {
+    serve(many(150));
+    view();
+    await waitFor(() => expect(cards()).toHaveLength(50));
+    const pager = screen.getByRole("navigation", { name: "Product pages" });
+    expect(within(pager).getByRole("button", { name: "Previous page" })).toBeDisabled();
+    await userEvent.click(within(pager).getByRole("button", { name: "Next page" }));
+    await waitFor(() => expect(screen.getByText("Showing 51–100 of 150")).toBeInTheDocument());
   });
 
   it("asks for every page with the visit's rotation hour, so the order never changes while the visitor pages through it", async () => {
-    serve(many(60));
+    serve(many(150));
     view();
-    await waitFor(() => expect(cards()).toHaveLength(24));
+    await waitFor(() => expect(cards()).toHaveLength(50));
     await userEvent.click(screen.getByRole("button", { name: "Show more products" }));
-    await waitFor(() => expect(cards()).toHaveLength(48));
+    await waitFor(() => expect(cards()).toHaveLength(100));
     const epochs = vi.mocked(items.getPage).mock.calls.map(([, opts]) => opts.epoch);
     expect(new Set(epochs).size).toBe(1);
     expect(Number.isInteger(epochs[0])).toBe(true);
   });
 
   it("keeps the list shallow: after the last page it invites the visitor to search, filter or browse instead", async () => {
-    serve(many(200));
+    serve(many(500));
     view("/?ppage=8");
-    await waitFor(() => expect(cards()).toHaveLength(24));
+    await waitFor(() => expect(cards()).toHaveLength(50));
     expect(screen.getByText("That’s the top of the list for now")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Search products" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Show more products" })).not.toBeInTheDocument();

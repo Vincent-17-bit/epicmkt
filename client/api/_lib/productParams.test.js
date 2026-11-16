@@ -17,7 +17,7 @@ describe("productParams", () => {
     expect(r.filters.max).toBe("");
     expect(r.filters.sort).toBe("recommended");
     expect(r.page).toBe(1);
-    expect(r.pageSize).toBe(48);
+    expect(r.pageSize).toBe(60);
     expect(r.filters.categories).toEqual(["a"]);
   });
 
