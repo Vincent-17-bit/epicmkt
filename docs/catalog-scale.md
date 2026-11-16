@@ -28,7 +28,7 @@ Redis        optional shared copy of snapshots and feed pools (Upstash), never a
 Postgres     indexes on items (full-text + trigram), the type-ahead dictionary and trending list rebuilt hourly by pg_cron
 ```
 
-Every request does a bounded amount of work, whatever the size of the catalogue: one page of 24, at most 600 search candidates
+Every request does a bounded amount of work, whatever the size of the catalogue: one page of about 50, at most 600 search candidates
 (after looking at no more than 10,000 matches), at most 12 suggestions from a small dictionary.
 
 ## The home feed ("Recommended")
@@ -54,7 +54,7 @@ Every request does a bounded amount of work, whatever the size of the catalogue:
 
 ## Loading and paging (`client/src/components/HomeProducts.jsx`)
 
-* One page = 24 cards (full rows at 2, 3, 4 and 6 columns), each page its own cached request.
+* One page = about 50 cards, sized to the screen so every row is full: 50 on phones (2 columns), 51 (3), 52 (4, tablets and laptops), 54 (6, wide screens); first view 50–54, 150–162 after the two automatic pages. Each page size and page is its own cached request. Page links are the shared Previous / 1 2 3 … N / Next bar (client/src/components/Pagination.jsx), also used above "Related searches" on product search.
 * **IntersectionObserver**, about one screen ahead of the end of the grid (never a scroll listener): fetches the next page in the
   background, and adds the first **2** pages by itself.
 * Then a **Show more products** button adds one page per tap (already fetched, so instant) and the footer stays reachable.

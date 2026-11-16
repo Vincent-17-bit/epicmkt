@@ -8,7 +8,12 @@ import { EMPTY_FILTERS, applyFilters, countsFor, facetsOf } from "./productFilte
 import { FEED_MAX_PAGES, blendFeed, epochOf, pagesOf } from "./feed.js";
 
 export const PAGE_SIZE = 24;
-export const MAX_PAGE_SIZE = 48;
+export const MAX_PAGE_SIZE = 60;
+
+// Cards per page on the home grid, by how many columns the screen shows (2 phone, 3 small tablet, 4 tablet and laptop, 6 wide).
+// Each is about 50 and a multiple of its column count, so every row of every page is full.
+export const GRID_PAGE_SIZES = { 2: 50, 3: 51, 4: 52, 6: 54 };
+export const pageSizeFor = (columns) => GRID_PAGE_SIZES[columns] ?? PAGE_SIZE;
 export { FEED_MAX_PAGES };
 
 /**

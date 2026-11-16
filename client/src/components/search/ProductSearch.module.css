@@ -423,50 +423,8 @@
 .relatedItem:hover {
   background: var(--surface-2);
 }
-.pager {
-  margin: var(--space-6) auto 0;
-  display: flex;
-  justify-content: center;
-  align-items: stretch;
-  width: fit-content;
-  border: 1px solid var(--border-strong);
-  border-radius: 0.5rem;
-  overflow: hidden;
-  box-shadow: 0 2px 5px rgb(15 17 17 / 0.08);
-}
-.pageBtn,
-.pageOn,
-.pageNav,
-.gap {
-  min-width: 3rem;
-  min-height: 3rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  border: 0;
-  border-right: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  font: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
-  padding: 0 0.875rem;
-}
-.pageNav:last-child {
-  border-right: 0;
-}
-.pageOn {
-  outline: 1px solid var(--text);
-  outline-offset: -1px;
-  font-weight: 700;
-}
-.pageNav:disabled {
-  color: var(--text-muted);
-  cursor: default;
-}
-.gap {
-  cursor: default;
+.pagerSpace {
+  margin-block: var(--space-6);
 }
 
 /* ---- filters as a sheet on phones ---- */
@@ -606,12 +564,8 @@
     gap: 0.5rem;
     font-size: var(--text-xs);
   }
-  .pager {
-    margin-top: var(--space-5);
-  }
-  .pageBtn:not(.pageOn),
-  .gap {
-    display: none;
+  .pagerSpace {
+    margin-block: var(--space-5);
   }
 }
 
