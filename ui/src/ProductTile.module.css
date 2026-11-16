@@ -83,6 +83,28 @@
   max-width: 70%;
 }
 
+.offerLow {
+  top: calc(clamp(6px, 3.6cqw, 10px) + 1.75em);
+}
+
+.tag {
+  position: absolute;
+  top: clamp(6px, 3.6cqw, 10px);
+  right: clamp(6px, 3.6cqw, 10px);
+  z-index: 2;
+  max-width: 70%;
+  overflow: hidden;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgb(17 17 17 / 0.82);
+  color: #fff;
+  font-size: clamp(0.625rem, 5.2cqw, 0.75rem);
+  font-weight: 700;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .stockTag {
   --stock-size: clamp(0.6875rem, 5.6cqw, 0.75rem);
   --stock-over: calc(var(--text-xs) * 1.4 + 8px);

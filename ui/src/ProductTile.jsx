@@ -53,6 +53,7 @@ const SWATCHES = 5;
  *   cta        "See options"             a quiet button at the foot (hidden on narrow cards)
  *   titleLines 2 (default) or 3;  blurb false hides the short description after the name;  priority loads the picture first
  *   onClick    called when the card is opened (search logs the position)
+ *   tag        a short label on the picture, top right ("From this shop")
  *
  * Availability: an available item shows nothing extra, one running low gets "Low stock" / "Only 3 left" on the picture, and a
  * sold-out item is not drawn at all (sold-out items are not listed to customers, so one reaching here is a bug elsewhere).
@@ -72,6 +73,7 @@ export default function ProductTile({
   blurb: showBlurb = true,
   priority = false,
   onClick,
+  tag = null,
   className = ""
 }) {
   const preview = isPreview(mode);
@@ -100,7 +102,8 @@ export default function ProductTile({
         <LazyImage fill src={coverUrl(item)} className={styles.img} priority={priority} />
         {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
-        <OfferChip offer={item.offer} className={styles.offer} labels={text.offerChip} />
+        {tag && <span className={styles.tag}>{tag}</span>}
+        <OfferChip offer={item.offer} className={`${styles.offer} ${tag ? styles.offerLow : ""}`} labels={text.offerChip} />
         <StockTag item={item} labels={text} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
         {hasVideo && (
           <span className={styles.video} title={text.videos}>

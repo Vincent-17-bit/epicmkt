@@ -1,0 +1,72 @@
+/* The recommendation rows at the end of the item page, after the Amazon "Customers who viewed this item" row: a heading with
+   "Page 1 of 7", a row of the site's product cards, round arrows at the sides. */
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-4) 0 var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-width: 0;
+  padding-inline: var(--space-4);
+}
+.headText { min-width: 0; }
+.title { margin: 0; font-size: var(--text-lg); font-weight: 700; line-height: 1.25; }
+.note { margin: 2px 0 0; color: var(--text-muted); font-size: var(--text-sm); line-height: 1.35; }
+.pageOf { flex: none; margin: 0; color: var(--text-muted); font-size: var(--text-sm); white-space: nowrap; }
+
+.frame { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-2); padding-inline: var(--space-2); }
+
+.track {
+  display: grid;
+  grid-auto-flow: column;
+  /* Two cards and a peek on a phone, then as many ~190px cards as fit. Each card snaps to the left edge. */
+  grid-auto-columns: clamp(140px, 42%, 200px);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 2px 2px var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  list-style: none;
+}
+.track::-webkit-scrollbar { display: none; }
+@media (min-width: 48rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 4 * var(--space-3)) / 5)); } }
+@media (min-width: 80rem) { .track { grid-auto-columns: minmax(170px, calc((100% - 6 * var(--space-3)) / 7)); } }
+
+.cell { display: grid; align-content: start; gap: 6px; min-width: 0; scroll-snap-align: start; }
+
+.arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 64px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-control, 10px);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+}
+.arrow:hover:not(:disabled) { background: var(--surface-2); }
+.arrow:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+.arrow:disabled { opacity: 0.35; cursor: default; box-shadow: none; }
+/* On a phone the row is swiped; the arrows would take a third of the width. */
+@media (max-width: 47.99rem) {
+  .frame { grid-template-columns: minmax(0, 1fr); padding-inline: var(--space-4); }
+  .arrow { display: none; }
+}
+
+/* The card itself is the site's ProductTile; a card cell stretches so every card in the row is the same height. */
+.cell:has(> article) { align-content: stretch; }
+.card { display: flex; min-width: 0; }
+
+.skeleton { aspect-ratio: 1 / 1; width: 100%; }

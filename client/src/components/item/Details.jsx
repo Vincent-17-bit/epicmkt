@@ -28,7 +28,7 @@ function TypedDetails({ ctx, slot }) {
   const tabs = [
     { id: "description", label: t("item.description"), content: <ItemDetails item={prose} t={t} marks={marks} /> },
     hasSpecs && { id: "specs", label: t("item.specs"), content: <ClientItemSpecs item={specItem} category={category} attributes={attributes} reveal={reveal} onExpand={(panel) => ctx?.track?.("spec_expand", { panel })} /> },
-    ctx?.item && { id: "recommend", label: "Recommended", content: <RecommendList ctx={ctx} compact /> }
+    ctx?.item && { id: "recommend", label: "Goes well with", content: <RecommendList ctx={ctx} /> }
   ].filter(Boolean);
   const hasProse = Boolean(item.description || item.shortDescription);
   const shown = hasProse ? tabs : tabs.filter((tab) => tab.id !== "description");

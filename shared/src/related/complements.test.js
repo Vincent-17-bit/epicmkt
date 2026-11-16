@@ -1,0 +1,58 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { complementGroupOf, complementWeight, complementSearchWords, hasComplements } from "./complements.js";
+
+const group = (name, extra = {}) => complementGroupOf({ name, ...extra });
+
+test("names decide the group, the most specific phrase first", () => {
+  const cases = {
+    "Chicken pilau": "restaurant-meal",
+    "Honey-Glazed Smash Burger": "restaurant-meal",
+    "Butter chicken": "restaurant-meal",
+    "Coca-Cola 500ml": "soft-drink",
+    "Fresh mango juice 500ml": "juice",
+    "White Bread Loaf": "bread",
+    "Burger buns 6": "bread",
+    "Blue Band margarine 500g": "spreads",
+    "Classic Chocolate Chip Cookie": "cupcakes-pastries",
+    "6kg gas cylinder with gas": "lpg-gas",
+    "Gas regulator": "gas-accessory",
+    "Two-burner gas cooker": "gas-cooker",
+    "Pressure cooker 5L": "cookware",
+    "Silicone phone case": "phone-case",
+    "Samsung Galaxy A15 128GB": "phone",
+    "43 inch smart TV": "tv",
+    "Laptop bag": "backpack-travel-bag",
+    "Ladies Ankara dress": "clothing",
+    "Women's sandals": "shoes",
+    "Cotton bedsheet set double": "bedding"
+  };
+  for (const [name, want] of Object.entries(cases)) assert.equal(group(name), want, name);
+});
+
+test("services, medicine, liquor, staples and household things have groups but nothing goes with them", () => {
+  for (const name of ["Haircut", "Fade and beard", "Phone repair", "Sugar test", "Paracetamol 500mg", "Tusker 500ml", "Maize flour 2kg", "Toilet rolls 10 pack"]) {
+    assert.ok(group(name), name);
+    assert.equal(hasComplements({ name }), false, name);
+  }
+});
+
+test("the product type is the fallback when the name says nothing", () => {
+  assert.equal(group("Special of the day", { productTypeId: "restaurant-meal" }), "restaurant-meal");
+  assert.equal(group("Style 2", { productTypeId: "barbershop-service" }), "services");
+  assert.equal(group("Item"), null);
+});
+
+test("a complement is never the same kind: another pilau is similar, not 'goes with'", () => {
+  assert.ok(complementWeight({ name: "Chicken pilau" }, { name: "Coca-Cola 2L" }) > 0);
+  assert.equal(complementWeight({ name: "Chicken pilau" }, { name: "Beef pilau" }), 0);
+  assert.ok(complementWeight({ name: "6kg gas cylinder" }, { name: "Gas regulator" }) > complementWeight({ name: "6kg gas cylinder" }, { name: "Aluminium sufuria" }));
+});
+
+test("search words for the partners are plain words, strongest partners first, never too many", () => {
+  const words = complementSearchWords("restaurant-meal");
+  assert.ok(words.includes("soda") && words.includes("juice") && words.includes("water"));
+  assert.ok(words.indexOf("soda") < words.indexOf("juice"));
+  assert.ok(words.length <= 24 && words.every((w) => /^[a-z][a-z0-9]{2,}$/.test(w)));
+  assert.deepEqual(complementSearchWords("services"), []);
+});

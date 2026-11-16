@@ -1,4 +1,5 @@
 import { distanceKm } from "./utils.js";
+import { seededKey } from "./related/complements.js";
 import {
   STOP_WORDS,
   UNIT_WORDS,
@@ -244,7 +245,8 @@ const point = (value) => (value && Number.isFinite(value.lat) && Number.isFinite
  * @returns the candidates, best first, never including the current item or any item of the current store, and never
  *   anything that fails the relevance gate: the row can be shorter than `limit`, or empty.
  */
-export function rankSimilar({ current, candidates, origin = null, limit = 12, perStore = 2 }) {
+export function rankSimilar({ current, candidates, origin = null, limit = 12, perStore = 2, seed = null }) {
+  const visit = seed === null || seed === undefined || seed === "" ? null : String(seed);
   if (!current || !Array.isArray(candidates)) return [];
   const section = sectionOf(current);
   const profile = profileOf(current);
@@ -272,7 +274,8 @@ export function rankSimilar({ current, candidates, origin = null, limit = 12, pe
       near: distanceBand(km),
       gap: unitPrice !== null && price !== null ? Math.abs(Math.log(price / unitPrice)) : Infinity,
       km: km ?? Infinity,
-      made: Date.parse(candidate.createdAt) || 0
+      made: Date.parse(candidate.createdAt) || 0,
+      key: visit === null ? 0 : seededKey(visit, candidate.id)
     });
   }
 
@@ -283,6 +286,9 @@ export function rankSimilar({ current, candidates, origin = null, limit = 12, pe
       b.tagged - a.tagged ||
       a.band - b.band ||
       a.near - b.near ||
+      // With a seed (one per visit), items that tie on everything above come in a shuffled order that holds for the whole visit:
+      // no shop's item is always first, and the row does not jump while someone browses. Without one, closest price first.
+      a.key - b.key ||
       a.gap - b.gap ||
       a.km - b.km ||
       b.made - a.made ||

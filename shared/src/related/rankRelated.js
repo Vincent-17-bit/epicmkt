@@ -1,18 +1,21 @@
 import { isListed } from "../availability.js";
-import { relevance } from "../similar.js";
+import { complementWeight, seededKey } from "./complements.js";
 
-// "Goes with" ranking for the Recommend tab. Pure: no I/O, so the live adapter and the demo backend rank the same way.
+// "Goes well with this" ranking. Pure: no I/O, so the live adapter and the demo backend rank the same way.
 //
-// Where "Similar items" answers "more of this", this answers "what do I buy with it": a soundbar goes with a smart TV, cables and
-// speakers. A candidate qualifies only through the admin-managed relations (product_relations) or by sharing the item's
-// department or product type; an unrelated item never fills a page.
+// Where "Similar items" answers "more of this" (pilau at another cafe), this answers "what do I buy with it" (a soda or a mango
+// juice with the pilau, a regulator with the gas cylinder). A candidate qualifies only as a COMPLEMENT:
+//   - the built-in complement map (complements.js): the item's group lists the candidate's group as a partner, or
+//   - an admin relation (product_relations, the Relations page) from the item's type or department to the candidate's.
+// The same kind of thing never qualifies through the map (that is "similar"), and an item whose group has no partners (a haircut,
+// a medicine) gets nothing: the section is not shown.
 //
 // Score (higher first):
-//   relation   type->type 100, type->department 80, department->type 70, department->department 50, plus the relation's weight
-//              (0-10). Only the strongest matching relation counts.
-//   same type  +15, same department +20 (a weak nudge: the same department is not "goes with" on its own)
-//   similarity up to +10 from the name relevance used by Similar items, so near-duplicates of the item rank a little higher
-// Ties break on newer, then id, so the order is the same on every call.
+//   relation    type->type 100, type->department 80, department->type 70, department->department 50, plus its weight (0-10)
+//   complement  40 + 5 x the pairing's weight (1-10), so 45-90
+//   The better of the two counts.
+// Order within the same strength: with a `seed` (one per visit), a shuffle that is the same for the whole visit, so nobody's
+// product is always first but the list does not jump while someone browses or pages; without one, newest then id.
 //
 // Shops: any shop may appear, but at least 1 in 5 results of every page come from the shop being viewed (rounded up, and never
 // more than that shop has). A page is never padded: a shop with one item simply has no "From this shop" results.
@@ -20,9 +23,8 @@ import { relevance } from "../similar.js";
 export const DEFAULT_PAGE_SIZE = 10;
 export const SAME_SHOP_SHARE = 5; // one in five
 const RELATION_SCORE = { "type>type": 100, "type>department": 80, "department>type": 70, "department>department": 50 };
-const SAME_TYPE = 15;
-const SAME_DEPARTMENT = 20;
-const SIMILARITY_CAP = 10;
+const COMPLEMENT_BASE = 40;
+const COMPLEMENT_STEP = 5;
 
 const id = (value) => (value === null || value === undefined || value === "" ? null : String(value));
 const typeOf = (entry) => id(entry?.productTypeId ?? entry?.productType);
@@ -47,23 +49,22 @@ const sameShop = (item, candidate) => id(item.businessId) !== null && id(item.bu
 /** One candidate's score, or 0 when it does not qualify. Exported for the admin preview and the tests. */
 export function relatedScore(item, candidate, relations = []) {
   const relation = relationScore(item, candidate, relations);
-  const sameType = typeOf(item) !== null && typeOf(item) === typeOf(candidate);
-  const sameDepartment = departmentOf(item) !== null && departmentOf(item) === departmentOf(candidate);
-  if (!relation && !sameType && !sameDepartment) return 0;
-  const similarity = Math.min(SIMILARITY_CAP, Math.round(relevance(item, candidate).score / 10));
-  return relation + (sameType ? SAME_TYPE : 0) + (sameDepartment ? SAME_DEPARTMENT : 0) + similarity;
+  const weight = complementWeight(item, candidate);
+  return Math.max(relation, weight > 0 ? COMPLEMENT_BASE + COMPLEMENT_STEP * weight : 0);
 }
 
-const byScore = (a, b) => b.score - a.score || (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0) || (a.id < b.id ? -1 : 1);
+const newest = (a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0) || (a.id < b.id ? -1 : 1);
+const orderBy = (seed) => (a, b) => b.score - a.score || (seed === null ? newest(a, b) : a.key - b.key || (a.id < b.id ? -1 : 1));
 
 /**
  * @param {object} item          the item being viewed: { id, businessId, productTypeId, departmentId, name, brand, section, price }
  * @param {object[]} candidates  other items, same fields plus availability and createdAt
- * @param {{ relations?: object[], page?: number, pageSize?: number }} [opts]  page counts from 1
+ * @param {{ relations?: object[], page?: number, pageSize?: number, seed?: string|number }} [opts]  page counts from 1; the
+ *   seed is one per visit (see above)
  * @returns {{ items: object[], page: number, pageSize: number, hasMore: boolean, total: number }}
  *   items: the candidates on that page, each as given plus `fromThisShop`; total: how many qualify in all.
  */
-export function rankRelated(item, candidates, { relations = [], page = 1, pageSize = DEFAULT_PAGE_SIZE } = {}) {
+export function rankRelated(item, candidates, { relations = [], page = 1, pageSize = DEFAULT_PAGE_SIZE, seed = null } = {}) {
   const size = Number.isInteger(pageSize) && pageSize > 0 ? Math.min(pageSize, 50) : DEFAULT_PAGE_SIZE;
   const wanted = Number.isInteger(page) && page > 0 ? page : 1;
   const seen = new Set();
@@ -73,9 +74,23 @@ export function rankRelated(item, candidates, { relations = [], page = 1, pageSi
     if (key === null || key === id(item?.id) || seen.has(key) || !isListed(candidate)) continue;
     seen.add(key);
     const score = relatedScore(item, candidate, relations);
-    if (score > 0) pool.push({ candidate, id: key, score, createdAt: String(candidate.createdAt ?? ""), mine: sameShop(item, candidate) });
+    if (score > 0) pool.push({ candidate, id: key, score, key: seed === null ? 0 : seededKey(seed, key), createdAt: String(candidate.createdAt ?? ""), mine: sameShop(item, candidate) });
   }
+  const byScore = orderBy(seed === null || seed === undefined || seed === "" ? null : String(seed));
   pool.sort(byScore);
+  // Variety first: the first time a product appears (by name) it keeps its place; the same product from more shops comes after
+  // every distinct one, still in order. A soda row reads "Coca-Cola, Fanta, mango juice, water..." before the third Coca-Cola.
+  const seenName = new Set();
+  const firsts = [];
+  const repeats = [];
+  for (const row of pool) {
+    const name = String(row.candidate.name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    (name && seenName.has(name) ? repeats : firsts).push(row);
+    if (name) seenName.add(name);
+  }
+  pool.length = 0;
+  pool.push(...firsts, ...repeats);
+  firsts.concat(repeats).forEach((row, index) => { row.rank = index; });
 
   // Build the pages in order so page N never repeats or skips what page N-1 showed. Each page: its quota of this shop's best
   // items first, then the best of what is left (any shop), shown in score order.
@@ -88,10 +103,10 @@ export function rankRelated(item, candidates, { relations = [], page = 1, pageSi
     const chosen = mine.splice(0, quota);
     while (chosen.length < count) {
       // the next best of everything left; this shop's surplus items compete on score with the other shops'
-      const takeMine = mine.length > 0 && (rest.length === 0 || byScore(mine[0], rest[0]) < 0);
+      const takeMine = mine.length > 0 && (rest.length === 0 || mine[0].rank < rest[0].rank);
       chosen.push(takeMine ? mine.shift() : rest.shift());
     }
-    pages.push(chosen.sort(byScore));
+    pages.push(chosen.sort((a, b) => a.rank - b.rank));
   }
   const shown = pages[wanted - 1] ?? [];
   return {
