@@ -86,6 +86,12 @@
 .offerLow {
   top: calc(clamp(6px, 3.6cqw, 10px) + 1.75em);
 }
+/* On a narrow card the discount (top left) and the offer tag (top right) would meet: the offer drops one line. */
+@container (max-width: 179px) {
+  .offerBesideSale {
+    top: calc(clamp(6px, 3.6cqw, 10px) + 1.75em);
+  }
+}
 
 .tag {
   position: absolute;
@@ -233,8 +239,10 @@
 
 .price {
   display: inline-flex;
-  flex: none;
+  flex: 0 1 auto;
   align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
   font-size: clamp(1.0625rem, 10cqw, 1.375rem);
   font-variant-numeric: tabular-nums;
   font-weight: 750;
@@ -250,13 +258,18 @@
   letter-spacing: 0.02em;
 }
 
+/* A long unit ("/Baker's Dozen Box: 13 pieces") is cut with an ellipsis instead of running past the card's edge. */
 .unit {
   align-self: flex-end;
+  min-width: 0;
   margin-left: 2px;
+  overflow: hidden;
   color: var(--text-muted);
   font-size: 0.56em;
   font-weight: 600;
   letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ask {
@@ -344,7 +357,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  min-height: clamp(28px, 19cqw, 34px);
   margin-top: clamp(4px, 2.4cqw, 8px);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-pill);
@@ -354,8 +367,9 @@
   transition: background var(--dur) ease, border-color var(--dur) ease, color var(--dur) ease;
 }
 
-/* A narrow card is a tap target already: the button would only take room from the picture. */
-@container (max-width: 199px) {
+/* A very narrow card is a tap target already: the button would only take room from the picture. Compact cards (about 120 px,
+   search results on a wide screen) keep it, smaller. */
+@container (max-width: 109px) {
   .cta {
     display: none;
   }

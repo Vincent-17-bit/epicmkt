@@ -5,6 +5,7 @@
 // load the full list once (flash/live.js getAllProducts) and answer with the same pure functions the endpoint runs, so a problem
 // with the endpoint makes the site slower, never broken.
 import { mediaUrl } from "../flash/shape.js";
+import { shapeProduct } from "./shape.js";
 import * as flashApi from "../flash/index.js";
 import { EMPTY_FILTERS } from "../../lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../../lib/productQuery.js";
@@ -70,18 +71,7 @@ async function fullList() {
   return promise;
 }
 
-// The endpoint returns raw storage paths for pictures; media-host sharding stays in the browser. The fallback path already
-// returns full urls, so a product that already has an imageUrl is left alone.
-const shaped = (p) => {
-  if (p.images || p.imageUrl === undefined) return p;
-  const url = p.imagePath ? mediaUrl(p.imagePath) : null;
-  const images = url ? [{ id: "i1", url, caption: p.name }] : [];
-  // A card carries its cover and the item's videos (the full photo sequence comes with the item's own page). The cover stays first
-  // here: a video is never the cover.
-  const videos = (p.videoPaths ?? []).map((path, index) => ({ id: `v${index + 1}`, url: mediaUrl(path), caption: p.name }));
-  const media = [...images.map((m) => ({ ...m, kind: "image" })), ...videos.map((m) => ({ ...m, kind: "video" }))];
-  return { ...p, description: p.description ?? p.shortDescription ?? "", imageUrl: url, images, videos, media };
-};
+const shaped = shapeProduct;
 
 export function invalidateProducts() {
   memo.clear();
