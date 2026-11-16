@@ -14,6 +14,9 @@ import FilterSidebar from "../components/search/FilterSidebar.jsx";
 import ResultRow from "../components/search/ResultRow.jsx";
 import styles from "../components/search/ProductSearch.module.css";
 
+// Shallow on purpose, like the 7 pages Amazon shows for a keyword: past this the shopper is better served by a filter.
+export const MAX_SEARCH_PAGES = 20;
+
 const FIELD_OF = { brand: "brands", colour: "colours", condition: "conditions", deals: "deals", shop: "shops", town: "towns", store: "store" };
 
 const activeCount = (s) =>
@@ -59,6 +62,8 @@ export default function ProductSearch() {
   const clear = () => go({ ...EMPTY_SEARCH, q: search.q, sort: search.sort, facets: {} });
   const count = activeCount(search);
 
+  const pages = data ? Math.min(data.pages, MAX_SEARCH_PAGES) : 1;
+  const deep = data ? data.total > pages * data.pageSize : false;
   const from = data && data.total ? (data.page - 1) * data.pageSize + 1 : 0;
   const to = data ? Math.min(data.total, data.page * data.pageSize) : 0;
   const chips = data ? chipsOf(data.facets, search) : [];
@@ -84,7 +89,7 @@ export default function ProductSearch() {
               <>No results for <span className={styles.term}>“{search.q || "everything"}”</span></>
             ) : (
               <>
-                {from}-{to} of {data.total > 100 ? `over ${Math.floor(data.total / 100) * 100}` : data.total} results{search.q ? <> for <span className={styles.term}>“{search.q}”</span></> : null}
+                {from}-{to} of {data.total > 100 ? `over ${Math.floor(data.total / 100) * 100}` : data.total} results{search.q ? <> for <span className={styles.term}>“{data.corrected ?? search.q}”</span></> : null}
               </>
             )}
           </p>
@@ -123,6 +128,11 @@ export default function ProductSearch() {
             </ul>
           )}
 
+          {data?.corrected && data.corrected !== search.q && (
+            <p className={styles.resultsNote} role="status">
+              Showing results for <strong>{data.corrected}</strong>. No products matched “{search.q}”.
+            </p>
+          )}
           {isPending ? (
             <ResultsSkeleton />
           ) : isError ? (
@@ -163,7 +173,10 @@ export default function ProductSearch() {
                   </ul>
                 </section>
               )}
-              {data.pages > 1 && <Pager page={data.page} pages={data.pages} onPage={(page) => go({ page }, { keepPage: true })} />}
+              {pages > 1 && <Pager page={Math.min(data.page, pages)} pages={pages} onPage={(page) => go({ page }, { keepPage: true })} />}
+              {deep && data.page >= pages && (
+                <p className={styles.resultsNote}>That is as deep as the results go. Add a filter or a more specific word to see the rest.</p>
+              )}
             </>
           )}
         </section>

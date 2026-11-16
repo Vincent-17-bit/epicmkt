@@ -78,14 +78,53 @@ describe("HomeProducts", () => {
     await waitFor(() => expect(screen.getByTestId("where")).toHaveTextContent("/b/shop-1/i/item-1"));
   });
 
+  const many = (n) => Array.from({ length: n }, (_, i) => product(i + 1, { createdAt: new Date(Date.UTC(2026, 0, 1) + i * 3_600_000).toISOString() }));
+  const cards = () => screen.queryAllByRole("link", { name: /Product \d+/ });
+
   it("lists every product, 24 at a time", async () => {
-    serve(Array.from({ length: 30 }, (_, i) => product(i + 1, { createdAt: `2026-01-${String(30 - i).padStart(2, "0")}T00:00:00Z` })));
+    serve(many(30));
     view();
-    await screen.findByText("Product 1");
-    expect(screen.getAllByRole("link")).toHaveLength(24);
+    await waitFor(() => expect(cards()).toHaveLength(24));
     await userEvent.click(screen.getByRole("button", { name: "Show more products" }));
-    expect(screen.getAllByRole("link")).toHaveLength(30);
+    await waitFor(() => expect(cards()).toHaveLength(30));
+    expect(new Set(cards().map((a) => a.textContent)).size).toBe(30);
     expect(screen.queryByRole("button", { name: "Show more products" })).not.toBeInTheDocument();
+  });
+
+  it("offers page links, and a page link jumps straight to that page", async () => {
+    serve(many(60));
+    view();
+    await waitFor(() => expect(cards()).toHaveLength(24));
+    const pager = screen.getByRole("navigation", { name: "Product pages" });
+    expect(within(pager).getAllByRole("button", { name: /^Page / }).map((b) => b.textContent)).toEqual(["1", "2", "3"]);
+    expect(within(pager).getByRole("button", { name: "Page 1" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Showing 1–24 of 60")).toBeInTheDocument();
+    await userEvent.click(within(pager).getByRole("button", { name: "Page 3" }));
+    await waitFor(() => expect(cards()).toHaveLength(12));
+    expect(within(pager).getByRole("button", { name: "Page 3" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByText("Showing 49–60 of 60")).toBeInTheDocument();
+  });
+
+  it("asks for every page with the visit's rotation hour, so the order never changes while the visitor pages through it", async () => {
+    serve(many(60));
+    view();
+    await waitFor(() => expect(cards()).toHaveLength(24));
+    await userEvent.click(screen.getByRole("button", { name: "Show more products" }));
+    await waitFor(() => expect(cards()).toHaveLength(48));
+    const epochs = vi.mocked(items.getPage).mock.calls.map(([, opts]) => opts.epoch);
+    expect(new Set(epochs).size).toBe(1);
+    expect(Number.isInteger(epochs[0])).toBe(true);
+  });
+
+  it("keeps the list shallow: after the last page it invites the visitor to search, filter or browse instead", async () => {
+    serve(many(200));
+    view("/?ppage=8");
+    await waitFor(() => expect(cards()).toHaveLength(24));
+    expect(screen.getByText("That’s the top of the list for now")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Search products" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more products" })).not.toBeInTheDocument();
+    const pager = screen.getByRole("navigation", { name: "Product pages" });
+    expect(within(pager).getAllByRole("button", { name: /^Page / })).toHaveLength(8);
   });
 
   it("renders nothing when there are no products", async () => {

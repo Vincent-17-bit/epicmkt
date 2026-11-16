@@ -50,6 +50,10 @@ export const items = {
   // The home grid asks the server for one page at a time, plus the filter options and live option counts.
   getPage: (filters, opts) => products.getPage(filters, opts),
   getFacets: () => products.getFacets(),
+  // Type-ahead while typing: { terms, products, stores, categories, corrected } (lib/suggest.js has the shape).
+  suggest: (prefix) => products.getSuggest(prefix),
+  // Trending searches for the menu, worked out on the hour: { computedAt, live, items: [{ term, count, hot, image, ... }] }.
+  getTrending: () => products.getTrending(),
   getCounts: (filters) => products.getCounts(filters),
   getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts),
   // The shoe conversion chart for the size chart modal; the built-in chart when the call fails.

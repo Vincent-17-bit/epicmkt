@@ -14,14 +14,24 @@
 //   5. Time-dependent facts (open now, a flash sale that has ended) are re-evaluated once a minute against the clock, not
 //      only when the snapshot is rebuilt, so a stale snapshot never shows a sale that is over.
 //
+// Past the snapshot (catalogue scale, docs/catalog-scale.md, migration 0128):
+//   * op=page, recommended, no filters: the feed of the visitor's rotation hour, built from products_feed_pool (featured shops'
+//     products, the freshest, a slice of the long tail), blended once per hour (src/lib/feed.js) and frozen for that hour.
+//   * op=search: when the catalogue is bigger than the snapshot, the indexed search_product_candidates adds what the snapshot
+//     cannot hold, so an old product is still found; ranking, filters and facets are unchanged.
+//   * op=suggest: type-ahead from the search_suggest dictionary (a few ms whatever the catalogue size); the snapshot otherwise.
+//   * op=trending: the most searched terms, worked out on the hour, cached until a few minutes past the next hour.
+//
 // Only data the anon key can already read leaves here. No service-role key is used.
 
 import { PLAN_FEATURES } from "../../shared/src/constants.js";
 import { normalizeText } from "../../shared/src/utils.js";
 import { statusOf } from "../../shared/src/openState.js";
 import { isListed } from "../../shared/src/availability.js";
-import { EMPTY_FILTERS } from "../src/lib/productFilters.js";
+import { EMPTY_FILTERS, countActive } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
+import { FEED_MAX_PAGES, blendFeed, clampEpoch, pagesOf } from "../src/lib/feed.js";
+import { buildSuggestIndex, correctWord, suggestFrom, suggestKey } from "../src/lib/suggest.js";
 import { parseRequest } from "./_lib/productParams.js";
 import { parseSearch, searchProducts } from "../../shared/src/search/search.js";
 import { cached } from "./_lib/redis.js";
@@ -242,6 +252,11 @@ async function addSearchFacts(snap) {
       console.warn(`[products] public_item_search_facts unavailable (${error?.message ?? error}); search filters use names only`);
       return {};
     });
+  mergeFacts(snap, facts);
+}
+
+function mergeFacts(snap, facts) {
+  if (!facts || typeof facts !== "object") return;
   for (const p of snap.products) {
     const f = facts[p.id];
     if (!f) continue;
@@ -300,6 +315,119 @@ async function snapshot() {
   }
 }
 
+// ---- The home feed of one rotation hour --------------------------------------------------------------------------------------
+// One entry per hour asked for (a visitor keeps the hour their visit started, so a few hours can be live at once). The ORDER is
+// worked out once per hour and kept; the products behind it are refreshed like the snapshot, so a product that is removed or
+// sold out simply drops out of its page and nothing else moves.
+const FEED_KEEP = 8;
+const MIN_POOL = 48;
+const feeds = new Map();
+
+async function feedPool(epoch) {
+  let entry = feeds.get(epoch);
+  if (entry?.snap && Date.now() - entry.at < FRESH_MS) return entry;
+  if (!entry) {
+    entry = { at: 0, snap: null, order: null, inflight: null };
+    feeds.set(epoch, entry);
+    while (feeds.size > FEED_KEEP) feeds.delete(Math.min(...feeds.keys()));
+  }
+  entry.inflight ??= cached(`products:feed:v1:${epoch}`, { freshMs: FRESH_MS, staleMs: STALE_MS }, () =>
+    rpc("products_feed_pool", { p_epoch: epoch }, { timeoutMs: 10_000 })
+  )
+    .then(({ data, at }) => {
+      const snap = buildSnapshot({ items: data.items ?? [], businesses: data.businesses ?? [], truncated: false });
+      mergeFacts(snap, data.facts);
+      entry.snap = snap;
+      entry.byId = new Map(snap.products.map((p) => [p.id, p]));
+      entry.at = at ?? Date.now();
+      return entry;
+    })
+    .finally(() => {
+      entry.inflight = null;
+    });
+  try {
+    return await entry.inflight;
+  } catch (error) {
+    if (entry.snap && Date.now() - entry.at < STALE_MS) return entry;
+    throw error;
+  }
+}
+
+function feedPage(entry, epoch, { page, pageSize }, now) {
+  tick(entry.snap, now);
+  entry.order ??= blendFeed(entry.snap.products, { epoch, pageSize, limit: FEED_MAX_PAGES * pageSize }).map((p) => p.id);
+  const pages = pagesOf(entry.order.length, pageSize);
+  const start = (page - 1) * pageSize;
+  const items = page <= pages ? entry.order.slice(start, start + pageSize).map((id) => entry.byId.get(id)).filter(Boolean) : [];
+  return {
+    items,
+    total: entry.order.length,
+    catalogTotal: Math.max(entry.order.length, entry.snap.products.length),
+    page,
+    pageSize,
+    pages,
+    hasMore: page < pages,
+    capped: true,
+    epoch
+  };
+}
+
+// ---- Search beyond the snapshot ---------------------------------------------------------------------------------------------
+const MEMO_MAX = 300;
+const memo = (map, key, value) => {
+  map.set(key, value);
+  if (map.size > MEMO_MAX) map.delete(map.keys().next().value);
+  return value;
+};
+const candidateMemo = new Map();
+
+async function candidatesFor(q) {
+  const key = suggestKey(q);
+  const hit = candidateMemo.get(key);
+  if (hit && Date.now() - hit.at < FRESH_MS) return hit.value;
+  const data = await rpc("search_product_candidates", { p_query: q, p_limit: 600 }, { timeoutMs: 6_000 });
+  const snap = buildSnapshot({ items: data.items ?? [], businesses: data.businesses ?? [], truncated: false });
+  mergeFacts(snap, data.facts);
+  return memo(candidateMemo, key, { at: Date.now(), value: { snap, matched: Number(data.matched) || 0, corrected: data.corrected ?? null } }).value;
+}
+
+// ---- Type-ahead and trending ------------------------------------------------------------------------------------------------
+const suggestMemo = new Map();
+const SUGGEST_MS = 5 * 60_000;
+
+async function suggestions(q) {
+  const key = suggestKey(q);
+  const hit = suggestMemo.get(key);
+  if (hit && Date.now() - hit.at < SUGGEST_MS) return hit.value;
+  let value = null;
+  try {
+    const data = await rpc("search_suggest", { p_prefix: q.trim().toLowerCase(), p_limit: 8 }, { timeoutMs: 2_500 });
+    if (data && typeof data === "object") value = { ...data, source: "index" };
+  } catch (error) {
+    console.warn(`[products] search_suggest unavailable (${error?.message ?? error}); suggesting from the snapshot`);
+  }
+  if (!value) {
+    const snap = await snapshot();
+    snap.suggest ??= buildSuggestIndex(snap.products);
+    value = { ...suggestFrom(snap.suggest, q), source: "snapshot" };
+  }
+  return memo(suggestMemo, key, { at: Date.now(), value }).value;
+}
+
+async function trending() {
+  try {
+    const data = await rpc("top_searches_hourly", { p_limit: 10 }, { timeoutMs: 3_000 });
+    if (data && Array.isArray(data.items)) return data;
+  } catch (error) {
+    console.warn(`[products] top_searches_hourly unavailable (${error?.message ?? error}); using the live count`);
+  }
+  const rows = await rpc("top_searches", { p_limit: 10 }, { timeoutMs: 3_000 }).catch(() => []);
+  return { computedAt: new Date().toISOString(), live: true, items: (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot })) };
+}
+
+// The trending list changes on the hour (pg_cron at :02): cache it until 5 minutes past the next hour.
+const untilNextHour = (now) => Math.max(60, Math.ceil((3_600_000 - (now % 3_600_000)) / 1000) + 300);
+
 const reply = (body, status, cache) =>
   new Response(JSON.stringify(body), {
     status,
@@ -308,6 +436,7 @@ const reply = (body, status, cache) =>
 
 const PAGE_CACHE = "public, max-age=15, s-maxage=60, stale-while-revalidate=300, stale-if-error=3600";
 const FACET_CACHE = "public, max-age=60, s-maxage=300, stale-while-revalidate=600, stale-if-error=3600";
+const SUGGEST_CACHE = "public, max-age=60, s-maxage=600, stale-while-revalidate=3600, stale-if-error=86400";
 
 // Only what the grid shows leaves the function: no search text, no internal ids.
 const outgoing = ({ hay: _hay, sizeValues: _sizeValues, specs: _specs, highlights: _highlights, optionValues: _optionValues, ...product }) => product;   // filter-only facts stay here; swatches are shown on the cards
@@ -323,10 +452,65 @@ export default async function handler(req) {
       const snap = await snapshot();
       const now = Date.now();
       tick(snap, now);
-      const result = searchProducts(snap.products, parseSearch(params));
-      return reply({ ...result, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
+      let search = parseSearch(params);
+      let products = snap.products;
+      let extra = {};
+      // A catalogue bigger than the snapshot: the indexed search finds what the snapshot cannot hold (older products), and the
+      // same ranking runs over both. A catalogue that fits keeps the snapshot alone (it also matches descriptions and specs).
+      if (snap.truncated && search.q.trim()) {
+        try {
+          const found = await candidatesFor(search.q);
+          tick(found.snap, now);
+          const ids = new Set(snap.products.map((p) => p.id));
+          products = [...snap.products, ...found.snap.products.filter((p) => !ids.has(p.id))];
+          extra = { matchedAll: found.matched };
+          // Nothing for what was typed, but the database corrected a misspelling ("mlik" -> "milk"): answer the corrected query,
+          // and say so, the way big shops do ("Showing results for milk").
+          if (found.corrected && !searchProducts(snap.products, { ...search, page: 1 }).total) {
+            search = { ...search, q: found.corrected };
+            extra.corrected = found.corrected;
+          }
+        } catch (error) {
+          console.warn(`[products] search_product_candidates unavailable (${error?.message ?? error}); searching the snapshot only`);
+        }
+      }
+      let result = searchProducts(products, search);
+      // Still nothing: correct each unknown word against the snapshot's own words ("mlik" -> "milk") and try once more.
+      if (!result.total && search.q.trim() && !extra.corrected) {
+        snap.suggest ??= buildSuggestIndex(snap.products);
+        const typed = suggestKey(search.q);
+        const fixed = typed.split(" ").map((w) => correctWord(snap.suggest, w) ?? w).join(" ");
+        if (fixed !== typed) {
+          const again = searchProducts(products, { ...search, q: fixed });
+          if (again.total) {
+            result = again;
+            extra.corrected = fixed;
+          }
+        }
+      }
+      return reply({ ...result, ...extra, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
     } catch (error) {
       console.error(`[products] search unavailable: ${error?.message ?? error}`);
+      return reply({ error: "unavailable" }, 502, "no-store");
+    }
+  }
+  if (params.get("op") === "suggest") {
+    const q = String(params.get("q") ?? "").slice(0, 60);
+    if (suggestKey(q).length < 2) return reply({ terms: [], products: [], stores: [], categories: [], corrected: null }, 200, SUGGEST_CACHE);
+    try {
+      return reply(await suggestions(q), 200, SUGGEST_CACHE);
+    } catch (error) {
+      console.error(`[products] suggestions unavailable: ${error?.message ?? error}`);
+      return reply({ error: "unavailable" }, 502, "no-store");
+    }
+  }
+  if (params.get("op") === "trending") {
+    const now = Date.now();
+    try {
+      const age = untilNextHour(now);
+      return reply(await trending(), 200, `public, max-age=${Math.min(age, 600)}, s-maxage=${age}, stale-while-revalidate=600, stale-if-error=86400`);
+    } catch (error) {
+      console.error(`[products] trending unavailable: ${error?.message ?? error}`);
       return reply({ error: "unavailable" }, 502, "no-store");
     }
   }
@@ -343,7 +527,20 @@ export default async function handler(req) {
       return reply(snap.summary, 200, FACET_CACHE);
     }
     if (op === "counts") return reply(countsSummary(snap.products, filters), 200, PAGE_CACHE);
-    const result = pageOf(snap.products, filters ?? EMPTY_FILTERS, { page, pageSize });
+    const epoch = clampEpoch(parsed.epoch, now);
+    // The unfiltered recommended feed: the hour's pool, when the database has it and it is big enough to be worth it.
+    if (filters.sort === "recommended" && countActive(filters) === 0 && snap.truncated) {
+      try {
+        const entry = await feedPool(epoch);
+        if (entry.snap.products.length >= MIN_POOL) {
+          const result = feedPage(entry, epoch, { page, pageSize }, now);
+          return reply({ ...result, catalogTotal: Math.max(result.catalogTotal, snap.products.length), items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
+        }
+      } catch (error) {
+        console.warn(`[products] products_feed_pool unavailable (${error?.message ?? error}); blending the snapshot`);
+      }
+    }
+    const result = pageOf(snap.products, filters ?? EMPTY_FILTERS, { page, pageSize, epoch });
     return reply({ ...result, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
   } catch (error) {
     console.error(`[products] unavailable: ${error?.message ?? error}`);

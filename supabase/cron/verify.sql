@@ -1,6 +1,6 @@
 -- Run after schedule.sql, then again a few minutes later. Read-only.
 
--- 1. All four jobs exist and are active.
+-- 1. All five jobs exist and are active (search-rollups runs inside the database, so it has no HTTP answer in 3).
 select jobname, schedule, active from cron.job order by jobname;
 
 -- 2. What the scheduler itself did. "succeeded" only means the HTTP request was queued, not that the function worked: see 3.
@@ -21,3 +21,9 @@ select count(*) filter (where status = 'queued') as queued,
        count(*) filter (where status = 'failed' and created_at >= now() - interval '7 days') as failed_7d,
        max(sent_at) filter (where status in ('sent', 'delivered')) as last_sent
 from public.messages where channel in ('sms', 'email');
+
+-- 5. Search rollups (0128): the dictionary and the trending list were rebuilt within the last hour or so.
+select (select max(refreshed_at) from public.search_terms) as dictionary_refreshed,
+       (select count(*) from public.search_terms) as dictionary_rows,
+       (select max(computed_at) from public.search_top_hourly) as trending_computed,
+       (select count(*) from public.search_top_hourly) as trending_rows;

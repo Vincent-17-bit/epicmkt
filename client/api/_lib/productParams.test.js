@@ -15,7 +15,7 @@ describe("productParams", () => {
     expect(r.filters.q).toHaveLength(80);
     expect(r.filters.min).toBe("");
     expect(r.filters.max).toBe("");
-    expect(r.filters.sort).toBe("newest");
+    expect(r.filters.sort).toBe("recommended");
     expect(r.page).toBe(1);
     expect(r.pageSize).toBe(48);
     expect(r.filters.categories).toEqual(["a"]);

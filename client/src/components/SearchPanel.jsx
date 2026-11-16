@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMagnifyingGlass,
@@ -9,38 +9,81 @@ import {
   faClockRotateLeft,
   faTableCells,
   faStore,
-  faScrewdriverWrench
+  faArrowUpLong,
+  faArrowRight,
+  faArrowTrendUp
 } from "@fortawesome/free-solid-svg-icons";
-import { getSuggestions, getTopSearches, logSearch } from "../api/index.js";
+import { formatTime, resizeImageUrl } from "@epicmkt/shared";
+import { getCategories, items, logSearch } from "../api/index.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
+import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
 import Flame from "./Flame.jsx";
 import styles from "./SearchPanel.module.css";
 
 export const SEARCH_ID = "site-search";
 
-const GROUP_LIMIT = 4;
+// Type-ahead, the way shoppers expect it (Baymard's autocomplete findings, Amazon, Jumia):
+//   * suggestions start at 2 letters and come from the database dictionary (search_suggest, a few ms) or, failing that, the
+//     product list; a short pause (DEBOUNCE_MS) keeps typing smooth and the previous answer stays up while the next loads;
+//   * at most 8 phrase suggestions, then up to 4 products with a picture and price, stores and categories: each kind leads
+//     straight to its own page (product, store, category);
+//   * the part the shopper has NOT typed is bold, so the eye goes to the completion;
+//   * arrow keys move through every row; on a phrase they copy it into the box (to edit it) and Escape puts back what was typed;
+//     the arrow button beside a phrase does the same with a tap;
+//   * a misspelling is corrected ("mlik" -> showing "milk") instead of showing nothing.
+const DEBOUNCE_MS = 120;
+const fmt = new Intl.NumberFormat("en-KE", { maximumFractionDigits: 0 });
+const price = (n) => (Number.isFinite(Number(n)) && Number(n) > 0 ? `KES ${fmt.format(Number(n))}` : null);
+const thumb = (url) => (url ? resizeImageUrl(url, 96) : null);
+
+// "mi" in "milk powder": typed part plain, completion bold. A match inside the text ("omo milk") marks the typed part instead.
+function Marked({ text, typed }) {
+  const q = suggestKey(typed);
+  const lower = String(text).toLowerCase();
+  if (!q) return text;
+  if (lower.startsWith(q)) {
+    return (
+      <>
+        <span className={styles.typed}>{text.slice(0, q.length)}</span>
+        <b className={styles.completion}>{text.slice(q.length)}</b>
+      </>
+    );
+  }
+  const at = lower.indexOf(q);
+  if (at < 0) return <b className={styles.completion}>{text}</b>;
+  return (
+    <>
+      <b className={styles.completion}>{text.slice(0, at)}</b>
+      <span className={styles.typed}>{text.slice(at, at + q.length)}</span>
+      <b className={styles.completion}>{text.slice(at + q.length)}</b>
+    </>
+  );
+}
+
+function Thumb({ src, icon }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <span className={styles.thumb} aria-hidden="true">
+      {src && !broken ? <img src={src} alt="" width="40" height="40" loading="lazy" decoding="async" onError={() => setBroken(true)} /> : <FontAwesomeIcon icon={icon} />}
+    </span>
+  );
+}
 
 function Rows({ count }) {
   return Array.from({ length: count }, (_, i) => (
-    <li key={i} aria-hidden="true">
-      <Skeleton height="40px" radius="var(--radius-card)" />
+    <li key={i} aria-hidden="true" className={styles.skeletonRow}>
+      <Skeleton height="36px" radius="10px" />
     </li>
   ));
 }
 
-function Option({ icon, children, onClick }) {
-  return (
-    <button type="button" className={styles.option} onClick={onClick}>
-      <span className={styles.optionIcon}>{icon}</span>
-      <span className={styles.optionName}>{children}</span>
-    </button>
-  );
-}
-
 export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRef }) {
+  const listId = useId();
   const [term, setTerm] = useState("");
-  // What Enter searches: products (Amazon-style results with filters) or businesses. Remembered for the visit.
+  const [typed, setTyped] = useState("");
+  const [active, setActive] = useState(-1);
+  // What Enter searches: products (results with filters) or stores. Remembered for the visit.
   const [scope, setScope] = useState(() => {
     try {
       return sessionStorage.getItem("epicmkt-search-scope") === "businesses" ? "businesses" : "products";
@@ -59,35 +102,42 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   };
   const [debounced, setDebounced] = useState("");
   const [recent, setRecent] = useState(getRecent);
-  const normalized = normalizeTerm(term);
-  const active = normalized !== "";
+  const normalized = normalizeTerm(typed);
+  const key = suggestKey(normalized);
+  const typing = key.length >= 2;
 
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(normalized), 250);
+    const id = setTimeout(() => setDebounced(key), DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [normalized]);
+  }, [key]);
 
   useEffect(() => {
     if (open) setRecent(getRecent());
-    else setTerm("");
+    else {
+      setTerm("");
+      setTyped("");
+      setActive(-1);
+    }
   }, [open]);
 
-  const top = useQuery({
-    queryKey: ["top-searches"],
-    queryFn: () => getTopSearches(10),
+  const trending = useQuery({
+    queryKey: ["trending"],
+    queryFn: () => items.getTrending(),
     enabled: open,
-    staleTime: 30_000,
-    refetchInterval: open && !active ? 60_000 : false,
-    refetchOnWindowFocus: true,
-    placeholderData: (previous) => previous
+    staleTime: 10 * 60_000,
+    refetchInterval: open && !typing ? 10 * 60_000 : false,
+    placeholderData: keepPreviousData
   });
 
   const suggestions = useQuery({
-    queryKey: ["suggestions", debounced],
-    queryFn: () => getSuggestions(debounced, 40),
-    enabled: open && debounced !== "",
-    staleTime: 60_000
+    queryKey: ["suggest", debounced],
+    queryFn: () => items.suggest(debounced),
+    enabled: open && debounced.length >= 2,
+    staleTime: 5 * 60_000,
+    // While the next answer loads, the last one stays (filtered to what is typed now), so the list never blinks.
+    placeholderData: keepPreviousData
   });
+  const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000, enabled: open });
 
   const commit = (value) => {
     const clean = normalizeTerm(value);
@@ -97,36 +147,88 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
     onSelect(scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`);
   };
 
+  // Every row in one list for the arrow keys: phrases, products, stores, categories, then "see all results".
+  const groups = (() => {
+    if (!typing) return [];
+    const data = suggestions.data ?? {};
+    const fits = (label) => {
+      const k = suggestKey(label);
+      return k.startsWith(key) || ` ${k}`.includes(` ${key}`) || Boolean(data.corrected);
+    };
+    const terms = (data.terms ?? []).filter((t) => fits(t.label)).slice(0, 8);
+    const products = (data.products ?? []).filter((p) => p?.id && p?.slug).slice(0, 4);
+    const stores = (data.stores ?? []).slice(0, 4);
+    const cats = [...(data.categories ?? [])];
+    for (const c of matchCategories(categories.data, key)) if (!cats.some((x) => x.id === c.id)) cats.push(c);
+    return [
+      { key: "terms", title: null, rows: terms.map((t) => ({ kind: "term", id: `t-${t.label}`, label: t.label, go: () => commit(t.label) })) },
+      {
+        key: "products",
+        title: "Products",
+        rows: products.map((p) => ({ kind: "product", id: `p-${p.id}`, label: p.name, image: thumb(p.image), price: price(p.price), go: () => onSelect(`/b/${p.slug}/i/${encodeURIComponent(p.id)}`) }))
+      },
+      { key: "stores", title: "Stores", rows: stores.map((s) => ({ kind: "store", id: `s-${s.slug}`, label: s.label, go: () => onSelect(`/b/${s.slug}`) })) },
+      { key: "categories", title: "Categories", rows: cats.slice(0, 3).map((c) => ({ kind: "category", id: `c-${c.id}`, label: c.label, go: () => onSelect(`/c/${c.id}`) })) },
+      // A corrected misspelling searches the correction ("mlik" -> all products for "milk").
+      { key: "all", title: null, rows: [{ kind: "all", id: "all", label: data.corrected ?? normalized, go: () => commit(data.corrected ?? normalized) }] }
+    ].filter((g) => g.rows.length);
+  })();
+  const flat = groups.flatMap((g) => g.rows);
+  const settled = typing && debounced === key && !suggestions.isFetching;
+  const loading = typing && !suggestions.data && !suggestions.isError;
+  const nothing = settled && flat.length === 1;
+  const corrected = typing ? suggestions.data?.corrected ?? null : null;
+
+  const optionId = (row) => `${listId}-${row.id}`.replace(/[^a-zA-Z0-9_:-]/g, "_");
+  const move = (to) => {
+    const next = to < -1 ? flat.length - 1 : to >= flat.length ? -1 : to;
+    setActive(next);
+    const row = flat[next];
+    // A phrase is copied into the box, so the shopper can edit it; anything else leaves the box as typed.
+    setTerm(row?.kind === "term" ? row.label : typed);
+    if (row) document.getElementById(optionId(row))?.scrollIntoView?.({ block: "nearest" });
+  };
+
+  const onKeyDown = (event) => {
+    if (!typing || !flat.length) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      move(active + 1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      move(active - 1);
+    } else if (event.key === "Escape" && active >= 0) {
+      event.preventDefault();
+      event.stopPropagation();
+      setActive(-1);
+      setTerm(typed);
+    } else if (event.key === "Enter" && active >= 0) {
+      event.preventDefault();
+      flat[active].go();
+    }
+  };
+
+  const change = (value) => {
+    setTerm(value);
+    setTyped(value);
+    setActive(-1);
+  };
+  const fill = (label) => {
+    change(`${label} `);
+    inputRef.current?.focus();
+  };
   const submit = (event) => {
     event.preventDefault();
     commit(term);
   };
-
   const clear = () => {
-    setTerm("");
+    change("");
     inputRef.current?.focus();
   };
 
-  const groups = [
-    { key: "business", title: "Businesses", icon: faStore },
-    { key: "term", title: "Services", icon: faScrewdriverWrench },
-    { key: "category", title: "Categories", icon: faTableCells }
-  ].map((group) => ({
-    ...group,
-    items: (suggestions.data ?? []).filter((item) => item.type === group.key).slice(0, GROUP_LIMIT)
-  }));
-
-  const settled = active && debounced === normalized && !suggestions.isPending;
-  const loading = active && !settled && !suggestions.isError;
-  const empty = settled && groups.every((group) => group.items.length === 0);
-
-  const choose = (group, item) => {
-    if (group.key === "business") onSelect(`/b/${item.slug}`);
-    else if (group.key === "category") onSelect(`/c/${item.categoryId}`);
-    else commit(item.label);
-  };
-
   const suggestTo = `/contact?suggest=${encodeURIComponent(normalized)}`;
+  const hour = trending.data?.computedAt && !trending.data.live ? formatTime(trending.data.computedAt) : null;
+  const trend = trending.data?.items ?? [];
 
   return (
     <>
@@ -146,126 +248,210 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
         <Container className={styles.inner}>
           <form role="search" className={styles.bar} onSubmit={submit}>
             <div className={styles.search}>
+              <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.lens} aria-hidden="true" />
               <label htmlFor="search-input" className="sr-only">
-                {scope === "products" ? "Search products" : "Search businesses"}
+                {scope === "products" ? "Search products, stores and categories" : "Search stores"}
               </label>
               <input
                 id="search-input"
                 ref={inputRef}
                 type="search"
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={typing && flat.length > 0}
+                aria-controls={listId}
+                aria-activedescendant={active >= 0 && flat[active] ? optionId(flat[active]) : undefined}
                 enterKeyHint="search"
                 autoComplete="off"
-                placeholder={scope === "products" ? "Search products: speakers, phones, cement…" : "Search businesses"}
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder={scope === "products" ? "Search products, stores, categories…" : "Search stores and services…"}
                 value={term}
-                onChange={(event) => setTerm(event.target.value)}
+                onChange={(event) => change(event.target.value)}
+                onKeyDown={onKeyDown}
                 className={styles.input}
               />
-              {term && <IconButton icon={faCircleXmark} label="Clear search" onClick={clear} />}
-              <IconButton type="submit" icon={faMagnifyingGlass} label="Search" className={styles.submit} />
+              {term && <IconButton icon={faCircleXmark} label="Clear search" onClick={clear} className={styles.clear} />}
+              <button type="submit" className={styles.go}>
+                Search
+              </button>
             </div>
-            <IconButton icon={faXmark} label="Close search" onClick={onClose} />
+            <button type="button" className={styles.cancel} onClick={onClose}>
+              <span className={styles.cancelText}>Cancel</span>
+              <FontAwesomeIcon icon={faXmark} className={styles.cancelIcon} aria-hidden="true" />
+              <span className="sr-only">Close search</span>
+            </button>
           </form>
           <div className={styles.scope} role="radiogroup" aria-label="Search in">
-            {[["products", "Products"], ["businesses", "Businesses"]].map(([id, label]) => (
+            {[["products", "Products"], ["businesses", "Stores"]].map(([id, label]) => (
               <button key={id} type="button" role="radio" aria-checked={scope === id} className={styles.scopeBtn} onClick={() => pickScope(id)}>
                 {label}
               </button>
             ))}
           </div>
 
-          {active ? (
-            <div className={styles.results} aria-live="polite">
-              {loading && (
+          {typing ? (
+            <div className={styles.results}>
+              {corrected && (
+                <p className={styles.corrected} role="status">
+                  Showing results for <b>{corrected}</b>
+                </p>
+              )}
+              {loading ? (
                 <ul className={styles.list}>
-                  <Rows count={3} />
+                  <Rows count={4} />
+                </ul>
+              ) : (
+                <ul id={listId} role="listbox" aria-label="Suggestions" className={styles.list} data-stale={(suggestions.isFetching && debounced !== key) || undefined}>
+                  {groups.map((group) => (
+                    <Fragment key={group.key}>
+                      {group.title && (
+                        <li role="presentation" className={styles.groupTitle}>
+                          {group.title}
+                        </li>
+                      )}
+                      {group.rows.map((row) => {
+                        const index = flat.indexOf(row);
+                        const on = index === active;
+                        return (
+                          <li
+                            key={row.id}
+                            id={optionId(row)}
+                            role="option"
+                            aria-selected={on}
+                            data-kind={row.kind}
+                            className={styles.row}
+                            onMouseDown={(event) => event.preventDefault()}
+                            onClick={row.go}
+                            onMouseMove={() => active !== index && setActive(index)}
+                          >
+                            {row.kind === "term" && (
+                              <>
+                                <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.rowIcon} aria-hidden="true" />
+                                <span className={styles.rowLabel}>
+                                  <Marked text={row.label} typed={corrected ?? normalized} />
+                                </span>
+                                <button
+                                  type="button"
+                                  tabIndex={-1}
+                                  className={styles.fill}
+                                  aria-label={`Edit “${row.label}”`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    fill(row.label);
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faArrowUpLong} className={styles.fillIcon} aria-hidden="true" />
+                                </button>
+                              </>
+                            )}
+                            {row.kind === "product" && (
+                              <>
+                                <Thumb src={row.image} icon={faMagnifyingGlass} />
+                                <span className={`${styles.rowLabel} ${styles.rowStack}`}>
+                                  <span className={styles.clamp}>{row.label}</span>
+                                  {row.price && <span className={styles.price}>{row.price}</span>}
+                                </span>
+                              </>
+                            )}
+                            {(row.kind === "store" || row.kind === "category") && (
+                              <>
+                                <span className={styles.badgeIcon} data-kind={row.kind} aria-hidden="true">
+                                  <FontAwesomeIcon icon={row.kind === "store" ? faStore : faTableCells} />
+                                </span>
+                                <span className={styles.rowLabel}>{row.label}</span>
+                              </>
+                            )}
+                            {row.kind === "all" && (
+                              <>
+                                <FontAwesomeIcon icon={faArrowRight} className={styles.rowIcon} aria-hidden="true" />
+                                <span className={styles.rowLabel}>
+                                  See all {scope === "products" ? "products" : "stores"} for <b>“{row.label}”</b>
+                                </span>
+                              </>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
                 </ul>
               )}
-              {settled &&
-                groups
-                  .filter((group) => group.items.length > 0)
-                  .map((group) => (
-                    <section key={group.key} aria-labelledby={`search-${group.key}`}>
-                      <h2 id={`search-${group.key}`} className={styles.label}>
-                        {group.title}
-                      </h2>
-                      <ul className={styles.list}>
-                        {group.items.map((item) => (
-                          <li key={`${group.key}-${item.label}`}>
-                            <Option icon={<FontAwesomeIcon icon={group.icon} />} onClick={() => choose(group, item)}>
-                              {item.label}
-                            </Option>
-                          </li>
-                        ))}
-                      </ul>
-                    </section>
-                  ))}
-              {empty && (
+              {nothing && (
                 <div className={styles.empty}>
-                  <p>No results for &ldquo;{normalized}&rdquo;.</p>
-                  <Link
-                    to={suggestTo}
-                    className={styles.suggest}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      onSelect(suggestTo);
-                    }}
-                  >
-                    Suggest this business/category
-                  </Link>
+                  <p>
+                    No suggestions for “{normalized}”. Press Search to look through every product, or{" "}
+                    <Link
+                      to={suggestTo}
+                      className={styles.suggest}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        onSelect(suggestTo);
+                      }}
+                    >
+                      suggest a business
+                    </Link>
+                    .
+                  </p>
                 </div>
               )}
             </div>
           ) : (
-            <>
+            <div className={styles.idle}>
               {recent.length > 0 && (
                 <section aria-labelledby="search-recent">
                   <div className={styles.head}>
                     <h2 id="search-recent" className={styles.label}>
-                      Recent searches
+                      Recent
                     </h2>
-                    <button
-                      type="button"
-                      className={styles.clearAll}
-                      onClick={() => setRecent(clearRecent())}
-                    >
-                      Clear all
+                    <button type="button" className={styles.clearAll} onClick={() => setRecent(clearRecent())}>
+                      Clear
                     </button>
                   </div>
-                  <ul className={styles.list}>
+                  <ul className={styles.chips}>
                     {recent.map((item) => (
-                      <li key={item} className={styles.recentRow}>
-                        <Option icon={<FontAwesomeIcon icon={faClockRotateLeft} />} onClick={() => commit(item)}>
+                      <li key={item} className={styles.chip}>
+                        <button type="button" className={styles.chipBtn} onClick={() => commit(item)}>
+                          <FontAwesomeIcon icon={faClockRotateLeft} aria-hidden="true" />
                           {item}
-                        </Option>
-                        <IconButton icon={faXmark} label={`Remove ${item}`} onClick={() => setRecent(removeRecent(item))} />
+                        </button>
+                        <IconButton icon={faXmark} label={`Remove ${item}`} className={styles.chipX} onClick={() => setRecent(removeRecent(item))} />
                       </li>
                     ))}
                   </ul>
                 </section>
               )}
 
-              {(top.isPending || top.data?.length > 0) && (
+              {(trending.isPending || trend.length > 0) && (
                 <section aria-labelledby="search-top">
-                  <h2 id="search-top" className={styles.label}>
-                    Top searches
-                  </h2>
-                  <ol className={`${styles.list} ${styles.ranked}`}>
-                    {top.isPending ? (
-                      <Rows count={5} />
+                  <div className={styles.head}>
+                    <h2 id="search-top" className={styles.label}>
+                      <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
+                    </h2>
+                    {hour && <span className={styles.updated}>Updated {hour}</span>}
+                  </div>
+                  <ol className={styles.ranked}>
+                    {trending.isPending ? (
+                      <Rows count={6} />
                     ) : (
-                      top.data.map((item, index) => (
+                      trend.map((item, index) => (
                         <li key={item.term}>
-                          <Option icon={index + 1} onClick={() => commit(item.term)}>
-                            {item.term}
+                          <button type="button" className={styles.rankRow} onClick={() => commit(item.term)}>
+                            <span className={styles.rank} data-top={index < 3 || undefined}>
+                              {index + 1}
+                            </span>
+                            <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
+                            <span className={styles.rowLabel}>{item.term}</span>
                             {item.hot && <Flame className={styles.fire} />}
-                          </Option>
+                          </button>
                         </li>
                       ))
                     )}
                   </ol>
                 </section>
               )}
-            </>
+            </div>
           )}
         </Container>
       </div>

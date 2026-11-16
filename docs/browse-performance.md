@@ -80,5 +80,7 @@ instance memory ──(older than 30/60 s)──▶ Redis copy ──(older than
 ## Known limits and next steps
 * Without Redis each Vercel instance builds its own snapshot, so a cold start pays one database call. With Redis (below) one copy is
   shared, but a seller's change still shows up only when the copy expires (30 s browse, 60 s products); nothing clears it early.
-* Past about 10,000 public products the snapshot is capped to the newest 10,000. That is the point to move paging and filters into SQL.
+* Past about 10,000 public products the snapshot is capped to the newest 10,000. Search, type-ahead, trending and the unfiltered
+  home feed already reach the whole catalogue through indexed SQL (`docs/catalog-scale.md`, migrations 0128-0130); filters on
+  the home grid are the next thing to move into SQL.
 * Main JS chunk is still ~208 KB gzipped; audit it for what Home does not need on first paint.

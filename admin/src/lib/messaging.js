@@ -103,6 +103,7 @@ export const JOB_INFO = {
   "dispatch-messages": { label: "Send queued messages", every: "Every minute", what: "Sends queued SMS and email, retries failures and holds promotions back during quiet hours." },
   "daily-lifecycle": { label: "Daily reminders and expiry", every: "07:00 Nairobi time", what: "Queues renewal reminders, moves listings into grace and expiry, and sends the notices.", staleAfter: 26 * 60, firstRun: "07:00 Nairobi time" },
   "proofs-purge": { label: "Clear old proof uploads", every: "04:00 Nairobi time", what: "Deletes proof files 90 days after their question was resolved, and uploads that were never finished.", staleAfter: 26 * 60, firstRun: "04:00 Nairobi time" },
+  "search-rollups": { label: "Search suggestions and trending", every: "Every hour", what: "Rebuilds the type-ahead suggestions and the trending searches shown in the menu.", staleAfter: 180, firstRun: "within an hour of being scheduled" },
   "media-gc": { label: "Clean up unused pictures", every: "Every 10 minutes", what: "Deletes pictures nothing uses any more from the image store and settles uploads that were never attached.", staleAfter: 60, firstRun: "within 10 minutes of being scheduled" },
 };
 
