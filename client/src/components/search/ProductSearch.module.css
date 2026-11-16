@@ -325,8 +325,9 @@
   color: var(--text-muted);
 }
 /* The results grid: the site's product card, as many across as the space gives (the results column's own width, not the
-   window's, so opening the filter column never squeezes a card). 2 on phones, 3 on small tablets, 4 on tablets and laptops,
-   5 on wide screens. */
+   window's, so opening the filter column never squeezes a card). Compact cards: 2 on phones, then every card at least 120 px
+   (7.5rem), which is 3 on small tablets, 4 on a laptop and 7 beside the filters on a wide screen.
+   The card's own type and spacing follow its width (ProductTile.module.css), so nothing inside it needs a breakpoint. */
 .list {
   list-style: none;
   margin: 0;
@@ -341,17 +342,7 @@
 }
 @container results (min-width: 30rem) {
   .list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-@container results (min-width: 42rem) {
-  .list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-@container results (min-width: 62rem) {
-  .list {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
   }
 }
 .cta,

@@ -6,6 +6,7 @@ import { searchProducts, writeSearch } from "@epicmkt/shared";
 import { isLive } from "../flash/mode.js";
 import { buildSuggestIndex, correctWord, suggestKey } from "../../lib/suggest.js";
 import * as flashApi from "../flash/index.js";
+import { shapeProduct } from "./shape.js";
 
 const ENDPOINT = "/api/products";
 const TIMEOUT_MS = 8000;
@@ -27,7 +28,9 @@ async function viaEndpoint(search) {
   query.set("op", "search");
   const res = await fetch(`${ENDPOINT}?${query}`, { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
   if (!res.ok || !(res.headers.get("content-type") ?? "").includes("application/json")) throw new Error(`search_${res.status}`);
-  return res.json();
+  const data = await res.json();
+  // Picture paths become urls here, as for the grid pages (shape.js); otherwise every card shows the placeholder.
+  return { ...data, items: (data.items ?? []).map(shapeProduct) };
 }
 
 // Nothing found: try once more with each unknown word corrected against the catalogue's own words ("mlik" -> "milk"), as the
