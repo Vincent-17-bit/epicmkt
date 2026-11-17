@@ -6,12 +6,15 @@ import { ELECTRONICS } from "./electronics.mjs";
 import { CYBER } from "./cyber.mjs";
 import { FOOD_HEALTH } from "./foodHealth.mjs";
 import { HOME_AUTO } from "./homeAuto.mjs";
+import { COVERAGE_FOOD } from "./coverageFood.mjs";
+import { COVERAGE_HEALTH } from "./coverageHealth.mjs";
+import { COVERAGE_HOME } from "./coverageHome.mjs";
 
-export { FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO };
+export { FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME };
 
 // A later file wins when two files describe the same id (the home and auto table is the more specific one for furniture and phone repair).
 const merged = new Map();
-for (const list of [FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO]) for (const type of list) merged.set(type.id, type);
+for (const list of [FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME]) for (const type of list) merged.set(type.id, type);
 export const ALL_TYPES = Object.freeze([...merged.values()]);
 
 const json = (v) => JSON.stringify(v);
