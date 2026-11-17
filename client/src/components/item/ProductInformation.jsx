@@ -27,6 +27,14 @@ function Fold({ id, open, children }) {
   );
 }
 
+export function ProductInfoLink() {
+  return (
+    <button type="button" className={styles.jump} onClick={openProductInfo}>
+      See more product details
+    </button>
+  );
+}
+
 export default function ProductInformation({ item }) {
   const uid = useId();
   const groups = buildInfoGroups(item?.specs);

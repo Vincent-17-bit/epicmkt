@@ -10,7 +10,7 @@ import Gallery from "./Gallery.jsx";
 import Header from "./Header.jsx";
 import Offers from "./Offers.jsx";
 import Options from "./Options.jsx";
-import ProductInformation, { openProductInfo } from "./ProductInformation.jsx";
+import ProductInformation, { ProductInfoLink, openProductInfo } from "./ProductInformation.jsx";
 import Quantity from "./Quantity.jsx";
 import Recommend, { RecommendSection } from "./Recommend.jsx";
 import SoldFrom from "./SoldFrom.jsx";
@@ -42,7 +42,7 @@ export default function ItemLayout({ ctx }) {
         gallery={(slot) => <div id="item-overview"><Gallery ctx={ctx} slot={slot} /></div>}
         header={(slot) => <Header ctx={ctx} slot={slot} />}
         options={(slot) => <Options ctx={ctx} slot={slot} />}
-        details={(slot) => <div id="item-details"><Details ctx={ctx} slot={hasInfo ? { ...slot, onMoreSpecs: openProductInfo, onMoreInfo: openProductInfo } : slot} /></div>}
+        details={(slot) => <div id="item-details"><Details ctx={ctx} slot={hasInfo ? { ...slot, onMoreSpecs: openProductInfo, onMoreInfo: openProductInfo } : slot} />{hasInfo && !(item.highlights?.length > 0) && <ProductInfoLink />}</div>}
         specs={(slot) => <div id="item-specs"><Specs key={`specs-${slot.item.id}`} ctx={ctx} slot={slot} /></div>}
         flash={<Flash ctx={ctx} />}
         offers={

@@ -1,13 +1,16 @@
 import { useState } from "react";
-import { INFO_TEMPLATES, SPEC_LIMITS, infoGroupKey, infoTemplateById, infoTemplateOf, infoValueRaw, infoValueText, isTemplateGroup } from "@epicmkt/shared";
+import { INFO_TEMPLATES, SPEC_LIMITS, infoGroupKey, infoTemplateById, infoTemplateOf, infoValueRaw, infoValueText, isTemplateGroup, suggestInfoTemplate } from "@epicmkt/shared";
 import { CheckRow, Field } from "./parts.jsx";
 import styles from "./editor.module.css";
 
 const sameLabel = (a, b) => String(a).trim().toLowerCase() === String(b).trim().toLowerCase();
 
-export default function ProductInfoEditor({ specs, onChange, plainCount }) {
+export default function ProductInfoEditor({ specs, onChange, plainCount, category, typeId, name }) {
   const found = infoTemplateOf(specs);
-  const [picked, setPicked] = useState(found?.id ?? "");
+  const suggested = suggestInfoTemplate({ category, typeId, name });
+  const [chosen, setChosen] = useState(null);
+  const picked = chosen ?? found?.id ?? suggested;
+  const setPicked = setChosen;
   const template = infoTemplateById(picked);
   const room = SPEC_LIMITS.rows - plainCount;
   const infoCount = specs.filter((s) => isTemplateGroup(s.group)).length;
@@ -26,7 +29,7 @@ export default function ProductInfoEditor({ specs, onChange, plainCount }) {
 
   const choose = (id) => {
     setPicked(id);
-    if (!id) onChange(specs.filter((s) => !isTemplateGroup(s.group)));
+    onChange(specs.filter((s) => !isTemplateGroup(s.group)));
   };
 
   const control = (group, row) => {
@@ -75,7 +78,7 @@ export default function ProductInfoEditor({ specs, onChange, plainCount }) {
       <p className={styles.hint}>A full sheet of facts, shown as a grouped table at the bottom of the item page. Pick what fits, fill what applies and leave the rest.</p>
       <Field name="info-template" as="select" label="Product kind" value={picked} onChange={(e) => choose(e.target.value)}>
         <option value="">None</option>
-        {INFO_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+        {INFO_TEMPLATES.map((t) => <option key={t.id} value={t.id}>{t.name}{t.id === suggested && !found ? " (suggested)" : ""}</option>)}
       </Field>
       {template && (
         <>

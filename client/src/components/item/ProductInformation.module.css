@@ -42,3 +42,7 @@
 @media (prefers-reduced-motion: reduce) {
   .fold, .chevron, .group, .faq { transition: none; }
 }
+
+.jump { display: inline-flex; align-items: center; min-block-size: var(--tap); padding: 0; border: 0; background: none; color: var(--primary-text, var(--primary)); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 0.2em; }
+.jump:hover { text-decoration-thickness: 2px; }
+.jump:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

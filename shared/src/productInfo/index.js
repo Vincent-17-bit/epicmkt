@@ -24,9 +24,11 @@ export const isInfoGroup = (group) => typeof group === "string" && group.startsW
 export const infoGroupName = (group) => (isInfoGroup(group) ? group.slice(INFO_PREFIX.length) : group);
 
 export const infoTemplateOf = (specs) => {
-  const used = new Set((Array.isArray(specs) ? specs : []).filter((s) => isTemplateGroup(s?.group)).map((s) => s.group));
-  if (!used.size) return null;
-  return INFO_TEMPLATES.find((t) => t.groups.some((g) => used.has(infoGroupKey(g.name)))) ?? null;
+  const rows = (Array.isArray(specs) ? specs : []).filter((s) => isTemplateGroup(s?.group));
+  if (!rows.length) return null;
+  const score = (t) => rows.filter((r) => t.groups.some((g) => infoGroupKey(g.name) === r.group && g.rows.some((x) => x.label === r.label))).length;
+  const ranked = INFO_TEMPLATES.map((t) => [t, score(t)]).sort((a, b) => b[1] - a[1]);
+  return ranked[0][1] > 0 ? ranked[0][0] : null;
 };
 
 export const plainSpecs = (specs) => (Array.isArray(specs) ? specs.filter((s) => !isInfoGroup(s?.group)) : []);
@@ -75,3 +77,20 @@ export const infoValueRaw = (row, stored) => {
 };
 
 export const INFO_GROUP_LIMIT = 40;
+
+const RULES = [
+  { id: "speaker", name: /\b(speaker|soundbar|subwoofer|woofer|home theat)/i },
+  { id: "phone", type: ["phone"], name: /\b(phone|iphone|smartphone|android|tecno|infinix|samsung galaxy|redmi)\b/i },
+  { id: "water-refill", type: ["drinking-water"], category: /water/i, name: /\b(refill|water)\b/i },
+  { id: "custom-printing", type: ["printing"], category: /print/i, name: /\b(print|branding|embroider|banner)/i },
+  { id: "bakery-item", type: ["bread"], category: /bakery|juice/i, name: /\b(cookie|cake|bread|mandazi|samosa|doughnut|pastry|bun)/i },
+  { id: "packaged-goods", category: /supermarket|minimart|grocer|household|cosmetic|baby/i, name: /\b(powder|soap|detergent|omo|msafi|tissue|oil|flour|sugar)\b/i }
+];
+
+export function suggestInfoTemplate({ category = "", typeId = "", name = "" } = {}) {
+  const hit =
+    RULES.find((r) => r.name?.test(name)) ??
+    RULES.find((r) => r.type?.includes(typeId)) ??
+    RULES.find((r) => r.category?.test(category));
+  return hit?.id ?? "general-product";
+}

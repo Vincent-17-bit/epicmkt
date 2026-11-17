@@ -9,7 +9,7 @@ import TypeRows from "./TypeRows.jsx";
 import { hasTemplate, rowsOf } from "./typedRows.js";
 import styles from "./editor.module.css";
 
-export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore }) {
+export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore, category }) {
   const hl = LIMITS.highlights;
   const inc = LIMITS.includes;
   const plain = form.specs.filter((s) => !isInfoGroup(s.group));
@@ -83,7 +83,7 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
             />
           </div>
 
-          <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} />
+          <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} category={category} typeId={form.productTypeId} name={form.name} />
 
           <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 

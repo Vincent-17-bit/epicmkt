@@ -197,4 +197,225 @@ const service = {
   ]
 };
 
-export const INFO_TEMPLATES = Object.freeze([speaker, goods, service]);
+const phone = {
+  id: "phone",
+  name: "Phone",
+  groups: [
+    {
+      name: "Item details",
+      rows: [
+        text("brand", "Brand"),
+        text("model-name", "Model name"),
+        text("model-number", "Model number"),
+        text("color", "Colour"),
+        pick("condition", "Condition", ["New", "Refurbished", "Used", "Ex-UK", "Ex-Dubai"]),
+        text("country-of-origin", "Country of origin")
+      ]
+    },
+    {
+      name: "Display",
+      rows: [
+        num("screen-size", "Screen size", "inches"),
+        text("resolution", "Resolution"),
+        pick("display-type", "Display type", ["LCD", "IPS LCD", "AMOLED", "Super AMOLED", "OLED"]),
+        num("refresh-rate", "Refresh rate", "hertz")
+      ]
+    },
+    {
+      name: "Performance",
+      rows: [
+        pick("ram", "RAM", ["1 GB", "2 GB", "3 GB", "4 GB", "6 GB", "8 GB", "12 GB", "16 GB"]),
+        pick("storage", "Storage", ["16 GB", "32 GB", "64 GB", "128 GB", "256 GB", "512 GB", "1 TB"]),
+        text("processor", "Processor"),
+        text("operating-system", "Operating system"),
+        yesNo("memory-card-slot", "Memory card slot")
+      ]
+    },
+    {
+      name: "Camera",
+      rows: [num("rear-camera", "Rear camera", "MP"), num("front-camera", "Front camera", "MP"), yesNo("flash", "Flash")]
+    },
+    {
+      name: "Battery",
+      rows: [
+        num("battery-capacity", "Battery capacity", "mAh"),
+        num("charging-power", "Charging power", "watts"),
+        pick("charging-port", "Charging port", ["USB-C", "Micro USB", "Lightning"]),
+        yesNo("wireless-charging", "Wireless charging")
+      ]
+    },
+    {
+      name: "Connectivity",
+      rows: [
+        pick("sim", "SIM", ["Single SIM", "Dual SIM", "eSIM and SIM"]),
+        multi("network", "Network", ["2G", "3G", "4G", "5G"]),
+        multi("connectivity-features", "Connectivity features", ["Wi-Fi", "Bluetooth", "NFC", "GPS", "Hotspot", "FM radio"]),
+        multi("security", "Security", ["Fingerprint", "Face unlock", "PIN only"])
+      ]
+    },
+    {
+      name: "Warranty & Support",
+      rows: [
+        pick("warranty-period", "Warranty period", ["None", "1 month", "3 months", "6 months", "1 year", "2 years"]),
+        text("in-the-box", "In the box"),
+        text("return-policy", "Return policy")
+      ]
+    }
+  ]
+};
+
+const water = {
+  id: "water-refill",
+  name: "Water refill",
+  groups: [
+    {
+      name: "Water details",
+      rows: [
+        pick("water-type", "Water type", ["Purified", "Spring", "Alkaline", "Mineral", "Distilled"]),
+        pick("container-size", "Container size", ["5 L", "10 L", "18.9 L", "20 L", "Other"]),
+        pick("refill-or-new", "Refill or new bottle", ["Refill", "New bottle", "Both"]),
+        text("brand", "Brand")
+      ]
+    },
+    {
+      name: "Treatment and quality",
+      rows: [
+        multi("treatment", "Treatment", ["Reverse osmosis", "UV", "Carbon filter", "Chlorinated", "Ozonated"]),
+        yesNo("kebs-certified", "KEBS certified"),
+        text("last-tested", "Last quality test")
+      ]
+    },
+    {
+      name: "Ordering and delivery",
+      rows: [
+        yesNo("delivery", "Delivery available"),
+        pick("subscription", "Delivery subscription", ["None", "Daily", "Weekly", "Monthly"]),
+        text("minimum-order", "Minimum order"),
+        yesNo("same-day", "Same-day delivery"),
+        text("bottle-deposit", "Bottle deposit")
+      ]
+    }
+  ]
+};
+
+const printing = {
+  id: "custom-printing",
+  name: "Printing and branding",
+  groups: [
+    {
+      name: "Service details",
+      rows: [
+        pick("service-type", "Service type", ["Shirt and garment printing", "Document printing", "Banners and posters", "Business cards", "Mugs and gifts", "Embroidery", "Binding and lamination"]),
+        multi("print-method", "Print method", ["Screen print", "Heat transfer", "DTF", "Sublimation", "Vinyl", "Embroidery", "Digital print"]),
+        pick("print-colour", "Print colour", ["Black and white", "Full colour", "Both"]),
+        text("print-areas", "Print areas", { placeholder: "Front, back, sleeve" })
+      ]
+    },
+    {
+      name: "Materials",
+      rows: [
+        multi("garments", "Items we print on", ["T-shirts", "Polo shirts", "Hoodies", "Caps", "Uniforms", "Aprons", "Bags"]),
+        text("fabric", "Fabric"),
+        text("sizes", "Sizes available"),
+        text("colours", "Item colours"),
+        text("paper-size-weight", "Paper size and weight")
+      ]
+    },
+    {
+      name: "Ordering",
+      rows: [
+        text("minimum-quantity", "Minimum quantity"),
+        yesNo("design-service", "Design service"),
+        yesNo("sample", "Sample before bulk order"),
+        pick("turnaround", "Turnaround", ["While you wait", "Same day", "24 hours", "2 to 3 days", "A week or more"]),
+        pick("fulfilment", "Pickup or delivery", ["Pickup", "Delivery", "Both"])
+      ]
+    }
+  ]
+};
+
+const bakery = {
+  id: "bakery-item",
+  name: "Bakery and snacks",
+  groups: [
+    {
+      name: "Product details",
+      rows: [
+        text("item-type", "Item type"),
+        text("flavour", "Flavour"),
+        text("weight-or-size", "Weight or size"),
+        num("pieces", "Pieces per pack", "pieces"),
+        text("ingredients", "Main ingredients")
+      ]
+    },
+    {
+      name: "Dietary and allergens",
+      rows: [
+        multi("dietary", "Dietary", ["Eggless", "Sugar-free", "Gluten-free", "Vegan", "Halal"]),
+        multi("contains", "Contains", ["Nuts", "Dairy", "Gluten", "Eggs", "Soy"])
+      ]
+    },
+    {
+      name: "Freshness and storage",
+      rows: [
+        pick("baked", "Baked", ["Fresh today", "Baked to order", "Packed"]),
+        text("shelf-life", "Shelf life"),
+        text("storage", "Storage")
+      ]
+    },
+    {
+      name: "Ordering",
+      rows: [
+        yesNo("custom-orders", "Custom orders"),
+        pick("lead-time", "Lead time", ["Ready now", "Same day", "24 hours", "3 days or more"]),
+        multi("occasions", "Occasions", ["Birthday", "Wedding", "Graduation", "Office", "Everyday"]),
+        yesNo("bulk-orders", "Bulk or event orders"),
+        yesNo("delivery", "Delivery available")
+      ]
+    }
+  ]
+};
+
+const packaged = {
+  id: "packaged-goods",
+  name: "Packaged goods",
+  groups: [
+    {
+      name: "Product details",
+      rows: [
+        text("brand", "Brand"),
+        text("product-type", "Product type"),
+        text("variant", "Variant or scent"),
+        text("pack-size", "Pack size", { placeholder: "1 kg, 500 ml, pack of 12" }),
+        text("country-of-origin", "Country of origin")
+      ]
+    },
+    {
+      name: "Usage",
+      rows: [
+        multi("suitable-for", "Suitable for", ["Hand wash", "Machine wash", "Whites", "Coloured clothes", "Sensitive skin", "All surfaces"]),
+        text("directions", "Directions for use"),
+        text("key-ingredients", "Key ingredients")
+      ]
+    },
+    {
+      name: "Safety and storage",
+      rows: [
+        text("expiry", "Expiry or best before"),
+        text("storage", "Storage"),
+        yesNo("keep-from-children", "Keep away from children"),
+        yesNo("kebs-marked", "KEBS marked")
+      ]
+    },
+    {
+      name: "Ordering",
+      rows: [
+        yesNo("wholesale", "Wholesale price available"),
+        text("minimum-bulk", "Bulk quantity"),
+        yesNo("delivery", "Delivery available")
+      ]
+    }
+  ]
+};
+
+export const INFO_TEMPLATES = Object.freeze([speaker, phone, water, printing, bakery, packaged, goods, service]);
