@@ -14,6 +14,7 @@ const api = {
   getMessageDetail: vi.fn(),
   listPendingBroadcasts: vi.fn(),
   cancelBroadcast: vi.fn(),
+  rescheduleBroadcast: vi.fn(),
   setTemplateEnabled: vi.fn(async () => true),
   deleteTemplate: vi.fn(async () => true),
   getBusinessFilterOptions: vi.fn(),
@@ -53,6 +54,7 @@ beforeEach(() => {
   api.getMessageSummary.mockResolvedValue({ days: 7, by_status: { sent: 1 }, cost_kes: 0 });
   api.getMessageDetail.mockResolvedValue({ id: "m1", subject: "Application received", body: "Thanks for applying. We review within two working days.", channel: "email", status: "sent", business_id: null, application_name: "Kamau Cuts", applicant_name: "Wanjiku Kamau", to_address: "kamau@cuts.test", attempts: 1, scheduled_at: "2026-10-31T10:00:00Z", created_at: "2026-10-31T09:30:00Z", sent_at: null, transactional: true, template_key: "application.received", created_by_email: "admin@epicmkt.test" });
   api.listPendingBroadcasts.mockResolvedValue([batch]);
+  api.rescheduleBroadcast.mockResolvedValue({ moved: 6, scheduledAt: "2026-11-02T05:00:00Z" });
   api.cancelBroadcast.mockResolvedValue({ cancelled: 6, sent: 2, failed: 0, inFlight: 0, total: 8 });
   api.getBusinessFilterOptions.mockResolvedValue({ categories: ["Barber", "Bakery"], counties: [{ name: "Kisumu", towns: ["Kisumu", "Maseno"] }, { name: "Nairobi", towns: ["Westlands"] }], plans: [], agents: [] });
   api.sendBroadcast.mockResolvedValue(preview);
@@ -102,6 +104,35 @@ describe("Cancel a waiting broadcast", () => {
     renderPage("/?tab=log");
     await screen.findByText("Application received");
     expect(screen.queryByTestId("pending-broadcast")).toBeNull();
+  });
+});
+
+describe("Change when a waiting broadcast goes out", () => {
+  it("also lists waiting broadcasts on the Compose tab, where they were scheduled", async () => {
+    renderPage("/");
+    expect(await screen.findByTestId("pending-broadcast")).toBeInTheDocument();
+  });
+
+  it("moves it to a new Nairobi time and sends that as UTC", async () => {
+    renderPage("/");
+    fireEvent.click(await screen.findByRole("button", { name: "Change time of Weekend offer" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change when this goes out" });
+    const day = new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10);
+    fireEvent.change(within(dialog).getByLabelText(/New time/), { target: { value: `${day}T08:00` } });
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: "Better time" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save new time" }));
+    await waitFor(() => expect(api.rescheduleBroadcast).toHaveBeenCalledWith({ batchId: "bt1", scheduledAt: `${day}T05:00:00.000Z` }));
+  });
+
+  it("Send now clears the time and goes out at once", async () => {
+    renderPage("/");
+    fireEvent.click(await screen.findByRole("button", { name: "Change time of Weekend offer" }));
+    const dialog = await screen.findByRole("dialog", { name: "Change when this goes out" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Send now" }));
+    fireEvent.change(within(dialog).getByLabelText(/Reason/), { target: { value: "Urgent" } });
+    fireEvent.click(within(dialog).getAllByRole("button", { name: "Send now" }).at(-1));
+    await waitFor(() => expect(api.rescheduleBroadcast).toHaveBeenCalled());
+    expect(Date.parse(api.rescheduleBroadcast.mock.calls[0][0].scheduledAt)).toBeLessThanOrEqual(Date.now() + 1000);
   });
 });
 

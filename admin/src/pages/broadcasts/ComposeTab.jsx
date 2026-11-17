@@ -3,9 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import ConfirmDialog from "../../components/ConfirmDialog.jsx";
+import SchedulePicker from "../../components/SchedulePicker.jsx";
+import PendingBroadcasts from "./PendingBroadcasts.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { formatNairobiDateTime, nairobiInputToUtcIso } from "../../lib/time.js";
+import { scheduleProblem } from "../../lib/schedule.js";
 import { BROADCAST_ERRORS, SEGMENTS, buildBroadcast, missingVariables, samePayload, smsInfo, templateVariables } from "../../lib/messaging.js";
 
 const blank = { segment: "expiring_7d", segmentValue: "", sms: true, email: false, inApp: false, templateKey: "", lang: "en", subject: "", body: "", variables: {}, transactional: false, scheduledAt: "" };
@@ -47,16 +50,21 @@ export default function ComposeTab() {
     mutationFn: (payload) => api.sendBroadcast(payload),
     onSuccess: (result) => {
       setConfirming(false);
-      toast.push({ message: result.duplicate ? "That message was already queued." : `${result.queued} ${result.queued === 1 ? "message" : "messages"} queued. They go out within a minute, outside quiet hours.` });
+      const later = Date.parse(result.scheduledAt) > Date.now() + 2 * 60_000;
+      const count = `${result.queued} ${result.queued === 1 ? "message" : "messages"}`;
+      toast.push({ message: result.duplicate ? "That message was already queued." : later ? `${count} scheduled for ${formatNairobiDateTime(result.scheduledAt)}. They send by themselves; change or cancel them under Waiting to send.` : `${count} queued. They go out within a minute, outside quiet hours.` });
       setForm(blank);
       setPreview(null);
       sendKey.current = newKey();
       queryClient.invalidateQueries({ queryKey: ["admin-message-log"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-broadcasts"] });
     },
   });
 
   const onPreview = () => {
     if (current.error) { setFormError(current.error); return; }
+    const timing = scheduleProblem(form.scheduledAt);
+    if (timing) { setFormError(timing); return; }
     if (gaps.length) { setFormError(`Fill in: ${gaps.join(", ")}.`); return; }
     check.mutate(current.payload);
   };
@@ -128,16 +136,13 @@ export default function ComposeTab() {
         ))}
         <p className="muted">{`{{business_name}}`}, {`{{seller_id}}`} and {`{{paid_until}}`} are filled in for each seller.</p>
 
-        <label className="field">Send at (optional, Nairobi time)
-          <input type="datetime-local" value={form.scheduledAt} onChange={(e) => set({ scheduledAt: e.target.value })} />
-        </label>
-        {sendAt ? <p className="muted" data-testid="send-at">Will send {formatNairobiDateTime(sendAt)}.</p> : null}
+        <SchedulePicker value={form.scheduledAt} onChange={(scheduledAt) => set({ scheduledAt })} />
         <label><input type="checkbox" checked={form.transactional} onChange={(e) => set({ transactional: e.target.checked })} /> This is a billing or account notice (sends even in quiet hours)</label>
 
         {formError ? <p className="modal__error" role="alert">{formError}</p> : null}
         <div className="compose__actions">
           <Button onClick={onPreview} disabled={!allowed || check.isPending} title={why("messages.send")}>{check.isPending ? "Checking" : "Preview"}</Button>
-          <Button variant="primary" disabled={!allowed || !previewIsCurrent} title={allowed ? (previewIsCurrent ? "" : "Preview the message first") : why("messages.send")} onClick={() => { send.reset(); setConfirming(true); }}>Send broadcast</Button>
+          <Button variant="primary" disabled={!allowed || !previewIsCurrent} title={allowed ? (previewIsCurrent ? "" : "Preview the message first") : why("messages.send")} onClick={() => { send.reset(); setConfirming(true); }}>{sendAt ? "Schedule broadcast" : "Send broadcast"}</Button>
         </div>
       </div>
 
@@ -155,15 +160,16 @@ export default function ComposeTab() {
 
       {confirming && result && (
         <ConfirmDialog
-          title="Send this message"
-          summary={`${result.rows.sms + result.rows.email + result.rows.inApp} messages to ${result.recipients} businesses. This cannot be recalled once it is sent.`}
-          confirmLabel="Send broadcast"
+          title={sendAt ? "Schedule this message" : "Send this message"}
+          summary={`${result.rows.sms + result.rows.email + result.rows.inApp} messages to ${result.recipients} businesses. ${sendAt ? `They go out ${formatNairobiDateTime(sendAt)}. Until then you can change the time or cancel them under Waiting to send.` : "This cannot be recalled once it is sent."}`}
+          confirmLabel={sendAt ? "Schedule broadcast" : "Send broadcast"}
           busy={send.isPending}
           error={send.isError ? explain(send.error) : ""}
           onConfirm={() => send.mutate({ ...preview.payload, preview: false, idempotencyKey: sendKey.current })}
           onCancel={() => setConfirming(false)}
         />
       )}
+    <div className="compose__pending"><PendingBroadcasts /></div>
     </div>
   );
 }

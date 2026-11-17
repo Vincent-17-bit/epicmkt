@@ -43,3 +43,10 @@ test("demo rows keep their own text; empty input is safe", () => {
   assert.deepEqual(describeActivity({ text: "Sample line" }), { text: "Sample line", to: null });
   assert.deepEqual(describeActivity(null), { text: "", to: null });
 });
+
+test("a note opens the exact business or application when the row names one, else the list", () => {
+  assert.equal(describeActivity({ kind: "change_request", business_id: "b9", business_name: "Shop A", data: {} }).to, "/admin/businesses/b9");
+  assert.equal(describeActivity({ kind: "flag_reply", business_name: "Shop A", data: { business_id: "b7" } }).to, "/admin/businesses/b7");
+  assert.equal(describeActivity({ kind: "listing_paused", business_name: "Shop A", data: {} }).to, "/admin/businesses");
+  assert.equal(describeActivity({ kind: "application_submitted", business_name: "X", data: { application_id: "a5" } }).to, "/admin/applications/a5");
+});
