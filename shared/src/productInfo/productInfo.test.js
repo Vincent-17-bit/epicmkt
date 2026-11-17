@@ -35,3 +35,21 @@ test("cleanSpecs accepts info groups and a full sheet", () => {
   assert.deepEqual(out.errors, {});
   assert.equal(out.specs.length, rows.length);
 });
+
+import { FAQ_GROUP, buildFaqs, faqRows, isTemplateGroup } from "./index.js";
+
+test("FAQs use long limits and stay out of the info table", () => {
+  const long = { group: FAQ_GROUP, label: "q".repeat(150), value: "a".repeat(500) };
+  const out = cleanSpecs([long, { group: infoGroupKey("Power"), label: "Voltage", value: "5 volts" }]);
+  assert.deepEqual(out.errors, {});
+  assert.equal(out.specs.length, 2);
+  assert.equal(cleanSpecs([{ group: "Features & Specs", label: "q".repeat(150), value: "a" }]).errors[0].label.includes("40"), true);
+  assert.equal(buildFaqs(out.specs).length, 1);
+  assert.equal(faqRows(out.specs)[0].answer.length, 500);
+  assert.deepEqual(buildInfoGroups(out.specs).map((g) => g.name), ["Power"]);
+  assert.equal(isTemplateGroup(FAQ_GROUP), false);
+});
+
+test("every template group fits the database limits", () => {
+  for (const t of INFO_TEMPLATES) for (const g of t.groups) for (const r of g.rows) assert.ok(r.label.length <= 40, `${t.id}/${r.label}`);
+});

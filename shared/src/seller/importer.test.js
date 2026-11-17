@@ -235,10 +235,10 @@ test("spec cells use the same limits as the item form", () => {
   const longLabel = run(`${HEAD}\tspec:${"L".repeat(41)}\nKettle\tfixed\t900\t\t\t\t\tSteel`);
   assert.match(longLabel.rejected[0].errors[0], /Spec "L+": Use 40 characters or fewer/);
   assert.equal(run(`${HEAD}\tspec:${"L".repeat(40)}\nKettle\tfixed\t900\t\t\t\t\tSteel`).rejected.length, 0);
-  const cols = Array.from({ length: 61 }, (_, i) => `spec:Label ${i}`);
+  const cols = Array.from({ length: 81 }, (_, i) => `spec:Label ${i}`);
   const row = (n) => `Kettle\tfixed\t900\t\t\t\t\t${Array.from({ length: n }, (_, i) => `v${i}`).join("\t")}`;
-  assert.match(run(`${HEAD}\t${cols.join("\t")}\n${row(61)}`).rejected[0].errors[0], /at most 60 specifications/);
-  assert.equal(run(`${HEAD}\t${cols.slice(0, 60).join("\t")}\n${row(60)}`).rejected.length, 0);
+  assert.match(run(`${HEAD}\t${cols.join("\t")}\n${row(81)}`).rejected[0].errors[0], /at most 80 specifications/);
+  assert.equal(run(`${HEAD}\t${cols.slice(0, 80).join("\t")}\n${row(80)}`).rejected.length, 0);
   // The same label under two columns keeps the first, as the item form does.
   const dup = run(`${HEAD}\tspec:Colour\tspec:colour\nKettle\tfixed\t900\t\t\t\t\tBlack\tWhite`);
   assert.deepEqual(dup.valid[0].value.specs, [{ group: "Features & Specs", label: "Colour", value: "Black" }]);

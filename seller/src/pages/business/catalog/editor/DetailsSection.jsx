@@ -1,8 +1,9 @@
 import { faBoxOpen, faListCheck, faPlus, faSliders } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, isInfoGroup } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, isInfoGroup, isFaqGroup } from "@epicmkt/shared";
 import { LIMITS, SPEC_PRESETS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
+import FaqEditor from "./FaqEditor.jsx";
 import ProductInfoEditor from "./ProductInfoEditor.jsx";
 import TypeRows from "./TypeRows.jsx";
 import { hasTemplate, rowsOf } from "./typedRows.js";
@@ -83,6 +84,8 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
           </div>
 
           <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} />
+
+          <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 
           <div className={styles.subBlock} data-area="includes">
             <h3 className={styles.subTitle}>What is included</h3>

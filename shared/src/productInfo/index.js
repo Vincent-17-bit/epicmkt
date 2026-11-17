@@ -5,12 +5,26 @@ export { INFO_TEMPLATES };
 export const INFO_PREFIX = "Info: ";
 
 export const infoTemplateById = (id) => INFO_TEMPLATES.find((t) => t.id === id) ?? null;
+export const FAQ_GROUP = `${INFO_PREFIX}FAQ`;
+export const FAQ_LIMITS = { rows: 15, question: 160, answer: 600 };
+export const isFaqGroup = (group) => group === FAQ_GROUP;
+export const isTemplateGroup = (group) => isInfoGroup(group) && !isFaqGroup(group);
+
+export const specLimitsFor = (group, base) => (isFaqGroup(group) ? { label: FAQ_LIMITS.question, value: FAQ_LIMITS.answer } : { label: base.label, value: base.value });
+
+export const buildFaqs = (specs) =>
+  (Array.isArray(specs) ? specs : [])
+    .filter((s) => isFaqGroup(s?.group) && String(s.label ?? "").trim() && String(s.value ?? "").trim())
+    .map((s) => ({ question: String(s.label).trim(), answer: String(s.value).trim() }));
+
+export const faqRows = (specs) => (Array.isArray(specs) ? specs.filter((s) => isFaqGroup(s?.group)).map((s) => ({ question: s.label ?? "", answer: s.value ?? "" })) : []);
+
 export const infoGroupKey = (name) => `${INFO_PREFIX}${name}`;
 export const isInfoGroup = (group) => typeof group === "string" && group.startsWith(INFO_PREFIX);
 export const infoGroupName = (group) => (isInfoGroup(group) ? group.slice(INFO_PREFIX.length) : group);
 
 export const infoTemplateOf = (specs) => {
-  const used = new Set((Array.isArray(specs) ? specs : []).filter((s) => isInfoGroup(s?.group)).map((s) => s.group));
+  const used = new Set((Array.isArray(specs) ? specs : []).filter((s) => isTemplateGroup(s?.group)).map((s) => s.group));
   if (!used.size) return null;
   return INFO_TEMPLATES.find((t) => t.groups.some((g) => used.has(infoGroupKey(g.name)))) ?? null;
 };
@@ -20,7 +34,7 @@ export const plainSpecs = (specs) => (Array.isArray(specs) ? specs.filter((s) =>
 const filled = (v) => v !== undefined && v !== null && String(v).trim() !== "";
 
 export function buildInfoGroups(specs) {
-  const list = (Array.isArray(specs) ? specs : []).filter((s) => isInfoGroup(s?.group) && filled(s.label) && filled(s.value));
+  const list = (Array.isArray(specs) ? specs : []).filter((s) => isTemplateGroup(s?.group) && filled(s.label) && filled(s.value));
   if (!list.length) return [];
   const template = infoTemplateOf(list);
   const order = template ? template.groups.map((g) => g.name) : [];

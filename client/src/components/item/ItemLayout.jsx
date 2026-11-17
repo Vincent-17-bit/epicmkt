@@ -1,4 +1,4 @@
-import { buildInfoGroups } from "@epicmkt/shared";
+import { buildFaqs, buildInfoGroups } from "@epicmkt/shared";
 import { ItemView } from "@epicmkt/ui";
 import { t } from "../../i18n/index.js";
 import { kesText } from "../../lib/flash.js";
@@ -21,7 +21,7 @@ import styles from "../ItemDetail.module.css";
 // A slot with nothing to show renders null, so an empty slot adds no markup. The slot map is in README.md.
 export default function ItemLayout({ ctx }) {
   const { item, shown, activeId, selectVariant, layout, business, track, Heading, titleRef, selective } = ctx;
-  const hasInfo = buildInfoGroups(item.specs).length > 0;
+  const hasInfo = buildInfoGroups(item.specs).length > 0 || buildFaqs(item.specs).length > 0;
   return (
     <>
       <FlashSticky ctx={ctx} />
@@ -55,9 +55,9 @@ export default function ItemLayout({ ctx }) {
         seller={<SoldFrom ctx={ctx} />}
         after={selective}
       />
-      <ProductInformation key={`info-${item.id}`} item={item} />
       <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
       <Recommend key={`similar-${item.id}`} ctx={ctx} />
+      <ProductInformation key={`info-${item.id}`} item={item} />
     </>
   );
 }

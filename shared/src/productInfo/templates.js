@@ -105,4 +105,96 @@ const speaker = {
   ]
 };
 
-export const INFO_TEMPLATES = Object.freeze([speaker]);
+const goods = {
+  id: "general-product",
+  name: "General product",
+  groups: [
+    {
+      name: "Item details",
+      rows: [
+        text("brand", "Brand"),
+        text("model-name", "Model name"),
+        text("model-number", "Model number"),
+        text("material", "Material"),
+        text("color", "Colour"),
+        text("size", "Size"),
+        text("country-of-origin", "Country of origin"),
+        text("manufacturer", "Manufacturer")
+      ]
+    },
+    {
+      name: "Measurements",
+      rows: [
+        text("dimensions", "Dimensions L x W x H", { placeholder: "30 x 20 x 10 cm" }),
+        num("item-weight", "Item weight", "kg"),
+        num("unit-count", "Unit count", "count"),
+        text("pack-contents", "Pack contents")
+      ]
+    },
+    {
+      name: "Additional details",
+      rows: [
+        pick("condition", "Condition", ["New", "Refurbished", "Used", "Mitumba"]),
+        pick("authenticity", "Authenticity", ["Original", "Inspired", "Compatible"]),
+        text("special-features", "Special features"),
+        text("care-instructions", "Care instructions"),
+        text("shelf-life", "Shelf life or expiry"),
+        yesNo("installation-available", "Installation available")
+      ]
+    },
+    {
+      name: "Warranty & Support",
+      rows: [
+        pick("warranty-period", "Warranty period", ["None", "1 month", "3 months", "6 months", "1 year", "2 years"]),
+        text("return-policy", "Return policy"),
+        text("support-contact", "Support contact")
+      ]
+    }
+  ]
+};
+
+const service = {
+  id: "general-service",
+  name: "General service",
+  groups: [
+    {
+      name: "Service details",
+      rows: [
+        text("service-type", "Service type"),
+        text("duration", "Typical duration"),
+        text("price-basis", "Price basis", { placeholder: "Per hour, per room, per item" }),
+        pick("booking", "Booking", ["Walk-in", "Appointment", "Both"]),
+        text("lead-time", "Lead time")
+      ]
+    },
+    {
+      name: "Coverage",
+      rows: [
+        text("area-served", "Area served"),
+        yesNo("home-service", "Home or on-site service"),
+        text("travel-cost", "Travel cost"),
+        text("opening-days", "Days available")
+      ]
+    },
+    {
+      name: "Credentials",
+      rows: [
+        yesNo("licensed", "Licensed or registered"),
+        text("licence-number", "Licence or registration number"),
+        num("experience", "Experience", "years"),
+        text("languages", "Languages spoken")
+      ]
+    },
+    {
+      name: "What is included",
+      rows: [
+        yesNo("materials-included", "Materials included"),
+        yesNo("free-quote", "Free quote or consultation"),
+        text("warranty-on-work", "Warranty on work"),
+        text("extras", "Extras")
+      ]
+    }
+  ]
+};
+
+export const INFO_TEMPLATES = Object.freeze([speaker, goods, service]);
