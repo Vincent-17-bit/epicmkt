@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faChevronRight, faXmark } from "@fortawesome/free-solid-svg-icons";
 import * as api from "../../../../api/index.js";
 import { mediaUrl } from "../../../../api/shape.js";
 import { useRealtime } from "../../../../lib/useRealtime.js";
@@ -90,6 +92,7 @@ export default function ItemPanel() {
   }, [mode]);
 
   useEffect(() => { scroller.current?.scrollTo?.({ top: 0 }); }, [section, itemId]);
+  useEffect(() => { document.getElementById(`tab-${section}`)?.scrollIntoView?.({ block: "nearest", inline: "center" }); }, [section]);
 
   const step = useCallback((dir) => {
     const next = ctx.navIds[at + dir];
@@ -172,9 +175,9 @@ export default function ItemPanel() {
           )}
         </div>
         <div className={styles.headBtns}>
-          <button type="button" className={styles.icon} onClick={() => step(-1)} disabled={at <= 0} aria-label="Previous item">‹</button>
-          <button type="button" className={styles.icon} onClick={() => step(1)} disabled={at < 0 || at >= ctx.navIds.length - 1} aria-label="Next item">›</button>
-          <button type="button" className={styles.icon} onClick={requestClose} aria-label="Close">×</button>
+          <button type="button" className={styles.icon} onClick={() => step(-1)} disabled={at <= 0} aria-label="Previous item"><FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" /></button>
+          <button type="button" className={styles.icon} onClick={() => step(1)} disabled={at < 0 || at >= ctx.navIds.length - 1} aria-label="Next item"><FontAwesomeIcon icon={faChevronRight} aria-hidden="true" /></button>
+          <button type="button" className={styles.icon} onClick={requestClose} aria-label="Close"><FontAwesomeIcon icon={faXmark} aria-hidden="true" /></button>
         </div>
       </header>
 
