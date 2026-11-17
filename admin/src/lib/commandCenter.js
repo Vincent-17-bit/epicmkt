@@ -1,3 +1,4 @@
+import { zonedParts } from "@epicmkt/shared";
 // What the Command Center shows, worked out from the real counts. Pure functions, no React or Supabase.
 // Nothing here invents a number: a row or a note only appears when the count behind it exists.
 
@@ -73,7 +74,7 @@ export function lastDays(rows, key, days) {
 
 /** "Good morning", "Good afternoon" or "Good evening", from the admin's own clock. */
 export function greeting(date = new Date()) {
-  const hour = date.getHours();
+  const hour = zonedParts(date)?.hour ?? 12;
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
 
