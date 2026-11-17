@@ -18,8 +18,8 @@ export default function FaqEditor({ specs, onChange, focusOn, usedElsewhere }) {
         empty={{ title: "No questions yet", body: "Add up to 15, like \"Does it come with a charger?\" or \"Do you deliver outside town?\"." }}
         renderRow={(r, i, edit) => (
           <>
-            <Field name={`faq-${i}-question`} label={`Question ${i + 1}`} area="faqs" max={FAQ_LIMITS.question} value={r.question} onChange={(e) => edit((x) => ({ ...x, question: e.target.value }))} />
-            <Field name={`faq-${i}-answer`} as="textarea" label={`Answer ${i + 1}`} area="faqs" max={FAQ_LIMITS.answer} value={r.answer} onChange={(e) => edit((x) => ({ ...x, answer: e.target.value }))} />
+            <Field name={`faq-${i}-question`} label="Question" area="faqs" max={FAQ_LIMITS.question} value={r.question} onChange={(e) => edit((x) => ({ ...x, question: e.target.value }))} />
+            <Field name={`faq-${i}-answer`} as="textarea" label="Answer" area="faqs" max={FAQ_LIMITS.answer} value={r.answer} onChange={(e) => edit((x) => ({ ...x, answer: e.target.value }))} />
           </>
         )}
       />

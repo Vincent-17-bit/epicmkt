@@ -11,6 +11,7 @@ const money = (raw) => {
   return value > 9999999999.99 ? { error: true } : { value };
 };
 
+export const PLAIN_SPEC_ROWS = 20;
 export const SPEC_LIMITS = { rows: 80, label: 40, value: 120 };
 export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
 export const SPEC_DEFAULT_GROUP = SPEC_GROUPS[0];

@@ -1,6 +1,6 @@
 import { faBoxOpen, faListCheck, faPlus, faSliders } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, isInfoGroup, isFaqGroup } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup } from "@epicmkt/shared";
 import { LIMITS, SPEC_PRESETS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
 import FaqEditor from "./FaqEditor.jsx";
@@ -15,7 +15,7 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
   const plain = form.specs.filter((s) => !isInfoGroup(s.group));
   const info = form.specs.filter((s) => isInfoGroup(s.group));
   const used = new Set(plain.map((s) => String(s.label ?? "").trim().toLowerCase()));
-  const specsFull = plain.length >= SPEC_LIMITS.rows - info.length;
+  const specsFull = plain.length >= PLAIN_SPEC_ROWS;
   const typed = hasTemplate(type);
   const quick = typed && !more;
   const { extra } = rowsOf(form, type);
@@ -67,7 +67,7 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
               ))}
             </ul>
             <RowList
-              noun={{ key: "spec", label: "Specification", name: "specification" }} rows={plain} max={SPEC_LIMITS.rows - info.length} onChange={(v) => patch("specs", [...v, ...info])} focusOn={focusOn}
+              noun={{ key: "spec", label: "Specification", name: "specification" }} rows={plain} max={PLAIN_SPEC_ROWS} onChange={(v) => patch("specs", [...v, ...info])} focusOn={focusOn}
               blank={{ group: SPEC_DEFAULT_GROUP, label: "", value: "" }} focusFirst={() => `spec-${plain.length}-label`} addLabel="Add custom row" addKey="add-spec" icon={faSliders}
               empty={{ title: "No specifications yet", body: "Tap a quick add above, like Material or Weight, or add your own row." }}
               error={errors.specsCount} errorKey="specsCount"
