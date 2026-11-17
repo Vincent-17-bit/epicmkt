@@ -12,7 +12,12 @@ import { validateProductType } from "../../shared/src/index.js";
 let c;
 const types = [...COVERAGE_FOOD, ...COVERAGE_HEALTH, ...COVERAGE_HOME];
 const drafts = categories.filter((x) => x.draft);
-before(async () => { c = await connect(await createDatabase({ database: "epicmkt_catalogue_coverage" })); });
+const extras = readFileSync(new URL("../data/catalogue_coverage_extras.sql", import.meta.url), "utf8");
+// The migration adds the types; the extras file (run by hand, after it) adds the draft categories, values and charts.
+before(async () => {
+  c = await connect(await createDatabase({ database: "epicmkt_catalogue_coverage" }));
+  await c.query(extras);
+});
 after(async () => { await c.end(); });
 
 test("every coverage type is stored as the seed defines it", async () => {
@@ -67,6 +72,7 @@ test("running the migration again changes nothing and keeps an admin's edits", a
   const count = async () => (await sql(c, `select (select count(*) from product_types)::int a, (select count(*) from option_values)::int b, (select count(*) from size_charts)::int d, (select count(*) from categories)::int e, (select count(*) from plans)::int f`))[0];
   const before = await count();
   await c.query(readFileSync(new URL("../migrations/0132_catalogue_coverage.sql", import.meta.url), "utf8"));
+  await c.query(extras);
   assert.deepEqual(await count(), before);
   assert.equal((await sql(c, `select active from categories where id = 'bookshop'`))[0].active, true);
   assert.equal((await sql(c, `select price_kes from plans where category_id = 'bookshop' and plan_key = 'standard'`))[0].price_kes, 700);

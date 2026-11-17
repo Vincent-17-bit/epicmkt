@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildMigration, MIGRATION_FILE } from "./gen-catalogue-migration.mjs";
+import { buildMigration, buildExtras, MIGRATION_FILE, EXTRAS_FILE } from "./gen-catalogue-migration.mjs";
 import { ALL_TYPES, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME } from "./seeds/index.mjs";
 import { COVERAGE_OPEN_VALUES } from "./seeds/openValues.mjs";
 import { COVERAGE_SIZE_CHARTS } from "./seeds/sizeCharts.mjs";
@@ -13,6 +13,15 @@ const coverage = [...COVERAGE_FOOD, ...COVERAGE_HEALTH, ...COVERAGE_HOME];
 
 test("0132_catalogue_coverage.sql is exactly what the generator writes (run: node scripts/gen-catalogue-migration.mjs)", () => {
   assert.equal(readFileSync(MIGRATION_FILE, "utf8"), buildMigration());
+});
+
+test("supabase/data/catalogue_coverage_extras.sql is exactly what the generator writes", () => {
+  assert.equal(readFileSync(EXTRAS_FILE, "utf8"), buildExtras());
+});
+
+test("the migration holds only types and departments: no category, value or chart (the database tests start without them)", () => {
+  const sql = readFileSync(MIGRATION_FILE, "utf8");
+  for (const table of ["categories", "plans", "option_values", "size_charts"]) assert.ok(!new RegExp(`(insert into|update) public\\.${table}\\b`).test(sql), table);
 });
 
 test("coverage types are valid, unique and do not replace an existing type", () => {
