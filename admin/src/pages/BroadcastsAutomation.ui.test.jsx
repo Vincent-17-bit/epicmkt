@@ -112,15 +112,34 @@ describe("Broadcast composer", () => {
 });
 
 describe("Scheduling a broadcast", () => {
+  const daysAhead = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
   it("reads the Send at time as Nairobi time, says so, and sends it as UTC", async () => {
     renderPage(<BroadcastsPage />);
     const input = await screen.findByLabelText(/Send at \(optional, Nairobi time\)/);
+    const day = daysAhead(3);
     fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Renew today" } });
-    fireEvent.change(input, { target: { value: "2026-10-25T14:00" } });
-    expect(screen.getByTestId("send-at")).toHaveTextContent(/Sun, 25 Oct, 14:00 EAT/);
+    fireEvent.change(input, { target: { value: `${day}T14:00` } });
+    expect(screen.getByTestId("send-at")).toHaveTextContent(/14:00 EAT/);
+    expect(screen.getByTestId("send-at")).toHaveTextContent(/by itself/);
     fireEvent.click(screen.getByRole("button", { name: "Preview" }));
     await waitFor(() => expect(api.sendBroadcast).toHaveBeenCalled());
-    expect(api.sendBroadcast.mock.calls[0][0].scheduledAt).toBe("2026-10-25T11:00:00.000Z");
+    expect(api.sendBroadcast.mock.calls[0][0].scheduledAt).toBe(`${day}T11:00:00.000Z`);
+    expect(screen.getByRole("button", { name: "Schedule broadcast" })).toBeInTheDocument();
+  });
+
+  it("refuses a time in the past before anything is sent, and a quick pick fills the field", async () => {
+    renderPage(<BroadcastsPage />);
+    const input = await screen.findByLabelText(/Send at \(optional, Nairobi time\)/);
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Renew today" } });
+    fireEvent.change(input, { target: { value: "2020-01-01T10:00" } });
+    expect(screen.getByRole("alert")).toHaveTextContent(/future/);
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(api.sendBroadcast).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Tomorrow 8:00" }));
+    expect(input.value).toMatch(/T08:00$/);
+    fireEvent.click(screen.getByRole("button", { name: "Send now" }));
+    expect(input.value).toBe("");
   });
 });
 
