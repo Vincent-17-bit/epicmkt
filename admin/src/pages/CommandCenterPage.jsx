@@ -17,14 +17,14 @@ import EmptyState from "../components/EmptyState.jsx";
 import ErrorCard from "../components/ErrorCard.jsx";
 import Skeleton, { SkeletonCard } from "../components/Skeleton.jsx";
 import Sparkline from "../components/Sparkline.jsx";
-import { formatKes } from "@epicmkt/shared";
+import { formatInstant, formatKes } from "@epicmkt/shared";
 
 export { ACTIVITY_KEY };
 
 const TREND_DAYS = 14;
 const ROW_ICON = { applications: faFileSignature, payments: faCreditCard, flags: faFlag, failed: faTriangleExclamation };
 const KPI_ICON = { live: faStore, expiring: faHourglassHalf, revenue: faCoins };
-const today = () => new Intl.DateTimeFormat(undefined, { weekday: "long", day: "numeric", month: "long" }).format(new Date());
+const today = () => formatInstant(new Date(), { weekday: "long", day: "numeric", month: "long" });
 
 export default function CommandCenterPage() {
   const { admin } = useAuth();
