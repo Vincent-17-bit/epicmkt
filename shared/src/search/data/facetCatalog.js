@@ -12,6 +12,8 @@
 // Everything here is data plus small pure readers, so the browser and the /api/products endpoint use the same rules. Category
 // ids live here on purpose (this is a data file): they say which shops sell which kind by default.
 
+import { COVERAGE_TYPE_KINDS } from "./coverageKinds.js";
+
 const rx = (source) => new RegExp(source, "i");
 // Whole words, with an optional plural: words("dress|shirt") matches "dresses" and "shirts" but not "address".
 const words = (alts) => rx(`\\b(?:${alts})(?:e?s)?\\b`);
@@ -405,7 +407,7 @@ export const KINDS = [
     ["applianceType", "applianceCapacity", "appliancePower", "applianceFeature", "burners"], { types: ["appliance"], cats: ["electronics-appliances", "home-kitchen"] }),
   kind("lighting", "Bulbs and lighting", "Lighting", "bulbs and lights", "bulb|lamp|light|lights|tube light|floodlight|flood light|security light|led strip|strip light|torch|lantern|chandelier|downlight|bulb holder",
     ["lightType", "lightBase", "lightColour", "lampPower", "powerSource"], { types: ["led-bulb", "light-fitting", "led-strip"], cats: ["electronics-appliances", "plumbing-electrical", "hardware-building"] }),
-  kind("batteries", "Batteries and solar", "Batteries", "batteries", "battery|batteries|solar panel|solar kit|inverter|charge controller|cr2032", ["batteryUse", "batterySize", "chemistry", "capacityMah"], { types: ["small-battery", "large-battery"], cats: ["electronics-appliances", "auto-spare-parts"] }),
+  kind("batteries", "Batteries and solar", "Batteries", "batteries", "battery|batteries|solar panel|solar kit|inverter|charge controller|cr2032", ["batteryUse", "batterySize", "chemistry", "capacityMah"], { types: ["small-battery", "large-battery"], cats: ["electronics-appliances", "auto-spare-parts", "solar-energy"] }),
   // ---- Fashion
   kind("eyewear", "Glasses and sunglasses", "Eyewear", "sunglasses", "sunglass|shades|spectacle|eyeglass|reading glass|glasses frame|spectacle frame|optical frame|contact lens|blue light glass", ["eyewearType", "lensFeature", "gender"], { types: ["sunglasses", "frames"], cats: ["optician", "fashion-boutiques"] }),
   kind("shoes", "Shoes", "Shoes", "shoes", "shoe|sneaker|sandal|heels|boot|loafer|slipper|trainer|crocs|open shoe|official shoe|school shoe|flip ?flop", ["shoeSize", "shoeType", "gender", "material"], { types: ["shoes"], cats: ["shoes-cobbler", "fashion-boutiques"] }),
@@ -418,7 +420,7 @@ export const KINDS = [
   // ---- Beauty and personal care (goods)
   kind("fragrance", "Perfume and fragrance", "Fragrance", "perfumes", "perfume|fragrance|cologne|eau de parfum|eau de toilette|body spray|oud|edp|edt|deodorant|body mist|roll-?on", ["concentration", "scentFor", "volumeMl", "authenticity"], { types: ["fragrance"], cats: ["salon-beauty", "chemist", "fashion-boutiques"] }),
   kind("beauty", "Beauty and hair products", "Beauty", "beauty products", "lotion|(?<!ice )cream|shampoo|conditioner|wig|weave|braids hair|braiding hair|hair extension|hair oil|hair food|makeup|lipstick|foundation|serum|soap|nail polish|lashes|relaxer kit|petroleum jelly|vaseline|sunscreen|face wash|body wash|shower gel|beard oil|hair gel",
-    ["beautyType", "skinType", "gender", "volumeMl"], { types: ["makeup-skincare", "hair-wigs"], cats: ["salon-beauty", "chemist", "supermarket-minimart"] }),
+    ["beautyType", "skinType", "gender", "volumeMl"], { types: ["makeup-skincare", "hair-wigs"], cats: ["salon-beauty", "chemist", "supermarket-minimart", "cosmetics-beauty-products"] }),
   // ---- Home and furniture
   kind("beds", "Beds and mattresses", "Furniture", "beds", "bed(?! ?sheets?| ?covers?| ?spreads?| bugs?| ?linen)|bedframe|bed frame|mattress|bunk|double-?decker|decker|cot|crib|headboard", ["bedType", "bedSize", "mattressThickness", "mattressType", "material"], { types: ["bed", "mattress"], cats: ["furniture-carpentry", "home-kitchen"] }),
   kind("tables", "Tables and desks", "Furniture", "tables", "table(?! salt| tennis| cloth| mat| lamp| fan| water| wine| spoon)|desk|workstation|study table|computer table|dressing table", ["tableType", "tableShape", "seats", "material"], { types: ["table"], cats: ["furniture-carpentry", "home-kitchen"] }),
@@ -438,12 +440,12 @@ export const KINDS = [
     ["buildMaterial", "sheetGauge", "paintType", "paintSize", "weight"], { types: ["iron-sheet", "paint", "cement-sand-bags", "tiles", "rope-wire-by-metre", "door-window"], cats: ["hardware-building", "hardware"] }),
   // ---- Auto parts and stationery (goods)
   kind("auto-parts", "Car parts and care", "Auto parts", "car parts", "tyre|tire|rim|tube|car battery|brake pad|brake shoe|brake|oil filter|air filter|filter|engine oil|motor oil|gear oil|atf|coolant|spark plug|wiper|shock absorber|bumper|headlight|tail light|side mirror|clutch|radiator|fan belt|timing belt|bush|car mat|seat cover|car polish|car shampoo",
-    ["autoPart", "vehicle", "tyreSize", "oilGrade", "partCondition"], { types: ["tyre", "car-battery", "engine-oil", "wiper-blade", "spare-part"], cats: ["auto-spare-parts", "garage-mechanic", "mechanics"] }),
+    ["autoPart", "vehicle", "tyreSize", "oilGrade", "partCondition"], { types: ["tyre", "car-battery", "engine-oil", "wiper-blade", "spare-part"], cats: ["auto-spare-parts", "garage-mechanic", "mechanics", "motorbike-sales-parts"] }),
   kind("stationery", "Stationery and office supplies", "Printing and stationery", "stationery", "pen|biro|ballpoint|pencil|crayon|marker|highlighter|exercise book|notebook|counter book|diary|ream|a4 paper|printing paper|photocopy paper|manila|whiteboard|white board|blackboard|chalkboard|notice board|cork board|flip chart|file|folder|envelope|box file|stapler|staples|glue|cello ?tape|tape|scissors|punch|sharpener|eraser|rubber|ruler|maths set|geometry set|calculator|pencil case|chalk|duster|stamp pad|sticky notes",
     ["stationeryType", "penType", "packCount", "paperSize", "boardSize", "boardMount"], { types: ["pens-pencils-markers", "notebooks-exercise-books", "paper-reams", "envelopes-files-folders", "staplers-glue-tape-scissors", "calculator"], cats: ["printing-stationery", "cyber-cafe", "supermarket-minimart"] }),
   // ---- Food and drink
   kind("liquor", "Beer, wine and spirits", "Food and drink", "drinks", "beer|lager|stout|tusker|guinness|white cap|balozi|cider|wine|whisky|whiskey|vodka|gin|brandy|cognac|rum|liqueur|amarula|baileys|spirit|savanna|hunters|smirnoff|jameson|johnnie walker|kenya cane|chrome",
-    ["liquorType", "bottleSize", "drinkPack"], { types: ["liquor"], cats: ["supermarket-minimart"] }),
+    ["liquorType", "bottleSize", "drinkPack"], { types: ["liquor"], cats: ["supermarket-minimart", "wines-spirits-bar"] }),
   kind("bakery", "Bread, cakes and pastries", "Food and drink", "bread and cakes", "bread|loaf|cake|cupcake|muffin|pastry|pastries|doughnut|donut|croissant|mandazi|maandazi|scone|cookie|bun|baguette|queen cake|black forest|red velvet",
     ["bakeType", "breadType", "flavour", "cakeOccasion", "weight", "dietary"], { types: ["bread", "cake", "cupcakes-pastries"], cats: ["bakery"] }),
   kind("sweets", "Chocolates and sweets", "Food and drink", "chocolates", "chocolate|cadbury|dairy milk|kitkat|snickers|ferrero|toblerone|truffle|pralines|sweet(?! potato| corn| pepper| melon| red| white| wine)|ice cream|candy|lollipop|toffee|chewing gum|gum|jelly bean|marshmallow",
@@ -453,21 +455,27 @@ export const KINDS = [
   kind("meals", "Meals and restaurant menu", "Food and drink", "meals", "pilau|biryani|plate of|full plate|half plate|meal deal|set meal|kids meal|menu|ugali|chapati and|chips|fries|burger|pizza|shawarma|samosa|smokie|sausage|bhajia|fried rice|noodle|stew|nyama choma|fish fry|wa kupaka|mukimo|githeri|matoke|pilau beef|chicken curry|beef curry|beans and|rice and|breakfast|lunch|dinner|combo|platter|chai|tea and|coffee and|mandazi and|full plate|half plate|kienyeji",
     ["cuisine", "protein", "portion", "mealTime", "dietary"], { types: ["restaurant-meal"], cats: ["restaurant-cafe", "eateries"] }),
   kind("meat", "Meat and fish", "Food and drink", "meat", "beef|goat|mbuzi|mutton|lamb|chicken|kienyeji|broiler|pork|bacon|fish|tilapia|omena|nile perch|mince|steak|ribs|sausages|smokies|liver|matumbo|offal",
-    ["meatType", "cut", "weight", "soldBy"], { types: ["meat-by-weight"], cats: ["butchery"] }),
+    ["meatType", "cut", "weight", "soldBy"], { types: ["meat-by-weight"], cats: ["butchery", "fish-mama-mboga"] }),
   kind("produce", "Fruit and vegetables", "Food and drink", "fruit and vegetables", "tomato|onion|sukuma|kale|cabbage|spinach|carrot|potato|pepper|managu|terere|banana|mango|orange|apple|avocado|pawpaw|pineapple|watermelon|passion fruit|lemon|dhania|garlic|ginger|egg|fruit|vegetable|mboga",
-    ["produceType", "soldBy", "weight", "dietary"], { types: ["produce"], cats: ["greengrocer", "groceries"] }),
+    ["produceType", "soldBy", "weight", "dietary"], { types: ["produce"], cats: ["greengrocer", "groceries", "fish-mama-mboga"] }),
   kind("water", "Drinking water", "Water and energy", "water", "water refill|drinking water|purified water|jerrican|\\d+ ?(?:l|litres?) refill|refill water", ["waterSize", "fill"], { types: ["drinking-water"], cats: ["water-refill"] }),
   kind("gas", "Cooking gas (LPG)", "Water and energy", "gas", "gas|lpg|cylinder|meko|regulator|gas burner|k-?gas|total gas|pro ?gas|afrigas|hashi", ["cylinderSize", "gasService"], { types: ["lpg-gas"], cats: ["lpg-gas"] }),
   kind("groceries", "Groceries and pantry", "Food and drink", "groceries", "flour|unga|maize meal|sugar|salt|rice|pasta|spaghetti|noodle|cooking oil|oil|cooking fat|kimbo|tea leaves|tea bags|ketepa|kericho gold|green tea|coffee|cocoa|spice|masala|royco|ketchup|sauce|cereal|cornflakes|oats|porridge|butter|margarine|blue band|cheese|biscuit|crisps|nuts|detergent|soap|bleach|tissue|toilet paper|omo|ariel|sunlight|jik|matches|beans|lentils|ndengu|honey|jam|peanut butter|baking powder|yeast",
-    ["groceryType", "packWeight", "packVolume", "dietary"], { types: ["packaged-food"], cats: ["supermarket-minimart", "groceries"] }),
+    ["groceryType", "packWeight", "packVolume", "dietary"], { types: ["packaged-food"], cats: ["supermarket-minimart", "groceries", "posho-mill-cereals"] }),
   kind("flowers", "Flowers and gifts", "Gifts", "flowers", "flower|rose|bouquet|lily|lilies|sunflower|carnation|orchid|potted plant|plant|succulent|wreath|hamper|gift basket|gift box",
     ["flowerType", "arrangement", "giftOccasion", "stems"], { cats: ["photography-events", "supermarket-minimart"] }),
   // ---- Health and farm
   kind("medicine", "Medicine and health products", "Medicine and health", "pharmacy products", "tablet|tablets|capsule|syrup|paracetamol|ibuprofen|panadol|amoxicillin|cetirizine|ointment|vitamin|multivitamin|zinc|test kit|condom|sanitiser|sanitizer|mask|thermometer|pressure monitor|glucometer|glucose strips|first aid|pregnancy test|ors|oral rehydration|antiseptic|bandage|plaster|cough|inhaler|eye drops|\\d+ ?mg",
     ["healthUse", "dosageForm", "prescription"], { types: ["medicine", "prescription-medicine"], cats: ["chemist", "chemists", "clinic"] }),
   kind("farm", "Farm inputs", "Farm inputs", "farm inputs", "seed|seeds|fertili[sz]er|dap|can fertili[sz]er|can 26|npk|urea|feed|dairy meal|layers mash|chick mash|growers|mash|pellets|dewormer|acaricide|pesticide|herbicide|fungicide|insecticide|sprayer|knapsack|vaccine|vet|mineral lick|maclick|drip kit",
-    ["farmType", "farmUse", "weight"], { types: ["vet-medicine", "agrochemicals", "agrovet-supplies"], cats: ["agrovet", "agrovets"] }),
+    ["farmType", "farmUse", "weight"], { types: ["vet-medicine", "agrochemicals", "agrovet-supplies"], cats: ["agrovet", "agrovets", "poultry-shop"] }),
   // ---- Services (matched separately from goods)
+  // ---- Added with the catalogue coverage work: shop types the first set did not cover. Facets stay general (price, brand, condition).
+  kind("pets", "Pet food and supplies", "Pets", "pet supplies", "dog|puppy|puppies|kitten|cat food|cat litter|pet food|pet shop|pet|leash|collar|aquarium|fish tank|kibble|chew|bird cage", [], { cats: ["pet-shop-vet"] }),
+  kind("baby-gear", "Baby gear and toys", "Baby", "baby gear", "pram|stroller|car seat|cot|baby carrier|baby bottle|steriliser|sterilizer|baby monitor|nappy|diaper|baby walker|high chair|teether|baby toy", [], { cats: ["baby-shop"] }),
+  kind("fitness-gear", "Fitness equipment", "Fitness", "fitness equipment", "dumbbell|kettlebell|barbell|treadmill|yoga mat|skipping rope|resistance band|exercise bike|weight plate|bench press|gym bench", [], { cats: ["gym-fitness"] }),
+  kind("security", "CCTV, alarms and fencing", "Security", "security equipment", "cctv|ip camera|security camera|dash cam|alarm|electric fence|intercom|biometric|smoke detector|panic button|gate motor", [], { cats: ["security-cctv"] }),
+  kind("books", "Books and learning materials", "Books", "books", "book|textbook|novel|storybook|revision|atlas|dictionary|past papers|exercise book|bible|quran", [], { cats: ["bookshop"] }),
   kind("barber", "Barber services", "Hair and beauty", "barbers", "haircut|hair cut|cut|fade|taper|beard|line-?up|shave|kids cut|chiskop|dreadlock|locs|retwist|hair dye|scalp massage|hot towel", ["barberService", "serviceFor", "duration", "homeService", "booking"],
     { types: ["barbershop-service"], cats: ["barbershop", "barbershops"], service: true }),
   kind("salon", "Salon services", "Hair and beauty", "salons", "braid|braids|cornrow|knotless|twist|wig install|wig|weave|sew-?in|frontal|relaxer|retouch|wash and blow-?dry|blow-?dry|silk press|styling|manicure|pedicure|gel nails|acrylic|nails|makeup|lashes|brows|waxing|facial|hair treatment|steam",
@@ -493,12 +501,22 @@ export const KINDS = [
     { types: ["photo-package"], cats: ["photography-events"], service: true }),
   kind("tuition", "Tuition and daycare", "Education", "tuition", "tuition|tutor|lesson|class|daycare|day care|pre-?school|kindergarten|homework|coaching|driving lesson|music lesson|holiday tuition", ["tuitionLevel", "subject", "lessonMode"], { cats: ["tuition-daycare"], service: true }),
   kind("money", "M-Pesa, airtime and payments", "Money", "money services", "m-?pesa|deposit|withdraw|airtime|bundle|data bundle|tokens|bill payment|agent banking|send money", ["agentService"], { cats: ["mpesa-airtime-agent", "mpesa"], service: true }),
-  kind("services", "Other services", "Services", "services", "service|session|installation|hire|booking|appointment|delivery|errand", ["booking", "duration", "homeService"], { service: true })
+  kind("stays", "Hotels, rooms and venues", "Hospitality", "rooms and venues", "hotel|room|bnb|airbnb|lodging|guest house|conference hall|venue|apartment stay|bed and breakfast", ["booking", "duration"], { cats: ["hotels-lodging"], service: true }),
+  kind("property", "Property for rent and sale", "Property", "property", "for rent|to let|for sale|bedsitter|plot|land for sale|bedroom apartment|office space|rental house", ["booking"], { cats: ["rentals-real-estate"], service: true }),
+  kind("transport", "Transport and delivery", "Transport", "transport", "boda|taxi|shuttle|courier|haulage|moving|parcel|lorry|pickup truck|tuk tuk|matatu", ["booking", "duration"], { cats: ["transport-logistics"], service: true }),
+  kind("services", "Other services", "Services", "services", "service|session|installation|hire|booking|appointment|delivery|errand", ["booking", "duration", "homeService"], { cats: ["welding-fabrication", "event-hire", "professional-services"], service: true })
 ];
 
 // Shop categories whose items are mostly services: there a word like "makeup" or "braids" means the service, not a product.
 export const SERVICE_CATEGORIES = new Set(["barbershop", "barbershops", "salon-beauty", "salons", "spa-massage", "gym-fitness", "gyms", "car-wash", "garage-mechanic", "mechanics",
   "cleaning-laundry", "cyber-cafe", "mpesa", "mpesa-airtime-agent", "photography-events", "tuition-daycare", "clinic", "phone-repair", "tailors"]);
+
+// The catalogue coverage types (data/coverageKinds.js) join their kind's own list of product types.
+for (const [kindId, ids] of Object.entries(COVERAGE_TYPE_KINDS)) {
+  const k = KINDS.find((x) => x.id === kindId);
+  if (!k) throw new Error(`coverageKinds: unknown kind ${kindId}`);
+  k.types = [...k.types, ...ids];
+}
 
 export const KIND_BY_ID = Object.fromEntries(KINDS.map((k) => [k.id, k]));
 
