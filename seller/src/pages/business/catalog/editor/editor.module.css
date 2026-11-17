@@ -492,3 +492,9 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 .errorList { margin: 0; padding-left: var(--space-5); color: var(--danger-text); display: grid; gap: var(--space-1); }
 .errorText { margin: 0; color: var(--danger-text); }
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.infoGroup { border: 1px solid var(--border-strong); border-radius: var(--radius-md, 8px); background: var(--surface); min-inline-size: 0; }
+.infoSummary { min-block-size: var(--tap); display: flex; align-items: center; padding: 0 var(--space-3); font-weight: 700; cursor: pointer; }
+.infoGrid { display: grid; gap: var(--space-3); padding: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+.infoMulti { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; display: grid; gap: var(--space-2); min-inline-size: 0; }
+.infoChecks { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }

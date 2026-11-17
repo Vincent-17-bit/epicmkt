@@ -1,3 +1,4 @@
+import { isInfoGroup } from "../productInfo/index.js";
 // Product options, variants, availability matrix and size charts: the ONE place their rules live in JavaScript.
 //
 // Mirrors migrations 0086 and 0088 (the SQL validators and seller_save_item / public_item_options). Same limits, same error names, so the
@@ -105,7 +106,7 @@ export const cleanSpecOverrides = (rows) => {
   const out = [];
   for (const r of rows) {
     if (!isRecord(r) || Object.keys(r).some((k) => !["group", "label", "value"].includes(k))) return null;
-    if (!SPEC_GROUPS.includes(r.group) || !text(r.label, SPEC_LIMITS.label) || !text(r.value, SPEC_LIMITS.value)) return null;
+    if (!(SPEC_GROUPS.includes(r.group) || isInfoGroup(r.group)) || !text(r.label, SPEC_LIMITS.label) || !text(r.value, SPEC_LIMITS.value)) return null;
     out.push({ group: r.group, label: r.label.trim(), value: r.value.trim() });
   }
   return out;

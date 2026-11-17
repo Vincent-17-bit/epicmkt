@@ -1,3 +1,4 @@
+import { isInfoGroup } from "../productInfo/index.js";
 import { STATUS_CHOICES, statusForForm } from "../availability.js";
 
 export const ITEM_PRICE_TYPES = ["fixed", "from", "range", "free", "contact"];
@@ -10,7 +11,7 @@ const money = (raw) => {
   return value > 9999999999.99 ? { error: true } : { value };
 };
 
-export const SPEC_LIMITS = { rows: 20, label: 40, value: 120 };
+export const SPEC_LIMITS = { rows: 60, label: 40, value: 120 };
 export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
 export const SPEC_DEFAULT_GROUP = SPEC_GROUPS[0];
 
@@ -24,7 +25,7 @@ export const cleanSpecs = (raw) => {
     const group = String(row?.group ?? "").trim();
     if (!label && !value) return;
     const rowErrors = {};
-    if (group && !SPEC_GROUPS.includes(group)) rowErrors.group = "Choose a group from the list.";
+    if (group && !SPEC_GROUPS.includes(group) && !isInfoGroup(group)) rowErrors.group = "Choose a group from the list.";
     if (!label) rowErrors.label = "Add a label.";
     else if (label.length > SPEC_LIMITS.label) rowErrors.label = `Use ${SPEC_LIMITS.label} characters or fewer.`;
     if (!value) rowErrors.value = "Add a value.";
@@ -183,7 +184,7 @@ export const storedItemDetails = (f) => {
     for (const row of list) {
       if (!isRecord(row) || Object.keys(row).some((k) => !["group", "label", "value"].includes(k))) return bad;
       const group = row.group ?? SPEC_DEFAULT_GROUP;
-      if (!SPEC_GROUPS.includes(group) || !filled(row.label, SPEC_LIMITS.label) || !filled(row.value, SPEC_LIMITS.value)) return bad;
+      if (!(SPEC_GROUPS.includes(group) || isInfoGroup(group)) || !filled(row.label, SPEC_LIMITS.label) || !filled(row.value, SPEC_LIMITS.value)) return bad;
       value.specs.push({ group, label: row.label, value: row.value });
     }
   }

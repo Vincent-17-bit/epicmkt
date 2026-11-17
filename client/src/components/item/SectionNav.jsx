@@ -8,6 +8,7 @@ export const SECTIONS = [
   { id: "item-specs", label: "Specifications" },
   { id: "item-delivery", label: "Delivery" },
   { id: "item-store", label: "From the store" },
+  { id: "item-product-info", label: "Product information" },
   { id: "item-recommend", label: "Goes well with" },
   { id: "item-similar", label: "Similar products" }
 ];

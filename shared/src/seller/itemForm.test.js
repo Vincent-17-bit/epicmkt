@@ -192,7 +192,7 @@ test("storedItemDetails: refuses what the database refuses", () => {
     { brand: "b".repeat(61) }, { shortDescription: "s".repeat(141) }, { terms: "t".repeat(501) }, { packSize: "p".repeat(41) }, { brand: 5 },
     { highlights: many(9, (i) => ({ text: `P${i}` })) }, { highlights: [{ text: "" }] }, { highlights: [{ title: "t".repeat(41), text: "x" }] }, { highlights: [{ text: "t".repeat(201) }] }, { highlights: [{ text: "x", other: 1 }] }, { highlights: ["x"] },
     { includes: many(11, (i) => `L${i}`) }, { includes: [""] }, { includes: ["x".repeat(81)] }, { includes: [5] },
-    { specs: many(21, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: "" }] }, { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
+    { specs: many(61, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: "" }] }, { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
   ];
   for (const f of bad) assert.deepEqual(storedItemDetails(f), { ok: false }, JSON.stringify(f).slice(0, 60));
 });

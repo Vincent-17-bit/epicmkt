@@ -87,3 +87,4 @@ export * from "./browse.js";   // A23
 
 // Product search: Amazon-style results with per-kind filters (search page).
 export * from "./search/index.js";
+export * from "./productInfo/index.js";
