@@ -467,6 +467,229 @@ export const categories = [
     ],
     extraDocs: [],
   },
+  // ---- Added with the catalogue coverage work. `draft: true` marks a category that is created inactive with no price:
+  // an admin reviews the document rules and sets the plan prices before it opens to sellers (supabase/migrations/0132).
+  {
+    id: 'poultry-shop', name: 'Poultry and eggs', group: 'Agriculture', icon: 'egg', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Day-old chicks', 'Growers and layers', 'Broilers (live)', 'Dressed chicken', 'Eggs', 'Turkeys and ducks', 'Poultry feed', 'Drinkers and feeders', 'Incubators and brooders'], { required: true, filterable: true, showOnCard: true }),
+      multi('breeds', 'Breeds', ['Kienyeji', 'Improved kienyeji', 'Kenbro', 'Broiler', 'Layer', 'Sasso', 'Other'], { filterable: true }),
+      bool('vaccinated', 'Chicks come vaccinated', { filterable: true }),
+      bool('wholesale', 'Wholesale prices', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'fish-mama-mboga', name: 'Fish and mama mboga', group: 'Food and drink', icon: 'fish', tier: 'A', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Tilapia', 'Nile perch', 'Omena', 'Fresh fish', 'Smoked and dried fish', 'Vegetables', 'Fruit', 'Tomatoes and onions', 'Potatoes and cereals', 'Eggs'], { required: true, filterable: true, showOnCard: true }),
+      multi('sold', 'Sold by', ['Per kg', 'Per piece', 'Per heap', 'Per bunch'], { filterable: true }),
+      bool('cleaning', 'Fish cleaned and gutted', { filterable: true }),
+      bool('fresh', 'Fresh stock daily', { filterable: true, showOnCard: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [
+      doc('public_health_cert', 'County public health certificate', 'conditional', 'Fish handling needs a public health check.', 'I sell fresh or smoked fish'),
+    ],
+  },
+  {
+    id: 'wines-spirits-bar', name: 'Wines, spirits and bar', group: 'Food and drink', icon: 'wine-glass', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Beer and cider', 'Wine', 'Whisky', 'Vodka and gin', 'Brandy and cognac', 'Rum and tequila', 'Liqueurs', 'Soft drinks and mixers', 'Snacks'], { required: true, filterable: true, showOnCard: true }),
+      multi('service', 'Service', ['Bottle shop', 'Bar and drinks', 'Nyama choma', 'Events and bulk orders'], { filterable: true }),
+      bool('delivery', 'Delivery available (18 and over only)', { filterable: true, showOnCard: true }),
+      deliveryArea(),
+      bool('wholesale', 'Wholesale prices', { filterable: true }),
+      text('hours', 'Last orders'),
+    ],
+    extraDocs: [
+      doc('liquor_licence', 'County liquor licence', 'required', 'Selling alcohol needs a county liquor licence.'),
+    ],
+  },
+  {
+    id: 'posho-mill-cereals', name: 'Posho mill and cereals', group: 'Food and drink', icon: 'wheat-awn', tier: 'A', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Maize flour', 'Wheat flour', 'Millet and sorghum flour', 'Whole maize', 'Beans and legumes', 'Rice', 'Cooking oil', 'Animal feed'], { required: true, filterable: true, showOnCard: true }),
+      bool('milling', 'Milling service (bring your grain)', { filterable: true, showOnCard: true }),
+      price('millingPrice', 'Milling price per kg', { showIf: { field: 'milling', equals: true } }),
+      bool('wholesale', 'Wholesale (90 kg bags)', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [
+      doc('public_health_cert', 'Public health certificate', 'required', 'Milling and food handling need a public health certificate.'),
+    ],
+  },
+  {
+    id: 'baby-shop', name: 'Baby shop', group: 'Fashion', icon: 'baby', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Baby clothes', 'Diapers and wipes', 'Feeding bottles and sterilisers', 'Baby food and formula', 'Strollers and car seats', 'Cots and bedding', 'Toys', 'Bath and skincare', 'Maternity items'], { required: true, filterable: true, showOnCard: true }),
+      multi('ages', 'Ages', ['Newborn', '0 to 12 months', '1 to 3 years', '3 to 6 years'], { filterable: true }),
+      multi('condition', 'Condition', ['New', 'Mitumba (second-hand)'], { filterable: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'cosmetics-beauty-products', name: 'Cosmetics and beauty supplies', group: 'Beauty and fitness', icon: 'spray-can-sparkles', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Makeup', 'Skincare', 'Hair products', 'Wigs and weaves', 'Nail products', 'Perfume', 'Body lotions and oils', 'Barber and salon supplies', 'Beauty tools'], { required: true, filterable: true, showOnCard: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      bool('authentic', 'Genuine products only', { filterable: true, showOnCard: true }),
+      bool('wholesale', 'Wholesale for salons', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'hotels-lodging', name: 'Hotels and lodging', group: 'Services and education', icon: 'hotel', tier: 'C', draft: true,
+    keyFields: [
+      select('stay', 'Type of stay', ['Hotel', 'Lodge', 'Guest house', 'Airbnb or short stay', 'Serviced apartment', 'Resort', 'Hostel'], { required: true, filterable: true, showOnCard: true }),
+      number('rooms', 'Number of rooms', { filterable: true }),
+      price('fromPrice', 'Rooms from (per night)', { required: true, showOnCard: true }),
+      multi('amenities', 'Amenities', ['Wi-Fi', 'Parking', 'Restaurant', 'Breakfast included', 'Hot shower', 'Air conditioning', 'Swimming pool', 'Conference hall', 'Gym', 'Airport pickup'], { filterable: true }),
+      bool('conference', 'Conference and event space', { filterable: true }),
+      text('checkIn', 'Check-in and check-out times'),
+    ],
+    extraDocs: [
+      doc('tourism_licence', 'Tourism Regulatory Authority licence', 'required', 'Hotels and lodges need a TRA licence.'),
+      doc('public_health_cert', 'Public health certificate', 'required', 'Accommodation with food service needs a public health certificate.'),
+    ],
+  },
+  {
+    id: 'rentals-real-estate', name: 'Rentals and real estate', group: 'Services and education', icon: 'house-chimney', tier: 'C', draft: true,
+    keyFields: [
+      multi('offers', 'Offers', ['Houses and apartments to rent', 'Bedsitters and single rooms', 'Commercial space and shops', 'Land for sale', 'Houses for sale', 'Property management', 'Agent services'], { required: true, filterable: true, showOnCard: true }),
+      text('areas', 'Areas covered', { showOnCard: true }),
+      price('fromRent', 'Rents from (per month)', { showOnCard: true }),
+      bool('viewing', 'Free viewing', { filterable: true }),
+      bool('agentFee', 'Agent fee charged', { filterable: true }),
+    ],
+    extraDocs: [
+      doc('estate_agent_registration', 'Estate Agents Registration Board certificate', 'conditional', 'Agents need to be registered with the board.', 'I act as an agent for other owners'),
+    ],
+  },
+  {
+    id: 'event-hire', name: 'Event hire and decor', group: 'Services and education', icon: 'tents', tier: 'B', draft: true,
+    keyFields: [
+      multi('hires', 'Hire items', ['Tents', 'Chairs and tables', 'Sound system and DJ', 'Lighting', 'Decor and flowers', 'Cutlery and crockery', 'Stage and dance floor', 'Bouncing castles', 'Generators'], { required: true, filterable: true, showOnCard: true }),
+      bool('setup', 'Delivery and setup included', { filterable: true }),
+      bool('planning', 'Event planning offered', { filterable: true }),
+      text('area', 'Area covered', { showOnCard: true }),
+      text('leadTime', 'Book at least this long before'),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'transport-logistics', name: 'Transport and logistics', group: 'Auto', icon: 'truck', tier: 'B', draft: true,
+    keyFields: [
+      multi('services', 'Services', ['Boda boda and tuk tuk', 'Taxi', 'Airport shuttle', 'Bus and matatu hire', 'Parcel delivery', 'Goods haulage', 'House and office moving', 'Vehicle hire', 'Towing'], { required: true, filterable: true, showOnCard: true }),
+      multi('vehicles', 'Vehicles', ['Motorbike', 'Car', 'Van', 'Pickup', 'Lorry', 'Minibus', 'Bus'], { filterable: true }),
+      text('area', 'Area covered', { showOnCard: true }),
+      bool('open24', 'Available 24 hours', { filterable: true }),
+      bool('insured', 'Goods and passengers insured', { filterable: true }),
+    ],
+    extraDocs: [
+      doc('ntsa_licence', 'NTSA licence for the service', 'conditional', 'Public service and goods vehicles need an NTSA licence.', 'I carry passengers or goods for hire'),
+      doc('insurance_cover', 'Insurance certificate', 'conditional', 'Insurance covers passengers and goods in transit.', 'I carry passengers or goods for hire'),
+    ],
+  },
+  {
+    id: 'motorbike-sales-parts', name: 'Motorbike sales and parts', group: 'Auto', icon: 'motorcycle', tier: 'C', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['New motorbikes', 'Used motorbikes', 'Spare parts', 'Tyres and batteries', 'Helmets and riding gear', 'Engine oil', 'Accessories'], { required: true, filterable: true, showOnCard: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      bool('repairs', 'Repairs and servicing', { filterable: true }),
+      bool('financing', 'Financing or lipa mdogo mdogo', { filterable: true }),
+      bool('logbook', 'Logbook transfer help', { filterable: true }),
+      select('warranty', 'Warranty on new bikes', WARRANTY),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'solar-energy', name: 'Solar and energy', group: 'Water and energy', icon: 'solar-panel', tier: 'C', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Solar panels', 'Batteries', 'Inverters', 'Charge controllers', 'Solar water heaters', 'Solar lights', 'Complete home kits', 'Generators', 'Solar pumps'], { required: true, filterable: true, showOnCard: true }),
+      bool('installation', 'Installation offered', { filterable: true, showOnCard: true }),
+      bool('payAsYouGo', 'Pay as you go or instalments', { filterable: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      select('warranty', 'Warranty on equipment', WARRANTY),
+      bool('siteVisit', 'Free site visit', { filterable: true }),
+    ],
+    extraDocs: [
+      doc('epra_solar_licence', 'EPRA solar licence', 'required', 'Solar installation needs an EPRA licence.'),
+    ],
+  },
+  {
+    id: 'welding-fabrication', name: 'Welding and fabrication', group: 'Home and construction', icon: 'helmet-safety', tier: 'B', draft: true,
+    keyFields: [
+      multi('makes', 'We make', ['Gates', 'Grills and burglar bars', 'Doors and windows', 'Stair and balcony railings', 'Roof trusses', 'Tanks and stands', 'Shop shutters', 'Furniture frames', 'Custom work'], { required: true, filterable: true, showOnCard: true }),
+      multi('materials', 'Materials', ['Mild steel', 'Stainless steel', 'Aluminium', 'Galvanised'], { filterable: true }),
+      bool('measuring', 'Free measuring visit', { filterable: true }),
+      bool('installation', 'Installation included', { filterable: true }),
+      text('leadTime', 'Typical days to make'),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'security-cctv', name: 'Security and CCTV', group: 'Tech and office', icon: 'video', tier: 'C', draft: true,
+    keyFields: [
+      multi('sells', 'Sells and installs', ['CCTV cameras', 'Alarms', 'Electric fence', 'Gate automation', 'Access control', 'Intercoms', 'Smoke detectors', 'Dash cams'], { required: true, filterable: true, showOnCard: true }),
+      bool('installation', 'Installation offered', { filterable: true, showOnCard: true }),
+      bool('maintenance', 'Maintenance plans', { filterable: true }),
+      bool('remoteView', 'Phone viewing set up', { filterable: true }),
+      list('brands', 'Brands', { showOnCard: true }),
+      select('warranty', 'Warranty', WARRANTY),
+    ],
+    extraDocs: [
+      doc('psra_licence', 'Private Security Regulatory Authority licence', 'conditional', 'Monitoring and guard services need a PSRA licence.', 'I offer guarding or alarm monitoring'),
+    ],
+  },
+  {
+    id: 'pet-shop-vet', name: 'Pet shop and vet', group: 'Agriculture', icon: 'paw', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['Dog food', 'Cat food', 'Bird and fish supplies', 'Pet accessories', 'Pet medicine', 'Puppies and kittens', 'Aquariums', 'Grooming products'], { required: true, filterable: true, showOnCard: true }),
+      multi('services', 'Services', ['Vet consultation', 'Vaccination', 'Grooming', 'Boarding', 'Training'], { filterable: true }),
+      bool('homeVisits', 'Home visits', { filterable: true }),
+      bool('emergency', 'Emergency callout', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [
+      doc('kvb_registration', 'Kenya Veterinary Board registration', 'conditional', 'Veterinary services need KVB registration.', 'I offer veterinary services or sell vet drugs'),
+    ],
+  },
+  {
+    id: 'bookshop', name: 'Bookshop', group: 'Services and education', icon: 'book', tier: 'B', draft: true,
+    keyFields: [
+      multi('sells', 'Sells', ['School textbooks', 'Revision books and past papers', 'Storybooks', 'Novels', 'Religious books', 'Reference books', 'Exercise books and stationery', 'Used books'], { required: true, filterable: true, showOnCard: true }),
+      multi('levels', 'Levels', ['Pre-primary', 'Primary', 'Junior school', 'Senior school', 'College and university', 'Adult'], { filterable: true }),
+      bool('orders', 'Special orders taken', { filterable: true }),
+      bool('schoolSupply', 'Supplies schools in bulk', { filterable: true }),
+      delivery(),
+      deliveryArea(),
+    ],
+    extraDocs: [],
+  },
+  {
+    id: 'professional-services', name: 'Professional services', group: 'Services and education', icon: 'briefcase', tier: 'C', draft: true,
+    keyFields: [
+      multi('field', 'Field', ['Legal', 'Accounting and tax', 'Architecture and surveying', 'Engineering', 'Consulting', 'Insurance', 'Real estate valuation', 'Marketing and design', 'Software and web', 'Translation'], { required: true, filterable: true, showOnCard: true }),
+      select('consultation', 'First consultation', ['Free', 'Paid', 'Depends on case'], { filterable: true, showOnCard: true }),
+      bool('remote', 'Online consultations', { filterable: true }),
+      bool('fixedFees', 'Fixed fee packages', { filterable: true }),
+      text('registration', 'Professional body and number'),
+    ],
+    extraDocs: [
+      doc('professional_registration', 'Professional registration certificate', 'conditional', 'Regulated professions need current registration.', 'My profession is regulated (law, accounting, architecture, engineering)'),
+    ],
+  },
 ];
 
 export const categoryById = Object.fromEntries(categories.map((c) => [c.id, c]));
