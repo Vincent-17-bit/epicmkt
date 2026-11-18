@@ -71,6 +71,16 @@ describe("PayByPhone", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
+  it("uses the app's own button classes when given, so it matches the page", async () => {
+    const { start } = setup({ buttonClassName: "app-btn", secondaryButtonClassName: "app-ghost" });
+    const pay = screen.getByRole("button", { name: "Pay KES 500 now" });
+    expect(pay.className).toContain("app-btn");
+    expect(pay).toHaveAttribute("type", "submit");
+    fireEvent.click(pay);
+    await waitFor(() => expect(start).toHaveBeenCalled());
+    expect((await screen.findByRole("button", { name: "Use a different number" })).className).toContain("app-ghost");
+  });
+
   it("can be disabled with a reason", () => {
     setup({ disabled: true, disabledReason: "Wait for the payment you reported to be checked." });
     expect(screen.getByRole("button", { name: "Pay KES 500 now" })).toBeDisabled();

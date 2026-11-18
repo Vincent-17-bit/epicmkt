@@ -76,7 +76,7 @@ Please confirm the exact account-number limit for your Paybill with your Safaric
 | 16 | Pays **less** (KES 300) | Kept as credit, no months yet | SMS and page: "KES 200 more is needed". The card now asks only for KES 200 |
 | 17 | Pays the rest | Months added | As 13 |
 | 18 | Pays a day late, or after expiry | One day late carries on from the old date. Expired restarts from today | Page shows the new end date |
-| 19 | Pays far in advance | Up to **12 months** ahead (`max_prepay_months` in `site_settings`). The excess stays as credit and is used later | SMS explains |
+| 19 | Pays far in advance | Up to **12 months** ahead (`max_prepay_months` in `site_settings`). The excess stays as credit and is used later | The Subscription page only offers the months that still fit (for example "up to 10 months now"), and says "nothing to pay now" when none do. A Paybill overpayment is explained by SMS |
 | 20 | Opens **Upgrade to Premium** or a **category change** and pays | The portal tells the server what the payment is for. Money is **held** for it and applied automatically when complete | Plan changes by itself. A part payment shows what is still due |
 | 21 | Has credit and wants to upgrade | **Use my KES X credit** button | Instant |
 | 22 | Pays with the old application reference after activation | Goes to the business | As 13 |
@@ -104,7 +104,9 @@ Please confirm the exact account-number limit for your Paybill with your Safaric
 1. On the applicant status page (after approval) or the seller's Subscription page, the **M-Pesa phone number** box is
    already filled with the number on the application or listing. They can change it to any Safaricom number (a relative's,
    a second line). It accepts `0712 345 678`, `+254712345678`, `254712345678`, `0110 345 678`.
-2. They choose how many months (renewals and first payments) and press **Pay KES X now**.
+2. They choose how many months (renewals and first payments) and press **Pay KES X now**. Each choice shows its price
+   and the paid-until date it gives ("3 months, KES 1,500, to 18 Feb 2027"), worked out by the same rule the server
+   credits with (`renewalPlan` in `shared/src/billing.js`; a database test keeps the two equal).
 3. Their phone shows *"Do you want to pay KES X to EpicMKT, account ES100001?"*. They enter their PIN. That is all.
 4. The page shows "Check your phone", then "Payment received" with the M-Pesa receipt, by itself. A first payment goes on
    to create the seller's login (SMS); a renewal shows the new paid-until date.

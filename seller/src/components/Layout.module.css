@@ -244,6 +244,26 @@
   margin: var(--space-4) auto 0;
 }
 
+/* "Your subscription ends in 3 days / has expired" on every page but Subscription, with the way to renew. */
+.reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  width: calc(100% - 2 * var(--space-4));
+  max-width: 64rem;
+  margin: var(--space-3) auto 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid;
+  border-radius: var(--radius-card);
+}
+
+.reminder p {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
 @media (max-width: 19.99rem) {
   .app {
     display: none;

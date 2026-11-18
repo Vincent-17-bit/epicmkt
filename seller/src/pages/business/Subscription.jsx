@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { daysLeft, formatDay, formatPrice, planLabel, subscriptionView } from "@epicmkt/shared/billing";
+import { subscriptionView } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import Banners from "../../components/Banners.jsx";
 import SetupCard from "../../onboarding/SetupCard.jsx";
 import { now } from "../../lib/clock.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import PaymentCard from "./PaymentCard.jsx";
+import SubscriptionStatus from "./SubscriptionStatus.jsx";
 import PlanCompare from "./PlanCompare.jsx";
 import PaymentHistory from "./PaymentHistory.jsx";
 import CategoryChange from "./CategoryChange.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./subscription.module.css";
 
-const STATUS_LABEL = { pending: "Pending", live: "Live", paused: "Paused (unlisted)", suspended: "Suspended", expired: "Expired", deleted: "Deleted" };
-const STATE_LABEL = { none: "Not paid yet", active: "Active", grace: "Grace period", expired: "Expired" };
+// The status card says these itself; the banners above it only add paused or suspended.
+const IN_STATUS = ["expiring", "grace", "expired", "first-payment"];
 
 export default function Subscription() {
   const qc = useQueryClient();
@@ -90,11 +91,12 @@ export default function Subscription() {
   if (sub.error) return <div className={ui.page}><p className={ui.error} role="alert">We could not load your subscription. Check your connection and refresh.</p></div>;
 
   const { business } = sub.data;
-  const view = subscriptionView(business, now());
+  const today = now();
+  const view = subscriptionView(business, today);
   const open = (payments.data ?? []).find((p) => p.status === "submitted") ?? null;
-  const left = daysLeft(business.paidUntil, now());
   // Paying always works. Changing the plan or the category does not: the server refuses those for a suspended seller, so the page does not offer them.
   const suspended = business.status === "suspended";
+  const price = sub.data.plans[business.planKey]?.price ?? null;
 
   return (
     <div className={ui.page}>
@@ -103,42 +105,30 @@ export default function Subscription() {
         <p className={ui.muted}>{business.name}</p>
       </div>
 
-      <SetupCard />
-      <Banners business={business} onAction={() => choose({ purpose: null })} skip={suspended ? ["suspended"] : []} />
+      <Banners business={business} skip={suspended ? ["suspended", ...IN_STATUS] : IN_STATUS} />
+      <SubscriptionStatus business={business} view={view} price={price} now={today} />
 
-      <section className={ui.card} aria-labelledby="sum-title">
-        <h2 id="sum-title" className="sr-only">Your subscription</h2>
-        <dl className={styles.summary}>
-          <div><dt>Plan</dt><dd data-testid="sum-plan">{planLabel(business.planKey)} · {business.categoryName}</dd></div>
-          <div><dt>Listing</dt><dd data-testid="sum-status">{business.status === "live" && view.state === "expired" ? "Hidden until you renew" : STATUS_LABEL[business.status] ?? business.status}</dd></div>
-          <div><dt>Subscription</dt><dd data-testid="sum-state">{STATE_LABEL[view.state]}</dd></div>
-          <div><dt>Paid until</dt><dd data-testid="sum-paid-until">{business.paidUntil ? formatDay(business.paidUntil) : "Not paid yet"}</dd></div>
-          <div>
-            <dt>{view.state === "grace" ? "Grace ends" : "Days left"}</dt>
-            <dd data-testid="sum-days">
-              {view.state === "none" ? "" : view.state === "grace" ? formatDay(view.graceEndsDay) : view.state === "expired" ? "0" : left}
-            </dd>
+      <div ref={payRef} className={styles.payArea}>
+        {mode.purpose && (
+          <div className={styles.modeRow} role="group" aria-label="What are you paying for">
+            <button type="button" className={ui.chip} onClick={() => choose({ purpose: null })}>Back to {business.paidUntil ? "renewal" : "first payment"}</button>
+            {mode.purpose === "upgrade" && <span className={ui.muted}>Upgrading to Premium</span>}
           </div>
-        </dl>
-        <p className={ui.muted}>Each payment covers one calendar month: a month that starts on 31 Jan runs to 28 Feb. After it ends you have {view.graceDays} day{view.graceDays === 1 ? "" : "s"} of grace.</p>
-      </section>
-
-      <div ref={payRef}>
-        <div className={styles.modeRow} role="group" aria-label="What are you paying for" style={{ marginBottom: "var(--space-3)" }}>
-          {mode.purpose && <button type="button" className={ui.chip} onClick={() => choose({ purpose: null })}>Back to {business.paidUntil ? "renewal" : "first payment"}</button>}
-          {mode.purpose === "upgrade" && <span className={ui.muted}>Upgrading to Premium</span>}
-        </div>
+        )}
         {instr.error && !open && !received ? (
           <section className={ui.card}><p className={ui.error} role="alert">{instr.error.code === "renew_first" ? "Renew your subscription first." : "We could not load the payment details."}</p></section>
         ) : (
-          <PaymentCard instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)} mode={mode} onPaid={refreshAfterPayment} />
+          <PaymentCard
+            instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)}
+            mode={mode} onPaid={refreshAfterPayment} business={business} view={view}
+          />
         )}
       </div>
 
+      <SetupCard />
       {suspended ? null : <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />}
       {suspended ? null : <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />}
       <PaymentHistory payments={payments.data ?? []} />
-      {sub.data.plans[business.planKey] && <p className={ui.muted}>{formatPrice(sub.data.plans[business.planKey].price)} per month is your current price.</p>}
     </div>
   );
 }

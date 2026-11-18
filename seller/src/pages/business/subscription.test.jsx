@@ -17,8 +17,11 @@ describe("Subscription: summary, calendar months and grace", () => {
     expect(text("sum-status")).toBe("Live");
     expect(text("sum-state")).toBe("Active");
     expect(text("sum-paid-until")).toBe("28 Feb 2026");
-    expect(text("sum-days")).toBe("18");
-    expect(screen.getByText(/starts on 31 Jan runs to 28 Feb/)).toBeInTheDocument();
+    expect(text("sum-price")).toBe("KES 500 / month");
+    expect(screen.getByTestId("status-message")).toHaveTextContent("Active until 28 Feb 2026");
+    expect(screen.getByTestId("status-message")).toHaveTextContent("18 days left");
+    expect(screen.getByRole("img", { name: "18 of 31 days left this month" })).toBeInTheDocument();
+    expect(await screen.findByText(/starts on 31 Jan runs to 28 Feb/)).toBeInTheDocument();
   });
 
   it("grace is one day after paid_until, then expired", async () => {
@@ -28,7 +31,10 @@ describe("Subscription: summary, calendar months and grace", () => {
     });
     expect(await screen.findByTestId("banner-grace")).toHaveTextContent("1 day of grace, until 6 Oct 2026");
     expect(text("sum-state")).toBe("Grace period");
-    expect(text("sum-days")).toBe("6 Oct 2026");
+    // Renewing in the grace day carries on from the old date: no day is lost.
+    expect(await screen.findByRole("heading", { name: "Renew now", level: 2 })).toBeInTheDocument();
+    expect(screen.getByTestId("payment-card")).toHaveTextContent("The new time carries on from 5 Oct 2026");
+    expect(text("pay-new-date")).toBe("5 Nov 2026");
   });
 
   it("expired shows the expired banner", async () => {
@@ -39,7 +45,10 @@ describe("Subscription: summary, calendar months and grace", () => {
     expect(await screen.findByTestId("banner-expired")).toHaveTextContent("ended on 5 Oct 2026");
     expect(text("sum-status")).toBe("Hidden until you renew");
     expect(text("sum-state")).toBe("Expired");
-    expect(text("sum-days")).toBe("0");
+    // Past the grace day the new time starts today.
+    expect(await screen.findByRole("heading", { name: "Renew now", level: 2 })).toBeInTheDocument();
+    expect(text("pay-new-date")).toBe("8 Nov 2026");
+    expect(text("pay-total")).toContain("Starts today");
   });
 
   it("warns when the subscription ends within 7 days", async () => {
@@ -82,7 +91,7 @@ describe("Subscription: the payment card", () => {
   it("renewal: Seller ID as account, current plan price as amount", async () => {
     await signedInApp();
     await screen.findByTestId("payment-card");
-    expect(screen.getByRole("heading", { name: "Renew your subscription" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Renew early" })).toBeInTheDocument();
     expect(text("pay-account")).toContain("ES100001");
     expect(text("pay-amount")).toContain("KES 500");
   });
@@ -204,7 +213,7 @@ describe("Subscription: payments arrive by themselves", () => {
     const user = userEvent.setup();
     const spy = vi.spyOn(navigator.clipboard, "writeText");
     await ready();
-    await user.selectOptions(screen.getByLabelText("How many months do you want to pay for?"), "3");
+    await user.click(screen.getByRole("radio", { name: /^3 months/ }));
     expect(text("pay-amount")).toContain("KES 1,500");
     await user.click(screen.getByRole("button", { name: "Copy amount" }));
     expect(spy.mock.calls.at(-1)[0]).toBe("1500");
@@ -309,9 +318,11 @@ describe("Subscription: Pay now (M-Pesa prompt to the phone)", () => {
     await screen.findByTestId("payment-card");
     expect(screen.getByLabelText("M-Pesa phone number")).toHaveValue("0712 345 678");
     expect(screen.getByText("Or pay with Paybill yourself")).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText("How many months do you want to pay for?"), "3");
+    await user.click(screen.getByRole("radio", { name: /^3 months/ }));
     await user.click(screen.getByRole("button", { name: "Pay KES 1,500 now" }));
     expect(await screen.findByText("Check your phone")).toBeInTheDocument();
+    // The prompt's amount is fixed while it waits: the months cannot be changed under it.
+    expect(screen.getByRole("radio", { name: /^6 months/ })).toBeDisabled();
     expect(screen.getByText(/sent to/)).toHaveTextContent("KES 1,500 to EpicMKT, account ES100001, sent to 0712 345 678.");
     expect(await screen.findByTestId("payment-received", {}, { timeout: 15000 })).toHaveTextContent("3 months");
     expect(text("sum-paid-until")).toBe("20 Jan 2027");
@@ -340,4 +351,80 @@ describe("Subscription: Pay now (M-Pesa prompt to the phone)", () => {
     await waitFor(() => expect(M.state.business.planKey).toBe("premium"), { timeout: 15000 });
     expect(text("sum-paid-until")).toBe("20 Oct 2026");
   }, 30000);
+});
+
+describe("Subscription: renewing shows what you get, and only what the server will add", () => {
+  const at = async (paidUntil, today = "2026-10-05T09:00:00Z") => {
+    setTime(today);
+    await signedInApp("/business/subscription", () => { setTime(today); M.state.business.paidUntil = paidUntil ? nairobiMidnight(paidUntil) : null; });
+    await screen.findByTestId("payment-card");
+  };
+
+  it("each month choice shows its price and the paid-until date it gives; the total follows the choice", async () => {
+    const user = userEvent.setup();
+    await at("2026-10-20");
+    const group = screen.getByRole("group", { name: "How many months do you want to pay for?" });
+    expect(within(group).getAllByRole("radio").map((r) => r.closest("label").textContent)).toEqual([
+      "1 monthKES 500to 20 Nov 2026", "3 monthsKES 1,500to 20 Jan 2027", "6 monthsKES 3,000to 20 Apr 2027", "11 monthsKES 5,500to 20 Sep 2027",
+    ]);
+    expect(screen.getByRole("radio", { name: /^1 month/ })).toBeChecked();
+    expect(text("pay-total")).toContain("KES 500");
+    expect(text("pay-new-date")).toBe("20 Nov 2026");
+    expect(text("pay-total")).toContain("Added after 20 Oct 2026");
+    await user.click(screen.getByRole("radio", { name: /^6 months/ }));
+    expect(text("pay-total")).toContain("KES 3,000");
+    expect(text("pay-new-date")).toBe("20 Apr 2027");
+    expect(screen.getByRole("button", { name: "Pay KES 3,000 now" })).toBeInTheDocument();
+  });
+
+  it("paid well ahead: only the months that fit under 12 months ahead are offered, and the prompt asks for exactly that", async () => {
+    const user = userEvent.setup();
+    // 12 months from 5 Oct 2026 is 5 Oct 2027; from 20 Nov 2026 that leaves 10 whole months.
+    await at("2026-11-20");
+    const radios = screen.getAllByRole("radio").map((r) => r.closest("label").textContent);
+    expect(radios.at(-1)).toBe("10 monthsKES 5,000to 20 Sep 2027");
+    expect(radios.some((t) => t.startsWith("12 months"))).toBe(false);
+    expect(text("pay-cap")).toContain("You can add up to 10 months now");
+    await user.click(screen.getByRole("radio", { name: /^10 months/ }));
+    await user.click(screen.getByRole("button", { name: "Pay KES 5,000 now" }));
+    expect(await screen.findByText(/sent to/)).toHaveTextContent("KES 5,000 to EpicMKT");
+    expect(await screen.findByTestId("payment-received", {}, { timeout: 15000 })).toHaveTextContent("10 months");
+    expect(text("sum-paid-until")).toBe("20 Sep 2027");
+  }, 30000);
+
+  it("paid ahead for the most allowed: nothing to pay, no button", async () => {
+    await at("2027-10-01");
+    expect(screen.getByTestId("pay-full")).toHaveTextContent("You are paid ahead for the most allowed, 12 months from today, until 1 Oct 2027. There is nothing to pay now.");
+    expect(screen.queryByRole("button", { name: /^Pay KES/ })).toBeNull();
+    expect(screen.queryByTestId("pay-amount")).toBeNull();
+  });
+});
+
+describe("Renew reminder on the other pages", () => {
+  it("shows on other pages when the subscription ends within 7 days, and links to Subscription; not on Subscription itself", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/questions", () => { setTime("2026-10-10T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-12"); });
+    const bar = await screen.findByTestId("renew-reminder");
+    expect(bar).toHaveTextContent("Your subscription ends in 2 days.");
+    await user.click(within(bar).getByRole("link", { name: "Renew now" }));
+    expect(await screen.findByTestId("payment-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("renew-reminder")).toBeNull();
+  });
+
+  it("an expired seller sees it everywhere, and My listings says it once", async () => {
+    const { unmount } = await signedInApp("/business/questions", () => { setTime("2026-10-20T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-05"); });
+    expect(await screen.findByTestId("renew-reminder")).toHaveTextContent("Your subscription has expired.");
+    unmount();
+    await signedInApp("/business/catalog", () => { setTime("2026-10-20T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-05"); });
+    const bar = await screen.findByTestId("renew-reminder");
+    expect(within(bar).getByRole("link", { name: "Renew now" })).toHaveAttribute("href", "/business/subscription");
+    expect(await screen.findByTestId("showing-summary")).toHaveTextContent("because your shop is not live");
+    expect(screen.queryByTestId("shop-not-live")).toBeNull();
+  });
+
+  it("nothing shows while there are more than 7 days left", async () => {
+    await signedInApp("/business/questions", () => { setTime("2026-10-01T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByTestId("renew-reminder")).toBeNull();
+  });
 });

@@ -9,6 +9,7 @@ import * as api from "../../../api/index.js";
 import { errorText } from "../../../lib/errors.js";
 import { useMedia } from "../../../lib/useMedia.js";
 import { useSettings } from "../../../state/settings.js";
+import { useRenewNotice } from "../../../lib/useRenewNotice.js";
 import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog, TypeDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
@@ -66,6 +67,7 @@ export default function Catalog() {
   const dragId = useRef(null);
 
   const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
+  const renewNotice = useRenewNotice();
   const signals = useQuery({ queryKey: ["catalog", "signals"], queryFn: api.itemSignals });
   // How old a confirmed price may get before it is flagged: the seller's own Settings choice (14, 30 or 60 days).
   const staleDays = useSettings((st) => st.settings.catalog.price_reminder_days);
@@ -342,11 +344,15 @@ export default function Catalog() {
         </div>
       </header>
 
-      {!shop.live && (
+      {/* Not live because the subscription expired: the renew reminder above the page already says so, with the Renew button. */}
+      {!shop.live && !(renewNotice?.id === "expired" && (shop.status === "live" || shop.status === "expired")) && (
         <div className={`${ui.banner} ${ui.tone_danger}`} data-testid="shop-not-live">
           <h2>Your shop is not live</h2>
           <p>{NOT_LIVE[shop.status] ?? NOT_LIVE.live} No items are showing to customers until it is live again. You can keep editing your items.</p>
-          <p><Link className={ui.link} to="/business/subscription">Open subscription</Link></p>
+          {/* Not live because the subscription ran out: the way back is to renew. */}
+          {shop.status === "live" || shop.status === "expired"
+            ? <p><Link className={ui.btn} to="/business/subscription">Renew now</Link></p>
+            : <p><Link className={ui.link} to="/business/subscription">Open subscription</Link></p>}
         </div>
       )}
 
