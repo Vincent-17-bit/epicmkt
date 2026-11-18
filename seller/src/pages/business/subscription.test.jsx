@@ -37,6 +37,7 @@ describe("Subscription: summary, calendar months and grace", () => {
       setTime("2026-10-08T10:00:00Z");
     });
     expect(await screen.findByTestId("banner-expired")).toHaveTextContent("ended on 5 Oct 2026");
+    expect(text("sum-status")).toBe("Hidden until you renew");
     expect(text("sum-state")).toBe("Expired");
     expect(text("sum-days")).toBe("0");
   });
@@ -299,4 +300,44 @@ describe("Subscription: plans for the seller's own category and history", () => 
     expect(labels).toEqual(["Date", "Amount", "M-Pesa code", "Period covered", "Status", "Receipt"]);
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Date", "Amount", "M-Pesa code", "Period covered", "Status", "Receipt"]);
   });
+});
+
+describe("Subscription: Pay now (M-Pesa prompt to the phone)", () => {
+  it("renewal: the prompt goes to the listing phone, the seller only enters the PIN, and the page shows the payment by itself", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
+    await screen.findByTestId("payment-card");
+    expect(screen.getByLabelText("M-Pesa phone number")).toHaveValue("0712 345 678");
+    expect(screen.getByText("Or pay with Paybill yourself")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("How many months do you want to pay for?"), "3");
+    await user.click(screen.getByRole("button", { name: "Pay KES 1,500 now" }));
+    expect(await screen.findByText("Check your phone")).toBeInTheDocument();
+    expect(screen.getByText(/sent to/)).toHaveTextContent("KES 1,500 to EpicMKT, account ES100001, sent to 0712 345 678.");
+    expect(await screen.findByTestId("payment-received", {}, { timeout: 15000 })).toHaveTextContent("3 months");
+    expect(text("sum-paid-until")).toBe("20 Jan 2027");
+  }, 30000);
+
+  it("a different paying number can be used, and a cancelled prompt can be tried again", async () => {
+    const user = userEvent.setup();
+    await signedInApp();
+    await screen.findByTestId("payment-card");
+    const input = screen.getByLabelText("M-Pesa phone number");
+    await user.clear(input);
+    await user.type(input, "0722 000 110");
+    await user.click(screen.getByRole("button", { name: "Pay KES 500 now" }));
+    expect(await screen.findByText("Payment not completed", {}, { timeout: 15000 })).toBeInTheDocument();
+    expect(screen.getByText(/You cancelled the M-Pesa request/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    expect(screen.getByLabelText("M-Pesa phone number")).toHaveValue("0722 000 110");
+  }, 30000);
+
+  it("an upgrade paid by prompt is applied as the upgrade", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
+    await user.click(await screen.findByRole("button", { name: "Upgrade to Premium" }));
+    await screen.findByRole("heading", { name: "Upgrade to Premium", level: 2 });
+    await user.click(await screen.findByRole("button", { name: "Pay KES 500 now" }));
+    await waitFor(() => expect(M.state.business.planKey).toBe("premium"), { timeout: 15000 });
+    expect(text("sum-paid-until")).toBe("20 Oct 2026");
+  }, 30000);
 });

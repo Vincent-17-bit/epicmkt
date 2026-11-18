@@ -102,3 +102,26 @@ export async function saveCorrections(session, patch, files = []) {
 
 export const resubmitApplication = (session) => call('status-resubmit', { token: session.token });
 
+
+// M-Pesa "Pay now" (STK Push): a PIN prompt on the applicant's phone. The server works out the amount; only the phone and
+// the number of months are sent. Errors carry .code (e.g. stk_not_configured), a payer-friendly .message and maybe .request.
+function stkError(e) {
+  const b = e?.details ?? {};
+  return Object.assign(new Error(b.message ?? 'We could not reach the payment service. Try again.'), { code: b.error ?? e?.message ?? 'error', request: b.request ?? null });
+}
+
+export async function startStkPayment(session, { phone, months = 1 }) {
+  try {
+    return await call('pay-stk-start', { token: session.token, phone, months });
+  } catch (e) {
+    throw stkError(e);
+  }
+}
+
+export async function getStkPayment(session, requestId) {
+  try {
+    return await call('pay-stk-status', { token: session.token, requestId });
+  } catch (e) {
+    throw stkError(e);
+  }
+}

@@ -481,7 +481,7 @@ describe("quick actions", () => {
     await user.selectOptions(within(edit).getAllByLabelText("Group")[0], "User guide");
     await user.click(within(edit).getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(M.state.items.at(-1).specs.map((r) => r.group)).toEqual(["User guide", "Measurements"]));
-  });
+  }, 30000); // many steps; took 5.0-5.3 s on CI and locally, over the 5 s default
 
   it("saves brand, short description, pack size, highlights, what's included and terms, and loads them again", async () => {
     const user = userEvent.setup();

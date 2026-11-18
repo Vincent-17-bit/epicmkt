@@ -53,3 +53,4 @@ export { ITEM_LABELS, itemT } from "./item/labels.js";
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "./item/itemView.js";
 export { default as ProductMedia, MediaViewer, PRODUCT_MEDIA_LABELS } from "./components/ProductMedia.jsx";
 export { default as ShopMap } from "./business/ShopMap.jsx";
+export { default as PayByPhone } from "./payments/PayByPhone.jsx";

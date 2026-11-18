@@ -96,3 +96,12 @@ verify_jwt = false
 # Called by Safaricom, not by a signed-in user. The secret in the URL path is the protection.
 [functions.pay-callback]
 verify_jwt = false
+
+[functions.pay-stk-start]
+verify_jwt = false
+
+[functions.pay-stk-status]
+verify_jwt = false
+
+[functions.pay-reconcile]
+verify_jwt = false

@@ -135,25 +135,30 @@ export const flagView = (f: any) => ({
 const PLAN_NAME: Record<string, string> = { standard: "Standard", premium: "Premium" };
 // What the applicant is shown to pay. The account number is their application reference. `received` is money already
 // credited to them (a part payment or a prepayment) and `balance` is what is still needed for the first month.
-function paymentView(a: any, m: any) {
+function paymentView(a: any, m: any, maxMonths: number) {
   const price = a.plan_snapshot?.priceOverride?.amount ?? a.price_at_submission;
   const received = Number(a.credit_kes ?? 0);
   return {
     method: m?.type ?? null, number: m?.number ?? null, account: m?.type === "paybill" ? a.reference_no : null, name: m?.name ?? null,
     amount: price, received, balance: Math.max(price - received, 0), months: price > 0 ? Math.floor(received / price) : 0, code: a.payment_code,
+    // "Pay now" (M-Pesa STK Push): a PIN prompt on the phone, switched on in site_settings.mpesa.stk (supabase/set-mpesa.sql).
+    stk: m?.stk === true && !!m?.number && a.status === "approved",
+    maxMonths,
   };
 }
 
 const PUBLIC_EVENTS = ["submitted", "under_review", "changes_requested", "approved", "payment_submitted", "activated", "rejected"];
 
 export async function viewApplication(db: any, a: any) {
-  const [{ data: docs }, { data: flags }, { data: events }, { data: cat }, { data: setting }] = await Promise.all([
+  const [{ data: docs }, { data: flags }, { data: events }, { data: cat }, { data: setting }, { data: prepay }] = await Promise.all([
     db.from("application_documents").select("slot_key, storage_path, original_name, mime, size_bytes").eq("application_id", a.id).eq("verified", true),
     db.from("application_flags").select("*").eq("application_id", a.id).order("created_at"),
     db.from("application_events").select("type, created_at").eq("application_id", a.id).in("type", PUBLIC_EVENTS).order("created_at"),
     db.from("categories").select("id, name").eq("id", a.category_id).maybeSingle(),
     db.from("site_settings").select("value").eq("key", "mpesa").maybeSingle(),
+    db.from("site_settings").select("value").eq("key", "max_prepay_months").maybeSingle(),
   ]);
+  const maxMonths = Math.max(1, Math.min(24, Number(prepay?.value ?? 12) || 12));
 
   const paths = (docs ?? []).map((d: any) => d.storage_path);
   const signed = paths.length ? (await db.storage.from("applications").createSignedUrls(paths, 600)).data ?? [] : [];
@@ -188,7 +193,7 @@ export async function viewApplication(db: any, a: any) {
     flags: (flags ?? []).map(flagView),
     events: (events ?? []).map((e: any) => ({ type: e.type, at: e.created_at })),
     payment: showPay
-      ? paymentView(a, m)
+      ? paymentView(a, m, maxMonths)
       : null,
   };
 }

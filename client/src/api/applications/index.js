@@ -10,5 +10,7 @@ export const endStatusSession = async (...args) => (await adapter()).endStatusSe
 export const getApplication = async (...args) => (await adapter()).getApplication(...args);
 export const saveCorrections = async (...args) => (await adapter()).saveCorrections(...args);
 export const resubmitApplication = async (...args) => (await adapter()).resubmitApplication(...args);
+export const startStkPayment = async (...args) => (await adapter()).startStkPayment(...args);
+export const getStkPayment = async (...args) => (await adapter()).getStkPayment(...args);
 
 export const devTools = import.meta.env.DEV && !import.meta.env.VITE_SUPABASE_URL ? () => import('./devTools') : null;

@@ -59,6 +59,8 @@ export const getSubscription = (...a) => impl.getSubscription(...a);
 export const getPaymentInstructions = (...a) => impl.getPaymentInstructions(...a);
 export const applyCredit = (...a) => impl.applyCredit(...a);
 export const setPaymentIntent = (...a) => impl.setPaymentIntent(...a);
+export const startStkPayment = (...a) => impl.startStkPayment(...a);
+export const getStkPayment = (...a) => impl.getStkPayment(...a);
 export const listPayments = (...a) => impl.listPayments(...a);
 export const getReceipt = (...a) => impl.getReceipt(...a);
 export const quoteCategoryChange = (...a) => impl.quoteCategoryChange(...a);
