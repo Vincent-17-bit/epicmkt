@@ -434,6 +434,16 @@ describe("/api/products", () => {
       expect(body.items).toHaveLength(24);
     });
 
+    it("answers the next page of a search with its cards only (view=items), and the first page with its filters", async () => {
+      const full = await (await call("op=search&q=bread")).json();
+      expect(Array.isArray(full.facets)).toBe(true);
+      expect(full.listing).toBeDefined();
+      const cards = await (await call("op=search&q=bread&page=2&view=items")).json();
+      expect(cards.facets).toBeUndefined();
+      expect(cards.related).toBeUndefined();
+      expect(cards).toMatchObject({ total: full.total, pageSize: full.pageSize });
+    });
+
     it("corrects a misspelled search against the catalogue's own words when nothing matches", async () => {
       const body = await (await call("op=search&q=bred")).json();
       expect(body.corrected).toBe("bread");

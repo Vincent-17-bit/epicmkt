@@ -12,7 +12,9 @@ export default function FilterSheet({
   title = "Filters",
   noun = ["result", "results"],
   closeAbove = "(min-width: 1024px)",
-  className = ""
+  className = "",
+  // "Apply" reads "Apply (23 results)", as on Amazon's phone filters; the default reads "Show 23 results".
+  verb = "Show"
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} labelledBy="filter-sheet-title" closeAbove={closeAbove} className={className}>
@@ -33,7 +35,13 @@ export default function FilterSheet({
             )}
             <Button variant="dark" className={styles.show} onClick={onClose} data-empty={total === 0 || undefined}>
               <span key={total} className={styles.count} role="status" aria-live="polite">
-                {total == null ? "Show results" : total === 0 ? `No ${noun[1]} match` : `Show ${total} ${total === 1 ? noun[0] : noun[1]}`}
+                {total == null
+                  ? `${verb} results`
+                  : total === 0
+                    ? `No ${noun[1]} match`
+                    : verb === "Apply"
+                      ? `Apply (${total.toLocaleString("en-KE")} ${total === 1 ? noun[0] : noun[1]})`
+                      : `${verb} ${total} ${total === 1 ? noun[0] : noun[1]}`}
               </span>
             </Button>
           </div>
