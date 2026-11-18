@@ -14988,7 +14988,33 @@ values
   ('drone-video-service', 'drone-video-service', 'Drone and video coverage', 'service', 'photography-events', array['photography-events']::text[], '{}'::text[], 'none', '[{"key":"coverage","label":"Coverage","display":"button","suggested":[{"id":"photo-only","label":"Photo only"},{"id":"video-only","label":"Video only"},{"id":"photo-and-video","label":"Photo and video"},{"id":"drone-only","label":"Drone only"},{"id":"live-stream","label":"Live stream"}]},{"key":"hours","label":"Hours","display":"button","scale":"duration","suggested":[{"id":"2-h","label":"2 h"},{"id":"4-h","label":"4 h"},{"id":"8-h","label":"8 h"},{"id":"12-h","label":"12 h"}]}]'::jsonb, '[{"key":"deliverables","label":"Deliverables","input":"text","level":"required"},{"key":"delivery-time","label":"Delivery time","input":"text","level":"required"},{"key":"drone","label":"Drone included","input":"boolean","level":"recommended"},{"key":"licence","label":"Drone licence (KCAA)","input":"text","level":"recommended"},{"key":"travel","label":"Travels","input":"boolean","level":"recommended"}]'::jsonb, '{}'::jsonb)
 on conflict (id) do nothing;
 
-$m_0132_catalogue_coverage$)
+$m_0132_catalogue_coverage$),
+    ('0133_product_info_groups', $m_0133_product_info_groups$
+create or replace function public.item_specs_valid(p jsonb) returns boolean
+language plpgsql immutable parallel safe as $$
+declare
+  e jsonb;
+  k text;
+  g text;
+  c_groups constant text[] := array['Features & Specs', 'Measurements', 'Additional details', 'User guide', 'Item details'];
+begin
+  if p is null or jsonb_typeof(p) <> 'array' or jsonb_array_length(p) > 80 then return false; end if;
+  for e in select jsonb_array_elements(p) loop
+    if jsonb_typeof(e) <> 'object' then return false; end if;
+    for k in select jsonb_object_keys(e) loop
+      if k not in ('group', 'label', 'value') then return false; end if;
+    end loop;
+    if jsonb_typeof(e -> 'group') is distinct from 'string' then return false; end if;
+    g := e ->> 'group';
+    if g <> all (c_groups) and not (g like 'Info: %' and char_length(g) <= 40) then return false; end if;
+    if g = 'Info: FAQ' then
+      if not public.item_detail_text_ok(e -> 'label', 160) or not public.item_detail_text_ok(e -> 'value', 600) then return false; end if;
+    elsif not public.item_detail_text_ok(e -> 'label', 40) or not public.item_detail_text_ok(e -> 'value', 120) then return false; end if;
+  end loop;
+  return true;
+end $$;
+
+$m_0133_product_info_groups$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;
