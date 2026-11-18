@@ -51,7 +51,7 @@ describe("Plans", () => {
     expect(save).toBeEnabled(); // nothing changed yet
     fireEvent.change(within(dialog).getByLabelText(/Monthly price/), { target: { value: "600" } });
     expect(within(dialog).getByText(/KES 600 a month instead of KES 500/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/10 live businesses keep the monthly price/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/10 live businesses pay the new price from their next payment/)).toBeInTheDocument();
     expect(save).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText(/Why is the price changing/), { target: { value: "Costs went up" } });
     fireEvent.click(save);
@@ -134,7 +134,7 @@ describe("Categories and the template builder", () => {
     renderPage(<CategoriesPage />);
     fireEvent.click(await screen.findByRole("button", { name: "Edit Salon" }));
     let dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByLabelText(/Available to new applicants/));
+    fireEvent.click(within(dialog).getByLabelText(/On: shown on the client and seller sites/));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(/Not ready to switch on: plans priced/);
     expect(within(dialog).getByRole("link", { name: "See what is missing" })).toHaveAttribute("href", "/admin/readiness");
     expect(within(dialog).getByRole("button", { name: "Save category" })).toBeDisabled();
@@ -142,7 +142,7 @@ describe("Categories and the template builder", () => {
     renderPage(<CategoriesPage />);
     fireEvent.click(await screen.findByRole("button", { name: "Edit Bakery" }));
     dialog = await screen.findByRole("dialog");
-    fireEvent.click(within(dialog).getByLabelText(/Available to new applicants/));
+    fireEvent.click(within(dialog).getByLabelText(/On: shown on the client and seller sites/));
     expect(within(dialog).getByRole("button", { name: "Save category" })).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText(/Why is it being switched off/), { target: { value: "Merged into another" } });
     expect(within(dialog).getByRole("button", { name: "Save category" })).toBeEnabled();

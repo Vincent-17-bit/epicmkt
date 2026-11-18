@@ -36,7 +36,7 @@ export const startSchema = z.object({
   phone: z.string().trim().min(9).max(20),
   months: months.optional(),
   purpose: z.enum(["first", "renewal", "upgrade", "category_change"]).optional(),
-  targetPlan: z.enum(["premium"]).optional(),
+  targetPlan: z.enum(["standard", "premium"]).optional(),
   category: z.string().trim().min(1).max(60).optional(),
   changeId: z.string().uuid().optional(),
 }).strict();

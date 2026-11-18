@@ -7,14 +7,16 @@ import { ContactCard, SiblingLinks } from "../components/LegalPage.jsx";
 import dialog from "../components/ReportDialog.module.css";
 import { HELP_CONTACT, HELP_RELATED_LABEL, helpDocs } from "../config/help.js";
 import { routes } from "../config/routes.js";
-import { categories } from "../data/categories.js";
+import { categories as builtIn } from "../data/categories.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { useCatalog } from "./seller-apply/useCatalog.js";
 import { SUGGEST_MAX, suggestionPath } from "../lib/suggestion.js";
 import styles from "./SuggestBusiness.module.css";
 
-// Category options grouped the way the seller form groups them.
-const groups = categories.reduce((acc, c) => {
-  (acc[c.group] ??= []).push(c);
+// Category options grouped the way the seller form groups them: the categories the admin has switched on (the same list the
+// application form and the pricing page read), or the built-in list while that loads or if it cannot be loaded.
+const groupsOf = (list) => list.reduce((acc, c) => {
+  (acc[c.group || "Other"] ??= []).push(c);
   return acc;
 }, {});
 
@@ -25,11 +27,14 @@ export default function SuggestBusiness() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", category: "", town: "", phone: "" });
   const [error, setError] = useState("");
+  const { catalog } = useCatalog();
+  const list = catalog?.categories?.length ? catalog.categories : builtIn;
+  const groups = groupsOf(list);
   const set = (key) => (event) => setForm((f) => ({ ...f, [key]: event.target.value }));
 
   const submit = (event) => {
     event.preventDefault();
-    const path = suggestionPath(form);
+    const path = suggestionPath({ ...form, categoryName: list.find((c) => c.id === form.category)?.name ?? "" });
     if (!path) {
       setError("Enter the name of the business.");
       return;

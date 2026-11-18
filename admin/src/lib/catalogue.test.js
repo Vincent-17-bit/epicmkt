@@ -66,9 +66,9 @@ test("plan edits explain who pays what", () => {
   assert.deepEqual(planImpact(row, 500), [], "no price change, nothing to warn about");
   const lines = planImpact(row, 600);
   assert.match(lines[0], /KES 600 a month instead of KES 500 \(\+KES 100\)/);
-  assert.match(lines[1], /12 live businesses keep the monthly price.*KES 6,000/);
+  assert.match(lines[1], /12 live businesses pay the new price from their next payment \(KES 6,000 a month in total today\)/);
   assert.match(planImpact({ ...row, live_businesses: 0 }, 400)[1], /No live businesses/);
-  assert.match(planImpact({ ...row, live_businesses: 1 }, 400)[1], /1 live business keeps/);
+  assert.match(planImpact({ ...row, live_businesses: 1 }, 400)[1], /1 live business pays the new price from its next payment/);
 });
 
 test("plan validation and grouping", () => {

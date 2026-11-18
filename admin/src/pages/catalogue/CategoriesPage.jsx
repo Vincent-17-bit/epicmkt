@@ -61,7 +61,7 @@ function CategoryDialog({ initial, groups, onClose }) {
           <label className="field">Icon name<input value={form.icon} onChange={(e) => set({ icon: e.target.value })} /></label>
           <label className="field">Order<input inputMode="numeric" value={form.sort} onChange={(e) => set({ sort: e.target.value.replace(/[^\d]/g, "") })} /></label>
         </div>
-        <label><input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} /> Available to new applicants</label>
+        <label><input type="checkbox" checked={form.active} onChange={(e) => set({ active: e.target.checked })} /> On: shown on the client and seller sites (browsing, applications, pricing, category changes)</label>
         {blocked ? <p className="modal__error" role="alert">{blocked} <Link to="/admin/readiness" onClick={onClose}>See what is missing</Link></p> : null}
         {turningOff && (
           <label className="field">Why is it being switched off?<textarea value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} /></label>
@@ -93,7 +93,7 @@ export default function CategoriesPage() {
           <h2 className="heading-sm">Categories</h2>
           <Button variant="primary" disabled={!canEdit} title={why("catalogue.edit")} onClick={() => setEditing(blank)}>New category</Button>
         </div>
-        <p className="muted">Categories are switched off, never deleted: sellers already in one keep it. A new category stays off until both its plans have a price.</p>
+        <p className="muted">The client and seller sites list exactly the categories that are On here, in this order and these groups. Categories are switched off, never deleted: sellers already in one keep it and can still renew. A new category stays off until both its plans have a price.</p>
         {isError ? <LoadError what="categories" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>
