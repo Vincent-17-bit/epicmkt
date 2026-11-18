@@ -106,6 +106,139 @@ function AssignPanel({ row, onClose, onDone }) {
   );
 }
 
+// "Pay now" (STK Push) prompts. Every prompt is listed, so nothing about a phone payment is ever invisible. A disputed one
+// (a success callback that did not check out) or one Safaricom says was paid but whose receipt never came needs a person:
+// compare with the M-Pesa statement, then credit it with the statement's receipt and amount, or close it.
+const STK_STATUS = {
+  creating: { label: "Sending", tone: "neutral" },
+  pending: { label: "Waiting for PIN", tone: "neutral" },
+  confirming: { label: "Paid, receipt on its way", tone: "live" },
+  paid: { label: "Paid", tone: "healthy" },
+  failed: { label: "Not completed", tone: "neutral" },
+  expired: { label: "No answer", tone: "neutral" },
+  error: { label: "Could not send", tone: "neutral" },
+  disputed: { label: "Needs checking", tone: "live" },
+};
+const STK_PURPOSE = { first: "First payment", renewal: "Renewal", upgrade: "Upgrade", category_change: "Category change" };
+const STK_RESOLVABLE = new Set(["disputed", "confirming", "expired"]);
+const STK_COLS = 6;
+const localPhone = (p) => (/^254\d{9}$/.test(p ?? "") ? `0${p.slice(3, 6)} ${p.slice(6, 9)} ${p.slice(9)}` : p ?? "");
+
+function StkResolve({ row, onClose, onDone }) {
+  const [receipt, setReceipt] = useState("");
+  const [amount, setAmount] = useState(String(row.amount ?? ""));
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState("");
+  const act = useMutation({
+    mutationFn: (action) => api.resolveStkRequest({ id: row.id, action, receipt: action === "credit" ? receipt.trim().toUpperCase() : null, amount: action === "credit" ? Number(amount) : null, reason: reason.trim() }),
+    onSuccess: (_out, action) => onDone(action === "credit" ? `Credited ${receipt.trim().toUpperCase()} to ${row.businessName}.` : "Prompt closed."),
+    onError: (e) => setError(e.message),
+  });
+  return (
+    <tr>
+      <td colSpan={STK_COLS}>
+        <div className="pay-assign" role="group" aria-label={`Resolve phone prompt for ${row.businessName}`}>
+          <p>
+            {row.note ? <>This prompt did not check out: <strong>{row.note}</strong>. </> : null}
+            Find the payment on the M-Pesa statement. If it is there, credit it with the statement's receipt and amount; if not, close the prompt.
+          </p>
+          <label>M-Pesa receipt from the statement<input value={receipt} onChange={(e) => setReceipt(e.target.value)} placeholder="e.g. SK12AB34CD" maxLength={10} /></label>
+          <label>Amount on the statement (KES)<input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="numeric" /></label>
+          <label>Reason (kept in the audit log)<input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Checked the statement, paid" /></label>
+          <div className="pay-assign__ignore">
+            <button type="button" className="secondary-button" disabled={act.isPending || reason.trim().length < 3 || receipt.trim().length !== 10} onClick={() => { setError(""); act.mutate("credit"); }}>Credit this payment</button>{" "}
+            <button type="button" className="secondary-button" disabled={act.isPending || reason.trim().length < 3} onClick={() => { setError(""); act.mutate("close"); }}>Close, not paid</button>
+          </div>
+          {error ? <p role="alert">{error}</p> : null}
+          <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function PhonePrompts({ q, canPay, whyPay, onNotice }) {
+  const queryClient = useQueryClient();
+  const [all, setAll] = useState(false);
+  const [open, setOpen] = useState(null);
+  const list = useQuery({ queryKey: ["admin-stk"], queryFn: () => api.getStkRequests(), refetchInterval: 30000 });
+  const rowsAll = list.data ?? [];
+  const needs = rowsAll.filter((r) => r.status === "disputed" || r.status === "confirming");
+  const rows = q
+    ? rowsAll.filter((r) => matchesText([r.businessName, r.reference, r.receipt, r.phone, r.account], q))
+    : all ? rowsAll : rowsAll.slice(0, 20);
+  const done = (text) => {
+    setOpen(null);
+    onNotice({ ok: true, text });
+    for (const key of ["admin-stk", "admin-payments", "admin-callbacks"]) queryClient.invalidateQueries({ queryKey: [key] });
+  };
+  return (
+    <section className="panel" aria-labelledby="stk-title">
+      <div className="panel__header">
+        <h2 className="heading-sm" id="stk-title">Phone prompts (Pay now)</h2>
+        <p className="muted">{needs.length ? `${needs.length} need checking.` : "Every M-Pesa prompt sellers and applicants started, and what Safaricom answered."}</p>
+      </div>
+      {list.error ? <ErrorCard what="phone prompts" error={list.error} onRetry={() => list.refetch()} retrying={list.isFetching} /> : null}
+      <div className="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Business</th>
+              <th scope="col">For</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Phone</th>
+              <th scope="col">Status</th>
+              <th scope="col"><span className="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.isLoading
+              ? Array.from({ length: 3 }).map((_, i) => <tr key={i}>{Array.from({ length: STK_COLS }).map((__, j) => <td key={j}><Skeleton /></td>)}</tr>)
+              : rows.flatMap((r) => {
+                  const st = STK_STATUS[r.status] ?? { label: r.status, tone: "neutral" };
+                  const line = (
+                    <tr key={r.id}>
+                      <td>
+                        <strong>{r.businessName}</strong>
+                        <div className="muted">{[r.town, r.reference, when(r.at)].filter(Boolean).join(" · ")}</div>
+                      </td>
+                      <td>{STK_PURPOSE[r.purpose] ?? r.purpose}{r.months > 1 ? <div className="muted">{r.months} months</div> : null}</td>
+                      <td>
+                        <strong>{formatKes(r.amount)}</strong>
+                        {r.paidAmount != null && r.paidAmount !== r.amount ? <div className="muted">Callback said {formatKes(r.paidAmount)}</div> : null}
+                      </td>
+                      <td><span style={{ whiteSpace: "nowrap" }}>{localPhone(r.phone)}</span><div className="muted">by {r.by}</div></td>
+                      <td>
+                        <span className={`status-pill status-pill--${st.tone}`}>{st.label}</span>
+                        {r.receipt ? <div className="muted"><code>{r.receipt}</code></div> : null}
+                        {r.status === "failed" || r.status === "error" ? <div className="muted">{r.resultDesc ?? r.message}</div> : null}
+                        {r.status === "disputed" && r.note ? <div className="muted">{r.note}</div> : null}
+                        {r.status === "paid" && r.verification === "query_unavailable" ? <div className="muted">Not double-checked (Safaricom busy)</div> : null}
+                      </td>
+                      <td>
+                        {STK_RESOLVABLE.has(r.status) ? (
+                          <button type="button" className="secondary-button" disabled={!canPay} title={whyPay} onClick={() => setOpen(open === r.id ? null : r.id)}>
+                            {open === r.id ? "Cancel" : "Check and resolve"}
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                  return open === r.id ? [line, <StkResolve key={`${r.id}-resolve`} row={r} onClose={() => setOpen(null)} onDone={done} />] : [line];
+                })}
+            {!list.isLoading && !rows.length && !list.error ? (
+              <tr><td colSpan={STK_COLS}><EmptyState icon={faCreditCard} title="No phone prompts yet">They appear here as soon as a seller or applicant presses Pay now.</EmptyState></td></tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+      {!q && rowsAll.length > 20 ? (
+        <button type="button" className="secondary-button" onClick={() => setAll(!all)}>{all ? "Show the latest 20" : `Show all ${rowsAll.length}`}</button>
+      ) : null}
+    </section>
+  );
+}
+
 export default function PaymentsPage() {
   const queryClient = useQueryClient();
   const { can, why } = usePermissions();
@@ -127,6 +260,7 @@ export default function PaymentsPage() {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-payments"] });
     queryClient.invalidateQueries({ queryKey: ["admin-callbacks"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-stk"] });
   };
 
   const confirm = useMutation({
@@ -250,6 +384,7 @@ export default function PaymentsPage() {
                         <td>
                           {row.payerName || "—"}
                           {row.phone ? <div className="muted">{row.phone}</div> : null}
+                          {row.channel === "stk" ? <div className="muted">Phone prompt (Pay now)</div> : null}
                         </td>
                         <td>
                           <span className={`status-pill status-pill--${st.tone}`}>{st.label}</span>
@@ -292,6 +427,7 @@ export default function PaymentsPage() {
           </table>
         </div>
       </section>
+      <PhonePrompts q={q} canPay={canPay} whyPay={whyPay} onNotice={setNotice} />
     </div>
   );
 }

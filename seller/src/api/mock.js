@@ -677,7 +677,8 @@ export const getPaymentInstructions = async ({ purpose = null, targetPlan = null
   await wait();
   const r = instructionsFor({ purpose, targetPlan, category });
   const credit = bill.business.creditKes ?? 0;
-  return { ...r, creditKes: credit, amountDue: Math.max(r.amount - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted") };
+  return { ...r, creditKes: credit, amountDue: Math.max(r.amount - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted"),
+    stk: !!r.configured, phone: DEMO.phone };
 };
 // Spend credit on an upgrade or category change: a confirmed payment funded from credit (the server does the same).
 const spendCredit = (q, changeId = null) => {
@@ -704,6 +705,44 @@ export const applyCredit = async ({ purpose = null, targetPlan = null, category 
 export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
   signedIn();
   bill.intent = purpose === "upgrade" || purpose === "category_change" ? { purpose, targetPlan, category, changeId } : null;
+};
+// M-Pesa "Pay now" (demo). The prompt "is answered" on the third status check: a phone ending in 0 cancels, any other pays.
+const stkRequests = new Map();
+const stkPhoneOf = (p) => { const m = String(p ?? "").replace(/[^0-9+]/g, "").match(/^(?:\+?254|0)?([71][0-9]{8})$/); return m ? `254${m[1]}` : null; };
+const stkOut = ({ checks: _c, intent: _i, ...r }) => copy(r);
+export const startStkPayment = async ({ phone, months = 1, purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
+  signedIn();
+  await wait();
+  const normalized = stkPhoneOf(phone);
+  if (!normalized) throw new ApiError("invalid_phone", "Enter a Safaricom M-Pesa number, like 0712 345 678.");
+  const q = instructionsFor({ purpose, targetPlan, category });
+  const credit = bill.business.creditKes ?? 0;
+  const n = q.purpose === "first" || q.purpose === "renewal" ? Math.min(Math.max(1, Number(months) || 1), 12) : 1;
+  const amount = Math.ceil(q.amount * n - credit);
+  if (amount <= 0) throw new ApiError("use_credit", "Your credit already covers this. Use the credit instead.");
+  const r = { id: `stk-${++bill.seq}`, status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay.", amount, months: n, phone: normalized,
+    account: bill.business.sellerId, purpose: q.purpose, checks: 0, intent: q.purpose === "upgrade" || q.purpose === "category_change" ? { purpose: q.purpose, targetPlan, category, changeId } : null };
+  stkRequests.set(r.id, r);
+  return { request: stkOut(r) };
+};
+export const getStkPayment = async (requestId) => {
+  signedIn();
+  await wait();
+  const r = stkRequests.get(requestId);
+  if (!r) throw new ApiError("not_found");
+  r.checks += 1;
+  if (r.status === "pending" && r.checks >= 3) {
+    if (r.phone.endsWith("0")) {
+      Object.assign(r, { status: "failed", resultCode: "1032", message: "You cancelled the M-Pesa request. Nothing was charged." });
+    } else {
+      bill.intent = r.intent;
+      const out = __mock.autoPay(r.amount);
+      const receipt = bill.payments[0]?.receiptNo ?? null;
+      Object.assign(r, { status: "paid", message: "Thank you. Your payment is recorded.", receipt: `SK${String(Date.now()).slice(-8)}`,
+        outcome: { outcome: out.outcome, months: out.months ?? null, paidUntil: bill.business.paidUntil ? nairobiDay(bill.business.paidUntil) : null, receiptNo: receipt, credit: out.credit ?? 0 } });
+    }
+  }
+  return { request: stkOut(r) };
 };
 export const listPayments = async () => { signedIn(); await wait(); return copy(bill.payments); };
 export const getReceipt = async (id) => {

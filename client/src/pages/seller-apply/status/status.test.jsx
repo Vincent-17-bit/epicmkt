@@ -145,6 +145,20 @@ describe("check my application", () => {
     expect(screen.queryByRole("button", { name: "I have paid" })).not.toBeInTheDocument();
   }, 30000);
 
+  it("Pay now: the PIN prompt goes to the applicant's phone and the page moves to payment received by itself", async () => {
+    const user = userEvent.setup();
+    mount();
+    await signIn(user, "EPM-2026-DEMO05");
+    expect(await screen.findByRole("heading", { name: "Approved, awaiting payment" })).toBeInTheDocument();
+    expect(screen.getByLabelText("M-Pesa phone number")).toHaveValue("0712 345 678");
+    expect(screen.getByText("Or pay with Paybill yourself")).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Pay for"), "3");
+    await user.click(screen.getByRole("button", { name: "Pay KES 1,500 now" }));
+    expect(await screen.findByText("Check your phone")).toBeInTheDocument();
+    expect(screen.getByText(/sent to/)).toHaveTextContent("KES 1,500 to EpicMKT, account 2026DEMO05, sent to 0712 345 678.");
+    expect(await screen.findByRole("heading", { name: /Payment received/ }, { timeout: 15000 })).toBeInTheDocument();
+  }, 30000);
+
   it("shows payment received once the backend has recorded the payment", async () => {
     const user = userEvent.setup();
     mount();

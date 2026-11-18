@@ -212,3 +212,22 @@
     text-align: left;
   }
 }
+
+.payOther {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+.payOther summary {
+  cursor: pointer;
+  font-weight: 700;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+.payOther[open] summary {
+  margin-bottom: var(--space-3);
+}
+.payOther[open] {
+  display: grid;
+  gap: var(--space-3);
+}

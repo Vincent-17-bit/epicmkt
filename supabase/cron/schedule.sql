@@ -112,6 +112,7 @@ select cron.schedule(
 --   select cron.unschedule('proofs-purge');
 --   select cron.unschedule('media-gc');
 --   select cron.unschedule('search-rollups');
+--   select cron.unschedule('pay-reconcile');
 
 -- media-gc: every 10 minutes. Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos,
 -- deleted shops) and settles uploads that were signed but never attached. Failed deletes are retried with a growing pause.
@@ -141,4 +142,23 @@ select cron.schedule(
   'search-rollups',
   '2 * * * *',
   $$ select public.refresh_search_rollups(); $$
+);
+
+-- pay-reconcile: every 2 minutes. M-Pesa "Pay now" (STK Push): finishes Safaricom callbacks that were stored but not processed,
+-- asks Safaricom about prompts whose callback is late (and credits them when the receipt arrives), expires prompts nobody
+-- answered, and e-mails the admin about a prompt Safaricom says was paid but whose receipt never came.
+select cron.schedule(
+  'pay-reconcile',
+  '*/2 * * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/pay-reconcile',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-cron-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret')
+    ),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 55000
+  );
+  $$
 );
