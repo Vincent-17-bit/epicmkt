@@ -1772,6 +1772,7 @@ grant execute on function public.seller_set_item_page(uuid, jsonb) to authentica
 create or replace function public.seller_set_item_include_media(p_id uuid, p_media jsonb) returns jsonb
 language plpgsql security definer set search_path = public as $$
 begin
+  perform public.assert_seller_active();
   return (public.seller_set_item_page(p_id, jsonb_build_object('includeMedia', coalesce(p_media, 'null'::jsonb)))) -> 'includeMedia';
 end $$;
 revoke all on function public.seller_set_item_include_media(uuid, jsonb) from public, anon;
@@ -1817,6 +1818,7 @@ create or replace function public.seller_item_extras(p_item uuid) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare v_biz uuid := public.my_business_id();
 begin
+  perform public.assert_seller_active();
   if v_biz is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
   if not exists (select 1 from public.items i where i.id = p_item and i.business_id = v_biz) then raise exception 'item_not_found' using errcode = 'P0001'; end if;
   return coalesce((select jsonb_agg(jsonb_build_object('id', m.id, 'path', m.path, 'width', m.width, 'height', m.height, 'size', m.size_bytes) order by m.sort, m.created_at, m.id)

@@ -51,7 +51,7 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
     if (!focus?.id) return;
     const at = photos.findIndex((p) => p.id === focus.id);
     if (at >= 0) show(at);
-  }, [focus?.id, focus?.n]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [focus?.id, focus?.n]);
 
   const show = (n) => {
     const next = Math.min(Math.max(n, 0), photos.length - 1);
