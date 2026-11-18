@@ -1,8 +1,9 @@
 import { faBoxOpen, faListCheck, faPlus, faSliders } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup, isBrandGroup } from "@epicmkt/shared";
 import { LIMITS, SPEC_PRESETS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
+import BrandEditor from "./BrandEditor.jsx";
 import FaqEditor from "./FaqEditor.jsx";
 import ProductInfoEditor from "./ProductInfoEditor.jsx";
 import TypeRows from "./TypeRows.jsx";
@@ -84,6 +85,8 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
           </div>
 
           <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} category={category} typeId={form.productTypeId} name={form.name} />
+
+          <BrandEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isBrandGroup(s.group)).length} />
 
           <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 

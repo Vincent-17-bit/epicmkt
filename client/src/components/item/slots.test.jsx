@@ -20,7 +20,7 @@ import TopBar from "./TopBar.jsx";
 // contract: what it shows, and that it shows nothing when it has nothing to show.
 vi.mock("../FlashBanner.jsx", () => ({ default: ({ ended }) => <div data-testid="banner" data-ended={String(ended)} /> }));
 vi.mock("../FlashStickyBar.jsx", () => ({ default: ({ visible, price }) => <div data-testid="sticky-price" data-visible={String(visible)}>{price}</div> }));
-vi.mock("../SimilarItems.jsx", () => ({ default: ({ itemId, businessId }) => <div data-testid="similar" data-item={itemId} data-business={businessId} /> }));
+vi.mock("../SimilarItems.jsx", () => ({ useSimilar: () => ({ data: undefined }), default: ({ itemId, businessId }) => <div data-testid="similar" data-item={itemId} data-business={businessId} /> }));
 vi.mock("../StoreSelective.jsx", () => ({
   default: ({ excludeItemId, onSelect, onSeeAll }) => (
     <div data-testid="selective" data-exclude={excludeItemId}>

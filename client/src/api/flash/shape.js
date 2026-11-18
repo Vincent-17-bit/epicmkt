@@ -28,7 +28,7 @@ export const mediaUrl = (path) => {
 };
 
 const MAX_LIST = 20;
-const MAX_SPECS = 20;
+const MAX_SPECS = 80;
 
 const textOf = (value) => (typeof value === "string" ? value.trim() : "");
 

@@ -15048,7 +15048,35 @@ values
   ('freight-haulage', 'freight-haulage', 'Freight and haulage', 'service', 'auto-parts', array['transport-logistics']::text[], '{}'::text[], 'none', '[{"key":"service","label":"Service","display":"button","suggested":[{"id":"full-load","label":"Full load"},{"id":"part-load","label":"Part load"},{"id":"container","label":"Container"},{"id":"refrigerated","label":"Refrigerated"},{"id":"construction-materials","label":"Construction materials"},{"id":"farm-produce","label":"Farm produce"},{"id":"cross-border","label":"Cross-border"}]},{"key":"vehicle","label":"Vehicle","display":"button","suggested":[{"id":"pickup","label":"Pickup"},{"id":"3-tonne","label":"3 tonne"},{"id":"7-tonne","label":"7 tonne"},{"id":"10-tonne","label":"10 tonne"},{"id":"trailer","label":"Trailer"}]}]'::jsonb, '[{"key":"routes","label":"Routes","input":"text","level":"required"},{"key":"price","label":"Price is","input":"choice","choices":["Per trip","Per tonne","Per km"],"level":"required"},{"key":"tracking","label":"GPS tracking","input":"boolean","level":"recommended"},{"key":"insurance","label":"Goods in transit insured","input":"boolean","level":"recommended"},{"key":"loading","label":"Loading help","input":"boolean","level":"recommended"}]'::jsonb, '{}'::jsonb)
 on conflict (id) do nothing;
 
-$m_0134_catalogue_coverage_more$)
+$m_0134_catalogue_coverage_more$),
+    ('0135_product_brand_story', $m_0135_product_brand_story$
+create or replace function public.item_specs_valid(p jsonb) returns boolean
+language plpgsql immutable parallel safe as $$
+declare
+  e jsonb;
+  k text;
+  g text;
+  c_groups constant text[] := array['Features & Specs', 'Measurements', 'Additional details', 'User guide', 'Item details'];
+begin
+  if p is null or jsonb_typeof(p) <> 'array' or jsonb_array_length(p) > 80 then return false; end if;
+  for e in select jsonb_array_elements(p) loop
+    if jsonb_typeof(e) <> 'object' then return false; end if;
+    for k in select jsonb_object_keys(e) loop
+      if k not in ('group', 'label', 'value') then return false; end if;
+    end loop;
+    if jsonb_typeof(e -> 'group') is distinct from 'string' then return false; end if;
+    g := e ->> 'group';
+    if g <> all (c_groups) and not (g like 'Info: %' and char_length(g) <= 40) then return false; end if;
+    if g = 'Info: FAQ' then
+      if not public.item_detail_text_ok(e -> 'label', 160) or not public.item_detail_text_ok(e -> 'value', 600) then return false; end if;
+    elsif g = 'Info: Brand' then
+      if not public.item_detail_text_ok(e -> 'label', 80) or not public.item_detail_text_ok(e -> 'value', 600) then return false; end if;
+    elsif not public.item_detail_text_ok(e -> 'label', 40) or not public.item_detail_text_ok(e -> 'value', 120) then return false; end if;
+  end loop;
+  return true;
+end $$;
+
+$m_0135_product_brand_story$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;

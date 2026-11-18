@@ -17,6 +17,19 @@ const roundOf = (coords) =>
   coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng) ? { lat: Math.round(coords.lat * 100) / 100, lng: Math.round(coords.lng * 100) / 100 } : null;
 
 
+export function useSimilar(itemId, enabled) {
+  const origin = roundOf(useGeoStore((s) => s.coords));
+  const key = origin ? `${origin.lat},${origin.lng}` : "";
+  const seed = visitSeed(itemId);
+  return useQuery({
+    queryKey: ["similar-items", itemId, key, seed],
+    queryFn: ({ signal }) => items.getSimilar(itemId, { limit: LIMIT, origin, seed, signal }),
+    enabled,
+    staleTime: 60_000,
+    retry: false
+  });
+}
+
 // "Similar products", the last section of the product page: the same KIND of product from other stores (white bread at one bakery
 // finds white bread at another bakery or a supermarket; pilau at one cafe finds pilau at another), best match first, shown as the
 // recommendation carousel. It is a nicety, so a failed or thin result (fewer than two) renders nothing at all,
@@ -25,19 +38,7 @@ const roundOf = (coords) =>
 export default function SimilarItems({ itemId, businessId, name = "", brand = "", className = "" }) {
   const marker = useRef(null);
   const near = useNearViewport(marker);
-  const origin = roundOf(useGeoStore((s) => s.coords));
-  const key = origin ? `${origin.lat},${origin.lng}` : "";
-  // One seed per product per visit: equally good matches come in a different order on another visit, the same order on this one.
-  const seed = visitSeed(itemId);
-
-  const { data, isPending } = useQuery({
-    queryKey: ["similar-items", itemId, key, seed],
-    // The signal cancels the request when the visitor moves to another product before it finishes.
-    queryFn: ({ signal }) => items.getSimilar(itemId, { limit: LIMIT, origin, seed, signal }),
-    enabled: near,
-    staleTime: 60_000,
-    retry: false
-  });
+  const { data, isPending } = useSimilar(itemId, near);
 
   if (!near) return <div ref={marker} className={styles.marker} aria-hidden="true" data-similar-marker="" />;
 

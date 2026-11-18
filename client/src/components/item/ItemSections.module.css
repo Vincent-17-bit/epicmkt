@@ -1,0 +1,42 @@
+.section { display: grid; gap: var(--space-4); margin-block: var(--space-6); padding-inline: var(--space-4); max-inline-size: var(--content-width); margin-inline: auto; scroll-margin-block-start: calc(var(--header-h) + var(--space-5)); }
+.title { margin: 0; font-size: var(--text-xl); color: var(--text); }
+.hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.videoGrid { display: grid; gap: var(--space-4); align-items: start; }
+.player { display: grid; gap: var(--space-3); min-inline-size: 0; }
+.video { inline-size: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-card); background: var(--text); object-fit: contain; }
+.reel { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.reelBtn { min-block-size: var(--tap); padding: 0 var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
+.reelBtn[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-tint); color: var(--on-primary-tint); }
+.reelBtn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.box { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-1); }
+.boxTitle { margin: 0 0 var(--space-3); font-size: var(--text-md); color: var(--text); }
+.checks { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.check { display: flex; align-items: flex-start; gap: var(--space-3); color: var(--text); font-size: var(--text-sm); overflow-wrap: anywhere; }
+.tick { flex: none; margin-block-start: 0.3em; color: var(--primary); }
+.story { display: grid; gap: var(--space-4); }
+.block { display: grid; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-1); overflow: clip; }
+.shot { inline-size: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--surface-3); }
+.copy { display: grid; align-content: center; gap: var(--space-2); padding: var(--space-5); min-inline-size: 0; }
+.heading { margin: 0; font-size: var(--text-lg); color: var(--text); overflow-wrap: anywhere; }
+.text { margin: 0; color: var(--text); font-size: var(--text-md); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-line; }
+.scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-1); }
+.scroll:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.table { inline-size: 100%; min-inline-size: 36rem; border-collapse: collapse; table-layout: fixed; font-size: var(--text-sm); }
+.corner { inline-size: 7.5rem; }
+.colHead { padding: var(--space-3); text-align: start; vertical-align: top; border-block-end: 1px solid var(--border); }
+.colHead[data-mine], .cellv[data-mine] { background: var(--primary-tint); color: var(--on-primary-tint); }
+.this { display: block; margin-block-end: var(--space-2); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; }
+.thumb { display: block; inline-size: 4.5rem; aspect-ratio: 1; margin-block-end: var(--space-2); border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-3); }
+.name { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: inherit; font-weight: 700; overflow-wrap: anywhere; }
+a.name { color: var(--text); text-decoration: underline; text-underline-offset: 0.2em; }
+.rowHead { padding: var(--space-3); text-align: start; color: var(--text-muted); font-weight: 600; background: var(--surface-2); }
+.cellv { padding: var(--space-3); color: var(--text); overflow-wrap: anywhere; }
+tr + tr .rowHead, tr + tr .cellv { border-block-start: 1px solid var(--border); }
+@media (min-width: 48rem) {
+  .section { padding-inline: var(--space-5); }
+  .videoGrid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .videoGrid[data-solo] { grid-template-columns: minmax(0, 1fr); }
+  .block:not([data-solo]) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .block[data-flip] .shot { order: 2; }
+  .shot { block-size: 100%; aspect-ratio: auto; min-block-size: 14rem; }
+}

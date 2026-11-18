@@ -8,9 +8,24 @@ export const infoTemplateById = (id) => INFO_TEMPLATES.find((t) => t.id === id) 
 export const FAQ_GROUP = `${INFO_PREFIX}FAQ`;
 export const FAQ_LIMITS = { rows: 15, question: 160, answer: 600 };
 export const isFaqGroup = (group) => group === FAQ_GROUP;
-export const isTemplateGroup = (group) => isInfoGroup(group) && !isFaqGroup(group);
+export const BRAND_GROUP = `${INFO_PREFIX}Brand`;
+export const BRAND_LIMITS = { rows: 6, heading: 80, text: 600 };
+export const isBrandGroup = (group) => group === BRAND_GROUP;
+export const isTemplateGroup = (group) => isInfoGroup(group) && !isFaqGroup(group) && !isBrandGroup(group);
 
-export const specLimitsFor = (group, base) => (isFaqGroup(group) ? { label: FAQ_LIMITS.question, value: FAQ_LIMITS.answer } : { label: base.label, value: base.value });
+export const specLimitsFor = (group, base) =>
+  isFaqGroup(group)
+    ? { label: FAQ_LIMITS.question, value: FAQ_LIMITS.answer }
+    : isBrandGroup(group)
+      ? { label: BRAND_LIMITS.heading, value: BRAND_LIMITS.text }
+      : { label: base.label, value: base.value };
+
+export const buildBrandStory = (specs) =>
+  (Array.isArray(specs) ? specs : [])
+    .filter((s) => isBrandGroup(s?.group) && String(s.label ?? "").trim() && String(s.value ?? "").trim())
+    .map((s) => ({ heading: String(s.label).trim(), text: String(s.value).trim() }));
+
+export const brandRows = (specs) => (Array.isArray(specs) ? specs.filter((s) => isBrandGroup(s?.group)).map((s) => ({ heading: s.label ?? "", text: s.value ?? "" })) : []);
 
 export const buildFaqs = (specs) =>
   (Array.isArray(specs) ? specs : [])
