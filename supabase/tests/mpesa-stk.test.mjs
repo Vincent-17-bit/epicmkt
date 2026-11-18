@@ -5,6 +5,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService } from "./db.mjs";
+import { renewalPlan } from "../../shared/src/billing.js";
 
 let c;
 const U = { owner: ids.admin, finance: "00000000-0000-0000-0000-0000000000c2", support: "00000000-0000-0000-0000-0000000000c3" };
@@ -370,6 +371,28 @@ test("the months asked for never exceed the prepay limit", async () => {
   assert.equal(r.request.amount, r.request.months * 500);
   await biz(6, "ES300006", { paidOffset: 400 });
   await rejects(c, asService, `select public.mpesa_stk_prepare('business', '${bid(6)}', 'renewal', null, null, null, 1, '0712345678', 'seller')`, [], /paid_ahead/);
+});
+
+test("the seller page offers exactly the months the database allows, with the same new paid-until date (shared renewalPlan)", async () => {
+  const today = (await row(`select to_char(public.nairobi_day(now()), 'YYYY-MM-DD') as d`)).d;
+  const grace = Number((await row(`select public.grace_days_of(null) as g`)).g);
+  const offsets = [-40, -3, -2, -1, 0, 1, 20, 31, 59, 100, 200, 300, 330, 340, 350, 360, 364, 365, 366, 400];
+  for (const [i, offset] of offsets.entries()) {
+    const n = 70 + i;
+    await biz(n, `ES3${String(n).padStart(5, "0")}`, { paidOffset: offset });
+    const paid = (await row(`select to_char(public.nairobi_day(paid_until), 'YYYY-MM-DD') as d from businesses where id = '${bid(n)}'`)).d;
+    const plan = renewalPlan({ paidUntil: paid, graceDays: grace, now: new Date(`${today}T12:00:00+03:00`), maxMonths: 12 });
+    if (plan.allowed === 0) {
+      await rejects(c, asService, `select public.mpesa_stk_prepare('business', '${bid(n)}', 'renewal', null, null, null, 1, '0712345678', 'seller')`, [], /paid_ahead/);
+      continue;
+    }
+    const r = await prepare("business", bid(n), { months: 24 });
+    assert.equal(r.request.months, plan.allowed, `paid until ${paid}`);
+    // Crediting those months gives the date the page showed.
+    await svc(`update businesses set credit_kes = $2 where id = $1 returning 1 as r`, [bid(n), plan.allowed * 500]);
+    await svc(`select public.mpesa_settle_business($1) as r`, [bid(n)]);
+    assert.equal(await paidUntil(n), plan.until(plan.allowed), `paid until ${paid}`);
+  }
 });
 
 test("credit that already covers the payment: the seller is told to use it, no prompt is sent", async () => {

@@ -6,7 +6,7 @@ import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, va
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
-import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode } from "@epicmkt/shared/billing";
+import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode, renewalPlan } from "@epicmkt/shared/billing";
 
 
 const DEMO = { sellerId: "ES100001", password: "Demo-Passw0rd", phone: "+254712345678", name: "Demo Shop", plan: "standard", status: "live" };
@@ -645,17 +645,12 @@ const emit = (table, type = "UPDATE", row = {}) => bill.listeners.forEach((l) =>
 const copy = (v) => JSON.parse(JSON.stringify(v));
 const priceOf = (cat, plan) => CATEGORIES[cat]?.prices?.[plan] ?? null;
 const nairobiDay = (d) => dayOf(d);
-// start + n calendar months, from the start date itself (31 Jan + 1 month = 28 Feb, + 2 months = 31 Mar), as the server does.
-const addMonthsTo = (day, n) => {
-  const [y, m, d] = day.split("-").map(Number);
-  const target = new Date(Date.UTC(y, m - 1 + n, 1));
-  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
-  return new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth(), Math.min(d, last))).toISOString().slice(0, 10);
-};
 const businessForInstructions = () => ({
   sellerId: bill.business.sellerId, planKey: bill.business.planKey, categoryId: bill.business.categoryId, paidUntil: bill.business.paidUntil,
   hasConfirmedPayment: bill.payments.some((p) => p.status === "confirmed"),
 });
+// How many renewal months can be added now (the server's 12-months-ahead limit), and where they start.
+const renewalNow = () => renewalPlan({ paidUntil: bill.business.paidUntil, graceDays: bill.business.graceDays ?? 1, now: clockNow(), maxMonths: 12 });
 const instructionsFor = (args = {}) => {
   try {
     return buildPaymentInstructions({ business: businessForInstructions(), application: bill.application, priceOf, setting: bill.paybill, now: clockNow(), ...args });
@@ -690,7 +685,7 @@ export const getPaymentInstructions = async ({ purpose = null, targetPlan = null
   const r = instructionsFor({ purpose, targetPlan, category });
   const credit = bill.business.creditKes ?? 0;
   return { ...r, creditKes: credit, amountDue: Math.max(r.amount - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted"),
-    stk: !!r.configured, phone: DEMO.phone };
+    stk: !!r.configured && bill.paybill?.stk !== false, phone: DEMO.phone };
 };
 // Spend credit on an upgrade or category change: a confirmed payment funded from credit (the server does the same).
 const spendCredit = (q, changeId = null) => {
@@ -729,7 +724,10 @@ export const startStkPayment = async ({ phone, months = 1, purpose = null, targe
   if (!normalized) throw new ApiError("invalid_phone", "Enter a Safaricom M-Pesa number, like 0712 345 678.");
   const q = instructionsFor({ purpose, targetPlan, category });
   const credit = bill.business.creditKes ?? 0;
-  const n = q.purpose === "first" || q.purpose === "renewal" ? Math.min(Math.max(1, Number(months) || 1), 12) : 1;
+  const prepay = q.purpose === "first" || q.purpose === "renewal";
+  const allowed = prepay ? renewalNow().allowed : 1;
+  if (allowed < 1) throw new ApiError("paid_ahead", "You are already paid ahead for the most allowed, 12 months.");
+  const n = prepay ? Math.min(Math.max(1, Number(months) || 1), allowed) : 1;
   const amount = Math.ceil(q.amount * n - credit);
   if (amount <= 0) throw new ApiError("use_credit", "Your credit already covers this. Use the credit instead.");
   const r = { id: `stk-${++bill.seq}`, status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay.", amount, months: n, phone: normalized,
@@ -1751,14 +1749,13 @@ export const __mock = {
         }
       }
     }
-    const months = Math.min(Math.floor(bill.business.creditKes / price), 12);
+    // Same rule as the server: carry on from the old date if paid by the end of the grace day, never more than 12 months ahead.
+    const plan = renewalNow();
+    const months = Math.min(Math.floor(bill.business.creditKes / price), plan.allowed);
     const day = (d) => new Date(`${d}T00:00:00+03:00`).toISOString();
     if (months >= 1) {
-      const today = nairobiDay(clockNow());
-      const paid = bill.business.paidUntil ? nairobiDay(bill.business.paidUntil) : null;
-      const late = paid && today <= new Date(new Date(`${paid}T00:00:00Z`).getTime() + DAY).toISOString().slice(0, 10);
-      const start = late ? paid : today;
-      const end = addMonthsTo(start, months);
+      const start = plan.start;
+      const end = plan.until(months);
       bill.business.paidUntil = day(end);
       if (["pending", "expired"].includes(bill.business.status)) bill.business.status = "live";
       bill.business.creditKes -= months * price;

@@ -127,6 +127,42 @@ export function categoryChangeQuote({ oldPrice, newPrice, paidUntil, now = new D
 
 export const daysLeft = (paidUntil, now = new Date()) => (paidUntil ? diffDays(toDay(paidUntil), toDay(now)) : null);
 
+// Whole months from day a to day b, counted like Postgres age(): 31 Jan to 28 Feb is 0 months, 31 Jan to 3 Mar is 1.
+const wholeMonths = (a, b) => {
+  const [ya, ma, da] = a.split('-').map(Number);
+  const [yb, mb, db] = b.split('-').map(Number);
+  return (yb - ya) * 12 + (mb - ma) - (db < da ? 1 : 0);
+};
+
+export const RENEW_MONTH_CHOICES = [1, 3, 6, 12];
+
+/**
+ * What a renewal paid now adds, by the same rule the server credits with (mpesa_settle_business) and asks
+ * Safaricom for (mpesa_stk_prepare):
+ *   * paid on the last paid day or within the grace days, the new months carry on from the old paid-until date (no day lost);
+ *   * later than that, they start today;
+ *   * nobody is paid more than `maxMonths` months ahead of today, so `allowed` can be less than 12, or 0.
+ * `choices` are the month counts to offer: the usual ones that fit, plus the most that fits when it is not one of them.
+ */
+export function renewalPlan({ paidUntil = null, graceDays = 1, now = new Date(), maxMonths = 12, choices = RENEW_MONTH_CHOICES } = {}) {
+  const today = toDay(now);
+  const paid = paidUntil ? toDay(paidUntil) : null;
+  const carriesOn = paid != null && today <= graceEndsAt(paid, graceDays).toISOString().slice(0, 10);
+  const start = carriesOn ? paid : today;
+  const cap = shiftMonths(today, maxMonths).toISOString().slice(0, 10);
+  const allowed = Math.max(0, wholeMonths(start, cap));
+  const offer = choices.filter((n) => n <= allowed);
+  if (allowed > 1 && !offer.includes(allowed)) offer.push(allowed);
+  return {
+    start,
+    startsToday: !carriesOn,
+    allowed,
+    maxMonths,
+    choices: offer,
+    until: (months) => shiftMonths(start, months).toISOString().slice(0, 10),
+  };
+}
+
 export const dayOf = toDay;
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

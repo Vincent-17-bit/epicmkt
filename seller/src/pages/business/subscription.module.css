@@ -1,19 +1,316 @@
-.summary {
+/* Where the subscription stands: one card with a tone (ok, warning, danger, info). */
+.status {
+  gap: var(--space-3);
+  border-top: 4px solid var(--ok-border);
+}
+
+.status[data-tone="warning"] { border-top-color: var(--warn-border); }
+.status[data-tone="danger"] { border-top-color: var(--danger-border); }
+.status[data-tone="info"] { border-top-color: var(--info-border); }
+
+.statusIcon,
+.statePill {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: var(--ok-border);
+}
+
+.status[data-tone="warning"] :is(.statusIcon, .statePill) { background: var(--warn-bg); color: var(--warn-text); border-color: var(--warn-border); }
+.status[data-tone="danger"] :is(.statusIcon, .statePill) { background: var(--danger-bg); color: var(--danger-text); border-color: var(--danger-border); }
+.status[data-tone="info"] :is(.statusIcon, .statePill) { background: var(--info-bg); color: var(--info-text); border-color: var(--info-border); }
+
+.statusHead {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+}
+
+.statusIcon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+.statusText {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.statusText h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
+.statusText p {
   margin: 0;
 }
 
-.summary dt {
+.meter {
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.meter > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--ok-border);
+}
+
+.status[data-tone="warning"] .meter > span {
+  background: var(--warn-border);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.facts dt {
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
 
-.summary dd {
+.facts dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Phones: the state pill goes under the headline so the headline keeps the width. */
+@media (max-width: 40rem) {
+  .statusHead {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .statePill {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* The renew card. */
+.payArea {
+  display: grid;
+  gap: var(--space-3);
+  scroll-margin-top: var(--space-4);
+}
+
+.payCard {
+  gap: var(--space-4);
+}
+
+.payHead {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.payHead h2 {
   margin: 0;
   font-size: var(--text-lg);
+}
+
+.payLoading {
+  min-height: 8rem;
+}
+
+.credit,
+.full {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--info-bg);
+  color: var(--info-text);
+  border: 1px solid var(--info-border);
+}
+
+.full {
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  border-color: var(--ok-border);
+}
+
+.payGrid {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.choose,
+.ways {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.months {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.months legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.month {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3);
+  padding-right: calc(var(--space-3) + 1.5rem);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.month:hover {
+  border-color: var(--primary);
+}
+
+.months:disabled .month {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.months:disabled .month input {
+  cursor: not-allowed;
+}
+
+.month input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.month[data-checked="true"] {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+
+.month:has(input:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.monthDot {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface);
+}
+
+.month[data-checked="true"] .monthDot {
+  border-color: var(--primary);
+  background: radial-gradient(circle, var(--primary) 0 45%, var(--surface) 50%);
+}
+
+.monthCount {
   font-weight: 700;
+}
+
+.monthPrice {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.monthUntil {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.note,
+.fine {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.total {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.total > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.total span,
+.total small {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.total strong {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.manual {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+}
+
+.manualTitle {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+/* Laptops: choose on the left, pay on the right. */
+@media (min-width: 56rem) {
+  .payGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+  }
 }
 
 .pay {
@@ -70,6 +367,7 @@
 .modeRow {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -223,6 +521,29 @@
   min-height: 44px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  list-style: none;
+}
+
+.payOther summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A chevron that turns when the Paybill details open. */
+.payOther summary::after {
+  content: "";
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: var(--space-1);
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg) translateY(-25%);
+}
+
+.payOther[open] summary::after {
+  transform: rotate(-135deg) translateY(-25%);
 }
 .payOther[open] summary {
   margin-bottom: var(--space-3);

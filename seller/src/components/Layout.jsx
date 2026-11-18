@@ -3,6 +3,7 @@ import { faBell, faBolt, faCalendarXmark, faMagnifyingGlassChart, faCircleInfo, 
 import { Button, Modal, Toaster } from "@epicmkt/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRenewNotice } from "../lib/useRenewNotice.js";
 import * as api from "../api/index.js";
 import { usePlanFeatures } from "../lib/usePlanFeatures.js";
 import { getTheme, setTheme, setThemePending, watchSystemTheme } from "../lib/theme.js";
@@ -55,6 +56,16 @@ export function Bell({ count }) {
 }
 
 // Shown while a seller is still on the temporary password we sent. Not a status role, so it never competes with page messages.
+// On every page but Subscription: the subscription ends within 7 days, is in its grace days, or has expired.
+export function RenewReminder({ notice }) {
+  return (
+    <section className={`${styles.reminder} ${ui[`tone_${notice.tone}`]}`} aria-label="Subscription reminder" data-testid="renew-reminder" data-kind={notice.id}>
+      <p><strong>{notice.title}.</strong> {notice.text}</p>
+      <Link className={ui.btn} to="/business/subscription">Renew now</Link>
+    </section>
+  );
+}
+
 export function SetupNotice() {
   return (
     <section className={`${ui.banner} ${ui.tone_info}`} aria-label="Finish setting up your sign-in" data-testid="setup-banner">
@@ -104,6 +115,8 @@ export default function Layout() {
   // A suspended seller can read notices, answer staff, and see and make their payments. Nothing else.
   // The bare /business address is allowed so it can send a suspended seller on to Notifications.
   const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname) || /^\/business\/?$/.test(pathname);
+  const notice = useRenewNotice();
+  const renew = pathname.startsWith("/business/subscription") ? null : notice;
   const moreActive = /^\/business\/(exceptions|flash|offers|demand|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
 
   const toggle = () => {
@@ -184,6 +197,7 @@ export default function Layout() {
             <p>{business.statusReason ? `Reason: ${business.statusReason}` : "EpicMKT suspended your account."} Your listing is hidden and you cannot change anything. You can still see your payments and pay under Subscription, read your notifications and answer EpicMKT under Questions.</p>
           </div>
         )}
+        {renew && <RenewReminder notice={renew} />}
         {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
