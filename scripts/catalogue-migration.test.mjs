@@ -2,17 +2,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { buildMigration, buildExtras, MIGRATION_FILE, EXTRAS_FILE } from "./gen-catalogue-migration.mjs";
-import { ALL_TYPES, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME } from "./seeds/index.mjs";
+import { buildMigration, buildMore, buildExtras, MIGRATION_FILE, MORE_FILE, EXTRAS_FILE } from "./gen-catalogue-migration.mjs";
+import { ALL_TYPES, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME, COVERAGE_MORE } from "./seeds/index.mjs";
 import { COVERAGE_OPEN_VALUES } from "./seeds/openValues.mjs";
 import { COVERAGE_SIZE_CHARTS } from "./seeds/sizeCharts.mjs";
 import { validateOpenValue, cleanSizeChart, validateProductType } from "../shared/src/index.js";
 import { parse } from "../shared/src/scales/index.js";
 
-const coverage = [...COVERAGE_FOOD, ...COVERAGE_HEALTH, ...COVERAGE_HOME];
+const coverage = [...COVERAGE_FOOD, ...COVERAGE_HEALTH, ...COVERAGE_HOME, ...COVERAGE_MORE];
 
 test("0132_catalogue_coverage.sql is exactly what the generator writes (run: node scripts/gen-catalogue-migration.mjs)", () => {
   assert.equal(readFileSync(MIGRATION_FILE, "utf8"), buildMigration());
+});
+
+test("0133_catalogue_coverage_more.sql is exactly what the generator writes", () => {
+  assert.equal(readFileSync(MORE_FILE, "utf8"), buildMore());
 });
 
 test("supabase/data/catalogue_coverage_extras.sql is exactly what the generator writes", () => {
@@ -20,8 +24,10 @@ test("supabase/data/catalogue_coverage_extras.sql is exactly what the generator 
 });
 
 test("the migration holds only types and departments: no category, value or chart (the database tests start without them)", () => {
-  const sql = readFileSync(MIGRATION_FILE, "utf8");
-  for (const table of ["categories", "plans", "option_values", "size_charts"]) assert.ok(!new RegExp(`(insert into|update) public\\.${table}\\b`).test(sql), table);
+  for (const file of [MIGRATION_FILE, MORE_FILE]) {
+    const sql = readFileSync(file, "utf8");
+    for (const table of ["categories", "plans", "option_values", "size_charts"]) assert.ok(!new RegExp(`(insert into|update) public\\.${table}\\b`).test(sql), `${file} ${table}`);
+  }
 });
 
 test("coverage types are valid, unique and do not replace an existing type", () => {
@@ -64,4 +70,26 @@ test("every size chart is valid, each type gets one chart and linked types exist
       linked.set(id, c.name);
     }
   }
+});
+
+test("the 17 new categories exist, are open (no draft flag), sit in a known group and are priced", async () => {
+  const { categories } = await import("../client/src/data/categories.js");
+  const { NEW_CATEGORY_IDS } = await import("./seeds/newCategories.mjs");
+  const { planRows, TIER_PLANS } = await import("../client/src/config/plans.seed.js");
+  assert.equal(NEW_CATEGORY_IDS.length, 17);
+  const groups = new Set(categories.filter((c) => !NEW_CATEGORY_IDS.includes(c.id)).map((c) => c.group));
+  for (const id of NEW_CATEGORY_IDS) {
+    const c = categories.find((x) => x.id === id);
+    assert.ok(c, id);
+    assert.ok(!("draft" in c), `${id} still has a draft flag`);
+    assert.ok(groups.has(c.group), `${id}: group ${c.group} is not one the site already shows`);
+    assert.ok(TIER_PLANS[c.tier], `${id}: tier`);
+    for (const r of planRows(c.id, c.tier)) assert.ok(r.price_kes > 0, `${id} ${r.plan_key} is not priced`);
+  }
+});
+
+test("every type placed in a category points at a category that exists", async () => {
+  const { categories } = await import("../client/src/data/categories.js");
+  const known = new Set(categories.map((c) => c.id));
+  for (const t of ALL_TYPES) for (const id of t.categoryIds) assert.ok(known.has(id), `${t.id} -> ${id}`);
 });

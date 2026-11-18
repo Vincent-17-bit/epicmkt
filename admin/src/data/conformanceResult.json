@@ -663,6 +663,8 @@
     "fish-mama-mboga": {
       "ok": true,
       "types": [
+        "meat-by-weight--seeded",
+        "produce",
         "fish",
         "mama-mboga-produce",
         "herbs-spices"
@@ -672,6 +674,7 @@
     "wines-spirits-bar": {
       "ok": true,
       "types": [
+        "liquor--seeded",
         "beer-cider",
         "wine",
         "spirits",
@@ -682,15 +685,20 @@
     "posho-mill-cereals": {
       "ok": true,
       "types": [
+        "packaged-food",
         "cooking-oil-fat",
         "flour-cereals-rice",
-        "milling-service"
+        "tea-coffee-sugar",
+        "household-consumables",
+        "milling-service",
+        "animal-feed"
       ],
       "failures": []
     },
     "baby-shop": {
       "ok": true,
       "types": [
+        "kids-clothing",
         "baby-food-formula",
         "sanitary-baby-care",
         "baby-gear",
@@ -702,6 +710,9 @@
     "cosmetics-beauty-products": {
       "ok": true,
       "types": [
+        "fragrance--seeded",
+        "makeup-skincare",
+        "hair-wigs",
         "hair-care-products",
         "body-care-lotions",
         "nail-lash-tools"
@@ -711,8 +722,11 @@
     "hotels-lodging": {
       "ok": true,
       "types": [
+        "restaurant-meal",
         "hotel-room",
-        "conference-venue"
+        "conference-venue",
+        "hotel-day-use-package",
+        "hostel-bed"
       ],
       "failures": []
     },
@@ -720,19 +734,24 @@
       "ok": true,
       "types": [
         "property-rental",
-        "property-sale"
+        "property-sale",
+        "commercial-space-rental",
+        "property-management-service",
+        "hostel-bed"
       ],
       "failures": []
     },
     "event-hire": {
       "ok": true,
       "types": [
+        "photo-package",
         "conference-venue",
         "tool-hire",
         "vehicle-hire",
         "event-hire-furniture",
         "event-hire-sound-lighting",
-        "event-decor-planning"
+        "event-decor-planning",
+        "creative-digital-service"
       ],
       "failures": []
     },
@@ -742,13 +761,19 @@
         "towing-recovery",
         "passenger-ride",
         "parcel-delivery-moving",
-        "vehicle-hire"
+        "vehicle-hire",
+        "school-staff-transport",
+        "freight-haulage"
       ],
       "failures": []
     },
     "motorbike-sales-parts": {
       "ok": true,
       "types": [
+        "small-battery",
+        "tyre",
+        "engine-oil",
+        "spare-part",
         "motorbike-sale",
         "motorbike-parts-gear"
       ],
@@ -757,6 +782,12 @@
     "solar-energy": {
       "ok": true,
       "types": [
+        "power-bank",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
         "solar-panel",
         "solar-battery-inverter",
         "solar-system-install"
@@ -766,15 +797,24 @@
     "welding-fabrication": {
       "ok": true,
       "types": [
+        "iron-sheet",
+        "table--seeded",
+        "chair",
+        "bed",
+        "door-window",
         "hand-power-tools",
         "locks-hardware",
-        "welding-fabrication"
+        "welding-fabrication",
+        "architecture-survey-service"
       ],
       "failures": []
     },
     "security-cctv": {
       "ok": true,
       "types": [
+        "cable",
+        "power-adapter",
+        "memory-card--seeded",
         "cctv-camera-kit",
         "alarm-electric-fence",
         "security-install-maintenance"
@@ -784,6 +824,7 @@
     "pet-shop-vet": {
       "ok": true,
       "types": [
+        "vet-medicine",
         "agrovet-service",
         "pet-food",
         "pet-accessories",
@@ -794,6 +835,9 @@
     "bookshop": {
       "ok": true,
       "types": [
+        "pens-pencils-markers",
+        "notebooks-exercise-books",
+        "calculator",
         "books-textbooks",
         "storybooks-general"
       ],
@@ -802,7 +846,11 @@
     "professional-services": {
       "ok": true,
       "types": [
-        "professional-consultation"
+        "professional-consultation",
+        "legal-service",
+        "accounting-tax-service",
+        "architecture-survey-service",
+        "creative-digital-service"
       ],
       "failures": []
     }
@@ -1053,7 +1101,17 @@
     "event-hire-furniture": true,
     "event-hire-sound-lighting": true,
     "event-decor-planning": true,
-    "drone-video-service": true
+    "drone-video-service": true,
+    "legal-service": true,
+    "accounting-tax-service": true,
+    "architecture-survey-service": true,
+    "creative-digital-service": true,
+    "commercial-space-rental": true,
+    "property-management-service": true,
+    "hotel-day-use-package": true,
+    "hostel-bed": true,
+    "school-staff-transport": true,
+    "freight-haulage": true
   },
   "hardCoded": []
 }
