@@ -81,6 +81,17 @@ describe("PayByPhone", () => {
     expect((await screen.findByRole("button", { name: "Use a different number" })).className).toContain("app-ghost");
   });
 
+  it("tells the caller when a prompt starts and stops waiting, including when it is taken off the page", async () => {
+    const onWaitingChange = vi.fn();
+    const start = vi.fn(async () => ({ request: req() }));
+    const { unmount } = render(<PayByPhone amount={500} defaultPhone="0712345678" start={start} poll={vi.fn(async () => ({ request: req() }))} pollMs={60_000} onWaitingChange={onWaitingChange} />);
+    expect(onWaitingChange).toHaveBeenLastCalledWith(false);
+    fireEvent.click(screen.getByRole("button", { name: "Pay KES 500 now" }));
+    await waitFor(() => expect(onWaitingChange).toHaveBeenLastCalledWith(true));
+    unmount();
+    expect(onWaitingChange).toHaveBeenLastCalledWith(false);
+  });
+
   it("can be disabled with a reason", () => {
     setup({ disabled: true, disabledReason: "Wait for the payment you reported to be checked." });
     expect(screen.getByRole("button", { name: "Pay KES 500 now" })).toBeDisabled();

@@ -74,6 +74,10 @@ export default function PayByPhone({
 
   const waiting = Boolean(request) && stage.waiting;
   useEffect(() => { onWaitingChange?.(waiting); }, [waiting, onWaitingChange]);
+  // Leaving the page part (the payment arrived another way, or the payer switched to an upgrade) ends the wait for the caller too.
+  const waitingRef = useRef(onWaitingChange);
+  waitingRef.current = onWaitingChange;
+  useEffect(() => () => waitingRef.current?.(false), []);
 
   useEffect(() => {
     if (request?.status === "paid" && paidRef.current !== request.id) {

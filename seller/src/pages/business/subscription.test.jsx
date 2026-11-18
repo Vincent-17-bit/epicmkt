@@ -392,6 +392,20 @@ describe("Subscription: renewing shows what you get, and only what the server wi
     expect(text("sum-paid-until")).toBe("20 Sep 2027");
   }, 30000);
 
+  it("a payment that arrives by Paybill while a prompt waits: the page shows it, and the next renewal is not left locked", async () => {
+    const user = userEvent.setup();
+    await at("2026-10-20");
+    await user.click(screen.getByRole("radio", { name: /^3 months/ }));
+    await user.click(screen.getByRole("button", { name: "Pay KES 1,500 now" }));
+    expect(await screen.findByText("Check your phone")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /^6 months/ })).toBeDisabled();
+    act(() => { M.autoPay(500); });
+    expect(await screen.findByTestId("payment-received")).toHaveTextContent("paid until 20 Nov 2026");
+    await user.click(screen.getByRole("button", { name: "Done" }));
+    expect(await screen.findByRole("radio", { name: /^6 months/ })).toBeEnabled();
+    expect(text("pay-total")).toContain("Added after 20 Nov 2026");
+  }, 30000);
+
   it("paid ahead for the most allowed: nothing to pay, no button", async () => {
     await at("2027-10-01");
     expect(screen.getByTestId("pay-full")).toHaveTextContent("You are paid ahead for the most allowed, 12 months from today, until 1 Oct 2027. There is nothing to pay now.");
