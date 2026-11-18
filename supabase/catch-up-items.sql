@@ -1,7 +1,8 @@
 -- EpicMKT: bring a database that stopped part-way up to the latest migration, applying only what is missing.
 -- Fixes: saving items failing with "Could not find the function ..." or "column ... does not exist", details not saved,
 --   size charts / size guides / options missing. Safe to run again: it applies nothing once the database is current.
--- Run it ONCE in the Supabase SQL editor on the project the seller, admin and client sites use.
+-- Too large for the Supabase SQL editor (about 1.2 MB): there, run the parts in supabase/catch-up/ in order instead; they do the same.
+-- This single file is for psql (psql "$DATABASE_URL" -f supabase/catch-up-items.sql) on the project the seller, admin and client sites use.
 -- It finds the first migration your database is missing, then applies that one and every later one in order.
 -- The result table at the end lists every migration it applied. Send me that table if any row says SKIPPED.
 -- Needs the base schema and migrations 0001 to 0037 (the catch-up-0024-0037.sql file covers 0024 to 0037).
