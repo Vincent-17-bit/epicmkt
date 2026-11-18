@@ -105,6 +105,23 @@
   overflow-y: auto;
 }
 
+/* Phones: the bell sits mid-header, so a panel anchored to it runs off the left edge. Pin it under the header instead. */
+@media (max-width: 47.99rem) {
+  .admin-bell {
+    position: static;
+  }
+
+  .admin-bell__panel {
+    position: fixed;
+    top: 3.5rem;
+    right: var(--space-3);
+    left: var(--space-3);
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - 8rem);
+  }
+}
+
 .admin-bell__head {
   display: flex;
   justify-content: space-between;

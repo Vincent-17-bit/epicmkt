@@ -2,26 +2,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronLeft, faChevronRight, faMagnifyingGlass, faSliders, faTableCellsLarge, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faMagnifyingGlass, faSliders, faTableCellsLarge, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { getCategories, items } from "../api/index.js";
 import { t } from "../i18n/index.js";
 import { EMPTY_FILTERS, chipsOf, countActive, parseFilters, writeFilters } from "../lib/productFilters.js";
-import { FEED_MAX_PAGES, PAGE_SIZE, countsFromJson } from "../lib/productQuery.js";
-import { feedEpoch } from "../lib/feedEpoch.js";
+import { FEED_MAX_PAGES, PAGE_SIZE, countsFromJson, pageSizeFor } from "../lib/productQuery.js";
+import { feedVisit } from "../lib/feedEpoch.js";
 import { useOpenSearch } from "../hooks/useOpenSearch.js";
+import { useMediaQuery } from "../hooks/useMediaQuery.js";
+import { useStableList } from "../hooks/useStableList.js";
 import { Button, Container, Skeleton } from "@epicmkt/ui";
 import ProductTile from "./ProductTile.jsx";
+import Pagination from "./Pagination.jsx";
 import FilterSheet from "./FilterSheet.jsx";
 import ProductFilters from "./ProductFilters.jsx";
 import { sizeNameFrom } from "../lib/sizeFilterLabels.js";
 import { chooseShoeSystem, readShoeSystem, saveShoeSystem } from "../lib/shoeSystem.js";
 import styles from "./HomeProducts.module.css";
 
-// A multiple of 2, 3, 4 and 6 so every row of the grid is full at every screen width.
+// A page is about 50 cards, sized to the screen's column count (lib/productQuery.js GRID_PAGE_SIZES) so every row is full.
 export { PAGE_SIZE };
 
 // Loading, in layers (docs/catalog-scale.md):
-//   * one page of 24 at a time, each its own cached question (the CDN answers repeats; React Query keeps visited pages);
+//   * one page (about 50 cards, by screen) at a time, each its own cached question (the CDN answers repeats; React Query keeps visited pages);
 //   * near the end of the grid (IntersectionObserver, about one screen ahead, never a scroll listener) the next page is fetched
 //     in the background, and the first AUTO_PAGES are added on their own;
 //   * after that a "Show more" button adds one page per tap (already fetched, so it is instant), and the footer stays reachable;
@@ -62,33 +65,6 @@ function useNear(ref, onNear, deps) {
   }, deps);
 }
 
-function Pager({ pages, from, to, onPage }) {
-  if (pages < 2) return null;
-  const numbers = Array.from({ length: pages }, (_, i) => i + 1);
-  return (
-    <nav className={styles.pager} aria-label="Product pages">
-      <button type="button" className={styles.pageNav} disabled={from <= 1} onClick={() => onPage(from - 1)} aria-label="Previous page">
-        <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" />
-      </button>
-      <ol className={styles.pageList}>
-        {numbers.map((n) => {
-          const shown = n >= from && n <= to;
-          return (
-            <li key={n}>
-              <button type="button" className={styles.pageBtn} data-on={shown || undefined} aria-current={shown ? "page" : undefined} aria-label={`Page ${n}`} onClick={() => onPage(n)}>
-                {n}
-              </button>
-            </li>
-          );
-        })}
-      </ol>
-      <button type="button" className={styles.pageNav} disabled={to >= pages} onClick={() => onPage(to + 1)} aria-label="Next page">
-        <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
-      </button>
-    </nav>
-  );
-}
-
 export default function HomeProducts() {
   const [params, setParams] = useSearchParams();
   const queryClient = useQueryClient();
@@ -102,22 +78,30 @@ export default function HomeProducts() {
     saveShoeSystem(id);
   };
 
+  // The grid's columns follow these breakpoints (HomeProducts.module.css); a page holds a whole number of rows of them.
+  const wide = useMediaQuery("(min-width: 78rem)");
+  const tablet = useMediaQuery("(min-width: 46rem)");
+  const small = useMediaQuery("(min-width: 34rem)");
+  const pageSize = pageSizeFor(wide ? 6 : tablet ? 4 : small ? 3 : 2);
+
   const filters = useMemo(() => parseFilters(params), [params]);
   const serialized = writeFilters(new URLSearchParams(), filters).toString();
-  // The visit's rotation hour: the recommended order is frozen for this visit, however long the visitor pages through it.
-  const [epoch] = useState(() => feedEpoch());
-  const hour = filters.sort === "recommended" ? epoch : null;
+  // The visit's rotation hour and variant: the recommended order is frozen for this visit, however long the visitor pages through it.
+  const [visit] = useState(() => feedVisit());
+  const recommended = filters.sort === "recommended";
+  const hour = recommended ? visit.epoch : null;
+  const variant = recommended ? visit.variant : null;
   const start = pageOfParam(params.get("ppage"));
 
   // The pages on screen: from `start` (the page the visitor jumped to, 1 by default) to `end`. A new list starts over.
-  const listKey = `${serialized}|${start}`;
+  const listKey = `${serialized}|${start}|${pageSize}`;
   const [shown, setShown] = useState({ key: listKey, end: start });
   const end = shown.key === listKey ? shown.end : start;
   const setEnd = (next) => setShown({ key: listKey, end: next });
 
   const pageQuery = (n) => ({
-    queryKey: ["products-page", serialized, hour, n],
-    queryFn: () => items.getPage(filters, { page: n, pageSize: PAGE_SIZE, ...(hour === null ? {} : { epoch: hour }) }),
+    queryKey: ["products-page", serialized, hour, variant, pageSize, n],
+    queryFn: () => items.getPage(filters, { page: n, pageSize, ...(hour === null ? {} : { epoch: hour, variant }) }),
     staleTime: 5 * 60_000
   });
   // While a new filter loads, the grid keeps the previous products instead of flashing back to skeletons.
@@ -137,22 +121,24 @@ export default function HomeProducts() {
 
   const { data, isPending, isError, refetch, isPlaceholderData } = first;
   // Every product once, even if a page boundary moved between two requests (at most 192 cards: cheap to rebuild).
-  const visible = [];
+  const fresh = [];
   const seenKeys = new Set();
   for (const page of [data, ...more.map((q) => q.data)]) {
     for (const item of page?.items ?? []) {
       const key = keyOf(item);
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
-        visible.push(item);
+        fresh.push(item);
       }
     }
   }
+  // Whatever a refetch brings, what is on screen stays where it is.
+  const visible = useStableList(listKey, fresh, keyOf);
   const loadingMore = more.some((q) => q.isPending);
   const moreFailed = more.find((q) => q.isError);
   const total = data?.total ?? 0;
   const catalogTotal = data?.catalogTotal ?? 0;
-  const pages = data?.pages ?? Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const pages = data?.pages ?? Math.max(1, Math.ceil(total / pageSize));
   const capped = data?.capped === true;
   const canMore = !isPlaceholderData && end < pages;
   const towns = facets.data?.towns ?? [];
@@ -173,8 +159,8 @@ export default function HomeProducts() {
   const top = useRef(null);
   const announce = useRef(null);
   useEffect(() => {
-    if (end > start && announce.current) announce.current.textContent = `${Math.min(visible.length, total)} of ${Math.min(total, pages * PAGE_SIZE)} products shown`;
-  }, [visible.length, end, start, total, pages]);
+    if (end > start && announce.current) announce.current.textContent = `${Math.min(visible.length, total)} of ${Math.min(total, pages * pageSize)} products shown`;
+  }, [visible.length, end, start, total, pages, pageSize]);
 
   const categoryName = (id) => categories.data?.find((c) => c.id === id)?.name ?? id;
   const townName = (slug) => towns.find((x) => x.slug === slug)?.name ?? slug;
@@ -198,9 +184,9 @@ export default function HomeProducts() {
 
   if (!isPending && !isError && catalogTotal === 0) return null;
 
-  const from = total ? (start - 1) * PAGE_SIZE + 1 : 0;
-  const to = Math.min(total, (start - 1) * PAGE_SIZE + visible.length);
-  const reachable = Math.min(total, pages * PAGE_SIZE);
+  const from = total ? (start - 1) * pageSize + 1 : 0;
+  const to = Math.min(total, (start - 1) * pageSize + visible.length);
+  const reachable = Math.min(total, pages * pageSize);
 
   return (
     <section className={styles.section} aria-labelledby="home-products-title" ref={top}>
@@ -297,7 +283,7 @@ export default function HomeProducts() {
                 </div>
               )
             )}
-            <Pager pages={pages} from={start} to={end} onPage={goToPage} />
+            <Pagination pages={pages} page={start} to={end} onPage={goToPage} label="Product pages" />
           </div>
         )}
       </Container>

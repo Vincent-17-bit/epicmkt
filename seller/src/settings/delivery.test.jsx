@@ -12,7 +12,7 @@ const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
 beforeEach(() => { useSettings.getState().reset(); useToasts.getState().clear(); });
 
 const open = async () => {
-  const view = await signedInApp("/business/settings");
+  const view = await signedInApp("/business/settings#delivery");
   await screen.findByRole("heading", { level: 1, name: "Settings" });
   await screen.findByRole("heading", { level: 2, name: "Delivery" });
   return view;

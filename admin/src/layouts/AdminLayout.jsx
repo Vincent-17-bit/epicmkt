@@ -240,17 +240,21 @@ export default function AdminLayout() {
           const text = badgeText(badges[item.to]);
           return (
             <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `admin-tab ${isActive ? "is-active" : ""}`}>
-              <FontAwesomeIcon icon={item.icon} fixedWidth />
-              <span>{item.to === "/admin" ? "Home" : item.label}</span>
-              {text ? <b className="admin-tab__badge">{text}</b> : null}
+              <span className="admin-tab__icon">
+                <FontAwesomeIcon icon={item.icon} fixedWidth />
+                {text ? <b className="admin-tab__badge">{text}</b> : null}
+              </span>
+              <span className="admin-tab__label">{item.to === "/admin" ? "Home" : item.label}</span>
             </NavLink>
           );
         })}
         {moreItems.length ? (
           <button type="button" className={`admin-tab ${moreActive || moreOpen ? "is-active" : ""}`} ref={moreButtonRef} aria-expanded={moreOpen} aria-haspopup="dialog" aria-controls={moreOpen ? "admin-more-menu" : undefined} onClick={() => setMoreOpen((value) => !value)}>
-            <FontAwesomeIcon icon={faEllipsis} fixedWidth />
-            <span>More</span>
-            {moreBadge ? <b className="admin-tab__badge">{badgeText(moreBadge)}</b> : null}
+            <span className="admin-tab__icon">
+              <FontAwesomeIcon icon={faEllipsis} fixedWidth />
+              {moreBadge ? <b className="admin-tab__badge">{badgeText(moreBadge)}</b> : null}
+            </span>
+            <span className="admin-tab__label">More</span>
           </button>
         ) : null}
       </nav>

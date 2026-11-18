@@ -1,4 +1,5 @@
 .shell {
+  --header-h: calc(3.5rem + var(--safe-top));
   min-height: 100dvh;
 }
 
@@ -31,8 +32,8 @@
   overflow: hidden;
   display: grid;
   place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: var(--radius-pill);
   background: var(--primary);
   color: var(--on-primary);
@@ -116,21 +117,21 @@
   align-items: center;
   justify-content: center;
   gap: 0.125rem;
-  min-height: 3.5rem;
+  min-height: 3.25rem;
   min-width: 0;
   padding: var(--space-1) 0;
   border: 0;
   background: transparent;
   color: var(--text-muted);
   font: inherit;
-  font-size: 0.65rem;
+  font-size: 0.6875rem;
   text-decoration: none;
   cursor: pointer;
 }
 
 .nav a svg,
 .moreBtn svg {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
 }
 
 .nav a span,
@@ -182,14 +183,18 @@
 .moreLinks {
   visibility: hidden;
   position: absolute;
-  right: var(--space-3);
-  bottom: calc(100% + var(--space-2));
-  left: var(--space-3);
+  right: 0;
+  bottom: 100%;
+  left: 0;
   display: grid;
-  padding: var(--space-2);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  max-height: 70dvh;
+  padding: var(--space-3);
+  overflow-y: auto;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-card);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
   box-shadow: var(--shadow-2);
 }
 
@@ -204,11 +209,20 @@
   min-height: var(--tap);
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
-  font-size: var(--text-md);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.moreLinks a[aria-current="page"] {
+  box-shadow: none;
+  background: var(--primary-tint);
 }
 
 .moreLinks a svg {
-  width: 1.5rem;
+  width: 1.25rem;
+  color: var(--text-muted);
 }
 
 .scrim {
@@ -221,7 +235,7 @@
 
 .main {
   min-width: 0;
-  padding-bottom: calc(4.5rem + var(--safe-bottom));
+  padding-bottom: calc(4.25rem + var(--safe-bottom));
 }
 
 .suspended {
@@ -261,8 +275,9 @@
   }
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 64rem) {
   .shell {
+    --header-h: calc(var(--bar-h) + var(--safe-top));
     display: grid;
     grid-template-columns: 15rem minmax(0, 1fr);
   }
@@ -310,6 +325,27 @@
     visibility: visible;
   }
 
+  .moreLinks a {
+    background: transparent;
+    color: var(--text-muted);
+    font-weight: inherit;
+  }
+
+  .moreLinks a:hover {
+    color: var(--text);
+    background: var(--link-hover-bg);
+  }
+
+  .moreLinks a[aria-current="page"] {
+    background: var(--primary-tint);
+    box-shadow: inset 3px 0 0 var(--primary);
+  }
+
+  .moreLinks a svg {
+    width: 1.5rem;
+    color: inherit;
+  }
+
   .moreBtn,
   .scrim {
     display: none;
@@ -319,10 +355,10 @@
     flex-direction: row;
     justify-content: flex-start;
     gap: var(--space-3);
-    min-height: var(--tap);
+    min-height: 2.5rem;
     padding: 0 var(--space-3);
     border-radius: var(--radius-sm);
-    font-size: var(--text-md);
+    font-size: var(--text-sm);
   }
 
   .nav a svg {
@@ -339,7 +375,7 @@
   }
 
   .moreLinks a:first-child {
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
   }
 
   .badge {
@@ -348,23 +384,16 @@
   }
 
   .tools {
-    flex-direction: column;
+    justify-content: space-between;
   }
 
   .iconBtn {
-    justify-content: flex-start;
+    justify-content: center;
     padding: 0 var(--space-3);
   }
 
   .iconBtn svg {
-    width: 1.5rem;
-  }
-
-  .iconBtn span {
-    position: static;
-    width: auto;
-    height: auto;
-    clip: auto;
+    width: 1.25rem;
   }
 
   .main {

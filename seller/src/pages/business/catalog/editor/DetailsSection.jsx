@@ -1,17 +1,21 @@
 import { faBoxOpen, faListCheck, faPlus, faSliders } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup } from "@epicmkt/shared";
 import { LIMITS, SPEC_PRESETS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
+import FaqEditor from "./FaqEditor.jsx";
+import ProductInfoEditor from "./ProductInfoEditor.jsx";
 import TypeRows from "./TypeRows.jsx";
 import { hasTemplate, rowsOf } from "./typedRows.js";
 import styles from "./editor.module.css";
 
-export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore }) {
+export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore, category }) {
   const hl = LIMITS.highlights;
   const inc = LIMITS.includes;
-  const used = new Set(form.specs.map((s) => String(s.label ?? "").trim().toLowerCase()));
-  const specsFull = form.specs.length >= SPEC_LIMITS.rows;
+  const plain = form.specs.filter((s) => !isInfoGroup(s.group));
+  const info = form.specs.filter((s) => isInfoGroup(s.group));
+  const used = new Set(plain.map((s) => String(s.label ?? "").trim().toLowerCase()));
+  const specsFull = plain.length >= PLAIN_SPEC_ROWS;
   const typed = hasTemplate(type);
   const quick = typed && !more;
   const { extra } = rowsOf(form, type);
@@ -56,15 +60,15 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
               {SPEC_PRESETS.map((p) => (
                 <li key={p.label}>
                   <button type="button" className={styles.chip} disabled={specsFull || used.has(p.label.toLowerCase())}
-                    onClick={() => { focusOn(`spec-${form.specs.length}-value`); patch("specs", [...form.specs, { group: p.group, label: p.label, value: "" }]); }}>
+                    onClick={() => { focusOn(`spec-${plain.length}-value`); patch("specs", [...plain, { group: p.group, label: p.label, value: "" }, ...info]); }}>
                     <FontAwesomeIcon icon={faPlus} aria-hidden="true" /> {p.label}
                   </button>
                 </li>
               ))}
             </ul>
             <RowList
-              noun={{ key: "spec", label: "Specification", name: "specification" }} rows={form.specs} max={SPEC_LIMITS.rows} onChange={(v) => patch("specs", v)} focusOn={focusOn}
-              blank={{ group: SPEC_DEFAULT_GROUP, label: "", value: "" }} focusFirst={() => `spec-${form.specs.length}-label`} addLabel="Add custom row" addKey="add-spec" icon={faSliders}
+              noun={{ key: "spec", label: "Specification", name: "specification" }} rows={plain} max={PLAIN_SPEC_ROWS} onChange={(v) => patch("specs", [...v, ...info])} focusOn={focusOn}
+              blank={{ group: SPEC_DEFAULT_GROUP, label: "", value: "" }} focusFirst={() => `spec-${plain.length}-label`} addLabel="Add custom row" addKey="add-spec" icon={faSliders}
               empty={{ title: "No specifications yet", body: "Tap a quick add above, like Material or Weight, or add your own row." }}
               error={errors.specsCount} errorKey="specsCount"
               renderRow={(s, i, edit) => (
@@ -78,6 +82,10 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
               )}
             />
           </div>
+
+          <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} category={category} typeId={form.productTypeId} name={form.name} />
+
+          <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 
           <div className={styles.subBlock} data-area="includes">
             <h3 className={styles.subTitle}>What is included</h3>

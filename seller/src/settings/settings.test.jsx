@@ -34,13 +34,32 @@ describe("navigation", () => {
 });
 
 describe("settings page", () => {
-  it("shows every section and points sign-in email and password to the Account page", async () => {
+  it("lists every section in the menu, shows one at a time, and points sign-in email and password to the Account page", async () => {
+    const user = userEvent.setup();
     await open();
-    for (const name of ["Shop location", "Account and security", "Notifications", "Appearance", "Catalog defaults", "Messaging", "Data and account"]) {
-      expect(screen.getByRole("heading", { level: 2, name })).toBeInTheDocument();
+    const menu = screen.getByRole("navigation", { name: "Settings sections" });
+    expect(screen.getByRole("heading", { level: 2, name: "Shop location" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 2, name: "Notifications" })).toBeNull();
+    for (const name of ["Delivery", "Opening hours", "Account and security", "Notifications", "Appearance", "Catalog defaults", "Messaging", "Data and account", "Shop location"]) {
+      await user.click(within(menu).getByRole("link", { name }));
+      expect(await screen.findByRole("heading", { level: 2, name })).toBeInTheDocument();
+      expect(within(menu).getByRole("link", { name })).toHaveAttribute("aria-current", "page");
     }
+    await user.click(within(menu).getByRole("link", { name: "Account and security" }));
     expect(await screen.findByText("ES100001")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Go to Account" })).toHaveAttribute("href", "/business/account");
+  });
+
+  it("keeps unsaved changes when you move between sections", async () => {
+    const user = userEvent.setup();
+    await open();
+    const menu = screen.getByRole("navigation", { name: "Settings sections" });
+    const box = await screen.findByRole("textbox", { name: "Address or landmark" });
+    await user.clear(box);
+    await user.type(box, "Draft landmark");
+    await user.click(within(menu).getByRole("link", { name: "Appearance" }));
+    await user.click(within(menu).getByRole("link", { name: "Shop location" }));
+    expect(screen.getByRole("textbox", { name: "Address or landmark" })).toHaveValue("Draft landmark");
   });
 
   it("no longer offers quiet hours, an inactivity timeout or the other trimmed settings", async () => {
@@ -75,7 +94,7 @@ describe("settings page", () => {
 
   it("saves appearance choices straight away and applies them to the whole portal", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#appearance");
     await user.click(within(screen.getByRole("radiogroup", { name: "Text size" })).getByRole("radio", { name: "Large" }));
     expect(document.documentElement.dataset.textSize).toBe("large");
     await waitFor(() => expect(useToasts.getState().toasts.some((t) => t.message === "Saved")).toBe(true));
@@ -86,7 +105,7 @@ describe("settings page", () => {
 
   it("rolls a change back and says so when the server refuses it", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#notifications");
     const original = mock.saveSettings;
     expect(typeof original).toBe("function");
     const sw = screen.getByRole("switch", { name: "Expiry reminders: SMS" });
@@ -99,7 +118,7 @@ describe("settings page", () => {
 
   it("keeps in-app on for critical events and lets the rest be turned off", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#notifications");
     const critical = screen.getByRole("switch", { name: "Expiry reminders: In-app" });
     expect(critical).toBeDisabled();
     expect(critical).toHaveAttribute("aria-checked", "true");
@@ -111,7 +130,7 @@ describe("settings page", () => {
 
   it("refuses a WhatsApp greeting with a link or a phone number, and previews a good one", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#messaging");
     const box = screen.getByRole("textbox", { name: "Greeting" });
     await user.clear(box);
     await user.type(box, "Order at https://shop.example.com");
@@ -127,7 +146,7 @@ describe("settings page", () => {
 
   it("adds and removes default units, and refuses a duplicate", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#catalog");
     const input = screen.getByRole("textbox", { name: "New unit" });
     await user.type(input, "crate");
     await user.click(screen.getByRole("button", { name: "Add" }));
@@ -141,7 +160,7 @@ describe("settings page", () => {
 
   it("requests a phone change, shows it waiting, and can cancel it", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#account");
     await user.click(screen.getByRole("button", { name: "Request change" }));
     const dialog = await screen.findByRole("dialog");
     await user.type(within(dialog).getByLabelText("New phone number"), "12345");
@@ -157,7 +176,7 @@ describe("settings page", () => {
 
   it("signs out other devices and says how many", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#account");
     await user.click(screen.getByRole("button", { name: "Sign out other devices" }));
     const dialog = await screen.findByRole("dialog");
     await user.click(within(dialog).getByRole("button", { name: "Sign out other devices" }));
@@ -165,14 +184,16 @@ describe("settings page", () => {
   });
 
   it("lists recent sign-ins", async () => {
-    await open();
+    await open("/business/settings#account");
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Recent sign-ins" }));
     const list = await screen.findByRole("list", { name: "Sign-in history" });
     expect(within(list).getAllByRole("listitem").length).toBeGreaterThan(0);
   });
 
   it("pauses and resumes the listing, and downloads nothing until asked", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#data");
     await user.click(await screen.findByRole("button", { name: "Pause listing" }));
     await waitFor(() => expect(M.state.business.status).toBe("paused"));
     await user.click(await screen.findByRole("button", { name: "Resume listing" }));
@@ -181,7 +202,7 @@ describe("settings page", () => {
 
   it("deleting the account needs the business name typed exactly", async () => {
     const user = userEvent.setup();
-    await open();
+    await open("/business/settings#data");
     await user.click(await screen.findByRole("button", { name: "Delete account" }));
     const dialog = await screen.findByRole("dialog");
     const go = within(dialog).getByRole("button", { name: "Delete my account" });

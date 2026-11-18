@@ -131,10 +131,10 @@ test("names from every kind of shop land in the right kind, using the shop's cat
     // event hire, lodging, property, transport, professionals, fundis, funerals)
     ["Day old Kenbro chicks", "agrovet", "poultry"], ["Layers mash 70kg", "agrovet", "farm"], ["Kienyeji chicken 1.5kg", "butchery", "meat"], ["Tilapia whole fresh 1kg", "butchery", "fish"],
     ["Bajaj Boxer 150cc", "auto-spare-parts", "motorbikes"], ["Toyota Fielder headlight 2010", "auto-spare-parts", "auto-parts"], ["Solar panel 300W mono", "electronics-appliances", "solar"],
-    ["Hikvision 4 channel CCTV kit", "electronics-computers", "cctv"], ["Pampers baby dry size 4", "supermarket-minimart", "baby"], ["KLB Grade 4 English learner's book", "printing-stationery", "books"],
+    ["Hikvision 4 channel CCTV kit", "electronics-computers", "security"], ["Pampers baby dry size 4", "supermarket-minimart", "baby-gear"], ["KLB Grade 4 English learner's book", "printing-stationery", "books"],
     ["Exercise book 96 pages", "printing-stationery", "stationery"], ["Pedigree dog food 3kg", "agrovet", "pets"], ["Rosecoco beans 1kg", "supermarket-minimart", "cereals"], ["Bean seeds 2kg", "agrovet", "farm"],
-    ["Hot dog", "restaurant-cafe", "meals"], ["Steel gate 12ft", "hardware-building", "welding"], ["House wiring", "plumbing-electrical", "trades"], ["Double room per night", "hotels-lodging", "hotels"],
-    ["2 bedroom apartment to let", "rentals-real-estate", "rentals"], ["Boda boda ride to town", "transport-logistics", "transport"], ["Coffin", "funeral-services", "funeral"], ["Land survey", "professional-services", "professional"]
+    ["Hot dog", "restaurant-cafe", "meals"], ["Steel gate 12ft", "hardware-building", "welding"], ["House wiring", "plumbing-electrical", "trades"], ["Double room per night", "hotels-lodging", "stays"],
+    ["2 bedroom apartment to let", "rentals-real-estate", "property"], ["Boda boda ride to town", "transport-logistics", "transport"], ["Coffin", "funeral-services", "funeral"], ["Land survey", "professional-services", "professional"]
   ];
   const wrong = cases.map(([name, cat, want]) => [name, kindOf({ name, business: { categoryId: cat } })?.id, want]).filter(([, got, want]) => got !== want);
   assert.deepEqual(wrong, []);

@@ -20,3 +20,23 @@
 .log-detail > div { display: grid; grid-template-columns: 9rem minmax(0, 1fr); gap: var(--space-3); }
 .log-detail dt { color: var(--text-muted); }
 .log-detail dd { margin: 0; overflow-wrap: anywhere; }
+
+/* Choosing a send time: the field, ready-made times, and what will happen. */
+.schedule { display: grid; gap: var(--space-2); }
+.schedule__picks { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.schedule__chip {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong, var(--border));
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-sm);
+  cursor: pointer;
+}
+.schedule__chip:hover { border-color: var(--primary); }
+.schedule__chip.is-on { background: var(--primary-tint); border-color: var(--primary); color: var(--primary-text); font-weight: var(--fw-semibold); }
+.schedule p { margin: 0; }
+.compose__pending { grid-column: 1 / -1; }
+.pending .row-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); }

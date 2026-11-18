@@ -8,6 +8,7 @@ import * as api from "../../api/index.js";
 import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
 import { useRealtime } from "../../lib/useRealtime.js";
+import Intro from "../../components/Intro.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./exceptions.module.css";
 
@@ -459,7 +460,7 @@ export default function Exceptions() {
         </div>
         <button type="button" className={ui.btn} onClick={() => setForm({ initial: null })} disabled={full || !!form}>Add exception</button>
       </div>
-      <p className={ui.muted}>Days when you are closed or open at different times from your usual hours. Customers see these on your shop page. Dates that have passed are removed automatically.</p>
+      <Intro>Days when you are closed or open at different times from your usual hours. Customers see these on your shop page. Dates that have passed are removed automatically.</Intro>
 
       {full && (
         <div className={styles.notice} role="status" data-testid="limit-notice">

@@ -8,7 +8,7 @@ import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
-const MAX_SPECS = 20;
+const MAX_SPECS = 80;
 const MAX_HIGHLIGHTS = 20;
 
 const SHORT_MAX = 140;

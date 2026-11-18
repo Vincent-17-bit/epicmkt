@@ -12,6 +12,12 @@ const PAYMENT_KIND = { first: "first", renewal: "renewal", upgrade: "upgrade", c
 const humanize = (action) => String(action ?? "").replace(/[._]+/g, " ").trim();
 const sentence = (text) => text.charAt(0).toUpperCase() + text.slice(1);
 
+// Where a note leads: the exact application or business when the row says which, else the list it belongs to.
+const toBusiness = (row, data, fallback = "/admin/businesses") => {
+  const id = row.business_id ?? data.business_id;
+  return id ? `/admin/businesses/${id}` : fallback;
+};
+
 export function describeActivity(row) {
   if (!row) return { text: "", to: null };
   if (typeof row.text === "string") return { text: row.text, to: row.to ?? null };
@@ -23,7 +29,7 @@ export function describeActivity(row) {
 
   switch (kind) {
     case "application_submitted":
-      return { text: `New application from ${biz}`, to: "/admin/applications" };
+      return { text: `New application from ${biz}`, to: data.application_id ? `/admin/applications/${data.application_id}` : "/admin/applications" };
     case "payment_submitted": {
       const label = PAYMENT_KIND[data.kind];
       return { text: `${biz} submitted ${label ? `a ${label} ` : "a "}payment to confirm`, to: "/admin/payments" };
@@ -35,17 +41,17 @@ export function describeActivity(row) {
     case "change_request":
     case "change_requested": {
       const field = FIELD_LABELS[data.field];
-      return { text: `${biz} asked to change ${field ? `their ${field}` : "a detail"}`, to: "/admin/businesses" };
+      return { text: `${biz} asked to change ${field ? `their ${field}` : "a detail"}`, to: toBusiness(row, data) };
     }
     case "flag_reply":
     case "flag_replied":
-      return { text: `${biz} replied to a flag`, to: "/admin/businesses" };
+      return { text: `${biz} replied to a flag`, to: toBusiness(row, data) };
     case "deletion_requested":
-      return { text: `${biz} asked to delete their listing`, to: "/admin/businesses" };
+      return { text: `${biz} asked to delete their listing`, to: toBusiness(row, data) };
     case "listing_paused":
-      return { text: `${biz} paused their listing`, to: "/admin/businesses" };
+      return { text: `${biz} paused their listing`, to: toBusiness(row, data) };
     case "listing_resumed":
-      return { text: `${biz} resumed their listing`, to: "/admin/businesses" };
+      return { text: `${biz} resumed their listing`, to: toBusiness(row, data) };
     case "application.open":
       return { text: `${who} started reviewing an application`, to: "/admin/applications" };
     case "application.return":
@@ -59,4 +65,17 @@ export function describeActivity(row) {
       return { text: `${sentence(humanize(kind) || "Activity")}${place}${row.actor ? ` (${row.actor})` : ""}`, to: null };
     }
   }
+}
+
+/** Which icon a feed row gets: a key the panel maps to a drawing. Unknown kinds get "bell", never nothing. */
+export function activityIconKey(row) {
+  const kind = String(row?.kind ?? "").toLowerCase();
+  const text = typeof row?.text === "string" ? row.text.toLowerCase() : "";
+  const has = (word) => kind.includes(word) || text.includes(word);
+  if (has("payment")) return "payment";
+  if (has("application")) return "application";
+  if (has("flag") || has("report")) return "flag";
+  if (has("remind") || has("message") || has("broadcast")) return "message";
+  if (has("business") || has("listing") || has("change") || has("deletion") || has("seller")) return "store";
+  return "bell";
 }

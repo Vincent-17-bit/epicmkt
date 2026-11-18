@@ -30,7 +30,7 @@ import { isOpenAllDay, statusOf } from "../../shared/src/openState.js";
 import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS, countActive } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
-import { FEED_MAX_PAGES, blendFeed, clampEpoch, pagesOf } from "../src/lib/feed.js";
+import { FEED_MAX_PAGES, blendFeed, clampEpoch, clampVariant, pagesOf } from "../src/lib/feed.js";
 import { buildSuggestIndex, correctWord, suggestFrom, suggestKey } from "../src/lib/suggest.js";
 import { parseRequest } from "./_lib/productParams.js";
 import { parseSearch, searchProducts } from "../../shared/src/search/search.js";
@@ -355,16 +355,21 @@ async function feedPool(epoch) {
   }
 }
 
-function feedPage(entry, epoch, { page, pageSize }, now) {
+function feedPage(entry, epoch, { page, pageSize, variant = 0 }, now) {
   tick(entry.snap, now);
-  entry.order ??= blendFeed(entry.snap.products, { epoch, pageSize, limit: FEED_MAX_PAGES * pageSize }).map((p) => p.id);
-  const pages = pagesOf(entry.order.length, pageSize);
+  // One order per page size and variant: the grid's page size depends on the screen (about 50 cards), the order's length and its
+  // featured places are counted in pages of that size, and each visit draws one of the hour's few variants.
+  entry.orders ??= new Map();
+  const orderKey = `${pageSize}:${variant}`;
+  if (!entry.orders.has(orderKey)) entry.orders.set(orderKey, blendFeed(entry.snap.products, { epoch, variant, pageSize, limit: FEED_MAX_PAGES * pageSize }).map((p) => p.id));
+  const order = entry.orders.get(orderKey);
+  const pages = pagesOf(order.length, pageSize);
   const start = (page - 1) * pageSize;
-  const items = page <= pages ? entry.order.slice(start, start + pageSize).map((id) => entry.byId.get(id)).filter(Boolean) : [];
+  const items = page <= pages ? order.slice(start, start + pageSize).map((id) => entry.byId.get(id)).filter(Boolean) : [];
   return {
     items,
-    total: entry.order.length,
-    catalogTotal: Math.max(entry.order.length, entry.snap.products.length),
+    total: order.length,
+    catalogTotal: Math.max(order.length, entry.snap.products.length),
     page,
     pageSize,
     pages,
@@ -532,19 +537,20 @@ export default async function handler(req) {
     }
     if (op === "counts") return reply(countsSummary(snap.products, filters), 200, PAGE_CACHE);
     const epoch = clampEpoch(parsed.epoch, now);
+    const variant = clampVariant(parsed.variant);
     // The unfiltered recommended feed: the hour's pool, when the database has it and it is big enough to be worth it.
     if (filters.sort === "recommended" && countActive(filters) === 0 && snap.truncated) {
       try {
         const entry = await feedPool(epoch);
         if (entry.snap.products.length >= MIN_POOL) {
-          const result = feedPage(entry, epoch, { page, pageSize }, now);
+          const result = feedPage(entry, epoch, { page, pageSize, variant }, now);
           return reply({ ...result, catalogTotal: Math.max(result.catalogTotal, snap.products.length), items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
         }
       } catch (error) {
         console.warn(`[products] products_feed_pool unavailable (${error?.message ?? error}); blending the snapshot`);
       }
     }
-    const result = pageOf(snap.products, filters ?? EMPTY_FILTERS, { page, pageSize, epoch });
+    const result = pageOf(snap.products, filters ?? EMPTY_FILTERS, { page, pageSize, epoch, variant });
     return reply({ ...result, items: result.items.map(outgoing), serverNow: new Date(now).toISOString() }, 200, PAGE_CACHE);
   } catch (error) {
     console.error(`[products] unavailable: ${error?.message ?? error}`);

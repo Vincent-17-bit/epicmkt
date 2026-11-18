@@ -86,6 +86,11 @@ html[data-reduce-motion="true"] *::after {
   scroll-behavior: auto !important;
 }
 
+main h2 {
+  font-size: var(--text-lg);
+  line-height: 1.25;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

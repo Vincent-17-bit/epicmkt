@@ -69,47 +69,42 @@ export default function ShopDelivery() {
     }
   };
 
-  const field = (key, label, props = {}) => {
+  const field = (key, label, props = {}, hint) => {
     const code = fieldErrors[key];
     const msg = code ? FIELD_TEXT[code] ?? "This value is not valid." : null;
     return (
       <div className={styles.field}>
         <label className={styles.fieldLabel} htmlFor={`${uid}-${key}`}>{label}</label>
-        <input id={`${uid}-${key}`} className={styles.input} value={value[key]} onChange={set(key)} aria-invalid={msg ? "true" : undefined} aria-describedby={msg ? `${uid}-${key}-e` : undefined} disabled={busy} {...props} />
-        {msg && <p className={styles.error} id={`${uid}-${key}-e`} role="alert">{msg}</p>}
+        <input id={`${uid}-${key}`} className={styles.input} value={value[key]} onChange={set(key)} aria-invalid={msg ? "true" : undefined} aria-describedby={msg ? `${uid}-${key}-e` : hint ? `${uid}-${key}-h` : undefined} disabled={busy} {...props} />
+        {msg ? <p className={styles.error} id={`${uid}-${key}-e`} role="alert">{msg}</p> : hint && <p className={styles.rowHint} id={`${uid}-${key}-h`}>{hint}</p>}
       </div>
     );
   };
 
   return (
-    <Section id="delivery" title="Delivery" intro="Tell buyers whether you deliver. This shows on every item page of your shop.">
-      <Row label="I deliver" hint={value.offers ? "Buyers see your fee, area and distance." : "Buyers see “No delivery” and where to pick up."}>
+    <Section id="delivery" title="Delivery">
+      <Row label="I deliver">
         <Switch checked={value.offers} onChange={(on) => setValue((v) => ({ ...v, offers: on }))} label="I deliver" disabled={busy || (!planHasDelivery && !value.offers)} />
       </Row>
       {!planHasDelivery && <p className={styles.note} role="note">Delivery is not part of your plan{value.offers ? ", so buyers no longer see it. You can switch it off here." : "."}</p>}
       {value.offers && (
         <>
-          <Row label="Fee and distance" hint="Leave the fee empty if it depends on the place. Enter 0 for free delivery." stack>
-            <div className={styles.page}>
-              {field("fee", "Delivery fee (KES)", { inputMode: "decimal", placeholder: "For example 150" })}
-              {field("radiusKm", "How far you deliver (km)", { inputMode: "decimal", placeholder: "For example 5" })}
-              {field("minOrder", "Minimum order (KES)", { inputMode: "decimal", placeholder: "Optional" })}
-            </div>
-          </Row>
-          <Row label="Area and notes" stack>
-            <div className={styles.page}>
-              {field("area", "Where you deliver", { placeholder: "For example Westlands and Parklands", maxLength: DELIVERY_LIMITS.areaMax + 20 })}
-              {field("notes", "Notes for buyers", { placeholder: "For example Orders before noon go out the same day", maxLength: DELIVERY_LIMITS.notesMax + 20 })}
-            </div>
-          </Row>
+          <div className={styles.grid3}>
+            {field("fee", "Delivery fee (KES)", { inputMode: "decimal", placeholder: "For example 150" }, "Leave empty if it varies. 0 is free.")}
+            {field("radiusKm", "How far you deliver (km)", { inputMode: "decimal", placeholder: "For example 5" })}
+            {field("minOrder", "Minimum order (KES)", { inputMode: "decimal", placeholder: "Optional" })}
+          </div>
+          {field("area", "Where you deliver", { placeholder: "For example Westlands and Parklands", maxLength: DELIVERY_LIMITS.areaMax + 20 })}
+          {field("notes", "Notes for buyers", { placeholder: "For example Orders before noon go out the same day", maxLength: DELIVERY_LIMITS.notesMax + 20 })}
         </>
       )}
-      <Row label="What buyers will read" stack>
-        <p className={styles.note} role="status" data-testid="delivery-preview">{previewLine(value, area)}</p>
-      </Row>
+      <div className={styles.preview}>
+        <strong>What buyers will read</strong>
+        <span role="status" data-testid="delivery-preview">{previewLine(value, area)}</span>
+      </div>
       {error && <p className={styles.error} role="alert">{error}</p>}
       <div className={styles.actions}>
-        <Button onClick={save} disabled={!changed || busy}>{busy ? "Saving…" : "Save delivery"}</Button>
+        <Button size="sm" onClick={save} disabled={!changed || busy}>{busy ? "Saving…" : "Save delivery"}</Button>
         {changed && !busy && <button type="button" className={styles.linkBtn} onClick={() => { setValue(saved); setFieldErrors({}); setError(null); }}>Undo changes</button>}
       </div>
     </Section>

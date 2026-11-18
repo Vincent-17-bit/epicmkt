@@ -88,15 +88,15 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-1) var(--space-3);
   background: var(--surface);
 }
 
 .thumb {
   display: block;
-  inline-size: 3rem;
-  block-size: 3rem;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
   overflow: hidden;
   border-radius: var(--radius-sm);
   background: var(--surface-3);
@@ -137,20 +137,20 @@
 
 .headBtns {
   display: flex;
-  gap: var(--space-1);
+  gap: 0;
 }
 
 .icon {
   display: inline-grid;
   place-items: center;
-  min-inline-size: var(--tap);
-  min-block-size: var(--tap);
+  min-inline-size: 2.5rem;
+  min-block-size: 2.5rem;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: var(--text-xl);
+  font-size: var(--text-md);
   line-height: 1;
   cursor: pointer;
 }
@@ -194,29 +194,39 @@
   flex: 0 0 auto;
   display: flex;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-4) var(--space-3);
+  padding: 0 var(--space-3);
   overflow-x: auto;
+  border-block-end: 1px solid var(--border);
   background: var(--surface);
   scrollbar-width: none;
 }
 
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
 .tabs button {
   flex: 0 0 auto;
-  min-block-size: var(--tap);
-  padding: 0 var(--space-4);
+  min-block-size: 2.5rem;
+  padding: 0 var(--space-3);
   border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--surface-2);
-  color: var(--text);
+  border-block-end: 3px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
 }
 
+.tabs button:hover {
+  color: var(--text);
+}
+
 .tabs button[aria-selected="true"] {
-  background: var(--primary);
-  color: var(--on-primary);
+  border-block-end-color: var(--primary);
+  color: var(--text);
 }
 
 .scroll {
@@ -227,7 +237,7 @@
 }
 
 .pad {
-  padding: var(--space-3) var(--space-4) var(--space-3);
+  padding: var(--space-3);
 }
 
 .pad:focus {
@@ -236,7 +246,7 @@
 
 .stack {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -273,8 +283,8 @@
 
 .card {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-4);
+  gap: var(--space-1);
+  padding: var(--space-3);
   border-radius: var(--radius-card);
   background: var(--surface-2);
 }
@@ -290,6 +300,38 @@
 
 .fit {
   justify-self: start;
+}
+
+.links {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.linkBtns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.linkBtns > * {
+  inline-size: 100%;
+  min-block-size: 2.5rem;
+}
+
+.textBtn {
+  justify-self: start;
+  min-block-size: 2.5rem;
+  padding: 0 var(--space-1);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 .buttons {
@@ -341,8 +383,8 @@
   position: relative;
   display: grid;
   place-items: center;
-  aspect-ratio: 4 / 3;
-  max-block-size: 14rem;
+  aspect-ratio: 16 / 9;
+  max-block-size: 11rem;
   inline-size: 100%;
   overflow: hidden;
   border-radius: var(--radius-card);
@@ -604,17 +646,46 @@
 }
 
 .bar {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) calc(var(--space-2) + var(--safe-bottom));
+  border-block-start: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: var(--shadow-1);
 }
 
 .act {
-  inline-size: 100%;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-inline-size: var(--tap);
   min-block-size: var(--tap);
+  padding: 0 var(--space-3);
+}
+
+.actMain {
+  flex: 1 1 auto;
+}
+
+.lbl {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@container (min-width: 30rem) {
+  .lbl {
+    position: static;
+    inline-size: auto;
+    block-size: auto;
+    overflow: visible;
+    clip-path: none;
+  }
 }
 
 .danger {

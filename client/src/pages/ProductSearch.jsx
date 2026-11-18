@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faChevronDown, faChevronLeft, faChevronRight, faChevronUp, faMagnifyingGlass, faSliders, faTableCellsLarge, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown, faChevronUp, faMagnifyingGlass, faSliders, faTableCellsLarge, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { EMPTY_SEARCH, SEARCH_SORTS, parseSearch, writeSearch } from "@epicmkt/shared";
 import { Container, Skeleton } from "@epicmkt/ui";
 import { searchCatalog } from "../api/products/search.js";
@@ -13,6 +13,7 @@ import { useOpenSearch } from "../hooks/useOpenSearch.js";
 import FilterSidebar, { FacetBody } from "../components/search/FilterSidebar.jsx";
 import FilterSheet from "../components/FilterSheet.jsx";
 import ResultRow from "../components/search/ResultRow.jsx";
+import Pagination from "../components/Pagination.jsx";
 import styles from "../components/search/ProductSearch.module.css";
 
 // Shallow on purpose, like the 7 pages Amazon shows for a keyword: past this the shopper is better served by a filter.
@@ -361,7 +362,7 @@ export default function ProductSearch() {
                     </div>
                   )
                 )}
-                {pages > 1 && <Pager pages={pages} from={start} to={end} onPage={goToPage} />}
+                <Pagination className={styles.pagerSpace} page={start} to={end} pages={pages} onPage={goToPage} label="Result pages" />
               </div>
 
               {data.related?.length > 0 && (
@@ -443,39 +444,6 @@ function chipsOf(facets, search) {
     out.push({ key: "price-own", label: priceText(search), remove: (h) => h.onPrice({ price: "", min: null, max: null }) });
   }
   return out;
-}
-
-// Page links: the first, the last and the ones around the pages on screen, which are all marked.
-function Pager({ pages, from, to, onPage }) {
-  const around = Array.from({ length: to - from + 3 }, (_, i) => from - 1 + i);
-  const nums = [...new Set([1, 2, ...around, pages - 1, pages].filter((n) => n >= 1 && n <= pages))].sort((a, b) => a - b);
-  const items = [];
-  nums.forEach((n, i) => {
-    if (i > 0 && n - nums[i - 1] > 1) items.push(`gap-${n}`);
-    items.push(n);
-  });
-  return (
-    <nav className={styles.pager} aria-label="Result pages">
-      <button type="button" className={styles.pageNav} disabled={from <= 1} onClick={() => onPage(from - 1)} aria-label="Previous page">
-        <FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" /> <span className={styles.pageNavText}>Previous</span>
-      </button>
-      {items.map((n) =>
-        typeof n === "string" ? (
-          <span key={n} className={styles.gap} aria-hidden="true">…</span>
-        ) : (
-          <button key={n} type="button" className={n >= from && n <= to ? styles.pageOn : styles.pageBtn} aria-current={n >= from && n <= to ? "page" : undefined} aria-label={`Page ${n}`} onClick={() => onPage(n)}>
-            {n}
-          </button>
-        )
-      )}
-      <span className={styles.pageStatus} aria-hidden="true">
-        {from === to ? `Page ${from}` : `Pages ${from}–${to}`} of {pages}
-      </span>
-      <button type="button" className={styles.pageNav} disabled={to >= pages} onClick={() => onPage(to + 1)} aria-label="Next page">
-        <span className={styles.pageNavText}>Next</span> <FontAwesomeIcon icon={faChevronRight} aria-hidden="true" />
-      </button>
-    </nav>
-  );
 }
 
 const SidebarSkeleton = () => (

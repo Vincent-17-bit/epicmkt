@@ -401,6 +401,31 @@ describe("/api/products", () => {
       expect(rpcs().filter((n) => n === "products_feed_pool")).toHaveLength(1);
     });
 
+    it("serves every page of every page size from one cached hour: a phone's 50 does not shorten a desktop's 54", async () => {
+      payload = { ...snapshotPayload(60), truncated: true };
+      const pool = { ...snapshotPayload(480), facts: {} };
+      answer({ products_feed_pool: () => new Response(JSON.stringify(pool), { status: 200 }) });
+      const epoch = Math.floor(Date.now() / 3_600_000) - 1;
+      const phone = await (await call(`op=page&epoch=${epoch}&pageSize=50&page=8`)).json();
+      expect(phone).toMatchObject({ pageSize: 50, pages: 8 });
+      expect(phone.items).toHaveLength(50);
+      const wide = await (await call(`op=page&epoch=${epoch}&pageSize=54&page=8`)).json();
+      expect(wide).toMatchObject({ pageSize: 54, pages: 8 });
+      expect(wide.items).toHaveLength(54);
+      expect(rpcs().filter((n) => n === "products_feed_pool")).toHaveLength(1);
+    });
+
+    it("gives each variant its own order of the same hour, and the same variant the same order", async () => {
+      payload = { ...snapshotPayload(60), truncated: true };
+      const pool = { ...snapshotPayload(480), facts: {} };
+      answer({ products_feed_pool: () => new Response(JSON.stringify(pool), { status: 200 }) });
+      const epoch = Math.floor(Date.now() / 3_600_000) - 1;
+      const ids = async (variant) => (await (await call(`op=page&epoch=${epoch}&pageSize=50&page=1&variant=${variant}`)).json()).items.map((i) => i.id).join();
+      const [a, b, a2] = [await ids(1), await ids(2), await ids(1)];
+      expect(a).not.toBe(b);
+      expect(a).toBe(a2);
+    });
+
     it("blends the snapshot when the whole catalogue fits in it, and clamps an hour that is too old", async () => {
       payload = snapshotPayload(60);
       const body = await (await call("op=page&epoch=1")).json();

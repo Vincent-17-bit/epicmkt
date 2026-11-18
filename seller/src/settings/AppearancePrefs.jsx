@@ -6,7 +6,7 @@ export default function AppearancePrefs() {
   const update = useSettings((s) => s.update);
   const set = (patch) => update({ appearance: patch });
   return (
-    <Section id="appearance" title="Appearance" intro="These apply right away and follow you to your other devices.">
+    <Section id="appearance" title="Appearance">
       <Row label="Theme">
         <Segmented label="Theme" value={a.theme} onChange={(v) => set({ theme: v })} options={[{ value: "light", label: "Light" }, { value: "dark", label: "Dark" }, { value: "system", label: "System" }]} />
       </Row>
