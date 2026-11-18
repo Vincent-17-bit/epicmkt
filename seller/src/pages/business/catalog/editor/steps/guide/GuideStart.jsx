@@ -16,6 +16,7 @@ const Templates = ({ list, sizes, kind, onStart }) => (
         >
           <strong>{t.name}</strong>
           <span>{t.columns.slice(1).join(" · ")}</span>
+          {t.rows?.length > 0 && <span className={s.tplRows}>{sizes.length ? "Fills the sizes it knows" : `Starts with ${t.rows.length} example rows: ${t.rows.slice(0, 3).map((r) => r[0]).join(", ")}…`}</span>}
         </button>
       </li>
     ))}
@@ -70,7 +71,7 @@ export default function GuideStart({ kind, sizes, charts, chartsState, onStart, 
       {mine.length > 0 && (
         <div className={s.panel}>
           <p className={s.panelTitle}>Pick the columns to show</p>
-          <p className={s.muted}>{sizes.length ? `One row is made for each of your ${sizes.length} sizes (${sizes.slice(0, 4).join(", ")}${sizes.length > 4 ? "…" : ""}). You type the rest.` : kind === "clothing" ? "Then add a row for each size you sell." : "Your item has no sizes listed, so it starts with one row called Standard."}</p>
+          <p className={s.muted}>{sizes.length ? `One row is made for each of your ${sizes.length} sizes (${sizes.slice(0, 4).join(", ")}${sizes.length > 4 ? "…" : ""}). You type the rest.` : kind === "clothing" ? "Tables with example rows start filled in; change any number to match your item." : "Your item has no sizes listed yet. Tables with example rows start filled in (you change them); the others start with one row called Standard."}</p>
           <Templates list={mine} sizes={sizes} kind={kind} onStart={onStart} />
         </div>
       )}

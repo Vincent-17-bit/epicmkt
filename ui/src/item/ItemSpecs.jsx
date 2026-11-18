@@ -60,6 +60,9 @@ export default function ItemSpecs({ item, category, attributes, onExpand, reveal
   const firstKey = groups.length ? GROUP_PANELS[groups[0].name].key : null;
   const [open, setOpen] = useState(firstKey ? { [firstKey]: true } : {});
   const includes = item.includes ?? [];
+  // An optional photo per line (migration 0136): a url or null, in the same order as `includes`.
+  const includePhotos = Array.isArray(item.includePhotos) ? item.includePhotos : [];
+  const withPhotos = includePhotos.some(Boolean);
   const nodes = useRef({});
   const pending = useRef({ key: null, force: undefined });
   const toggle = (key) => () => {
@@ -109,10 +112,12 @@ export default function ItemSpecs({ item, category, attributes, onExpand, reveal
       key: "included",
       title: t("item.included"),
       body: (
-        <ul className={styles.checks}>
-          {includes.map((entry) => (
-            <li key={entry} className={styles.check}>
-              <FontAwesomeIcon icon={faCheck} className={styles.tick} aria-hidden="true" />
+        <ul className={styles.checks} data-photos={withPhotos ? "" : undefined}>
+          {includes.map((entry, i) => (
+            <li key={`${i}-${entry}`} className={styles.check}>
+              {includePhotos[i]
+                ? <img className={styles.includePhoto} src={includePhotos[i]} alt="" loading="lazy" />
+                : <FontAwesomeIcon icon={faCheck} className={styles.tick} aria-hidden="true" />}
               <span>{entry}</span>
             </li>
           ))}

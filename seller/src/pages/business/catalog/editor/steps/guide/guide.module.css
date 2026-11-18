@@ -98,3 +98,4 @@ tr[data-hit] .rtd, tr[data-hit] th.rtd { background: var(--primary-tint); color:
 /* ---------- ask (in Details) ---------- */
 .ask { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center; padding: var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-card); background: var(--surface); }
 .askText { flex: 1 1 14rem; min-inline-size: 0; }
+.tpl .tplRows { font-size: var(--text-xs); color: var(--primary); font-weight: 600; }

@@ -375,10 +375,22 @@ export const uploadMedia3d = async (itemId, { role, file, optionIds = [], positi
   if (role !== "spin-frame") next = list.filter((r) => !(r.role === role && same(r))); // a model or a poster replaces the one in its scope
   if (role === "spin-frame" && list.filter((r) => r.role === role && same(r)).length >= MEDIA3D.spinMaxFrames) throw new ApiError("media3d_limit");
   const path = `mock/${itemId}/${role}-${++bill.seq}`;
-  next = [...next, { id: `m3-${bill.seq}`, path, role, sort: position ?? next.filter((r) => r.role === role).length, optionIds: scope.ids, size: file.size, width: null, height: null }];
+  // The demo keeps no files: a picture is shown from the browser's own copy, so the spin and the poster look real in mock mode.
+  let url = null;
+  try { url = role !== "model-glb" && typeof URL !== "undefined" && URL.createObjectURL ? URL.createObjectURL(file) : null; } catch { url = null; }
+  next = [...next, { id: `m3-${bill.seq}`, path, role, sort: position ?? next.filter((r) => r.role === role).length, optionIds: scope.ids, size: file.size, width: null, height: null, ...(url && { url }) }];
   media3d().set(itemId, next);
   onProgress?.(1, "finishing");
   return { path };
+};
+export const reorderSpinFrames = async (itemId, { optionId = "", paths }) => {
+  writer();
+  await wait();
+  const list = rows3d(itemId);
+  const frames = list.filter((r) => r.role === "spin-frame" && (r.optionIds?.[0] ?? "") === (optionId ?? ""));
+  if (!Array.isArray(paths) || paths.length !== frames.length || new Set(paths).size !== paths.length || !paths.every((p) => frames.some((f) => f.path === p))) throw new ApiError("invalid_order");
+  media3d().set(itemId, list.map((r) => (paths.includes(r.path) ? { ...r, sort: paths.indexOf(r.path) } : r)));
+  return { updated: paths.length };
 };
 export const removeMedia3d = async (path) => {
   signedIn();
@@ -1135,6 +1147,19 @@ export const saveItemSizeGuide = async (id, guide) => {
   if (!guideOk(guide)) throw new ApiError("invalid_size_guide");
   bill.guides.set(id, copy(guide));
   return true;
+};
+// The photo of each "What's included" line (migration 0137): ids of the item's own photos, or null.
+export const saveItemIncludeMedia = async (id, list) => {
+  writer();
+  await wait();
+  const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (list != null && (!Array.isArray(list) || list.length > 50)) throw new ApiError("invalid_details");
+  const own = new Set(sequence(item).filter((m) => m.kind === "image").map((m) => mediaUuid(m.path)));
+  const clean = (list ?? []).map((x) => (x == null || x === "" ? null : x));
+  if (clean.some((x) => x !== null && !own.has(x))) throw new ApiError("invalid_details");
+  item.includeMedia = clean.some(Boolean) ? clean : [];
+  return copy(item.includeMedia);
 };
 export const getItemCustomSize = async (id) => {
   signedIn();

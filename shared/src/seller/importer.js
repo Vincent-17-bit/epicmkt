@@ -156,7 +156,7 @@ const parsePrice = (raw) => {
 const TAG_LIMIT = 10;
 const LIST_FIELDS = ["includes", "highlights"];
 const listOf = (cell) => cell.split(IMPORT_LIST_SEPARATOR).map((part) => part.trim()).filter(Boolean);
-export const DETAIL_LIMITS = { brand: 60, short_description: 140, pack_size: 40, terms: 500, includes: ITEM_DETAIL_LIMITS.includes.rows, include: ITEM_DETAIL_LIMITS.includes.text, highlights: ITEM_DETAIL_LIMITS.highlights.rows };
+export const DETAIL_LIMITS = { brand: 60, short_description: 140, pack_size: ITEM_DETAIL_LIMITS.packSize, terms: ITEM_DETAIL_LIMITS.terms, includes: ITEM_DETAIL_LIMITS.includes.rows, include: ITEM_DETAIL_LIMITS.includes.text, highlights: ITEM_DETAIL_LIMITS.highlights.rows };
 
 export const validateRow = (cells, mapping) => {
   const get = (field) => (mapping[field] === null || mapping[field] === undefined ? "" : String(cells[mapping[field]] ?? "").trim());

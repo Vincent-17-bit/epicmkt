@@ -32,3 +32,9 @@ textarea.field { resize: vertical; }
 .ghost { color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); }
 .primary:disabled, .ghost:disabled { opacity: 0.55; cursor: not-allowed; }
 @media (max-width: 30rem) { .actions > * { inline-size: 100%; } }
+
+.cant > .ghost { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-block-size: 3rem; border-style: dashed; border-radius: var(--radius-card); background: var(--surface); transition: border-color 120ms ease, background-color 120ms ease; }
+.cant > .ghost:hover:not(:disabled) { border-color: var(--primary); background: var(--primary-tint, var(--surface-2)); }
+.row { transition: border-color 120ms ease, background-color 120ms ease; }
+.row:hover { border-color: var(--primary); }
+.deptBtn[aria-expanded="true"] { border-color: var(--primary); }

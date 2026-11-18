@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faPlus, faXmark } from "@fortawesome/free-solid-svg-icons";
 import ValuePhotos from "./ValuePhotos.jsx";
-import { scales, DISPLAYS, OPTION_LIMITS, addValue, canAddValue, dependencyChoices, limitMessage, moveValue, removeValue, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
+import { scales, DISPLAYS, OPTION_LIMITS, colourHexOf, colourOf, isColourNamedAxis, addValue, canAddValue, dependencyChoices, limitMessage, moveValue, removeValue, setDependsOn, setDisplay, setValueColor, renameAxis } from "@epicmkt/shared";
 import DependentEditor from "./DependentEditor.jsx";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
@@ -40,6 +40,8 @@ export default function AxisCard({ options, index, set, limits, announce, onRemo
         p = scales.format(read.value);
         extras = { stored: read.value };   // kept with the value, so buyers read "1 TB" from data and sizes can be filtered
       }
+      // A colour gets its swatch from its name ("Black", "Navy blue", "Nyekundu"); the seller can still change it.
+      if (isColourNamedAxis(axis) && colourHexOf(p)) extras = { ...extras, color: colourHexOf(p) };
       const r = addValue(next, axis.key, p, extras, limits);
       if (r.error === "duplicate") { problem = `${r.existing.label} is already listed.`; continue; }
       if (r.error) { problem = ERRORS[r.error] ?? limitMessage(r.error, limits, r.plan); break; }
@@ -87,8 +89,10 @@ export default function AxisCard({ options, index, set, limits, announce, onRemo
           <ul className={s.values}>
             {axis.values.map((v, i) => (
               <li key={v.id} className={s.chip}>
-                {axis.display === "swatch" && (
-                  <input type="color" className={s.swatchInput} value={v.color ?? "#9ca3af"} aria-label={`Colour for ${v.label}`} onChange={(e) => set(setValueColor(options, axis.key, v.id, e.target.value))} />
+                {(axis.display === "swatch" || isColourNamedAxis(axis)) && (
+                  v.color || !colourOf(v.label)
+                    ? <input type="color" className={s.swatchInput} value={v.color ?? colourHexOf(v.label) ?? "#9ca3af"} aria-label={`Colour for ${v.label}`} onChange={(e) => set(setValueColor(options, axis.key, v.id, e.target.value))} />
+                    : <span className={s.swatchDot} style={{ background: colourOf(v.label) }} title={`Shown to buyers as this colour. Add a photo for ${v.label} to show the real thing.`} aria-hidden="true" />
                 )}
                 <span className={s.chipLabel}>{v.label}</span>
                 <button type="button" className={s.chipBtn} aria-label={`Move ${v.label} earlier`} disabled={i === 0} onClick={() => { set(moveValue(options, axis.key, v.id, -1)); announce(`${v.label} moved earlier.`); }}><FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" /></button>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import * as api from "../api/index.js";
+import { mediaUrl } from "../api/shape.js";
 import { errorText } from "../lib/errors.js";
 import { SPIN, acceptFrame, compressFrame, frameIssues, move, sortFrames, startAt } from "../lib/spinPrep.js";
 import styles from "./media3d.module.css";
@@ -7,8 +8,10 @@ import styles from "./media3d.module.css";
 let nextId = 1;
 const ISSUE_TEXT = { too_few: `Add at least ${SPIN.min} pictures so the turn looks smooth.`, too_many: `Use at most ${SPIN.max} pictures.` };
 
-// Build a photo spin: 12 to 72 pictures taken around the item. Pictures are put in file-name order, can be moved, previewed as a turn,
-// and the first one (the start frame) is also the poster. Each is made smaller on this device before it is sent.
+// A photo spin: 12 to 72 pictures taken all the way round the item. On the item page buyers drag across the picture and the item
+// turns, as if they were holding it. Pictures are put in file-name order, can be moved, previewed as a turn, and each one can be
+// removed on its own (before or after it is uploaded). The first picture is the start frame and, when there is no poster yet, the poster.
+// `frames` are the uploaded frames of this scope (sorted); `queue` holds pictures chosen on this device and not sent yet.
 export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster = null, onChanged, compress = compressFrame }) {
   const uid = useId();
   const [queue, setQueue] = useState([]);
@@ -18,22 +21,34 @@ export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster
   const [notes, setNotes] = useState([]);
   const [busy, setBusy] = useState(false);
   const [step, setStep] = useState(null);
+  const [removing, setRemoving] = useState(null);
   const abort = useRef(null);
   const urls = useRef(new Map());
 
   const urlOf = (item) => {
+    if (item.url) return item.url;
+    if (item.path) return mediaUrl(item.path);
     if (!urls.current.has(item.id)) urls.current.set(item.id, URL.createObjectURL(item.file));
     return urls.current.get(item.id);
   };
+  const forget = (item) => {
+    const u = urls.current.get(item?.id);
+    if (u) { URL.revokeObjectURL(u); urls.current.delete(item.id); }
+  };
   useEffect(() => () => { abort.current?.abort(); for (const u of urls.current.values()) URL.revokeObjectURL(u); urls.current.clear(); }, []);
-  useEffect(() => {
-    if (!playing || queue.length < 2) return undefined;
-    const timer = setInterval(() => setAt((i) => (i + 1) % queue.length), 90);
-    return () => clearInterval(timer);
-  }, [playing, queue.length]);
 
-  const issues = frameIssues(queue.length);
-  const cur = Math.min(at, Math.max(0, queue.length - 1));
+  // One list for the preview and the strip: the uploaded frames first, then the pictures still on this device.
+  const saved = useMemo(() => frames.map((f) => ({ id: `s:${f.path}`, path: f.path, ...(f.url && { url: f.url }), saved: true })), [frames]);
+  const all = useMemo(() => [...saved, ...queue], [saved, queue]);
+  const total = all.length;
+  useEffect(() => {
+    if (!playing || total < 2) return undefined;
+    const timer = setInterval(() => setAt((i) => (i + 1) % total), 90);
+    return () => clearInterval(timer);
+  }, [playing, total]);
+
+  const issues = frameIssues(total);
+  const cur = Math.min(at, Math.max(0, total - 1));
 
   const add = (e) => {
     const chosen = [...(e.target.files ?? [])];
@@ -49,27 +64,72 @@ export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster
     ]);
     setQueue((q) => [...q, ...kept]);
   };
-  const shift = (i, to) => { setQueue((q) => move(q, i, to)); setAt(to); };
-  const drop = (i) => { setQueue((q) => q.filter((_, n) => n !== i)); setAt(0); };
-  const makeStart = () => { setQueue((q) => startAt(q, cur)); setAt(0); };
+  // Moving and "make it the start" work on the pictures not sent yet; uploaded frames keep their place unless moved with their own arrows.
+  const shiftQueued = (i, to) => { setQueue((q) => move(q, i, to)); setAt(saved.length + to); };
+  const dropQueued = (i) => { setQueue((q) => { forget(q[i]); return q.filter((_, n) => n !== i); }); setAt(0); };
+  const makeStart = () => {
+    if (saved.length === 0) { setQueue((q) => startAt(q, cur)); setAt(0); return; }
+    reorderSaved(startAt(saved.map((s) => s.path), cur));
+  };
 
-  const build = async () => {
+  const reorderSaved = async (paths) => {
     setBusy(true);
     setError("");
-    abort.current = new AbortController();
-    const { signal } = abort.current;
     try {
-      for (let i = 0; i < queue.length; i += 1) {
-        setStep({ n: i + 1, of: queue.length });
-        const file = await compress(queue[i].file);
-        await api.uploadMedia3d(itemId, { role: "spin-frame", file, optionIds: scopeIds, position: i }, { signal });
-        if (i === 0 && !poster) await api.uploadMedia3d(itemId, { role: "poster", file, optionIds: scopeIds }, { signal });
-      }
-      setQueue([]);
+      await api.reorderSpinFrames(itemId, { optionId: scopeIds[0] ?? "", paths });
       setAt(0);
       await onChanged?.();
     } catch (err) {
-      if (err?.code !== "upload_cancelled") setError(errorText(err));
+      setError(`The new order was not saved. ${errorText(err)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const shiftSaved = (i, to) => {
+    if (to < 0 || to >= saved.length) return;
+    reorderSaved(move(saved.map((s) => s.path), i, to));
+  };
+  const dropSaved = async (i) => {
+    const frame = saved[i];
+    if (!frame) return;
+    setRemoving(frame.path);
+    setError("");
+    try {
+      await api.removeMedia3d(frame.path);
+      setAt(0);
+      await onChanged?.();
+    } catch (err) {
+      setError(`Picture ${i + 1} was not removed. ${errorText(err)}`);
+    } finally {
+      setRemoving(null);
+    }
+  };
+
+  // Sends the pictures on this device, in order, after the uploaded ones. A picture leaves the queue as soon as it is stored, so a
+  // failure part way keeps only the ones still to send: "Try again" never sends a picture twice.
+  const build = async () => {
+    setBusy(true);
+    setError("");
+    setPlaying(false);
+    abort.current = new AbortController();
+    const { signal } = abort.current;
+    const start = frames.length;
+    const list = [...queue];
+    let sent = 0;
+    try {
+      for (let i = 0; i < list.length; i += 1) {
+        setStep({ n: i + 1, of: list.length });
+        const file = await compress(list[i].file);
+        await api.uploadMedia3d(itemId, { role: "spin-frame", file, optionIds: scopeIds, position: start + i }, { signal });
+        if (start + i === 0 && !poster) await api.uploadMedia3d(itemId, { role: "poster", file, optionIds: scopeIds }, { signal });
+        sent += 1;
+        forget(list[i]);
+        setQueue((q) => q.filter((x) => x.id !== list[i].id));
+      }
+      setAt(0);
+      await onChanged?.();
+    } catch (err) {
+      if (err?.code !== "upload_cancelled") setError(`${sent} of ${list.length} pictures were sent. ${errorText(err)}`);
       await onChanged?.();
     } finally {
       setBusy(false);
@@ -81,19 +141,22 @@ export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster
     setError("");
     try {
       for (const f of frames) await api.removeMedia3d(f.path);
+      setAt(0);
       await onChanged?.();
     } catch (err) {
       setError(errorText(err));
+      await onChanged?.();
     } finally {
       setBusy(false);
     }
   };
 
-  const shown = queue[cur];
-  const total = useMemo(() => frames.length + queue.length, [frames.length, queue.length]);
+  const shown = all[cur];
+  const canSend = queue.length > 0 && !busy && issues.length === 0;
   return (
     <section className={styles.block} aria-labelledby={`${uid}-t`}>
-      <h3 id={`${uid}-t`} className={styles.h3}>Photo spin</h3>
+      <h3 id={`${uid}-t`} className={styles.h3}>Photo spin (360°)</h3>
+      <p className={styles.hint}>Buyers drag across the picture and the item turns all the way round, as if they were holding it. Good for shoes, bags, phones, furniture and gifts. Skip it for food, services and anything a few photos already show well.</p>
       <details className={styles.guide} open={frames.length === 0 && queue.length === 0}>
         <summary>How to take the pictures</summary>
         <ul>
@@ -101,66 +164,83 @@ export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster
           <li>Take {SPIN.min} to {SPIN.max} pictures, one full turn. 24 gives a smooth result.</li>
           <li>Use even light, a plain background and the same distance every time.</li>
           <li>Name the files in order (1, 2, 3 …). We put them in that order for you.</li>
+          <li>Only pictures of this item: a picture of something else makes the turn jump.</li>
         </ul>
       </details>
 
       {frames.length > 0 && (
-        <p className={styles.status}>
-          A spin of {frames.length} pictures is uploaded.{" "}
-          <button type="button" className={`${styles.btn} ${styles.danger}`} onClick={removeSpin} disabled={busy}>Remove the spin</button>
+        <p className={styles.status} role="status">
+          {frames.length} {frames.length === 1 ? "picture is" : "pictures are"} uploaded{frames.length < SPIN.min ? `. Buyers see the spin once it has ${SPIN.min}: add ${SPIN.min - frames.length} more.` : ". Buyers can turn it on the item page."}
         </p>
       )}
 
-      {frames.length === 0 && (
-        <>
-          <label className={styles.file}>
-            <span className={styles.btn}>{queue.length ? "Add more pictures" : "Choose the pictures"}</span>
-            <input type="file" multiple accept="image/jpeg,image/png,image/webp" className={styles.input} onChange={add} disabled={busy} aria-label="Spin pictures" />
-          </label>
-          {notes.map((n) => <p key={n} className={styles.note} role="status">{n}</p>)}
+      <div className={styles.row}>
+        <label className={styles.file}>
+          <span className={styles.btn}>{total ? "Add more pictures" : "Choose the pictures"}</span>
+          <input type="file" multiple accept="image/jpeg,image/png,image/webp" className={styles.input} onChange={add} disabled={busy || total >= SPIN.max} aria-label="Spin pictures" />
+        </label>
+        {frames.length > 0 && <button type="button" className={`${styles.btn} ${styles.danger}`} onClick={removeSpin} disabled={busy}>Remove all spin pictures</button>}
+      </div>
+      {notes.map((n) => <p key={n} className={styles.note} role="status">{n}</p>)}
 
+      {total > 0 && (
+        <>
+          {queue.length > 0 && <p className={styles.count} role="status">{total} of {SPIN.min} to {SPIN.max} pictures</p>}
+          {queue.length > 0 && issues.map((c) => <p key={c} className={styles.error} role="alert">{ISSUE_TEXT[c]}</p>)}
+          <div className={styles.spinPreview}>
+            {shown && <img className={styles.frame} src={urlOf(shown)} alt={`Picture ${cur + 1} of ${total}`} />}
+            {total > 1 && (
+              <label className={styles.scrub}>
+                <span>Turn the preview</span>
+                <input type="range" min={0} max={total - 1} value={cur} onChange={(e) => { setPlaying(false); setAt(Number(e.target.value)); }} aria-valuetext={`Picture ${cur + 1} of ${total}`} />
+              </label>
+            )}
+            <div className={styles.row}>
+              {total > 1 && <button type="button" className={styles.btn} aria-pressed={playing} onClick={() => setPlaying((p) => !p)}>{playing ? "Stop" : "Play the turn"}</button>}
+              <button type="button" className={styles.btn} onClick={makeStart} disabled={cur === 0 || busy || (saved.length > 0 && cur >= saved.length)}>Make picture {cur + 1} the start</button>
+            </div>
+          </div>
+          <ol className={styles.strip} aria-label="Pictures in order">
+            {all.map((item, i) => {
+              const q = i - saved.length;
+              const gone = item.saved && removing === item.path;
+              return (
+                <li key={item.id} className={styles.cell} aria-current={i === cur ? "true" : undefined} data-state={item.saved ? "saved" : "new"}>
+                  <button type="button" className={styles.cellImg} onClick={() => { setPlaying(false); setAt(i); }} aria-label={`Show picture ${i + 1}${item.file ? `, ${item.file.name}` : ", uploaded"}`}>
+                    <img src={urlOf(item)} alt="" />
+                    {!item.saved && <span className={styles.cellBadge}>New</span>}
+                  </button>
+                  <span className={styles.cellNum}>{i + 1}</span>
+                  <span className={styles.cellTools}>
+                    {item.saved ? (
+                      <>
+                        <button type="button" className={styles.mini} onClick={() => shiftSaved(i, i - 1)} disabled={i === 0 || busy} aria-label={`Move picture ${i + 1} earlier`}>←</button>
+                        <button type="button" className={styles.mini} onClick={() => shiftSaved(i, i + 1)} disabled={i === saved.length - 1 || busy} aria-label={`Move picture ${i + 1} later`}>→</button>
+                        <button type="button" className={`${styles.mini} ${styles.miniDanger}`} onClick={() => dropSaved(i)} disabled={busy || Boolean(removing)} aria-label={`Delete picture ${i + 1}`} title="Delete this picture">{gone ? "…" : "×"}</button>
+                      </>
+                    ) : (
+                      <>
+                        <button type="button" className={styles.mini} onClick={() => shiftQueued(q, q - 1)} disabled={q === 0 || busy} aria-label={`Move picture ${i + 1} earlier`}>←</button>
+                        <button type="button" className={styles.mini} onClick={() => shiftQueued(q, q + 1)} disabled={q === queue.length - 1 || busy} aria-label={`Move picture ${i + 1} later`}>→</button>
+                        <button type="button" className={`${styles.mini} ${styles.miniDanger}`} onClick={() => dropQueued(q)} disabled={busy} aria-label={`Remove picture ${i + 1}`} title="Remove this picture">×</button>
+                      </>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+          {busy && step && <p role="status" className={styles.status}>Sending picture {step.n} of {step.of}…<progress className={styles.progress} value={step.n - 1} max={step.of} aria-label="Spin upload progress" /></p>}
           {queue.length > 0 && (
-            <>
-              <p className={styles.count} role="status">{queue.length} of {SPIN.min} to {SPIN.max} pictures</p>
-              {issues.map((c) => <p key={c} className={styles.error} role="alert">{ISSUE_TEXT[c]}</p>)}
-              <div className={styles.spinPreview}>
-                <img className={styles.frame} src={urlOf(shown)} alt={`Picture ${cur + 1} of ${queue.length}`} />
-                <label className={styles.scrub}>
-                  <span>Turn the preview</span>
-                  <input type="range" min={0} max={queue.length - 1} value={cur} onChange={(e) => { setPlaying(false); setAt(Number(e.target.value)); }} aria-valuetext={`Picture ${cur + 1} of ${queue.length}`} />
-                </label>
-                <div className={styles.row}>
-                  <button type="button" className={styles.btn} aria-pressed={playing} onClick={() => setPlaying((p) => !p)}>{playing ? "Stop" : "Play the turn"}</button>
-                  <button type="button" className={styles.btn} onClick={makeStart} disabled={cur === 0}>Make picture {cur + 1} the start</button>
-                </div>
-              </div>
-              <ol className={styles.strip} aria-label="Pictures in order">
-                {queue.map((item, i) => (
-                  <li key={item.id} className={styles.cell} aria-current={i === cur ? "true" : undefined}>
-                    <button type="button" className={styles.cellImg} onClick={() => { setPlaying(false); setAt(i); }} aria-label={`Show picture ${i + 1}, ${item.file.name}`}>
-                      <img src={urlOf(item)} alt="" />
-                    </button>
-                    <span className={styles.cellNum}>{i + 1}</span>
-                    <span className={styles.cellTools}>
-                      <button type="button" className={styles.mini} onClick={() => shift(i, i - 1)} disabled={i === 0 || busy} aria-label={`Move picture ${i + 1} earlier`}>←</button>
-                      <button type="button" className={styles.mini} onClick={() => shift(i, i + 1)} disabled={i === queue.length - 1 || busy} aria-label={`Move picture ${i + 1} later`}>→</button>
-                      <button type="button" className={styles.mini} onClick={() => drop(i)} disabled={busy} aria-label={`Remove picture ${i + 1}`}>×</button>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-              {busy && step && <p role="status" className={styles.status}>Sending picture {step.n} of {step.of}…<progress className={styles.progress} value={step.n - 1} max={step.of} aria-label="Spin upload progress" /></p>}
-              {error && <p role="alert" className={styles.error}>{error}</p>}
-              <div className={styles.row}>
-                <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={busy || issues.length > 0} onClick={build}>Upload {total} pictures</button>
-                {busy && <button type="button" className={styles.btn} onClick={() => abort.current?.abort()}>Cancel</button>}
-              </div>
-              <p className={styles.hint}>Picture 1 is the start and also the poster shoppers see while the spin loads.</p>
-            </>
+            <div className={styles.row}>
+              <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={!canSend} onClick={build}>{frames.length ? `Upload ${queue.length} more ${queue.length === 1 ? "picture" : "pictures"}` : `Upload ${total} pictures`}</button>
+              {busy && <button type="button" className={styles.btn} onClick={() => abort.current?.abort()}>Cancel</button>}
+            </div>
           )}
+          <p className={styles.hint}>Picture 1 is the start and also the poster shoppers see while the spin loads.</p>
         </>
       )}
-      {frames.length > 0 && error && <p role="alert" className={styles.error}>{error}</p>}
+      {error && <p role="alert" className={styles.error}>{error}</p>}
     </section>
   );
 }

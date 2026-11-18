@@ -237,3 +237,59 @@ describe("poster taken from the model", () => {
     expect(screen.getByLabelText("Poster picture")).toBeInTheDocument();
   });
 });
+
+describe("deleting single 3D files", () => {
+  const names = (n) => Array.from({ length: n }, (_, i) => `IMG_${i + 1}.jpg`);
+  const compress = vi.fn(async (f) => f);
+  const framesOf = async () => (await api.getItemMedia3d(ITEM)).media3d.filter((r) => r.role === "spin-frame").sort((a, b) => a.sort - b.sort);
+
+  it("a poster on its own cannot be sent as 'the model'", async () => {
+    const user = userEvent.setup();
+    render(<ModelUpload itemId={ITEM} onChanged={() => {}} previewLoad={previewLoad} />);
+    await user.upload(screen.getByLabelText("Poster picture"), pic("poster.jpg"));
+    expect(screen.getByRole("button", { name: "Upload the model" })).toBeDisabled();
+    expect(screen.getByText("Now choose the .glb model this poster belongs to.")).toBeInTheDocument();
+  });
+
+  it("removes a chosen model file before it is sent, and deletes the uploaded poster on its own", async () => {
+    await api.uploadMedia3d(ITEM, { role: "model-glb", file: glb() });
+    await api.uploadMedia3d(ITEM, { role: "poster", file: pic("p.jpg") });
+    const rows = (await api.getItemMedia3d(ITEM)).media3d;
+    const changed = vi.fn();
+    const user = userEvent.setup();
+    render(<ModelUpload itemId={ITEM} model={rows.find((r) => r.role === "model-glb")} poster={rows.find((r) => r.role === "poster")} onChanged={changed} previewLoad={previewLoad} />);
+    await user.upload(screen.getByLabelText("Model file (.glb)"), glb("other.glb"));
+    await user.click(await screen.findByRole("button", { name: "Remove other.glb" }));
+    expect(screen.queryByText(/other\.glb/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Delete the poster" }));
+    await waitFor(() => expect(changed).toHaveBeenCalled());
+    expect((await api.getItemMedia3d(ITEM)).media3d.map((r) => r.role)).toEqual(["model-glb"]);
+  });
+
+  it("deletes one uploaded spin picture, moves one, and adds more to an existing spin", async () => {
+    for (let i = 0; i < 13; i++) await api.uploadMedia3d(ITEM, { role: "spin-frame", file: pic(`f${i}.jpg`), position: i });
+    await api.uploadMedia3d(ITEM, { role: "poster", file: pic("p.jpg") });
+    const before = await framesOf();
+    const changed = vi.fn();
+    const user = userEvent.setup();
+    const view = render(<SpinBuilder itemId={ITEM} frames={before} poster={{ path: "p" }} onChanged={changed} compress={compress} />);
+    expect(screen.getByText(/13 pictures are uploaded/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Delete picture 2" }));
+    await waitFor(() => expect(changed).toHaveBeenCalledTimes(1));
+    expect((await framesOf()).map((f) => f.path)).toEqual(before.filter((_, i) => i !== 1).map((f) => f.path));
+
+    const now = await framesOf();
+    view.rerender(<SpinBuilder itemId={ITEM} frames={now} poster={{ path: "p" }} onChanged={changed} compress={compress} />);
+    await user.click(screen.getByRole("button", { name: "Move picture 1 later" }));
+    await waitFor(() => expect(changed).toHaveBeenCalledTimes(2));
+    expect((await framesOf()).slice(0, 2).map((f) => f.path)).toEqual([now[1].path, now[0].path]);
+
+    const spy = vi.spyOn(mock, "uploadMedia3d");
+    view.rerender(<SpinBuilder itemId={ITEM} frames={await framesOf()} poster={{ path: "p" }} onChanged={changed} compress={compress} />);
+    await user.upload(screen.getByLabelText("Spin pictures"), names(2).map(pic));
+    await user.click(await screen.findByRole("button", { name: "Upload 2 more pictures" }));
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(2));
+    expect(spy.mock.calls.map((c) => c[1].position)).toEqual([12, 13]);
+    expect(spy.mock.calls.every((c) => c[1].role === "spin-frame")).toBe(true);
+  });
+});

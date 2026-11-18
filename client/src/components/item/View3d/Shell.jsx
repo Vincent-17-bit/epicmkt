@@ -15,9 +15,15 @@ export default function View3dShell({ view, name = "", onFallback = null, load =
   if (kinds.length === 0 || !view?.poster) return null;
   return (
     <>
-      <button type="button" className={styles.open} onClick={() => setOpen(true)} aria-haspopup="dialog">
-        <span aria-hidden="true" className={styles.cube} />
-        {t("view3d.open")}
+      <button type="button" className={styles.open} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={t("view3d.open")}>
+        <span className={styles.openThumb} aria-hidden="true">
+          <img src={view.poster} alt="" loading="lazy" />
+          <span className={styles.openBadge}>{kinds.includes("model") ? "3D" : "360°"}</span>
+        </span>
+        <span className={styles.openText}>
+          <strong>{t("view3d.open")}</strong>
+          <span className={styles.openHint}>{kinds.includes("model") ? t("view3d.openHint") : t("view3d.openSpin")}</span>
+        </span>
       </button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="view3d-title" variant="sheet" className={styles.modal}>
         {open && <Viewer view={view} kinds={kinds} name={name} onClose={() => setOpen(false)} onFallback={onFallback} load={load} />}

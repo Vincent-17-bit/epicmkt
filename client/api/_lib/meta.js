@@ -190,4 +190,4 @@ export function buildSitemap({ origin, businesses, items, categoryIds = [] }) {
 }
 
 export const robotsTxt = (origin) =>
-  `User-agent: *\nAllow: /\nDisallow: /seller/\nDisallow: /admin/\nDisallow: /search\nDisallow: /s/\nDisallow: /offline\nDisallow: /sell/register\nDisallow: /become-a-seller/status\n\nSitemap: ${origin}/sitemap.xml\n`;
+  `User-agent: *\nAllow: /\nDisallow: /seller/\nDisallow: /admin/\nDisallow: /search\nDisallow: /s/\nDisallow: /offline\nDisallow: /sell/register\nDisallow: /become-a-seller/status\nDisallow: /preview/\n\nSitemap: ${origin}/sitemap.xml\n`;

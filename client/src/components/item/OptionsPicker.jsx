@@ -1,6 +1,6 @@
 import { useId, useMemo, useRef, useState } from "react";
 import { OptionCard, OptionSelect } from "@epicmkt/ui";
-import { axisCards, formatCapacityLabel, photoForRow, photosByLabel, valueForRow } from "@epicmkt/shared";
+import { axisCards, colourOf, formatCapacityLabel, isColourNamedAxis, photoForRow, photosByLabel, valueForRow } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import { kesText } from "../../lib/flash.js";
 import SizeChartLink from "./SizeChartModal.jsx";
@@ -49,7 +49,11 @@ function Group({ item, option, axis, withChart, system, onSystem, guide }) {
   const currentLabel = valueLabel(axis.values.find((v) => v.id === current) ?? { label: "" });
   // A list whose values have photos is drawn as photo cards, whatever display the seller chose (a colour keeps its swatch).
   const withPhotos = axis.display !== "swatch" && values.some((c) => photoOf(item, c.value));
-  const asSelect = !withPhotos && (axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER));
+  // A colour choice with no photo still shows its colour: the seller's own swatch, else one read from the name ("Black", "Space Grey",
+  // "Black/Red"). A value the name does not describe falls back to a card with its name and price.
+  const colourish = isColourNamedAxis(axis);
+  const swatchOf = (value) => (axis.display === "swatch" || (colourish && !photoOf(item, value)) ? value.color || colourOf(value.label) : "");
+  const asSelect = !withPhotos && !colourish && (axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER));
   const money = (n) => kesText(n);
 
   // "Color: Grey". Polite and atomic: when the choice changes a screen reader says the whole line once, and not on first load.
@@ -125,9 +129,9 @@ function Group({ item, option, axis, withChart, system, onSystem, guide }) {
               price={showPrice && card.price !== null ? money(card.price) : ""}
               was={showPrice && card.was !== null ? money(card.was) : ""}
               wasLabel={t("item.was")}
-              swatch={axis.display === "swatch" ? value.color || "" : ""}
+              swatch={swatchOf(value)}
               imageUrl={withPhotos || axis.display === "image-card" ? photoOf(item, value) : ""}
-              compact={!withPhotos && (axis.display === "button" || axis.display === "dropdown")}
+              compact={!withPhotos && !colourish && (axis.display === "button" || axis.display === "dropdown")}
               tabIndex={selected ? 0 : -1}
               onSelect={() => option.select(axis.key, value.id)}
               onKeyDown={onKeyDown(index)}

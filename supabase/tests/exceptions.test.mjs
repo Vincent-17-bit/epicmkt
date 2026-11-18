@@ -286,7 +286,8 @@ test("a running break stays; an ended one is dropped; a repeating break with no 
   const anon = async () => (await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions.map((e) => e.id.slice(-2));
   assert.deepEqual(await anon(), ["01", "03"], "customers get the running and the repeating ones only");
   await save(asA, addDays(today, 40), "closed");
-  assert.deepEqual((await list()).map((e) => e.id.slice(-2)).filter((x) => x.startsWith("0")).sort(), ["01", "03"]);
+  // Only the four planted rows (ids ...aa01 to ...aa04): the saved one has a random id, which can also end in "0x".
+  assert.deepEqual((await list()).map((e) => e.id).filter((x) => x.startsWith("00000000-0000-0000-0000-00000000aa")).map((x) => x.slice(-2)).sort(), ["01", "03"]);
   const seen = (await tx(c, { role: "anon" }, (k) => sql(k, `select exceptions from public_businesses where id = '${ids.bizA}'`)))[0].exceptions[0];
   assert.deepEqual(Object.keys(seen).sort(), ["date", "id", "intervals", "kind", "note", "until", "weekdays"]);
 });

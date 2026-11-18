@@ -179,12 +179,12 @@ test("detail columns are limited like the database limits them", () => {
   };
   assert.match(bad("x".repeat(61), 7).errors[0], /Brand is over 60/);
   assert.match(bad("x".repeat(141), 8).errors[0], /Short description is over 140/);
-  assert.match(bad("x".repeat(41), 9).errors[0], /Pack size is over 40/);
-  assert.match(bad("x".repeat(501), 10).errors[0], /Terms is over 500/);
-  assert.match(bad(Array.from({ length: 11 }, (_, i) => `p${i}`).join("|"), 11).errors[0], /at most 10 included/);
-  assert.match(bad("x".repeat(81), 11).errors[0], /included item is over 80/);
+  assert.match(bad("x".repeat(121), 9).errors[0], /Pack size is over 120/);
+  assert.match(bad("x".repeat(5001), 10).errors[0], /Terms is over 5000/);
+  assert.match(bad(Array.from({ length: 51 }, (_, i) => `p${i}`).join("|"), 11).errors[0], /at most 50 included/);
+  assert.match(bad("x".repeat(301), 11).errors[0], /included item is over 300/);
   assert.equal(bad("x".repeat(60), 7).errors.length, 0);
-  assert.equal(bad("x".repeat(500), 10).errors.length, 0);
+  assert.equal(bad("x".repeat(5000), 10).errors.length, 0);
 });
 
 test("included items are separated by | only, so a comma stays inside one item", () => {
@@ -199,11 +199,11 @@ test("a highlights column splits on | and keeps plain text rows", () => {
   const r = run(`${head}\nKettle\tfixed\t900\t\t\t\t\tBoils in 3 minutes | Auto shut-off, quiet |\nPlain\tfixed\t10\t\t\t\t\t`);
   assert.deepEqual(r.valid[0].value.highlights, [{ text: "Boils in 3 minutes" }, { text: "Auto shut-off, quiet" }]);
   assert.equal("highlights" in r.valid[1].value, false);
-  const many = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${Array.from({ length: 9 }, (_, i) => `Point ${i}`).join(" | ")}`);
-  assert.match(many.rejected[0].errors[0], /at most 8 highlights/);
-  const long = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(201)}`);
-  assert.match(long.rejected[0].errors[0], /highlight is over 200/);
-  assert.equal(run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(200)}`).rejected.length, 0);
+  const many = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${Array.from({ length: 13 }, (_, i) => `Point ${i}`).join(" | ")}`);
+  assert.match(many.rejected[0].errors[0], /at most 12 highlights/);
+  const long = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(251)}`);
+  assert.match(long.rejected[0].errors[0], /highlight is over 250/);
+  assert.equal(run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(250)}`).rejected.length, 0);
   assert.match(run(`${head}\nKettle\tfixed\t900\t\t\t\t\tFast | -5 minutes`).rejected[0].errors[0], /Highlights starts with/);
 });
 
@@ -229,16 +229,16 @@ test("spec:Label headers become specification columns, grouped by an optional pr
 
 test("spec cells use the same limits as the item form", () => {
   const head = `${HEAD}\tspec:Material\tspec:Colour`;
-  const long = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(121)}\tBlack`);
-  assert.match(long.rejected[0].errors[0], /Spec "Material": Use 120 characters or fewer/);
-  assert.equal(run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(120)}\tBlack`).rejected.length, 0);
-  const longLabel = run(`${HEAD}\tspec:${"L".repeat(41)}\nKettle\tfixed\t900\t\t\t\t\tSteel`);
-  assert.match(longLabel.rejected[0].errors[0], /Spec "L+": Use 40 characters or fewer/);
-  assert.equal(run(`${HEAD}\tspec:${"L".repeat(40)}\nKettle\tfixed\t900\t\t\t\t\tSteel`).rejected.length, 0);
-  const cols = Array.from({ length: 81 }, (_, i) => `spec:Label ${i}`);
+  const long = run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(2001)}\tBlack`);
+  assert.match(long.rejected[0].errors[0], /Spec "Material": Use 2000 characters or fewer/);
+  assert.equal(run(`${head}\nKettle\tfixed\t900\t\t\t\t\t${"x".repeat(2000)}\tBlack`).rejected.length, 0);
+  const longLabel = run(`${HEAD}\tspec:${"L".repeat(101)}\nKettle\tfixed\t900\t\t\t\t\tSteel`);
+  assert.match(longLabel.rejected[0].errors[0], /Spec "L+": Use 100 characters or fewer/);
+  assert.equal(run(`${HEAD}\tspec:${"L".repeat(100)}\nKettle\tfixed\t900\t\t\t\t\tSteel`).rejected.length, 0);
+  const cols = Array.from({ length: 201 }, (_, i) => `spec:Label ${i}`);
   const row = (n) => `Kettle\tfixed\t900\t\t\t\t\t${Array.from({ length: n }, (_, i) => `v${i}`).join("\t")}`;
-  assert.match(run(`${HEAD}\t${cols.join("\t")}\n${row(81)}`).rejected[0].errors[0], /at most 80 specifications/);
-  assert.equal(run(`${HEAD}\t${cols.slice(0, 80).join("\t")}\n${row(80)}`).rejected.length, 0);
+  assert.match(run(`${HEAD}\t${cols.join("\t")}\n${row(201)}`).rejected[0].errors[0], /at most 200 specifications/);
+  assert.equal(run(`${HEAD}\t${cols.slice(0, 200).join("\t")}\n${row(200)}`).rejected.length, 0);
   // The same label under two columns keeps the first, as the item form does.
   const dup = run(`${HEAD}\tspec:Colour\tspec:colour\nKettle\tfixed\t900\t\t\t\t\tBlack\tWhite`);
   assert.deepEqual(dup.valid[0].value.specs, [{ group: "Features & Specs", label: "Colour", value: "Black" }]);
@@ -248,7 +248,7 @@ test("spec cells use the same limits as the item form", () => {
 
 test("bad rows are reported with their row number and the good rows are still ready", () => {
   const head = `${HEAD}\tbrand\thighlights\tspec:Material`;
-  const r = run(`${head}\nGood\tfixed\t10\t\t\t\t\tAcme\tFast\tSteel\nBad brand\tfixed\t10\t\t\t\t\t${"b".repeat(61)}\t\t\nGood two\tfixed\t20\t\t\t\t\t\t\t\nBad spec\tfixed\t10\t\t\t\t\t\t\t${"s".repeat(121)}`);
+  const r = run(`${head}\nGood\tfixed\t10\t\t\t\t\tAcme\tFast\tSteel\nBad brand\tfixed\t10\t\t\t\t\t${"b".repeat(61)}\t\t\nGood two\tfixed\t20\t\t\t\t\t\t\t\nBad spec\tfixed\t10\t\t\t\t\t\t\t${"s".repeat(2001)}`);
   assert.deepEqual(r.valid.map((v) => [v.row, v.value.name]), [[2, "Good"], [4, "Good two"]]);
   assert.deepEqual(r.rejected.map((x) => x.row), [3, 5]);
   assert.deepEqual(toImportPayload(r.valid).map((p) => p.row), [2, 4]);

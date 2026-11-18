@@ -218,7 +218,8 @@ describe("help", () => {
     await open("/business/help");
     expect(screen.getByRole("heading", { level: 2, name: "Common questions" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /How do I add an item and photos/ }));
-    expect(screen.getByText(/Open My listings, choose Add an item/)).toBeInTheDocument();
+    // The answer follows the editor's real order: pick the type first, then Media, Basics, Options, Price and stock, Details.
+    expect(screen.getByText(/Open My listings and tap Add item\. First pick what you are adding.*Media.*Basics.*Options.*Price and stock.*Details/)).toBeInTheDocument();
     expect(screen.getByText("Add items and photos")).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /WhatsApp/ })).toHaveAttribute("href", expect.stringContaining("wa.me"));
     expect(screen.getByRole("link", { name: /Call us/ })).toHaveAttribute("href", expect.stringMatching(/^tel:/));

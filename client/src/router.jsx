@@ -34,6 +34,8 @@ export const router = createBrowserRouter([
           { path: "d/:department/:type", lazy: async () => ({ Component: (await import("./pages/Department.jsx")).default }) },
           { path: "b/:slug", lazy: async () => ({ Component: (await import("./pages/Business.jsx")).default }) },
           { path: "b/:slug/i/:itemId", lazy: async () => ({ Component: (await import("./pages/ItemPage.jsx")).default }) },
+          // The seller editor's live preview (see pages/PreviewItem.jsx): the real item page, filled by the editor. Not indexed.
+          { path: "preview/item", lazy: async () => ({ Component: (await import("./pages/PreviewItem.jsx")).default }) },
           { path: "s/:shortcode", lazy: async () => ({ Component: (await import("./pages/ShortLink.jsx")).default }) },
           { path: "about", lazy: async () => ({ Component: (await import("./pages/About.jsx")).default }) },
           { path: "contact", lazy: async () => ({ Component: (await import("./pages/Contact.jsx")).default }) },
