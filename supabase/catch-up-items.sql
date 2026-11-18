@@ -14407,9 +14407,9 @@ create or replace function public.mpesa_stk_message(p_status text, p_code text) 
 language sql immutable as $$
   select case p_status
     when 'creating' then 'Sending the payment request to your phone.'
-    when 'pending' then 'Check your phone and enter your M-Pesa PIN to pay.'
+    when 'pending' then 'A payment request is on your phone. Enter your M-Pesa PIN there to pay.'
     when 'confirming' then 'Safaricom says you paid. We are waiting for the receipt, which takes a moment. Do not pay again.'
-    when 'paid' then 'Payment received. Thank you.'
+    when 'paid' then 'Thank you. Your payment is recorded.'
     when 'expired' then 'We did not get an answer from your phone in time. If you entered your PIN, the payment is still recorded as soon as Safaricom confirms it. Otherwise, try again.'
     when 'error' then 'We could not send the payment request to your phone. Try again in a minute, or pay with Paybill instead.'
     when 'disputed' then 'We are checking this payment with Safaricom. We will confirm it shortly; do not pay again.'

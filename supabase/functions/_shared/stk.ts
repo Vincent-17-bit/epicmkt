@@ -116,7 +116,7 @@ export const startStk = (d: StkDeps) => async (req: Request, raw: unknown): Prom
       // The prompt IS on the phone; only our bookkeeping failed. The callback for an unknown CheckoutRequestID is still matched
       // (amount + phone + time) and never lost, so tell the payer to go ahead.
       console.error("pay-stk-start: could not record the CheckoutRequestID", sent.error.message);
-      return json({ request: { ...publicView(r), status: "pending", message: "Check your phone and enter your M-Pesa PIN to pay." } });
+      return json({ request: { ...publicView(r), status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay." } });
     }
     return json({ request: publicView(sent.data) });
   }

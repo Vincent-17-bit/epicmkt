@@ -720,7 +720,7 @@ export const startStkPayment = async ({ phone, months = 1, purpose = null, targe
   const n = q.purpose === "first" || q.purpose === "renewal" ? Math.min(Math.max(1, Number(months) || 1), 12) : 1;
   const amount = Math.ceil(q.amount * n - credit);
   if (amount <= 0) throw new ApiError("use_credit", "Your credit already covers this. Use the credit instead.");
-  const r = { id: `stk-${++bill.seq}`, status: "pending", message: "Check your phone and enter your M-Pesa PIN to pay.", amount, months: n, phone: normalized,
+  const r = { id: `stk-${++bill.seq}`, status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay.", amount, months: n, phone: normalized,
     account: bill.business.sellerId, purpose: q.purpose, checks: 0, intent: q.purpose === "upgrade" || q.purpose === "category_change" ? { purpose: q.purpose, targetPlan, category, changeId } : null };
   stkRequests.set(r.id, r);
   return { request: stkOut(r) };
@@ -738,7 +738,7 @@ export const getStkPayment = async (requestId) => {
       bill.intent = r.intent;
       const out = __mock.autoPay(r.amount);
       const receipt = bill.payments[0]?.receiptNo ?? null;
-      Object.assign(r, { status: "paid", message: "Payment received. Thank you.", receipt: `SK${String(Date.now()).slice(-8)}`,
+      Object.assign(r, { status: "paid", message: "Thank you. Your payment is recorded.", receipt: `SK${String(Date.now()).slice(-8)}`,
         outcome: { outcome: out.outcome, months: out.months ?? null, paidUntil: bill.business.paidUntil ? nairobiDay(bill.business.paidUntil) : null, receiptNo: receipt, credit: out.credit ?? 0 } });
     }
   }

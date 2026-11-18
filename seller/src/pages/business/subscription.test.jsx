@@ -37,6 +37,7 @@ describe("Subscription: summary, calendar months and grace", () => {
       setTime("2026-10-08T10:00:00Z");
     });
     expect(await screen.findByTestId("banner-expired")).toHaveTextContent("ended on 5 Oct 2026");
+    expect(text("sum-status")).toBe("Hidden until you renew");
     expect(text("sum-state")).toBe("Expired");
     expect(text("sum-days")).toBe("0");
   });

@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest";
 import PayByPhone from "./PayByPhone.jsx";
 
-const req = (over = {}) => ({ id: "r1", status: "pending", message: "Check your phone and enter your M-Pesa PIN to pay.", amount: 500, account: "ES100001", phone: "254712345678", ...over });
+const req = (over = {}) => ({ id: "r1", status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay.", amount: 500, account: "ES100001", phone: "254712345678", ...over });
 
 function setup(props = {}) {
   const start = vi.fn(async () => ({ request: req() }));
@@ -34,7 +34,7 @@ describe("PayByPhone", () => {
 
   it("polls until the payment is recorded, then reports the receipt once", async () => {
     let n = 0;
-    const poll = vi.fn(async () => ({ request: ++n < 3 ? req() : req({ status: "paid", message: "Payment received. Thank you.", receipt: "SK12345678", outcome: { outcome: "applied", months: 1, paidUntil: "2026-12-16" } }) }));
+    const poll = vi.fn(async () => ({ request: ++n < 3 ? req() : req({ status: "paid", message: "Thank you. Your payment is recorded.", receipt: "SK12345678", outcome: { outcome: "applied", months: 1, paidUntil: "2026-12-16" } }) }));
     const { onPaid } = setup({ poll, formatDay: () => "16 Dec 2026" });
     fireEvent.click(screen.getByRole("button", { name: "Pay KES 500 now" }));
     await screen.findByText("Payment received");

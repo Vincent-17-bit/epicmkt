@@ -110,7 +110,7 @@ export default function Subscription() {
         <h2 id="sum-title" className="sr-only">Your subscription</h2>
         <dl className={styles.summary}>
           <div><dt>Plan</dt><dd data-testid="sum-plan">{planLabel(business.planKey)} · {business.categoryName}</dd></div>
-          <div><dt>Listing</dt><dd data-testid="sum-status">{STATUS_LABEL[business.status] ?? business.status}</dd></div>
+          <div><dt>Listing</dt><dd data-testid="sum-status">{business.status === "live" && view.state === "expired" ? "Hidden until you renew" : STATUS_LABEL[business.status] ?? business.status}</dd></div>
           <div><dt>Subscription</dt><dd data-testid="sum-state">{STATE_LABEL[view.state]}</dd></div>
           <div><dt>Paid until</dt><dd data-testid="sum-paid-until">{business.paidUntil ? formatDay(business.paidUntil) : "Not paid yet"}</dd></div>
           <div>

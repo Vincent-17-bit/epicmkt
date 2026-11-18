@@ -335,7 +335,7 @@ export async function startStkPayment(session, { phone, months = 1 }) {
   if (rec.status !== 'approved') throw Object.assign(new Error('This application cannot be paid yet. Wait for approval.'), { code: 'not_payable' });
   const n = Math.min(Math.max(1, Number(months) || 1), 12);
   const amount = Math.max(rec.priceAtSubmission * n - (rec.creditKes ?? 0), 1);
-  const request = { id: `stk-${Date.now()}`, status: 'pending', message: 'Check your phone and enter your M-Pesa PIN to pay.', amount, months: n,
+  const request = { id: `stk-${Date.now()}`, status: 'pending', message: 'A payment request is on your phone. Enter your M-Pesa PIN there to pay.', amount, months: n,
     phone: normalized, account: rec.referenceNo.replace(/-/g, '').replace(/^EPM/, ''), purpose: 'first', checks: 0, ref: rec.referenceNo };
   stkRequests.set(request.id, request);
   const { checks: _c, ref: _r, ...out } = request;
@@ -353,7 +353,7 @@ export async function getStkPayment(session, requestId) {
       Object.assign(r, { status: 'failed', resultCode: '1032', message: 'You cancelled the M-Pesa request. Nothing was charged.' });
     } else {
       const receipt = `SK${String(Date.now()).slice(-8)}`;
-      Object.assign(r, { status: 'paid', receipt, message: 'Payment received. Thank you.', outcome: { outcome: 'ready' } });
+      Object.assign(r, { status: 'paid', receipt, message: 'Thank you. Your payment is recorded.', outcome: { outcome: 'ready' } });
       updateApplication(r.ref, (x) => {
         x.creditKes = (x.creditKes ?? 0) + r.amount;
         x.paymentCode = receipt;

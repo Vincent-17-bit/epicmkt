@@ -207,7 +207,7 @@ function PhonePrompts({ q, canPay, whyPay, onNotice }) {
                         <strong>{formatKes(r.amount)}</strong>
                         {r.paidAmount != null && r.paidAmount !== r.amount ? <div className="muted">Callback said {formatKes(r.paidAmount)}</div> : null}
                       </td>
-                      <td>{localPhone(r.phone)}<div className="muted">by {r.by}</div></td>
+                      <td><span style={{ whiteSpace: "nowrap" }}>{localPhone(r.phone)}</span><div className="muted">by {r.by}</div></td>
                       <td>
                         <span className={`status-pill status-pill--${st.tone}`}>{st.label}</span>
                         {r.receipt ? <div className="muted"><code>{r.receipt}</code></div> : null}
