@@ -73,3 +73,15 @@ test("templates are suggested per item and carry no unrelated groups", () => {
     for (const bad of unrelated) assert.ok(!names.includes(bad), `${id} has ${bad}`);
   }
 });
+
+test("brand story: builds blocks, skips blanks, stays out of the table", async () => {
+  const { buildBrandStory, BRAND_GROUP, specLimitsFor, isTemplateGroup } = await import("./index.js");
+  const specs = [
+    { group: BRAND_GROUP, label: "Built to last", value: "Strong body." },
+    { group: BRAND_GROUP, label: "", value: "x" }
+  ];
+  assert.deepEqual(buildBrandStory(specs), [{ heading: "Built to last", text: "Strong body." }]);
+  assert.deepEqual(buildInfoGroups(specs), []);
+  assert.equal(isTemplateGroup(BRAND_GROUP), false);
+  assert.deepEqual(specLimitsFor(BRAND_GROUP, { label: 40, value: 120 }), { label: 80, value: 600 });
+});

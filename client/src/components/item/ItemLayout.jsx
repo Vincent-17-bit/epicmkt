@@ -8,6 +8,7 @@ import Flash from "./Flash.jsx";
 import FlashSticky from "./FlashSticky.jsx";
 import Gallery from "./Gallery.jsx";
 import Header from "./Header.jsx";
+import { BrandStory, CompareTable, ItemVideos } from "./ItemSections.jsx";
 import Offers from "./Offers.jsx";
 import Options from "./Options.jsx";
 import ProductInformation, { ProductInfoLink, openProductInfo } from "./ProductInformation.jsx";
@@ -57,6 +58,9 @@ export default function ItemLayout({ ctx }) {
       />
       <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
       <Recommend key={`similar-${item.id}`} ctx={ctx} />
+      <ItemVideos key={`videos-${item.id}`} item={item} />
+      <BrandStory key={`brand-${item.id}`} item={item} />
+      <CompareTable key={`compare-${item.id}`} item={item} business={business} />
       <ProductInformation key={`info-${item.id}`} item={item} />
     </>
   );

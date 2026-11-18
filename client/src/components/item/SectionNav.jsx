@@ -10,6 +10,9 @@ export const SECTIONS = [
   { id: "item-store", label: "From the store" },
   { id: "item-recommend", label: "Goes well with" },
   { id: "item-similar", label: "Similar products" },
+  { id: "item-videos", label: "Videos" },
+  { id: "item-brand", label: "From the brand" },
+  { id: "item-compare", label: "Compare" },
   { id: "item-product-info", label: "Product information" }
 ];
 
