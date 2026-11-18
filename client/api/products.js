@@ -26,7 +26,7 @@
 
 import { PLAN_FEATURES } from "../../shared/src/constants.js";
 import { normalizeText } from "../../shared/src/utils.js";
-import { statusOf } from "../../shared/src/openState.js";
+import { isOpenAllDay, statusOf } from "../../shared/src/openState.js";
 import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS, countActive } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
@@ -149,6 +149,8 @@ function buildSnapshot({ items, businesses, truncated }) {
         town: b.town ?? "",
         county: b.county ?? "",
         isOpen: false,
+        // Open round the clock every day: the "Open 24 hours" filter. Fixed by the weekly hours, so read once here.
+        open24: isOpenAllDay(b.hours ?? {}),
         statusLine: ""
       },
       hours: b.hours,
@@ -474,14 +476,16 @@ export default async function handler(req) {
           console.warn(`[products] search_product_candidates unavailable (${error?.message ?? error}); searching the snapshot only`);
         }
       }
-      let result = searchProducts(products, search);
+      // view=items: the next page of a list already on screen, which needs only its cards, not the filters again.
+      const itemsOnly = params.get("view") === "items";
+      let result = searchProducts(products, search, { itemsOnly });
       // Still nothing: correct each unknown word against the snapshot's own words ("mlik" -> "milk") and try once more.
       if (!result.total && search.q.trim() && !extra.corrected) {
         snap.suggest ??= buildSuggestIndex(snap.products);
         const typed = suggestKey(search.q);
         const fixed = typed.split(" ").map((w) => correctWord(snap.suggest, w) ?? w).join(" ");
         if (fixed !== typed) {
-          const again = searchProducts(products, { ...search, q: fixed });
+          const again = searchProducts(products, { ...search, q: fixed }, { itemsOnly });
           if (again.total) {
             result = again;
             extra.corrected = fixed;

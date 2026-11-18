@@ -22,7 +22,8 @@ const opt = (id, label, alts) => ({ id, label, re: words(alts) });
 // A range filter reads one number: from a spec row whose label matches `spec`, else from the product's name and short text.
 const num = (s) => Number(String(s).replace(/,/g, ""));
 export const readers = {
-  watts: { spec: /power|output|watt|wattage/i, re: /(\d{1,4}(?:\.\d+)?)\s?(?:w|watts?)\b/i },
+  // "2kW" is 2,000 W, so a 2 kW solar kit and a 2000 W one fall in the same range.
+  watts: { spec: /power|output|watt|wattage|system size/i, re: /(\d{1,4}(?:\.\d+)?)\s?(k?w|watts?)\b/i, scale: (m) => num(m[1]) * (/^kw$/i.test(m[2]) ? 1000 : 1) },
   hours: { spec: /battery|playtime|play time/i, re: /(\d{1,3}(?:\.\d+)?)\s?(?:h|hrs?|hours?)\b/i },
   inches: { spec: /screen|size|display/i, re: /(\d{2,3}(?:\.\d+)?)\s?(?:"|”|in\b|inch(?:es)?)/i },
   smallInches: { spec: /screen|display/i, re: /(\d{1,2}(?:\.\d+)?)\s?(?:"|”|in\b|inch(?:es)?)/i },
@@ -31,9 +32,29 @@ export const readers = {
   ramGb: { spec: /\bram\b|memory \(ram\)/i, re: /(\d{1,2})\s?gb\s?ram|ram[^\d]{0,6}(\d{1,2})\s?gb|^\s*(\d{1,2})\s?gb\s*$/i, scale: (m) => num(m[1] ?? m[2] ?? m[3]) },
   mah: { spec: /capacity|battery/i, re: /(\d{3,5})\s?mah/i },
   metres: { spec: /length|cable/i, re: /(\d{1,3}(?:\.\d+)?)\s?(?:m|metres?|meters?)\b/i },
-  litres: { spec: /volume|capacity|size/i, re: /(\d{1,5}(?:\.\d+)?)\s?(l|ltrs?|litres?|liters?|ml)\b/i, scale: (m) => num(m[1]) / (/^ml$/i.test(m[2]) ? 1000 : 1) },
-  ml: { spec: /volume|size/i, re: /(\d{1,4})\s?ml\b/i },
-  kg: { spec: /weight|pack|bag|size|cylinder/i, re: /(\d{1,4}(?:\.\d+)?)\s?(kg|g|grams?)\b/i, scale: (m) => num(m[1]) / (/^g/i.test(m[2]) ? 1000 : 1) },
+  // Litres and millilitres are one scale: "1000 ml" and "1 L" are the same size, "500mls" is half a litre.
+  litres: { spec: /volume|capacity|size/i, re: /(\d{1,5}(?:\.\d+)?)\s?(l|lts?|ltrs?|litres?|liters?|ml|mls|millilit(?:re|er)s?)\b/i, scale: (m) => num(m[1]) / (/^m/i.test(m[2]) ? 1000 : 1) },
+  ml: { spec: /volume|size/i, re: /(\d{1,4}(?:\.\d+)?)\s?(ml|mls|l|ltrs?|litres?)\b/i, scale: (m) => num(m[1]) * (/^m/i.test(m[2]) ? 1 : 1000) },
+  // Kilograms and grams are one scale: "1 kg", "1000 g", "1,000gms" and "1 kilo" all read 1.
+  kg: { spec: /weight|pack|bag|size|cylinder/i, re: /(\d{1,4}(?:\.\d+)?)\s?(kgs?|kilos?|kilograms?|g|gms?|grams?|grammes?)\b/i, scale: (m) => num(m[1]) / (/^g/i.test(m[2]) ? 1000 : 1) },
+  gsm: { spec: /gsm|paper weight|grammage|thickness/i, re: /(\d{2,3})\s?(?:gsm|g\/m2|g\/m²|grams? per square met(?:re|er))\b/i },
+  cc: { spec: /engine|displacement|\bcc\b/i, re: /(\d{2,4})\s?cc\b/i },
+  year: { spec: /^(?:year|model year|year of (?:make|manufacture)|yom)$/i, re: /\b(19[89]\d|20[0-3]\d)\b/ },
+  // A warranty in months: "12 months warranty", "warranty: 1 year", or a Warranty row that says "6 months".
+  months: {
+    spec: /warranty|guarantee/i,
+    re: /(\d{1,2})\s?(months?|mths?|yrs?|years?)\s*(?:warranty|guarantee)|(?:warranty|guarantee)\D{0,12}(\d{1,2})\s?(months?|mths?|yrs?|years?)|^\s*(\d{1,2})\s?(months?|mths?|yrs?|years?)\s*$/i,
+    scale: (m) => {
+      const n = num(m[1] ?? m[3] ?? m[5]);
+      return /^y/i.test(m[2] ?? m[4] ?? m[6]) ? n * 12 : n;
+    }
+  },
+  // Bedrooms: a bedsitter or studio is 0.
+  bedrooms: { spec: /bedrooms?|rooms?/i, re: /(\d)\s?-?\s?(?:bed(?:room)?s?|br|bhk)\b|\b(bed-?sitters?|studio|single room)\b/i, scale: (m) => (m[2] ? 0 : num(m[1])) },
+  abv: { spec: /alcohol|abv/i, re: /(\d{1,2}(?:\.\d)?)\s?%\s?(?:abv|alc|vol|alcohol)|(?:abv|alc\.?|alcohol)\s?:?\s?(\d{1,2}(?:\.\d)?)\s?%|^\s*(\d{1,2}(?:\.\d)?)\s?%\s*$/i, scale: (m) => num(m[1] ?? m[2] ?? m[3]) },
+  channels: { spec: /channels?|cameras?/i, re: /(\d{1,2})\s?-?\s?(?:ch\b|channels?|cameras?|cams?\b)/i },
+  mp: { spec: /resolution|megapixel/i, re: /(\d{1,2}(?:\.\d)?)\s?(?:mp|megapixels?)\b/i },
+  guests: { spec: /guests?|sleeps|occupancy|capacity/i, re: /(\d{1,2})\s?(?:guests?|people|persons?|pax|adults)\b|sleeps (\d{1,2})/i, scale: (m) => num(m[1] ?? m[2]) },
   minutes: { spec: /duration|time|length/i, re: /(\d{1,3})\s?(min|minutes?|h|hrs?|hours?)\b/i, scale: (m) => num(m[1]) * (/^h/i.test(m[2]) ? 60 : 1) },
   seats: { spec: /seats?|seater/i, re: /(\d)\s?-?\s?seater|(\d)\s?seats?/i, scale: (m) => num(m[1] ?? m[2]) },
   shoeEu: { spec: /size/i, re: /\b(3[5-9]|4[0-8])\b/ },
@@ -44,9 +65,21 @@ export const readers = {
   count: { spec: /pack|pieces|count|quantity|stems|pcs|in a box/i, re: /(\d{1,3})\s?(?:pcs|pieces?|pack|pk|count|stems?|roses|pens|pencils|markers|sticks|bars|tablets)\b|(?:pack|box|set|bunch) of (\d{1,3})/i, scale: (m) => num(m[1] ?? m[2]) }
 };
 
+// Amounts as people write them, made plain before they are read: "½ kg" and "1/2 kg" are 0.5 kg, "1,000 g" is 1000 g, "half a
+// kilo" is 0.5 kg. So the same size written two ways lands in the same range.
+const FRACTIONS = { "½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 0.33, "⅔": 0.67, "⅛": 0.125 };
+export function plainAmounts(text) {
+  return String(text ?? "")
+    .replace(/(\d),(\d{3})(?!\d)/g, "$1$2")
+    .replace(/(\d+)?\s?([½¼¾⅓⅔⅛])/g, (_, whole, f) => String((whole ? Number(whole) : 0) + FRACTIONS[f]))
+    .replace(/(?<![\d.])([1-9])\/([248])(?=\s?(?:kg|kilo|l\b|lt|litre|liter|"|in\b|inch))/gi, (_, a, b) => String(Number(a) / Number(b)))
+    .replace(/\bhalf (?:a )?(kg|kilo)/gi, "0.5 $1")
+    .replace(/\bquarter (?:a )?(kg|kilo)/gi, "0.25 $1");
+}
+
 export function readNumber(reader, product) {
   const parse = (text) => {
-    const m = String(text ?? "").match(reader.re);
+    const m = plainAmounts(text).match(reader.re);
     if (!m) return null;
     const value = reader.scale ? reader.scale(m) : num(m[1]);
     return Number.isFinite(value) ? value : null;
@@ -240,7 +273,7 @@ export const FACETS = {
     opt("candy", "Sweets and candy", "sweet|candy|lollipop|toffee|chewing gum|gum|jelly"), opt("biscuit", "Biscuits and cookies", "biscuit|cookie|digestive")]),
   gift: facet("gift", "Gift", [choice("giftbox", "Gift box / wrapped", "gift|wrapped|hamper|box of"), choice("personal", "Personalised", "personali[sz]ed|custom|name on")]),
   dietary: facet("dietary", "Dietary", [choice("halal", "Halal", "halal"), choice("veg", "Vegetarian", "vegetarian|vegan|veg\\b"), choice("sugarfree", "Sugar free / diet", "sugar[- ]free|no sugar|diet|zero"), choice("glutenfree", "Gluten free", "gluten[- ]free"), choice("organic", "Organic", "organic")]),
-  weight: range("weight", "Pack weight", "kg", [[0, 0.5, "Up to 500 g"], [0.51, 1, "500 g to 1 kg"], [1.01, 5, "1 to 5 kg"], [5.01, 25, "5 to 25 kg"], [25.01, null, "Over 25 kg"]]),
+  weight: range("weight", "Weight", "kg", [[0, 0.5, "Up to 500 g"], [0.51, 1, "500 g to 1 kg"], [1.01, 5, "1 to 5 kg"], [5.01, 25, "5 to 25 kg"], [25.01, null, "Over 25 kg"]]),
   waterSize: range("waterSize", "Container size", "litres", [[0, 5, "Up to 5 L"], [5.01, 10, "6 to 10 L"], [10.01, 20, "11 to 20 L"], [20.01, null, "Over 20 L"]], "L"),
   fill: facet("fill", "How it is filled", [choice("refill", "Refill (bring your bottle)", "refill"), choice("new", "New bottle with water", "new bottle|with bottle|dispenser")]),
   cylinderSize: range("cylinderSize", "Cylinder size", "kg", [[0, 6, "3 to 6 kg"], [6.01, 13, "13 kg"], [13.01, 22.5, "22.5 kg"], [22.51, null, "50 kg"]], "kg"),
@@ -316,7 +349,13 @@ export const FACETS = {
     choice("two", "1½ to 2 inch", "1\\.5 ?(?:\"|in|inch)|1 1/2|\\b2 ?(?:\"|in\\b|inch)|50 ?mm"), choice("four", "3 to 4 inch", "\\b[34] ?(?:\"|in\\b|inch)|110 ?mm")]),
   tankCapacity: range("tankCapacity", "Tank size", "litres", [[0, 500, "Up to 500 L"], [501, 1000, "1,000 L"], [1001, 5000, "2,000 to 5,000 L"], [5001, null, "Over 5,000 L"]], "L"),
   // ---- Auto
-  vehicle: facet("vehicle", "Fits vehicle", ["Toyota", "Nissan", "Subaru", "Mazda", "Honda", "Mitsubishi", "Isuzu", "Mercedes", "Volkswagen"].map((m) => choice(m.toLowerCase(), m, m))),
+  // Make, then Model, then Year: the "does this fit my car?" filters, most used first for parts.
+  vehicle: facet("vehicle", "Make", [["toyota", "Toyota", "toyota|probox|fielder|axio|premio|allion|vitz|corolla|hilux|prado|land ?cruiser|noah|voxy|harrier|rav ?4|mark ?x|belta|passo|sienta|succeed"],
+    ["nissan", "Nissan", "nissan|tiida|x-?trail|navara|wingroad|ad van|sylphy|serena|caravan|juke"], ["subaru", "Subaru", "subaru|forester|impreza|legacy|outback|\\bxv\\b"],
+    ["mazda", "Mazda", "mazda|demio|axela|atenza|cx-?5|verisa"], ["honda", "Honda", "honda(?! ace)|vezel|cr-?v|insight|civic"], ["mitsubishi", "Mitsubishi", "mitsubishi|outlander|pajero|canter|l200|rvr"],
+    ["isuzu", "Isuzu", "isuzu|d-?max|\\bnqr\\b|\\bfrr\\b|\\bnpr\\b|\\bnkr\\b"], ["mercedes", "Mercedes-Benz", "mercedes|benz|c-?class|e-?class|\\bml\\b"], ["volkswagen", "Volkswagen", "volkswagen|\\bvw\\b|passat|touareg|tiguan"],
+    ["suzuki", "Suzuki", "suzuki|escudo|vitara"], ["ford", "Ford", "\\bford\\b"], ["landrover", "Land Rover", "land ?rover|range ?rover"],
+    ["bmw", "BMW", "\\bbmw\\b"], ["hyundai", "Hyundai / Kia", "hyundai|\\bkia\\b|sportage|tucson"]].map(([id, label, re]) => choice(id, label, re))),
   partCondition: facet("partCondition", "Part condition", [choice("genuine", "Genuine", "genuine|original|oem"), choice("aftermarket", "Aftermarket", "aftermarket|compatible"), choice("used", "Ex-Japan / used", "ex-?japan|used|second")]),
   autoPart: facet("autoPart", "Part", [opt("tyre", "Tyres", "tyre|tire|tube|rim"), opt("battery", "Batteries", "battery"), opt("oil", "Oils and fluids", "oil|coolant|brake fluid|atf|grease"), opt("brake", "Brakes", "brake pad|brake shoe|disc|brake"),
     opt("filter", "Filters", "filter"), opt("light", "Lights and bulbs", "headlight|tail light|bulb|lamp"), opt("wiper", "Wipers", "wiper"), opt("engine", "Engine and suspension", "spark plug|plug|belt|shock|bush|mount|clutch|radiator|engine")]),
@@ -358,6 +397,148 @@ export const FACETS = {
   agentService: facet("agentService", "Service", [choice("mpesa", "M-Pesa deposit and withdrawal", "m-?pesa|deposit|withdraw"), choice("airtime", "Airtime and bundles", "airtime|bundle|data|credit"), choice("bills", "Bill payments", "bill|kplc|tokens|water bill|dstv|gotv|zuku"), choice("bank", "Bank agent", "bank|agent banking|equity|kcb|co-?op")])
 };
 
+// ---- more filters: every kind of shop on a Kenyan high street, and the ones still to come -----------------------------
+// Each filter belongs to the kinds that list it (KINDS below), so a filter never shows where it means nothing: meat has no
+// colour, a haircut has no size, a print job has no pack weight. Numbers are ranges with their unit; labels are checkboxes.
+const MODELS = [
+  ["toyota", ["Probox / Succeed", "probox|succeed"], ["Fielder", "fielder"], ["Axio", "axio"], ["Premio / Allion", "premio|allion"], ["Vitz", "vitz"], ["Corolla", "corolla"], ["Hilux", "hilux"],
+    ["Land Cruiser / Prado", "land ?cruiser|prado"], ["Noah / Voxy", "noah|voxy"], ["Harrier", "harrier"], ["RAV4", "rav ?4"], ["Mark X", "mark ?x"], ["Belta", "belta"], ["Passo", "passo"], ["Sienta", "sienta"]],
+  ["nissan", ["Note", "nissan note|\\bnote (?:e-?power|e12|e11)\\b"], ["Tiida", "tiida"], ["X-Trail", "x-?trail"], ["Navara", "navara"], ["AD van / Wingroad", "ad van|wingroad"], ["Sylphy", "sylphy"],
+    ["Serena", "serena"], ["Caravan", "caravan"], ["March", "nissan march"], ["Juke", "juke"]],
+  ["subaru", ["Forester", "forester"], ["Impreza", "impreza"], ["Legacy", "legacy"], ["Outback", "outback"], ["XV", "\\bxv\\b"]],
+  ["mazda", ["Demio", "demio"], ["Axela", "axela"], ["Atenza", "atenza"], ["CX-5", "cx-?5"], ["Verisa", "verisa"]],
+  ["honda", ["Fit", "honda fit|\\bfit (?:rs|hybrid|gd|ge|gk)\\b"], ["Vezel", "vezel"], ["CR-V", "cr-?v"], ["Insight", "insight"], ["Civic", "civic"]],
+  ["mitsubishi", ["Outlander", "outlander"], ["Pajero", "pajero"], ["Canter", "canter"], ["L200", "l200"], ["RVR", "\\brvr\\b"]],
+  ["isuzu", ["D-Max", "d-?max"], ["NQR / FRR / NPR trucks", "\\bnqr\\b|\\bfrr\\b|\\bnpr\\b|\\bnkr\\b"]],
+  ["volkswagen", ["Golf", "vw golf|golf [4-8]\\b|golf (?:iv|v|vi|vii)\\b"], ["Polo", "vw polo|polo vivo"], ["Passat", "passat"], ["Touareg", "touareg"], ["Tiguan", "tiguan"]],
+  ["suzuki", ["Swift", "suzuki swift"], ["Alto", "suzuki alto"], ["Escudo / Vitara", "escudo|vitara"]],
+  ["ford", ["Ranger", "ford ranger"], ["Everest", "ford everest"], ["Focus", "ford focus"]]
+];
+
+Object.assign(FACETS, {
+  // ---- Vehicles and motorbikes
+  carModel: { ...facet("carModel", "Model", MODELS.flatMap(([make, ...models]) => models.map(([label, re]) => ({ ...choice(`${make}-${label.toLowerCase().replace(/[^a-z0-9]+/g, "")}`, label, re), make })))), follows: "vehicle" },
+  year: range("year", "Year", "year", [[0, 2005, "2005 & older"], [2006, 2010, "2006 to 2010"], [2011, 2015, "2011 to 2015"], [2016, 2019, "2016 to 2019"], [2020, null, "2020 & newer"]]),
+  bikeMake: facet("bikeMake", "Make", [choice("bajaj", "Bajaj (Boxer)", "bajaj|boxer"), choice("tvs", "TVS", "\\btvs\\b|apache|star hlx|hlx"), choice("honda", "Honda", "honda|ace 1[12]5"), choice("haojue", "Haojue", "haojue"),
+    choice("skygo", "Skygo", "skygo"), choice("yamaha", "Yamaha", "yamaha"), choice("suzuki", "Suzuki", "suzuki"), choice("kymco", "Kymco / scooters", "kymco|scooter"), choice("electric", "Electric (e-bike)", "electric|e-?bike|roam|ampersand")]),
+  engineCc: range("engineCc", "Engine size", "cc", [[0, 110, "Up to 110 cc"], [111, 150, "111 to 150 cc"], [151, 250, "151 to 250 cc"], [251, null, "Over 250 cc"]], "cc"),
+  bikePart: facet("bikePart", "Part", [opt("bike", "Whole motorbikes", "motorbike|motorcycle|motor ?bike|piki ?piki|scooter|e-?bike"), opt("tyre", "Tyres and tubes", "tyre|tire|tube|rim"), opt("chain", "Chain and sprocket", "chain|sprocket|kit"),
+    opt("brake", "Brakes and cables", "brake|cable|clutch"), opt("engine", "Engine parts", "piston|ring|carburet|plug|gasket|engine|cylinder|head|valve|bearing"), opt("body", "Body, seats and mirrors", "seat|mirror|mudguard|fender|carrier|crash guard|body|tank"),
+    opt("light", "Lights and electrics", "headlight|indicator|bulb|light|battery|wiring|horn"), opt("gear", "Helmets and riding gear", "helmet|reflector|jacket|gloves|gear")]),
+  // ---- Fish, poultry and meat
+  fishType: facet("fishType", "Fish", [opt("tilapia", "Tilapia", "tilapia|ngege"), opt("omena", "Omena (dagaa)", "omena|dagaa|daga"), opt("perch", "Nile perch (mbuta)", "nile perch|mbuta|perch"), opt("catfish", "Catfish (kamongo)", "cat ?fish|kamongo|mumi"),
+    opt("sardine", "Sardines and mackerel", "sardine|mackerel|tuna"), opt("seafood", "Prawns and seafood", "prawn|shrimp|seafood|octopus|squid|lobster|crab"), opt("other", "Salmon and imported fish", "salmon|hake|cod|trout|kingfish")]),
+  fishPrep: facet("fishPrep", "Prepared", [choice("fresh", "Fresh", "fresh|\\blive\\b|today'?s catch"), choice("frozen", "Frozen", "frozen"), choice("fried", "Fried", "fried|fry"), choice("smoked", "Smoked", "smoked"), choice("dried", "Dried / sun-dried", "dried|dry|sun-?dried|salted")]),
+  fishCut: facet("fishCut", "Cut", [choice("whole", "Whole fish", "whole|full fish"), choice("fillet", "Fillets", "fillet|filet|boneless"), choice("cleaned", "Gutted and scaled", "gutted|scaled|cleaned"), choice("pieces", "Steaks and pieces", "steak|pieces|cubes|chunks")]),
+  meatState: facet("meatState", "Fresh or frozen", [choice("fresh", "Fresh", "fresh|today|slaughtered today"), choice("frozen", "Frozen", "frozen"), choice("marinated", "Marinated", "marinated|spiced|seasoned"), choice("smoked", "Smoked and processed", "smoked|cured|processed|bacon|\\bham\\b|sausage|smokie")]),
+  birdType: facet("birdType", "Bird", [opt("broiler", "Broilers", "broiler"), opt("layer", "Layers", "layers?(?![a-z]| mash| pellets| feed| concentrate)|pullet|point of lay"), opt("kienyeji", "Kienyeji (indigenous)", "kienyeji|indigenous|local chicken|cockerel|rooster|hen"),
+    opt("improved", "Improved kienyeji", "improved kienyeji|kuroiler|kenbro|rainbow rooster|sasso|kari"), opt("chicks", "Chicks", "chicks?(?![a-z]| mash| feed| starter)|day-?old"), opt("eggs", "Eggs", "egg"), opt("duck", "Ducks, turkeys and quails", "duck|turkey|quail|guinea fowl|goose|geese")]),
+  birdAge: facet("birdAge", "Age", [choice("dayold", "Day-old", "day-?old|1 day"), choice("weeks", "1 to 8 weeks", "\\b[1-8] ?(?:-|to) ?[2-8]? ?weeks?|\\b[1-8] weeks?|brooded"), choice("pol", "Point of lay", "point of lay|\\bpol\\b|1[6-9] weeks|20 weeks"),
+    choice("mature", "Mature / ready", "mature|ready|grown|months? old|\\badult")]),
+  birdBreed: facet("birdBreed", "Breed", [choice("kenbro", "Kenbro", "kenbro"), choice("kuroiler", "Kuroiler", "kuroiler"), choice("rainbow", "Rainbow Rooster", "rainbow rooster"), choice("sasso", "Sasso", "sasso"),
+    choice("cobb", "Cobb / Ross (broilers)", "cobb|ross 308|\\bross\\b"), choice("isa", "ISA Brown / Hy-Line (layers)", "isa brown|hy-?line|lohmann|shaver"), choice("kari", "KARI improved kienyeji", "\\bkari\\b|kalro")]),
+  liveDressed: facet("liveDressed", "Sold", [choice("live", "Live", "\\blive\\b|alive"), choice("dressed", "Dressed (slaughtered)", "dressed|slaughtered|cleaned|whole chicken|ready to cook")]),
+  eggPack: facet("eggPack", "Eggs", [choice("single", "Single eggs", "per egg|single egg|\\beach\\b"), choice("half", "Half tray (15)", "half tray|15 eggs"), choice("tray", "Tray (30)", "\\btray\\b|30 eggs|tray of 30"), choice("crate", "Crates and bulk", "crate|box of|bulk|\\b[2-9]\\d? trays")]),
+  vaccinated: facet("vaccinated", "Health", [choice("vaccinated", "Vaccinated", "vaccinated|vaccines? given|immuni[sz]ed"), choice("dewormed", "Dewormed", "dewormed")]),
+  // ---- Water, gas, juice, cereals
+  waterType: facet("waterType", "Water", [choice("purified", "Purified (RO)", "purified|reverse osmosis|\\bro\\b|treated"), choice("mineral", "Mineral", "mineral"), choice("spring", "Spring", "spring"), choice("alkaline", "Alkaline", "alkaline"), choice("distilled", "Distilled", "distilled")]),
+  waterPlan: facet("waterPlan", "Delivery plan", [choice("daily", "Daily", "daily|every day"), choice("weekly", "Weekly", "weekly|per week|every week"), choice("monthly", "Monthly / subscription", "monthly|subscription|subscribe")]),
+  gasBrand: facet("gasBrand", "Gas brand", [choice("total", "Total", "\\btotal\\b|totalenergies"), choice("kgas", "K-Gas", "k-?gas"), choice("afrigas", "Afrigas", "afrigas"), choice("hashi", "Hashi", "hashi"), choice("progas", "Pro Gas", "pro ?gas"),
+    choice("rubis", "Rubis / Mpishi", "rubis|oilibya|mpishi"), choice("lake", "Lake Gas", "lake gas"), choice("sea", "Sea Gas", "sea gas"), choice("other", "Other brands", "mwanga|men gas|supa gas|delta gas|ola energy")]),
+  fruit: facet("fruit", "Fruit", [choice("mango", "Mango", "mango"), choice("passion", "Passion", "passion"), choice("orange", "Orange", "orange"), choice("pineapple", "Pineapple", "pineapple"), choice("watermelon", "Watermelon", "watermelon|tikiti"),
+    choice("avocado", "Avocado", "avocado"), choice("beet", "Beetroot and carrot", "beet|carrot"), choice("lemon", "Lemon and ginger", "lemon|ginger|mint"), choice("mixed", "Mixed / cocktail", "mixed|cocktail|tropical|fruit salad"), choice("berry", "Berries", "berry|berries")]),
+  grainType: facet("grainType", "Grain", [opt("maize", "Maize", "maize|mahindi|corn"), opt("beans", "Beans", "bean|maharagwe|rosecoco|nyayo|mwitemania|wairimu"), opt("grams", "Green grams (ndengu)", "green gram|ndengu|dengu|pojo"),
+    opt("wheat", "Wheat", "wheat|ngano"), opt("millet", "Millet and sorghum", "millet|wimbi|sorghum|mtama"), opt("peas", "Peas and cowpeas", "peas|kunde|njahi|black bean|pigeon"), opt("nuts", "Groundnuts", "groundnut|peanut|njugu")]),
+  milling: facet("milling", "Form", [choice("whole", "Whole grain", "whole|dry|grain|per gorogoro|gorogoro|debe"), choice("flour", "Milled flour", "flour|unga|meal|milled"), choice("service", "Milling service", "milling|posho mill|grinding|kusaga")]),
+  produceOrigin: facet("produceOrigin", "Grown", [choice("organic", "Organic", "organic"), choice("local", "Local / farm fresh", "farm fresh|from the farm|shamba|local"), choice("imported", "Imported", "imported|south african|egyptian")]),
+  // ---- Wines and spirits
+  abv: range("abv", "Alcohol", "abv", [[0, 5.9, "Up to 5.9% (beer, cider)"], [6, 15, "6 to 15% (wine)"], [15.01, null, "Over 15% (spirits)"]], "%"),
+  // ---- Health, optician, beauty
+  ageGroup: facet("ageGroup", "Age group", [choice("baby", "Babies (0 to 2)", "baby|babies|infant|newborn|toddler|\\b\\d{1,2} ?(?:-|to) ?\\d{1,2} ?months"), choice("kids", "Kids", "kids?|child|children|boys|girls|junior|paediatric|pediatric|school"),
+    choice("teens", "Teens", "teen|youth"), choice("adults", "Adults", "adult|\\bmen\\b|women|ladies|gents|unisex")]),
+  frameShape: facet("frameShape", "Frame shape", [choice("round", "Round", "\\bround\\b"), choice("square", "Square", "square"), choice("rect", "Rectangle", "rectang"), choice("cateye", "Cat eye", "cat[- ]eye"), choice("aviator", "Aviator", "aviator|pilot"),
+    choice("oval", "Oval", "oval"), choice("rimless", "Rimless", "rimless|half[- ]rim")]),
+  lensType: facet("lensType", "Lens type", [choice("single", "Single vision", "single vision"), choice("bifocal", "Bifocal", "bifocal"), choice("progressive", "Progressive", "progressive|varifocal|multifocal"), choice("reading", "Reading", "reading")]),
+  hairType: facet("hairType", "Hair type", [choice("natural", "Natural hair", "natural hair|\\b4c\\b|kinky|afro"), choice("relaxed", "Relaxed hair", "relaxed hair|relaxer"), choice("curly", "Curly", "curly|curls|wavy"), choice("straight", "Straight / silky", "straight|silky")]),
+  hairLength: facet("hairLength", "Length", [choice("short", "Short", "short hair|\\bbob\\b|pixie|\\b(?:8|10|12) ?(?:\"|inch)"), choice("medium", "Medium / shoulder", "medium length|shoulder|\\b(?:14|16|18) ?(?:\"|inch)"), choice("long", "Long", "long hair|long braids|\\b(?:20|22|24) ?(?:\"|inch)"),
+    choice("waist", "Waist length & longer", "waist|bum length|extra long|\\b(?:26|28|30|32) ?(?:\"|inch)")]),
+  // ---- Farm and pets
+  farmForm: facet("farmForm", "Form", [choice("powder", "Powder", "powder|wettable|\\bwp\\b|mash"), choice("liquid", "Liquid", "liquid|\\bec\\b|\\bsl\\b|solution|drench|ml\\b|litre"), choice("granules", "Granules and pellets", "granule|pellet|crumble"), choice("tablets", "Tablets and boluses", "tablet|bolus")]),
+  petAnimal: facet("petAnimal", "Pet", [choice("dog", "Dogs", "\\bdogs?\\b|puppy|puppies|canine"), choice("cat", "Cats", "\\bcats?\\b|kitten|feline"), choice("bird", "Birds", "\\bbirds?\\b|parrot|budgie|pigeon"), choice("fish", "Fish", "aquarium|fish food|goldfish|\\bfish\\b"),
+    choice("rabbit", "Rabbits", "rabbit")]),
+  petProduct: facet("petProduct", "Product", [opt("food", "Food and treats", "food|treat|biscuit|kibble|chow|pedigree|whiskas|meal"), opt("health", "Medicine and dewormers", "dewormer|deworming|tick|flea|vaccine|medicine|vitamin|shampoo"),
+    opt("accessory", "Collars, leashes and beds", "collar|leash|lead|harness|bed|bowl|cage|kennel|carrier|toy|aquarium"), opt("litter", "Litter and cleaning", "litter|poop|pad"), opt("vet", "Vet and grooming services", "vet|grooming|clinic|consultation|spay|neuter")]),
+  // ---- Security, solar, electronics extras
+  securityItem: facet("securityItem", "Item", [opt("camera", "CCTV cameras", "camera|cctv|dome|bullet|ip cam|ptz"), opt("kit", "Complete CCTV kits", "kit|package|dvr|nvr"), opt("alarm", "Alarms and sensors", "alarm|sensor|siren|smoke detector|panic"),
+    opt("fence", "Electric fence", "electric fence|energi[sz]er|razor wire|fence"), opt("intercom", "Intercoms and doorbells", "intercom|doorbell|door phone"), opt("access", "Smart locks and access", "smart lock|biometric|fingerprint|access control|card reader|gate motor")]),
+  cameraChannels: range("cameraChannels", "Cameras", "channels", [[1, 1, "1 camera"], [2, 4, "2 to 4"], [5, 8, "5 to 8"], [9, null, "9 & above"]], "cameras"),
+  cameraMp: range("cameraMp", "Resolution", "mp", [[0, 2, "Up to 2 MP (1080p)"], [2.01, 5, "3 to 5 MP"], [5.01, null, "Over 5 MP (4K)"]], "MP"),
+  installation: facet("installation", "Installation", [choice("included", "Installation included", "install(?:ation)? (?:included|inclusive|done)|supply and install|with installation|we install|fitted|fixing included"), choice("supply", "Supply only", "supply only|no installation|diy|self[- ]install")]),
+  solarItem: facet("solarItem", "Item", [opt("panel", "Solar panels", "solar panel|panel|monocrystalline|polycrystalline|\\bmono\\b"), opt("kit", "Complete solar kits", "kit|system|home system|package"), opt("inverter", "Inverters", "inverter|hybrid|ups"),
+    opt("battery", "Solar batteries", "battery|batteries|lithium|lifepo4|gel|deep cycle"), opt("controller", "Charge controllers", "charge controller|controller|mppt|pwm"), opt("heater", "Solar water heaters and pumps", "water heater|geyser|pump"), opt("light", "Solar lights", "solar light|flood|street light|lamp|lantern")]),
+  systemSize: range("systemSize", "System size", "watts", [[0, 100, "Up to 100 W"], [101, 500, "101 to 500 W"], [501, 2000, "501 W to 2 kW"], [2001, null, "Over 2 kW"]], "W"),
+  warranty: range("warranty", "Warranty", "months", [[1, 5, "Under 6 months"], [6, 11, "6 to 11 months"], [12, 23, "1 year"], [24, null, "2 years & above"]], "months"),
+  partQuality: facet("partQuality", "Part quality", [choice("original", "Original", "original|genuine|oem"), choice("hq", "High copy", "high copy|hq|grade a|copy a"), choice("copy", "Copy / compatible", "\\bcopy\\b|compatible")]),
+  mobileNetwork: facet("mobileNetwork", "Network", [choice("safaricom", "Safaricom (M-Pesa)", "safaricom|m-?pesa"), choice("airtel", "Airtel (Airtel Money)", "airtel"), choice("telkom", "Telkom (T-Kash)", "telkom|t-?kash"), choice("bank", "Bank agency", "bank|equity|kcb|co-?op|family bank")]),
+  // ---- Babies, books, printing extras
+  babyItem: facet("babyItem", "Baby", [opt("diaper", "Diapers and wipes", "diaper|nappy|nappies|pampers|huggies|molfix|wipe"), opt("feeding", "Feeding and formula", "bottle|formula|lactogen|nan\\b|cerelac|sippy|bib|teat|breast pump|feeding"),
+    opt("gear", "Strollers, carriers and walkers", "stroller|pram|carrier|walker|car seat|bouncer|rocker"), opt("bath", "Bath and skin care", "bath|lotion|oil|powder|jelly|soap|shampoo"), opt("clothes", "Baby clothes and shawls", "romper|onesie|shawl|receiving blanket|bodysuit|clothes|baby set|mittens|booties"),
+    opt("sleep", "Cots and bedding", "cot|crib|carry ?cot|baby bed|baby net|cot sheet"), opt("toys", "Toys and teethers", "toy|teether|rattle|pacifier")]),
+  babyAge: facet("babyAge", "Baby's age", [choice("newborn", "Newborn (0 to 3 months)", "newborn|0 ?-? ?3 ?m|0-3|\\bnb\\b|stage 1"), choice("infant", "3 to 12 months", "3 ?-? ?6 ?m|6 ?-? ?12 ?m|6-12|3-6|stage 2|\\b[3-9] months"),
+    choice("toddler", "1 to 3 years", "1 ?-? ?3 ?y|12 ?-? ?(?:18|24|36) ?m|toddler|stage 3|\\b[12] years?"), choice("preschool", "3 years & above", "3 ?\\+|3 ?-? ?[5-6] ?y|4 years|5 years|junior|stage 4")]),
+  diaperSize: facet("diaperSize", "Diaper size", [choice("nb", "Newborn", "newborn|\\bnb\\b|size 0"), choice("s", "Small (size 1 to 2)", "size [12]\\b|\\bsmall\\b|\\bmini\\b"), choice("m", "Medium (size 3)", "size 3\\b|\\bmedium\\b|\\bmidi\\b"),
+    choice("l", "Large (size 4)", "size 4\\b|\\blarge\\b|\\bmaxi\\b"), choice("xl", "Extra large (size 5 & up)", "size [5-7]\\b|x-?large|\\bxl\\b|junior")]),
+  bookType: facet("bookType", "Book", [opt("textbook", "Textbooks and course books", "textbook|text book|course book|learner'?s book|pupil'?s book|student'?s book|grade \\d+ (?:english|maths|mathematics|science|kiswahili)"),
+    opt("revision", "Revision and past papers", "revision|past paper|kcse|kcpe|kpsea|kjsea|mock|exam|workbook|activity book"), opt("story", "Storybooks and novels", "storybook|story book|novel|reader|fiction|set book|literature"),
+    opt("reference", "Dictionaries and atlases", "dictionary|atlas|encyclopedia|thesaurus"), opt("religious", "Bibles and religious books", "bible|quran|qur'an|hymn|prayer|devotional"), opt("other", "Business and self-help", "business|self-help|biography|cookbook|cook book|guide")]),
+  bookLevel: facet("bookLevel", "Level", [choice("pp", "Pre-primary (PP1, PP2)", "pp ?1|pp ?2|pre-?primary|pre-?school|playgroup|nursery"), choice("lower", "Lower primary (Grade 1 to 3)", "grade [1-3]\\b|lower primary|class [1-3]\\b"),
+    choice("upper", "Upper primary (Grade 4 to 6)", "grade [4-6]\\b|upper primary|class [4-8]\\b|kcpe|kpsea"), choice("junior", "Junior school (Grade 7 to 9)", "grade [7-9]\\b|junior (?:secondary|school)|\\bjss\\b|kjsea"),
+    choice("senior", "Secondary and senior school", "form [1-4]|grade 1[0-2]\\b|secondary|senior school|kcse|high school"), choice("college", "College and university", "college|university|diploma|degree|cpa|accounting")]),
+  curriculum: facet("curriculum", "Curriculum", [choice("cbc", "CBC / CBE", "\\bcbc\\b|\\bcbe\\b|competency|grade \\d"), choice("844", "8-4-4", "8-?4-?4|kcse|form [1-4]"), choice("igcse", "IGCSE / British", "igcse|cambridge|british|a-?level|o-?level"), choice("ib", "IB / American", "\\bib\\b|international baccalaureate|american")]),
+  publisher: facet("publisher", "Publisher", [choice("klb", "KLB", "\\bklb\\b|kenya literature bureau"), choice("longhorn", "Longhorn", "longhorn"), choice("oxford", "Oxford", "oxford"), choice("moran", "Moran", "moran"),
+    choice("spotlight", "Spotlight", "spotlight"), choice("mentor", "Mentor", "mentor"), choice("eaep", "EAEP", "\\beaep\\b|east african educational"), choice("jkf", "JKF", "\\bjkf\\b|jomo kenyatta foundation"), choice("storymoja", "Storymoja", "storymoja")]),
+  paperWeight: range("paperWeight", "Paper weight", "gsm", [[0, 80, "Up to 80 gsm (everyday)"], [81, 130, "90 to 130 gsm"], [131, 200, "150 to 200 gsm"], [201, null, "250 gsm & above (card)"]], "gsm"),
+  printSides: facet("printSides", "Sides", [choice("single", "Single sided", "single[- ]sided|one side"), choice("double", "Double sided", "double[- ]sided|both sides|back to back|duplex")]),
+  bindingType: facet("bindingType", "Binding", [choice("spiral", "Spiral / comb", "spiral|\\bcomb\\b|wire-?o"), choice("hardcover", "Hardcover", "hard ?cover|hard ?bound"), choice("soft", "Softcover / perfect", "soft ?cover|perfect bind|glue bind"), choice("thermal", "Thermal", "thermal")]),
+  finish: facet("finish", "Finish", [choice("matte", "Matte", "matte?\\b"), choice("glossy", "Glossy", "gloss"), choice("laminated", "Laminated", "laminat")]),
+  // ---- Furniture and fabrication
+  madeTo: facet("madeTo", "Made", [choice("ready", "Ready-made", "ready[- ]made|in stock|ready to (?:go|take)|available now"), choice("custom", "Made to order / custom size", "made to order|custom|to measure|your (?:size|design)|order in|fabricat")]),
+  weldItem: facet("weldItem", "Item", [opt("gate", "Gates", "gate"), opt("grill", "Window and door grills", "grill|burglar proof"), opt("door", "Steel doors and frames", "door|frame"), opt("stand", "Tank stands and towers", "tank stand|tower|stand"),
+    opt("carport", "Carports and shades", "carport|shade|canopy|shed|structure|truss"), opt("rail", "Railings and balustrades", "rail|balustrade|handrail"), opt("furniture", "Metal furniture", "chair|table|bed|shelf|rack")]),
+  // ---- Events, lodging, property, transport, professionals, trades, funerals
+  hireItem: facet("hireItem", "Hire", [opt("tent", "Tents and marquees", "tent|marquee|canopy|dome"), opt("chairs", "Chairs and tables", "chair|table|tiffany|chiavari"), opt("sound", "Sound, PA and DJ", "sound|pa system|public address|speaker|dj|mic"),
+    opt("decor", "Decor and lighting", "decor|décor|decoration|lighting|draping|flowers|balloon|red carpet|stage"), opt("catering", "Catering and equipment", "catering|chafing|cutlery|crockery|food"), opt("mc", "MCs and entertainment", "\\bmc\\b|emcee|entertain|band|acrobat"),
+    opt("toilet", "Mobile toilets", "toilet|washroom")]),
+  setup: facet("setup", "Delivery and setup", [choice("setup", "Delivery and setup included", "set ?up|delivery and|transport included|we deliver|delivered and"), choice("collect", "Collect yourself", "collect|pick ?up")]),
+  coverage: facet("coverage", "Coverage", [choice("photo", "Photos only", "photo(?:graphy)? only|photos? only"), choice("video", "Video only", "video only"), choice("both", "Photo and video", "photo and video|photo & video|photography and videography"), choice("drone", "Drone shots", "drone|aerial")]),
+  roomType: facet("roomType", "Room", [opt("single", "Single room", "single room|single bed|single"), opt("double", "Double room", "double room|double bed|double|queen|king"), opt("twin", "Twin room", "twin"), opt("deluxe", "Deluxe and executive", "deluxe|executive|superior"),
+    opt("suite", "Suites and family rooms", "suite|family room|apartment|cottage|villa"), opt("dorm", "Dorms and hostel beds", "dorm|hostel|bunk"), opt("hall", "Conference and event halls", "conference|hall|boardroom|meeting room")]),
+  amenities: facet("amenities", "Amenities", [choice("wifi", "Free Wi-Fi", "wi-?fi|internet"), choice("hotwater", "Hot shower", "hot (?:shower|water)|instant shower"), choice("parking", "Parking", "parking"), choice("breakfast", "Breakfast included", "breakfast|bed and breakfast|\\bb&b\\b|\\bbnb\\b"),
+    choice("tv", "TV / DStv", "\\btv\\b|dstv|netflix"), choice("pool", "Swimming pool", "pool"), choice("ac", "Air conditioning", "air ?con|\\bac\\b")]),
+  guests: range("guests", "Guests", "guests", [[1, 1, "1 guest"], [2, 2, "2 guests"], [3, 4, "3 to 4 guests"], [5, null, "5 guests & above"]], "guests"),
+  dealType: facet("dealType", "For", [choice("rent", "For rent", "for rent|to let|\\brent\\b|rental|per month|monthly"), choice("sale", "For sale", "for sale|selling|title deed|freehold|leasehold")]),
+  propertyType: facet("propertyType", "Property", [opt("bedsitter", "Bedsitters and single rooms", "bed-?sitter|single room|studio"), opt("apartment", "Apartments and flats", "apartment|flat|\\d ?-?bed(?:room)?s?|one bedroom|two bedroom|three bedroom"),
+    opt("house", "Houses and bungalows", "house|bungalow|maisonette|mansion|villa|townhouse"), opt("land", "Land and plots", "land|plot|acre|eighth|1/8"), opt("commercial", "Shops, offices and stores", "shop|office|stall|godown|warehouse|commercial|store"), opt("hostel", "Hostels", "hostel")]),
+  bedrooms: range("bedrooms", "Bedrooms", "bedrooms", [[0, 0, "Bedsitter / studio"], [1, 1, "1 bedroom"], [2, 2, "2 bedrooms"], [3, 3, "3 bedrooms"], [4, null, "4 bedrooms & above"]]),
+  propertyFeatures: facet("propertyFeatures", "Features", [choice("water", "Reliable water", "water|borehole|tank"), choice("security", "Security / gated", "security|gated|guard|cctv|electric fence"), choice("parking", "Parking", "parking"),
+    choice("tiled", "Tiled", "tiled|tiles"), choice("internet", "Wi-Fi ready", "wi-?fi|fibre|internet"), choice("dsq", "Servant quarter (DSQ)", "\\bdsq\\b|servant"), choice("furnished", "Furnished", "(?<!un)furnished")]),
+  transportVehicle: facet("transportVehicle", "Vehicle", [opt("boda", "Boda boda", "boda|motorbike|piki"), opt("tuktuk", "Tuk-tuk", "tuk ?tuk"), opt("taxi", "Taxi / cab", "taxi|cab|car|uber|bolt|little|chauffeur"),
+    opt("pickup", "Pick-up and van", "pick-?up|van|probox"), opt("lorry", "Lorry and truck", "lorry|truck|canter|fuso|trailer"), opt("bus", "Matatu, bus and shuttle", "matatu|bus|shuttle|minibus|coaster")]),
+  transportService: facet("transportService", "Service", [opt("ride", "Passenger rides", "ride|trip|passenger|airport|transfer|taxi|cab"), opt("parcel", "Parcels and courier", "parcel|courier|package|delivery|errand|document"), opt("moving", "House and office moving", "moving|movers|relocation|shifting"),
+    opt("cargo", "Goods and cargo", "cargo|goods|transport of|haulage|construction material"), opt("hire", "Vehicle hire", "hire|self[- ]drive|rental|with driver")]),
+  profSpecialty: facet("profSpecialty", "Specialty", [opt("law", "Lawyers and advocates", "lawyer|advocate|legal|conveyancing|affidavit|commissioner for oaths|notary"), opt("accounts", "Accountants and tax", "accountant|accounting|bookkeeping|audit|tax|kra returns|payroll"),
+    opt("architect", "Architects and drawings", "architect|house plan|building plan|drawing"), opt("survey", "Surveyors and valuers", "surveyor|survey|valuer|valuation|land search|beacons"), opt("engineer", "Engineers", "engineer|structural"),
+    opt("insurance", "Insurance agents", "insurance|cover|policy"), opt("consult", "Business consultants", "consultant|consultancy|business plan|registration|compliance"), opt("events", "Event planners", "event planner|wedding planner|planning")]),
+  consultMode: facet("consultMode", "Consultation", [choice("office", "At the office", "office|in person|walk-?in"), choice("online", "Online or by phone", "online|virtual|zoom|phone call|whatsapp|remote"), choice("visit", "Comes to you", "site visit|home visit|we come|on site")]),
+  licensed: facet("licensed", "Credentials", [choice("licensed", "Licensed / registered", "licensed|registered|certified|accredited|member of|\\bebk\\b|\\bisk\\b|\\blsk\\b|\\bicpak\\b|\\bnca\\b|\\bepra\\b")]),
+  tradeService: facet("tradeService", "Service", [opt("plumbing", "Plumbing", "plumb|pipe|leak|tap|toilet|sink|drain|unblock|water tank|borehole"), opt("electrical", "Electrical wiring", "electric|wiring|rewiring|socket|lighting installation|power"),
+    opt("solar", "Solar installation", "solar"), opt("cctv", "CCTV and security", "cctv|alarm|electric fence|security"), opt("painting", "Painting", "paint"), opt("tiling", "Tiling, masonry and gypsum", "tiling|tiler|tiles|mason|gypsum|ceiling|plaster"),
+    opt("carpentry", "Carpentry and roofing", "carpent|roof|door fitting|kitchen cabinet"), opt("appliance", "Appliance installation", "install|dstv|tv mounting|cooker|geyser|water heater")]),
+  emergency: facet("emergency", "Response", [choice("sameday", "Same day / emergency", "emergency|same day|urgent|24 ?hours?|24/7|call ?out"), choice("quote", "Free quote", "free quote|free quotation|free site visit|free assessment")]),
+  funeralService: facet("funeralService", "Service", [opt("mortuary", "Mortuary and preservation", "mortuary|preservation|embalm|cold room|morgue"), opt("casket", "Caskets and coffins", "casket|coffin"), opt("hearse", "Hearse and transport", "hearse|transport|van"),
+    opt("tent", "Tents, chairs and PA", "tent|chair|pa system|sound"), opt("flowers", "Wreaths and flowers", "wreath|flower"), opt("package", "Full funeral packages", "package|full service|arrangement")])
+});
+
 // "What is it" filters are read from the product's name and its own type rows (a spec row named like the filter, or "Type"),
 // not from its section or description: a juice on a "Soda and drinks" shelf is not a soda, and a mattress is not a bed.
 const BY_NAME = ["accessoryType", "computerAccessory", "storageDevice", "printerType", "applianceType", "lightType", "garment", "bagType", "jewelleryType", "watchType", "eyewearType",
@@ -366,7 +547,10 @@ const BY_NAME = ["accessoryType", "computerAccessory", "storageDevice", "printer
   "woodType", "electricalType", "autoPart", "carService", "printService", "stationeryType", "penType", "laundryService", "shootType", "eventService", "healthService", "farmType",
   "headphoneType", "speakerType", "agentService", "tuitionLevel", "subject", "drinkPack",
   // sizes and shapes too: "Large double sided whiteboard" in a description is not the board size
-  "boardSize", "boardMount", "rugSize", "rugType", "bedSize", "timberSize", "tableShape", "shape", "portion", "sleeve", "mattressType", "lightBase", "cut", "soldBy"];
+  "boardSize", "boardMount", "rugSize", "rugType", "bedSize", "timberSize", "tableShape", "shape", "portion", "sleeve", "mattressType", "lightBase", "cut", "soldBy",
+  // the newer "what is it" filters, and a car's make and model (a description saying "please note" is not a Nissan Note)
+  "vehicle", "carModel", "bikeMake", "bikePart", "fishType", "birdType", "gasBrand", "grainType", "securityItem", "solarItem", "babyItem", "bookType", "petProduct", "weldItem", "hireItem",
+  "roomType", "propertyType", "transportVehicle", "transportService", "profSpecialty", "tradeService", "funeralService", "frameShape", "diaperSize"];
 for (const id of BY_NAME) FACETS[id].on = "name";
 
 // ---- kinds of product ------------------------------------------------------------------------------------------------
@@ -378,127 +562,166 @@ for (const id of BY_NAME) FACETS[id].on = "name";
 // Order matters within goods and within services: the first kind whose words match wins, so a phone case comes before phones.
 // Goods that are also sold used or refurbished get the Condition filter (phones, laptops, furniture, mitumba clothes ...);
 // food, medicine and building materials do not.
-const SECOND_HAND = new Set(["headphones", "speakers", "tvs", "monitors", "storage-devices", "printers", "computer-accessories", "tablets", "phones", "laptops", "appliances", "batteries", "eyewear", "shoes", "bags", "jewellery", "clothing", "beds", "tables", "carpets", "furniture", "auto-parts", "phone-accessories", "fashion-accessories"]);
+const SECOND_HAND = new Set(["headphones", "speakers", "tvs", "monitors", "storage-devices", "printers", "computer-accessories", "tablets", "phones", "laptops", "appliances", "batteries", "eyewear", "shoes", "bags", "jewellery", "clothing", "beds", "tables", "carpets", "furniture", "auto-parts", "phone-accessories", "fashion-accessories", "motorbikes", "books", "baby", "cctv", "solar"]);
 const kind = (id, label, department, noun, alts, facets, { types = [], cats = [], service = false } = {}) => ({ id, label, department, noun, re: words(alts), facets, types, cats, service, condition: SECOND_HAND.has(id) });
+
+// Filters a kind may place in its own list that are not FACETS entries: they are read from every product (brand, price) or
+// from its colours, and the kind's list only says where they go (and, for colour, that the kind has colours at all).
+export const PLACED_FACETS = ["brand", "price", "colour"];
 
 export const KINDS = [
   // ---- Electronics and phones (sound first: "speaker with power bank" is a speaker; accessories before the devices they fit)
-  kind("headphones", "Headphones and earbuds", "Electronics", "earbuds", "earbud|earphone|headphone|headset|airpod|buds|neckband", ["headphoneType", "connectivity", "noiseCancel", "battery", "water"], { types: ["earphones-headphones"], cats: ["phones-accessories", "electronics-appliances", "electronics-computers"] }),
+  kind("headphones", "Headphones and earbuds", "Electronics", "earbuds", "earbud|earphone|headphone|headset|airpod|buds|neckband", ["headphoneType", "brand", "price", "connectivity", "noiseCancel", "battery", "colour", "water"], { types: ["earphones-headphones"], cats: ["phones-accessories", "electronics-appliances", "electronics-computers"] }),
   kind("speakers", "Speakers and sound", "Electronics", "speakers", "speaker|sound ?bar|home theat(?:re|er)|subwoofer|partybox|boombox|woofer|amplifier|sound system|hi-?fi|radio",
-    ["connectivity", "power", "battery", "water", "audioOutput", "speakerType", "powerSource"], { types: ["speaker-soundbar"], cats: ["electronics-appliances", "electronics-computers"] }),
+    ["speakerType", "brand", "price", "power", "connectivity", "battery", "water", "colour", "audioOutput", "powerSource"], { types: ["speaker-soundbar"], cats: ["electronics-appliances", "electronics-computers"] }),
   kind("phone-accessories", "Phone accessories", "Phones", "phone accessories", "phone case|phone cover|screen protector|tempered glass|glass protector|phone charger|fast charger|charger|charging cable|usb cable|type-?c cable|lightning cable|data cable|aux cable|power ?bank|phone holder|car holder|selfie stick|ring light|pop ?socket|otg",
-    ["accessoryType", "fitsPhone", "connector", "chargerPower", "capacityMah", "cableLength"], { types: ["phone-case", "screen-protector", "phone-charger", "power-bank", "cable"], cats: ["phones-accessories"] }),
-  kind("tvs", "TVs", "Electronics", "TVs", "tv(?! ?(?:stand|unit|mount|bracket|cabinet|table))|television|smart tv|led tv|android tv|decoder", ["screen", "resolution", "smartPlatform", "connectivity"], { types: ["tv"], cats: ["electronics-appliances", "electronics-computers"] }),
-  kind("monitors", "Monitors", "Computers", "monitors", "(?<!pressure |baby |heart rate |sugar )monitor|computer screen|display screen", ["monitorSize", "resolution", "refreshRate", "panel", "monitorPorts"], { cats: ["electronics-computers"] }),
+    ["accessoryType", "fitsPhone", "brand", "price", "connector", "chargerPower", "capacityMah", "cableLength", "colour"], { types: ["phone-case", "screen-protector", "phone-charger", "power-bank", "cable"], cats: ["phones-accessories"] }),
+  kind("cctv", "Security and CCTV", "Electronics", "CCTV and security", "cctv|security camera|surveillance camera|ip camera|dome camera|bullet camera|dvr|nvr|hikvision|dahua|ezviz|alarm system|burglar alarm|electric fence|fence energi[sz]er|intercom|video doorbell|access control|biometric (?:lock|reader|attendance)|smart lock|motion sensor|smoke detector|gate motor|razor wire",
+    ["securityItem", "cameraChannels", "cameraMp", "brand", "price", "installation", "connectivity"], { cats: ["electronics-appliances", "electronics-computers", "plumbing-electrical", "security-cctv"] }),
+  kind("tvs", "TVs", "Electronics", "TVs", "tv(?! ?(?:stand|unit|mount|bracket|cabinet|table))|television|smart tv|led tv|android tv|decoder", ["screen", "brand", "price", "resolution", "smartPlatform", "connectivity", "warranty"], { types: ["tv"], cats: ["electronics-appliances", "electronics-computers"] }),
+  kind("monitors", "Monitors", "Computers", "monitors", "(?<!pressure |baby |heart rate |sugar )monitor|computer screen|display screen", ["monitorSize", "brand", "price", "resolution", "refreshRate", "panel", "monitorPorts"], { cats: ["electronics-computers"] }),
   kind("storage-devices", "USB flash disks and memory cards", "Computers", "flash disks", "flash ?disk|flash drive|pen ?drive|usb drive|usb stick|memory card|micro ?sd|sd card|external hard ?disk|external hdd|portable ssd|external ssd|hard ?disk",
-    ["storageDevice", "storage", "usbVersion"], { types: ["memory-card"], cats: ["electronics-computers", "phones-accessories", "cyber-cafe"] }),
+    ["storageDevice", "storage", "brand", "price", "usbVersion"], { types: ["memory-card"], cats: ["electronics-computers", "phones-accessories", "cyber-cafe"] }),
   kind("printers", "Printers and ink", "Computers", "printers", "printer|ink tank|ecotank|toner|ink cartridge|cartridge|ink bottle|printer ink|refill ink",
-    ["printerType", "printerFunctions", "inkType", "connectivity"], { types: ["printer", "ink-toner"], cats: ["electronics-computers", "printing-stationery", "cyber-cafe"] }),
+    ["printerType", "brand", "price", "printerFunctions", "inkType", "connectivity"], { types: ["printer", "ink-toner"], cats: ["electronics-computers", "printing-stationery", "cyber-cafe"] }),
   kind("computer-accessories", "Computer accessories", "Computers", "computer accessories", "keyboard|mouse|mice|router|mifi|wi-?fi extender|range extender|access point|modem|webcam|laptop charger|laptop adapter|laptop bag|usb hub|hdmi cable|vga cable|ups|surge protector|cooling pad",
-    ["computerAccessory", "wireless", "connector"], { types: ["mouse-keyboard", "router-extender", "laptop-charger"], cats: ["electronics-computers", "cyber-cafe"] }),
-  kind("tablets", "Tablets", "Computers", "tablets", "tablet pc|android tablet|kids tablet|educational tablet|ipad|galaxy tab|lenovo tab|tecno tab|tablet (?=\\d|with|wi-?fi|4g|10)", ["storage", "ram", "tabletScreen", "network", "os"], { types: ["tablet"], cats: ["phones-accessories", "electronics-computers"] }),
+    ["computerAccessory", "brand", "price", "wireless", "connector", "colour"], { types: ["mouse-keyboard", "router-extender", "laptop-charger"], cats: ["electronics-computers", "cyber-cafe"] }),
+  kind("tablets", "Tablets", "Computers", "tablets", "tablet pc|android tablet|kids tablet|educational tablet|ipad|galaxy tab|lenovo tab|tecno tab|tablet (?=\\d|with|wi-?fi|4g|10)", ["brand", "storage", "price", "ram", "tabletScreen", "network", "os", "colour"], { types: ["tablet"], cats: ["phones-accessories", "electronics-computers"] }),
   kind("phones", "Phones", "Phones", "phones", "phone|iphone|galaxy|smartphone|tecno|infinix|itel|redmi|xiaomi|oppo|realme|nokia|feature phone|kabambe|vivo|pixel",
-    ["storage", "ram", "network", "dualSim", "os", "phoneScreen"], { types: ["phone"], cats: ["phones-accessories"] }),
+    ["brand", "storage", "price", "ram", "network", "dualSim", "os", "phoneScreen", "colour"], { types: ["phone"], cats: ["phones-accessories"] }),
   kind("laptops", "Laptops and desktops", "Computers", "laptops", "laptop|notebook|macbook|ideapad|latitude|elitebook|thinkpad|probook|vivobook|inspiron|chromebook|desktop|all-in-one|computer(?! (?:table|desk|chair|bag|service|repair|class|lessons?|packages?))|desktop pc|gaming pc|mini pc|pc tower|cpu",
-    ["processor", "ram", "storage", "diskType", "laptopScreen", "os"], { types: ["laptop"], cats: ["electronics-computers", "cyber-cafe"] }),
+    ["brand", "processor", "ram", "storage", "price", "diskType", "laptopScreen", "os"], { types: ["laptop"], cats: ["electronics-computers", "cyber-cafe"] }),
   kind("appliances", "Home appliances", "Appliances", "appliances", "microwave|fridge|refrigerator|freezer|(?<!pressure )cooker|oven|hot ?plate|electric kettle|kettle|blender|mixer|juicer|food processor|iron box|steam iron|washing machine|fan|heater|water dispenser|air ?fryer|deep fryer|toaster|sandwich maker|rice cooker|vacuum cleaner",
-    ["applianceType", "applianceCapacity", "appliancePower", "applianceFeature", "burners"], { types: ["appliance"], cats: ["electronics-appliances", "home-kitchen"] }),
+    ["applianceType", "brand", "price", "applianceCapacity", "appliancePower", "applianceFeature", "burners", "colour", "warranty"], { types: ["appliance"], cats: ["electronics-appliances", "home-kitchen"] }),
   kind("lighting", "Bulbs and lighting", "Lighting", "bulbs and lights", "bulb|lamp|light|lights|tube light|floodlight|flood light|security light|led strip|strip light|torch|lantern|chandelier|downlight|bulb holder",
     ["lightType", "lightBase", "lightColour", "lampPower", "powerSource"], { types: ["led-bulb", "light-fitting", "led-strip"], cats: ["electronics-appliances", "plumbing-electrical", "hardware-building"] }),
-  kind("batteries", "Batteries and solar", "Batteries", "batteries", "battery|batteries|solar panel|solar kit|inverter|charge controller|cr2032", ["batteryUse", "batterySize", "chemistry", "capacityMah"], { types: ["small-battery", "large-battery"], cats: ["electronics-appliances", "auto-spare-parts"] }),
+  kind("solar", "Solar power", "Solar and energy", "solar", "solar panel|solar kit|solar system|solar home system|home solar|solar power|inverter|charge controller|mppt|solar water heater|solar geyser|solar pump|solar battery|solar batteries|lithium battery pack|lifepo4|monocrystalline|polycrystalline",
+    ["solarItem", "systemSize", "brand", "price", "chemistry", "installation", "warranty"], { cats: ["electronics-appliances", "plumbing-electrical", "hardware-building", "solar-energy"] }),
+  kind("batteries", "Batteries and solar", "Batteries", "batteries", "battery|batteries|cr2032", ["batteryUse", "batterySize", "chemistry", "capacityMah"], { types: ["small-battery", "large-battery"], cats: ["electronics-appliances", "auto-spare-parts"] }),
   // ---- Fashion
-  kind("eyewear", "Glasses and sunglasses", "Eyewear", "sunglasses", "sunglass|shades|spectacle|eyeglass|reading glass|glasses frame|spectacle frame|optical frame|contact lens|blue light glass", ["eyewearType", "lensFeature", "gender"], { types: ["sunglasses", "frames"], cats: ["optician", "fashion-boutiques"] }),
-  kind("shoes", "Shoes", "Shoes", "shoes", "shoe|sneaker|sandal|heels|boot|loafer|slipper|trainer|crocs|open shoe|official shoe|school shoe|flip ?flop", ["shoeSize", "shoeType", "gender", "material"], { types: ["shoes"], cats: ["shoes-cobbler", "fashion-boutiques"] }),
-  kind("bags", "Bags and wallets", "Bags", "bags", "handbag|backpack|wallet|purse|tote|suitcase|clutch|duffel|travel bag|laptop bag|school bag|shoulder bag|sling bag|tote bag|gym bag|ladies bag|men'?s bag|sports bag", ["bagType", "material", "gender"], { types: ["handbag", "backpack-travel-bag", "wallet-purse"], cats: ["fashion-boutiques"] }),
-  kind("jewellery", "Jewellery and watches", "Jewellery", "jewellery", "necklace|chain|bracelet|earring|ring|bangle|pendant|anklet|watch|smart ?watch|jewellery|jewelry", ["jewelleryType", "metal", "purity", "watchType", "gender"], { types: ["necklace-chain-bracelet", "earrings", "ring", "watch"], cats: ["fashion-boutiques"] }),
-  kind("fashion-accessories", "Belts, hats and scarves", "Clothing", "accessories", "belt|hat|cap|beanie|scarf|shawl|bandana|head ?wrap|tie|bow tie|gloves|marvin", ["fashionAccessory", "gender", "material"], { types: ["belt", "scarf-hat-cap"], cats: ["fashion-boutiques", "tailor-boutique"] }),
-  kind("fabric", "Fabric by the metre", "Clothing", "fabric", "fabric|kitenge fabric|ankara fabric|cloth by the metre|per metre|lace fabric|chiffon|material for", ["fabric", "occasion"], { types: ["fabric-by-metre"], cats: ["tailor-boutique", "fashion-boutiques"] }),
+  kind("eyewear", "Glasses and sunglasses", "Eyewear", "sunglasses", "sunglass|shades|spectacle|eyeglass|reading glass|glasses frame|spectacle frame|optical frame|contact lens|blue light glass", ["eyewearType", "gender", "frameShape", "price", "brand", "lensType", "lensFeature", "material", "colour"], { types: ["sunglasses", "frames"], cats: ["optician", "fashion-boutiques"] }),
+  kind("shoes", "Shoes", "Shoes", "shoes", "shoe|sneaker|sandal|heels|boot|loafer|slipper|trainer|crocs|open shoe|official shoe|school shoe|flip ?flop", ["shoeSize", "shoeType", "gender", "colour", "price", "brand", "material", "ageGroup"], { types: ["shoes"], cats: ["shoes-cobbler", "fashion-boutiques"] }),
+  kind("bags", "Bags and wallets", "Bags", "bags", "handbag|backpack|wallet|purse|tote|suitcase|clutch|duffel|travel bag|laptop bag|school bag|shoulder bag|sling bag|tote bag|gym bag|ladies bag|men'?s bag|sports bag", ["bagType", "colour", "price", "brand", "material", "gender"], { types: ["handbag", "backpack-travel-bag", "wallet-purse"], cats: ["fashion-boutiques"] }),
+  kind("jewellery", "Jewellery and watches", "Jewellery", "jewellery", "necklace|chain|bracelet|earring|ring|bangle|pendant|anklet|watch|smart ?watch|jewellery|jewelry", ["jewelleryType", "metal", "price", "purity", "watchType", "gender", "brand"], { types: ["necklace-chain-bracelet", "earrings", "ring", "watch"], cats: ["fashion-boutiques"] }),
+  kind("fashion-accessories", "Belts, hats and scarves", "Clothing", "accessories", "belt|hat|cap|beanie|scarf|shawl|bandana|head ?wrap|tie|bow tie|gloves|marvin", ["fashionAccessory", "colour", "gender", "price", "material"], { types: ["belt", "scarf-hat-cap"], cats: ["fashion-boutiques", "tailor-boutique"] }),
+  kind("fabric", "Fabric by the metre", "Clothing", "fabric", "fabric|kitenge fabric|ankara fabric|cloth by the metre|per metre|lace fabric|chiffon|material for", ["fabric", "colour", "price", "occasion"], { types: ["fabric-by-metre"], cats: ["tailor-boutique", "fashion-boutiques"] }),
   kind("clothing", "Clothing", "Clothing", "clothes", "dress|gown|shirt|blouse|jeans|trouser|skirt|jacket|sweater|t-shirt|tshirt|tee|suit|kitenge|ankara|hoodie|top|shorts|uniform|kanzu|leggings|abaya|kaftan|pyjama|nightdress|vest|socks|boxer|underwear|bra|mitumba|polo|blazer|coat|cardigan",
-    ["garment", "clothingSize", "gender", "sleeve", "fit", "fabric", "occasion"], { types: ["clothing", "dress-shirt", "kids-clothing"], cats: ["fashion-boutiques", "tailor-boutique", "tailors"] }),
+    ["clothingSize", "garment", "colour", "price", "gender", "ageGroup", "brand", "sleeve", "fit", "fabric", "occasion"], { types: ["clothing", "dress-shirt", "kids-clothing"], cats: ["fashion-boutiques", "tailor-boutique", "tailors"] }),
   // ---- Beauty and personal care (goods)
-  kind("fragrance", "Perfume and fragrance", "Fragrance", "perfumes", "perfume|fragrance|cologne|eau de parfum|eau de toilette|body spray|oud|edp|edt|deodorant|body mist|roll-?on", ["concentration", "scentFor", "volumeMl", "authenticity"], { types: ["fragrance"], cats: ["salon-beauty", "chemist", "fashion-boutiques"] }),
+  kind("baby", "Baby products", "Baby", "baby products", "diaper|nappy|nappies|pampers|huggies|molfix|baby wipes|wet wipes|feeding bottle|baby bottle|infant formula|formula milk|lactogen|nan (?:1|2|3|optipro|pro)|cerelac|stroller|pram|baby carrier|baby walker|baby bath|teether|sippy cup|pacifier|baby shawl|receiving blanket|carry ?cot|diaper bag|romper|onesie|baby (?:clothes|set|lotion|oil|powder|jelly|soap|shampoo)",
+    ["babyItem", "babyAge", "diaperSize", "brand", "price", "gender", "colour"], { cats: ["supermarket-minimart", "chemist", "baby-shop"] }),
+  kind("fragrance", "Perfume and fragrance", "Fragrance", "perfumes", "perfume|fragrance|cologne|eau de parfum|eau de toilette|body spray|oud|edp|edt|deodorant|body mist|roll-?on", ["concentration", "scentFor", "brand", "price", "volumeMl", "authenticity"], { types: ["fragrance"], cats: ["salon-beauty", "chemist", "fashion-boutiques"] }),
   kind("beauty", "Beauty and hair products", "Beauty", "beauty products", "lotion|(?<!ice )cream|shampoo|conditioner|wig|weave|braids hair|braiding hair|hair extension|hair oil|hair food|makeup|lipstick|foundation|serum|soap|nail polish|lashes|relaxer kit|petroleum jelly|vaseline|sunscreen|face wash|body wash|shower gel|beard oil|hair gel",
-    ["beautyType", "skinType", "gender", "volumeMl"], { types: ["makeup-skincare", "hair-wigs"], cats: ["salon-beauty", "chemist", "supermarket-minimart"] }),
+    ["beautyType", "brand", "price", "hairType", "skinType", "gender", "volumeMl"], { types: ["makeup-skincare", "hair-wigs"], cats: ["salon-beauty", "chemist", "supermarket-minimart"] }),
   // ---- Home and furniture
-  kind("beds", "Beds and mattresses", "Furniture", "beds", "bed(?! ?sheets?| ?covers?| ?spreads?| bugs?| ?linen)|bedframe|bed frame|mattress|bunk|double-?decker|decker|cot|crib|headboard", ["bedType", "bedSize", "mattressThickness", "mattressType", "material"], { types: ["bed", "mattress"], cats: ["furniture-carpentry", "home-kitchen"] }),
-  kind("tables", "Tables and desks", "Furniture", "tables", "table(?! salt| tennis| cloth| mat| lamp| fan| water| wine| spoon)|desk|workstation|study table|computer table|dressing table", ["tableType", "tableShape", "seats", "material"], { types: ["table"], cats: ["furniture-carpentry", "home-kitchen"] }),
+  kind("beds", "Beds and mattresses", "Furniture", "beds", "bed(?! ?sheets?| ?covers?| ?spreads?| bugs?| ?linen)|bedframe|bed frame|mattress|bunk|double-?decker|decker|cot|crib|headboard", ["bedType", "bedSize", "price", "mattressThickness", "mattressType", "material", "madeTo", "colour"], { types: ["bed", "mattress"], cats: ["furniture-carpentry", "home-kitchen"] }),
+  kind("tables", "Tables and desks", "Furniture", "tables", "table(?! salt| tennis| cloth| mat| lamp| fan| water| wine| spoon)|desk|workstation|study table|computer table|dressing table", ["tableType", "seats", "price", "tableShape", "material", "colour", "madeTo"], { types: ["table"], cats: ["furniture-carpentry", "home-kitchen"] }),
   kind("home-textiles", "Bedding, curtains and towels", "Home", "bedding", "bedsheet|bed sheet|sheet set|duvet|comforter|blanket|quilt|bedcover|pillow|cushion|curtain|sheer|blind|towel|bath mat|bathroom mat|mosquito net",
-    ["textileType", "bedSize", "fabric", "room"], { cats: ["home-kitchen"] }),
-  kind("carpets", "Carpets and rugs", "Home", "carpets", "carpet|rug|doormat|door mat|floor mat|runner rug|hallway runner|shaggy", ["rugType", "rugSize", "shape", "material", "room"], { cats: ["home-kitchen", "furniture-carpentry"] }),
+    ["textileType", "bedSize", "colour", "price", "fabric", "room"], { cats: ["home-kitchen"] }),
+  kind("carpets", "Carpets and rugs", "Home", "carpets", "carpet|rug|doormat|door mat|floor mat|runner rug|hallway runner|shaggy", ["rugType", "rugSize", "colour", "price", "shape", "material", "room"], { cats: ["home-kitchen", "furniture-carpentry"] }),
   kind("furniture", "Sofas, chairs and cabinets", "Furniture", "furniture", "sofa|couch|seater|l-?shape|recliner|chair|stool|bench|wardrobe|cabinet|cupboard|shelf|shelves|bookshelf|drawer|dresser|tv stand|tv unit|wall unit|ottoman|pouf|chesterfield",
-    ["furnitureType", "seats", "material", "room"], { types: ["sofa", "chair", "wardrobe-cabinet"], cats: ["furniture-carpentry", "home-kitchen"] }),
+    ["furnitureType", "seats", "material", "price", "colour", "room", "madeTo"], { types: ["sofa", "chair", "wardrobe-cabinet"], cats: ["furniture-carpentry", "home-kitchen"] }),
   kind("kitchenware", "Kitchen and dining", "Home", "kitchenware", "sufuria|pan|pot|casserole|wok|pressure cooker|plates|dinner plate|side plate|plate set|cup|mug|dinner set|bowl|glass|tumbler|tea set|cutlery|spoon|fork|knife|knives|ladle|utensil|chopping board|grater|container|jar|basin|bucket|jug|lunch box|flask|thermos|water bottle|jiko|charcoal stove|tray|kitchen",
-    ["kitchenType", "kitchenMaterial", "pieces", "capacityL"], { cats: ["home-kitchen"] }),
+    ["kitchenType", "kitchenMaterial", "price", "brand", "pieces", "capacityL", "colour"], { cats: ["home-kitchen"] }),
   // ---- Building, plumbing and electrical
   kind("timber", "Timber and boards", "Hardware and building", "timber", "timber|plank|lumber|cypress|pine|mahogany|mvule|mninga|blue ?gum|eucalyptus|plywood|ply wood|blockboard|mdf|chipboard|hardboard|rafter|fito|wood|pole|post|beam",
-    ["woodType", "timberSize", "timberLength", "treatment"], { types: ["timber"], cats: ["hardware-building", "furniture-carpentry", "hardware"] }),
+    ["woodType", "timberSize", "timberLength", "price", "treatment"], { types: ["timber"], cats: ["hardware-building", "furniture-carpentry", "hardware"] }),
   kind("electrical-plumbing", "Plumbing and electrical", "Plumbing and electrical", "plumbing and electrical", "cable|wire|electrical wire|twin and earth|socket|switch|plug|breaker|mcb|rcd|consumer unit|db box|extension|multi ?plug|adapter|pipe|ppr|pvc pipe|hdpe|elbow|valve|tap|mixer|shower|sink|water tank|tank|conduit|trunking|meter box",
-    ["electricalType", "cableSize", "pipeSize", "tankCapacity"], { types: ["pipe", "electrical-wire", "socket-switch", "circuit-breaker", "water-tank", "extension-multi-plug", "power-adapter", "travel-adapter", "adapter-converter"], cats: ["plumbing-electrical", "hardware-building", "hardware"] }),
+    ["electricalType", "brand", "price", "cableSize", "pipeSize", "tankCapacity"], { types: ["pipe", "electrical-wire", "socket-switch", "circuit-breaker", "water-tank", "extension-multi-plug", "power-adapter", "travel-adapter", "adapter-converter"], cats: ["plumbing-electrical", "hardware-building", "hardware"] }),
+  kind("welding", "Welding and metal work", "Hardware and building", "metal work", "welding|welder|fabrication|(?:metal|steel|sliding|swing|main|pedestrian|wrought iron|compound) gates?|gate fabrication|(?:window|door|security|burglar) grills?|burglar proof(?:ing)?|steel doors?|metal doors?|door frames?|window frames?|tank stands?|tank towers?|carports?|metal shed|steel structures?|balustrades?|hand ?rails?|railings?|trusses",
+    ["weldItem", "material", "madeTo", "price", "installation"], { cats: ["hardware-building", "hardware", "welding"] }),
   kind("building", "Building materials and tools", "Hardware and building", "building materials", "cement|sand|ballast|hardcore|mabati|iron sheet|roofing sheet|box profile|ridge|gutter|steel bar|rebar|y8|y10|y12|y16|brc|wire mesh|binding wire|nail|screw|bolt|paint|emulsion|gloss|undercoat|primer|varnish|tile|grout|adhesive|hammer|saw|tape measure|spade|jembe|panga|wheelbarrow|trowel|spirit level|drill|grinder|spanner|pliers|padlock|lock|hinge|door|window|glass pane|rope|chain|tool",
-    ["buildMaterial", "sheetGauge", "paintType", "paintSize", "weight"], { types: ["iron-sheet", "paint", "cement-sand-bags", "tiles", "rope-wire-by-metre", "door-window"], cats: ["hardware-building", "hardware"] }),
+    ["buildMaterial", "brand", "price", "paintType", "paintSize", "sheetGauge", "colour", "weight"], { types: ["iron-sheet", "paint", "cement-sand-bags", "tiles", "rope-wire-by-metre", "door-window"], cats: ["hardware-building", "hardware"] }),
   // ---- Auto parts and stationery (goods)
+  kind("motorbikes", "Motorbikes and parts", "Auto parts", "motorbike parts", "motorbike|motorcycle|motor ?bike|piki ?piki|boda(?: ?boda)? (?:bike|for sale|parts?|spares?|tyres?)|bajaj|boxer bm|boxer 1[05]0|tvs (?:hlx|star|apache|neo)|haojue|skygo|honda ace|yamaha|kymco|scooter|e-?bike|\\d{2,3} ?cc|helmet|riding gear",
+    ["bikeMake", "bikePart", "engineCc", "price", "year", "brand"], { cats: ["auto-spare-parts", "garage-mechanic", "mechanics", "motorbikes"] }),
   kind("auto-parts", "Car parts and care", "Auto parts", "car parts", "tyre|tire|rim|tube|car battery|brake pad|brake shoe|brake|oil filter|air filter|filter|engine oil|motor oil|gear oil|atf|coolant|spark plug|wiper|shock absorber|bumper|headlight|tail light|side mirror|clutch|radiator|fan belt|timing belt|bush|car mat|seat cover|car polish|car shampoo",
-    ["autoPart", "vehicle", "tyreSize", "oilGrade", "partCondition"], { types: ["tyre", "car-battery", "engine-oil", "wiper-blade", "spare-part"], cats: ["auto-spare-parts", "garage-mechanic", "mechanics"] }),
+    ["vehicle", "carModel", "year", "autoPart", "price", "brand", "partCondition", "tyreSize", "oilGrade", "warranty"], { types: ["tyre", "car-battery", "engine-oil", "wiper-blade", "spare-part"], cats: ["auto-spare-parts", "garage-mechanic", "mechanics"] }),
   kind("stationery", "Stationery and office supplies", "Printing and stationery", "stationery", "pen|biro|ballpoint|pencil|crayon|marker|highlighter|exercise book|notebook|counter book|diary|ream|a4 paper|printing paper|photocopy paper|manila|whiteboard|white board|blackboard|chalkboard|notice board|cork board|flip chart|file|folder|envelope|box file|stapler|staples|glue|cello ?tape|tape|scissors|punch|sharpener|eraser|rubber|ruler|maths set|geometry set|calculator|pencil case|chalk|duster|stamp pad|sticky notes",
-    ["stationeryType", "penType", "packCount", "paperSize", "boardSize", "boardMount"], { types: ["pens-pencils-markers", "notebooks-exercise-books", "paper-reams", "envelopes-files-folders", "staplers-glue-tape-scissors", "calculator"], cats: ["printing-stationery", "cyber-cafe", "supermarket-minimart"] }),
+    ["stationeryType", "brand", "price", "penType", "packCount", "paperSize", "paperWeight", "colour", "boardSize", "boardMount"], { types: ["pens-pencils-markers", "notebooks-exercise-books", "paper-reams", "envelopes-files-folders", "staplers-glue-tape-scissors", "calculator"], cats: ["printing-stationery", "cyber-cafe", "supermarket-minimart"] }),
   // ---- Food and drink
+  kind("books", "Books and textbooks", "Books", "books", "(?<!exercise |counter |receipt |cheque |note |log |guest |phone |address |story )book(?! ?shelf| ?case| ?stand| ?mark| ?end)|textbook|storybook|story book|novel|revision|past papers?|dictionary|atlas|bible|quran|encyclopedia|workbook|course book|set book",
+    ["bookType", "bookLevel", "subject", "price", "curriculum", "publisher"], { cats: ["printing-stationery", "bookshop", "supermarket-minimart"] }),
   kind("liquor", "Beer, wine and spirits", "Food and drink", "drinks", "beer|lager|stout|tusker|guinness|white cap|balozi|cider|wine|whisky|whiskey|vodka|gin|brandy|cognac|rum|liqueur|amarula|baileys|spirit|savanna|hunters|smirnoff|jameson|johnnie walker|kenya cane|chrome",
-    ["liquorType", "bottleSize", "drinkPack"], { types: ["liquor"], cats: ["supermarket-minimart"] }),
+    ["liquorType", "brand", "bottleSize", "price", "abv", "drinkPack"], { types: ["liquor"], cats: ["supermarket-minimart"] }),
   kind("bakery", "Bread, cakes and pastries", "Food and drink", "bread and cakes", "bread|loaf|cake|cupcake|muffin|pastry|pastries|doughnut|donut|croissant|mandazi|maandazi|scone|cookie|bun|baguette|queen cake|black forest|red velvet",
-    ["bakeType", "breadType", "flavour", "cakeOccasion", "weight", "dietary"], { types: ["bread", "cake", "cupcakes-pastries"], cats: ["bakery"] }),
+    ["bakeType", "flavour", "weight", "price", "cakeOccasion", "dietary", "breadType", "turnaround"], { types: ["bread", "cake", "cupcakes-pastries"], cats: ["bakery"] }),
   kind("sweets", "Chocolates and sweets", "Food and drink", "chocolates", "chocolate|cadbury|dairy milk|kitkat|snickers|ferrero|toblerone|truffle|pralines|sweet(?! potato| corn| pepper| melon| red| white| wine)|ice cream|candy|lollipop|toffee|chewing gum|gum|jelly bean|marshmallow",
-    ["sweetType", "gift", "packWeight", "dietary"], { cats: ["supermarket-minimart", "groceries", "bakery"] }),
+    ["sweetType", "brand", "price", "gift", "packWeight", "dietary"], { cats: ["supermarket-minimart", "groceries", "bakery"] }),
   kind("drinks", "Soda, juice and drinks", "Food and drink", "drinks", "soda|soft drink|coke|coca-?cola|fanta|sprite|pepsi|mirinda|krest|stoney|novida|7up|schweppes|juice|smoothie|energy drink|red bull|monster|predator|power play|bottled water|mineral water|dasani|keringet|milkshake|yoghurt|yogurt|mala|lala|fresh milk|milk|soya drink|minute maid|afia|quencher|squash|cordial",
-    ["drinkType", "drinkSize", "drinkPack", "dietary"], { types: ["juice"], cats: ["juice-shop", "supermarket-minimart", "groceries", "restaurant-cafe"] }),
-  kind("meals", "Meals and restaurant menu", "Food and drink", "meals", "pilau|biryani|plate of|full plate|half plate|meal deal|set meal|kids meal|menu|ugali|chapati and|chips|fries|burger|pizza|shawarma|samosa|smokie|sausage|bhajia|fried rice|noodle|stew|nyama choma|fish fry|wa kupaka|mukimo|githeri|matoke|pilau beef|chicken curry|beef curry|beans and|rice and|breakfast|lunch|dinner|combo|platter|chai|tea and|coffee and|mandazi and|full plate|half plate|kienyeji",
-    ["cuisine", "protein", "portion", "mealTime", "dietary"], { types: ["restaurant-meal"], cats: ["restaurant-cafe", "eateries"] }),
-  kind("meat", "Meat and fish", "Food and drink", "meat", "beef|goat|mbuzi|mutton|lamb|chicken|kienyeji|broiler|pork|bacon|fish|tilapia|omena|nile perch|mince|steak|ribs|sausages|smokies|liver|matumbo|offal",
-    ["meatType", "cut", "weight", "soldBy"], { types: ["meat-by-weight"], cats: ["butchery"] }),
+    ["drinkType", "drinkSize", "brand", "price", "fruit", "drinkPack", "dietary"], { types: ["juice"], cats: ["juice-shop", "supermarket-minimart", "groceries", "restaurant-cafe"] }),
+  kind("meals", "Meals and restaurant menu", "Food and drink", "meals", "pilau|biryani|plate of|full plate|half plate|meal deal|set meal|kids meal|menu|ugali|chapati and|chips|fries|burger|pizza|hot ?dog|shawarma|samosa|smokie|sausage|bhajia|fried rice|noodle|stew|nyama choma|fish fry|wa kupaka|mukimo|githeri|matoke|pilau beef|chicken curry|beef curry|beans and|rice and|breakfast|lunch|dinner|combo|platter|chai|tea and|coffee and|mandazi and|full plate|half plate|kienyeji",
+    ["cuisine", "protein", "price", "portion", "mealTime", "dietary"], { types: ["restaurant-meal"], cats: ["restaurant-cafe", "eateries"] }),
+  kind("fish", "Fish and seafood", "Food and drink", "fish", "fish(?! ?food| ?feed| ?tank| ?bowl| ?net| ?hook| ?pond| ?oil)|tilapia|omena|dagaa|nile perch|mbuta|samaki|cat ?fish|kamongo|sardines?|mackerel|prawns?|shrimps?|seafood|octopus|squid|lobster|salmon|hake|fish fillet",
+    ["fishType", "fishPrep", "fishCut", "weight", "price", "soldBy"], { cats: ["butchery", "greengrocer", "supermarket-minimart", "fishmonger"] }),
+  kind("poultry", "Poultry and eggs", "Farm", "poultry", "chicks?(?![a-z]| ?mash| ?feed| ?starter| ?mesh)|day-?old|layers?(?![a-z]| ?mash| ?pellets| ?feed| ?concentrate| ?cake)|point of lay|pullets?|cockerels?|hens?|roosters?|kuroiler|kenbro|rainbow rooster|sasso|live (?:chicken|bird|broiler|kienyeji)s?|egg trays?|trays? of eggs|fertil(?:e|ised) eggs|incubator|ducks?|ducklings?|turkeys?|quails?|guinea fowls?|kienyeji (?:hen|cock|chicks|eggs)",
+    ["birdType", "birdAge", "birdBreed", "price", "liveDressed", "eggPack", "weight", "vaccinated"], { cats: ["agrovet", "agrovets", "poultry"] }),
+  kind("meat", "Meat and fish", "Food and drink", "meat", "beef|goat|mbuzi|mutton|lamb|chicken|kienyeji|broiler|pork|bacon|mince|steak|ribs|sausages|smokies|liver|matumbo|offal",
+    ["cut", "weight", "meatType", "price", "meatState", "soldBy", "dietary"], { types: ["meat-by-weight"], cats: ["butchery"] }),
   kind("produce", "Fruit and vegetables", "Food and drink", "fruit and vegetables", "tomato|onion|sukuma|kale|cabbage|spinach|carrot|potato|pepper|managu|terere|banana|mango|orange|apple|avocado|pawpaw|pineapple|watermelon|passion fruit|lemon|dhania|garlic|ginger|egg|fruit|vegetable|mboga",
-    ["produceType", "soldBy", "weight", "dietary"], { types: ["produce"], cats: ["greengrocer", "groceries"] }),
-  kind("water", "Drinking water", "Water and energy", "water", "water refill|drinking water|purified water|jerrican|\\d+ ?(?:l|litres?) refill|refill water", ["waterSize", "fill"], { types: ["drinking-water"], cats: ["water-refill"] }),
-  kind("gas", "Cooking gas (LPG)", "Water and energy", "gas", "gas|lpg|cylinder|meko|regulator|gas burner|k-?gas|total gas|pro ?gas|afrigas|hashi", ["cylinderSize", "gasService"], { types: ["lpg-gas"], cats: ["lpg-gas"] }),
+    ["produceType", "soldBy", "weight", "price", "produceOrigin"], { types: ["produce"], cats: ["greengrocer", "groceries"] }),
+  kind("cereals", "Cereals and grains", "Food and drink", "cereals", "maize(?! ?meal| ?flour| ?seeds?)|dry maize|(?<!baked |coffee |jelly |cocoa |green |french )bean(?! ?seeds?)|green grams?|ndengu|dengu|njahi|sorghum|millet|wimbi|mtama|cowpeas|pigeon peas|groundnuts|njugu|posho mill|posho milling|githeri mix",
+    ["grainType", "milling", "weight", "price"], { cats: ["groceries", "supermarket-minimart", "greengrocer", "posho-mill"] }),
+  kind("water", "Drinking water", "Water and energy", "water", "water refill|drinking water|purified water|jerrican|\\d+ ?(?:l|litres?) refill|refill water", ["waterSize", "waterType", "fill", "price", "brand", "waterPlan"], { types: ["drinking-water"], cats: ["water-refill"] }),
+  kind("gas", "Cooking gas (LPG)", "Water and energy", "gas", "gas|lpg|cylinder|meko|regulator|gas burner|k-?gas|total gas|pro ?gas|afrigas|hashi", ["cylinderSize", "gasService", "gasBrand", "price"], { types: ["lpg-gas"], cats: ["lpg-gas"] }),
   kind("groceries", "Groceries and pantry", "Food and drink", "groceries", "flour|unga|maize meal|sugar|salt|rice|pasta|spaghetti|noodle|cooking oil|oil|cooking fat|kimbo|tea leaves|tea bags|ketepa|kericho gold|green tea|coffee|cocoa|spice|masala|royco|ketchup|sauce|cereal|cornflakes|oats|porridge|butter|margarine|blue band|cheese|biscuit|crisps|nuts|detergent|soap|bleach|tissue|toilet paper|omo|ariel|sunlight|jik|matches|beans|lentils|ndengu|honey|jam|peanut butter|baking powder|yeast",
-    ["groceryType", "packWeight", "packVolume", "dietary"], { types: ["packaged-food"], cats: ["supermarket-minimart", "groceries"] }),
+    ["groceryType", "brand", "packWeight", "price", "packVolume", "dietary"], { types: ["packaged-food"], cats: ["supermarket-minimart", "groceries"] }),
   kind("flowers", "Flowers and gifts", "Gifts", "flowers", "flower|rose|bouquet|lily|lilies|sunflower|carnation|orchid|potted plant|plant|succulent|wreath|hamper|gift basket|gift box",
-    ["flowerType", "arrangement", "giftOccasion", "stems"], { cats: ["photography-events", "supermarket-minimart"] }),
+    ["flowerType", "arrangement", "giftOccasion", "price", "stems", "colour"], { cats: ["photography-events", "supermarket-minimart"] }),
   // ---- Health and farm
   kind("medicine", "Medicine and health products", "Medicine and health", "pharmacy products", "tablet|tablets|capsule|syrup|paracetamol|ibuprofen|panadol|amoxicillin|cetirizine|ointment|vitamin|multivitamin|zinc|test kit|condom|sanitiser|sanitizer|mask|thermometer|pressure monitor|glucometer|glucose strips|first aid|pregnancy test|ors|oral rehydration|antiseptic|bandage|plaster|cough|inhaler|eye drops|\\d+ ?mg",
-    ["healthUse", "dosageForm", "prescription"], { types: ["medicine", "prescription-medicine"], cats: ["chemist", "chemists", "clinic"] }),
+    ["healthUse", "dosageForm", "price", "brand", "prescription", "ageGroup"], { types: ["medicine", "prescription-medicine"], cats: ["chemist", "chemists", "clinic"] }),
+  kind("pets", "Pet food and supplies", "Pets", "pet supplies", "dog food|cat food|puppy food|pet food|(?<!hot )dog|puppy|puppies|cat(?! ?eye| ?walk| ?fish)|kitten|pet|cat litter|bird seed|bird cage|fish food|aquarium|pedigree|whiskas|kennel|pet grooming|dog grooming",
+    ["petAnimal", "petProduct", "brand", "price", "weight"], { cats: ["agrovet", "agrovets", "pet-shop"] }),
   kind("farm", "Farm inputs", "Farm inputs", "farm inputs", "seed|seeds|fertili[sz]er|dap|can fertili[sz]er|can 26|npk|urea|feed|dairy meal|layers mash|chick mash|growers|mash|pellets|dewormer|acaricide|pesticide|herbicide|fungicide|insecticide|sprayer|knapsack|vaccine|vet|mineral lick|maclick|drip kit",
-    ["farmType", "farmUse", "weight"], { types: ["vet-medicine", "agrochemicals", "agrovet-supplies"], cats: ["agrovet", "agrovets"] }),
+    ["farmType", "farmUse", "brand", "price", "weight", "farmForm"], { types: ["vet-medicine", "agrochemicals", "agrovet-supplies"], cats: ["agrovet", "agrovets"] }),
   // ---- Services (matched separately from goods)
-  kind("barber", "Barber services", "Hair and beauty", "barbers", "haircut|hair cut|cut|fade|taper|beard|line-?up|shave|kids cut|chiskop|dreadlock|locs|retwist|hair dye|scalp massage|hot towel", ["barberService", "serviceFor", "duration", "homeService", "booking"],
+  kind("barber", "Barber services", "Hair and beauty", "barbers", "haircut|hair cut|cut|fade|taper|beard|line-?up|shave|kids cut|chiskop|dreadlock|locs|retwist|hair dye|scalp massage|hot towel", ["barberService", "serviceFor", "price", "duration", "homeService", "booking"],
     { types: ["barbershop-service"], cats: ["barbershop", "barbershops"], service: true }),
   kind("salon", "Salon services", "Hair and beauty", "salons", "braid|braids|cornrow|knotless|twist|wig install|wig|weave|sew-?in|frontal|relaxer|retouch|wash and blow-?dry|blow-?dry|silk press|styling|manicure|pedicure|gel nails|acrylic|nails|makeup|lashes|brows|waxing|facial|hair treatment|steam",
-    ["salonService", "serviceFor", "duration", "homeService", "booking"], { types: ["salon-service"], cats: ["salon-beauty", "salons"], service: true }),
-  kind("spa", "Spa and massage", "Hair and beauty", "massages", "massage|spa|reflexology|aromatherapy|hot stone|deep tissue|swedish|body scrub|sauna|steam bath|body wrap", ["massageType", "duration", "serviceFor", "homeService", "booking"],
+    ["salonService", "serviceFor", "price", "hairLength", "hairType", "duration", "homeService", "booking"], { types: ["salon-service"], cats: ["salon-beauty", "salons"], service: true }),
+  kind("spa", "Spa and massage", "Hair and beauty", "massages", "massage|spa|reflexology|aromatherapy|hot stone|deep tissue|swedish|body scrub|sauna|steam bath|body wrap", ["massageType", "duration", "price", "serviceFor", "homeService", "booking"],
     { types: ["spa-treatment"], cats: ["spa-massage"], service: true }),
   kind("tailoring", "Tailoring and dress making", "Clothing", "tailors", "tailor|tailoring|dress making|dressmaking|made to measure|made-to-measure|custom made|alteration|hemming|stitching|sewing|dress|gown|suit|kitenge|outfit|uniform|trouser|shirt|jeans|kids outfits",
-    ["garmentMade", "gender", "turnaround", "fabricSupply"], { types: ["tailoring"], cats: ["tailor-boutique", "tailors"], service: true }),
-  kind("shoe-repair", "Shoe repair", "Shoes", "shoe repair", "shoe repair|cobbler|resole|sole|heel repair|stitching|shoe polish|shoe shine|bag repair|zip repair", ["repairType", "turnaround"], { types: ["shoe-repair"], cats: ["shoes-cobbler"], service: true }),
+    ["garmentMade", "gender", "price", "turnaround", "fabricSupply"], { types: ["tailoring"], cats: ["tailor-boutique", "tailors"], service: true }),
+  kind("shoe-repair", "Shoe repair", "Shoes", "shoe repair", "shoe repair|cobbler|resole|sole|heel repair|stitching|shoe polish|shoe shine|bag repair|zip repair", ["repairType", "price", "turnaround"], { types: ["shoe-repair"], cats: ["shoes-cobbler"], service: true }),
+  kind("trades", "Plumbers, electricians and fundis", "Plumbing and electrical", "fundis", "plumbers?|plumbing (?:services?|repairs?|works?)|electricians?|(?:house |electrical )?(?:re)?wiring|fundis?|borehole (?:drilling|services?)|tank (?:installation|cleaning)|(?:solar|cctv|electric fence|alarm|gate motor|dstv|water heater|geyser|shower) installation|installation of|painting services?|house painting|painters?|tiling|tilers?|masonry|masons?|gypsum (?:ceiling|works?)|ceiling installation|carpenters?|carpentry services?|roofing services?|leak repairs?|pipe repairs?|unblocking|toilet repairs?",
+    ["tradeService", "emergency", "price", "homeService", "licensed"], { cats: ["plumbing-electrical", "hardware-building", "hardware", "trades"], service: true }),
   kind("repairs", "Phone, laptop and appliance repair", "Repairs", "repairs", "repair|screen replacement|battery replacement|charging port|unlock|flashing|software|laptop service|servicing|fixing|fix|water damage|installation|tv mounting",
-    ["repairDevice", "repairType", "turnaround", "homeService"], { types: ["phone-repair"], cats: ["phone-repair", "electronics-appliances", "electronics-computers"], service: true }),
+    ["repairDevice", "repairType", "price", "partQuality", "turnaround", "warranty", "homeService"], { types: ["phone-repair"], cats: ["phone-repair", "electronics-appliances", "electronics-computers"], service: true }),
   kind("printing", "Printing and cyber services", "Printing and stationery", "printing", "print|printing|photocopy|copy|scan|scanning|lamination|laminate|binding|typing|passport photo|banner|poster|business card|flyer|invitation card|sticker|branding|ecitizen|kra|itax|nhif|sha|helb|kuccps|good conduct|online application|internet|browsing|cv writing",
-    ["printService", "paperSize", "colourMode", "turnaround"], { types: ["printing", "scanning", "lamination", "binding", "typing-documents", "passport-photos", "banners-posters-cards", "computer-internet-use"], cats: ["cyber-cafe", "printing-stationery", "mpesa"], service: true }),
-  kind("laundry", "Laundry and cleaning", "Cleaning", "laundry", "laundry|wash and fold|dry ?clean|ironing|duvet cleaning|carpet cleaning|sofa cleaning|house cleaning|office cleaning|deep cleaning|fumigation|cleaning", ["laundryService", "pricedBy", "turnaround", "pickup"],
+    ["printService", "paperSize", "colourMode", "price", "paperWeight", "printSides", "bindingType", "finish", "turnaround"], { types: ["printing", "scanning", "lamination", "binding", "typing-documents", "passport-photos", "banners-posters-cards", "computer-internet-use"], cats: ["cyber-cafe", "printing-stationery", "mpesa"], service: true }),
+  kind("laundry", "Laundry and cleaning", "Cleaning", "laundry", "laundry|wash and fold|dry ?clean|ironing|duvet cleaning|carpet cleaning|sofa cleaning|house cleaning|office cleaning|deep cleaning|fumigation|cleaning", ["laundryService", "pricedBy", "price", "turnaround", "pickup"],
     { types: ["laundry-by-weight", "laundry-by-item"], cats: ["cleaning-laundry"], service: true }),
   kind("car-services", "Car wash and garage", "Auto", "car services", "car wash|wash|valet|detailing|interior cleaning|engine wash|seat cleaning|service|oil change|diagnostic|diagnostics|repair|wheel alignment|balancing|panel beating|spray painting|tuning|towing",
-    ["carService", "vehicleClass", "duration", "homeService"], { types: ["garage-service", "car-wash"], cats: ["car-wash", "garage-mechanic", "mechanics", "auto-spare-parts"], service: true }),
-  kind("gym", "Gym and fitness", "Fitness", "gym memberships", "membership|day pass|weekly pass|pass|monthly|weekly|quarterly|annual|personal training|trainer|class|aerobics|zumba|yoga|spinning|boxing|karate|swimming|fitness|gym|locker", ["membership", "membershipFor", "duration"],
+    ["carService", "vehicleClass", "price", "vehicle", "duration", "homeService"], { types: ["garage-service", "car-wash"], cats: ["car-wash", "garage-mechanic", "mechanics", "auto-spare-parts"], service: true }),
+  kind("gym", "Gym and fitness", "Fitness", "gym memberships", "membership|day pass|weekly pass|pass|monthly|weekly|quarterly|annual|personal training|trainer|class|aerobics|zumba|yoga|spinning|boxing|karate|swimming|fitness|gym|locker", ["membership", "membershipFor", "price", "duration"],
     { types: ["gym-membership"], cats: ["gym-fitness", "gyms"], service: true }),
   kind("health-services", "Health checks and clinic services", "Medicine and health", "health checks", "blood pressure|sugar test|test|check|checkup|check-up|screening|consultation|vaccination|eye test|eye exam|dental|lab|malaria test|hiv test|scan|ultrasound",
-    ["healthService", "booking", "duration"], { cats: ["clinic", "chemist", "chemists", "optician"], service: true }),
-  kind("photography", "Photography and events", "Events", "photographers", "photo|photography|photographer|video|videography|shoot|wedding|event|tent|chairs hire|decor|decoration|mc|dj|sound hire|pa system|catering|package", ["shootType", "eventService", "deliverables", "duration"],
+    ["healthService", "price", "booking", "homeService", "duration"], { cats: ["clinic", "chemist", "chemists", "optician"], service: true }),
+  kind("event-hire", "Event hire and services", "Events", "event hire", "tents?(?! ?pegs?)|tent hire|marquees?|chairs? hire|tables? hire|sound hire|sound system hire|pa system|public address|decor|décor|decorations?|stage hire|red carpet|portable toilets?|mobile toilets?|tiffany chairs?|chiavari|chafing dish(?:es)?|catering|mc|emcee|dj|event hire|hire for events",
+    ["hireItem", "setup", "price"], { cats: ["photography-events", "event-hire"], service: true }),
+  kind("photography", "Photography and events", "Events", "photographers", "photo|photography|photographer|video|videography|shoot|wedding|event|package|drone shots?|aerial", ["shootType", "coverage", "price", "deliverables", "duration"],
     { types: ["photo-package"], cats: ["photography-events"], service: true }),
-  kind("tuition", "Tuition and daycare", "Education", "tuition", "tuition|tutor|lesson|class|daycare|day care|pre-?school|kindergarten|homework|coaching|driving lesson|music lesson|holiday tuition", ["tuitionLevel", "subject", "lessonMode"], { cats: ["tuition-daycare"], service: true }),
-  kind("money", "M-Pesa, airtime and payments", "Money", "money services", "m-?pesa|deposit|withdraw|airtime|bundle|data bundle|tokens|bill payment|agent banking|send money", ["agentService"], { cats: ["mpesa-airtime-agent", "mpesa"], service: true }),
-  kind("services", "Other services", "Services", "services", "service|session|installation|hire|booking|appointment|delivery|errand", ["booking", "duration", "homeService"], { service: true })
+  kind("tuition", "Tuition and daycare", "Education", "tuition", "tuition|tutor|lesson|class|daycare|day care|pre-?school|kindergarten|homework|coaching|driving lesson|music lesson|holiday tuition", ["tuitionLevel", "subject", "curriculum", "price", "lessonMode"], { cats: ["tuition-daycare"], service: true }),
+  kind("money", "M-Pesa, airtime and payments", "Money", "money services", "m-?pesa|deposit|withdraw|airtime|bundle|data bundle|tokens|bill payment|agent banking|send money", ["agentService", "mobileNetwork"], { cats: ["mpesa-airtime-agent", "mpesa"], service: true }),
+  kind("funeral", "Funeral services", "Funeral services", "funeral services", "funerals?|mortuary|morgue|caskets?|coffins?|hearse|body preservation|embalming|cremation|burial|memorial service|requiem",
+    ["funeralService", "price", "booking"], { cats: ["funeral-services"], service: true }),
+  kind("transport", "Transport and delivery", "Transport", "transport", "boda ?boda(?! (?:bike|for sale|parts?|spares?|tyres?))|(?:boda|taxi|cab) rides?|taxi|cabs?|uber|matatu|shuttle|tuk ?tuk|pick-?up hire|lorry|lorries|truck hire|canter hire|moving|movers|relocation|house moving|office moving|parcels?|courier|delivery service|errands?|airport transfers?|car hire|car rental|vehicle hire|vehicle rental|self drive|chauffeur|transport",
+    ["transportVehicle", "transportService", "price", "booking"], { cats: ["transport-logistics"], service: true }),
+  kind("rentals", "Houses, rooms and land", "Property", "rentals", "for rent|to let|to-let|rental|bed-?sitters?|\\d ?-?(?:bedroom|br|bhk)s?|one bedroom|two bedroom|three bedroom|apartments?|flat to let|house for (?:rent|sale)|plots? for sale|plots?|land for sale|acres?|office space|shop space|godown|warehouse|hostels?|maisonettes?|bungalows?",
+    ["dealType", "propertyType", "bedrooms", "price", "propertyFeatures"], { cats: ["rentals-real-estate"], service: true }),
+  kind("hotels", "Hotels and lodging", "Lodging", "rooms", "hotel room|lodging|lodge|accommodation|guest ?house|bnb|b&b|airbnb|per night|a night|night stay|overnight stay|suite|cottage|resort|motel|(?:single|double|twin|deluxe|executive|standard|family) rooms?|conference (?:room|hall)|boardroom hire",
+    ["roomType", "price", "guests", "amenities", "booking"], { cats: ["hotels-lodging", "restaurant-cafe"], service: true }),
+  kind("professional", "Professional services", "Professional services", "professionals", "lawyers?|advocates?|legal|conveyancing|affidavits?|commissioner for oaths|notary|accountants?|accounting|bookkeeping|audit(?:ing)?|tax (?:filing|returns|consult(?:ant|ing)?)|kra returns|payroll|architects?|architectural|house plans?|building plans?|surveyors?|surveying|land survey|valuers?|valuation|land search|engineers?|structural|consultants?|consultancy|insurance(?: agent| cover| broker)?|event planners?|wedding planners?|interior design(?:er)?|business plans?|company registration|business registration",
+    ["profSpecialty", "consultMode", "price", "licensed"], { cats: ["professional-services"], service: true }),
+  kind("services", "Other services", "Services", "services", "service|session|installation|hire|booking|appointment|delivery|errand", ["booking", "duration", "price", "homeService"], { service: true })
 ];
 
 // Shop categories whose items are mostly services: there a word like "makeup" or "braids" means the service, not a product.
 export const SERVICE_CATEGORIES = new Set(["barbershop", "barbershops", "salon-beauty", "salons", "spa-massage", "gym-fitness", "gyms", "car-wash", "garage-mechanic", "mechanics",
-  "cleaning-laundry", "cyber-cafe", "mpesa", "mpesa-airtime-agent", "photography-events", "tuition-daycare", "clinic", "phone-repair", "tailors"]);
+  "cleaning-laundry", "cyber-cafe", "mpesa", "mpesa-airtime-agent", "photography-events", "tuition-daycare", "clinic", "phone-repair", "tailors",
+  "event-hire", "hotels-lodging", "rentals-real-estate", "transport-logistics", "professional-services", "funeral-services"]);
 
 export const KIND_BY_ID = Object.fromEntries(KINDS.map((k) => [k.id, k]));
 

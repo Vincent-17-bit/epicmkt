@@ -3,6 +3,7 @@
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
 import { normalizeText } from "../utils.js";
 import { normalizeValueKey } from "../openValues.js";
+import { deliveryInfo } from "../delivery.js";
 import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, KIND_BY_TYPE, SERVICE_CATEGORIES, readNumber, readers } from "./data/facetCatalog.js";
 
 const SERVICE_KINDS = KINDS.filter((k) => k.service);
@@ -10,7 +11,7 @@ const GOODS_KINDS = KINDS.filter((k) => !k.service);
 
 export const SEARCH_PAGE_SIZE = 16;
 export const SEARCH_SORTS = [
-  { id: "featured", label: "Featured" },
+  { id: "featured", label: "Best match" },
   { id: "price_asc", label: "Price: Low to High" },
   { id: "price_desc", label: "Price: High to Low" },
   { id: "newest", label: "Newest Arrivals" },
@@ -65,7 +66,7 @@ const priceOf = (p) => {
 };
 
 // Words that say "this is work done for you", whatever the shop: "dress making", "phone repair", "tent hire".
-const SERVICE_WORDS = /\b(?:making|made[- ]to[- ]measure|custom[- ]made|alterations?|repairs?|servic(?:e|ing)|install(?:ation)?|hire|lessons?|tuition|treatments?|consultation|appointment|per session|wash(?:ing)?|cleaning|refill)\b/i;
+const SERVICE_WORDS = /\b(?:making|made[- ]to[- ]measure|custom[- ]made|alterations?|repairs?|servic(?:e|ing)|install(?:ation)?|hire|lessons?|tuition|treatments?|consultation|appointment|per session|wash(?:ing)?|cleaning|refill|rides?|courier|transport(?:ation)?|relocation|movers|lodging|accommodation|per night|to let|for rent)\b/i;
 
 /**
  * The kind of a product, used for its department and its filters. In order:
@@ -106,6 +107,18 @@ export function coloursOf(p) {
   return found;
 }
 
+// Products only: services have no stock, so "In stock" and "Only a few left" never describe a haircut.
+const PRE_ORDER = /\bpre-?orders?\b|made to order|order in advance|on order|\bimport(?:ed)? on order/i;
+function availabilityOf(p, text, listing) {
+  if (listing !== "product") return [];
+  const out = [];
+  if (p.availability === "available" || p.availability === "limited_stock" || !p.availability) out.push("instock");
+  if (p.availability === "limited_stock") out.push("low");
+  if (PRE_ORDER.test(text)) out.push("preorder");
+  return out;
+}
+const BULK = /\bwholesale\b|\bbulk\b|\bcarton of\b|\bbale\b|\bper (?:bag|sack|bale|crate|carton|dozen)\b|\bdozen\b|\bcrate of\b/i;
+
 function conditionOf(p, text, k) {
   if (p.kind === "service" || k?.service || (k && !k.condition)) return null;
   if (/refurbished|renewed|grade a|ex-?uk/i.test(text)) return "refurbished";
@@ -120,6 +133,8 @@ export function describe(p) {
   const text = `${p.name ?? ""} · ${p.brand ?? ""} · ${p.section ?? ""} · ${p.shortDescription ?? ""} · ${p.description ?? ""} · ${specText(p)} · ${(p.optionValues ?? []).join(" · ")} · ${(p.highlights ?? []).map((h) => (typeof h === "string" ? h : `${h.label ?? ""} ${h.value ?? ""}`)).join(" · ")} · ${p.hay ?? ""}`;
   const k = kindOf(p);
   const facetValues = {};
+  // A number filter keeps the number itself too ("0.5" kg), so a shopper's own min and max work, not only the ranges.
+  const numbers = {};
   for (const id of k?.facets ?? []) {
     const f = FACETS[id];
     if (!f) continue;
@@ -127,12 +142,17 @@ export function describe(p) {
       const n = readNumber(readers[f.reader], p);
       const bucket = n === null ? null : f.values.find((v) => n >= v.min && (v.max === null || n <= v.max));
       facetValues[id] = bucket ? new Set([bucket.id]) : new Set();
+      if (n !== null) numbers[id] = n;
     } else {
       // "What is it" filters read the name and the product's own type rows; a value marked onName reads the name only.
       const own = f.on === "name" ? ownText(p, f.label) : text;
       facetValues[id] = new Set(f.values.filter((v) => v.re.test(v.onName ? p.name ?? "" : own)).map((v) => v.id));
     }
   }
+  // A service the shop marked "by appointment" is booked, whatever its words say.
+  if (facetValues.booking && p.availability === "by_appointment") facetValues.booking.add("appointment");
+  const listing = p.kind === "service" || (p.kind !== "product" && (k ? k.service : SERVICE_CATEGORIES.has(p.business?.categoryId))) ? "service" : "product";
+  const delivery = deliveryInfo(p.business);
   const brand = p.brand ?? (p.specs ?? []).find((s) => /^brand$/i.test(s.label ?? ""))?.value ?? null;
   const d = {
     kind: k,
@@ -143,25 +163,49 @@ export function describe(p) {
     brand,
     price: priceOf(p),
     colours: coloursOf(p),
+    // Colour is a filter only for things that come in colours (clothes, phones, sofas), never for bread or meat.
+    colourable: Boolean(k?.facets.includes("colour")),
     condition: conditionOf(p, text, k),
     facetValues,
+    numbers,
+    listing,
+    avail: availabilityOf(p, text, listing),
     onSale: Boolean(p.pricing?.savings > 0) || Boolean(p.flash),
     flash: Boolean(p.flash),
-    delivers: p.business?.delivery?.offers === true
+    offer: Boolean(p.offer),
+    bulk: BULK.test(`${p.name ?? ""} ${p.unit ?? ""} ${p.shortDescription ?? ""}`),
+    delivers: delivery.offers,
+    freeDelivery: delivery.offers && delivery.fee === 0,
+    county: normalizeText(p.business?.county ?? "")
   };
   cache.set(p, d);
   return d;
 }
 
 // ---- the query ----------------------------------------------------------------------------------------------------
+// `type` is the listing type: "" for everything, "product" or "service". `ranges` holds a shopper's own min and max for a number
+// filter ({ weight: { min: 0.5, max: 2 } }), in the filter's own unit (kg, L, GB, cc ...).
 export const EMPTY_SEARCH = Object.freeze({
-  q: "", kind: "", brands: [], colours: [], conditions: [], deals: [], delivery: false, shops: [], towns: [], store: [],
-  min: null, max: null, price: "", facets: {}, sort: "featured", page: 1
+  q: "", kind: "", type: "", brands: [], colours: [], conditions: [], deals: [], delivery: false, freeDelivery: false, shops: [], towns: [], counties: [],
+  store: [], avail: [], min: null, max: null, price: "", facets: {}, ranges: {}, sort: "featured", page: 1
 });
+export const LISTING_TYPES = ["product", "service"];
 
-const LIST_KEYS = { brands: "brand", colours: "colour", conditions: "cond", deals: "deal", shops: "shop", towns: "town", store: "store" };
+const LIST_KEYS = { brands: "brand", colours: "colour", conditions: "cond", deals: "deal", shops: "shop", towns: "town", counties: "county", store: "store", avail: "av" };
 const list = (v) => (v ? String(v).split(",").map((x) => x.trim()).filter(Boolean).slice(0, 40) : []);
 const amount = (v) => (/^\d{1,9}$/.test(String(v ?? "")) ? Number(v) : null);
+// "0.5-2", "0.5-" or "-2": a number range in the address. Anything else is ignored.
+const decimal = (v) => (/^\d{1,7}(?:\.\d{1,3})?$/.test(v) ? Number(v) : null);
+function rangeOf(v) {
+  const m = /^([\d.]*)-([\d.]*)$/.exec(String(v ?? ""));
+  if (!m) return null;
+  let min = m[1] ? decimal(m[1]) : null;
+  let max = m[2] ? decimal(m[2]) : null;
+  if ((m[1] && min === null) || (m[2] && max === null) || (min === null && max === null)) return null;
+  if (min !== null && max !== null && min > max) [min, max] = [max, min];
+  return { min, max };
+}
+const rangeText = (r) => `${r.min ?? ""}-${r.max ?? ""}`;
 
 /** Reads a search from page address parameters (URLSearchParams or a plain object). */
 export function parseSearch(params) {
@@ -169,17 +213,25 @@ export function parseSearch(params) {
   const out = { ...EMPTY_SEARCH, facets: {} };
   out.q = String(get("q") ?? "").slice(0, 100);
   out.kind = KIND_BY_ID[get("k")] ? get("k") : "";
+  out.type = LISTING_TYPES.includes(get("t")) ? get("t") : "";
   for (const [field, key] of Object.entries(LIST_KEYS)) out[field] = list(get(key));
   out.delivery = get("dlv") === "1";
+  out.freeDelivery = get("fdlv") === "1";
   out.min = amount(get("min"));
   out.max = amount(get("max"));
   out.price = PRICE_PRESETS.some((p) => p.id === get("price")) ? get("price") : "";
   out.sort = SEARCH_SORTS.some((s) => s.id === get("sort")) ? get("sort") : "featured";
   out.page = Math.min(500, Math.max(1, Math.round(Number(get("page"))) || 1));
   const keys = typeof params.keys === "function" ? [...params.keys()] : Object.keys(params);
+  out.ranges = {};
   for (const key of keys) {
     const m = /^f_([a-zA-Z]+)$/.exec(key);
     if (m && FACETS[m[1]]) out.facets[m[1]] = list(get(key));
+    const r = /^r_([a-zA-Z]+)$/.exec(key);
+    if (r && FACETS[r[1]]?.type === "range") {
+      const value = rangeOf(get(key));
+      if (value) out.ranges[r[1]] = value;
+    }
   }
   return out;
 }
@@ -189,12 +241,15 @@ export function writeSearch(search) {
   const p = new URLSearchParams();
   if (search.q) p.set("q", search.q);
   if (search.kind) p.set("k", search.kind);
+  if (search.type) p.set("t", search.type);
   for (const [field, key] of Object.entries(LIST_KEYS)) if (search[field]?.length) p.set(key, search[field].join(","));
   if (search.delivery) p.set("dlv", "1");
+  if (search.freeDelivery) p.set("fdlv", "1");
   if (search.price) p.set("price", search.price);
   if (search.min !== null && search.min !== undefined) p.set("min", String(search.min));
   if (search.max !== null && search.max !== undefined) p.set("max", String(search.max));
   for (const [id, values] of Object.entries(search.facets ?? {})) if (values?.length) p.set(`f_${id}`, values.join(","));
+  for (const [id, r] of Object.entries(search.ranges ?? {})) if (r && (r.min !== null || r.max !== null)) p.set(`r_${id}`, rangeText(r));
   if (search.sort && search.sort !== "featured") p.set("sort", search.sort);
   if (search.page > 1) p.set("page", String(search.page));
   return p;
@@ -231,21 +286,23 @@ const priceWindow = (search) => {
 };
 
 // Each filter as a test; `skip` leaves one filter out so its own options can be counted.
+const DEAL_TEST = { sale: (d) => d.onSale, flash: (d) => d.flash, offer: (d) => d.offer, bulk: (d) => d.bulk };
+const STORE_TEST = { open: (p) => p.business?.isOpen, open24: (p) => p.business?.open24, verified: (p) => p.business?.verified, featured: (p) => p.business?.featured };
+
 function passes(p, d, search, skip = null) {
+  if (skip !== "type" && search.type && d.listing !== search.type) return false;
   if (skip !== "kind" && search.kind && d.kind?.id !== search.kind) return false;
   if (skip !== "brand" && search.brands.length && !search.brands.includes(d.brandKey)) return false;
   if (skip !== "colour" && search.colours.length && !search.colours.some((c) => d.colours.has(c))) return false;
   if (skip !== "condition" && search.conditions.length && !search.conditions.includes(d.condition)) return false;
-  if (skip !== "deals" && search.deals.length && !search.deals.every((x) => (x === "flash" ? d.flash : d.onSale))) return false;
-  if (skip !== "delivery" && search.delivery && !d.delivers) return false;
+  if (skip !== "deals" && search.deals.length && !search.deals.every((x) => DEAL_TEST[x]?.(d))) return false;
+  if (skip !== "delivery" && ((search.delivery && !d.delivers) || (search.freeDelivery && !d.freeDelivery))) return false;
+  if (skip !== "avail" && search.avail.length && !search.avail.some((a) => d.avail.includes(a))) return false;
   if (skip !== "shop" && search.shops.length && !search.shops.includes(p.business?.slug)) return false;
   if (skip !== "town" && search.towns.length && !search.towns.includes(normalizeText(p.business?.town))) return false;
+  if (skip !== "county" && search.counties.length && !search.counties.includes(d.county)) return false;
   if (skip !== "store") {
-    for (const s of search.store) {
-      if (s === "open" && !p.business?.isOpen) return false;
-      if (s === "verified" && !p.business?.verified) return false;
-      if (s === "featured" && !p.business?.featured) return false;
-    }
+    for (const s of search.store) if (STORE_TEST[s] && !STORE_TEST[s](p)) return false;
   }
   if (skip !== "price") {
     const { min, max } = priceWindow(search);
@@ -259,6 +316,11 @@ function passes(p, d, search, skip = null) {
     if (skip === id || !wanted.length) continue;
     const have = d.facetValues[id];
     if (!have || !wanted.some((w) => have.has(w))) return false;
+  }
+  for (const [id, r] of Object.entries(search.ranges)) {
+    if (skip === id || !r) continue;
+    const n = d.numbers[id];
+    if (n === undefined || (r.min !== null && n < r.min) || (r.max !== null && n > r.max)) return false;
   }
   return true;
 }
@@ -320,81 +382,235 @@ function dominantKinds(all, search) {
     .map(([id]) => KIND_BY_ID[id]);
 }
 
-function buildFacets(matched, search) {
-  const others = (skip) => matched.filter((r) => passes(r.p, r.d, search, skip));
-  const facets = [];
-  const push = (facet) => {
-    if (facet.values.length) facets.push(facet);
+// ---- the filter column ------------------------------------------------------------------------------------------
+// Three layers, as on Amazon and eBay: the listing type and department; the filters of the kind of thing found (only
+// those its kind has: no colour on bread, no size on a haircut), most used first; then the filters every listing has
+// (availability, deals, delivery, the shop, the town). A filter that would offer fewer than two different values in these
+// results is left out, unless the shopper is using it, so the column never shows a choice that changes nothing.
+
+// The order of a kind's filters: its own list (most used first: size for clothes, make and model for parts, cut and
+// weight for meat), with Brand and Price where the kind puts them, else straight after its first three.
+function orderFor(k) {
+  const ids = [...k.facets];
+  if (!ids.includes("price")) ids.splice(Math.min(3, ids.length), 0, "price");
+  if (!ids.includes("brand")) ids.splice(ids.indexOf("price"), 0, "brand");
+  return ids;
+}
+const GLOBAL_ORDER = ["condition", "avail", "deals", "delivery", "store", "shop", "town", "county"];
+// How many filters the quick chips above the results show (eBay's row of "Size", "Brand", "Price" ...).
+export const QUICK_FILTERS = 5;
+
+// The unit a number filter's own min and max are typed in.
+const READER_UNIT = {
+  litres: "L", kg: "kg", gb: "GB", ramGb: "GB", ml: "ml", minutes: "min", hours: "h", watts: "W", inches: "in", smallInches: "in", mah: "mAh", metres: "m", feet: "ft",
+  thickInch: "in", count: "pcs", hz: "Hz", mm2: "mm²", gsm: "gsm", cc: "cc", months: "months", abv: "%", channels: "cameras", mp: "MP", guests: "guests", seats: "seats",
+  bedrooms: "bedrooms", shoeEu: "EU", year: ""
+};
+export const unitOf = (id) => {
+  const f = FACETS[id];
+  return f ? (READER_UNIT[f.reader] ?? f.unit ?? "") : "";
+};
+
+const AVAIL = [
+  { id: "instock", label: "In stock" },
+  { id: "low", label: "Only a few left" },
+  { id: "preorder", label: "Pre-order / made to order" }
+];
+const DEALS = [
+  { id: "sale", label: "On sale" },
+  { id: "flash", label: "Flash sale now" },
+  { id: "offer", label: "Shop offers" },
+  { id: "bulk", label: "Wholesale and bulk" }
+];
+const STORE = [
+  { id: "open", label: "Open now" },
+  { id: "open24", label: "Open 24 hours" },
+  { id: "verified", label: "Verified shops" },
+  { id: "featured", label: "Featured shops" }
+];
+
+// A yes/no filter ("Open now") only helps when some results have it and some do not.
+const splits = (values, total) => values.filter((v) => v.selected || (v.count > 0 && v.count < total));
+
+function buildFacets(matched, search, kinds) {
+  const memo = new Map();
+  const others = (skip) => {
+    if (!memo.has(skip)) memo.set(skip, matched.filter((r) => passes(r.p, r.d, search, skip)));
+    return memo.get(skip);
   };
-  const kindCounts = countBy(others("kind"), (r) => [r.d.kind?.id]);
-  push({
-    id: "kind", label: "Department", type: "links",
-    values: [...kindCounts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: KIND_BY_ID[id].label, count, selected: search.kind === id }))
-  });
-  const brandRows = others("brand");
-  const brandNames = new Map();
-  for (const r of brandRows) if (r.d.brandKey && !brandNames.has(r.d.brandKey)) brandNames.set(r.d.brandKey, r.d.brand.trim());
-  push({
-    id: "brand", label: "Brands", type: "checkbox",
-    values: [...countBy(brandRows, (r) => [r.d.brandKey])].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([id, count]) => ({ id, label: brandNames.get(id), count, selected: search.brands.includes(id) }))
-  });
-  for (const k of dominantKinds(matched, search)) {
-    for (const id of k.facets) {
-      const f = FACETS[id];
-      if (!f || facets.some((x) => x.id === id)) continue;
-      const counts = countBy(others(id), (r) => [...(r.d.facetValues[id] ?? [])]);
-      push({
-        id, label: f.label, type: "checkbox", kind: k.id,
-        values: f.values.filter((v) => counts.get(v.id)).map((v) => ({ id: v.id, label: v.label, count: counts.get(v.id), selected: (search.facets[id] ?? []).includes(v.id) }))
-      });
+  const facetOn = (id) => (search.facets[id] ?? []).length > 0;
+  const built = new Map();
+  const show = (facet, visible) => {
+    if (visible) built.set(facet.id, facet);
+  };
+  const atLeastTwo = (facet) => facet.values.length >= 2 || facet.values.some((v) => v.selected);
+
+  const builders = {
+    kind() {
+      const counts = countBy(others("kind"), (r) => [r.d.kind?.id]);
+      const facet = {
+        id: "kind", label: "Department", type: "links",
+        values: [...counts].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: KIND_BY_ID[id].label, count, selected: search.kind === id }))
+      };
+      show(facet, atLeastTwo(facet) || Boolean(search.kind));
+    },
+    brand() {
+      const rows = others("brand");
+      const names = new Map();
+      for (const r of rows) if (r.d.brandKey && !names.has(r.d.brandKey)) names.set(r.d.brandKey, r.d.brand.trim());
+      const facet = {
+        id: "brand", label: "Brand", type: "checkbox",
+        values: [...countBy(rows, (r) => [r.d.brandKey])].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([id, count]) => ({ id, label: names.get(id), count, selected: search.brands.includes(id) }))
+      };
+      show(facet, atLeastTwo(facet));
+    },
+    price() {
+      const priced = others("price").map((r) => r.d.price).filter((n) => n !== null);
+      const active = Boolean(search.price) || search.min !== null || search.max !== null;
+      const facet = {
+        id: "price", label: "Price", type: "price", unit: "KES",
+        bounds: priced.length ? { min: Math.min(...priced), max: Math.max(...priced) } : null,
+        values: splits(PRICE_PRESETS.map((pr) => ({ ...pr, count: priced.filter((n) => n >= pr.min && (pr.max === null || n <= pr.max)).length, selected: search.price === pr.id })), priced.length)
+      };
+      show(facet, active || new Set(priced).size >= 2);
+    },
+    colour() {
+      const rows = others("colour").filter((r) => r.d.colourable);
+      const counts = countBy(rows, (r) => [...r.d.colours]);
+      const facet = {
+        id: "colour", label: "Colour", type: "swatch",
+        values: COLOURS.filter((c) => counts.get(c.id) || search.colours.includes(c.id)).map((c) => ({ id: c.id, label: c.label, hex: c.hex, count: counts.get(c.id) ?? 0, selected: search.colours.includes(c.id) }))
+      };
+      show(facet, atLeastTwo(facet));
+    },
+    condition() {
+      const counts = countBy(others("condition"), (r) => [r.d.condition]);
+      const facet = { id: "condition", label: "Condition", type: "checkbox", values: CONDITIONS.filter((c) => counts.get(c.id)).map((c) => ({ ...c, count: counts.get(c.id), selected: search.conditions.includes(c.id) })) };
+      show(facet, atLeastTwo(facet));
+    },
+    avail() {
+      const rows = others("avail").filter((r) => r.d.listing === "product");
+      const facet = {
+        id: "avail", label: "Availability", type: "checkbox", toggle: true,
+        values: splits(AVAIL.map((a) => ({ ...a, count: rows.filter((r) => r.d.avail.includes(a.id)).length, selected: search.avail.includes(a.id) })), rows.length)
+      };
+      show(facet, facet.values.length > 0);
+    },
+    deals() {
+      const rows = others("deals");
+      const facet = {
+        id: "deals", label: "Deals & discounts", type: "checkbox", toggle: true,
+        values: splits(DEALS.map((x) => ({ ...x, count: rows.filter((r) => DEAL_TEST[x.id](r.d)).length, selected: search.deals.includes(x.id) })), rows.length)
+      };
+      show(facet, facet.values.length > 0);
+    },
+    delivery() {
+      const rows = others("delivery");
+      const facet = {
+        id: "delivery", label: "Delivery", type: "checkbox", toggle: true,
+        values: splits([
+          { id: "1", label: "Shop delivers", count: rows.filter((r) => r.d.delivers).length, selected: search.delivery },
+          { id: "free", label: "Free delivery", count: rows.filter((r) => r.d.freeDelivery).length, selected: search.freeDelivery }
+        ], rows.length)
+      };
+      show(facet, facet.values.length > 0);
+    },
+    store() {
+      const rows = others("store");
+      const facet = {
+        id: "store", label: "Shop", type: "checkbox", toggle: true,
+        values: splits(STORE.map((x) => ({ ...x, count: rows.filter((r) => STORE_TEST[x.id](r.p)).length, selected: search.store.includes(x.id) })), rows.length)
+      };
+      show(facet, facet.values.length > 0);
+    },
+    shop() {
+      const rows = others("shop");
+      const names = new Map(rows.map((r) => [r.p.business?.slug, r.p.business?.name]));
+      const facet = {
+        id: "shop", label: "Seller", type: "checkbox",
+        values: [...countBy(rows, (r) => [r.p.business?.slug])].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: names.get(id), count, selected: search.shops.includes(id) }))
+      };
+      show(facet, atLeastTwo(facet));
+    },
+    town() {
+      const rows = others("town");
+      const names = new Map(rows.map((r) => [normalizeText(r.p.business?.town), r.p.business?.town]));
+      const facet = {
+        id: "town", label: "Town", type: "checkbox",
+        values: [...countBy(rows, (r) => [normalizeText(r.p.business?.town)])].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: names.get(id), count, selected: search.towns.includes(id) }))
+      };
+      show(facet, atLeastTwo(facet));
+    },
+    county() {
+      const rows = others("county");
+      const names = new Map(rows.map((r) => [r.d.county, r.p.business?.county]));
+      const facet = {
+        id: "county", label: "County", type: "checkbox",
+        values: [...countBy(rows, (r) => [r.d.county])].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: names.get(id), count, selected: search.counties.includes(id) }))
+      };
+      show(facet, atLeastTwo(facet));
+    }
+  };
+
+  // A filter of the kind itself: labels as checkboxes, numbers as ranges with their unit and the shopper's own min and max.
+  const kindFacet = (id, k) => {
+    const f = FACETS[id];
+    if (!f) return;
+    const rows = others(id);
+    const counts = countBy(rows, (r) => [...(r.d.facetValues[id] ?? [])]);
+    const wanted = search.facets[id] ?? [];
+    if (f.type === "range") {
+      const numbers = rows.map((r) => r.d.numbers[id]).filter((n) => n !== undefined);
+      const own = search.ranges[id] ?? null;
+      const unit = unitOf(id);
+      const facet = {
+        id, label: f.label, type: "range", kind: k.id, unit,
+        bounds: numbers.length ? { min: Math.min(...numbers), max: Math.max(...numbers) } : null,
+        range: own ? { ...own, text: rangeLabel(id, own) } : null,
+        values: f.values.filter((v) => counts.get(v.id) || wanted.includes(v.id)).map((v) => ({ id: v.id, label: v.label, count: counts.get(v.id) ?? 0, selected: wanted.includes(v.id) }))
+      };
+      show(facet, new Set(numbers).size >= 2 || wanted.length > 0 || Boolean(own));
+      return;
+    }
+    // Model follows Make: with Toyota ticked, only Toyota models are offered.
+    const makes = f.follows ? search.facets[f.follows] ?? [] : [];
+    const facet = {
+      id, label: f.label, type: "checkbox", kind: k.id, ...(f.sizes ? { sizes: true } : {}),
+      values: f.values
+        .filter((v) => (counts.get(v.id) || wanted.includes(v.id)) && (!makes.length || !v.make || makes.includes(v.make) || wanted.includes(v.id)))
+        .map((v) => ({ id: v.id, label: v.label, count: counts.get(v.id) ?? 0, selected: wanted.includes(v.id) }))
+    };
+    show(facet, atLeastTwo(facet) || facetOn(id));
+  };
+
+  builders.kind();
+  const order = [];
+  for (const k of kinds) {
+    for (const id of orderFor(k)) {
+      if (order.includes(id)) continue;
+      order.push(id);
+      if (builders[id]) builders[id]();
+      else kindFacet(id, k);
     }
   }
-  const priceRows = others("price");
-  const priced = priceRows.map((r) => r.d.price).filter((n) => n !== null);
-  push({
-    id: "price", label: "Price", type: "price",
-    bounds: priced.length ? { min: Math.min(...priced), max: Math.max(...priced) } : null,
-    values: PRICE_PRESETS.map((pr) => ({ ...pr, count: priced.filter((n) => n >= pr.min && (pr.max === null || n <= pr.max)).length, selected: search.price === pr.id })).filter((v) => v.count > 0)
-  });
-  const dealRows = others("deals");
-  push({
-    id: "deals", label: "Deals & discounts", type: "checkbox",
-    values: [
-      { id: "sale", label: "On sale", count: dealRows.filter((r) => r.d.onSale).length, selected: search.deals.includes("sale") },
-      { id: "flash", label: "Flash sale now", count: dealRows.filter((r) => r.d.flash).length, selected: search.deals.includes("flash") }
-    ].filter((v) => v.count > 0)
-  });
-  const colourCounts = countBy(others("colour"), (r) => [...r.d.colours]);
-  push({
-    id: "colour", label: "Colour", type: "swatch",
-    values: COLOURS.filter((c) => colourCounts.get(c.id)).map((c) => ({ id: c.id, label: c.label, hex: c.hex, count: colourCounts.get(c.id), selected: search.colours.includes(c.id) }))
-  });
-  const condCounts = countBy(others("condition"), (r) => [r.d.condition]);
-  push({ id: "condition", label: "Condition", type: "checkbox", values: CONDITIONS.filter((c) => condCounts.get(c.id)).map((c) => ({ ...c, count: condCounts.get(c.id), selected: search.conditions.includes(c.id) })) });
-  const deliveryCount = others("delivery").filter((r) => r.d.delivers).length;
-  push({ id: "delivery", label: "Delivery", type: "checkbox", values: deliveryCount ? [{ id: "1", label: "Shop delivers", count: deliveryCount, selected: search.delivery }] : [] });
-  const shopRows = others("shop");
-  const shopNames = new Map(shopRows.map((r) => [r.p.business?.slug, r.p.business?.name]));
-  push({
-    id: "shop", label: "Seller", type: "checkbox",
-    values: [...countBy(shopRows, (r) => [r.p.business?.slug])].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: shopNames.get(id), count, selected: search.shops.includes(id) }))
-  });
-  const townRows = others("town");
-  const townNames = new Map(townRows.map((r) => [normalizeText(r.p.business?.town), r.p.business?.town]));
-  push({
-    id: "town", label: "Town", type: "checkbox",
-    values: [...countBy(townRows, (r) => [normalizeText(r.p.business?.town)])].sort((a, b) => b[1] - a[1]).map(([id, count]) => ({ id, label: townNames.get(id), count, selected: search.towns.includes(id) }))
-  });
-  const storeRows = others("store");
-  push({
-    id: "store", label: "Shop", type: "checkbox",
-    values: [
-      { id: "open", label: "Open now", count: storeRows.filter((r) => r.p.business?.isOpen).length },
-      { id: "verified", label: "Verified shops", count: storeRows.filter((r) => r.p.business?.verified).length },
-      { id: "featured", label: "Featured shops", count: storeRows.filter((r) => r.p.business?.featured).length }
-    ].filter((v) => v.count > 0).map((v) => ({ ...v, selected: search.store.includes(v.id) }))
-  });
-  return facets;
+  if (!kinds.length) {
+    order.push("brand", "price");
+    builders.brand();
+    builders.price();
+  }
+  for (const id of GLOBAL_ORDER) {
+    order.push(id);
+    builders[id]();
+  }
+  return ["kind", ...order].filter((id) => built.has(id)).map((id) => built.get(id));
+}
+
+// "0.5 to 2 kg", "From 128 GB", "Up to 150 cc": a shopper's own range, as a chip says it.
+function rangeLabel(id, r) {
+  const f = FACETS[id];
+  const text = (n) => amountText(n, f);
+  if (r.min !== null && r.max !== null) return `${text(r.min)} to ${text(r.max)}`;
+  return r.min !== null ? `From ${text(r.min)}` : `Up to ${text(r.max)}`;
 }
 
 // "Related searches" under the results: the kind's own words with the leading brands and filter values, nearby kinds.
@@ -406,7 +622,7 @@ function relatedSearches(rows, search) {
   };
   const [top] = dominantKinds(rows, { ...search, kind: "" });
   if (top) {
-    const conn = countBy(rows, (r) => [...(r.d.facetValues.connectivity ?? [])]);
+    const conn = countBy(rows.filter((r) => r.d.kind === top), (r) => [...(r.d.facetValues.connectivity ?? [])]);
     if (conn.get("bluetooth")) add(`bluetooth ${top.noun}`);
     for (const [brandKey] of [...countBy(rows, (r) => (r.d.kind === top ? [r.d.brandKey] : []))].sort((a, b) => b[1] - a[1]).slice(0, 2)) {
       const name = rows.find((r) => r.d.brandKey === brandKey)?.d.brand;
@@ -421,11 +637,13 @@ function relatedSearches(rows, search) {
 }
 
 /**
- * Runs a search. Returns { total, page, pageSize, pages, items, facets, related, kinds } where each item is the product plus
- * `search`: { kind, price, colours, highlights } for the result row.
+ * Runs a search. Returns { total, page, pageSize, pages, items, facets, quick, listing, related } where each item is the
+ * product plus `search`: { kind, listing, price, facts } for its card. `facets` is the filter column in order (hidden filters
+ * left out), `quick` the ids of the first few for the chips above the results, `listing` the products and services found.
+ * `itemsOnly` skips the filters: the next page of a list already on screen needs only its cards.
  */
-export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE } = {}) {
-  const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) } };
+export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
+  const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
   const tokens = tokensOf(s.q);
   const matched = [];
   for (const p of products) {
@@ -443,18 +661,34 @@ export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEA
   const pages = Math.max(1, Math.ceil(kept.length / pageSize));
   const page = Math.min(s.page, pages);
   const items = kept.slice((page - 1) * pageSize, page * pageSize).map(({ p, d }) => ({ ...p, search: rowFacts(p, d) }));
-  return { total: kept.length, matched: matched.length, page, pageSize, pages, items, facets: buildFacets(matched, s), related: relatedSearches(matched, s) };
+  const base = { total: kept.length, matched: matched.length, page, pageSize, pages, items };
+  if (itemsOnly) return base;
+  // The filters follow the listing type picked: services show service filters, products product ones.
+  const typed = s.type ? matched.filter((r) => r.d.listing === s.type) : matched;
+  const facets = buildFacets(matched, s, dominantKinds(typed, s));
+  const byType = countBy(matched.filter((r) => passes(r.p, r.d, s, "type")), (r) => [r.d.listing]);
+  return {
+    ...base,
+    facets,
+    quick: facets.filter((f) => f.id !== "kind").slice(0, QUICK_FILTERS).map((f) => f.id),
+    listing: { product: byType.get("product") ?? 0, service: byType.get("service") ?? 0 },
+    related: relatedSearches(matched, s)
+  };
 }
 
 // The short facts a result row shows under the title ("30 W · 12 h · IP67 waterproof"), read from the same filter values.
 // A number as a buyer reads it: 0.5 litres is "500 ml", 0.25 kg is "250 g", 64 on a storage filter is "64 GB", 60 minutes is "60 min".
-const UNIT_OF = { gb: "GB", ramGb: "GB RAM", minutes: "min", count: "pcs", feet: "ft", seats: "seats", hz: "Hz", mm2: "mm²", thickInch: "in", shoeEu: "" };
+const UNIT_OF = { gb: "GB", ramGb: "GB RAM", minutes: "min", count: "pcs", feet: "ft", seats: "seats", hz: "Hz", mm2: "mm²", thickInch: "in", shoeEu: "", gsm: "gsm", cc: "cc", mp: "MP", guests: "guests", channels: "cameras" };
 function amountText(n, f) {
   const fmt = (x) => x.toLocaleString("en-KE", { maximumFractionDigits: 2 });
   if (f.reader === "litres") return n < 1 ? `${fmt(n * 1000)} ml` : `${fmt(n)} L`;
   if (f.reader === "kg") return n < 1 ? `${fmt(n * 1000)} g` : `${fmt(n)} kg`;
   if (f.reader === "gb" && n >= 1024) return `${fmt(n / 1024)} TB`;
   if (f.reader === "shoeEu") return `EU ${fmt(n)}`;
+  if (f.reader === "year") return String(Math.round(n));
+  if (f.reader === "abv") return `${fmt(n)}%`;
+  if (f.reader === "months") return n >= 12 && n % 12 === 0 ? `${n / 12} yr${n > 12 ? "s" : ""}` : `${fmt(n)} months`;
+  if (f.reader === "bedrooms") return n === 0 ? "Bedsitter" : `${fmt(n)} bedroom${n === 1 ? "" : "s"}`;
   const unit = f.unit || UNIT_OF[f.reader] || "";
   return `${fmt(n)}${unit ? ` ${unit}` : ""}`;
 }
@@ -467,7 +701,7 @@ function rowFacts(p, d) {
     if (!f || !have?.size) continue;
     if (f.type === "range") {
       const n = readNumber(readers[f.reader], p);
-      if (n !== null) facts.push(`${amountText(n, f)}${id === "battery" ? " playtime" : ""}`);
+      if (n !== null) facts.push(`${amountText(n, f)}${id === "battery" ? " playtime" : id === "warranty" ? " warranty" : ""}`);
     } else {
       const on = f.values.filter((v) => have.has(v.id));
       // Sizes read as a span ("S to XL"); anything else shows its first value.
@@ -477,7 +711,16 @@ function rowFacts(p, d) {
     }
     if (facts.length >= 4) break;
   }
-  return { kind: d.kind ? { id: d.kind.id, label: d.kind.label } : null, price: d.price, condition: d.condition, delivers: d.delivers, facts };
+  return {
+    kind: d.kind ? { id: d.kind.id, label: d.kind.label } : null,
+    listing: d.listing,
+    // A service that comes to you says so on its card instead of "Pick up".
+    comesToYou: Boolean(d.facetValues.homeService?.has("home")),
+    price: d.price,
+    condition: d.condition,
+    delivers: d.delivers,
+    facts
+  };
 }
 
 export { COMMON_FACETS };
