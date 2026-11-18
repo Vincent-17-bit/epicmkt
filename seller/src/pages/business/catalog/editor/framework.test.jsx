@@ -71,7 +71,7 @@ describe("steps registry", () => {
 
 describe("form reducer slices", () => {
   it("lists the slices in order", () => {
-    expect(SLICES.map((s) => s.id)).toEqual(["basics", "options", "prices", "media", "specs", "type"]);
+    expect(SLICES.map((s) => s.id)).toEqual(["basics", "options", "prices", "media", "specs", "type", "page"]);
   });
 
   it("owns every key of a new item exactly once", () => {

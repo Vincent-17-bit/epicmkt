@@ -14,12 +14,15 @@ export const MEDIA3D = Object.freeze({
   maxRowsPerItem: 500,               // all 3D rows of one item (frames, models, posters), whatever the scope
   maxPendingTickets: 160,            // tickets handed out for one item and not finished yet (two full spins plus posters and models)
   maxOptionIds: 40,                  // a photo or video can sit under at most one axis worth of values
+  extrasPerItem: 80,                 // "extra" pictures of one item: What's included photos, the 5 gallery pictures, From the brand
 });
 
-export const MEDIA_ROLES = Object.freeze(["image", "video", "spin-frame", "model-glb", "poster"]);
+// "extra-image" (migration 0138): a picture for a page section (What's included, the gallery, From the brand). Its own kind, so it never
+// takes a photo slot of the plan and never shows in the photo gallery at the top of the page.
+export const MEDIA_ROLES = Object.freeze(["image", "video", "spin-frame", "model-glb", "poster", "extra-image"]);
 export const MEDIA3D_ROLES = Object.freeze(["spin-frame", "model-glb", "poster"]);
 // item_media.kind for each role. The 3D kinds are new, so every existing query that filters on kind image|video is unaffected.
-export const KIND_OF_ROLE = Object.freeze({ image: "image", video: "video", "spin-frame": "spin", "model-glb": "model", poster: "poster" });
+export const KIND_OF_ROLE = Object.freeze({ image: "image", video: "video", "spin-frame": "spin", "model-glb": "model", poster: "poster", "extra-image": "extra" });
 export const ROLE_OF_KIND = Object.freeze(Object.fromEntries(Object.entries(KIND_OF_ROLE).map(([role, kind]) => [kind, role])));
 
 export const GLB_MIME = "model/gltf-binary";
@@ -32,6 +35,7 @@ export const TICKET_KINDS = Object.freeze({
   "model-glb": { role: "model-glb", purpose: "item_model", types: ["glb"], maxBytes: MEDIA3D.modelMaxBytes, storage: true, delegated: false },
   "spin-frame": { role: "spin-frame", purpose: "item_spin", types: PICTURE_TYPES, maxBytes: MEDIA3D.imageMaxBytes, storage: false, delegated: false, maxCount: MEDIA3D.spinMaxFrames },
   poster: { role: "poster", purpose: "item_poster", types: PICTURE_TYPES, maxBytes: MEDIA3D.imageMaxBytes, storage: false, delegated: false },
+  "extra-image": { role: "extra-image", purpose: "item_extra", types: PICTURE_TYPES, maxBytes: MEDIA3D.imageMaxBytes, storage: false, delegated: false, maxCount: MEDIA3D.extrasPerItem },
 });
 
 const TYPE_ALIASES = { jpeg: "jpg", "image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp", "video/mp4": "mp4", "video/webm": "webm", [GLB_MIME]: "glb" };
@@ -65,6 +69,7 @@ export function checkOptionIds(role, ids) {
   if (ids === undefined || ids === null) return { ok: true, ids: [] };
   if (!Array.isArray(ids) || ids.some((x) => typeof x !== "string" || !VALUE_ID.test(x)) || new Set(ids).size !== ids.length) return { ok: false, error: "bad_option_ids" };
   if (!MEDIA_ROLES.includes(role)) return { ok: false, error: "unsupported_kind" };
+  if (role === "extra-image" && ids.length > 0) return { ok: false, error: "bad_option_ids" };
   if (MEDIA3D_ROLES.includes(role) ? ids.length > 1 : ids.length > MEDIA3D.maxOptionIds) return { ok: false, error: MEDIA3D_ROLES.includes(role) ? "one_option_only" : "bad_option_ids" };
   return { ok: true, ids: [...ids] };
 }

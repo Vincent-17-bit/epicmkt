@@ -26,19 +26,18 @@ import { blockedText } from "./publishWire.js";
 import { publishIssues } from "./checks/index.js";
 import { remember } from "../../../../lib/shopMemory.js";
 import { ownValue } from "./typedRows.js";
+import { emptyPage, pageErrors, pageOf, pagePayload, pendingKeys } from "./page.js";
+import { useExtras } from "./useExtras.js";
 import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 // The photos of the "What's included" lines (migration 0137), as the form keeps them: { mediaId } or null per line. Only an item that has some gets the key.
 const includeMediaOf = (item) => (item?.includeMedia?.some(Boolean) ? { includeMedia: item.includes.map((_, i) => (item.includeMedia[i] ? { mediaId: item.includeMedia[i] } : null)) } : {});
+// The page sections (migration 0138) always have a key, so their changes count as unsaved changes and go into the draft.
+const pageFormOf = (item) => ({ page: item ? pageOf(item) : emptyPage() });
 // What is sent: one id or null per line that is kept (blank lines are dropped by the save, so their photos go too). `ids` maps a
 // photo still uploading (tile key) to the id it got.
-const includeMediaPayload = (form, ids = {}) => form.includes.flatMap((text, i) => {
-  if (!String(text ?? "").trim()) return [];
-  const p = form.includeMedia?.[i];
-  return [p?.mediaId ?? (p?.tile ? ids?.[p.tile] ?? null : null)];
-});
 // "type_not_allowed" is also the code of a refused file upload elsewhere in the app; saving an item it means the shop may not sell the chosen product type.
 const saveErrorText = (err) => (err?.code === "type_not_allowed" ? "Your shop is not set up to sell that product type. Choose another type, or request it from the Type step." : errorText(err));
 const detailsKey = (f) => JSON.stringify([f.productTypeId ?? null, f.specs ?? [], f.brand ?? "", f.packSize ?? "", f.includes ?? [], f.options?.axes ?? []]);
@@ -120,6 +119,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
 
   const seedRef = useRef(location.state?.leftover ?? []);
   const media = useMediaSlot(item, { onPhotosChanged: () => qc.invalidateQueries({ queryKey: ["catalog"] }), seed: seedRef.current });
+  const extras = useExtras(item);
 
   // The starting form is the saved item, or the draft kept on this device if it was made from this same item.
   const startRef = useRef(null);
@@ -129,7 +129,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
     // The type picked on the Add item screen rides along in the route state; null means Other goods. Items with no type get no key at all.
     const picked = location.state && "productTypeId" in location.state ? { productTypeId: location.state.productTypeId ?? null } : {};
     const typed = item?.productTypeId ? { productTypeId: item.productTypeId } : {};
-    const saved = item ? { ...formFromItem(item), ...typed, ...includeMediaOf(item) } : { ...fresh, ...picked };
+    const saved = item ? { ...formFromItem(item), ...typed, ...includeMediaOf(item), ...pageFormOf(item) } : { ...fresh, ...picked, ...pageFormOf(null) };
     const base = JSON.stringify(saved);
     const draft = loadDraft(draftId, base);
     startRef.current = { base, saved, form: draft ? { ...saved, ...draft.form } : saved, restoredAt: draft?.savedAt ?? null };
@@ -334,9 +334,13 @@ function EditorForm({ item, sections, category, business, shop = null }) {
     const customCheck = CUSTOM_SIZE_STORED ? validateCustomSize(form.customSize) : { ok: true, errors: {} };
     const guideCheck = form.sizeGuide ? checkGuide(form.sizeGuide) : { errors: {} };
     const tierProblems = form.priceType === "from" && form.tiers ? tierIssues(form.tiers).list : [];
+    const sectionProblems = pageErrors(form);
     const optionErrors = { ...(optionsCheck.ok ? {} : optionsCheck.errors), ...Object.fromEntries(Object.entries(customCheck.errors).map(([k, v]) => [`custom.${k}`, v])) };
-    if (!check.ok || Object.keys(optionErrors).length || Object.keys(guideCheck.errors).length || tierProblems.length) {
-      const found = { ...(check.ok ? {} : check.errors), ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}), ...(Object.keys(guideCheck.errors).length ? { sizeGuide: guideCheck.errors } : {}), ...(tierProblems.length ? { tiers: tierProblems[0] } : {}) };
+    if (!check.ok || Object.keys(optionErrors).length || Object.keys(guideCheck.errors).length || tierProblems.length || Object.keys(sectionProblems).length) {
+      const base = check.ok ? {} : check.errors;
+      const found = { ...base, ...(Object.keys(optionErrors).length ? { options: optionErrors } : {}), ...(Object.keys(guideCheck.errors).length ? { sizeGuide: guideCheck.errors } : {}), ...(tierProblems.length ? { tiers: tierProblems[0] } : {}),
+        ...(sectionProblems.delivery ? { delivery: sectionProblems.delivery } : {}), ...(sectionProblems.notices ? { notices: sectionProblems.notices } : {}),
+        ...(sectionProblems.includes ? { includes: { ...sectionProblems.includes, ...(typeof base.includes === "object" ? base.includes : {}) } } : {}) };
       setErrors(found);
       setNotice(null);
       const target = firstErrorTarget(found);
@@ -388,13 +392,16 @@ function EditorForm({ item, sections, category, business, shop = null }) {
       await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
       const { problems, leftover, ids } = await media.flush(id);
       if (guideProblem) problems.push(guideProblem);
-      // The photos next to the "What's included" lines, once every photo has its id. Sent only when the form has (or had) any.
-      if (form.includeMedia !== undefined || (item?.includeMedia ?? []).some(Boolean)) {
-        try {
-          await api.saveItemIncludeMedia(id, includeMediaPayload(form, ids));
-        } catch (err) {
-          problems.push(`The photos of "What is included" were not saved: ${blockedText(err) ?? saveErrorText(err)}`);
-        }
+      // The page sections (migration 0138), once every picture has its id: the waiting pictures upload first, then one call stores
+      // delivery, notes, the gallery, From the brand and the "What's included" photos (those only when the form has or had any).
+      const up = await extras.flush(id, pendingKeys(form));
+      problems.push(...up.problems);
+      try {
+        const sendIncludes = form.includeMedia !== undefined || (item?.includeMedia ?? []).some(Boolean);
+        await api.saveItemPage(id, pagePayload(form, { extra: up.ids, tile: ids }, { includes: sendIncludes }));
+        extras.settle(up.ids);
+      } catch (err) {
+        problems.push(`Delivery, notes, Images, From the brand and the What's included photos were not saved: ${blockedText(err) ?? saveErrorText(err)}`);
       }
       if (customProblem) problems.push(customProblem);
       // Photos chosen for a size or type before the item existed (or while still uploading) have their ids only now: link them.
@@ -441,7 +448,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
         return;
       }
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
-      let next = fresh ? { ...formFromItem(fresh), ...includeMediaOf(fresh) } : form;
+      let next = fresh ? { ...formFromItem(fresh), ...includeMediaOf(fresh), ...pageFormOf(fresh) } : form;
       if (fresh) {
         // formFromItem knows nothing of the type or the options: carry them over, re-reading the options so ids and stock are the saved ones.
         if ("productTypeId" in form) next = { ...next, productTypeId: form.productTypeId };
@@ -475,7 +482,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
       busyRef.current = false;
       setBusy(false);
     }
-  }, [form, type, item, media, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo, catalogDefaults]);
+  }, [form, type, item, media, extras, draftId, qc, isNew, allow, navigate, backTo, location.state, step, goTo, catalogDefaults]);
 
   // A save from the new-item route lands on the edit route; show what happened there.
   useEffect(() => {
@@ -535,7 +542,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
   const sizeChart = { needed: wantsGuide({ guide: null, options: form.options, typeName, itemName: form.name }), has: Boolean(form.sizeGuide) };
   const colourPhotos = colourPhotoStatus(form.options, media.tiles.filter((t) => t.kind === "image" && t.status === "saved" && t.id).map((t) => t.id));
   const askGuide = () => { setGuideAsked(true); setTimeout(() => goTo("sizeguide"), 0); };
-  const stepProps = { itemId: item?.id ?? null, askGuide, guideShown: steps.some((x) => x.id === "sizeguide"), form, patch, errors, category, sections, focusOn, media, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart, colourPhotos };
+  const stepProps = { itemId: item?.id ?? null, askGuide, guideShown: steps.some((x) => x.id === "sizeguide"), form, patch, errors, category, sections, focusOn, media, extras, busy, checks, isNew, goTo, grandfathered, onPublish, sizeChart, colourPhotos };
   const renderSection = (st) => <st.component key={st.id} {...stepProps} />;
 
   const stepButtons = (variant) => (
@@ -617,7 +624,7 @@ function EditorForm({ item, sections, category, business, shop = null }) {
           </form>
         </div>
 
-        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} tiles={media.tiles} item={item} business={business} shop={shop} /></aside>}
+        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} tiles={media.tiles} item={item} business={business} shop={shop} extras={extras} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
             <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" issues={publishIssues(form, { type, grandfathered, sizeChart, colourPhotos })} />

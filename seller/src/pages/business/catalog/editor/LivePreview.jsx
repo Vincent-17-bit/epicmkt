@@ -121,7 +121,7 @@ function PageView({ form, images, media, hl }) {
 
 const props3dId = (item) => item?.id ?? null;
 
-export default function LivePreview({ form, images, media, area, tiles = [], item: itemProp = null, business = null, shop = null }) {
+export default function LivePreview({ form, images, media, area, tiles = [], item: itemProp = null, business = null, shop = null, extras = null }) {
   const [view, setView] = useState(() => readDevicePref("seller.editor.previewView", "card", VIEWS.map((v) => v[0])));
   const [device, setDevice] = useState(() => readDevicePref("seller.editor.previewDevice", "mobile", DEVICES.map((d) => d[0])));
   const pick = (setter, key) => (value) => { setter(value); storeDevicePref(key, value); };
@@ -132,7 +132,7 @@ export default function LivePreview({ form, images, media, area, tiles = [], ite
   const site = siteDown ? "" : base;
   const saved = props3dId(itemProp);
   const view3d = useQuery({ queryKey: ["media3d", saved], queryFn: () => api.getItemMedia3d(saved), enabled: Boolean(site && saved && view === "page"), staleTime: 30_000 });
-  const payload = useMemo(() => (site && view === "page" ? previewPayload({ form, item: itemProp, business, shop, tiles, media3d: view3d.data?.media3d ?? [] }) : null), [site, view, form, itemProp, business, shop, tiles, view3d.data]);
+  const payload = useMemo(() => (site && view === "page" ? previewPayload({ form, item: itemProp, business, shop, tiles, media3d: view3d.data?.media3d ?? [], extras }) : null), [site, view, form, itemProp, business, shop, tiles, view3d.data, extras, extras?.version, extras?.saved]);
   const live = itemProp && !itemProp.draft && itemProp.visible ? liveLinkOf(shop?.slug, itemProp.id) : "";
   const item = card;
   const hl = (...ids) => (ids.includes(area) ? "" : undefined);

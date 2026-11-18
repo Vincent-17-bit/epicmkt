@@ -3,6 +3,7 @@ import { validateCustomSize } from "@epicmkt/shared";
 import { MEDIA3D, checkOptionIds, checkTicketRequest, hasView3d, inspectGlb, view3dIssues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
+import { PAGE_LIMITS, checkItemDelivery, checkNotices, isMediaId } from "@epicmkt/shared";
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
@@ -1158,6 +1159,82 @@ export const saveItemIncludeMedia = async (id, list) => {
   if (clean.some((x) => x !== null && !own.has(x))) throw new ApiError("invalid_details");
   item.includeMedia = clean.some(Boolean) ? clean : [];
   return copy(item.includeMedia);
+};
+// Page sections (migration 0138). Extra pictures live in memory per item; the demo keeps no files, so a picture is shown from the browser's
+// own copy (an object url), like the 3D pictures above.
+const demoExtras = new Map();
+const extrasOf = (itemId) => demoExtras.get(itemId) ?? [];
+export const listItemExtras = async (itemId) => {
+  signedIn();
+  await wait();
+  if (!bill.items.some((i) => i.id === itemId && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  return copy(extrasOf(itemId).map(({ url, ...r }) => ({ ...r, url })));
+};
+export const uploadItemExtra = async (itemId, file, { signal, onProgress } = {}) => {
+  writer();
+  checkpoint(signal);
+  if (!bill.items.some((i) => i.id === itemId && !i.removedByAdmin)) throw new ApiError("item_not_found");
+  const ticket = checkTicketRequest({ kind: "extra-image", type: file?.type, size: file?.size });
+  if (!ticket.ok) throw new ApiError(ticket.error);
+  if (extrasOf(itemId).length >= MEDIA3D.extrasPerItem) throw new ApiError("extras_limit");
+  onProgress?.(0.5, "uploading");
+  await wait();
+  checkpoint(signal);
+  let url = null;
+  try { url = typeof URL !== "undefined" && URL.createObjectURL ? URL.createObjectURL(file) : null; } catch { url = null; }
+  const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : mediaUuid(`extra-${++bill.seq}-${Date.now()}`);
+  const row = { id, path: `mock/${itemId}/extra-${++bill.seq}`, width: null, height: null, size: file.size, ...(url && { url }) };
+  demoExtras.set(itemId, [...extrasOf(itemId), row]);
+  onProgress?.(1, "finishing");
+  return { path: row.path, id };
+};
+// Mirrors seller_set_item_page: the same checks and the same error codes; unused extra pictures are dropped afterwards.
+export const saveItemPage = async (id, page) => {
+  writer();
+  await wait();
+  const item = bill.items.find((i) => i.id === id && !i.removedByAdmin);
+  if (!item) throw new ApiError("item_not_found");
+  if (!page || typeof page !== "object") throw new ApiError("invalid_page");
+  const extras = new Set(extrasOf(id).map((x) => x.id));
+  const photos = new Set(sequence(item).filter((m) => m.kind === "image").map((m) => mediaUuid(m.path)));
+  if ("delivery" in page) {
+    const d = page.delivery;
+    if (d !== null) {
+      const again = checkItemDelivery(d);
+      if (!again.ok || !again.value || JSON.stringify(again.value) !== JSON.stringify({ ...again.value, ...d })) throw new ApiError("invalid_delivery");
+    }
+    item.delivery = d === null ? null : copy(d);
+  }
+  if ("notices" in page) {
+    const list = page.notices ?? [];
+    const r = checkNotices(list);
+    if (!r.ok || r.value.length !== list.length) throw new ApiError("invalid_notices");
+    item.notices = r.value;
+  }
+  if ("gallery" in page) {
+    const list = page.gallery ?? [];
+    const L = PAGE_LIMITS.gallery;
+    if (!Array.isArray(list) || list.length > L.rows || new Set(list.map((g) => g?.id)).size !== list.length
+      || list.some((g) => !isMediaId(g?.id) || !extras.has(g.id) || String(g.label ?? "").length > L.label || String(g.caption ?? "").length > L.caption)) throw new ApiError("invalid_gallery");
+    item.gallery = copy(list);
+  }
+  if ("brand" in page) {
+    let b = page.brand;
+    if (b && !b.banner && !(b.cards ?? []).length) b = null;
+    const L = PAGE_LIMITS.brand;
+    if (b && ((b.banner && !extras.has(b.banner)) || !Array.isArray(b.cards ?? []) || (b.cards ?? []).length > L.cards
+      || (b.cards ?? []).some((c) => !extras.has(c?.id) || String(c.caption ?? "").length > L.caption))) throw new ApiError("invalid_brand");
+    item.brandPage = b ? copy({ banner: b.banner ?? null, cards: b.cards ?? [] }) : null;
+  }
+  if ("includeMedia" in page) {
+    const list = page.includeMedia ?? [];
+    if (!Array.isArray(list) || list.length > 50 || list.some((x) => x !== null && !extras.has(x) && !photos.has(x))) throw new ApiError("invalid_details");
+    item.includeMedia = list.some(Boolean) ? [...list] : [];
+  }
+  const used = new Set([...(item.includeMedia ?? []), ...(item.gallery ?? []).map((g) => g.id), item.brandPage?.banner, ...(item.brandPage?.cards ?? []).map((c) => c.id)].filter(Boolean));
+  const before = extrasOf(id);
+  demoExtras.set(id, before.filter((x) => used.has(x.id)));
+  return { delivery: copy(item.delivery ?? null), notices: copy(item.notices ?? []), gallery: copy(item.gallery ?? []), brand: copy(item.brandPage ?? null), includeMedia: copy(item.includeMedia ?? []), removed: before.length - extrasOf(id).length };
 };
 export const getItemCustomSize = async (id) => {
   signedIn();

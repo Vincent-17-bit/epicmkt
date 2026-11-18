@@ -24,7 +24,7 @@ const Body = z.object({
   cloudinary: Hosted.optional(),
 });
 
-const ROLE_OF_PURPOSE: Record<string, string> = { item_model: "model-glb", item_poster: "poster", item_spin: "spin-frame" };
+const ROLE_OF_PURPOSE: Record<string, string> = { item_model: "model-glb", item_poster: "poster", item_spin: "spin-frame", item_extra: "extra-image" };
 const MIME: Record<string, string> = { jpg: "image/jpeg", png: "image/png", webp: "image/webp" };
 const STATUS: Record<string, number> = {
   limit_reached: 409, unknown_option_value: 422, bad_option_ids: 422, bad_position: 422, item_not_found: 404, path_not_owned: 403, invalid_role: 422,
@@ -102,7 +102,8 @@ export const sellerMedia3dFinalize = (d: Deps) => wrap(async (req) => {
     const m = String(attached.error.message ?? "");
     const code = /limit_reached/.test(m) ? "limit_reached" : (m.match(/unknown_option_value|bad_option_ids|bad_position|item_not_found|path_not_owned|invalid_role/)?.[0] ?? null);
     await discard(code ?? "attach_failed");
-    return json(code === "limit_reached" ? { error: code, limit: /spin_frames/.test(m) ? "spin_frames" : "media3d" } : { error: code ?? "server_error" }, code ? STATUS[code] : 500);
+    return json(code === "limit_reached" ? { error: code, limit: /spin_frames/.test(m) ? "spin_frames" : /extras/.test(m) ? "extras" : "media3d" } : { error: code ?? "server_error" }, code ? STATUS[code] : 500);
   }
-  return json({ id: attached.data, role, kind: role === "model-glb" ? "model" : role === "poster" ? "poster" : "spin", size, width, height, optionIds: scope.ids }, 201);
+  const kind = role === "model-glb" ? "model" : role === "poster" ? "poster" : role === "extra-image" ? "extra" : "spin";
+  return json({ id: attached.data, role, kind, path, size, width, height, optionIds: scope.ids }, 201);
 });

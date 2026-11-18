@@ -1,4 +1,5 @@
-import { comboKey, guidePayload, liveRows, publicOptions } from "@epicmkt/shared";
+import { checkItemDelivery, cleanNotices, comboKey, guidePayload, liveRows, publicOptions } from "@epicmkt/shared";
+import { emptyPage } from "./page.js";
 import { parseKes, stockLeftOf, stockStatusOf } from "./model.js";
 import { tiersPayload } from "./model/tiers.js";
 
@@ -31,7 +32,15 @@ function optionsOf(form, tiles, price, salePrice) {
   return publicOptions({ axes, variants, item: { price, salePrice, showStockCount: Boolean(form.trackStock && form.showStockCount) }, guide: form.sizeGuide ? guidePayload(form.sizeGuide) : null, defaultVariantId: def?.id ?? null });
 }
 
-export function previewPayload({ form, item = null, business = null, shop = null, tiles = [], media3d = [] }) {
+// A page-section picture (migration 0138) for the page: the saved file's path, or the seller's own file before it is uploaded.
+const extraOf = (extras, ref) => {
+  const pic = extras?.pic?.(ref);
+  if (!pic) return null;
+  const size = { width: pic.width ?? null, height: pic.height ?? null };
+  return pic.path ? { path: pic.path, ...size } : pic.file ? { blob: pic.file, ...size } : null;
+};
+
+export function previewPayload({ form, item = null, business = null, shop = null, tiles = [], media3d = [], extras = null }) {
   const price = num(form.price);
   const salePrice = num(form.salePrice);
   const status = stockStatusOf(form);
@@ -43,10 +52,19 @@ export function previewPayload({ form, item = null, business = null, shop = null
   const prices = options ? options.optionVariants.map((v) => v.price).filter((n) => Number.isFinite(n)) : [];
   const includeMedia = (form.includes ?? []).map((_, i) => {
     const p = form.includeMedia?.[i];
+    if (p?.pending || (p?.mediaId && extras?.saved?.has(p.mediaId))) {
+      const x = extraOf(extras, p);
+      return x ? (x.path ? { path: x.path } : { blob: x.blob }) : null;
+    }
     const t = p?.mediaId ? tiles.find((x) => x.id === p.mediaId) : p?.tile ? tiles.find((x) => x.key === p.tile) : null;
     if (!t) return null;
     return t.path && t.status === "saved" ? { path: t.path } : t.file ? { blob: t.file } : null;
   });
+  const page = form.page ?? emptyPage();
+  const delivery = checkItemDelivery(page.delivery);
+  const gallery = (page.gallery ?? []).map((g) => { const x = extraOf(extras, g); return x ? { ...x, label: text(g.label), caption: text(g.caption) } : null; }).filter(Boolean);
+  const banner = page.brand?.banner ? extraOf(extras, page.brand.banner) : null;
+  const cards = (page.brand?.cards ?? []).map((c) => { const x = extraOf(extras, c); return x ? { ...x, caption: text(c.caption) } : null; }).filter(Boolean);
   const t = form.priceType === "from" && form.tiers ? tiersPayload(form.tiers, { priceType: form.priceType, had: false }) : null;
   const tiers = t?.priceTiers ? { tiers: t.priceTiers, mode: t.priceTierMode } : null;
   return {
@@ -74,6 +92,10 @@ export function previewPayload({ form, item = null, business = null, shop = null
       price_min: prices.length ? Math.min(...prices) : null,
       price_high: prices.length ? Math.max(...prices) : null,
       created_at: item?.createdAt ?? new Date().toISOString(),
+      delivery: delivery.ok ? delivery.value : null,
+      notices: cleanNotices(page.notices),
+      gallery,
+      brand_page: banner || cards.length ? { banner, cards } : null,
     },
     business: { id: business?.id ?? null, slug: shop?.slug ?? "", name: business?.name ?? "Your shop", logo_path: business?.logoPath ?? null, category: null },
     options,

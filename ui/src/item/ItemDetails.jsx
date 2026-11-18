@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { dedupeDescription } from "../lib/media.js";
 import ItemDescription from "./ItemDescription.jsx";
+import ItemNotices from "./ItemNotices.jsx";
+import { cleanNotices } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, normalizeHighlights } from "./itemView.js";
 import { itemT } from "./labels.js";
 import styles from "./ItemView.module.css";
@@ -44,10 +46,13 @@ export default function ItemDetails({ item, t = itemT, onMoreSpecs, marks }) {
   const mark = (part) => marks?.(part);
   const highlights = normalizeHighlights(item.highlights);
   const fullDescription = dedupeDescription(item.shortDescription, item.description);
-  if (highlights.length === 0 && !fullDescription) return null;
+  // Notes buyers must see (migration 0138) sit right under "About this item", before the description.
+  const notices = cleanNotices(item.notices);
+  if (highlights.length === 0 && !fullDescription && notices.length === 0) return null;
   return (
     <>
       {highlights.length > 0 && <Highlights key={`highlights-${item.id}`} dataHl={mark("highlights")} items={highlights} onMore={onMoreSpecs} t={t} />}
+      {notices.length > 0 && <ItemNotices notices={notices} />}
       {fullDescription && <ItemDescription key={`description-${item.id}`} text={fullDescription} t={t} dataHl={mark("description")} />}
     </>
   );
