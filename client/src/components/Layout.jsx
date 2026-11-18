@@ -8,7 +8,8 @@ import LocationDialog from "./LocationDialog.jsx";
 import Toaster from "./Toaster.jsx";
 import Header from "./Header.jsx";
 import Footer from "./Footer.jsx";
-import BackToTop from "./BackToTop.jsx";
+import { BackToTop } from "@epicmkt/ui";
+import { scrollToTop } from "../lib/scrollToTop.js";
 import OfflineBanner from "./OfflineBanner.jsx";
 import UpdatePrompt from "./UpdatePrompt.jsx";
 import styles from "./Layout.module.css";
@@ -72,7 +73,7 @@ export default function Layout() {
           <Footer />
         </main>
       </div>
-      <BackToTop hidden={layered} lifted={/^\/b\/[^/]+\/i\//.test(pathname)} />
+      <BackToTop onTop={scrollToTop} hidden={layered} lifted={/^\/b\/[^/]+\/i\//.test(pathname)} />
       <UpdatePrompt />
       <LocationDialog />
       <Toaster />
