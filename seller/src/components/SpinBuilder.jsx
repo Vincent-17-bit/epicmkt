@@ -4,6 +4,7 @@ import { mediaUrl } from "../api/shape.js";
 import { errorText } from "../lib/errors.js";
 import { SPIN, acceptFrame, compressFrame, frameIssues, move, sortFrames, startAt } from "../lib/spinPrep.js";
 import styles from "./media3d.module.css";
+import { spinPictureMs } from "@epicmkt/ui/view3d/spin";
 
 let nextId = 1;
 const ISSUE_TEXT = { too_few: `Add at least ${SPIN.min} pictures so the turn looks smooth.`, too_many: `Use at most ${SPIN.max} pictures.` };
@@ -43,7 +44,8 @@ export default function SpinBuilder({ itemId, scopeIds = [], frames = [], poster
   const total = all.length;
   useEffect(() => {
     if (!playing || total < 2) return undefined;
-    const timer = setInterval(() => setAt((i) => (i + 1) % total), 90);
+    // The same pace as the buyer's page (a full turn in 5 to 10 s), so the seller sees what buyers will see.
+    const timer = setInterval(() => setAt((i) => (i + 1) % total), spinPictureMs(total));
     return () => clearInterval(timer);
   }, [playing, total]);
 

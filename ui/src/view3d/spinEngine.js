@@ -18,9 +18,20 @@ export const wrap = (value, count) => ((Math.round(value) % count) + count) % co
 /** A drag across `width` pixels is one full turn. */
 export const dragToFrames = (dx, width, count) => (width > 0 ? (dx / width) * count : 0);
 
-const DECAY = 0.94;
+// Speed is measured in time, not in screen refreshes, so a spin turns at the same pace on a 60 Hz laptop and a 120 Hz phone.
+// One full turn when turning by itself takes 5 to 10 seconds: about a fifth of a second per picture, never faster than 5 s a turn
+// (a 13-picture spin would otherwise flash round in under 3 s) and never slower than 10 s (a 72-picture spin).
+export const SPIN_PICTURE_MS = 220;
+export const SPIN_TURN_MS = Object.freeze({ min: 5000, max: 10000 });
+export const spinTurnMs = (count) => Math.min(SPIN_TURN_MS.max, Math.max(SPIN_TURN_MS.min, (count || 0) * SPIN_PICTURE_MS));
+/** How long each picture stays when the spin turns by itself (also the pace of the seller's "Play the turn" preview). */
+export const spinPictureMs = (count) => (count > 0 ? Math.round(spinTurnMs(count) / count) : SPIN_PICTURE_MS);
+
+const FRAME_MS = 1000 / 60;          // velocity is in pictures per 1/60 s
+const DECAY = 0.94;                  // per 1/60 s after letting go of a drag
 const STOP = 0.02;
-const AUTO_STEP = 0.2;
+const FLING_TURN_MS = 1500;          // a hard flick turns at most one full turn in 1.5 s, then slows down
+const MAX_DT = 100;                  // a long pause (tab in the background) does not jump the spin
 
 export function createSpinEngine({ frames, startFrame = 0, ImageClass, raf, caf } = {}) {
   const list = Array.isArray(frames) ? frames.filter((f) => typeof f === "string" && f) : [];
@@ -58,17 +69,26 @@ export function createSpinEngine({ frames, startFrame = 0, ImageClass, raf, caf 
     root?.setAttribute("data-frame", String(i));
   };
 
-  const tick = () => {
+  const turnMs = spinTurnMs(count);
+  const maxVelocity = (count * FRAME_MS) / FLING_TURN_MS;
+  let last = null; // time of the previous tick, ms
+  const now = () => (typeof performance !== "undefined" && performance.now ? performance.now() : Date.now());
+
+  const tick = (time) => {
     timer = null;
     if (destroyed) return;
+    const t = typeof time === "number" ? time : now();
+    const dt = last === null ? FRAME_MS : Math.min(MAX_DT, Math.max(0, t - last));
+    last = t;
     if (!dragging) {
-      if (Math.abs(velocity) > STOP) { position += velocity; velocity *= DECAY; }
-      else if (auto) position += AUTO_STEP;
+      if (Math.abs(velocity) > STOP) { position += velocity * (dt / FRAME_MS); velocity *= DECAY ** (dt / FRAME_MS); }
+      else if (auto) position += (dt * count) / turnMs;
     }
     paint();
     if (!dragging && (auto || Math.abs(velocity) > STOP)) timer = request(tick);
+    else last = null;
   };
-  const kick = () => { if (timer === null && !destroyed) timer = request(tick); };
+  const kick = () => { if (timer === null && !destroyed) { last = null; timer = request(tick); } };
 
   const on = (target, type, fn, opts) => { target.addEventListener(type, fn, opts); offs.push(() => target.removeEventListener(type, fn, opts)); };
 
@@ -111,7 +131,7 @@ export function createSpinEngine({ frames, startFrame = 0, ImageClass, raf, caf 
         const width = root.clientWidth || host.clientWidth || root.getBoundingClientRect?.().width || 300;
         const step = dragToFrames(e.clientX - dragging.last, width, count);
         position -= step; // dragging right turns the item right: the previous frame
-        velocity = -step;
+        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, -step));
         dragging.last = e.clientX;
         paint();
       });
