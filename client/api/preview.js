@@ -42,7 +42,9 @@ export default async function handler(req) {
       [item] = await rest(`public_items?select=${ITEM}&id=eq.${itemId}&business_id=eq.${business.id}&limit=1`);
       // A removed or unknown item still gets the store's own preview, as the app itself shows the store in that case.
     }
-    const categoryName = categories.find((c) => c.id === business.category_id)?.name ?? "";
+    // The admin's name for the category (it can be renamed or added in the admin site); the built-in name if that lookup fails.
+    const [cat] = await rest(`categories?select=name&id=eq.${encodeURIComponent(business.category_id ?? "")}&limit=1`).catch(() => []);
+    const categoryName = cat?.name ?? categories.find((c) => c.id === business.category_id)?.name ?? "";
     const page = injectHead(shell, buildMeta({ origin, supabaseUrl: supabaseUrl(), cloudName: cloudinaryCloud(), business, item, categoryName }));
     return html(page, 200, "public, s-maxage=300, stale-while-revalidate=86400");
   } catch {

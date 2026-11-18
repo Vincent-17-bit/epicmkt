@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatPrice } from "@epicmkt/shared/billing";
+import { formatPrice, planLabel } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { errorText } from "../../lib/errors.js";
 import ui from "../../styles/ui.module.css";
@@ -80,26 +80,58 @@ export default function CategoryChange({ business, payments, onPay }) {
     );
   }
 
-  const options = (cats.data ?? []).filter((c) => c.id !== business.categoryId && c.prices[business.planKey] != null);
+  // Every category the admin has switched on, in the admin's order and groups. The shop's own category is listed (it cannot be
+  // chosen) so it is clear the list is complete; a category with no price for this shop's plan cannot be chosen either.
+  const all = cats.data ?? [];
+  const groups = [];
+  for (const c of all) {
+    const g = c.group || "Other";
+    let entry = groups.find((x) => x.name === g);
+    if (!entry) groups.push((entry = { name: g, list: [] }));
+    entry.list.push(c);
+  }
+  const plan = planLabel(business.planKey);
+  // The server refuses a dearer category while the subscription is not active, so say so before the seller asks.
+  const renewFirst = Boolean(quote?.dearer && quote.listingState && quote.listingState !== "active");
   return (
     <section className={ui.card} aria-labelledby="cat-title">
       <h2 id="cat-title">Change category</h2>
-      <p className={ui.muted}>Moving to a dearer category costs the prorated difference for the rest of this month. A cheaper one costs nothing now and starts at your next renewal. An admin approves every change.</p>
+      <p className={ui.muted}>
+        Only if your shop now does a different kind of business. To keep {business.categoryName} and pay for more time, use <strong>Renew</strong> at the top of this page.
+      </p>
+      <p className={ui.muted}>Moving to a dearer category costs the prorated difference for the days left this month. A cheaper one costs nothing now and starts at your next renewal. An admin approves every change.</p>
       <div className={ui.field}>
-        <label className={ui.label} htmlFor="new-cat">New category</label>
-        <select id="new-cat" className={ui.input} value={target} onChange={(e) => setTarget(e.target.value)}>
-          <option value="">Choose a category</option>
-          {options.map((c) => <option key={c.id} value={c.id}>{c.name} ({formatPrice(c.prices[business.planKey])} / month)</option>)}
+        <label className={ui.label} htmlFor="new-cat">New category (prices are for your {plan} plan)</label>
+        <select id="new-cat" className={ui.input} value={target} onChange={(e) => setTarget(e.target.value)} disabled={cats.isLoading}>
+          <option value="">{cats.isLoading ? "Loading categories…" : `Choose from ${all.length} categories`}</option>
+          {groups.map((g) => (
+            <optgroup key={g.name} label={g.name}>
+              {g.list.map((c) => {
+                const mine = c.id === business.categoryId;
+                const price = c.prices?.[business.planKey];
+                return (
+                  <option key={c.id} value={c.id} disabled={mine || price == null}>
+                    {c.name} ({mine ? "your category" : price == null ? `no ${plan} price yet` : `${formatPrice(price)} / month`})
+                  </option>
+                );
+              })}
+            </optgroup>
+          ))}
         </select>
       </div>
+      {cats.isError && <p className={ui.error} role="alert">We could not load the categories. Check your connection and try again.</p>}
       {quote && (
         <div className={styles.quote} data-testid="category-quote">
-          {quote.dearer ? <p>Pay <strong>{formatPrice(quote.extraDueNow)}</strong> now for the rest of this month.</p> : <p>Nothing to pay now.</p>}
+          {renewFirst
+            ? <p><strong>Renew first.</strong> A dearer category can be requested while your subscription is active. Renew at the top of this page, then come back.</p>
+            : quote.extraDueNow > 0
+              ? <p>Pay <strong>{formatPrice(quote.extraDueNow)}</strong> now for the days left this month.</p>
+              : <p>Nothing to pay now.</p>}
           <p>{formatPrice(quote.newMonthlyPrice)} per month from your next renewal.</p>
         </div>
       )}
       {error && <p className={ui.error} role="alert">{error}</p>}
-      <button type="button" className={ui.btn} style={{ justifySelf: "start" }} disabled={!quote || busy} onClick={request}>Request change</button>
+      <button type="button" className={ui.btn} style={{ justifySelf: "start" }} disabled={!quote || busy || renewFirst} onClick={request}>Request change</button>
     </section>
   );
 }

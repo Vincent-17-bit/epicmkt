@@ -108,7 +108,7 @@ export default function PlansPage() {
     <div className="page-shell">
       <section className="panel">
         <div className="panel__header"><h2 className="heading-sm">Plans and pricing</h2></div>
-        <p className="muted">Price changes reach new and unpaid applications and the seller and application pages straight away. A payment that covers the price and matches the category activates the shop automatically. Sellers already live keep the monthly price on their account.</p>
+        <p className="muted">These prices are what every site shows and charges: the application form and pricing page on the client site, and the renewal, plan choice and category list on the seller site. A change reaches them straight away. Sellers already live pay the new price from their next payment; time they have already paid for is not changed. Sellers choose Standard or Premium when they renew, so both plans of a category need a price.</p>
         {isError ? <LoadError what="plans" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
             <table>

@@ -179,7 +179,8 @@
   gap: var(--space-2);
 }
 
-.month {
+.month,
+.planPick {
   position: relative;
   display: grid;
   gap: 2px;
@@ -191,20 +192,24 @@
   cursor: pointer;
 }
 
-.month:hover {
+.month:hover,
+.planPick:hover {
   border-color: var(--primary);
 }
 
-.months:disabled .month {
+.months:disabled .month,
+.plans:disabled .planPick {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.months:disabled .month input {
+.months:disabled .month input,
+.plans:disabled .planPick input {
   cursor: not-allowed;
 }
 
-.month input {
+.month input,
+.planPick input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -214,13 +219,15 @@
   cursor: pointer;
 }
 
-.month[data-checked="true"] {
+.month[data-checked="true"],
+.planPick[data-checked="true"] {
   border-color: var(--primary);
   background: var(--primary-tint);
   box-shadow: inset 0 0 0 1px var(--primary);
 }
 
-.month:has(input:focus-visible) {
+.month:has(input:focus-visible),
+.planPick:has(input:focus-visible) {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -236,7 +243,8 @@
   background: var(--surface);
 }
 
-.month[data-checked="true"] .monthDot {
+.month[data-checked="true"] .monthDot,
+.planPick[data-checked="true"] .monthDot {
   border-color: var(--primary);
   background: radial-gradient(circle, var(--primary) 0 45%, var(--surface) 50%);
 }
@@ -244,6 +252,35 @@
 .monthCount {
   font-weight: 700;
 }
+
+/* Standard or Premium for the renewal. */
+.plans {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.plans legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+@media (min-width: 56rem) {
+  .planGrid {
+    grid-template-columns: repeat(2, minmax(0, 16rem));
+  }
+}
+
+
 
 .monthPrice {
   font-size: var(--text-lg);
@@ -271,6 +308,10 @@
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   border: 1px solid var(--border);
+}
+
+.total[data-updating="true"] {
+  opacity: 0.55;
 }
 
 .total > div {

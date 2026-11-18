@@ -125,6 +125,25 @@ export function categoryChangeQuote({ oldPrice, newPrice, paidUntil, now = new D
   return { extraDueNow: Math.ceil(((newPrice - oldPrice) * left) / monthDays), ...base };
 }
 
+/**
+ * Renewing on the other plan moves the days still left in the current period to it at once: going up charges the prorated
+ * difference for those days (switchDue), going down gives it back as credit (switchCredit). No days left, nothing either way.
+ * Same rule and rounding as the database's plan_switch_quote (migration 0139).
+ */
+export function planSwitchQuote({ oldPrice, newPrice, paidUntil, now = new Date() }) {
+  let left = 0;
+  let due = 0;
+  let back = 0;
+  if (paidUntil && oldPrice != null && newPrice != null && newPrice !== oldPrice) {
+    const end = toDay(paidUntil);
+    const monthDays = diffDays(end, shiftMonths(end, -1).toISOString().slice(0, 10));
+    left = Math.min(monthDays, Math.max(0, diffDays(end, toDay(now))));
+    if (newPrice > oldPrice) due = Math.ceil(((newPrice - oldPrice) * left) / monthDays);
+    else back = Math.floor(((oldPrice - newPrice) * left) / monthDays);
+  }
+  return { switchDue: due, switchCredit: back, daysLeft: left, oldMonthlyPrice: oldPrice, newMonthlyPrice: newPrice, appliesFromNextRenewal: false };
+}
+
 export const daysLeft = (paidUntil, now = new Date()) => (paidUntil ? diffDays(toDay(paidUntil), toDay(now)) : null);
 
 // Whole months from day a to day b, counted like Postgres age(): 31 Jan to 28 Feb is 0 months, 31 Jan to 3 Mar is 1.
@@ -251,12 +270,23 @@ export function buildPaymentInstructions({ business, application = null, priceOf
   let planKey = business.planKey;
   let categoryId = business.categoryId;
   let quote = null;
+  let switchKes = 0;
 
   if (kind === 'first') {
     amount = application?.priceAtSubmission ?? current;
     account = application?.referenceNo ?? business.sellerId;
   } else if (kind === 'renewal') {
     amount = current;
+    // Renewing on the other plan (0139): the month is at that plan's price and the days left move to it now.
+    if (targetPlan && targetPlan !== business.planKey) {
+      if (!PLAN_KEYS.includes(targetPlan)) throw fail('invalid_plan');
+      const next = priceOf(business.categoryId, targetPlan);
+      if (next == null || next <= 0) throw fail('invalid_plan');
+      quote = { ...planSwitchQuote({ oldPrice: current, newPrice: next, paidUntil: business.paidUntil, now }), fromPlan: business.planKey, toPlan: targetPlan };
+      switchKes = quote.switchDue - quote.switchCredit;
+      amount = next;
+      planKey = targetPlan;
+    }
   } else if (kind === 'upgrade') {
     if (business.planKey !== 'standard' || targetPlan !== 'premium') throw fail('invalid_upgrade');
     if (state !== 'active') throw fail('renew_first');
@@ -285,6 +315,7 @@ export function buildPaymentInstructions({ business, application = null, priceOf
     categoryId,
     listingState: state,
     quote,
+    switchKes,
     configured,
     method: configured ? setting.type ?? 'paybill' : null,
     number: configured ? String(setting.number).trim() : null,

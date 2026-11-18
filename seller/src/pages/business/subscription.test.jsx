@@ -117,7 +117,7 @@ describe("Subscription: the payment card", () => {
     const user = userEvent.setup();
     await signedInApp("/business/subscription", () => { setTime("2026-10-05T09:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
     await screen.findByRole("option", { name: /Salon/ });
-    await user.selectOptions(screen.getByLabelText("New category"), "salon");
+    await user.selectOptions(screen.getByLabelText(/^New category/), "salon");
     expect(await screen.findByTestId("category-quote")).toHaveTextContent("Pay KES 150 now");
     expect(screen.getByTestId("category-quote")).toHaveTextContent("KES 800 per month from your next renewal");
     await user.click(screen.getByRole("button", { name: "Request change" }));
@@ -133,7 +133,7 @@ describe("Subscription: the payment card", () => {
     const user = userEvent.setup();
     await signedInApp();
     await screen.findByRole("option", { name: /Kiosk/ });
-    await user.selectOptions(screen.getByLabelText("New category"), "kiosk");
+    await user.selectOptions(screen.getByLabelText(/^New category/), "kiosk");
     const q = await screen.findByTestId("category-quote");
     expect(q).toHaveTextContent("Nothing to pay now");
     expect(q).toHaveTextContent("KES 300 per month from your next renewal");
@@ -142,7 +142,7 @@ describe("Subscription: the payment card", () => {
     expect(pending).toHaveTextContent("Nothing to pay now");
     expect(within(pending).queryByRole("button", { name: /^Pay/ })).toBeNull();
     await user.click(within(pending).getByRole("button", { name: "Cancel request" }));
-    await screen.findByLabelText("New category");
+    await screen.findByLabelText(/^New category/);
   });
 
   it("copy buttons copy the paybill, account number and amount", async () => {
@@ -440,5 +440,99 @@ describe("Renew reminder on the other pages", () => {
     await signedInApp("/business/questions", () => { setTime("2026-10-01T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-20"); });
     await screen.findByRole("heading", { level: 1 });
     expect(screen.queryByTestId("renew-reminder")).toBeNull();
+  });
+});
+
+describe("Renewing on Standard or Premium", () => {
+  const at = async (planKey, paidUntil, today = "2026-10-05T09:00:00Z") => {
+    setTime(today);
+    await signedInApp("/business/subscription", () => { setTime(today); M.setBusiness({ planKey, paidUntil: nairobiMidnight(paidUntil) }); });
+    await screen.findByTestId("payment-card");
+  };
+
+  it("an expired Premium seller can renew on Standard: the price, the total and the plan all follow the choice", async () => {
+    const user = userEvent.setup();
+    await at("premium", "2026-09-20");
+    const plans = await screen.findByTestId("pay-plans");
+    expect(within(plans).getByRole("radio", { name: "Premium, your plan, KES 1,500 a month" })).toBeChecked();
+    expect(text("pay-total")).toContain("KES 1,500");
+    await user.click(within(plans).getByRole("radio", { name: /^Standard/ }));
+    await waitFor(() => expect(text("pay-total")).toContain("KES 500"));
+    expect(screen.getByTestId("pay-switch")).toHaveTextContent("Your shop moves to Standard when the payment arrives.");
+    await user.click(screen.getByRole("radio", { name: /^3 months/ }));
+    expect(text("pay-total")).toContain("KES 1,500");
+    expect(screen.getByRole("radio", { name: /^3 months/ }).closest("label")).toHaveTextContent("3 monthsKES 1,500to 5 Jan 2027");
+    await user.click(screen.getByRole("button", { name: "Pay KES 1,500 now" }));
+    expect(await screen.findByTestId("payment-received", {}, { timeout: 15000 })).toHaveTextContent("3 months");
+    await waitFor(() => expect(text("sum-plan")).toBe("Standard · Barber"));
+    expect(text("sum-paid-until")).toBe("5 Jan 2027");
+    expect(M.state.business.planKey).toBe("standard");
+  }, 30000);
+
+  it("an active Standard seller renewing on Premium pays the difference for the days left, then Premium months", async () => {
+    const user = userEvent.setup();
+    await at("standard", "2026-10-20");
+    await user.click(within(await screen.findByTestId("pay-plans")).getByRole("radio", { name: /^Premium/ }));
+    // 15 of 30 days left: (1,500 - 500) x 15 / 30 = 500.
+    await waitFor(() => expect(screen.getByTestId("pay-switch")).toHaveTextContent("Premium starts as soon as you pay. KES 500 for the 15 days left on Standard is added."));
+    expect(text("pay-total")).toContain("KES 2,000");
+    expect(text("pay-total")).toContain("1 month × KES 1,500 + KES 500 for the days left");
+    await user.click(screen.getByRole("button", { name: "Pay KES 2,000 now" }));
+    expect(await screen.findByTestId("payment-received", {}, { timeout: 15000 })).toBeInTheDocument();
+    await waitFor(() => expect(text("sum-plan")).toBe("Premium · Barber"));
+    expect(text("sum-paid-until")).toBe("20 Nov 2026");
+  }, 30000);
+
+  it("an active Premium seller renewing on Standard gets the unused Premium days taken off", async () => {
+    const user = userEvent.setup();
+    await at("premium", "2026-10-20");
+    await user.click(within(await screen.findByTestId("pay-plans")).getByRole("radio", { name: /^Standard/ }));
+    await waitFor(() => expect(screen.getByTestId("pay-switch")).toHaveTextContent("KES 500 for the 15 unused Premium days is taken off."));
+    // 500 for the month less 500 for the unused days: covered without paying.
+    expect(text("pay-total")).toContain("You payKES 0");
+    await user.click(screen.getByRole("button", { name: "Switch to Standard now" }));
+    await waitFor(() => expect(M.state.business.planKey).toBe("standard"));
+    expect(await screen.findByTestId("payment-received")).toHaveTextContent("paid until 20 Nov 2026");
+  }, 30000);
+
+  it("Renew on Premium in the plan comparison picks the plan in the renew card", async () => {
+    const user = userEvent.setup();
+    await at("standard", "2026-09-20");
+    await user.click(await screen.findByRole("button", { name: "Renew on Premium" }));
+    await waitFor(() => expect(within(screen.getByTestId("pay-plans")).getByRole("radio", { name: /^Premium/ })).toBeChecked());
+    expect(screen.getByTestId("renewing-premium")).toHaveTextContent("Chosen for your renewal above.");
+    // Expired: the mid-month upgrade is not offered; renewing on Premium is.
+    expect(screen.queryByRole("button", { name: "Upgrade to Premium" })).toBeNull();
+  });
+
+  it("before the server offers the choice, the card has no plan choice and works as before", async () => {
+    await signedInApp("/business/subscription", () => { M.state.noPlanChoice = true; });
+    await screen.findByTestId("payment-card");
+    expect(screen.queryByTestId("pay-plans")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Renew on/ })).toBeNull();
+    M.state.noPlanChoice = false;
+  });
+});
+
+describe("Change category lists every category, and points to Renew", () => {
+  it("shows the shop's own category (not choosable), groups the rest, and says how to renew instead", async () => {
+    await signedInApp("/business/subscription");
+    const select = await screen.findByLabelText(/^New category \(prices are for your Standard plan\)/);
+    await waitFor(() => expect(within(select).getByRole("option", { name: "Barber (your category)" })).toBeDisabled());
+    expect(within(select).getByRole("option", { name: /^Salon \(KES 800 \/ month\)/ })).toBeEnabled();
+    expect(select.querySelectorAll("optgroup").length).toBeGreaterThan(1);
+    expect(screen.getByText(/To keep Barber and pay for more time, use/)).toBeInTheDocument();
+  });
+
+  it("an expired seller choosing a dearer category is told to renew first, not to 'pay Free'", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/subscription", () => { setTime("2026-10-20T10:00:00Z"); M.state.business.paidUntil = nairobiMidnight("2026-10-05"); });
+    const select = await screen.findByLabelText(/^New category/);
+    await screen.findByRole("option", { name: /^Salon/ });
+    await user.selectOptions(select, "salon");
+    const q = await screen.findByTestId("category-quote");
+    expect(q).toHaveTextContent("Renew first.");
+    expect(q).not.toHaveTextContent("Free");
+    expect(screen.getByRole("button", { name: "Request change" })).toBeDisabled();
   });
 });

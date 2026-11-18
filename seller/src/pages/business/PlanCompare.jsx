@@ -2,7 +2,7 @@ import { formatPrice, planLabel } from "@epicmkt/shared/billing";
 import ui from "../../styles/ui.module.css";
 import styles from "./subscription.module.css";
 
-function PlanColumn({ planKey, plan, current, canUpgrade, upgradeBlocked, onUpgrade }) {
+function PlanColumn({ planKey, plan, current, canUpgrade, upgradeBlocked, onUpgrade, onRenewOn, renewing }) {
   return (
     <article className={styles.plan} data-current={current} data-testid={`plan-${planKey}`} aria-label={`${planLabel(planKey)} plan`}>
       <header style={{ display: "flex", justifyContent: "space-between", gap: "var(--space-2)", alignItems: "center" }}>
@@ -18,18 +18,29 @@ function PlanColumn({ planKey, plan, current, canUpgrade, upgradeBlocked, onUpgr
           <ul>{list.map((f) => <li key={f}>{f}</li>)}</ul>
         </section>
       ))}
-      {canUpgrade && (
+      {canUpgrade && !(upgradeBlocked && onRenewOn) && (
         <>
           <button type="button" className={ui.btn} onClick={onUpgrade} disabled={upgradeBlocked}>Upgrade to Premium</button>
-          {upgradeBlocked && <p className={ui.muted}>Renew your subscription first, then upgrade.</p>}
+          {upgradeBlocked
+            ? <p className={ui.muted}>Renew your subscription first, then upgrade.</p>
+            : <p className={ui.muted}>Upgrade now for the days left of this month only.</p>}
         </>
+      )}
+      {onRenewOn && !current && (
+        renewing
+          ? <p className={ui.muted} data-testid={`renewing-${planKey}`}>Chosen for your renewal above.</p>
+          : <button type="button" className={canUpgrade && !upgradeBlocked ? `${ui.btn} ${ui.btnGhost}` : ui.btn} onClick={() => onRenewOn(planKey)}>Renew on {planLabel(planKey)}</button>
       )}
     </article>
   );
 }
 
-/** Standard and Premium for the seller's OWN category only. Prices, items and features come from the plan tables. */
-export default function PlanCompare({ subscription, listingState, onUpgrade }) {
+/**
+ * Standard and Premium for the seller's OWN category only. Prices, items and features come from the plan tables.
+ * "Renew on …" picks the plan for the renewal card above (when the server offers the choice, migration 0139); "Upgrade to
+ * Premium" stays for moving up mid-period without renewing.
+ */
+export default function PlanCompare({ subscription, listingState, onUpgrade, canRenewOn = false, renewingOn = null, onRenewOn = null }) {
   const { business, plans } = subscription;
   const available = ["standard", "premium"].filter((k) => plans?.[k]);
   return (
@@ -42,6 +53,7 @@ export default function PlanCompare({ subscription, listingState, onUpgrade }) {
           <PlanColumn
             key={k} planKey={k} plan={plans[k]} current={business.planKey === k}
             canUpgrade={k === "premium" && business.planKey === "standard"} upgradeBlocked={listingState !== "active"} onUpgrade={onUpgrade}
+            onRenewOn={canRenewOn ? onRenewOn : null} renewing={renewingOn === k}
           />
         ))}
       </div>
