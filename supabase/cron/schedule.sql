@@ -1,4 +1,4 @@
--- Cron schedule for the background jobs (messages, daily lifecycle, proof clean-up, media clean-up). Not a migration: pg_cron and
+-- Cron schedule for the background jobs (messages, daily lifecycle, proof clean-up, media clean-up, search rollups). Not a migration: pg_cron and
 -- pg_net are enabled per project, and the secrets differ between projects. Run this whole file once in the SQL editor of each
 -- environment. It is safe to run again: scheduling an existing job name replaces it.
 --
@@ -111,6 +111,7 @@ select cron.schedule(
 --   select cron.unschedule('daily-lifecycle');
 --   select cron.unschedule('proofs-purge');
 --   select cron.unschedule('media-gc');
+--   select cron.unschedule('search-rollups');
 --   select cron.unschedule('pay-reconcile');
 
 -- media-gc: every 10 minutes. Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos,
@@ -129,6 +130,18 @@ select cron.schedule(
     timeout_milliseconds := 55000
   );
   $$
+);
+
+-- search-rollups: hourly at :02, just after the hour turns. Rebuilds the type-ahead dictionary (search_terms) and the "Trending"
+-- list the menu shows (search_top_hourly), migration 0128. Plain SQL inside the database: no function, URL or secret involved.
+-- /api/products caches the trending list until 5 minutes past the next hour, so visitors see the new list within minutes.
+-- Without this job nothing breaks: trending falls back to the live count and suggestions to the product snapshot.
+-- On a catalogue of several million products the dictionary takes a minute or more; if it ever runs long, move it to every 6
+-- hours ('7 */6 * * *') and keep refresh_top_searches() hourly.
+select cron.schedule(
+  'search-rollups',
+  '2 * * * *',
+  $$ select public.refresh_search_rollups(); $$
 );
 
 -- pay-reconcile: every 2 minutes. M-Pesa "Pay now" (STK Push): finishes Safaricom callbacks that were stored but not processed,

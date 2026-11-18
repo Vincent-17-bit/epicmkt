@@ -54,7 +54,7 @@ export default function AutomationPage() {
             )}
 
             <div className="table-shell">
-              <table>
+              <table data-cards>
                 <thead><tr><th scope="col">Job</th><th scope="col">Runs</th><th scope="col">State</th><th scope="col">Last run</th><th scope="col"><span className="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                   {(status.expected ?? []).map((name) => {
@@ -62,13 +62,13 @@ export default function AutomationPage() {
                     const info = JOB_INFO[name] ?? { label: name, every: "", what: "" };
                     return (
                       <tr key={name}>
-                        <td><strong>{info.label}</strong><div className="muted">{info.what}</div></td>
-                        <td>{info.every}{job ? <div className="muted">{job.schedule} UTC</div> : null}</td>
-                        <td>{!job ? <span className="status-pill status-pill--down">Not scheduled</span> : job.active ? <span className="status-pill status-pill--healthy">Active</span> : <span className="status-pill status-pill--degraded">Paused</span>}</td>
-                        <td>
+                        <td data-label="Job"><strong>{info.label}</strong><div className="muted">{info.what}</div></td>
+                        <td data-label="Runs">{info.every}{job ? <div className="muted">{job.schedule} UTC</div> : null}</td>
+                        <td data-label="State">{!job ? <span className="status-pill status-pill--down">Not scheduled</span> : job.active ? <span className="status-pill status-pill--healthy">Active</span> : <span className="status-pill status-pill--degraded">Paused</span>}</td>
+                        <td data-label="Last run">
                           {job?.last_run ? <>{ago(job.last_run.started_at)}<div className={job.last_run.status === "failed" ? "text-danger" : "muted"}>{job.last_run.status}{job.last_run.message ? `: ${job.last_run.message}` : ""}</div></> : "Never"}
                         </td>
-                        <td className="row-actions">
+                        <td className="row-actions" data-label="Actions">
                           {job && (
                             <Button size="sm" disabled={!manage || busy === name} title={why("automation.manage")} onClick={() => { setBusy(name); toggle.mutate({ name, active: !job.active }); }} aria-label={`${job.active ? "Pause" : "Resume"} ${info.label}`}>{job.active ? "Pause" : "Resume"}</Button>
                           )}
@@ -83,8 +83,8 @@ export default function AutomationPage() {
 
             <h3 className="heading-flow">Message queue</h3>
             <p>
-              <strong>{status.queue.queued}</strong> queued, <strong>{status.queue.due_now}</strong> due now, <strong className={status.queue.failed_7d ? "text-danger" : ""}>{status.queue.failed_7d}</strong> failed in 7 days. Last sent {ago(status.last_sent_at)}; last reminder queued {ago(status.last_reminder_at)}.{" "}
-              <Link to="/admin/broadcasts?tab=log">Open the message log</Link>
+              <strong>{status.queue.queued}</strong> queued ({Math.max(0, status.queue.queued - status.queue.due_now)} scheduled for later, <strong>{status.queue.due_now}</strong> due now), <strong className={status.queue.failed_7d ? "text-danger" : ""}>{status.queue.failed_7d}</strong> failed in 7 days. Last sent {ago(status.last_sent_at)}; last reminder queued {ago(status.last_reminder_at)}.{" "}
+              <Link to="/admin/broadcasts?tab=log">Open the message log</Link> · <Link to="/admin/broadcasts">Schedule a broadcast</Link>
             </p>
           </>
         )}

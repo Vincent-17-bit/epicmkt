@@ -2,12 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrash } from "@fortawesome/free-solid-svg-icons";
+import { faBell, faComment, faCreditCard, faFileSignature, faFlag, faStore, faTrash } from "@fortawesome/free-solid-svg-icons";
 import { api } from "../api/index.js";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { useActivityDelete } from "../hooks/useActivityDelete.js";
 import { describeError } from "../lib/applications.js";
-import { describeActivity } from "../lib/activity.js";
+import { activityIconKey, describeActivity } from "../lib/activity.js";
 import { clearSummary, clearedMessage, removeRows } from "../lib/activityDelete.js";
 import { timeAgo } from "../lib/time.js";
 import Button from "./Button.jsx";
@@ -15,6 +15,7 @@ import ConfirmDialog from "./ConfirmDialog.jsx";
 import { useToast } from "./Toast.jsx";
 
 export const ACTIVITY_KEY = ["admin-activity"];
+const ICONS = { payment: faCreditCard, application: faFileSignature, flag: faFlag, message: faComment, store: faStore, bell: faBell };
 const noRows = [];
 
 // The "Live activity" panel of the Command Center: the feed, a delete button on every row and "Clear all".
@@ -69,9 +70,9 @@ export default function LiveActivityPanel({ undoMs }) {
   const clearHint = !canManage ? why("activity.manage") : rows.length === 0 ? "There is nothing to clear." : undefined;
 
   return (
-    <section className="panel">
+    <section className="panel cc-activity" aria-labelledby="cc-activity-title">
       <div className="panel__header">
-        <h3>Live activity</h3>
+        <h3 id="cc-activity-title">Live activity</h3>
         {canView ? (
           <Button size="sm" disabled={clearDisabled} title={clearHint} onClick={() => { setClearError(""); setConfirmRows(rows); }}>
             Clear all
@@ -96,6 +97,7 @@ export default function LiveActivityPanel({ undoMs }) {
             const { text, to } = describeActivity(row);
             return (
               <li key={row.id}>
+                <span className={`activity-list__icon activity-list__icon--${activityIconKey(row)}`} aria-hidden="true"><FontAwesomeIcon icon={ICONS[activityIconKey(row)]} /></span>
                 <div className="activity-list__main">
                   {to ? <Link to={to}>{text}</Link> : <span>{text}</span>}
                   {row.at ? <time className="muted" dateTime={row.at}> · {timeAgo(row.at)}</time> : null}

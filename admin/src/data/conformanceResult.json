@@ -5,14 +5,16 @@
       "ok": true,
       "types": [
         "drinking-water",
-        "drinking-water--seeded"
+        "drinking-water--seeded",
+        "water-dispenser-filter"
       ],
       "failures": []
     },
     "lpg-gas": {
       "ok": true,
       "types": [
-        "lpg-gas"
+        "lpg-gas",
+        "lpg-accessories"
       ],
       "failures": []
     },
@@ -22,14 +24,21 @@
         "bread",
         "bread--seeded",
         "cake",
-        "cupcakes-pastries"
+        "cupcakes-pastries",
+        "buns-doughnuts-snacks",
+        "custom-cake-order",
+        "bakery-bulk-order",
+        "catering"
       ],
       "failures": []
     },
     "juice-shop": {
       "ok": true,
       "types": [
-        "juice"
+        "juice",
+        "smoothie-fruit-salad",
+        "bottled-juice-event",
+        "dairy-eggs-chilled"
       ],
       "failures": []
     },
@@ -38,7 +47,14 @@
       "types": [
         "bread",
         "bread--seeded",
-        "restaurant-meal"
+        "restaurant-meal",
+        "buns-doughnuts-snacks",
+        "bakery-bulk-order",
+        "smoothie-fruit-salad",
+        "restaurant-drink",
+        "catering",
+        "soft-drinks-bottled-water",
+        "bar-menu-drink"
       ],
       "failures": []
     },
@@ -46,14 +62,22 @@
       "ok": true,
       "types": [
         "meat-by-weight",
-        "meat-by-weight--seeded"
+        "meat-by-weight--seeded",
+        "processed-meat",
+        "offal-bones",
+        "dressed-chicken",
+        "eggs",
+        "fish"
       ],
       "failures": []
     },
     "greengrocer": {
       "ok": true,
       "types": [
-        "produce"
+        "produce",
+        "eggs",
+        "mama-mboga-produce",
+        "herbs-spices"
       ],
       "failures": []
     },
@@ -78,7 +102,31 @@
         "bread--seeded",
         "meat-by-weight--seeded",
         "packaged-food",
-        "liquor--seeded"
+        "liquor--seeded",
+        "buns-doughnuts-snacks",
+        "bottled-juice-event",
+        "processed-meat",
+        "dressed-chicken",
+        "eggs",
+        "fish",
+        "herbs-spices",
+        "cooking-oil-fat",
+        "flour-cereals-rice",
+        "tea-coffee-sugar",
+        "dairy-eggs-chilled",
+        "snacks-biscuits-sweets",
+        "soft-drinks-bottled-water",
+        "household-consumables",
+        "baby-food-formula",
+        "beer-cider",
+        "wine",
+        "spirits",
+        "vitamins-supplements",
+        "sanitary-baby-care",
+        "grooming-products",
+        "hair-care-products",
+        "body-care-lotions",
+        "underwear-socks"
       ],
       "failures": []
     },
@@ -86,27 +134,47 @@
       "ok": true,
       "types": [
         "medicine",
-        "prescription-medicine"
+        "prescription-medicine",
+        "baby-food-formula",
+        "vitamins-supplements",
+        "first-aid-devices",
+        "sanitary-baby-care",
+        "skin-hair-medical",
+        "lab-test",
+        "vaccination",
+        "body-care-lotions"
       ],
       "failures": []
     },
     "clinic": {
       "ok": true,
-      "types": [],
+      "types": [
+        "first-aid-devices",
+        "clinic-consultation",
+        "lab-test",
+        "vaccination",
+        "dental-service",
+        "maternity-physio"
+      ],
       "failures": []
     },
     "optician": {
       "ok": true,
       "types": [
         "sunglasses",
-        "frames"
+        "frames",
+        "lenses",
+        "contact-lenses",
+        "eye-test"
       ],
       "failures": []
     },
     "barbershop": {
       "ok": true,
       "types": [
-        "barbershop-service"
+        "barbershop-service",
+        "kids-haircut",
+        "grooming-products"
       ],
       "failures": []
     },
@@ -121,21 +189,36 @@
         "fragrance--seeded",
         "makeup-skincare",
         "hair-wigs",
-        "salon-service"
+        "salon-service",
+        "kids-haircut",
+        "grooming-products",
+        "braiding-service",
+        "nails-service",
+        "makeup-service",
+        "hair-care-products",
+        "nail-lash-tools"
       ],
       "failures": []
     },
     "spa-massage": {
       "ok": true,
       "types": [
-        "spa-treatment"
+        "spa-treatment",
+        "nails-service",
+        "spa-package-membership",
+        "sauna-steam"
       ],
       "failures": []
     },
     "gym-fitness": {
       "ok": true,
       "types": [
-        "gym-membership"
+        "gym-membership",
+        "vitamins-supplements",
+        "sauna-steam",
+        "gym-class-training",
+        "fitness-equipment",
+        "sportswear"
       ],
       "failures": []
     },
@@ -144,7 +227,15 @@
       "types": [
         "vet-medicine",
         "agrochemicals",
-        "agrovet-supplies"
+        "agrovet-supplies",
+        "animal-feed",
+        "seeds-seedlings",
+        "fertiliser-manure",
+        "farm-tools-equipment",
+        "agrovet-service",
+        "day-old-chicks",
+        "poultry-equipment",
+        "pet-food"
       ],
       "failures": []
     },
@@ -165,7 +256,8 @@
         "paper-reams",
         "envelopes-files-folders",
         "staplers-glue-tape-scissors",
-        "calculator"
+        "calculator",
+        "computer-music-classes"
       ],
       "failures": []
     },
@@ -211,7 +303,16 @@
         "ink-toner",
         "router-extender",
         "appliance",
-        "socket-switch"
+        "socket-switch",
+        "water-dispenser-filter",
+        "solar-panel",
+        "solar-battery-inverter",
+        "cctv-camera-kit",
+        "alarm-electric-fence",
+        "fridge-freezer",
+        "cooker-microwave",
+        "washing-machine",
+        "fan-heater-small-appliance"
       ],
       "failures": []
     },
@@ -233,13 +334,17 @@
         "paper-reams",
         "envelopes-files-folders",
         "staplers-glue-tape-scissors",
-        "calculator"
+        "calculator",
+        "books-textbooks"
       ],
       "failures": []
     },
     "mpesa-airtime-agent": {
       "ok": true,
-      "types": [],
+      "types": [
+        "mpesa-agent-service",
+        "airtime-bills-tokens"
+      ],
       "failures": []
     },
     "hardware-building": {
@@ -264,7 +369,13 @@
         "rope-wire-by-metre",
         "electrical-wire",
         "water-tank",
-        "door-window"
+        "door-window",
+        "lpg-accessories",
+        "farm-tools-equipment",
+        "hand-power-tools",
+        "locks-hardware",
+        "paint-supplies-finishes",
+        "tool-hire"
       ],
       "failures": []
     },
@@ -286,7 +397,13 @@
         "electrical-wire",
         "socket-switch",
         "circuit-breaker",
-        "water-tank"
+        "water-tank",
+        "hand-power-tools",
+        "plumbing-service",
+        "electrical-service",
+        "solar-panel",
+        "solar-battery-inverter",
+        "solar-system-install"
       ],
       "failures": []
     },
@@ -303,7 +420,8 @@
         "bed",
         "mattress",
         "door-window",
-        "wardrobe-cabinet"
+        "wardrobe-cabinet",
+        "furniture-custom-order"
       ],
       "failures": []
     },
@@ -311,7 +429,10 @@
       "ok": true,
       "types": [
         "laundry-by-weight",
-        "laundry-by-item"
+        "laundry-by-item",
+        "household-consumables",
+        "house-cleaning",
+        "fumigation-pest"
       ],
       "failures": []
     },
@@ -336,7 +457,13 @@
         "scarf-hat-cap",
         "hair-wigs",
         "fabric-by-metre",
-        "tailoring"
+        "tailoring",
+        "baby-clothing",
+        "school-uniform",
+        "alterations-repairs",
+        "suit-formalwear",
+        "traditional-bridal-wear",
+        "underwear-socks"
       ],
       "failures": []
     },
@@ -353,14 +480,20 @@
       "ok": true,
       "types": [
         "garage-service",
-        "engine-oil"
+        "engine-oil",
+        "tyre-fitting-alignment",
+        "bodywork-spraying",
+        "towing-recovery"
       ],
       "failures": []
     },
     "car-wash": {
       "ok": true,
       "types": [
-        "car-wash"
+        "car-wash",
+        "tyre-fitting-alignment",
+        "car-accessories-care",
+        "car-detailing"
       ],
       "failures": []
     },
@@ -372,7 +505,10 @@
         "car-battery",
         "engine-oil",
         "wiper-blade",
-        "spare-part"
+        "spare-part",
+        "tyre-fitting-alignment",
+        "used-spare-part",
+        "car-accessories-care"
       ],
       "failures": []
     },
@@ -380,13 +516,23 @@
       "ok": true,
       "types": [
         "passport-photos",
-        "photo-package"
+        "photo-package",
+        "catering",
+        "event-hire-furniture",
+        "event-hire-sound-lighting",
+        "event-decor-planning",
+        "drone-video-service"
       ],
       "failures": []
     },
     "tuition-daycare": {
       "ok": true,
-      "types": [],
+      "types": [
+        "tuition-lessons",
+        "daycare-childcare",
+        "driving-school",
+        "computer-music-classes"
+      ],
       "failures": []
     },
     "phones-accessories": {
@@ -472,7 +618,14 @@
         "fragrance--seeded",
         "makeup-skincare",
         "hair-wigs",
-        "fabric-by-metre"
+        "fabric-by-metre",
+        "fitness-equipment",
+        "baby-clothing",
+        "school-uniform",
+        "suit-formalwear",
+        "traditional-bridal-wear",
+        "underwear-socks",
+        "sportswear"
       ],
       "failures": []
     },
@@ -485,7 +638,219 @@
         "chair",
         "bed",
         "mattress",
-        "wardrobe-cabinet"
+        "wardrobe-cabinet",
+        "water-dispenser-filter",
+        "lpg-accessories",
+        "fridge-freezer",
+        "cooker-microwave",
+        "washing-machine",
+        "fan-heater-small-appliance"
+      ],
+      "failures": []
+    },
+    "poultry-shop": {
+      "ok": true,
+      "types": [
+        "dressed-chicken",
+        "eggs",
+        "animal-feed",
+        "day-old-chicks",
+        "live-birds",
+        "poultry-equipment"
+      ],
+      "failures": []
+    },
+    "fish-mama-mboga": {
+      "ok": true,
+      "types": [
+        "meat-by-weight--seeded",
+        "produce",
+        "fish",
+        "mama-mboga-produce",
+        "herbs-spices"
+      ],
+      "failures": []
+    },
+    "wines-spirits-bar": {
+      "ok": true,
+      "types": [
+        "liquor--seeded",
+        "beer-cider",
+        "wine",
+        "spirits",
+        "bar-menu-drink"
+      ],
+      "failures": []
+    },
+    "posho-mill-cereals": {
+      "ok": true,
+      "types": [
+        "packaged-food",
+        "cooking-oil-fat",
+        "flour-cereals-rice",
+        "tea-coffee-sugar",
+        "household-consumables",
+        "milling-service",
+        "animal-feed"
+      ],
+      "failures": []
+    },
+    "baby-shop": {
+      "ok": true,
+      "types": [
+        "kids-clothing",
+        "baby-food-formula",
+        "sanitary-baby-care",
+        "baby-gear",
+        "baby-clothing",
+        "baby-feeding-toys"
+      ],
+      "failures": []
+    },
+    "cosmetics-beauty-products": {
+      "ok": true,
+      "types": [
+        "fragrance--seeded",
+        "makeup-skincare",
+        "hair-wigs",
+        "hair-care-products",
+        "body-care-lotions",
+        "nail-lash-tools"
+      ],
+      "failures": []
+    },
+    "hotels-lodging": {
+      "ok": true,
+      "types": [
+        "restaurant-meal",
+        "hotel-room",
+        "conference-venue",
+        "hotel-day-use-package",
+        "hostel-bed"
+      ],
+      "failures": []
+    },
+    "rentals-real-estate": {
+      "ok": true,
+      "types": [
+        "property-rental",
+        "property-sale",
+        "commercial-space-rental",
+        "property-management-service",
+        "hostel-bed"
+      ],
+      "failures": []
+    },
+    "event-hire": {
+      "ok": true,
+      "types": [
+        "photo-package",
+        "conference-venue",
+        "tool-hire",
+        "vehicle-hire",
+        "event-hire-furniture",
+        "event-hire-sound-lighting",
+        "event-decor-planning",
+        "creative-digital-service"
+      ],
+      "failures": []
+    },
+    "transport-logistics": {
+      "ok": true,
+      "types": [
+        "towing-recovery",
+        "passenger-ride",
+        "parcel-delivery-moving",
+        "vehicle-hire",
+        "school-staff-transport",
+        "freight-haulage"
+      ],
+      "failures": []
+    },
+    "motorbike-sales-parts": {
+      "ok": true,
+      "types": [
+        "small-battery",
+        "tyre",
+        "engine-oil",
+        "spare-part",
+        "motorbike-sale",
+        "motorbike-parts-gear"
+      ],
+      "failures": []
+    },
+    "solar-energy": {
+      "ok": true,
+      "types": [
+        "power-bank",
+        "led-bulb--seeded",
+        "light-fitting",
+        "led-strip--seeded",
+        "small-battery",
+        "large-battery",
+        "solar-panel",
+        "solar-battery-inverter",
+        "solar-system-install"
+      ],
+      "failures": []
+    },
+    "welding-fabrication": {
+      "ok": true,
+      "types": [
+        "iron-sheet",
+        "table--seeded",
+        "chair",
+        "bed",
+        "door-window",
+        "hand-power-tools",
+        "locks-hardware",
+        "welding-fabrication",
+        "architecture-survey-service"
+      ],
+      "failures": []
+    },
+    "security-cctv": {
+      "ok": true,
+      "types": [
+        "cable",
+        "power-adapter",
+        "memory-card--seeded",
+        "cctv-camera-kit",
+        "alarm-electric-fence",
+        "security-install-maintenance"
+      ],
+      "failures": []
+    },
+    "pet-shop-vet": {
+      "ok": true,
+      "types": [
+        "vet-medicine",
+        "agrovet-service",
+        "pet-food",
+        "pet-accessories",
+        "pet-grooming-boarding"
+      ],
+      "failures": []
+    },
+    "bookshop": {
+      "ok": true,
+      "types": [
+        "pens-pencils-markers",
+        "notebooks-exercise-books",
+        "calculator",
+        "books-textbooks",
+        "storybooks-general"
+      ],
+      "failures": []
+    },
+    "professional-services": {
+      "ok": true,
+      "types": [
+        "professional-consultation",
+        "legal-service",
+        "accounting-tax-service",
+        "architecture-survey-service",
+        "creative-digital-service"
       ],
       "failures": []
     }
@@ -615,7 +980,138 @@
     "engine-oil": true,
     "wiper-blade": true,
     "spare-part": true,
-    "photo-package": true
+    "photo-package": true,
+    "water-dispenser-filter": true,
+    "lpg-accessories": true,
+    "buns-doughnuts-snacks": true,
+    "custom-cake-order": true,
+    "bakery-bulk-order": true,
+    "smoothie-fruit-salad": true,
+    "bottled-juice-event": true,
+    "restaurant-drink": true,
+    "catering": true,
+    "processed-meat": true,
+    "offal-bones": true,
+    "dressed-chicken": true,
+    "eggs": true,
+    "fish": true,
+    "mama-mboga-produce": true,
+    "herbs-spices": true,
+    "cooking-oil-fat": true,
+    "flour-cereals-rice": true,
+    "tea-coffee-sugar": true,
+    "dairy-eggs-chilled": true,
+    "snacks-biscuits-sweets": true,
+    "soft-drinks-bottled-water": true,
+    "household-consumables": true,
+    "baby-food-formula": true,
+    "milling-service": true,
+    "beer-cider": true,
+    "wine": true,
+    "spirits": true,
+    "bar-menu-drink": true,
+    "animal-feed": true,
+    "seeds-seedlings": true,
+    "fertiliser-manure": true,
+    "farm-tools-equipment": true,
+    "agrovet-service": true,
+    "day-old-chicks": true,
+    "live-birds": true,
+    "poultry-equipment": true,
+    "pet-food": true,
+    "pet-accessories": true,
+    "pet-grooming-boarding": true,
+    "vitamins-supplements": true,
+    "first-aid-devices": true,
+    "sanitary-baby-care": true,
+    "skin-hair-medical": true,
+    "clinic-consultation": true,
+    "lab-test": true,
+    "vaccination": true,
+    "dental-service": true,
+    "maternity-physio": true,
+    "lenses": true,
+    "contact-lenses": true,
+    "eye-test": true,
+    "kids-haircut": true,
+    "grooming-products": true,
+    "braiding-service": true,
+    "nails-service": true,
+    "makeup-service": true,
+    "spa-package-membership": true,
+    "sauna-steam": true,
+    "hair-care-products": true,
+    "body-care-lotions": true,
+    "nail-lash-tools": true,
+    "gym-class-training": true,
+    "fitness-equipment": true,
+    "baby-gear": true,
+    "baby-clothing": true,
+    "baby-feeding-toys": true,
+    "tuition-lessons": true,
+    "daycare-childcare": true,
+    "driving-school": true,
+    "computer-music-classes": true,
+    "books-textbooks": true,
+    "storybooks-general": true,
+    "mpesa-agent-service": true,
+    "airtime-bills-tokens": true,
+    "hotel-room": true,
+    "conference-venue": true,
+    "property-rental": true,
+    "property-sale": true,
+    "professional-consultation": true,
+    "hand-power-tools": true,
+    "locks-hardware": true,
+    "paint-supplies-finishes": true,
+    "tool-hire": true,
+    "plumbing-service": true,
+    "electrical-service": true,
+    "welding-fabrication": true,
+    "furniture-custom-order": true,
+    "house-cleaning": true,
+    "fumigation-pest": true,
+    "solar-panel": true,
+    "solar-battery-inverter": true,
+    "solar-system-install": true,
+    "cctv-camera-kit": true,
+    "alarm-electric-fence": true,
+    "security-install-maintenance": true,
+    "fridge-freezer": true,
+    "cooker-microwave": true,
+    "washing-machine": true,
+    "fan-heater-small-appliance": true,
+    "school-uniform": true,
+    "alterations-repairs": true,
+    "suit-formalwear": true,
+    "traditional-bridal-wear": true,
+    "underwear-socks": true,
+    "sportswear": true,
+    "tyre-fitting-alignment": true,
+    "bodywork-spraying": true,
+    "towing-recovery": true,
+    "used-spare-part": true,
+    "car-accessories-care": true,
+    "car-detailing": true,
+    "motorbike-sale": true,
+    "motorbike-parts-gear": true,
+    "passenger-ride": true,
+    "parcel-delivery-moving": true,
+    "vehicle-hire": true,
+    "event-hire-furniture": true,
+    "event-hire-sound-lighting": true,
+    "event-decor-planning": true,
+    "drone-video-service": true,
+    "legal-service": true,
+    "accounting-tax-service": true,
+    "architecture-survey-service": true,
+    "creative-digital-service": true,
+    "commercial-space-rental": true,
+    "property-management-service": true,
+    "hotel-day-use-package": true,
+    "hostel-bed": true,
+    "school-staff-transport": true,
+    "freight-haulage": true
   },
   "hardCoded": []
 }

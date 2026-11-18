@@ -1,4 +1,4 @@
--- 0128_mpesa_stk_push.sql
+-- 0135_mpesa_stk_push.sql
 -- M-Pesa STK Push ("Pay now": a PIN prompt on the payer's phone) and one price for every payment path.
 --
 -- 1. One price. The monthly price of a live business is the CURRENT price of its plan in its category (plans.price_kes).
@@ -1163,5 +1163,7 @@ begin
 end $$;
 
 -- Admin > Automation watches, pauses and runs the new reconcile job like the others (keep equal to supabase/cron/schedule.sql).
+-- search-rollups (0128_search_index) stays on the list; admin_run_job from 0128 already runs it in the database and runs
+-- pay-reconcile, like the other jobs, through its edge function.
 create or replace function public.admin_job_names() returns text[]
-language sql immutable as $$ select array['dispatch-messages', 'daily-lifecycle', 'proofs-purge', 'media-gc', 'pay-reconcile'] $$;
+language sql immutable as $$ select array['dispatch-messages', 'daily-lifecycle', 'proofs-purge', 'media-gc', 'search-rollups', 'pay-reconcile'] $$;

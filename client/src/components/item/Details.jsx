@@ -24,7 +24,7 @@ function TypedDetails({ ctx, slot }) {
   const specItem = overrides ? { ...item, specs: groups.flatMap((g) => g.rows.map((r) => ({ group: g.name, label: r.label, value: r.value }))) } : item;
   const bullets = { ...item, description: "", shortDescription: "" };
   const prose = { ...item, highlights: [] };
-  const more = hasSpecs ? () => { setActive("specs"); setReveal((n) => n + 1); } : undefined;
+  const more = slot.onMoreInfo ?? (hasSpecs ? () => { setActive("specs"); setReveal((n) => n + 1); } : undefined);
   const tabs = [
     { id: "description", label: t("item.description"), content: <ItemDetails item={prose} t={t} marks={marks} /> },
     hasSpecs && { id: "specs", label: t("item.specs"), content: <ClientItemSpecs item={specItem} category={category} attributes={attributes} reveal={reveal} onExpand={(panel) => ctx?.track?.("spec_expand", { panel })} /> },

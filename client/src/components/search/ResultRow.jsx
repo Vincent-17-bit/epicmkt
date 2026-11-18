@@ -16,20 +16,31 @@ export function deliveryLine(business) {
   return { kind: "pickup", text: business.town ? `Pick up · ${business.town}` : "Pick up from the shop" };
 }
 
+// A service is not picked up: it is done at the shop, or the shop comes to you.
+function serviceLine(item) {
+  const town = item.business?.town;
+  if (item.search?.comesToYou) return { kind: "delivery", text: town ? `Comes to you · ${town}` : "Comes to you" };
+  return { kind: "pickup", text: town ? `At the shop · ${town}` : "At the shop" };
+}
+
 /**
  * One search result: the site's product card, with what a buyer compares in search added from the item itself: its
  * facts ("Bluetooth · 60 W"), its colours, delivery or pick-up, and a "See options" / "View item" button. No cart.
+ * Products and services are different listings: a service never shows stock ("Only 3 left" means nothing for a haircut),
+ * and says where it is done instead of "Pick up".
  */
 export default function ResultRow({ item, position, onOpen }) {
+  const service = item.search?.listing === "service";
+  const shown = service && (item.availability === "limited_stock" || item.stockLeft) ? { ...item, availability: "available", stockLeft: null } : item;
   return (
     <li className={styles.cell}>
       <ProductTile
-        item={item}
+        item={shown}
         href={itemHref(item)}
         facts={item.search?.facts ?? null}
         swatches={item.swatches ?? null}
-        delivery={deliveryLine(item.business)}
-        cta={item.hasOptions ? "See options" : "View item"}
+        delivery={service ? serviceLine(item) : deliveryLine(item.business)}
+        cta={item.hasOptions ? "See options" : service ? "View service" : "View item"}
         titleLines={3}
         priority={position <= 4}
         onClick={() => onOpen?.(item, position)}

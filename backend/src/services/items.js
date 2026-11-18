@@ -1,5 +1,5 @@
 import { orderStoreItems, rankRelated } from "@epicmkt/shared";
-import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
+import { BUSINESS_STATUS, PLAN_FEATURES, distanceKm, isListed, isOpenAllDay, comboKey, legacyVariantsToOptions, publicOptions, rankSimilar, statusOf, getFixture, getFixtures, itemPriceBounds, productTypeById, cleanShoeConversion } from "@epicmkt/shared";
 import { store } from "../store.js";
 import { delay } from "../latency.js";
 import { now } from "../clock.js";
@@ -8,7 +8,7 @@ import { serviceArt } from "../data/art.js";
 import { defaultKind } from "../data/catalogItems.js";
 import { appliesToLabel, buildPricing, liveOffersFor, liveSaleFor, liveStoreOffers, offerAvailableNow, offerChipFor, offerProducts, runSweep } from "../promotions.js";
 
-const MAX_SPECS = 20;
+const MAX_SPECS = 80;
 const MAX_HIGHLIGHTS = 20;
 
 const SHORT_MAX = 140;
@@ -419,6 +419,7 @@ export async function getAllProducts() {
           town: business.area ?? "",
           county: business.county ?? "",
           isOpen: statusOf(business.hours, business.exceptions, undefined, business.timezone).isOpen,
+          open24: isOpenAllDay(business.hours ?? {}),
           statusLine: statusOf(business.hours, business.exceptions, undefined, business.timezone).line,
           ...(business.delivery ? { delivery: business.delivery } : {})
         }

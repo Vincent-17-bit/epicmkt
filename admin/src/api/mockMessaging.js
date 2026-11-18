@@ -105,6 +105,19 @@ export async function cancelBroadcast({ batchId }) {
   return { cancelled, sent: batch.sent, failed: 0, inFlight: 0, total: batch.total };
 }
 
+export async function rescheduleBroadcast({ batchId, scheduledAt }) {
+  await latency();
+  const batch = batches.find((b) => b.batch_id === batchId);
+  if (!batchId || !scheduledAt) throw new ApiError("invalid_input");
+  if (!batch) throw new ApiError("broadcast_not_found");
+  const when = Math.max(Date.parse(scheduledAt), Date.now());
+  const iso = new Date(when).toISOString();
+  batches = batches.map((b) => (b.batch_id === batchId ? { ...b, scheduled_at: iso } : b));
+  // A time that is now (or past) means it goes out at once: it leaves the waiting list.
+  if (when <= Date.now() + 1000) batches = batches.map((b) => (b.batch_id === batchId ? { ...b, pending: 0, sent: b.total } : b));
+  return { moved: batch.pending, scheduledAt: iso };
+}
+
 export async function setTemplateEnabled({ key, enabled }) {
   await latency();
   const t = templates.find((x) => x.key === key);
@@ -150,7 +163,7 @@ export async function sendBroadcast(payload) {
 export async function getAutomationStatus() {
   await latency();
   return {
-    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "pay-reconcile"], jobs: jobs.map((j) => ({ ...j })),
+    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups", "pay-reconcile"], jobs: jobs.map((j) => ({ ...j })),
     queue: { queued: 1, due_now: 1, oldest_due_at: at(-2 * MIN), failed_7d: log.filter((m) => m.status === "failed").length },
     last_sent_at: at(-19 * MIN), last_reminder_at: at(-20 * MIN),
   };

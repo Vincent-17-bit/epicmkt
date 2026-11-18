@@ -27,6 +27,17 @@ function Follow({ value }) {
   return null;
 }
 
+function Resize() {
+  const map = useMap();
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(map.getContainer());
+    return () => ro.disconnect();
+  }, [map]);
+  return null;
+}
+
 export default function MapPicker({ value, onChange }) {
   const wrap = useRef(null);
   const has = value && Number.isFinite(value.lat) && Number.isFinite(value.lng);
@@ -65,6 +76,7 @@ export default function MapPicker({ value, onChange }) {
         />
         <Clicks onPick={pick} />
         <Follow value={has ? value : null} />
+        <Resize />
         {has && (
           <Marker
             position={[value.lat, value.lng]}

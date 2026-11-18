@@ -1,4 +1,4 @@
-import { formatValue, visibleFields } from "@epicmkt/shared";
+import { formatValue, isInfoGroup, visibleFields } from "@epicmkt/shared";
 
 const SCALARS = ["text", "number", "price", "boolean", "select", "multiselect"];
 
@@ -20,7 +20,7 @@ export function buildSpecGroups({ item, category, attributes }) {
     seen.add(key);
     buckets.get(name).push({ label, value: String(value) });
   };
-  for (const spec of item?.specs ?? []) add(asGroup(spec.group, DEFAULT_GROUP), spec.label, spec.value);
+  for (const spec of item?.specs ?? []) if (!isInfoGroup(spec.group)) add(asGroup(spec.group, DEFAULT_GROUP), spec.label, spec.value);
   add(DETAILS_GROUP, "Duration", item?.duration);
   add(DETAILS_GROUP, "Term", item?.term);
   add(DETAILS_GROUP, "Pack size", item?.packSize);

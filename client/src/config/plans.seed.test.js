@@ -50,7 +50,7 @@ describe('plan seed data', () => {
         seen.add(r.top_benefits.join('|'));
       });
     });
-    expect(seen.size).toBe(72);
+    expect(seen.size).toBe(categories.length * 2);
   });
 
   it('keeps global limits consistent with the premium benefit text', () => {

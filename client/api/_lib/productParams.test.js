@@ -15,9 +15,9 @@ describe("productParams", () => {
     expect(r.filters.q).toHaveLength(80);
     expect(r.filters.min).toBe("");
     expect(r.filters.max).toBe("");
-    expect(r.filters.sort).toBe("newest");
+    expect(r.filters.sort).toBe("recommended");
     expect(r.page).toBe(1);
-    expect(r.pageSize).toBe(48);
+    expect(r.pageSize).toBe(60);
     expect(r.filters.categories).toEqual(["a"]);
   });
 
@@ -76,5 +76,17 @@ describe("brand and colour reach the endpoint", () => {
     const q = canonicalQuery("page", { ...EMPTY_FILTERS, brands: ["sony", "jbl"], colours: ["blue", "black"] });
     expect(q).toContain("brand=jbl%2Csony");
     expect(q).toContain("colour=black%2Cblue");
+  });
+});
+
+describe("the visit's order variant", () => {
+  it("is read as a whole number 0-7, anything else is the first, and only a recommended list carries it", () => {
+    expect(parseRequest(new URLSearchParams("op=page&variant=5")).variant).toBe(5);
+    expect(parseRequest(new URLSearchParams("op=page&variant=99")).variant).toBe(0);
+    expect(parseRequest(new URLSearchParams("op=page&variant=x")).variant).toBe(0);
+    expect(parseRequest(new URLSearchParams("op=page")).variant).toBe(0);
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS }, { epoch: 493000, variant: 5 })).toContain("variant=5");
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS }, { epoch: 493000, variant: 0 })).not.toContain("variant");
+    expect(canonicalQuery("page", { ...EMPTY_FILTERS, sort: "newest" }, { epoch: 493000, variant: 5 })).not.toContain("variant");
   });
 });

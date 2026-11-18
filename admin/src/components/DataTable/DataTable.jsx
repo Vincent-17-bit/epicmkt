@@ -372,10 +372,10 @@ export default function DataTable({
                       <input type="checkbox" tabIndex={-1} checked={isSelected} onChange={() => toggleRow(row)} aria-label="Select row" />
                     </div>
                   ) : null}
-                  {visible.map((column) => (
+                  {visible.map((column, columnIndex) => (
                     <div
                       key={column.key}
-                      className={!mobile && column.align === "end" ? "dt__cell dt__cell--end" : "dt__cell"}
+                      className={`dt__cell${!mobile && column.align === "end" ? " dt__cell--end" : ""}${mobile && columnIndex === 0 ? " dt__cell--lead" : ""}`}
                       role="gridcell"
                       data-label={column.label ?? column.header}
                     >

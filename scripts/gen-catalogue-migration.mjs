@@ -1,0 +1,198 @@
+// Builds supabase/migrations/0132_catalogue_coverage.sql from the seed data, so the SQL and the seeds cannot drift apart
+// (scripts/catalogue-migration.test.mjs regenerates it and compares).
+//
+//   node scripts/gen-catalogue-migration.mjs          writes the file
+//
+// Two files, because the migrations folder holds schema and type definitions only (the way 0106 seeded the first types), while categories,
+// approved values and size charts are data an admin owns and the database tests start without:
+//   * supabase/migrations/0132_catalogue_coverage.sql      the departments and the coverage product types;
+//   * supabase/data/catalogue_coverage_extras.sql          the 17 new categories (open, plans priced by their tier), approved open values,
+//                                                          the extra size charts, and links from existing types to the new categories.
+// Run the migration first, then the extras file. Every insert is "do nothing on conflict" or "where not exists", so both are safe to run
+// twice and never overwrite something an admin has edited (a type, a chart, a value, a category, a plan price).
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME, COVERAGE_MORE } from "./seeds/index.mjs";
+import { COVERAGE_OPEN_VALUES } from "./seeds/openValues.mjs";
+import { COVERAGE_SIZE_CHARTS } from "./seeds/sizeCharts.mjs";
+import { categories } from "../client/src/data/categories.js";
+import { planRows } from "../client/src/config/plans.seed.js";
+import { EXTRA_CATEGORY_LINKS } from "./seeds/categoryLinks.mjs";
+import { NEW_CATEGORY_IDS } from "./seeds/newCategories.mjs";
+
+const here = dirname(fileURLToPath(import.meta.url));
+export const MIGRATION_FILE = join(here, "..", "supabase", "migrations", "0132_catalogue_coverage.sql");
+export const MORE_FILE = join(here, "..", "supabase", "migrations", "0134_catalogue_coverage_more.sql");
+export const EXTRAS_FILE = join(here, "..", "supabase", "data", "catalogue_coverage_extras.sql");
+
+const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
+const j = (v) => `${q(JSON.stringify(v))}::jsonb`;
+const arr = (list) => (list.length ? `array[${list.map(q).join(", ")}]::text[]` : "'{}'::text[]");
+const titleCase = (id) => id.replace(/-/g, " ").replace(/^./, (s) => s.toUpperCase());
+
+function counts() {
+  const types = [...COVERAGE_FOOD, ...COVERAGE_HEALTH, ...COVERAGE_HOME];
+  return { types, fresh: NEW_CATEGORY_IDS.map((id) => categories.find((c) => c.id === id)) };
+}
+
+function typesSql(types, headerLines) {
+  const departments = [...new Set(types.map((t) => t.departmentId))].sort();
+  const out = [];
+  const add = (...lines) => out.push(...lines);
+  add(...headerLines, "");
+  add("-- 1. Departments the types need (existing ones are left as they are)", "");
+  add("insert into public.departments (id, name, sort)", "values");
+  add(departments.map((d) => `  (${q(d)}, ${q(titleCase(d))}, 900)`).join(",\n"));
+  add("on conflict (id) do nothing;", "");
+  add("-- 2. Product types", "");
+  add("insert into public.product_types (id, slug, name, kind, department_id, category_ids, restricted_to, quantity_mode, axes, spec_rows, extras)", "values");
+  add(
+    types
+      .map(
+        (t) =>
+          `  (${q(t.id)}, ${q(t.id)}, ${q(t.name)}, ${q(t.kind)}, ${q(t.departmentId)}, ${arr(t.categoryIds)}, ${arr(t.restrictedTo ?? [])}, ${q(t.quantityMode)}, ${j(t.axes ?? [])}, ${j(t.specRows ?? [])}, ${j(t.extras ?? {})})`
+      )
+      .join(",\n")
+  );
+  add("on conflict (id) do nothing;", "");
+  return out.join("\n");
+}
+
+export function buildMigration() {
+  const { types } = counts();
+  const departments = [...new Set(types.map((t) => t.departmentId))].sort();
+  const out = [];
+  const add = (...lines) => out.push(...lines);
+  add(
+    "-- 0132_catalogue_coverage.sql",
+    "-- Catalogue coverage: the product types for the shop and service types the first catalogue did not reach (LPG and water, bakeries and",
+    "-- juice bars, butcheries, fish and mama mboga, wines and bars, chemists, clinics, opticians, barbers, salons, spas, gyms, agrovets, poultry,",
+    "-- cyber cafes, printing, phone repair, M-Pesa agents, hardware, trades, solar, security, furniture, cleaning, tailors, shoes, garages, car",
+    "-- wash, spare parts, motorbikes, events, tuition, daycare, hotels, rentals, transport, baby shops, cosmetics, pets, books and",
+    "-- professional services).",
+    "--",
+    `-- ${types.length} product types, axes, spec rows and extras exactly as scripts/seeds/coverage*.mjs define them, and the departments they need.`,
+    "-- Nothing existing is changed or overwritten (every insert skips what is already there), so it is safe to run twice.",
+    "-- The draft categories, approved open values and size charts are in supabase/data/catalogue_coverage_extras.sql: run it after this file.",
+    "-- Generated by scripts/gen-catalogue-migration.mjs. Never edit this file once applied.",
+    ""
+  );
+  add("-- 1. Departments the new types need (existing ones are left as they are)", "");
+  add("insert into public.departments (id, name, sort)", "values");
+  add(departments.map((d) => `  (${q(d)}, ${q(titleCase(d))}, 900)`).join(",\n"));
+  add("on conflict (id) do nothing;", "");
+  add("-- 2. Product types", "");
+  add("insert into public.product_types (id, slug, name, kind, department_id, category_ids, restricted_to, quantity_mode, axes, spec_rows, extras)", "values");
+  add(
+    types
+      .map(
+        (t) =>
+          `  (${q(t.id)}, ${q(t.id)}, ${q(t.name)}, ${q(t.kind)}, ${q(t.departmentId)}, ${arr(t.categoryIds)}, ${arr(t.restrictedTo ?? [])}, ${q(t.quantityMode)}, ${j(t.axes ?? [])}, ${j(t.specRows ?? [])}, ${j(t.extras ?? {})})`
+      )
+      .join(",\n")
+  );
+  add("on conflict (id) do nothing;", "");
+  return out.join("\n");
+}
+
+export function buildMore() {
+  return typesSql(COVERAGE_MORE, [
+    "-- 0134_catalogue_coverage_more.sql",
+    "-- Catalogue coverage, part 4: more product types for the categories that had the fewest (professional services, rentals, hotels and",
+    "-- hostels, transport and freight), so every new category has a useful set of types from day one.",
+    "--",
+    `-- ${COVERAGE_MORE.length} product types and the departments they need. Nothing existing is changed or overwritten, so it is safe to run twice.`,
+    "-- Run after 0132 and before supabase/data/catalogue_coverage_extras.sql.",
+    "-- Generated by scripts/gen-catalogue-migration.mjs. Never edit this file once applied."
+  ]);
+}
+
+export function buildExtras() {
+  const { fresh } = counts();
+  const rows = fresh.flatMap((c) => planRows(c.id, c.tier));
+  const out = [];
+  const add = (...lines) => out.push(...lines);
+  add(
+    "-- Catalogue coverage, part 2: the new categories, approved open values, size charts and links from existing types.",
+    "-- Run supabase/migrations/0132_catalogue_coverage.sql first (the size-chart and category links below point at its types).",
+    "--",
+    `--   * ${fresh.length} categories         created OPEN, both plans priced by their tier (A 300/800, B 500/1300, C 800/2000, D 1200/3000 KES).`,
+    "--                                A copy of this file run earlier left them closed at price 0: those untouched ones are opened and priced now.",
+    "--                                A category whose price or switch an admin has already changed is left exactly as it is.",
+    `--   * ${COVERAGE_OPEN_VALUES.length} approved open values  brands, materials, colours (with a shade), finishes and flavours, so sellers pick instead of typing.`,
+    `--   * ${COVERAGE_SIZE_CHARTS.length} size charts          added to the library; a type is pointed at one only if it has no chart yet.`,
+    `--   * ${Object.keys(EXTRA_CATEGORY_LINKS).length} existing types      also offered to the new categories (liquor to bars, baby clothes to baby shops, ...). Nothing is removed.`,
+    "-- Every insert skips what is already there, so it is safe to run twice and never overwrites an admin's edit.",
+    "-- Generated by scripts/gen-catalogue-migration.mjs.",
+    ""
+  );
+  add("-- 1. Categories: open, plans priced by tier", "");
+  add("insert into public.categories (id, name, grp, icon, tier, sort, active, template, extra_docs)", "values");
+  add(
+    fresh
+      .map((c) => `  (${q(c.id)}, ${q(c.name)}, ${q(c.group)}, ${q(c.icon)}, ${q(c.tier)}, ${(categories.indexOf(c) + 1) * 10}, true, ${j(c.keyFields)}, ${j(c.extraDocs)})`)
+      .join(",\n")
+  );
+  add("on conflict (id) do nothing;", "");
+  add("insert into public.plans (category_id, plan_key, price_kes, items_limit, top_benefits, features, badge)", "values");
+  add(
+    rows
+      .map((r) => `  (${q(r.category_id)}, ${q(r.plan_key)}, ${r.price_kes}, ${r.items_limit ?? "null"}, ${j(r.top_benefits)}, ${j(r.features)}, ${r.badge ? q(r.badge) : "null"})`)
+      .join(",\n")
+  );
+  add("on conflict (category_id, plan_key) do nothing;", "");
+  add(
+    "-- A copy of this file run earlier left these closed at price 0. Open only the ones nobody has touched: still closed, and no plan priced.",
+    "with untouched as (",
+    "  select c.id from public.categories c",
+    `   where c.id = any(${arr(fresh.map((c) => c.id))}) and not c.active`,
+    "     and not exists (select 1 from public.plans p where p.category_id = c.id and p.price_kes > 0)",
+    "), priced as (",
+    "  update public.plans p set price_kes = v.price from (values",
+    rows.map((r) => `    (${q(r.category_id)}, ${q(r.plan_key)}, ${r.price_kes})`).join(",\n"),
+    "  ) as v (category_id, plan_key, price)",
+    "  where p.category_id = v.category_id and p.plan_key = v.plan_key and p.category_id in (select id from untouched)",
+    "  returning p.category_id",
+    ")",
+    "update public.categories c set active = true, tier = t.tier, updated_at = now() from (values",
+    fresh.map((c) => `    (${q(c.id)}, ${q(c.tier)})`).join(",\n"),
+    ") as t (id, tier)",
+    "where c.id = t.id and c.id in (select id from untouched);",
+    ""
+  );
+  add("-- 2. Existing types also offered to the new categories (adds the missing ids, never removes one)", "");
+  add("update public.product_types t set category_ids = t.category_ids || array(select x from unnest(v.cats) x where x <> all (t.category_ids))", "from (values");
+  add(Object.entries(EXTRA_CATEGORY_LINKS).map(([id, cats]) => `  (${q(id)}, ${arr(cats)})`).join(",\n"));
+  add(") as v (id, cats)", "where t.id = v.id;", "");
+  add("-- 3. Approved open values (the key is worked out by normalize_value_key, so it always matches what a seller types)", "");
+  add("insert into public.option_values (kind, key, label, status, tags, hex, reviewed_at)");
+  add("select v.kind, public.normalize_value_key(v.label), v.label, 'approved', v.tags, v.hex, now()");
+  add("from (values");
+  add(COVERAGE_OPEN_VALUES.map((v) => `  (${q(v.kind)}, ${q(v.label)}, ${arr(v.tags ?? [])}, ${v.hex ? q(v.hex) : "null::text"})`).join(",\n"));
+  add(") as v (kind, label, tags, hex)", "on conflict (kind, key) where status <> 'merged' do nothing;", "");
+  add("-- 4. Size charts, then the types that have no chart yet point at theirs", "");
+  for (const c of COVERAGE_SIZE_CHARTS) {
+    add(
+      `insert into public.size_charts (name, category, unit, columns, rows) values (${q(c.name)}, null, ${q(c.unit)}, ${j(c.columns)}, ${j(c.rows)})`,
+      "on conflict (coalesce(category, ''), lower(btrim(name))) do nothing;"
+    );
+  }
+  add("");
+  for (const c of COVERAGE_SIZE_CHARTS.filter((x) => x.productTypeIds.length)) {
+    add(
+      `update public.product_types t set size_chart_id = c.id from public.size_charts c`,
+      `where c.category is null and lower(btrim(c.name)) = ${q(c.name.toLowerCase())} and t.id = any(${arr(c.productTypeIds)}) and t.size_chart_id is null;`
+    );
+  }
+  add("");
+  return out.join("\n");
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  mkdirSync(dirname(EXTRAS_FILE), { recursive: true });
+  writeFileSync(MIGRATION_FILE, buildMigration());
+  writeFileSync(MORE_FILE, buildMore());
+  writeFileSync(EXTRAS_FILE, buildExtras());
+  console.log(`wrote ${MIGRATION_FILE}\nwrote ${MORE_FILE}\nwrote ${EXTRAS_FILE}`);
+}

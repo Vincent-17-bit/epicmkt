@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faArrowDown, faClock, faRotateRight, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
@@ -7,6 +7,7 @@ import { categoryIcon } from "../lib/categoryIcons.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { usePageMeta } from "../hooks/usePageMeta.js";
 import { useNoindex } from "../hooks/useRouteSeo.js";
+import { useOpenSearch } from "../hooks/useOpenSearch.js";
 import { Container, Button, Skeleton, StateCard } from "@epicmkt/ui";
 import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
@@ -37,13 +38,9 @@ function CategorySkeleton() {
 export default function Home() {
   const { slug } = useParams();
   const [params] = useSearchParams();
-  const navigate = useNavigate();
   const location = useLocation();
-  const openSearch = () =>
-    navigate(
-      { pathname: location.pathname, search: location.search, hash: location.hash },
-      { state: { menu: true, search: true } }
-    );
+  // The search bar opens search on its own: never the menu behind it.
+  const openSearch = useOpenSearch();
   const query = (params.get("q") ?? "").trim();
   const isSearch = location.pathname === "/search";
   const isNewest = isSearch && !query && params.get("sort") === "newest";
@@ -130,9 +127,9 @@ export default function Home() {
           <p className={styles.lead}>
             Barbershops, water refill points, chemists, agrovets, gyms and more. Call, WhatsApp or get directions in one tap.
           </p>
-          <button type="button" className={styles.searchEntry} onClick={openSearch}>
+          <button type="button" className={styles.searchEntry} onClick={openSearch} aria-haspopup="dialog" aria-controls="site-search">
             <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.searchIcon} />
-            <span className={styles.searchText}>Search barbers, chemists, gyms…</span>
+            <span className={styles.searchText}>Search products, stores, categories…</span>
             <span className={styles.searchGo}>Search</span>
           </button>
           <Button as={Link} to="/#categories" variant="dark" size="sm" iconRight={faArrowDown}>

@@ -63,6 +63,7 @@ export const ACTION_TEXT = {
   invalid_channel: "Choose SMS, email or in-app.",
   not_failed: "That message is not in a failed state.",
   broadcast_not_found: "That broadcast no longer exists. Refresh the page.",
+  too_far_ahead: "Pick a time within the next six months.",
   template_not_found: "That template no longer exists. Refresh the page.",
   template_in_use: "The system uses this template, so it cannot be deleted. Disable it instead.",
   invalid_key: "Template keys use lower-case letters, numbers, dots, dashes and underscores (2 to 60 characters).",

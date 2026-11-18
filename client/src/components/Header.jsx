@@ -24,6 +24,8 @@ export default function Header() {
   const searchInputRef = useRef(null);
   const wasMenu = useRef(false);
   const wasSearch = useRef(false);
+  // Where focus goes back to when search closes without the menu behind it (the home page search bar, say).
+  const returnTo = useRef(null);
   const opening = useRef(false);
   const quiet = useRef(false);
   const pending = useRef(null);
@@ -53,6 +55,8 @@ export default function Header() {
     if (inMenu && !inSearch) navigate(-1);
   }, [navigate, inMenu, inSearch]);
 
+  // From the menu's search box: search opens over the menu, and closing it goes back to the menu. Anywhere else opens search on
+  // its own (hooks/useOpenSearch.js), so the menu never flashes open behind it.
   const openSearch = useCallback(() => {
     if (inSearch || opening.current) return;
     opening.current = true;
@@ -91,6 +95,8 @@ export default function Header() {
   useEffect(() => {
     if (searchOpen) {
       wasSearch.current = true;
+      const from = document.activeElement;
+      returnTo.current = from && from !== document.body && !rootRef.current?.contains(from) ? from : null;
       searchInputRef.current?.focus({ preventScroll: true });
     } else if (wasSearch.current) {
       wasSearch.current = false;
@@ -98,7 +104,10 @@ export default function Header() {
         quiet.current = true;
         menuSearchRef.current?.focus({ preventScroll: true });
         quiet.current = false;
+      } else if (returnTo.current?.isConnected) {
+        returnTo.current.focus({ preventScroll: true });
       }
+      returnTo.current = null;
     }
   }, [searchOpen]);
 

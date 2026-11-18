@@ -15,7 +15,7 @@ export default function MessagingModeBanner({ always = false }) {
   if (data?.mode === "mock") {
     return (
       <div className="banner banner--warning" role="status" data-testid="messaging-mode">
-        <span><strong>Messaging is in test mode.</strong> SMS and email are not being sent. They are recorded as &ldquo;simulated&rdquo;.</span>
+        <span><strong>Messaging is in test mode.</strong><span className="banner__more"> SMS and email are not being sent. They are recorded as &ldquo;simulated&rdquo;.</span></span>
       </div>
     );
   }

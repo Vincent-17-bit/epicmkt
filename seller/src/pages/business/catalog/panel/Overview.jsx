@@ -44,9 +44,9 @@ export default function Overview({ item, shop, reason, ctx }) {
         )}
       </section>
 
-      <section className={styles.stack} aria-labelledby="panel-links">
-        <h3 id="panel-links" className={styles.h3}>Customer page</h3>
-        <div className={styles.buttons}>
+      <section className={styles.links} aria-labelledby="panel-links">
+        <h3 id="panel-links" className={styles.sr}>Customer page</h3>
+        <div className={styles.linkBtns}>
           {blocked ? (
             <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled>Open live page</button>
           ) : (
@@ -84,7 +84,7 @@ export default function Overview({ item, shop, reason, ctx }) {
             {pub.images.length > 1 && <span className={styles.heroCount}>{pub.images.length} photos</span>}
           </div>
         )}
-        <button type="button" className={`${ui.btn} ${ui.btnGhost} ${styles.fit}`} aria-expanded={full} onClick={() => setFull((v) => !v)}>{full ? "Hide full preview" : "Show full preview"}</button>
+        <button type="button" className={styles.textBtn} aria-expanded={full} onClick={() => setFull((v) => !v)}>{full ? "Hide full preview" : "Show full preview"}</button>
       </section>
 
       <section aria-labelledby="panel-quality">

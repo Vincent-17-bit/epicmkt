@@ -9,6 +9,7 @@ import { serverNow } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
 import { useRealtime } from "../../lib/useRealtime.js";
 import { useServerClock, useServerNow } from "../../lib/useServerNow.js";
+import Intro from "../../components/Intro.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./flash.module.css";
 
@@ -290,7 +291,7 @@ export default function Flash() {
         </div>
         <button type="button" className={ui.btn} onClick={() => setCreating(true)} disabled={creating || !q?.canCreate || choices.length === 0}>New flash sale</button>
       </div>
-      <p className={ui.muted}>A flash sale appears to customers only while it runs and disappears everywhere the moment it ends.</p>
+      <Intro>A flash sale appears to customers only while it runs and disappears everywhere the moment it ends.</Intro>
       {q && !q.canCreate && <p className={ui.error} role="status">Your plan limit is reached. You can start another when a sale ends or next month.</p>}
       {q?.canCreate && choices.length === 0 && !items.isLoading && <p className={ui.muted} data-testid="no-items">You have no items that can go on sale right now. Items must be listed, in stock and priced.</p>}
 

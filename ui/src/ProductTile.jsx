@@ -103,7 +103,7 @@ export default function ProductTile({
         {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
         {item.flash?.sale && renderFlash?.(styles.flash)}
         {tag && <span className={styles.tag}>{tag}</span>}
-        <OfferChip offer={item.offer} className={`${styles.offer} ${tag ? styles.offerLow : ""}`} labels={text.offerChip} />
+        <OfferChip offer={item.offer} className={`${styles.offer} ${tag ? styles.offerLow : ""} ${onSale && !ranged ? styles.offerBesideSale : ""}`} labels={text.offerChip} />
         <StockTag item={item} labels={text} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
         {hasVideo && (
           <span className={styles.video} title={text.videos}>

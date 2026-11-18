@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPaperclip, faPaperPlane, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faPaperclip, faPaperPlane, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { PROOF_ACCEPT, PROOF_MAX_FILES, checkProofBatch, groupThreads, receiptOf } from "@epicmkt/shared";
 import { api } from "../api/index.js";
@@ -293,7 +293,7 @@ export default function MessagesPage() {
   const askConversation = (b) => { const count = b.messages?.length ?? b.messageCount ?? 0; setPending({ kind: "conversation", businessId: b.id, title: `Delete the conversation with ${b.name}?`, summary: `All ${count} ${count === 1 ? "message" : "messages"} are removed from the admin app. The seller keeps their copy.` }); };
 
   return (
-    <div className="msg-layout">
+    <div className="msg-layout" data-view={selected ? "thread" : "list"}>
       <section className="msg-list" aria-label="Conversations">
         <header className="msg-pane__head">
           <h2 className="heading-sm">Conversations</h2>
@@ -354,6 +354,7 @@ export default function MessagesPage() {
         ) : (
           <>
             <header className="msg-pane__head msg-thread__head">
+              <Button size="sm" className="msg-thread__back" onClick={() => setParams({})} aria-label="Back to conversations"><FontAwesomeIcon icon={faChevronLeft} /></Button>
               <span className="msg-avatar msg-avatar--lg" aria-hidden="true">{initials(current.name)}</span>
               <div className="msg-thread__who">
                 <h2 className="heading-sm">{current.name}</h2>

@@ -2,10 +2,12 @@
 
 .stage {
   display: grid;
+  min-width: 0;
 }
 
 .cover {
   position: relative;
+  width: 100%;
   aspect-ratio: 3 / 1;
   min-height: 7.5rem;
   overflow: hidden;

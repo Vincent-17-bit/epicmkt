@@ -75,33 +75,35 @@ export default function ShopLocation() {
   const reset = () => { setError(null); setPin(saved); setAddress(facts.address ?? ""); };
 
   return (
-    <Section id="location" title="Shop location" intro="This is where customers see your shop on the map. Move the pin whenever you relocate.">
-      <Row label="Area" hint="To change your county or town, contact the team.">
-        <strong>{[facts.town, facts.county].filter(Boolean).join(", ") || "Not set"}</strong>
+    <Section id="location" title="Shop location">
+      <Row label="Area" hint="Contact the team to change.">
+        <strong className={styles.value}>{[facts.town, facts.county].filter(Boolean).join(", ") || "Not set"}</strong>
       </Row>
-      <Row label="Landmark" hint="Describe it the way you would to a boda rider." stack>
-        <div className={styles.field}>
-          <label className={styles.fieldLabel} htmlFor="shop-landmark">Address or landmark</label>
-          <input id="shop-landmark" className={styles.input} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="For example Next to Maseno market gate" aria-invalid={tooLong ? "true" : undefined} autoComplete="street-address" />
-          {tooLong && <p className={styles.error} role="alert">Keep it under {ADDRESS_MAX} characters.</p>}
+      <div className={styles.field}>
+        <label className={styles.fieldLabel} htmlFor="shop-landmark">Address or landmark</label>
+        <input id="shop-landmark" className={styles.input} value={address} onChange={(e) => setAddress(e.target.value)} placeholder="For example Next to Maseno market gate" aria-invalid={tooLong ? "true" : undefined} autoComplete="street-address" />
+        {tooLong && <p className={styles.error} role="alert">Keep it under {ADDRESS_MAX} characters.</p>}
+      </div>
+      <div className={styles.field}>
+        <div className={styles.fieldHead}>
+          <span className={styles.fieldLabel}>Pin on the map</span>
+          <span className={styles.rowHint}>Tap the map or drag the pin.</span>
         </div>
-      </Row>
-      <Row label="Pin on the map" hint="Tap the map or drag the pin. With a keyboard, use the arrow keys." stack>
-        <div className={styles.page}>
-          <Suspense fallback={<p className={styles.muted}>Loading the map…</p>}>
-            <MapPicker value={pin} onChange={choose} />
-          </Suspense>
+        <Suspense fallback={<p className={styles.muted}>Loading the map…</p>}>
+          <MapPicker value={pin} onChange={choose} />
+        </Suspense>
+        <div className={styles.saveBar}>
           <p className={styles.note} role="status" data-testid="pin-state">
             {inKenya(pin) ? `Pin at ${pin.lat.toFixed(5)}, ${pin.lng.toFixed(5)}` : "No pin yet. Tap the map to place it."}
           </p>
-          {error && <p className={styles.error} role="alert">{error}</p>}
-          <div className={styles.actions}>
-            <Button variant="secondary" onClick={locate} disabled={locating || busy}>{locating ? "Finding you…" : "Use my location"}</Button>
-            <Button onClick={save} disabled={!readyToSave}>{busy ? "Saving…" : "Save location"}</Button>
-            {moved && !busy && <button type="button" className={styles.linkBtn} onClick={reset}>Undo changes</button>}
-          </div>
+          <Button size="sm" variant="secondary" onClick={locate} disabled={locating || busy}>{locating ? "Finding you…" : "Use my location"}</Button>
         </div>
-      </Row>
+      </div>
+      {error && <p className={styles.error} role="alert">{error}</p>}
+      <div className={styles.actions}>
+        <Button size="sm" onClick={save} disabled={!readyToSave}>{busy ? "Saving…" : "Save location"}</Button>
+        {moved && !busy && <button type="button" className={styles.linkBtn} onClick={reset}>Undo changes</button>}
+      </div>
     </Section>
   );
 }

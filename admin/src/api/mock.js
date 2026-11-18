@@ -18,7 +18,7 @@ export { deleteRelation, listRelations, saveRelation } from "./mockRelations.js"
 export { listDepartments, listRequestTypes, listTypeRequests, resolveTypeRequest, saveDepartment } from "./mockDepartments.js";   // B28
 export { approveOptionValue, importOptionValue, listOptionValues, mergeOptionValue, renameOptionValue, updateOptionValue } from "./mockValues.js";   // A18
 export {
-  cancelBroadcast, deleteTemplate, getAutomationStatus, getMessageDetail, getMessageSummary, getMessagingMode, listMessageLog, listPendingBroadcasts, listTemplates, retryFailedMessages, retryMessage,
+  cancelBroadcast, rescheduleBroadcast, deleteTemplate, getAutomationStatus, getMessageDetail, getMessageSummary, getMessagingMode, listMessageLog, listPendingBroadcasts, listTemplates, retryFailedMessages, retryMessage,
   runJob, saveTemplate, sendBroadcast, setJobActive, setTemplateEnabled,
 } from "./mockMessaging.js";
 export {

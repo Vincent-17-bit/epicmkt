@@ -5,9 +5,9 @@ import { categories, FIELD_TYPES } from './categories';
 const iconExport = (name) => 'fa' + name.split('-').map((p) => p[0].toUpperCase() + p.slice(1)).join('');
 
 describe('categories', () => {
-  it('has 36 unique, well-formed ids', () => {
-    expect(categories).toHaveLength(36);
-    expect(new Set(categories.map((c) => c.id)).size).toBe(36);
+  it('has 53 unique, well-formed ids', () => {
+    expect(categories).toHaveLength(53);
+    expect(new Set(categories.map((c) => c.id)).size).toBe(53);
     categories.forEach((c) => expect(c.id).toMatch(/^[a-z0-9-]{2,50}$/));
   });
 

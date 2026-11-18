@@ -13,9 +13,9 @@ export default function MessagingDefaults() {
   const [draft, setDraft] = useState(m.whatsapp_greeting);
 
   return (
-    <Section id="messaging" title="Messaging" intro="The first line customers send you on WhatsApp.">
+    <Section id="messaging" title="Messaging">
       <Row label="WhatsApp greeting" hint="Use {item} and {price}. No links or phone numbers." stack>
-        <CommitField label="Greeting" multiline rows={3} maxLength={GREETING_MAX} counter value={m.whatsapp_greeting} validate={(v) => validateField(greetingSchema, v)} liveError onDraft={setDraft} onCommit={(v) => update({ messaging: { whatsapp_greeting: v.trim() } })} />
+        <CommitField hideLabel label="Greeting" multiline rows={3} maxLength={GREETING_MAX} counter value={m.whatsapp_greeting} validate={(v) => validateField(greetingSchema, v)} liveError onDraft={setDraft} onCommit={(v) => update({ messaging: { whatsapp_greeting: v.trim() } })} />
         <p className={styles.preview} aria-live="polite" data-testid="greeting-preview">
           <strong>Preview</strong>
           {renderGreeting(draft, SAMPLE)}

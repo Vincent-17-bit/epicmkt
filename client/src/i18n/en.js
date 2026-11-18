@@ -322,7 +322,7 @@ export default {
   "nav.sellerGuide": "Seller guide",
   "menu.label": "Menu",
   "menu.searchLabel": "Search businesses",
-  "menu.searchPlaceholder": "Search businesses",
+  "menu.searchPlaceholder": "Search products, stores, categories",
   "menu.searchButton": "Search",
   "menu.categories": "Categories",
   "menu.categoriesError": "Categories could not be loaded.",

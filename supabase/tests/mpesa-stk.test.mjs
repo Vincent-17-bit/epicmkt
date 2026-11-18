@@ -1,4 +1,4 @@
-// STK Push (the "Pay now" phone prompt) and the one-price rule (migration 0128).
+// STK Push (the "Pay now" phone prompt) and the one-price rule (migration 0135).
 // Every path that moves money is covered: the amount is worked out by the database, a success is credited once whichever of the
 // STK callback and the Paybill confirmation arrives first, failures never credit, and odd callbacks are held for an admin.
 import { test, before, after } from "node:test";
@@ -103,7 +103,7 @@ test("an upgrade moves the seller to the Premium price: the next renewal costs (
   assert.equal((await c2b("ES300002", due, "UPGRADE001")).outcome, "applied");
   const b = await row(`select plan_key, monthly_price from businesses where id = '${bid(2)}'`);
   assert.deepEqual(b, { plan_key: "premium", monthly_price: 1500 });
-  // Before 0128 this KES 1,500 bought three Standard months.
+  // Before 0135 this KES 1,500 bought three Standard months.
   const r = await c2b("ES300002", 1500, "PREMRENEW1");
   assert.equal(r.months, 1);
 });

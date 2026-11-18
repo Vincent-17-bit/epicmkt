@@ -112,8 +112,9 @@ describe("/api/products", () => {
 
   it("does not show a flash sale that has already ended, even from a snapshot built earlier", async () => {
     const body = await (await call("op=page&q=cake")).json();
-    expect(body.items[0].flash).toBeNull();
-    expect(body.items[0].pricing).toMatchObject({ regularPrice: 200, salePrice: 200, savings: 0 });
+    const cake = body.items.find((p) => p.name === "Chocolate cake");
+    expect(cake.flash).toBeNull();
+    expect(cake.pricing).toMatchObject({ regularPrice: 200, salePrice: 200, savings: 0 });
   });
 
   it("filters and sorts with the same rules as the app", async () => {
@@ -287,7 +288,7 @@ describe("/api/products", () => {
       ["cannot be reached", () => { throw new Error("network"); }],
     ])("the list still works, with no size facets, when the sizes function %s", async (_name, reply) => {
       fetchMock.mockImplementation(views(reply));
-      const body = await (await call("op=page")).json();
+      const body = await (await call("op=page&sort=newest")).json();
       expect(body.items.map((p) => p.name)).toEqual(["Loafer", "Mug"]);
       expect((await (await call("op=facets")).json()).sizes).toEqual([]);
     });
@@ -335,5 +336,131 @@ describe("/api/products", () => {
     vi.stubEnv("SUPABASE_URL", "");
     vi.stubEnv("VITE_SUPABASE_URL", "");
     expect((await call("op=page")).status).toBe(503);
+  });
+
+  describe("catalogue scale (migration 0128)", () => {
+    const rpcs = () => fetchMock.mock.calls.map(([u]) => String(u)).filter((u) => u.includes("/rpc/")).map((u) => u.split("/rpc/")[1]);
+    const answer = (handlers) =>
+      fetchMock.mockImplementation(async (url, init) => {
+        const name = String(url).split("/rpc/")[1];
+        if (name && handlers[name]) return handlers[name](init?.body ? JSON.parse(init.body) : {});
+        if (name === "products_snapshot") return new Response(JSON.stringify(payload), { status: 200 });
+        return new Response("{}", { status: 404 });
+      });
+
+    it("suggests from the database dictionary, with CDN caching", async () => {
+      const dictionary = { terms: [{ label: "milk" }], products: [{ id: "x", name: "Fresh Milk", slug: "s", image: null, price: 60 }], stores: [], categories: [], corrected: null };
+      answer({ search_suggest: (body) => new Response(JSON.stringify(body.p_prefix === "mi" ? dictionary : null), { status: 200 }) });
+      const res = await call("op=suggest&q=Mi");
+      expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=600/);
+      expect(await res.json()).toMatchObject({ ...dictionary, source: "index" });
+      expect(rpcs()).toEqual(["search_suggest"]);
+    });
+
+    it("suggests from the snapshot when the dictionary has not been built (or the function is missing)", async () => {
+      answer({ search_suggest: () => new Response("null", { status: 200 }) });
+      const body = await (await call("op=suggest&q=bre")).json();
+      expect(body.source).toBe("snapshot");
+      expect(body.terms.map((t) => t.label)).toContain("bread");
+      expect(body.products[0]).toMatchObject({ id: "item-1", slug: "sunrise-bakery" });
+    });
+
+    it("answers one letter with nothing, without asking the database", async () => {
+      const body = await (await call("op=suggest&q=m")).json();
+      expect(body.terms).toEqual([]);
+      expect(rpcs()).toEqual([]);
+    });
+
+    it("serves trending searches cached until a few minutes past the next hour", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-03-01T10:50:00Z"));
+      answer({ top_searches_hourly: () => new Response(JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "milk", count: 9, hot: true }] }), { status: 200 }) });
+      const res = await call("op=trending");
+      expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=900\b/);
+      expect((await res.json()).items[0].term).toBe("milk");
+    });
+
+    it("falls back to the live count for trending when the hourly list is missing", async () => {
+      answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
+      const body = await (await call("op=trending")).json();
+      expect(body).toMatchObject({ live: true, items: [{ term: "bread", count: 4, hot: false }] });
+    });
+
+    it("builds the unfiltered feed from the hour's pool once the catalogue is bigger than the snapshot, and keeps its order", async () => {
+      payload = { ...snapshotPayload(60), truncated: true };
+      const pool = { ...snapshotPayload(80), facts: {} };
+      answer({ products_feed_pool: () => new Response(JSON.stringify(pool), { status: 200 }) });
+      const epoch = Math.floor(Date.now() / 3_600_000) - 1;
+      const first = await (await call(`op=page&epoch=${epoch}`)).json();
+      expect(rpcs()).toContain("products_feed_pool");
+      expect(first).toMatchObject({ epoch, page: 1, pageSize: 24, hasMore: true, capped: true });
+      expect(first.items).toHaveLength(24);
+      const second = await (await call(`op=page&epoch=${epoch}&page=2`)).json();
+      const ids = [...first.items, ...second.items].map((p) => p.id);
+      expect(new Set(ids).size).toBe(48);
+      expect(rpcs().filter((n) => n === "products_feed_pool")).toHaveLength(1);
+    });
+
+    it("serves every page of every page size from one cached hour: a phone's 50 does not shorten a desktop's 54", async () => {
+      payload = { ...snapshotPayload(60), truncated: true };
+      const pool = { ...snapshotPayload(480), facts: {} };
+      answer({ products_feed_pool: () => new Response(JSON.stringify(pool), { status: 200 }) });
+      const epoch = Math.floor(Date.now() / 3_600_000) - 1;
+      const phone = await (await call(`op=page&epoch=${epoch}&pageSize=50&page=8`)).json();
+      expect(phone).toMatchObject({ pageSize: 50, pages: 8 });
+      expect(phone.items).toHaveLength(50);
+      const wide = await (await call(`op=page&epoch=${epoch}&pageSize=54&page=8`)).json();
+      expect(wide).toMatchObject({ pageSize: 54, pages: 8 });
+      expect(wide.items).toHaveLength(54);
+      expect(rpcs().filter((n) => n === "products_feed_pool")).toHaveLength(1);
+    });
+
+    it("gives each variant its own order of the same hour, and the same variant the same order", async () => {
+      payload = { ...snapshotPayload(60), truncated: true };
+      const pool = { ...snapshotPayload(480), facts: {} };
+      answer({ products_feed_pool: () => new Response(JSON.stringify(pool), { status: 200 }) });
+      const epoch = Math.floor(Date.now() / 3_600_000) - 1;
+      const ids = async (variant) => (await (await call(`op=page&epoch=${epoch}&pageSize=50&page=1&variant=${variant}`)).json()).items.map((i) => i.id).join();
+      const [a, b, a2] = [await ids(1), await ids(2), await ids(1)];
+      expect(a).not.toBe(b);
+      expect(a).toBe(a2);
+    });
+
+    it("blends the snapshot when the whole catalogue fits in it, and clamps an hour that is too old", async () => {
+      payload = snapshotPayload(60);
+      const body = await (await call("op=page&epoch=1")).json();
+      expect(rpcs()).not.toContain("products_feed_pool");
+      expect(body.epoch).toBe(Math.floor(Date.now() / 3_600_000));
+      expect(body.items).toHaveLength(24);
+    });
+
+    it("answers the next page of a search with its cards only (view=items), and the first page with its filters", async () => {
+      const full = await (await call("op=search&q=bread")).json();
+      expect(Array.isArray(full.facets)).toBe(true);
+      expect(full.listing).toBeDefined();
+      const cards = await (await call("op=search&q=bread&page=2&view=items")).json();
+      expect(cards.facets).toBeUndefined();
+      expect(cards.related).toBeUndefined();
+      expect(cards).toMatchObject({ total: full.total, pageSize: full.pageSize });
+    });
+
+    it("corrects a misspelled search against the catalogue's own words when nothing matches", async () => {
+      const body = await (await call("op=search&q=bred")).json();
+      expect(body.corrected).toBe("bread");
+      expect(body.items.map((p) => p.name)).toContain("Fresh bread");
+      const none = await (await call("op=search&q=qqqzzz")).json();
+      expect(none.total).toBe(0);
+      expect(none.corrected).toBeUndefined();
+    });
+
+    it("searches past the snapshot with the indexed candidates when the catalogue is bigger, and passes a correction on", async () => {
+      payload = { ...snapshotPayload(5), truncated: true };
+      const older = { truncated: false, items: [item(40, { name: "Vintage milk jug", business_id: "b1" })], businesses: payload.businesses, facts: {}, matched: 1, corrected: "milk" };
+      answer({ search_product_candidates: () => new Response(JSON.stringify(older), { status: 200 }) });
+      const body = await (await call("op=search&q=mlik")).json();
+      expect(rpcs()).toContain("search_product_candidates");
+      expect(body.items.map((p) => p.name)).toContain("Vintage milk jug");
+      expect(body.corrected).toBe("milk");
+    });
   });
 });
