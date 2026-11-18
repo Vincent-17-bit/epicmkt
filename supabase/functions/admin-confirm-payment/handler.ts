@@ -40,7 +40,7 @@ export const adminConfirmPayment = (d: AdminDeps) =>
       if (!biz || biz.status === "deleted") return json({ error: "not_found" }, 404);
     }
 
-    // A live business pays the current price of its plan (0135: business_unit_price); monthly_price only mirrors it.
+    // A live business pays the current price of its plan (0136: business_unit_price); monthly_price only mirrors it.
     const planPrice = app ? null
       : (await d.db.from("plans").select("price_kes").eq("category_id", biz!.category_id).eq("plan_key", biz!.plan_key).maybeSingle()).data?.price_kes;
     const unit: number = app ? (app.plan_snapshot?.priceOverride?.amount ?? app.price_at_submission) : (planPrice ?? biz!.monthly_price);

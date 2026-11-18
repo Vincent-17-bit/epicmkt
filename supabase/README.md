@@ -285,19 +285,19 @@ How it works (`mpesa_ingest` and friends, migration `0015`):
 - The account is matched to one application reference, then one Seller ID, then (fallback) one business name. Two shops with the same name are never guessed between: the payer's hashed phone can break the tie, otherwise an admin assigns it with one click.
 - Money is credit on the application or business. Whole months are taken from it, the rest waits. So short payments, top-ups, 3-month prepayments and overpayments are one mechanism.
 - Renewals for existing sellers apply automatically (`payments` row with `source = 'auto'`). A first payment that covers the price activates the seller automatically (login created and sent); otherwise it waits for an admin's **Confirm**. Upgrades and category changes are applied automatically when the seller opened that payment in the portal.
-- One price: a live business pays the **current** price of its plan in its category (`business_unit_price`, migration `0135`). A plan price change applies to every seller from their next payment, and each is told in the portal; `businesses.monthly_price` only mirrors it for the admin totals.
+- One price: a live business pays the **current** price of its plan in its category (`business_unit_price`, migration `0136`). A plan price change applies to every seller from their next payment, and each is told in the portal; `businesses.monthly_price` only mirrors it for the admin totals.
 - The admin Payments page reads the `admin_payment_queue` view. Owner and finance can assign, ignore and reprocess (`admin_mpesa_*` functions).
 
 ### Pay now (M-Pesa STK Push)
 
 The payer presses **Pay now**, an M-Pesa PIN prompt appears on their phone, they enter the PIN. Nothing is typed on the site
 except, optionally, a different paying number. The amount is worked out by the database at that moment, from the current
-plan price; the browser never sends an amount. Migration `0135`, functions `pay-stk-start`, `pay-stk-status`, `pay-reconcile`
+plan price; the browser never sends an amount. Migration `0136`, functions `pay-stk-start`, `pay-stk-status`, `pay-reconcile`
 and the `/stk` route of `pay-callback`. Details and scenarios: [`docs/PAYMENTS.md`](../docs/PAYMENTS.md#pay-now-m-pesa-prompt-stk-push).
 
 Setup, once per environment (after the Paybill setup above):
 
-1. Apply migration `0135`.
+1. Apply migration `0136`.
 2. In the Daraja portal, add **Lipa Na M-Pesa Online (M-Pesa Express)** to your app and get the passkey for your shortcode.
 3. Set the secrets in `.env.example` under "Pay now" (`MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_STK_SHORTCODE`,
    `MPESA_STK_PASSKEY`, `MPESA_ENV`), run `supabase secrets set --env-file supabase/.env`.

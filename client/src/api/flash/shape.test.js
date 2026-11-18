@@ -128,6 +128,11 @@ describe("customer item shape with product details", () => {
     expect(item.specs).toEqual([{ label: "Power", value: "2200 W", group: "Electrical" }, { label: "Colour", value: "Steel" }]);
   });
 
+  it("keeps product information and FAQ rows past the first 20 specs", () => {
+    const specs = Array.from({ length: 30 }, (_, k) => ({ group: k < 20 ? "Features & Specs" : "Info: FAQ", label: `Q${k}`, value: `A${k}` }));
+    expect(itemOf({ ...base, specs }).specs).toHaveLength(30);
+  });
+
   it("falls back to the shortened description when there is no short description", () => {
     const long = `${"word ".repeat(60)}end`;
     expect(itemOf({ ...base, description: long, shortDescription: "  " }).shortDescription.length).toBeLessThanOrEqual(141);

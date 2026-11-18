@@ -22,7 +22,7 @@ ledger, so everything below (credit, months, part payments, upgrades) works the 
    (`business_unit_price`). The quote on the page, the amount in the phone prompt, the crediting and the admin list all use
    that one number. When the admin changes a plan price, every seller pays the new price from their next payment (time
    already paid for is not touched) and each one gets an in-app note. An upgrade to Premium moves the seller to the Premium
-   price; a category change to the new category's price. (Before migration 0135 the crediting used a price frozen at
+   price; a category change to the new category's price. (Before migration 0136 the crediting used a price frozen at
    activation, so a seller who paid exactly the amount shown could be told they were short, and an upgraded seller was
    credited at the Standard rate.) An admin's "charge a different amount" on an application applies to its first payment.
 

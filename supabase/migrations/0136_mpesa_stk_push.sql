@@ -1,4 +1,4 @@
--- 0135_mpesa_stk_push.sql
+-- 0136_mpesa_stk_push.sql
 -- M-Pesa STK Push ("Pay now": a PIN prompt on the payer's phone) and one price for every payment path.
 --
 -- 1. One price. The monthly price of a live business is the CURRENT price of its plan in its category (plans.price_kes).
