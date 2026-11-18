@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ZOOM, clampZoom } from "./contract.js";
-import { createSpinEngine, dragToFrames, loadOrder, wrap } from "./spinEngine.js";
+import { createSpinEngine, dragToFrames, loadOrder, spinPictureMs, spinTurnMs, wrap } from "./spinEngine.js";
 import { createModelEngine } from "./modelEngine.js";
 
 // 24 test frames. The fake Image "loads" on the next tick, in the order asked for, so the test can see what was requested.
@@ -74,18 +74,51 @@ describe("photo spin", () => {
     e.destroy();
   });
 
-  it("auto-orbits when asked and stops when told", async () => {
+  it("auto-orbits at a calm pace measured in time, the same on a 60 Hz and a 120 Hz screen, and stops when told", async () => {
+    for (const hz of [60, 120]) {
+      const el = box();
+      const ticks = [];
+      const e = createSpinEngine({ frames, ImageClass: FakeImage, raf: (fn) => { ticks.push(fn); return ticks.length; }, caf: () => {} });
+      await e.mount(el);
+      e.setAutoRotate(true);
+      let t = 0;
+      for (let i = 0; i < hz; i += 1) { t += 1000 / hz; ticks.shift()?.(t); }
+      // 24 pictures turn once in 24 × 220 ms = 5.28 s, so one second moves about 4.5 pictures (it used to be 12).
+      expect(frameOf(el)).toBe(5);
+      e.setAutoRotate(false);
+      ticks.shift()?.(t + 16);
+      expect(ticks).toHaveLength(0);
+      e.destroy();
+    }
+  });
+
+  it("a hard flick eases to a stop well inside one turn instead of whirling round", async () => {
     const el = box();
     const ticks = [];
     const e = createSpinEngine({ frames, ImageClass: FakeImage, raf: (fn) => { ticks.push(fn); return ticks.length; }, caf: () => {} });
     await e.mount(el);
-    e.setAutoRotate(true);
-    for (let i = 0; i < 10; i += 1) ticks.shift()?.();
-    expect(frameOf(el)).toBe(2);
-    e.setAutoRotate(false);
-    ticks.shift()?.();
-    expect(ticks).toHaveLength(0);
+    const stage = el.querySelector("[data-view3d]");
+    pointer(stage, "pointerdown", 200);
+    pointer(stage, "pointermove", 80); // 120 px of 240 in one move: half a turn, a very fast flick
+    const atRelease = frameOf(el);
+    pointer(stage, "pointerup", 80);
+    let t = 0;
+    let moved = 0;
+    for (let i = 0; i < 600 && ticks.length; i += 1) { const before = e.getState().frame; t += 1000 / 60; ticks.shift()(t); moved += (e.getState().frame - before + 24) % 24; }
+    expect(ticks).toHaveLength(0); // it stopped by itself
+    expect(moved).toBeGreaterThan(0);
+    expect(moved).toBeLessThan(8); // at most a third of a turn after letting go (it used to be about 8 turns)
+    expect(frameOf(el)).not.toBe(atRelease);
     e.destroy();
+  });
+
+  it("a full turn takes 5 to 10 seconds whatever the number of pictures", () => {
+    expect(spinTurnMs(12)).toBe(5000);
+    expect(spinTurnMs(24)).toBe(5280);
+    expect(spinTurnMs(36)).toBe(7920);
+    expect(spinTurnMs(72)).toBe(10000);
+    expect(spinPictureMs(13)).toBe(385);
+    expect(spinPictureMs(72)).toBe(139);
   });
 
   it("lets go of every image and the page element on destroy, and is safe twice", async () => {
