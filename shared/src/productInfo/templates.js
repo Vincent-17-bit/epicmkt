@@ -265,7 +265,7 @@ const phone = {
 };
 
 const water = {
-  id: "water-refill",
+  id: "water-point",
   name: "Water refill",
   groups: [
     {

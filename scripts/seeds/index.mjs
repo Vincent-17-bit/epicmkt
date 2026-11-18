@@ -9,13 +9,20 @@ import { HOME_AUTO } from "./homeAuto.mjs";
 import { COVERAGE_FOOD } from "./coverageFood.mjs";
 import { COVERAGE_HEALTH } from "./coverageHealth.mjs";
 import { COVERAGE_HOME } from "./coverageHome.mjs";
+import { COVERAGE_MORE } from "./coverageMore.mjs";
+import { EXTRA_CATEGORY_LINKS } from "./categoryLinks.mjs";
 
-export { FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME };
+export { EXTRA_CATEGORY_LINKS, FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME, COVERAGE_MORE };
 
 // A later file wins when two files describe the same id (the home and auto table is the more specific one for furniture and phone repair).
 const merged = new Map();
-for (const list of [FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME]) for (const type of list) merged.set(type.id, type);
-export const ALL_TYPES = Object.freeze([...merged.values()]);
+for (const list of [FASHION, ELECTRONICS, CYBER, FOOD_HEALTH, HOME_AUTO, COVERAGE_FOOD, COVERAGE_HEALTH, COVERAGE_HOME, COVERAGE_MORE]) for (const type of list) merged.set(type.id, type);
+// Existing types that also belong to the new shop categories (categoryLinks.mjs): added to their list, never taken away.
+const linked = (type) => {
+  const more = (EXTRA_CATEGORY_LINKS[type.id] ?? []).filter((id) => !type.categoryIds.includes(id));
+  return more.length ? { ...type, categoryIds: [...type.categoryIds, ...more] } : type;
+};
+export const ALL_TYPES = Object.freeze([...merged.values()].map(linked));
 
 const json = (v) => JSON.stringify(v);
 

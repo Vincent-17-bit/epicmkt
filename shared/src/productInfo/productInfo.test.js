@@ -58,7 +58,7 @@ import { suggestInfoTemplate } from "./index.js";
 
 test("templates are suggested per item and carry no unrelated groups", () => {
   const cases = [
-    [{ category: "Water refill station", name: "20L refill" }, "water-refill"],
+    [{ category: "Water refill station", name: "20L refill" }, "water-point"],
     [{ category: "Printing and stationery", name: "Custom shirt printing" }, "custom-printing"],
     [{ category: "Bakery", name: "Chocolate chip cookies" }, "bakery-item"],
     [{ category: "Supermarket or minimart", name: "Msafi washing powder 1kg" }, "packaged-goods"],
@@ -68,7 +68,7 @@ test("templates are suggested per item and carry no unrelated groups", () => {
   ];
   for (const [input, id] of cases) assert.equal(suggestInfoTemplate(input), id, input.name);
   const unrelated = ["Compatibility", "Power Source", "Audio Hardware", "Sound Quality", "Measurements"];
-  for (const id of ["water-refill", "custom-printing", "bakery-item", "packaged-goods", "phone"]) {
+  for (const id of ["water-point", "custom-printing", "bakery-item", "packaged-goods", "phone"]) {
     const names = INFO_TEMPLATES.find((t) => t.id === id).groups.map((g) => g.name);
     for (const bad of unrelated) assert.ok(!names.includes(bad), `${id} has ${bad}`);
   }

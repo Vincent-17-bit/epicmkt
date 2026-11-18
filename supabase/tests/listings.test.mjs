@@ -339,7 +339,7 @@ test("item details with a bad shape or length cannot be stored", async () => {
     [{ specs: json([spec(1, { value: longer(121) })]) }, /items_specs_shape/],
     [{ specs: json([spec(1, { label: " " })]) }, /items_specs_shape/],
     [{ specs: json([spec(1, { extra: "x" })]) }, /items_specs_shape/],
-    [{ specs: json(specList(21)) }, /items_specs_shape/],
+    [{ specs: json(specList(81)) }, /items_specs_shape/],
     [{ includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, /items_includes_shape/],
     [{ includes: [longer(81)] }, /items_includes_shape/],
     [{ includes: ["Cable", " "] }, /items_includes_shape/],
@@ -377,15 +377,15 @@ test("item details at their limits are stored as given", async () => {
   assert.deepEqual((await row(titleless)).highlights, [{ text: "Just text" }]);
 });
 
-test("the 21st spec is refused by the save function and the table", async () => {
+test("the 81st spec is refused by the save function and the table", async () => {
   await sql(c, `delete from items`);
   const id = await save(asA, { ...detailFields, specs: specList(20) });
   assert.equal((await row(id)).specs.length, 20);
-  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(21) })], /invalid_details/);
-  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(21) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(81) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(81) })], /invalid_details/);
   assert.equal((await row(id)).specs.length, 20);
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
-  await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(21))]), /items_specs_shape/);
+  await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(81))]), /items_specs_shape/);
 });
 
 test("the save function writes, keeps and clears the details and rejects bad ones", async () => {
@@ -579,7 +579,7 @@ test("a bad detail skips only that row and reports it", async () => {
     { brand: longer(61) }, { short_description: longer(141) }, { pack_size: longer(41) }, { terms: longer(501) }, { brand: 5 },
     { includes: "Cable" }, { includes: [1] }, { includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, { includes: [longer(81)] },
     { highlights: {} }, { highlights: Array.from({ length: 9 }, () => ({ text: "Fast" })) }, { highlights: [{ text: longer(201) }] }, { highlights: [{ title: "Only a title" }] },
-    { specs: {} }, { specs: Array.from({ length: 21 }, (_, i) => spec({ label: `Label ${i}` })) }, { specs: [spec({ group: "Nonsense" })] }, { specs: [spec({ value: longer(121) })] },
+    { specs: {} }, { specs: Array.from({ length: 81 }, (_, i) => spec({ label: `Label ${i}` })) }, { specs: [spec({ group: "Nonsense" })] }, { specs: [spec({ value: longer(121) })] },
     { specs: [spec({ label: "  " })] },
   ]) {
     const out = (await as(asB, `select seller_import_items($1::jsonb) as r`, [json([ok, { name: "Bad row", price_type: "fixed", price: 5, row: 7, ...bad }])]))[0].r;
