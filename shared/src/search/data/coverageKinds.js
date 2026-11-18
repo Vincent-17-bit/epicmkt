@@ -28,8 +28,8 @@ export const COVERAGE_TYPE_KINDS = Object.freeze({
   "baby-gear": ["baby-gear", "baby-feeding-toys", "baby-food-formula"],
   tuition: ["tuition-lessons", "daycare-childcare", "driving-school", "computer-music-classes"],
   books: ["books-textbooks", "storybooks-general"],
-  stays: ["hotel-room", "conference-venue"],
-  property: ["property-rental", "property-sale"],
+  stays: ["hotel-room", "conference-venue", "hotel-day-use-package", "hostel-bed"],
+  property: ["property-rental", "property-sale", "commercial-space-rental", "property-management-service"],
   building: ["hand-power-tools", "locks-hardware", "paint-supplies-finishes"],
   solar: ["solar-panel", "solar-battery-inverter"],
   security: ["cctv-camera-kit", "alarm-electric-fence"],
@@ -39,14 +39,14 @@ export const COVERAGE_TYPE_KINDS = Object.freeze({
   "car-services": ["tyre-fitting-alignment", "bodywork-spraying", "towing-recovery", "car-detailing"],
   "auto-parts": ["used-spare-part", "car-accessories-care"],
   motorbikes: ["motorbike-sale", "motorbike-parts-gear"],
-  transport: ["passenger-ride", "parcel-delivery-moving", "vehicle-hire"],
+  transport: ["passenger-ride", "parcel-delivery-moving", "vehicle-hire", "school-staff-transport", "freight-haulage"],
   money: ["mpesa-agent-service", "airtime-bills-tokens"],
   photography: ["drone-video-service"],
   cereals: ["milling-service"],
-  professional: ["professional-consultation"],
+  professional: ["professional-consultation", "legal-service", "accounting-tax-service", "architecture-survey-service"],
   "event-hire": ["event-hire-furniture", "event-hire-sound-lighting", "event-decor-planning"],
   trades: ["plumbing-service", "electrical-service", "solar-system-install", "security-install-maintenance"],
   welding: ["welding-fabrication"],
   furniture: ["furniture-custom-order"],
-  services: ["tool-hire"]
+  services: ["tool-hire", "creative-digital-service"]
 });

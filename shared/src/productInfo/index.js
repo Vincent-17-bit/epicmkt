@@ -81,7 +81,7 @@ export const INFO_GROUP_LIMIT = 40;
 const RULES = [
   { id: "speaker", name: /\b(speaker|soundbar|subwoofer|woofer|home theat)/i },
   { id: "phone", type: ["phone"], name: /\b(phone|iphone|smartphone|android|tecno|infinix|samsung galaxy|redmi)\b/i },
-  { id: "water-refill", type: ["drinking-water"], category: /water/i, name: /\b(refill|water)\b/i },
+  { id: "water-point", type: ["drinking-water"], category: /water/i, name: /\b(refill|water)\b/i },
   { id: "custom-printing", type: ["printing"], category: /print/i, name: /\b(print|branding|embroider|banner)/i },
   { id: "bakery-item", type: ["bread"], category: /bakery|juice/i, name: /\b(cookie|cake|bread|mandazi|samosa|doughnut|pastry|bun)/i },
   { id: "packaged-goods", category: /supermarket|minimart|grocer|household|cosmetic|baby/i, name: /\b(powder|soap|detergent|omo|msafi|tissue|oil|flour|sugar)\b/i }

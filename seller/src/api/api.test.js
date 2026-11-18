@@ -137,7 +137,7 @@ test("import details: highlights and specs are stored, a missing group is filled
   const spec = (over = {}) => ({ group: "Measurements", label: "Weight", value: "2 kg", ...over });
   const out = await mock.importItems([
     { name: "Kettle", price_type: "free", row: 2, highlights: [{ text: "Fast" }, { title: " ", text: "Quiet" }, { title: "Safe", text: "Auto off" }], specs: [{ label: "Material", value: "Steel" }, spec()] },
-    { name: "Too many specs", price_type: "free", row: 3, specs: Array.from({ length: 21 }, (_, i) => spec({ label: `L${i}` })) },
+    { name: "Too many specs", price_type: "free", row: 3, specs: Array.from({ length: 81 }, (_, i) => spec({ label: `L${i}` })) },
     { name: "Bad group", price_type: "free", row: 4, specs: [spec({ group: "Nope" })] },
     { name: "Nine highlights", price_type: "free", row: 5, highlights: Array.from({ length: 9 }, () => ({ text: "x" })) },
     { name: "Formula spec", price_type: "free", row: 6, specs: [spec({ value: "=1+1" })] },
@@ -218,7 +218,7 @@ test("details: the mock refuses what the database refuses, specs included, and k
   const rows = (n, make) => Array.from({ length: n }, (_, i) => make(i));
   const refused = [
     { highlights: [{ text: "ok", extra: 1 }] }, { highlights: [{ title: "Lead", text: "  " }] },
-    { specs: rows(21, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "l".repeat(41), value: "v" }] }, { specs: [{ label: "l", value: "v".repeat(121) }] },
+    { specs: rows(81, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "l".repeat(41), value: "v" }] }, { specs: [{ label: "l", value: "v".repeat(121) }] },
     { specs: [{ label: "Size", value: "" }] }, { specs: [{ group: "Nope", label: "Size", value: "M" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
   ];
   for (const bad of refused) await assert.rejects(mock.saveItem("it-fade", { ...form, ...bad }), { code: "invalid_details" }, JSON.stringify(bad).slice(0, 60));
