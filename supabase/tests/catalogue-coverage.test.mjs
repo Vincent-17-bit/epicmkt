@@ -110,7 +110,7 @@ test("running the migration again changes nothing and keeps an admin's edits", a
   await sql(c, `update product_types set name = 'Edited name' where id = 'eggs'`);
   const count = async () => (await sql(c, `select (select count(*) from product_types)::int a, (select count(*) from option_values)::int b, (select count(*) from size_charts)::int d, (select count(*) from categories)::int e, (select count(*) from plans)::int f`))[0];
   const before = await count();
-  for (const f of ["0132_catalogue_coverage.sql", "0133_catalogue_coverage_more.sql"]) await c.query(readFileSync(new URL(`../migrations/${f}`, import.meta.url), "utf8"));
+  for (const f of ["0132_catalogue_coverage.sql", "0134_catalogue_coverage_more.sql"]) await c.query(readFileSync(new URL(`../migrations/${f}`, import.meta.url), "utf8"));
   await c.query(extras);
   assert.deepEqual(await count(), before);
   assert.equal((await sql(c, `select active from categories where id = 'bookshop'`))[0].active, true);

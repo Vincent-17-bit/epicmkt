@@ -15,7 +15,7 @@ test("0132_catalogue_coverage.sql is exactly what the generator writes (run: nod
   assert.equal(readFileSync(MIGRATION_FILE, "utf8"), buildMigration());
 });
 
-test("0133_catalogue_coverage_more.sql is exactly what the generator writes", () => {
+test("0134_catalogue_coverage_more.sql is exactly what the generator writes", () => {
   assert.equal(readFileSync(MORE_FILE, "utf8"), buildMore());
 });
 

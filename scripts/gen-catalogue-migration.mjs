@@ -23,7 +23,7 @@ import { NEW_CATEGORY_IDS } from "./seeds/newCategories.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 export const MIGRATION_FILE = join(here, "..", "supabase", "migrations", "0132_catalogue_coverage.sql");
-export const MORE_FILE = join(here, "..", "supabase", "migrations", "0133_catalogue_coverage_more.sql");
+export const MORE_FILE = join(here, "..", "supabase", "migrations", "0134_catalogue_coverage_more.sql");
 export const EXTRAS_FILE = join(here, "..", "supabase", "data", "catalogue_coverage_extras.sql");
 
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
@@ -98,7 +98,7 @@ export function buildMigration() {
 
 export function buildMore() {
   return typesSql(COVERAGE_MORE, [
-    "-- 0133_catalogue_coverage_more.sql",
+    "-- 0134_catalogue_coverage_more.sql",
     "-- Catalogue coverage, part 4: more product types for the categories that had the fewest (professional services, rentals, hotels and",
     "-- hostels, transport and freight), so every new category has a useful set of types from day one.",
     "--",

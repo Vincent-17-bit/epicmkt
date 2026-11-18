@@ -1,4 +1,4 @@
--- 0133_catalogue_coverage_more.sql
+-- 0134_catalogue_coverage_more.sql
 -- Catalogue coverage, part 4: more product types for the categories that had the fewest (professional services, rentals, hotels and
 -- hostels, transport and freight), so every new category has a useful set of types from day one.
 --

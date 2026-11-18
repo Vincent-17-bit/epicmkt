@@ -1,5 +1,5 @@
 // Catalogue coverage, part 4: more types for the categories that had the fewest (professional services, rentals, hotels, transport).
-// Shipped in its own migration (0133) so a database that already ran 0132 gets them too.
+// Shipped in its own migration (0134) so a database that already ran 0132 gets them too.
 import { ax, b, c, rec, req, t, type } from "./lib.mjs";
 
 export const COVERAGE_MORE = [
