@@ -30,7 +30,7 @@ import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-// The photos of the "What's included" lines (migration 0136), as the form keeps them: { mediaId } or null per line. Only an item that has some gets the key.
+// The photos of the "What's included" lines (migration 0137), as the form keeps them: { mediaId } or null per line. Only an item that has some gets the key.
 const includeMediaOf = (item) => (item?.includeMedia?.some(Boolean) ? { includeMedia: item.includes.map((_, i) => (item.includeMedia[i] ? { mediaId: item.includeMedia[i] } : null)) } : {});
 // What is sent: one id or null per line that is kept (blank lines are dropped by the save, so their photos go too). `ids` maps a
 // photo still uploading (tile key) to the id it got.

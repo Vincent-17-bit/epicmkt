@@ -11,7 +11,11 @@ export const isFaqGroup = (group) => group === FAQ_GROUP;
 export const BRAND_GROUP = `${INFO_PREFIX}Brand`;
 export const BRAND_LIMITS = { rows: 6, heading: 80, text: 600 };
 export const isBrandGroup = (group) => group === BRAND_GROUP;
-export const isTemplateGroup = (group) => isInfoGroup(group) && !isFaqGroup(group) && !isBrandGroup(group);
+export const BRAND_IMAGE_GROUP = `${INFO_PREFIX}Brand image`;
+export const BRAND_PHOTO_MAX = 15;
+export const isBrandImageGroup = (group) => group === BRAND_IMAGE_GROUP;
+export const isTemplateGroup = (group) => isInfoGroup(group) && !isFaqGroup(group) && !isBrandGroup(group) && !isBrandImageGroup(group);
+const imageKey = (heading) => String(heading ?? "").trim().slice(0, 40);
 
 export const specLimitsFor = (group, base) =>
   isFaqGroup(group)
@@ -20,12 +24,29 @@ export const specLimitsFor = (group, base) =>
       ? { label: BRAND_LIMITS.heading, value: BRAND_LIMITS.text }
       : { label: base.label, value: base.value };
 
-export const buildBrandStory = (specs) =>
-  (Array.isArray(specs) ? specs : [])
+export const buildBrandStory = (specs) => {
+  const list = Array.isArray(specs) ? specs : [];
+  const photos = new Map(list.filter((s) => isBrandImageGroup(s?.group)).map((s) => [imageKey(s.label), Number.parseInt(s.value, 10)]));
+  return list
     .filter((s) => isBrandGroup(s?.group) && String(s.label ?? "").trim() && String(s.value ?? "").trim())
-    .map((s) => ({ heading: String(s.label).trim(), text: String(s.value).trim() }));
+    .map((s) => {
+      const photo = photos.get(imageKey(s.label));
+      return { heading: String(s.label).trim(), text: String(s.value).trim(), photo: Number.isInteger(photo) && photo >= 1 && photo <= BRAND_PHOTO_MAX ? photo : null };
+    });
+};
 
-export const brandRows = (specs) => (Array.isArray(specs) ? specs.filter((s) => isBrandGroup(s?.group)).map((s) => ({ heading: s.label ?? "", text: s.value ?? "" })) : []);
+export const brandRows = (specs) => {
+  const list = Array.isArray(specs) ? specs : [];
+  const photos = new Map(list.filter((s) => isBrandImageGroup(s?.group)).map((s) => [imageKey(s.label), String(s.value ?? "")]));
+  return list.filter((s) => isBrandGroup(s?.group)).map((s) => ({ heading: s.label ?? "", text: s.value ?? "", photo: photos.get(imageKey(s.label)) ?? "" }));
+};
+
+export const brandSpecs = (rows) =>
+  rows.flatMap((r) => {
+    const base = { group: BRAND_GROUP, label: r.heading, value: r.text };
+    const photo = Number.parseInt(r.photo, 10);
+    return Number.isInteger(photo) && imageKey(r.heading) ? [base, { group: BRAND_IMAGE_GROUP, label: imageKey(r.heading), value: String(photo) }] : [base];
+  });
 
 export const buildFaqs = (specs) =>
   (Array.isArray(specs) ? specs : [])

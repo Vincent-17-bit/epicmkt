@@ -2,7 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService } from "./db.mjs";
 
-// Migration 0136: longer details, a photo for each "What's included" line, and reordering the frames of a photo spin.
+// Migration 0137: longer details, a photo for each "What's included" line, and reordering the frames of a photo spin.
 let c;
 before(async () => {
   c = await connect(await createDatabase({ database: "epicmkt_test_details_room" }));

@@ -24,6 +24,7 @@ export const instructions = (r) => ({
   listingState: r.listing_state, quote: r.quote ?? null, configured: !!r.configured,
   method: r.method ?? null, number: r.number ?? null, name: r.name ?? null, hasOpenSubmission: !!r.has_open_submission,
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
+  stk: !!r.stk, phone: r.phone ?? null,
 });
 
 // One row of an item's media sequence, and the plan limits beside it. Live and mock return the same shape.
@@ -96,7 +97,7 @@ export const catalogItem = (i) => ({
   inFlashSale: !!i.in_flash_sale, specs: Array.isArray(i.specs) ? i.specs : [],
   productTypeId: i.product_type_id ?? i.productTypeId ?? null,
   brand: i.brand ?? null, shortDescription: i.short_description ?? null, packSize: i.pack_size ?? null, terms: i.terms ?? null, includes: Array.isArray(i.includes) ? i.includes : [], highlights: Array.isArray(i.highlights) ? i.highlights : [],
-  // The photo next to each "What's included" line (migration 0136): a media id or null, in the same order as `includes`.
+  // The photo next to each "What's included" line (migration 0137): a media id or null, in the same order as `includes`.
   includeMedia: Array.isArray(i.include_media) ? i.include_media.map((x) => (typeof x === "string" && x ? x : null)) : [],
 });
 

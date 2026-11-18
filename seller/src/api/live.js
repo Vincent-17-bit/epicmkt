@@ -24,7 +24,7 @@ const fn = async (name, body) => {
     if (error.name === "FunctionsFetchError") throw new ApiError("service_unreachable", `${name}: ${error.context?.message ?? error.message}`, { fn: name });
     if (error.name === "FunctionsRelayError") throw new ApiError("service_unavailable", name, { fn: name, status });
     if (status === 404 && !payload?.error) throw new ApiError("function_missing", name, { fn: name, status });
-    throw new ApiError(payload?.error ?? (status >= 500 ? "server_error" : "request_failed"), payload?.message, { status, fn: name, retryAfter: payload?.retryAfter, problems: payload?.problems });
+    throw new ApiError(payload?.error ?? (status >= 500 ? "server_error" : "request_failed"), payload?.message, { status, fn: name, retryAfter: payload?.retryAfter, problems: payload?.problems, request: payload?.request ?? null });
   }
   return data;
 };
@@ -332,7 +332,7 @@ export const uploadMedia3d = async (itemId, { role, file, optionIds = [], positi
 };
 // A 3D row is removed like a photo: delete the row, then the file follows (the database queues it).
 export const removeMedia3d = (path) => removeItemPhoto(path);
-// Puts the uploaded frames of one photo spin in a new order (migration 0136). `paths` must be every frame of that scope, once each.
+// Puts the uploaded frames of one photo spin in a new order (migration 0137). `paths` must be every frame of that scope, once each.
 export const reorderSpinFrames = (itemId, { optionId = "", paths }) => rpc("seller_reorder_spin", { p_item: itemId, p_option: optionId || null, p_paths: paths });
 
 // `paths` must be every path of the item, once each, in the new order. Anything else is refused and nothing changes.
@@ -397,6 +397,11 @@ export const applyCredit = async ({ purpose = null, targetPlan = null, category 
 export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
   await rpc("seller_set_payment_intent", { p_purpose: purpose, p_target_plan: targetPlan, p_category: category, p_change_id: changeId });
 };
+// M-Pesa "Pay now" (STK Push): the PIN prompt goes to `phone`. Only what is being paid for is sent; the server works out the amount.
+const defined = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== undefined));
+export const startStkPayment = ({ phone, months = 1, purpose = null, targetPlan = null, category = null, changeId = null } = {}) =>
+  fn("pay-stk-start", defined({ phone, months, purpose, targetPlan, category, changeId }));
+export const getStkPayment = (requestId) => fn("pay-stk-status", { requestId });
 export const listPayments = async () => (await rows(need().from("payments").select("*").order("created_at", { ascending: false }).limit(200))).map(shape.payment);
 export const getReceipt = async (id) => {
   const p = await rows(need().from("payments").select("*").eq("id", id).maybeSingle());
@@ -571,7 +576,7 @@ export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
 // The seller's own size guide for one item (migration 0103): { unit, columns, rows } or null.
 export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id });
 export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
-// The photo next to each "What's included" line (migration 0136): [mediaId | null, ...] in the order of the saved lines.
+// The photo next to each "What's included" line (migration 0137): [mediaId | null, ...] in the order of the saved lines.
 export const saveItemIncludeMedia = (id, list) => rpc("seller_set_item_include_media", { p_id: id, p_media: list ?? null });
 // The made-to-measure setting of one item (migration 0125): the saved config or null. saveItemCustomSize(id, null) clears it.
 export const getItemCustomSize = (id) => rpc("seller_item_custom_size", { p_id: id });

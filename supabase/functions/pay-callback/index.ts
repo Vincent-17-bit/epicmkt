@@ -3,10 +3,17 @@ import { escapeHtml, json, sendMail } from "../_shared/http.ts";
 import { ACCEPTED, alertFor, bodyOf, routeOf, sameSecret } from "./parse.ts";
 import { realAdminDeps } from "../_shared/adminKit.ts";
 import { autoActivate } from "../_shared/activate.ts";
+import { stkCallback, type StkDeps } from "../_shared/stk.ts";
+import { realStkDeps } from "../_shared/stkDeps.ts";
+
+let stkDeps: StkDeps | null = null;
+const stk = () => (stkDeps ??= realStkDeps());
 
 // Safaricom (Daraja C2B) calls this when someone pays the EpicMKT Paybill:
 //   POST /functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/validation
 //   POST /functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/confirmation
+// and (Daraja STK Push) when a payer answers a "Pay now" prompt; pay-stk-start gives Safaricom this URL with every prompt:
+//   POST /functions/v1/pay-callback/<MPESA_CALLBACK_SECRET>/stk
 // Register both URLs once with scripts/register-mpesa-c2b.mjs. The secret in the path is what proves the call is ours
 // (Daraja does not sign its callbacks). Everything else, including the matching, happens in the database.
 
@@ -24,10 +31,16 @@ Deno.serve(async (req) => {
 
   // Validation: accept everything. A payer is never blocked; a payment with a wrong account is recorded and shown to the admin.
   if (route.kind === "validation") return json(ACCEPTED);
-  if (route.kind !== "confirmation") return json({ error: "not_found" }, 404);
+  if (route.kind !== "confirmation" && route.kind !== "stk") return json({ error: "not_found" }, 404);
 
   const body = bodyOf(await req.text());
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  // STK Push ("Pay now") answers: stored raw, checked with Safaricom's status query, then credited (see _shared/stk.ts).
+  if (route.kind === "stk") {
+    const { stored } = await stkCallback(stk(), body, ip);
+    return stored ? json(ACCEPTED) : json({ ResultCode: 1, ResultDesc: "Try again" }, 500);
+  }
 
   // The raw callback is saved first, inside the database call. If even that fails, answer 500 so Safaricom can retry.
   const res = await db.rpc("mpesa_ingest", { p_kind: "confirmation", p_body: body, p_ip: ip });

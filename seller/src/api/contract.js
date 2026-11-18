@@ -54,6 +54,8 @@ export const SELLER_API = [
   "getPaymentInstructions",
   "applyCredit",
   "setPaymentIntent",
+  "startStkPayment",
+  "getStkPayment",
   "listPayments",
   "getReceipt",
   "quoteCategoryChange",

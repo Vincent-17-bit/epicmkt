@@ -293,18 +293,37 @@ export async function getPayments() {
     candidates: r.candidates ?? [],
     note: r.note,
     matchMethod: r.match_method,
+    channel: r.channel ?? null,
   }));
 }
 
 // Callbacks Safaricom sent that were saved but could not be turned into a payment (a database hiccup, an odd payload).
+// A phone-prompt (STK) callback waits a few seconds while Safaricom is asked to confirm it, so only older ones are shown.
+const stkItem = (body, name) => (body?.Body?.stkCallback?.CallbackMetadata?.Item ?? []).find((i) => i?.Name === name)?.Value ?? null;
 export async function getUnprocessedCallbacks() {
   const { data } = check(
-    await client().from("mpesa_callbacks").select("id, received_at, error, body")
+    await client().from("mpesa_callbacks").select("id, kind, received_at, error, body")
       .eq("processed", false).is("dismissed_at", null).order("received_at", { ascending: false }).limit(20),
   );
-  return (data ?? []).map((r) => ({
-    id: r.id, at: r.received_at, error: r.error,
+  const settled = Date.now() - 2 * 60_000;
+  return (data ?? []).filter((r) => r.kind !== "stk" || Date.parse(r.received_at) < settled || r.error).map((r) => (r.kind === "stk" ? {
+    id: r.id, at: r.received_at, error: r.error ?? "waiting to be checked with Safaricom", kind: "stk",
+    code: stkItem(r.body, "MpesaReceiptNumber"), amount: stkItem(r.body, "Amount"), account: "Phone prompt",
+  } : {
+    id: r.id, at: r.received_at, error: r.error, kind: r.kind,
     code: r.body?.TransID ?? null, amount: r.body?.TransAmount ?? null, account: r.body?.BillRefNumber ?? null,
+  }));
+}
+
+// Every "Pay now" (STK Push) prompt: who asked, how much, what Safaricom answered, and what the money did.
+export async function getStkRequests() {
+  const { data } = check(await client().from("admin_stk_requests").select("*").order("created_at", { ascending: false }).limit(200));
+  return (data ?? []).map((r) => ({
+    id: r.id, status: r.status, purpose: r.purpose, months: r.months, amount: Number(r.amount_kes), phone: r.phone, account: r.account_ref,
+    businessName: r.business_name, reference: r.reference, town: r.town, businessId: r.business_id, applicationId: r.application_id,
+    receipt: r.mpesa_receipt, paidAmount: r.paid_amount == null ? null : Number(r.paid_amount), resultCode: r.result_code, resultDesc: r.result_desc,
+    message: r.message, verification: r.verification, note: r.note, outcome: r.outcome, by: r.initiated_by,
+    at: r.created_at, sentAt: r.sent_at, completedAt: r.completed_at,
   }));
 }
 
@@ -320,6 +339,9 @@ const PAYMENT_ERRORS = {
   reason_required: "Write a short reason.",
   application_not_payable: "That application was rejected, so it cannot receive a payment.",
   target_not_found: "That business could not be found.",
+  invalid_receipt: "The M-Pesa receipt is 10 letters and numbers, like SK12AB34CD.",
+  invalid_amount: "Enter the amount shown on the statement.",
+  request_not_found: "That prompt could not be found. Refresh the page.",
 };
 const run = async (call) => {
   try {
@@ -332,6 +354,9 @@ export const assignPayment = ({ txId, type, id }) => run(client().rpc("admin_mpe
 export const ignorePayment = ({ txId, reason }) => run(client().rpc("admin_mpesa_ignore", { p_tx: txId, p_reason: reason }));
 export const reprocessCallback = (id) => run(client().rpc("admin_mpesa_reprocess", { p_callback: id }));
 export const dismissCallback = (id) => run(client().rpc("admin_mpesa_dismiss_callback", { p_callback: id }));
+// A disputed or receipt-less prompt checked against the M-Pesa statement: credit it with the statement's receipt and amount, or close it.
+export const resolveStkRequest = ({ id, action, receipt = null, amount = null, reason }) =>
+  run(client().rpc("admin_stk_resolve", { p_id: id, p_action: action, p_receipt: receipt, p_amount: amount, p_reason: reason }));
 
 const CONFIRM_ERRORS = {
   duplicate_mpesa_code: "This M-Pesa code is already recorded on another payment.",

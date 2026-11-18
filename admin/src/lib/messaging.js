@@ -105,6 +105,7 @@ export const JOB_INFO = {
   "proofs-purge": { label: "Clear old proof uploads", every: "04:00 Nairobi time", what: "Deletes proof files 90 days after their question was resolved, and uploads that were never finished.", staleAfter: 26 * 60, firstRun: "04:00 Nairobi time" },
   "search-rollups": { label: "Search suggestions and trending", every: "Every hour", what: "Rebuilds the type-ahead suggestions and the trending searches shown in the menu.", staleAfter: 180, firstRun: "within an hour of being scheduled" },
   "media-gc": { label: "Clean up unused pictures", every: "Every 10 minutes", what: "Deletes pictures nothing uses any more from the image store and settles uploads that were never attached.", staleAfter: 60, firstRun: "within 10 minutes of being scheduled" },
+  "pay-reconcile": { label: "Check M-Pesa phone payments", every: "Every 2 minutes", what: "Finishes Pay now (STK) payments whose Safaricom answer was late or lost, and expires prompts nobody answered.", staleAfter: 15, firstRun: "within 2 minutes of being scheduled" },
 };
 
 export function minutesAgo(iso, now = Date.now()) {

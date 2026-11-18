@@ -27,8 +27,8 @@ export const mediaUrl = (path) => {
   return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
 };
 
-const MAX_LIST = 50;   // what's included can have 50 lines (migration 0136)
-const MAX_SPECS = 200;  // the database allows 200 rows (migration 0136)
+const MAX_LIST = 50;   // what's included can have 50 lines (migration 0137)
+const MAX_SPECS = 200;  // the database allows 200 rows (migration 0137)
 
 const textOf = (value) => (typeof value === "string" ? value.trim() : "");
 
@@ -148,7 +148,7 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     brand: textOf(brand) || null,
     highlights: highlightsOf(highlights),
     includes: listOf(includes),
-    // One photo per "What's included" line, or null (migration 0136). Only when at least one line has a photo.
+    // One photo per "What's included" line, or null (migration 0137). Only when at least one line has a photo.
     ...(Array.isArray(includeMedia) && includeMedia.some((p) => typeof p === "string" && p) ? { includePhotos: listOf(includes).map((_, i) => (typeof includeMedia[i] === "string" && includeMedia[i] ? mediaUrl(includeMedia[i]) : null)) } : {}),
     terms: textOf(terms),
     duration: null,

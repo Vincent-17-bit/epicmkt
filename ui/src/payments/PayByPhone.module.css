@@ -1,0 +1,150 @@
+.box {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+
+.lead,
+.hint,
+.detail {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.input {
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+  letter-spacing: 0.02em;
+}
+
+.input:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--status-bad);
+}
+
+.fieldError,
+.error {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--status-bad);
+}
+
+.pay {
+  justify-self: start;
+  min-height: var(--tap);
+}
+
+.status {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.status p {
+  margin: 0;
+}
+
+.statusBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.statusTitle {
+  font-size: var(--text-md);
+}
+
+.icon {
+  flex: none;
+  margin-top: 0.2em;
+  font-size: 1.25rem;
+}
+
+.isInfo {
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+}
+
+.isInfo .icon {
+  color: var(--primary-pressed);
+}
+
+.isSuccess {
+  border-color: var(--status-ok);
+}
+
+.isSuccess .icon {
+  color: var(--status-ok);
+}
+
+.isWarning {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+}
+
+.isError {
+  border-color: var(--status-bad);
+}
+
+.isError .icon {
+  color: var(--status-bad);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.actions:empty {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icon {
+    animation: none !important;
+  }
+}

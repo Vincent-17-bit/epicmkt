@@ -11,7 +11,7 @@ const money = (raw) => {
   return value > 9999999999.99 ? { error: true } : { value };
 };
 
-// Sellers can write as many facts as they need (migration 0136): the limits are only there to stop abuse, not to make anyone shorten.
+// Sellers can write as many facts as they need (migration 0137): the limits are only there to stop abuse, not to make anyone shorten.
 export const PLAIN_SPEC_ROWS = 100;
 export const SPEC_LIMITS = { rows: 200, label: 100, value: 2000 };
 export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
@@ -45,7 +45,7 @@ export const cleanSpecs = (raw) => {
 };
 
 // Same limits as the items table (migration 0050), so the form catches a problem before the database does.
-// Raised in migration 0136: highlights 250 characters (was 200), 12 of them; what's included 50 lines of 300; pack size 120; terms 5000.
+// Raised in migration 0137: highlights 250 characters (was 200), 12 of them; what's included 50 lines of 300; pack size 120; terms 5000.
 export const ITEM_DETAIL_LIMITS = {
   brand: 60,
   shortDescription: 140,

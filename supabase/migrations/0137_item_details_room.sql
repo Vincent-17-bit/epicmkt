@@ -1,4 +1,4 @@
--- 0136_item_details_room.sql
+-- 0137_item_details_room.sql
 -- Room for sellers to write everything a buyer needs, a photo for each "What's included" line, and photo-spin frames that can be
 -- reordered after upload.
 --
@@ -89,14 +89,14 @@ begin
   foreach v_fn in array array['seller_save_item_base', 'seller_import_items'] loop
     select pg_get_functiondef(p.oid) into v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
      where n.nspname = 'public' and p.proname = v_fn limit 1;
-    if v_def is null then raise notice '0136: % not found, skipped', v_fn; continue; end if;
+    if v_def is null then raise notice '0137: % not found, skipped', v_fn; continue; end if;
     v_def := replace(v_def, E'\r', '');
     v_new := v_def;
     v_new := replace(v_new, 'char_length(coalesce(v_terms, '''')) > 500', 'char_length(coalesce(v_terms, '''')) > 5000');
     v_new := replace(v_new, 'char_length(coalesce(v_pack, '''')) > 40', 'char_length(coalesce(v_pack, '''')) > 120');
     if v_new = v_def then
       if position('> 5000' in v_def) > 0 then continue; end if;   -- already patched (a re-run)
-      raise exception '0136: the text limits of % were not found', v_fn;
+      raise exception '0137: the text limits of % were not found', v_fn;
     end if;
     execute v_new;
   end loop;

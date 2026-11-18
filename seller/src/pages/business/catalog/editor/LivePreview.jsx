@@ -14,7 +14,10 @@ const FRAME_HEIGHT = { mobile: 760, desktop: 820 };
 
 // The item page of the buyer site itself (its /preview/item page), in a frame at phone or laptop width. The form is posted to it as it
 // changes, so the seller sees the real page (photos, options and prices, size guide, specifications, 3D) and not an imitation of it.
-function SitePreview({ base, payload, device, slug }) {
+// If the page does not answer (an old buyer site without /preview/item, no connection, or a buyer site that does not accept this seller
+// address) `onFail` is called and the editor shows its own simpler page instead, so the preview never stays blank.
+const SITE_WAIT_MS = 12_000;
+function SitePreview({ base, payload, device, slug, onFail }) {
   const frame = useRef(null);
   const ready = useRef(false);
   const latest = useRef(payload);
@@ -24,13 +27,16 @@ function SitePreview({ base, payload, device, slug }) {
   const send = () => frame.current?.contentWindow?.postMessage({ type: "epicmkt:item-preview", payload: latest.current }, origin);
   useEffect(() => {
     const onMessage = (e) => {
-      if (e.source !== frame.current?.contentWindow || e.data?.type !== "epicmkt:preview-ready") return;
+      if (e.source !== frame.current?.contentWindow) return;
+      if (e.data?.type === "epicmkt:preview-refused") { onFail?.(); return; }
+      if (e.data?.type !== "epicmkt:preview-ready") return;
       ready.current = true;
       setLoaded(true);
       send();
     };
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    const wait = setTimeout(() => { if (!ready.current) onFail?.(); }, SITE_WAIT_MS);
+    return () => { window.removeEventListener("message", onMessage); clearTimeout(wait); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!ready.current) return undefined;
@@ -120,7 +126,10 @@ export default function LivePreview({ form, images, media, area, tiles = [], ite
   const [device, setDevice] = useState(() => readDevicePref("seller.editor.previewDevice", "mobile", DEVICES.map((d) => d[0])));
   const pick = (setter, key) => (value) => { setter(value); storeDevicePref(key, value); };
   const card = useMemo(() => previewItemOf(form, images), [form, images]);
-  const site = clientBase();
+  const base = clientBase();
+  // The real buyer page did not open (see SitePreview): use the editor's own page view for the rest of this visit.
+  const [siteDown, setSiteDown] = useState(false);
+  const site = siteDown ? "" : base;
   const saved = props3dId(itemProp);
   const view3d = useQuery({ queryKey: ["media3d", saved], queryFn: () => api.getItemMedia3d(saved), enabled: Boolean(site && saved && view === "page"), staleTime: 30_000 });
   const payload = useMemo(() => (site && view === "page" ? previewPayload({ form, item: itemProp, business, shop, tiles, media3d: view3d.data?.media3d ?? [] }) : null), [site, view, form, itemProp, business, shop, tiles, view3d.data]);
@@ -153,12 +162,12 @@ export default function LivePreview({ form, images, media, area, tiles = [], ite
         <p className={styles.sr}>{item.name}. {priceSummary(form)}.</p>
         <ScaledFrame width={DESIGN_WIDTH[device]} interactive={Boolean(site && view === "page")}>
           <div className={styles.device} data-device={device}>
-            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : site ? <SitePreview base={site} payload={payload} device={device} slug={shop?.slug} /> : <PageView form={form} images={images} media={media} hl={hl} />}
+            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : site ? <SitePreview base={site} payload={payload} device={device} slug={shop?.slug} onFail={() => setSiteDown(true)} /> : <PageView form={form} images={images} media={media} hl={hl} />}
           </div>
         </ScaledFrame>
       </div>
       <p className={styles.previewNote}>
-        {view === "page" && site ? "This is the real EpicMKT item page, filled with what you type. " : "Updates as you type. "}
+        {view === "page" && site ? "This is the real EpicMKT item page, filled with what you type. " : view === "page" && siteDown ? "The live item page could not open here, so this is a simpler preview. " : "Updates as you type. "}
         Customers see {view === "card" ? "the card" : "the item page"} like this on {device === "mobile" ? "a phone" : "a computer"}.
         {live && <> <a href={live} target="_blank" rel="noreferrer">Open the live page</a></>}
       </p>

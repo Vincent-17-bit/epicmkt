@@ -80,8 +80,17 @@ test("brand story: builds blocks, skips blanks, stays out of the table", async (
     { group: BRAND_GROUP, label: "Built to last", value: "Strong body." },
     { group: BRAND_GROUP, label: "", value: "x" }
   ];
-  assert.deepEqual(buildBrandStory(specs), [{ heading: "Built to last", text: "Strong body." }]);
+  assert.deepEqual(buildBrandStory(specs), [{ heading: "Built to last", text: "Strong body.", photo: null }]);
   assert.deepEqual(buildInfoGroups(specs), []);
   assert.equal(isTemplateGroup(BRAND_GROUP), false);
   assert.deepEqual(specLimitsFor(BRAND_GROUP, { label: 40, value: 120 }), { label: 80, value: 600 });
+});
+
+test("brand story: a block's chosen photo round-trips and is cleaned out of the table", async () => {
+  const { brandRows, brandSpecs, buildBrandStory, buildInfoGroups } = await import("./index.js");
+  const specs = brandSpecs([{ heading: "Built to last", text: "Strong.", photo: "3" }, { heading: "Light", text: "Easy.", photo: "" }]);
+  assert.equal(specs.length, 3);
+  assert.deepEqual(buildBrandStory(specs).map((b) => b.photo), [3, null]);
+  assert.deepEqual(brandRows(specs).map((r) => r.photo), ["3", ""]);
+  assert.deepEqual(buildInfoGroups(specs), []);
 });
