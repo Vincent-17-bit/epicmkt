@@ -55,3 +55,71 @@ a.name { color: var(--text); text-decoration: underline; text-underline-offset: 
   .block[data-flip] .shot { order: 2; }
   .shot { block-size: 100%; aspect-ratio: auto; min-block-size: 14rem; }
 }
+
+/* ---- Sections the seller sets (migration 0138) ------------------------------------------------------------------------------- */
+.titleRow { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+.count { color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+
+/* What's included: cards for lines with a picture, a list for the rest. Names are always bold. */
+.incGrid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.incCard { display: grid; align-content: start; gap: var(--space-1); text-align: center; min-inline-size: 0; }
+.incFrame { display: grid; place-items: center; aspect-ratio: 1; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); overflow: hidden; }
+.incFrame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; }
+.incName { margin: var(--space-2) 0 0; color: var(--text); font-size: var(--text-md); line-height: 1.3; overflow-wrap: anywhere; }
+.incName strong { font-weight: 700; }
+.incDetails { margin: 0; color: var(--text-muted); font-size: var(--text-sm); line-height: 1.45; overflow-wrap: anywhere; }
+.incList { display: grid; gap: var(--space-2); margin: 0; padding: var(--space-4); list-style: none; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+.incLine { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); align-items: baseline; color: var(--text); font-size: var(--text-md); line-height: 1.5; overflow-wrap: anywhere; }
+.incDot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: var(--text); transform: translateY(-0.12em); }
+.incLabel { font-weight: 700; }
+
+/* Images: one 16:9 frame for every slide, the picture shown whole inside it. */
+.tabs { display: flex; gap: var(--space-1); overflow-x: auto; scrollbar-width: none; border-block-end: 1px solid var(--border); }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { flex: none; min-block-size: var(--tap); padding: 0 var(--space-4); border: 0; border-block-end: 3px solid transparent; background: none; color: var(--text-muted); font: inherit; font-size: var(--text-sm); font-weight: 700; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--text); border-block-end-color: var(--primary); }
+.tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.stage { position: relative; min-inline-size: 0; }
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: var(--radius-card); }
+.track::-webkit-scrollbar { display: none; }
+.track:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.slide { margin: 0; scroll-snap-align: start; display: grid; gap: var(--space-2); align-content: start; min-inline-size: 0; }
+.frame { aspect-ratio: 16 / 9; inline-size: 100%; display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-card); background: var(--surface-2); }
+.frame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; }
+.caption { margin: 0; color: var(--text); font-size: var(--text-md); line-height: 1.5; text-align: center; overflow-wrap: anywhere; }
+.arrow { position: absolute; inset-block-start: calc(50% - 1.5rem); display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; padding: 0; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); cursor: pointer; }
+.arrow:disabled { opacity: 0; pointer-events: none; }
+.arrow:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.arrowPrev { inset-inline-start: var(--space-2); }
+.arrowNext { inset-inline-end: var(--space-2); }
+.stage .arrow { inset-block-start: calc(50% - 1.5rem - 1rem); }
+.dots { display: flex; justify-content: center; gap: var(--space-2); }
+.dot { inline-size: 0.6rem; block-size: 0.6rem; padding: 0; border: 0; border-radius: 50%; background: var(--border-strong); cursor: pointer; }
+.dot[data-on] { background: var(--text); inline-size: 1.4rem; border-radius: var(--radius-pill); }
+
+/* From the brand: cards on a wide banner (or a dark band when there is none). */
+.brandStage { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--radius-card); background: var(--featured-bg); padding: clamp(var(--space-5), 5vw, var(--space-8)) clamp(var(--space-4), 4vw, var(--space-7)); min-block-size: 12rem; }
+.brandBanner { position: absolute; inset: 0; z-index: -1; inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
+.brandStage[data-banner]::before { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgb(0 0 0 / 0.35), rgb(0 0 0 / 0) 60%); }
+.brandTrack { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(11rem, 26vw, 18.5rem); gap: clamp(var(--space-3), 2vw, var(--space-5)); overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; padding-block: var(--space-1); }
+.brandTrack::-webkit-scrollbar { display: none; }
+.brandTrack:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.brandCard { margin: 0; scroll-snap-align: start; display: grid; gap: var(--space-2); align-content: start; min-inline-size: 0; }
+.brandFrame { aspect-ratio: 4 / 5; display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-lg); }
+.brandFrame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; }
+.brandCaption { margin: 0; color: var(--featured-text); font-size: var(--text-sm); font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgb(0 0 0 / 0.6); overflow-wrap: anywhere; }
+
+@media (min-width: 900px) {
+  .incList { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); }
+}
+@media (max-width: 40rem) {
+  .incGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .arrow { inline-size: 2.5rem; block-size: 2.5rem; }
+  .brandTrack { grid-auto-columns: 62vw; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dot { transition: inline-size 160ms ease, background-color 160ms ease; }
+}
+
+/* Picture sections use the page's full width on big screens, so the pictures are large and several brand cards fit. */
+.wide { max-inline-size: min(76rem, 100%); }

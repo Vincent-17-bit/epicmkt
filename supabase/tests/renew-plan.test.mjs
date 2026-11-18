@@ -1,4 +1,4 @@
-// Renew on Standard or Premium (migration 0138). The renewal names the plan; the days left move to the new plan (charged going up,
+// Renew on Standard or Premium (migration 0139). The renewal names the plan; the days left move to the new plan (charged going up,
 // credited going down); the months are at the new plan's price. Every way money arrives applies the choice the same way.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";

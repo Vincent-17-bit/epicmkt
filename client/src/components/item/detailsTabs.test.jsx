@@ -51,7 +51,8 @@ describe("typed item details", () => {
     expect(within(panel).getAllByRole("term").map((n) => n.textContent)).toEqual(expect.arrayContaining(["Display", "Storage", "Warranty"]));
     await userEvent.click(within(panel).getByRole("button", { name: "Measurements" }));
     expect(within(panel).getByText("190 g")).toBeVisible();
-    expect(within(panel).getByRole("button", { name: "What's included" })).toBeInTheDocument();
+    // What's included is its own section further down the page now, not a panel of the table.
+    expect(within(panel).queryByRole("button", { name: "What's included" })).toBeNull();
   });
 
   it("tabs work with the keyboard: arrows wrap, Home and End jump, only the selected tab is in the tab order", async () => {

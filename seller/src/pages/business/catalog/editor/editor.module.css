@@ -534,3 +534,8 @@ textarea.input { min-block-size: 7rem; max-block-size: 60dvh; resize: vertical; 
 .pointer > span { flex: 1 1 16rem; min-inline-size: 0; }
 .pointerBtn { flex: none; min-block-size: var(--tap); padding: 0 var(--space-4); font: inherit; font-weight: 700; font-size: var(--text-sm); color: var(--on-primary); background: var(--primary); border: 0; border-radius: var(--radius-pill); cursor: pointer; }
 .pointerBtn:hover { background: var(--primary-hover, var(--primary)); }
+
+/* "What's included": a name (always bold, as buyers see it) and optional details beside the picture (migration 0138). */
+.incFields { display: grid; gap: var(--space-2); grid-template-columns: minmax(0, 1fr); min-width: 0; }
+@media (min-width: 40rem) { .incFields { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); } }
+.incName input { font-weight: 700; }

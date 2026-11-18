@@ -25,7 +25,7 @@ export const instructions = (r) => ({
   method: r.method ?? null, number: r.number ?? null, name: r.name ?? null, hasOpenSubmission: !!r.has_open_submission,
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
   stk: !!r.stk, phone: r.phone ?? null,
-  // 0138: the plans this shop can renew on ({ standard, premium } prices) and the one it is on. Absent before 0138, and then the
+  // 0139: the plans this shop can renew on ({ standard, premium } prices) and the one it is on. Absent before 0139, and then the
   // page does not offer a choice.
   planChoices: r.plan_choices && Object.keys(r.plan_choices).length ? r.plan_choices : null,
   currentPlan: r.current_plan ?? null,
@@ -104,6 +104,11 @@ export const catalogItem = (i) => ({
   brand: i.brand ?? null, shortDescription: i.short_description ?? null, packSize: i.pack_size ?? null, terms: i.terms ?? null, includes: Array.isArray(i.includes) ? i.includes : [], highlights: Array.isArray(i.highlights) ? i.highlights : [],
   // The photo next to each "What's included" line (migration 0137): a media id or null, in the same order as `includes`.
   includeMedia: Array.isArray(i.include_media) ? i.include_media.map((x) => (typeof x === "string" && x ? x : null)) : [],
+  // Page sections (migration 0138): delivery for this item (null = the shop's), notes, the 5-picture gallery and From the brand.
+  delivery: i.delivery && typeof i.delivery === "object" ? i.delivery : null,
+  notices: Array.isArray(i.notices) ? i.notices : [],
+  gallery: Array.isArray(i.gallery) ? i.gallery : [],
+  brandPage: i.brand_page && typeof i.brand_page === "object" ? i.brand_page : i.brandPage ?? null,
 });
 
 const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;

@@ -128,7 +128,7 @@ export function categoryChangeQuote({ oldPrice, newPrice, paidUntil, now = new D
 /**
  * Renewing on the other plan moves the days still left in the current period to it at once: going up charges the prorated
  * difference for those days (switchDue), going down gives it back as credit (switchCredit). No days left, nothing either way.
- * Same rule and rounding as the database's plan_switch_quote (migration 0138).
+ * Same rule and rounding as the database's plan_switch_quote (migration 0139).
  */
 export function planSwitchQuote({ oldPrice, newPrice, paidUntil, now = new Date() }) {
   let left = 0;
@@ -277,7 +277,7 @@ export function buildPaymentInstructions({ business, application = null, priceOf
     account = application?.referenceNo ?? business.sellerId;
   } else if (kind === 'renewal') {
     amount = current;
-    // Renewing on the other plan (0138): the month is at that plan's price and the days left move to it now.
+    // Renewing on the other plan (0139): the month is at that plan's price and the days left move to it now.
     if (targetPlan && targetPlan !== business.planKey) {
       if (!PLAN_KEYS.includes(targetPlan)) throw fail('invalid_plan');
       const next = priceOf(business.categoryId, targetPlan);

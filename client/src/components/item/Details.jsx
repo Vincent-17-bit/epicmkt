@@ -20,7 +20,7 @@ function TypedDetails({ ctx, slot }) {
   // Top highlights are the item's own facts only: the shop's profile (its "Main brands", "Products") belongs to the shop card,
   // not above an item it may have nothing to do with.
   const top = topHighlights(specGroupsFor({ item, category, attributes: null, overrides }));
-  const hasSpecs = groups.length > 0 || (item.includes?.length ?? 0) > 0 || Boolean(item.terms);
+  const hasSpecs = groups.length > 0 || Boolean(item.terms);
   const specItem = overrides ? { ...item, specs: groups.flatMap((g) => g.rows.map((r) => ({ group: g.name, label: r.label, value: r.value }))) } : item;
   const bullets = { ...item, description: "", shortDescription: "" };
   const prose = { ...item, highlights: [] };

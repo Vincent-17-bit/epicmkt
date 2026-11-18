@@ -13,13 +13,14 @@ export const STEP_OF = {
   name: "basics", brand: "basics", section: "basics", shortDescription: "basics", description: "basics", options: "options", sizeGuide: "sizeguide",
   priceType: "price", price: "price", priceMax: "price", salePrice: "price", unit: "price", tiers: "price", availability: "price", stockCount: "price", lowStockThreshold: "price", variants: "price", variantsCount: "price",
   highlights: "details", highlightsCount: "details", specs: "details", specsCount: "details", includes: "details", includesCount: "details", packSize: "details", terms: "details",
+  delivery: "price", notices: "details",
 };
 
 // The order errors are looked for in, the same order the fields appear on screen.
 const ERROR_ORDER = [
   "name", "brand", "section", "shortDescription", "description", "options", "sizeGuide",
-  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants", "tiers",
-  "highlightsCount", "highlights", "specsCount", "specs", "includesCount", "includes", "packSize", "terms",
+  "priceType", "price", "priceMax", "salePrice", "unit", "availability", "stockCount", "lowStockThreshold", "variantsCount", "variants", "tiers", "delivery",
+  "highlightsCount", "highlights", "notices", "specsCount", "specs", "includesCount", "includes", "packSize", "terms",
 ];
 
 const firstIndex = (obj) => Object.keys(obj).map(Number).sort((a, b) => a - b)[0];
@@ -44,6 +45,11 @@ export const firstErrorTarget = (errors) => {
     return { key, step, focus: `var-${i}-${row.label ? "label" : row.price ? "price" : "stock"}` };
   }
   if (key === "includes") return { key, step, focus: `inc-${firstIndex(errors.includes)}` };
+  if (key === "delivery") return { key, step, focus: `dl-${Object.keys(errors.delivery)[0]}` };
+  if (key === "notices") {
+    const i = firstIndex(errors.notices);
+    return { key, step, focus: `nt-${i}-${errors.notices[i].title ? "title" : "text"}` };
+  }
   // errors.options is a flat map of path -> message ("axes.0.label", "row:colour=black:price", "rows"); the first one is the first problem.
   if (key === "options") return { key, step, focus: `opt-${Object.keys(errors.options)[0]}` };
   if (key === "sizeGuide") return { key, step, focus: `guide-${Object.keys(errors.sizeGuide)[0]}` };
@@ -75,6 +81,10 @@ export const errorList = (errors) => {
       Object.entries(value).forEach(([path, message]) => out.push({ key: `guide-${path}`, step: "sizeguide", focus: `guide-${path}`, label: "Size guide", message }));
     } else if (key === "options") {
       Object.entries(value).forEach(([path, message]) => out.push({ key: `opt-${path}`, step: "options", focus: `opt-${path}`, label: path.startsWith("row:") ? "Combination" : "Options", message }));
+    } else if (key === "delivery") {
+      Object.entries(value).forEach(([f, message]) => out.push({ key: `dl-${f}`, step: "price", focus: `dl-${f}`, label: "Delivery for this item", message }));
+    } else if (key === "notices") {
+      Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => Object.entries(value[i]).forEach(([f, message]) => out.push({ key: `nt-${i}-${f}`, step: "details", focus: `nt-${i}-${f}`, label: `Note ${i + 1}`, message })));
     } else if (key === "includes") {
       Object.keys(value).map(Number).sort((a, b) => a - b).forEach((i) => out.push({ key: `inc-${i}`, step: "details", focus: `inc-${i}`, label: `Included item ${i + 1}`, message: value[i] }));
     } else {

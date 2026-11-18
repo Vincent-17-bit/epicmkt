@@ -37,7 +37,7 @@ function PlanColumn({ planKey, plan, current, canUpgrade, upgradeBlocked, onUpgr
 
 /**
  * Standard and Premium for the seller's OWN category only. Prices, items and features come from the plan tables.
- * "Renew on …" picks the plan for the renewal card above (when the server offers the choice, migration 0138); "Upgrade to
+ * "Renew on …" picks the plan for the renewal card above (when the server offers the choice, migration 0139); "Upgrade to
  * Premium" stays for moving up mid-period without renewing.
  */
 export default function PlanCompare({ subscription, listingState, onUpgrade, canRenewOn = false, renewingOn = null, onRenewOn = null }) {

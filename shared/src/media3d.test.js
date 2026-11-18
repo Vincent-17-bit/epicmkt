@@ -17,7 +17,7 @@ test("limits: a spin is 12 to 72 frames and at most 160 tickets may be open per 
 });
 
 test("roles and kinds map one to one", () => {
-  assert.deepEqual(MEDIA_ROLES, ["image", "video", "spin-frame", "model-glb", "poster"]);
+  assert.deepEqual(MEDIA_ROLES, ["image", "video", "spin-frame", "model-glb", "poster", "extra-image"]);
   for (const role of MEDIA_ROLES) assert.equal(ROLE_OF_KIND[KIND_OF_ROLE[role]], role);
   assert.equal(KIND_OF_ROLE["model-glb"], "model");
 });

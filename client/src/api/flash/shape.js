@@ -1,4 +1,4 @@
-import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours } from "@epicmkt/shared";
+import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours, cleanNotices, imageSrcSet } from "@epicmkt/shared";
 
 const SHORT_MAX = 140;
 
@@ -119,7 +119,29 @@ export const rangeOfRow = (row) => {
   return Number.isFinite(min) && Number.isFinite(max) && min < max ? { min, max } : null;
 };
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, includeMedia, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, optionCount, priceRange }) => {
+// A page-section picture (migration 0138): the url at a width that fits most frames, a srcset for every screen, and the stored size.
+// `toUrl` turns the stored path into a url (the preview passes its own, for files that are not uploaded yet).
+export const sectionPicture = (p, toUrl = mediaUrl) => {
+  if (!p || typeof p !== "object") return null;
+  const url = toUrl(p);
+  if (!url) return null;
+  const w = Number(p.width);
+  const h = Number(p.height);
+  return { url, srcSet: imageSrcSet(url, [480, 800, 1200, 1600, 2000]), width: Number.isFinite(w) && w > 0 ? w : null, height: Number.isFinite(h) && h > 0 ? h : null };
+};
+const sectionGalleryOf = (list, toUrl) => (Array.isArray(list) ? list : [])
+  .map((g) => { const pic = sectionPicture(g, toUrl); return pic ? { ...pic, label: textOf(g.label) || null, caption: textOf(g.caption) || null } : null; })
+  .filter(Boolean)
+  .slice(0, 5);
+const brandPageOf = (b, toUrl) => {
+  if (!b || typeof b !== "object") return null;
+  const banner = sectionPicture(b.banner, toUrl);
+  const cards = (Array.isArray(b.cards) ? b.cards : []).map((c) => { const pic = sectionPicture(c, toUrl); return pic ? { ...pic, caption: textOf(c.caption) || null } : null; }).filter(Boolean).slice(0, 8);
+  return banner || cards.length ? { banner, cards } : null;
+};
+const pathUrl = (p) => mediaUrl(p?.path);
+
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, includeMedia, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, optionCount, priceRange, delivery, notices, gallery, brandPage, pictureUrl = pathUrl }) => {
   // A photo's id is its database id when the card carries one (`media` entries have it). An option value points at a photo by that id
   // (`mediaId`), so it has to survive here; the counting names i1, i2 are only for older data that has no ids.
   const realIds = (kind) => (Array.isArray(mediaPaths) ? mediaPaths.filter((m) => m?.path && m.kind === kind).map((m) => (typeof m.id === "string" && m.id ? m.id : null)) : []);
@@ -151,6 +173,11 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     // One photo per "What's included" line, or null (migration 0137). Only when at least one line has a photo.
     ...(Array.isArray(includeMedia) && includeMedia.some((p) => typeof p === "string" && p) ? { includePhotos: listOf(includes).map((_, i) => (typeof includeMedia[i] === "string" && includeMedia[i] ? mediaUrl(includeMedia[i]) : null)) } : {}),
     terms: textOf(terms),
+    // Page sections the seller sets (migration 0138): delivery for this item (null = the shop's), notes, the gallery and From the brand.
+    deliveryOverride: delivery && typeof delivery === "object" && ["custom", "none"].includes(delivery.mode) ? delivery : null,
+    notices: cleanNotices(notices),
+    galleryImages: sectionGalleryOf(gallery, pictureUrl),
+    brandPage: brandPageOf(brandPage, pictureUrl),
     duration: null,
     term: null,
     packSize: textOf(packSize) || null,

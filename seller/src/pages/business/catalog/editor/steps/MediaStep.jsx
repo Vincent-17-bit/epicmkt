@@ -2,12 +2,16 @@ import MediaSlot from "../MediaSlot.jsx";
 import { SectionCard } from "../parts.jsx";
 import { usePlanFeatures } from "../../../../../lib/usePlanFeatures.js";
 import Media3dSection from "./Media3dSection.jsx";
+import GalleryEditor from "../GalleryEditor.jsx";
+import { emptyPage } from "../page.js";
 
-export default function MediaStep({ media, busy, itemId = null, form }) {
+export default function MediaStep({ media, busy, itemId = null, form, patch, extras }) {
   const features = usePlanFeatures();
+  const page = form?.page ?? emptyPage();
   return (
     <SectionCard id="media" title="Media" why="Items with clear photos get far more taps and messages.">
       <div data-area="media"><MediaSlot media={media} disabled={busy} /></div>
+      {extras && patch && <GalleryEditor gallery={page.gallery} onChange={(gallery) => patch("page", { ...page, gallery })} extras={extras} />}
       {features.threeD ? (
         <div data-area="media3d"><Media3dSection itemId={itemId} options={form?.options} /></div>
       ) : (

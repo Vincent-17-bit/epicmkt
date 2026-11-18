@@ -100,6 +100,12 @@ const toItem = (business, svc, index) => {
     stockLeft: Number.isInteger(svc.stockLeft) && svc.stockLeft > 0 ? svc.stockLeft : null,
     variants: svc.variants ?? [],
     specs: (svc.specs ?? []).slice(0, MAX_SPECS),
+    // Page sections the seller sets (migration 0138), the same keys the live API gives: delivery for this item (null = the shop's),
+    // notes under "About this item", the 5-picture gallery and "From the brand".
+    deliveryOverride: svc.deliveryOverride ?? null,
+    notices: Array.isArray(svc.notices) ? svc.notices : [],
+    galleryImages: Array.isArray(svc.galleryImages) ? svc.galleryImages : [],
+    brandPage: svc.brandPage ?? null,
     createdAt: new Date(Date.parse(business.createdAt) + index * 60000).toISOString()
   };
 };

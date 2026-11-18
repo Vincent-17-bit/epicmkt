@@ -123,7 +123,7 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
   const gross = amount * n + switchKes;
   const total = Math.max(gross - creditKes, 0);
   const canUseCredit = amount > 0 && creditKes + Math.max(-switchKes, 0) >= amount + Math.max(switchKes, 0) && (creditKes > 0 || switchKes < 0);
-  // Standard or Premium, when the server offers the choice (migration 0138) and this is a renewal.
+  // Standard or Premium, when the server offers the choice (migration 0139) and this is a renewal.
   const planChoices = purpose === "renewal" && instructions.planChoices && onPlan
     ? PLAN_ORDER.filter((k) => instructions.planChoices[k] > 0)
     : [];

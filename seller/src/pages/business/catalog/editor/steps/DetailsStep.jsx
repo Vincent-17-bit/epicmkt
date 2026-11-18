@@ -11,8 +11,8 @@ function Typed(props) {
 
 import SizeGuideAsk from "./guide/SizeGuideAsk.jsx";
 
-export default function DetailsStep({ form, patch, errors, focusOn, askGuide, guideShown, category, media, goTo }) {
-  const shared = { form, patch, errors, focusOn, category, media, goTo };
+export default function DetailsStep({ form, patch, errors, focusOn, askGuide, guideShown, category, media, extras, goTo }) {
+  const shared = { form, patch, errors, focusOn, category, media, extras, goTo };
   return (
     <>
       {form.productTypeId ? <Typed {...shared} /> : <DetailsSection {...shared} />}

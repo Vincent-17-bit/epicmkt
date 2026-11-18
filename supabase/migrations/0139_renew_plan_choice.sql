@@ -1,4 +1,4 @@
--- 0138_renew_plan_choice.sql
+-- 0139_renew_plan_choice.sql
 -- Renew on Standard or Premium.
 --
 -- Until now a seller could only renew on the plan they were on. Premium could be bought mid-period (upgrade, prorated),
@@ -79,7 +79,7 @@ begin
     v_amount := coalesce((v_app.plan_snapshot -> 'priceOverride' ->> 'amount')::integer, v_app.price_at_submission, v_unit);
     v_account := coalesce(v_app.reference_no, p_b.seller_id);
   elsif v_purpose = 'renewal' then
-    -- 0138: renewing on the other plan. One month costs the target plan's price, and the days still left in the current
+    -- 0139: renewing on the other plan. One month costs the target plan's price, and the days still left in the current
     -- period are moved to the new plan now: a dearer plan charges the prorated difference, a cheaper one gives it back as credit.
     if p_target is not null and p_target is distinct from p_b.plan_key then
       if p_target not in ('standard', 'premium') then raise exception 'invalid_plan'; end if;
@@ -197,7 +197,7 @@ begin
   if v_price is null or v_price <= 0 then return jsonb_build_object('outcome', 'no_price', 'credit', b.credit_kes); end if;
   v_ref := b.seller_id;
 
-  -- 0138: the seller chose the other plan when renewing. Switch first (the days left move to the new plan: charged or credited),
+  -- 0139: the seller chose the other plan when renewing. Switch first (the days left move to the new plan: charged or credited),
   -- then the months below are at the new plan's price. Until the money covers the switch and one month, hold it.
   if b.pay_intent is not null and b.pay_intent ->> 'purpose' = 'plan_switch' then
     begin
@@ -379,7 +379,7 @@ begin
     q := public.payment_quote(b, p_purpose, p_target_plan, p_category);
     v_purpose := q ->> 'purpose';
     v_unit := (q ->> 'amount_kes')::integer;
-    -- 0138: renewing on the other plan adds (or takes off) the difference for the days left.
+    -- 0139: renewing on the other plan adds (or takes off) the difference for the days left.
     v_switch := coalesce((q ->> 'switch_kes')::integer, 0);
     v_plan := case when v_purpose = 'renewal' and (q ->> 'plan_key') is distinct from b.plan_key then q ->> 'plan_key' end;
     if v_unit is null or v_unit <= 0 then raise exception 'nothing_to_pay'; end if;
@@ -473,7 +473,7 @@ begin
       -- The request says what the money is for; that beats any older intent.
       update public.businesses x set pay_intent = case when r.purpose in ('upgrade', 'category_change') then
         jsonb_build_object('purpose', r.purpose, 'target_plan', r.target_plan, 'category', r.category_id, 'change_id', r.change_id, 'set_at', now())
-        -- 0138: a renewal on the other plan.
+        -- 0139: a renewal on the other plan.
         when r.purpose = 'renewal' and r.target_plan is not null and r.target_plan is distinct from x.plan_key then
         jsonb_build_object('purpose', 'plan_switch', 'target_plan', r.target_plan, 'set_at', now()) end
        where id = r.business_id;
@@ -586,7 +586,7 @@ begin
     'phone', v_b.phone,
     'credit_kes', v_b.credit_kes,
     'amount_due_kes', greatest(v_amount + v_switch - v_b.credit_kes, 0)::integer,
-    -- 0138: the plans this shop can renew on (its own category), so the seller can pick Standard or Premium.
+    -- 0139: the plans this shop can renew on (its own category), so the seller can pick Standard or Premium.
     'current_plan', v_b.plan_key,
     'plan_choices', (select coalesce(jsonb_object_agg(p.plan_key, p.price_kes), '{}'::jsonb) from public.plans p
                       where p.category_id = v_b.category_id and p.price_kes > 0),

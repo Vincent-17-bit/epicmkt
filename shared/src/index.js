@@ -81,6 +81,8 @@ export * from "./related/index.js";
 export * from "./planLimits.js";
 
 export * from "./delivery.js";
+// Item page sections the seller sets: delivery for one item, notes, picture gallery, "From the brand", "What's included" names (migration 0138).
+export * from "./item/page.js";
 export * from "./demand.js";
 export * from "./unitPrice.js";   // A21
 export * from "./mergeItems.js";   // A21
