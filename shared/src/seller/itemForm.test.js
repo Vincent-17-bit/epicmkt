@@ -189,10 +189,10 @@ test("storedItemDetails: keeps only the keys that were sent, empty text as null"
 test("storedItemDetails: refuses what the database refuses", () => {
   const many = (n, make) => Array.from({ length: n }, (_, i) => make(i));
   const bad = [
-    { brand: "b".repeat(61) }, { shortDescription: "s".repeat(141) }, { terms: "t".repeat(501) }, { packSize: "p".repeat(41) }, { brand: 5 },
-    { highlights: many(9, (i) => ({ text: `P${i}` })) }, { highlights: [{ text: "" }] }, { highlights: [{ title: "t".repeat(41), text: "x" }] }, { highlights: [{ text: "t".repeat(201) }] }, { highlights: [{ text: "x", other: 1 }] }, { highlights: ["x"] },
-    { includes: many(11, (i) => `L${i}`) }, { includes: [""] }, { includes: ["x".repeat(81)] }, { includes: [5] },
-    { specs: many(81, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: "" }] }, { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
+    { brand: "b".repeat(61) }, { shortDescription: "s".repeat(141) }, { terms: "t".repeat(5001) }, { packSize: "p".repeat(121) }, { brand: 5 },
+    { highlights: many(13, (i) => ({ text: `P${i}` })) }, { highlights: [{ text: "" }] }, { highlights: [{ title: "t".repeat(61), text: "x" }] }, { highlights: [{ text: "t".repeat(251) }] }, { highlights: [{ text: "x", other: 1 }] }, { highlights: ["x"] },
+    { includes: many(51, (i) => `L${i}`) }, { includes: [""] }, { includes: ["x".repeat(301)] }, { includes: [5] },
+    { specs: many(201, (i) => ({ label: `L${i}`, value: "v" })) }, { specs: [{ label: "", value: "v" }] }, { specs: [{ label: "l", value: "" }] }, { specs: [{ group: "Nope", label: "l", value: "v" }] }, { specs: [{ label: "l", value: "v", extra: 1 }] },
   ];
   for (const f of bad) assert.deepEqual(storedItemDetails(f), { ok: false }, JSON.stringify(f).slice(0, 60));
 });

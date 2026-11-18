@@ -11,6 +11,7 @@ export { default as Select } from "./components/Select.jsx";
 export { default as Accordion } from "./components/Accordion.jsx";
 export { default as Toaster } from "./components/Toaster.jsx";
 export { default as Modal } from "./components/Modal.jsx";
+export { default as BackToTop } from "./components/BackToTop.jsx";
 export { default as BottomSheet } from "./components/BottomSheet.jsx";
 export { default as Lightbox } from "./components/Lightbox.jsx";
 export { default as PromoChip } from "./components/PromoChip.jsx";

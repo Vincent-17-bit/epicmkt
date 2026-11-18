@@ -9,18 +9,18 @@ import styles from "./editor.module.css";
 
 const TYPE_LABELS = { fixed: "Fixed price", from: "Starting from", range: "Price range", free: "Free", contact: "Contact for price" };
 const TYPE_HELP = {
-  fixed: "One price for this item.",
-  from: "Shows \"From\" before the price. Good when the final price depends on options.",
-  range: "Shows a lowest and a highest price.",
-  free: "Shows \"Free\". There is no price to enter.",
-  contact: "Shows \"Contact for price\". Customers message you to ask.",
+  fixed: "One price for this item. Example: White bread 400 g, KES 65.",
+  from: "Shows \"From\" before the price, like From KES 60. Use it when the price depends on the option or quantity picked: bread from KES 60 (400 g) up to KES 150 (900 g).",
+  range: "Shows a lowest and a highest price, like KES 1,500 to KES 2,500. Example: braids priced by length.",
+  free: "Shows \"Free\". There is no price to enter. Example: a free consultation.",
+  contact: "Shows \"Contact for price\". Customers message you to ask. Example: custom furniture you quote for.",
 };
 const COUNTED_TEXT = { available: "Available", limited_stock: "Low stock, customers see a Low stock tag", out_of_stock: "Out of stock, customers cannot see it" };
 
 const newOptionId = () => `v${Math.random().toString(36).slice(2, 10)}`;
 const OPTION_TYPES = ["fixed", "from"];
 
-export default function PriceSection({ form, patch, errors, focusOn }) {
+export default function PriceSection({ form, patch, errors, focusOn, goTo = null }) {
   const priced = PRICED.includes(form.priceType);
   const range = form.priceType === "range";
   const hasSale = form.salePrice !== "" || Boolean(errors.salePrice);
@@ -49,10 +49,21 @@ export default function PriceSection({ form, patch, errors, focusOn }) {
           )}
         </div>
       )}
+      {(form.options?.axes?.length ?? 0) > 0 ? (
+        <p className={styles.pointer} data-area="variants">
+          <span>Each choice has its own price in <strong>Options</strong> ({form.options.axes.map((a) => a.label || "option").join(" × ")}). The price above is what shows before a buyer picks.</span>
+          {goTo && <button type="button" className={styles.pointerBtn} onClick={() => goTo("options")}>Edit option prices</button>}
+        </p>
+      ) : (
+        <p className={styles.pointer}>
+          <span><strong>Different prices for different brands, weights, sizes or colours?</strong> Use Options: for example Festive 400 g KES 65 and Supa Loaf 400 g KES 60. Each combination gets its own price, stock and photo.</span>
+          {goTo && <button type="button" className={styles.pointerBtn} onClick={() => goTo("options")}>Set prices in Options</button>}
+        </p>
+      )}
       {OPTION_TYPES.includes(form.priceType) && !((form.options?.axes?.length ?? 0) > 0 && (form.variants ?? []).length === 0) && (
         <div className={styles.subBlock} data-area="variants">
-          <h3 className={styles.subTitle}>Options (optional)</h3>
-          <p className={styles.hint}>Sizes or types that have their own price, like Small and Large. Customers pick one. Leave a stock number empty if you do not count that option; at 0 it is hidden from customers.</p>
+          <h3 className={styles.subTitle}>Simple price list (optional)</h3>
+          <p className={styles.hint}>A short list of one choice each with its own price, like Small and Large. Customers pick one. For more than one kind of choice (brand and weight), use Options instead. Leave a stock number empty if you do not count that choice; at 0 it is hidden from customers.</p>
           <RowList
             noun={{ key: "var", label: "Option", name: "option" }} rows={form.variants ?? []} max={LIMITS.variants.rows} onChange={(v) => patch("variants", v)} focusOn={focusOn}
             blank={() => ({ id: newOptionId(), label: "", price: "", stock: "" })} focusFirst={(i) => `var-${i}-label`} addLabel="Add an option" addKey="add-variant" icon={faLayerGroup}

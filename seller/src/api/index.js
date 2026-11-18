@@ -40,6 +40,8 @@ export const uploadItemPhoto = (...a) => impl.uploadItemPhoto(...a);
 export const getItemMedia3d = (...a) => impl.getItemMedia3d(...a);
 export const uploadMedia3d = (...a) => impl.uploadMedia3d(...a);
 export const removeMedia3d = (...a) => impl.removeMedia3d(...a);
+export const reorderSpinFrames = (...a) => impl.reorderSpinFrames(...a);
+export const saveItemIncludeMedia = (...a) => impl.saveItemIncludeMedia(...a);
 export const listItemVideos = (...a) => impl.listItemVideos(...a);
 export const getItemMedia = (...a) => impl.getItemMedia(...a);
 export const listItemMedia = (...a) => impl.listItemMedia(...a);

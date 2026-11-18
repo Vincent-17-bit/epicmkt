@@ -65,7 +65,7 @@ export default function ProductInfoEditor({ specs, onChange, plainCount, categor
         value={raw}
         inputMode={row.input === "number" ? "decimal" : undefined}
         placeholder={row.placeholder}
-        max={row.unit ? 20 : SPEC_LIMITS.value}
+        {...(row.unit ? { max: 20 } : { maxLength: SPEC_LIMITS.value })}
         onChange={(e) => setValue(group, row, e.target.value)}
         autoComplete="off"
       />

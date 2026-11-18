@@ -1,5 +1,8 @@
 export const FAQ = [
-  { q: "How do I add an item and photos?", a: "Open My listings, choose Add an item, fill in the name and price, then add a photo. Clear, well-lit photos get more taps." },
+  { q: "How do I add an item and photos?", a: "Open My listings and tap Add item. First pick what you are adding (search a type such as bread, phone or haircut, or choose Other goods). The editor then opens in this order: Media (add a clear photo), Basics (the name), Options (only if buyers choose a size, colour, brand or weight), Price and stock, Details, and Review. Save as draft at any time; Add item publishes it. Clear, well-lit photos get more taps." },
+  { q: "One item comes in different brands, weights or sizes. How do I give each its own price?", a: "Use the Options step. Example: white bread sold as Festive and Supa Loaf in 400 g, 700 g and 900 g. Add the option Brand (Festive, Supa Loaf) and the option Weight (400 g, 700 g, 900 g); a table appears with one row per combination, where you type each price (Festive 400 g KES 65, Supa Loaf 400 g KES 60...) and, if you count stock, how many you have. Each choice can also have its own photo." },
+  { q: "What do Section, Highlights, Specifications and “Starting from” mean?", a: "Section groups items on your shop page, like Bread, Cakes or Haircuts. Highlights are short selling points shown under “About this item”, like 【Freshness guaranteed】: Baked every morning. Specifications are facts buyers check, like Weight: 400 g or Material: cotton. Price type “Starting from” shows “From KES 60”: use it when the final price depends on the option or quantity the buyer picks." },
+  { q: "What is a photo spin or a 3D model, and do I need one?", a: "Both are optional. A photo spin is 12 to 72 photos taken all the way round the item; buyers drag across it and the item turns. A 3D model is a .glb file made in a 3D app. They help for shoes, bags, phones and furniture. Food, services and most everyday items do not need them: good photos are enough. Save the item first, then open Media, then 3D model and photo spin." },
   { q: "How do I close for a short while?", a: "Open Exceptions under More, pick the date, say whether you are closed or open different hours, and add a short note. Customers see it on your listing, and it ends on its own." },
   { q: "What does confirming prices mean?", a: "Every so often we ask you to check that your prices are still right. Confirming takes one tap in My listings and keeps customers from seeing old prices. You choose how often in Settings." },
   { q: "Who are the questions from EpicMKT?", a: "Sometimes the team needs to check something about your listing. You will see them under Questions and as a notice in Notifications. Replying quickly keeps your listing in good standing." },
@@ -9,7 +12,15 @@ export const FAQ = [
 ];
 
 export const GUIDES = [
-  { id: "items", title: "Add items and photos", steps: ["Open My listings and choose Add an item.", "Enter a clear name, the price and the unit.", "Add a bright, close photo with a plain background.", "Check the item is set to Visible, then save."] },
+  { id: "items", title: "Add items and photos", steps: [
+    "Open My listings and tap Add item.",
+    "Pick what you are adding: search a type such as bread, phone or haircut, or choose Add as Other goods.",
+    "Media: add a bright, close photo with a plain background. More photos and a video are optional.",
+    "Basics: write a clear name, like White bread loaf 400 g. Section groups items on your page, like Bread or Cakes.",
+    "Options (only if buyers choose): add Size, Colour, Brand or Weight and type the price of each combination.",
+    "Price and stock: choose the price type and type the price. “Starting from” shows “From KES 60”.",
+    "Details: add highlights, specifications and what is included, then tap Add item. Save as draft if you want to finish later."
+  ] },
   { id: "closing", title: "Close for a day or change your hours", steps: ["Open Exceptions under More.", "Pick the date.", "Choose closed, or open different hours, and add a short note.", "Save. Customers see it on your listing."] },
   { id: "prices", title: "Confirm your prices", steps: ["Open My listings and look for items marked as having an old price.", "Update any price that changed.", "Choose Confirm prices to mark the rest as checked."] },
   { id: "questions", title: "Answer a question from the team", steps: ["Open Questions.", "Read the question carefully.", "Type a short, honest reply and send it.", "We will tell you if anything else is needed."] },

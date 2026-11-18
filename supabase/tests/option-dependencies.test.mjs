@@ -195,7 +195,7 @@ test("variant specs are trimmed, stored, read back, and validated like item spec
   const bad = (specs) => { const x = small(); x.variants[0].specs = specs; return base({ options: x }); };
   await saveFails(asA, id, bad([{ group: "Nope", label: "a", value: "b" }]), /invalid_variant/);
   await saveFails(asA, id, bad([{ group: "Measurements", label: "  ", value: "b" }]), /invalid_variant/);
-  await saveFails(asA, id, bad([{ group: "Measurements", label: "a", value: "x".repeat(121) }]), /invalid_variant/);
+  await saveFails(asA, id, bad([{ group: "Measurements", label: "a", value: "x".repeat(2001) }]), /invalid_variant/);
   await saveFails(asA, id, bad([{ group: "Measurements", label: "a", value: "b", extra: 1 }]), /invalid_variant/);
   await saveFails(asA, id, bad("nope"), /invalid_variant/);
   await saveFails(asA, id, bad(Array.from({ length: 21 }, (_, i) => ({ group: "Measurements", label: `l${i}`, value: "v" }))), /invalid_variant/);

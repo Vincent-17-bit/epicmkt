@@ -1,3 +1,4 @@
+import { EXTRA_GUIDE_KINDS, EXTRA_GUIDE_TEMPLATES, EXTRA_GUIDE_WORDS } from "./guidePresets.js";
 // The seller's own size guide for one item: a table the seller fills in on the item (columns they choose, one row per size they sell).
 // Pure code, no browser or Node APIs. Stored as items.size_guide = { unit, columns:[text], rows:[[text]] } (migration 0103);
 // in the editor each row also has an id so the screen can keep its place: { unit, columns, rows:[{ id, cells:[text] }] }. The first column is the size.
@@ -27,7 +28,8 @@ export const GUIDE_KINDS = Object.freeze([
   { id: "dimensions", label: "Wood, furniture and building", about: "Length, width, height or thickness for each size or cut." },
   { id: "drink", label: "Drinks and bottles", about: "Bottle or pack volumes, so buyers can compare sizes." },
   { id: "food", label: "Bread, cakes and food", about: "Weight, slices or servings for each size." },
-  { id: "hardware", label: "Hardware, paint and tools", about: "Pack size, weight, volume, gauge or power for each size, so buyers pick the right one." }
+  { id: "hardware", label: "Hardware, paint and tools", about: "Pack size, weight, volume, gauge or power for each size, so buyers pick the right one." },
+  ...EXTRA_GUIDE_KINDS
 ]);
 export const kindLabel = (id) => GUIDE_KINDS.find((k) => k.id === id)?.label ?? "Other";
 
@@ -55,7 +57,8 @@ export const GUIDE_TEMPLATES = Object.freeze([
   { id: "fasteners", name: "Nails, screws and bolts", kind: "hardware", unit: null, columns: ["Size", "Gauge", "Pack of", "Weight (kg)"] },
   { id: "wire", name: "Wire and cable", kind: "hardware", unit: null, columns: ["Size", "Core size", "Rating", "Roll (m)"] },
   { id: "tools", name: "Tools and equipment", kind: "hardware", unit: null, columns: ["Size", "Power (W)", "Voltage", "Weight (kg)"] },
-  { id: "plain", name: "Only my own columns", kind: "custom", unit: "cm", columns: ["Size", "Measurement"] }
+  { id: "plain", name: "Only my own columns", kind: "custom", unit: "cm", columns: ["Size", "Measurement"] },
+  ...EXTRA_GUIDE_TEMPLATES
 ]);
 
 // Column ideas to add, by kind.
@@ -67,7 +70,17 @@ export const GUIDE_COLUMN_IDEAS = Object.freeze({
   drink: ["Volume (ml)", "Servings", "Bottles in pack", "Alcohol (%)", "Type"],
   hardware: ["Pack of", "Weight (kg)", "Volume (L)", "Gauge", "Power (W)", "Voltage", "Coverage (m²)"],
   food: ["Weight (g)", "Slices", "Serves (people)", "Pieces"],
-  custom: ["Length", "Width", "Height", "Weight (kg)", "Volume (ml)", "Notes"]
+  custom: ["Length", "Width", "Height", "Weight (kg)", "Volume (ml)", "Notes"],
+  jewellery: ["Circumference (mm)", "Length (in)", "Width (mm)", "Fits"],
+  beauty: ["Volume (ml)", "Weight (g)", "Shade", "Length (in)", "Lasts about"],
+  home: ["Feet", "Centimetres", "Capacity (L)", "Pieces", "Serves"],
+  household: ["Weight (g)", "Volume (ml)", "Pieces", "Lasts about"],
+  health: ["Strength", "Count", "Measure", "Box of"],
+  farm: ["Weight (kg)", "Feeds about", "Covers about", "Age"],
+  vehicle: ["Fits", "Capacity (Ah)", "Volts", "Power (W)"],
+  electronics: ["Storage", "RAM", "Screen (in)", "Capacity (L)", "Power (W)"],
+  paper: ["Millimetres", "Inches", "Pages", "Quantity"],
+  service: ["Minutes", "Hours", "Guests", "Includes", "Price"]
 });
 
 const WORDS = [
@@ -77,8 +90,11 @@ const WORDS = [
   ["food", /\b(bread|loaf|loaves|bun|buns|cake|cakes|pastry|pastries|cookie|cookies|biscuit|biscuits|flour|sugar|rice|maize|meat|cheese|bakery|food|snack|snacks|butter|yogurt|honey|oil)\b/i],
   ["hardware", /\b(hardware|paint|paints|varnish|cement|sand|nail|nails|screw|screws|bolt|bolts|nut|nuts|rivet|rivets|wire|wires|cable|cables|tool|tools|drill|drills|hammer|hammers|spanner|spanners|saw|saws|glue|adhesive|sealant|padlock|padlocks|hinge|hinges|bulb|bulbs)\b/i],
   ["dimensions", /\b(wood|wooden|timber|plank|planks|board|boards|lumber|plywood|mdf|beam|beams|post|posts|pole|poles|log|logs|furniture|table|tables|chair|chairs|sofa|sofas|bed|beds|mattress|door|doors|window|windows|pipe|pipes|tile|tiles|glass|sheet|sheets|carpet|rug|rugs|curtain|curtains|shelf|shelves|desk|desks|cabinet|wardrobe|frame|mirror|fabric|mat|mats)\b/i],
-  ["clothing", /\b(shirt|t-?shirt|tee|dress|trouser|trousers|jean|jeans|skirt|jacket|coat|hoodie|sweater|top|tops|suit|blouse|short|shorts|kitenge|ankara|abaya|vest|uniform|leggings?|gown|wear|clothing)\b/i]
+  ["clothing", /\b(shirt|t-?shirt|tee|dress|trouser|trousers|jean|jeans|skirt|jacket|coat|hoodie|sweater|top|tops|suit|blouse|short|shorts|kitenge|ankara|abaya|vest|uniform|leggings?|gown|wear|clothing|bra|bras)\b/i]
 ];
+// The other kinds (jewellery, beauty, home, electronics...) only choose which tables come first once the seller opens a guide.
+// They do not add a Size guide step on their own: a phone or a haircut can still get one with "Add a size guide" in Details.
+const ALL_WORDS = [...WORDS, ...EXTRA_GUIDE_WORDS];
 // Size-like option types: the one called Size first, then the others that say how big or how much.
 const SIZE_WORDS = [/\b(size|sizes|saizi)\b/i, /\b(volume|capacity|weight|length|dimensions?|thickness|diameter|pack|bottle|loaf|width)\b/i];
 
@@ -96,12 +112,17 @@ export const sizeLabels = (options) => {
 /** One of GUIDE_KINDS ids, or null, read from the product type's name and the item name (the first match in the order shoe, bag, drink, food, wood and furniture, clothing). */
 export const guideKindFor = (...names) => {
   const text = names.filter(Boolean).join(" ");
+  return ALL_WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
+};
+/** Like guideKindFor, but only the kinds that bring the Size guide step by themselves (shoes, bags, drinks, food, building, clothing). */
+const stepKindFor = (...names) => {
+  const text = names.filter(Boolean).join(" ");
   return WORDS.find(([, re]) => re.test(text))?.[0] ?? null;
 };
 /** Has the seller put a "Size" row in the item's specifications? (rows are { group, label, value }) */
 export const hasSizeSpec = (specs) => (Array.isArray(specs) ? specs : []).some((r) => /^\s*(sizes?|saizi)\s*$/i.test(String(r?.label ?? "")));
 /** Does this item deserve a Size guide step? It does when it has a guide, sells sizes, or is a kind of item that has one. */
-export const wantsGuide = ({ guide, options, typeName, itemName }) => Boolean(guide) || sizeLabels(options).length > 0 || guideKindFor(typeName, itemName) !== null;
+export const wantsGuide = ({ guide, options, typeName, itemName }) => Boolean(guide) || sizeLabels(options).length > 0 || stepKindFor(typeName, itemName) !== null;
 
 // ---- reading amounts from size names ----
 const num = (t) => Number(String(t).replace(",", "."));
@@ -140,12 +161,19 @@ export const emptyGuide = (unit = null) => ({ unit, columns: ["Size"], rows: [] 
  * Columns for a kind of item with one row per size the seller offers, the size filled in. `template.fill` also fills an amount column
  * from the size names ("750ml" gives 750); a size that does not say its amount is left blank for the seller to type.
  */
-export function startGuide({ columns, sizes = [], unit = "cm", fill }) {
+export function startGuide({ columns, sizes = [], unit = "cm", fill, rows: examples }) {
   const cols = (columns?.length ? columns : ["Size", "Measurement"]).slice(0, GUIDE_LIMITS.columns);
   const read = fill ? READERS[fill.read] : null;
-  const rows = sizes.slice(0, GUIDE_LIMITS.rows).map((size) => {
-    const cells = [size];
-    if (read && fill.col > 0 && fill.col < cols.length) { const v = read(size); cells[fill.col] = v === null ? "" : String(v); }
+  const known = Array.isArray(examples) ? examples : [];
+  // No sizes of the item's own yet (or only the one "Standard" row): start from the template's example rows, for the seller to change.
+  const own = sizes.filter((x) => text(x) && !sameSize(x, "Standard"));
+  if (own.length === 0 && known.length) return { unit, columns: cols, rows: known.slice(0, GUIDE_LIMITS.rows).map((cells) => row(cells, cols.length)) };
+  const list = own.length ? own : sizes;
+  const rows = list.slice(0, GUIDE_LIMITS.rows).map((size) => {
+    // A size the template knows ("XL", "5x6 (Queen)", "195/65 R15") brings its example cells; any other starts empty.
+    const hit = known.find((cells) => sameSize(cells[0], size));
+    const cells = hit ? [size, ...hit.slice(1)] : [size];
+    if (read && fill.col > 0 && fill.col < cols.length) { const v = read(size); if (v !== null || !cells[fill.col]) cells[fill.col] = v === null ? "" : String(v); }
     return row(cells, cols.length);
   });
   return { unit, columns: cols, rows };

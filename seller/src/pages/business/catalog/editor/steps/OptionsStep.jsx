@@ -12,7 +12,7 @@ import ed from "../editor.module.css";
 import s from "./options/options.module.css";
 
 // Item options: colours, sizes, storage, styles. Axes come from the product type; every combination has its own price and stock.
-// Items with no options never see this step (see steps/index.js), and saving without touching it changes nothing.
+// Every item can open this step (see steps/index.js); saving without touching it changes nothing.
 export default function OptionsStep({ form, patch, errors, media }) {
   const { types, planLimits } = useProductTypes();
   const [said, setSaid] = useState("");
@@ -64,7 +64,8 @@ export default function OptionsStep({ form, patch, errors, media }) {
         {options.axes.length === 0 ? (
           <div className={s.start}>
             <p className={s.startTitle}><FontAwesomeIcon icon={faLayerGroup} aria-hidden="true" /> What do buyers choose?</p>
-            <p className={s.startText}>Pick one to start. You can add up to {limits.axes} option types, each with up to {limits.values} values.</p>
+            <p className={s.startText}>Pick one to start. You can add up to {limits.axes} option types, each with up to {limits.values} values. Every combination gets its own price, stock and photo.</p>
+            <p className={s.example}><strong>Example:</strong> White bread sold as <em>Festive</em> and <em>Supa Loaf</em>, each in <em>400 g</em>, <em>700 g</em> and <em>900 g</em>. Add <strong>Brand</strong> (Festive, Supa Loaf) and <strong>Weight</strong> (400 g, 700 g, 900 g), then type each price in the table: Festive 400 g KES 65, Supa Loaf 400 g KES 60, and so on.</p>
             {typeAxes.length > 0 && (
               <button type="button" className={`${s.pill} ${s.pillPrimary}`} style={{ justifySelf: "start" }}
                 onClick={() => { const r = addTypeAxes(options, typeAxes, limits); set(r.options); setSaid(`${r.added} option ${r.added === 1 ? "type" : "types"} added for ${type.name}.`); }}>

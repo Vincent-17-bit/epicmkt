@@ -28,11 +28,13 @@ beforeEach(() => { window.__plan = undefined; window.__types = undefined; });
 afterEach(() => { window.__plan = undefined; window.__types = undefined; });
 
 describe("steps registry", () => {
-  it("shows the step only for a typed item or one that has options", () => {
-    const ids = (form) => visibleSteps({ form, errors: {}, mediaCount: 0 }).map((s) => s.id);
-    expect(ids({ name: "x" })).not.toContain("options");
+  it("shows the step for every item, and hides it only for a plan without options (unless the item has some)", () => {
+    const ids = (form, features) => visibleSteps({ form, errors: {}, mediaCount: 0, features }).map((s) => s.id);
+    expect(ids({ name: "x" })).toContain("options");
     expect(ids({ productTypeId: null })).toContain("options");
     expect(ids({ options: { axes: [], rows: [], defaultKey: null } })).toContain("options");
+    expect(ids({ name: "x" }, { options: false })).not.toContain("options");
+    expect(ids({ options: { axes: [{ key: "size", label: "Size", values: [] }], rows: [], defaultKey: null } }, { options: false })).toContain("options");
   });
 });
 
@@ -269,12 +271,12 @@ describe("in the editor", () => {
     expect(await named("Tee shirt")).toBeUndefined();
   });
 
-  it("an item with no type and no options shows no Options step and saves as before", async () => {
+  it("an item with no type can use Options too, and one left without options saves as before", async () => {
     const user = userEvent.setup();
     await signedInApp("/business/catalog/new");
     await user.type(await screen.findByLabelText("Name"), "Plain item");
     await user.type(screen.getByLabelText("Price (KES)"), "500");
-    expect(screen.queryByRole("heading", { name: "Options" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Options" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Save as draft" }));
     await waitFor(async () => expect(await named("Plain item")).toBeTruthy(), { timeout: 5000 });
     expect((await api.getItemOptions((await named("Plain item")).id)).axes).toEqual([]);

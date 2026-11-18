@@ -1,0 +1,274 @@
+# Puts database changes and edge functions live on the Supabase project from GitHub, so nothing has to be run from a laptop.
+# Run it from Actions → "Deploy Supabase" → Run workflow (or `gh workflow run deploy-supabase.yml`).
+#
+# Needs two repository secrets (Settings → Secrets and variables → Actions → New repository secret):
+#   SUPABASE_ACCESS_TOKEN  a personal access token from https://supabase.com/dashboard/account/tokens
+#   SUPABASE_PROJECT_REF   the project's reference id: the 20 letters after /project/ in the dashboard address
+#
+# Database: sends the parts in supabase/catch-up/ to the project through the Supabase SQL API, in order: the same parts you would paste in
+# the SQL editor (the single catch-up-items.sql is too large for it). They apply only the migrations the database is missing, in order
+# (nothing once it is current), and list what they did. A row that says SKIPPED fails the run, with the database error. (`supabase db push` is not used: this project's migrations were
+# applied in the SQL editor, so its migration history table does not list them and a push would try to run them all again.)
+# Functions: deploys the names given; each keeps its verify_jwt setting from supabase/config.toml.
+# Pull requests that touch supabase/ run only the "Secrets" job: it says whether the two secrets are set and the token can see the
+# project (never their values), and never blocks the pull request.
+name: Deploy Supabase
+
+on:
+  workflow_dispatch:
+    inputs:
+      database:
+        description: "Bring the database up to date (the parts in supabase/catch-up/)"
+        type: boolean
+        default: true
+      functions:
+        description: "Edge functions to deploy, separated by spaces (leave empty for none)"
+        required: false
+        default: "seller-media-ticket seller-media3d-finalize"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/deploy-supabase.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-supabase-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  secrets:
+    name: Secrets
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -uo pipefail
+          missing=""
+          [ -n "${TOKEN}" ] || missing="${missing} SUPABASE_ACCESS_TOKEN"
+          [ -n "${REF}" ] || missing="${missing} SUPABASE_PROJECT_REF"
+          if [ -n "${missing}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "### Supabase deploy is not set up" >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing repository secrets:${missing}. Add them in Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Missing repository secrets:${missing}"
+            exit 0
+          fi
+          if ! [[ "${REF}" =~ ^[a-z]{20}$ ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "SUPABASE_PROJECT_REF does not look like a project reference (20 lowercase letters)." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::SUPABASE_PROJECT_REF does not look like a project reference (20 lowercase letters)."
+            exit 0
+          fi
+          code=$(curl -sS -o project.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://api.supabase.com/v1/projects/${REF}")
+          if [ "${code}" != "200" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "The access token cannot open the project (HTTP ${code}). Check that the token is current and belongs to an owner of the project." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::The access token cannot open the project (HTTP ${code})."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Supabase deploy is set up for project $(jq -r '.name + " (" + .region + ", " + .status + ")"' project.json)." | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f project.json
+
+  database:
+    name: Database
+    needs: secrets
+    if: github.event_name == 'workflow_dispatch' && inputs.database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop when the secrets are missing
+        if: needs.secrets.outputs.ready != 'true'
+        run: |
+          echo "Add the SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF repository secrets first (see the Secrets job)." >&2
+          exit 1
+      - uses: actions/checkout@v4
+      - name: Apply the missing migrations
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          for part in supabase/catch-up/part-*.sql; do
+            echo "Running ${part}"
+            jq -Rs '{query: .}' "${part}" > body.json
+            code=$(curl -sS -o result.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/${REF}/database/query" \
+              -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" --data-binary @body.json)
+            echo "HTTP ${code}"
+            if [ "${code}" -lt 200 ] || [ "${code}" -ge 300 ]; then
+              cat result.json
+              echo "::error::The SQL API answered HTTP ${code} for ${part}."
+              exit 1
+            fi
+            # Part 1 says when nothing is missing; the other parts are then not needed.
+            if jq -e 'type == "array" and any(.[]; (.result // "") == "Finished: nothing else to run.")' result.json > /dev/null; then break; fi
+          done
+          {
+            echo "### Database catch-up"
+            echo
+            echo "| Step | Migration | Result |"
+            echo "| --- | --- | --- |"
+            jq -r 'if type == "array" then .[] | "| \(.step) | \(.migration) | \(.result | gsub("\\|"; "/")) |" else empty end' result.json || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq . result.json || cat result.json
+          if jq -e 'type == "array" and any(.[]; (.result // "") | startswith("SKIPPED"))' result.json > /dev/null; then
+            echo "::error::At least one migration was skipped; its database error is in the table above."
+            exit 1
+          fi
+
+  functions:
+        description: "Edge functions to deploy, separated by spaces (leave empty for none)"
+        required: false
+        default: "seller-media-ticket seller-media3d-finalize"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/deploy-supabase.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-supabase-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  secrets:
+    name: Secrets
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -uo pipefail
+          missing=""
+          [ -n "${TOKEN}" ] || missing="${missing} SUPABASE_ACCESS_TOKEN"
+          [ -n "${REF}" ] || missing="${missing} SUPABASE_PROJECT_REF"
+          if [ -n "${missing}" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "### Supabase deploy is not set up" >> "$GITHUB_STEP_SUMMARY"
+            echo "Missing repository secrets:${missing}. Add them in Settings → Secrets and variables → Actions." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Missing repository secrets:${missing}"
+            exit 0
+          fi
+          if ! [[ "${REF}" =~ ^[a-z]{20}$ ]]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "SUPABASE_PROJECT_REF does not look like a project reference (20 lowercase letters)." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::SUPABASE_PROJECT_REF does not look like a project reference (20 lowercase letters)."
+            exit 0
+          fi
+          code=$(curl -sS -o project.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "https://api.supabase.com/v1/projects/${REF}")
+          if [ "${code}" != "200" ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "The access token cannot open the project (HTTP ${code}). Check that the token is current and belongs to an owner of the project." >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::The access token cannot open the project (HTTP ${code})."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Supabase deploy is set up for project $(jq -r '.name + " (" + .region + ", " + .status + ")"' project.json)." | tee -a "$GITHUB_STEP_SUMMARY"
+          rm -f project.json
+
+  database:
+    name: Database
+    needs: secrets
+    if: github.event_name == 'workflow_dispatch' && inputs.database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop when the secrets are missing
+        if: needs.secrets.outputs.ready != 'true'
+        run: |
+          echo "Add the SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF repository secrets first (see the Secrets job)." >&2
+          exit 1
+      - uses: actions/checkout@v4
+      - name: Apply the missing migrations
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: |
+          set -euo pipefail
+          jq -Rs '{query: .}' supabase/catch-up-items.sql > body.json
+          code=$(curl -sS -o result.json -w '%{http_code}' -X POST "https://api.supabase.com/v1/projects/${REF}/database/query" \
+            -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" --data-binary @body.json)
+          echo "HTTP ${code}"
+          {
+            echo "### Database catch-up"
+            echo
+            echo "| Step | Migration | Result |"
+            echo "| --- | --- | --- |"
+            jq -r 'if type == "array" then .[] | "| \(.step) | \(.migration) | \(.result | gsub("\\|"; "/")) |" else empty end' result.json || true
+          } >> "$GITHUB_STEP_SUMMARY"
+          jq . result.json || cat result.json
+          if [ "${code}" -lt 200 ] || [ "${code}" -ge 300 ]; then
+            echo "::error::The SQL API answered HTTP ${code}."
+            exit 1
+          fi
+          if jq -e 'type == "array" and any(.[]; (.result // "") | startswith("SKIPPED"))' result.json > /dev/null; then
+            echo "::error::At least one migration was skipped; its database error is in the table above."
+            exit 1
+          fi
+
+  functions:
+    name: Edge functions
+    needs: [secrets, database]
+    if: always() && github.event_name == 'workflow_dispatch' && inputs.functions != '' && needs.database.result != 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Stop when the secrets are missing
+        if: needs.secrets.outputs.ready != 'true'
+        run: |
+          echo "Add the SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF repository secrets first (see the Secrets job)." >&2
+          exit 1
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          FUNCTIONS: ${{ inputs.functions }}
+        run: |
+          set -euo pipefail
+          for name in ${FUNCTIONS}; do
+            if ! [[ "${name}" =~ ^[a-z0-9-]+$ ]] || [ ! -d "supabase/functions/${name}" ]; then
+              echo "::error::Unknown function: ${name}"
+              exit 1
+            fi
+          done
+          for name in ${FUNCTIONS}; do
+            echo "Deploying ${name}"
+            supabase functions deploy "${name}" --project-ref "${PROJECT_REF}"
+          done
+      - name: Check what is live
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          FUNCTIONS: ${{ inputs.functions }}
+        run: |
+          set -euo pipefail
+          curl -sS -H "Authorization: Bearer ${TOKEN}" "https://api.supabase.com/v1/projects/${REF}/functions" > live.json
+          {
+            echo "### Edge functions"
+            echo
+            echo "| Function | Status | Version |"
+            echo "| --- | --- | --- |"
+            for name in ${FUNCTIONS}; do
+              jq -r --arg n "${name}" '(.[] | select(.slug == $n) | "| \(.slug) | \(.status) | \(.version) |") // "| \($n) | missing | |"' live.json
+            done
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          # The media functions sign uploads with Cloudinary: say if its secret is not on the project (names only, never values).
+          curl -sS -H "Authorization: Bearer ${TOKEN}" "https://api.supabase.com/v1/projects/${REF}/secrets" > secrets.json
+          if ! jq -e 'any(.[]; .name == "CLOUDINARY_URL" or .name == "CLOUDINARY_API_SECRET")' secrets.json > /dev/null; then
+            echo "::warning::The project has no CLOUDINARY_URL secret, so photo, 3D and spin uploads cannot be signed. See docs/cloudinary-images.md step 3."
+          fi
+          rm -f secrets.json

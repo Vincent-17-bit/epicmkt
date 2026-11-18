@@ -126,6 +126,7 @@ const itemRow = (row, business) =>
     highlights: row.highlights,
     specs: row.specs,
     includes: row.includes,
+    includeMedia: row.include_media,
     terms: row.terms,
     packSize: row.pack_size,
     variants: row.variants,

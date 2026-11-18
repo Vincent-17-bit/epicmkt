@@ -321,12 +321,12 @@ test("item details with a bad shape or length cannot be stored", async () => {
   const bad = [
     [{ highlights: json({}) }, /items_highlights_shape/],
     [{ highlights: "null" }, /items_highlights_shape/],
-    [{ highlights: json(Array.from({ length: 9 }, () => ({ text: "Fast" }))) }, /items_highlights_shape/],
+    [{ highlights: json(Array.from({ length: 13 }, () => ({ text: "Fast" }))) }, /items_highlights_shape/],
     [{ highlights: json([{ title: "Only a title" }]) }, /items_highlights_shape/],
     [{ highlights: json([{ text: "   " }]) }, /items_highlights_shape/],
     [{ highlights: json([{ text: 5 }]) }, /items_highlights_shape/],
-    [{ highlights: json([{ text: longer(201) }]) }, /items_highlights_shape/],
-    [{ highlights: json([{ title: longer(41), text: "Fast" }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ text: longer(251) }]) }, /items_highlights_shape/],
+    [{ highlights: json([{ title: longer(61), text: "Fast" }]) }, /items_highlights_shape/],
     [{ highlights: json([{ title: null, text: "Fast" }]) }, /items_highlights_shape/],
     [{ highlights: json([{ text: "Fast", url: "x" }]) }, /items_highlights_shape/],
     [{ highlights: json(["Fast"]) }, /items_highlights_shape/],
@@ -335,20 +335,20 @@ test("item details with a bad shape or length cannot be stored", async () => {
     [{ specs: json([spec(1, { group: "Elsewhere" })]) }, /items_specs_shape/],
     [{ specs: json([spec(1, { group: "measurements" })]) }, /items_specs_shape/],
     [{ specs: json([{ label: "Weight", value: "2 kg" }]) }, /items_specs_shape/],
-    [{ specs: json([spec(1, { label: longer(41) })]) }, /items_specs_shape/],
-    [{ specs: json([spec(1, { value: longer(121) })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { label: longer(101) })]) }, /items_specs_shape/],
+    [{ specs: json([spec(1, { value: longer(2001) })]) }, /items_specs_shape/],
     [{ specs: json([spec(1, { label: " " })]) }, /items_specs_shape/],
     [{ specs: json([spec(1, { extra: "x" })]) }, /items_specs_shape/],
-    [{ specs: json(specList(81)) }, /items_specs_shape/],
-    [{ includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, /items_includes_shape/],
-    [{ includes: [longer(81)] }, /items_includes_shape/],
+    [{ specs: json(specList(201)) }, /items_specs_shape/],
+    [{ includes: Array.from({ length: 51 }, (_, i) => `Part ${i}`) }, /items_includes_shape/],
+    [{ includes: [longer(301)] }, /items_includes_shape/],
     [{ includes: ["Cable", " "] }, /items_includes_shape/],
     [{ includes: ["Cable", null] }, /items_includes_shape/],
     [{ includes: "{{a},{b}}" }, /items_includes_shape/],
     [{ brand: longer(61) }, /items_brand_len/],
     [{ short_description: longer(141) }, /items_short_description_len/],
-    [{ terms: longer(501) }, /items_terms_len/],
-    [{ pack_size: longer(41) }, /items_pack_size_len/],
+    [{ terms: longer(5001) }, /items_terms_len/],
+    [{ pack_size: longer(121) }, /items_pack_size_len/],
   ];
   for (const [extra, pattern] of bad) await assert.rejects(item(ids.bizA, "Bad shape", extra), pattern, Object.keys(extra)[0]);
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 0);
@@ -361,31 +361,31 @@ test("item details at their limits are stored as given", async () => {
   const id = await item(ids.bizA, "At the limit", {
     brand: longer(60),
     short_description: longer(140),
-    terms: longer(500),
-    pack_size: longer(40),
-    highlights: json(Array.from({ length: 8 }, () => ({ title: longer(40), text: longer(200) }))),
-    specs: json(Array.from({ length: 20 }, (_, i) => ({ group: groups[i % 5], label: longer(40), value: longer(120) }))),
-    includes: Array.from({ length: 10 }, () => longer(80)),
+    terms: longer(5000),
+    pack_size: longer(120),
+    highlights: json(Array.from({ length: 12 }, () => ({ title: longer(60), text: longer(250) }))),
+    specs: json(Array.from({ length: 200 }, (_, i) => ({ group: groups[i % 5], label: longer(100), value: longer(2000) }))),
+    includes: Array.from({ length: 50 }, () => longer(300)),
   });
   const r = await row(id);
   assert.equal(r.brand.length, 60);
-  assert.equal(r.highlights.length, 8);
-  assert.equal(r.specs.length, 20);
+  assert.equal(r.highlights.length, 12);
+  assert.equal(r.specs.length, 200);
   assert.deepEqual([...new Set(r.specs.map((s) => s.group))].sort(), [...groups].sort());
-  assert.equal(r.includes.length, 10);
+  assert.equal(r.includes.length, 50);
   const titleless = await item(ids.bizA, "Titleless", { highlights: json([{ text: "Just text" }]) });
   assert.deepEqual((await row(titleless)).highlights, [{ text: "Just text" }]);
 });
 
-test("the 81st spec is refused by the save function and the table", async () => {
+test("the 201st spec is refused by the save function and the table", async () => {
   await sql(c, `delete from items`);
   const id = await save(asA, { ...detailFields, specs: specList(20) });
   assert.equal((await row(id)).specs.length, 20);
-  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(81) })], /invalid_details/);
-  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(81) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(201) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(201) })], /invalid_details/);
   assert.equal((await row(id)).specs.length, 20);
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
-  await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(81))]), /items_specs_shape/);
+  await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(201))]), /items_specs_shape/);
 });
 
 test("the save function writes, keeps and clears the details and rejects bad ones", async () => {
@@ -422,14 +422,14 @@ test("the save function writes, keeps and clears the details and rejects bad one
   for (const bad of [
     { brand: "x".repeat(61) },
     { short_description: "x".repeat(141) },
-    { terms: "x".repeat(501) },
-    { pack_size: "x".repeat(41) },
+    { terms: "x".repeat(5001) },
+    { pack_size: "x".repeat(121) },
     { brand: { a: 1 } },
-    { highlights: [{ text: "x".repeat(201) }] },
+    { highlights: [{ text: "x".repeat(251) }] },
     { highlights: "not a list" },
     { specs: [spec(1, { group: "Elsewhere" })] },
     { includes: [1, 2] },
-    { includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) },
+    { includes: Array.from({ length: 51 }, (_, i) => `Part ${i}`) },
     { includes: ["ok", " "] },
   ]) {
     await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, ...bad })], /invalid_details/);
@@ -541,7 +541,7 @@ test("items and stores without details select exactly as before", async () => {
   const cols = (view) => sql(c, `select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position`, [view]).then((x) => x.map((y) => y.column_name));
   const items = await cols("public_items");
   assert.deepEqual(items.slice(0, 15), ["id", "business_id", "name", "description", "section", "price", "price_max", "price_type", "unit", "availability", "sort", "created_at", "image_paths", "video_paths", "stock_left"]);
-  assert.deepEqual(items.slice(15), ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size", "media", "variants", "price_min", "price_high", "has_options", "department_id", "product_type_id", "has_3d", "option_count"]);
+  assert.deepEqual(items.slice(15), ["brand", "short_description", "highlights", "specs", "includes", "terms", "pack_size", "media", "variants", "price_min", "price_high", "has_options", "department_id", "product_type_id", "has_3d", "option_count", "include_media"]);
   const stores = await cols("public_businesses");
   assert.deepEqual(stores.slice(-5), ["exceptions", "product_count", "timezone", "shop_settings", "delivery"]);
   const grants = await sql(c, `select grantee from information_schema.role_table_grants where table_schema = 'public' and table_name in ('public_items', 'public_businesses') and privilege_type = 'SELECT' and grantee in ('anon', 'authenticated', 'service_role')`);
@@ -576,10 +576,10 @@ test("a bad detail skips only that row and reports it", async () => {
   const longer = (n) => "x".repeat(n);
   const spec = (over = {}) => ({ group: "Measurements", label: "Weight", value: "2 kg", ...over });
   for (const bad of [
-    { brand: longer(61) }, { short_description: longer(141) }, { pack_size: longer(41) }, { terms: longer(501) }, { brand: 5 },
-    { includes: "Cable" }, { includes: [1] }, { includes: Array.from({ length: 11 }, (_, i) => `Part ${i}`) }, { includes: [longer(81)] },
-    { highlights: {} }, { highlights: Array.from({ length: 9 }, () => ({ text: "Fast" })) }, { highlights: [{ text: longer(201) }] }, { highlights: [{ title: "Only a title" }] },
-    { specs: {} }, { specs: Array.from({ length: 81 }, (_, i) => spec({ label: `Label ${i}` })) }, { specs: [spec({ group: "Nonsense" })] }, { specs: [spec({ value: longer(121) })] },
+    { brand: longer(61) }, { short_description: longer(141) }, { pack_size: longer(121) }, { terms: longer(5001) }, { brand: 5 },
+    { includes: "Cable" }, { includes: [1] }, { includes: Array.from({ length: 51 }, (_, i) => `Part ${i}`) }, { includes: [longer(301)] },
+    { highlights: {} }, { highlights: Array.from({ length: 13 }, () => ({ text: "Fast" })) }, { highlights: [{ text: longer(251) }] }, { highlights: [{ title: "Only a title" }] },
+    { specs: {} }, { specs: Array.from({ length: 201 }, (_, i) => spec({ label: `Label ${i}` })) }, { specs: [spec({ group: "Nonsense" })] }, { specs: [spec({ value: longer(2001) })] },
     { specs: [spec({ label: "  " })] },
   ]) {
     const out = (await as(asB, `select seller_import_items($1::jsonb) as r`, [json([ok, { name: "Bad row", price_type: "fixed", price: 5, row: 7, ...bad }])]))[0].r;

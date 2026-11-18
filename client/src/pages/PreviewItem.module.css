@@ -1,0 +1,2 @@
+.frame { min-block-size: 100vh; }
+.waiting { margin: 0; padding: 3rem 1rem; text-align: center; color: var(--text-muted); font-size: var(--text-sm); }

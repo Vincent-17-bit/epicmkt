@@ -40,7 +40,10 @@ export const publicItemOf = (item, { gallery = null } = {}) => {
   return gallery ? withGallery(base, gallery) : base;
 };
 
-export const clientBase = () => String(import.meta.env?.VITE_CLIENT_URL ?? "").replace(/\/+$/, "");
+// Where the buyer site lives. VITE_CLIENT_URL wins; a production build without it uses the buyer site's Vercel address, the same default
+// the edge functions use for links in messages (supabase/functions/_shared/messages.ts). Local work and tests keep it empty.
+export const DEFAULT_CLIENT_URL = "https://epicmkt-client.vercel.app";
+export const clientBase = () => String(import.meta.env?.VITE_CLIENT_URL || (import.meta.env?.PROD ? DEFAULT_CLIENT_URL : "")).replace(/\/+$/, "");
 
 export const liveLinkOf = (shopSlug, itemId) => {
   const base = clientBase();

@@ -38,7 +38,8 @@ export default function BasicsSection({ form, patch, errors, category, sections,
           onChange={(text, v) => { patch("brand", text); patch("brandValueId", v?.id ?? null); }}
           hint="The maker or label, such as Nike or Brookside. Pick one from the list so it matches other shops, or type your own." />
         {!quick && <Field name="section" label="Section" area="section" max={LIMITS.section} value={form.section} error={errors.section} onChange={(e) => patch("section", e.target.value)} list={listId} autoComplete="off"
-          hint="Groups items on your page, like Haircuts or Cakes. Pick one you use already or type a new one." />}
+          placeholder="Bread"
+          hint="Groups items on your shop page, like Bread, Cakes or Haircuts: White bread and Brown bread both go under Bread. Pick one you use already or type a new one." />}
         {!quick && <datalist id={listId}>{sections.map((s) => <option key={s} value={s} />)}</datalist>}
       </div>
 

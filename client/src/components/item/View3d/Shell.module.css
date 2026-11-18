@@ -1,5 +1,11 @@
-.open { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px; padding: 0 var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: 700; cursor: pointer; }
-.open:hover { background: var(--surface-3); }
+.open { display: inline-flex; align-items: center; gap: var(--space-3); min-height: 44px; padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1); border: 1px solid var(--primary, var(--border-strong)); border-radius: var(--radius-pill); background: var(--primary-tint, var(--surface-2)); color: var(--text); font: inherit; font-size: var(--text-sm); text-align: start; cursor: pointer; transition: background-color 120ms ease, box-shadow 120ms ease; }
+.open:hover { background: var(--surface-2); box-shadow: 0 0 0 2px var(--primary, var(--border-strong)) inset; }
+.openThumb { position: relative; flex: none; inline-size: 2.75rem; block-size: 2.75rem; border-radius: 50%; overflow: hidden; background: var(--surface); border: 1px solid var(--border); }
+.openThumb img { inline-size: 100%; block-size: 100%; object-fit: cover; display: block; }
+.openBadge { position: absolute; inset: auto 0 0 0; padding: 1px 0; font-size: 0.625rem; font-weight: 800; line-height: 1.2; text-align: center; color: var(--on-primary); background: var(--primary); }
+.openText { display: grid; line-height: 1.25; }
+.openText strong { font-weight: 700; }
+.openHint { color: var(--text-muted); font-size: var(--text-xs); }
 .open:focus-visible, .close:focus-visible, .btn:focus-visible, .stage:focus-visible { outline: 3px solid var(--focus-ring, var(--primary, currentColor)); outline-offset: 2px; }
 .cube { inline-size: 1rem; block-size: 1rem; border: 2px solid currentColor; border-radius: 3px; transform: rotate(45deg) skew(-8deg, -8deg); }
 .modal { padding: 0; }

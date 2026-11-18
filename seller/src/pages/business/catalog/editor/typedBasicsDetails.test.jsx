@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useState } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { configureAxe } from "vitest-axe";
 import { emptyItemForm, PRODUCT_TYPES } from "@epicmkt/shared";
@@ -206,8 +206,9 @@ describe("row inputs write the item's specifications", () => {
 
   it("a saved material shows as chosen without asking the dictionary", () => {
     const form = base({ productTypeId: "accessory", specs: [{ group: "Features & Specs", label: "Material", value: "Mahogany" }] });
-    render(<Harness Section={DetailsSection} initial={form} type={accessory} more onMore={() => {}} />);
-    expect(screen.getByText("Mahogany")).toBeInTheDocument();
+    const { container } = render(<Harness Section={DetailsSection} initial={form} type={accessory} more onMore={() => {}} />);
+    // The row's own control shows it chosen (the plain specification box below holds the same text as its value).
+    expect(within(container.querySelector('[data-area="typerows"]')).getByText("Mahogany")).toBeInTheDocument();
     expect(mockSource.current.search).not.toHaveBeenCalled();
   });
 

@@ -312,9 +312,9 @@ test("validateOptions: variant spec overrides follow the item's spec rules", () 
   assert.equal(storedOptions(group).error, "invalid_variant");
   const blank = base2(); blank.variants[0].specs = [{ group: "Measurements", label: "", value: "b" }];
   assert.equal(storedOptions(blank).error, "invalid_variant");
-  const long = base2(); long.variants[0].specs = [{ group: "Measurements", label: "a", value: "x".repeat(121) }];
+  const long = base2(); long.variants[0].specs = [{ group: "Measurements", label: "a", value: "x".repeat(2001) }];
   assert.equal(storedOptions(long).error, "invalid_variant");
-  const many = base2(); many.variants[0].specs = Array.from({ length: 81 }, (_, i) => ({ group: "Measurements", label: `l${i}`, value: "v" }));
+  const many = base2(); many.variants[0].specs = Array.from({ length: 21 }, (_, i) => ({ group: "Measurements", label: `l${i}`, value: "v" }));
   assert.equal(storedOptions(many).error, "invalid_variant");
   const extra = base2(); extra.variants[0].specs = [{ group: "Measurements", label: "a", value: "b", more: 1 }];
   assert.equal(storedOptions(extra).error, "invalid_variant");

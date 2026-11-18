@@ -168,6 +168,10 @@ The DB test files run one at a time because they share one database name.
 
 ### 9. Edge functions
 
+From GitHub, with nothing to run locally: **Actions → Deploy Supabase → Run workflow** brings the database up to date
+(the parts in `supabase/catch-up/` through the Supabase SQL API) and deploys the functions you list. It needs the repository secrets
+`SUPABASE_ACCESS_TOKEN` and `SUPABASE_PROJECT_REF`; see `.github/workflows/deploy-supabase.yml`.
+
 `admin-decide-application`, `admin-confirm-payment` and `admin-reset-seller-password` are rewritten on the canonical
 columns (migrations 0008 to 0010) and tested. `admin-message`, `dispatch-messages`, `daily-lifecycle` and `admin-export`
 are implemented on migration `0021_messaging.sql`; their contracts are in `docs/b0d-contracts.md` (derived from the

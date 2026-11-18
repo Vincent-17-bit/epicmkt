@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { BackToTop } from "@epicmkt/ui";
 import * as api from "../api/index.js";
 
 /**
@@ -21,5 +22,10 @@ export default function RequireSeller() {
   }, [me.error, signedOut]);
   if (me.isLoading && !settled.current) return <p role="status" style={{ padding: "var(--space-5)" }}>Loading</p>;
   if (signedOut) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <Outlet />;
+  return (
+    <>
+      <Outlet />
+      <BackToTop lifted liftedUntil="64rem" />
+    </>
+  );
 }

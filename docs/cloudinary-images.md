@@ -19,7 +19,10 @@ message attachments stay in Supabase Storage (they are private or not pictures).
 4. **Browser + Vercel**: set `VITE_CLOUDINARY_CLOUD_NAME=<cloud_name>` in `client/.env`, `seller/.env` and in the Vercel projects
    (the cloud name is public; it is in every picture URL). Redeploy: Vercel applies variables only to new deployments.
 5. **Database**: apply `supabase/migrations/0047_cloudinary_media.sql`.
-6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize seller-media-purge seller-item-copy-media media-gc`.
+6. **Functions**: `supabase functions deploy seller-media-sign seller-media-finalize seller-media-ticket seller-media3d-finalize seller-media-purge seller-item-copy-media media-gc`
+   (or run the **Deploy Supabase** workflow in GitHub Actions, which also brings the database up to date). `seller-media-ticket` and `seller-media3d-finalize` carry the
+   3D model, the poster and the photo-spin pictures (migration 0101): without them every 3D or spin upload fails. The seller site now
+   says which function is missing ("…seller-media-ticket is not deployed") instead of "Check your connection".
 7. **Cron**: run the `media-gc` block of `supabase/cron/schedule.sql` once (it is safe to re-run the whole file).
 8. **Move existing pictures** (optional, any time; old ones keep working from Supabase until then):
    ```

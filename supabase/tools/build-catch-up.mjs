@@ -1,6 +1,6 @@
 // Builds supabase/catch-up-items.sql: one paste-and-run script that brings a database that stopped part-way (after migration 0037)
 // up to the latest migration, applying only what is missing. Run: node supabase/tools/build-catch-up.mjs
-import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,12 +35,33 @@ export const sigSql = (s) => s.kind === "fn" ? `exists (select 1 from pg_proc p 
   : s.kind === "table" ? `exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relname = '${s.name}')`
   : `exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = '${s.table}' and column_name = '${s.name}')`;
 
+// One row of the (values ...) list a script applies: the migration's name and its text, dollar-quoted.
+function applyRow(f) {
+  let body = readFileSync(join(dir, f), "utf8").replace(/create\s+(unique\s+)?index\s+concurrently/gi, "create $1index");
+  const tag = `$m_${f.replace(/\.sql$/, "").replace(/[^0-9a-z]/gi, "_")}$`;
+  if (body.includes(tag)) throw new Error(`tag clash in ${f}`);
+  // 0086 defines this view with fewer columns than 0093 gives it, and Postgres cannot shrink a view in place; 0093 (applied later in the same run) recreates it.
+  if (f.startsWith("0086_")) body = "drop view if exists public.public_size_charts;\n" + body;
+  return `    ('${f.replace(/\.sql$/, "")}', ${tag}\n${body}\n${tag})`;
+}
+
+// One row per migration from FIRST on: its name and whether every object it creates for the first time exists.
+function detectionRows(validSigs) {
+  const rows = [];
+  for (const [f, sig] of Object.entries(validSigs)) {
+    if (f < FIRST || !sig.length) continue;
+    rows.push(`    ('${f.replace(/\.sql$/, "")}', ${sig.map(sigSql).join(" and ")})`);
+  }
+  return rows;
+}
+
 export function build(validSigs, { from = null } = {}) {
   const parts = [];
   parts.push(`-- EpicMKT: bring a database that stopped part-way up to the latest migration, applying only what is missing.
 -- Fixes: saving items failing with "Could not find the function ..." or "column ... does not exist", details not saved,
 --   size charts / size guides / options missing. Safe to run again: it applies nothing once the database is current.
--- Run it ONCE in the Supabase SQL editor on the project the seller, admin and client sites use.
+-- Too large for the Supabase SQL editor (about 1.2 MB): there, run the parts in supabase/catch-up/ in order instead; they do the same.
+-- This single file is for psql (psql "$DATABASE_URL" -f supabase/catch-up-items.sql) on the project the seller, admin and client sites use.
 -- It finds the first migration your database is missing, then applies that one and every later one in order.
 ${from ? `-- THIS COPY starts at migration ${from} even if the database looks current: use it to repair a run of catch-up-items.sql that reported SKIPPED.\n` : ""}-- The result table at the end lists every migration it applied. Send me that table if any row says SKIPPED.
 -- Needs the base schema and migrations 0001 to 0037 (the catch-up-0024-0037.sql file covers 0024 to 0037).
@@ -57,12 +78,7 @@ declare
 begin
   -- 1. the first migration whose own objects are not all there
   select x.f into v_first from (values`);
-  const rows = [];
-  for (const [f, sig] of Object.entries(validSigs)) {
-    if (f < FIRST || !sig.length) continue;
-    rows.push(`    ('${f.replace(/\.sql$/, "")}', ${sig.map(sigSql).join(" and ")})`);
-  }
-  parts.push(rows.join(",\n"));
+  parts.push(detectionRows(validSigs).join(",\n"));
   parts.push(`  ) as x(f, ok) where not x.ok order by x.f limit 1;
 
 ${from ? `  v_first := '${from}';\n` : ""}  if v_first is null then
@@ -73,17 +89,7 @@ ${from ? `  v_first := '${from}';\n` : ""}  if v_first is null then
 
   -- 2. apply it and every later migration in order; each one in its own sub-transaction
   for m in select * from (values`);
-  const apply = [];
-  for (const f of files) {
-    if (f < FIRST) continue;
-    let body = readFileSync(join(dir, f), "utf8").replace(/create\s+(unique\s+)?index\s+concurrently/gi, "create $1index");
-    const tag = `$m_${f.replace(/\.sql$/, "").replace(/[^0-9a-z]/gi, "_")}$`;
-    if (body.includes(tag)) throw new Error(`tag clash in ${f}`);
-    // 0086 defines this view with fewer columns than 0093 gives it, and Postgres cannot shrink a view in place; 0093 (applied later in the same run) recreates it.
-    if (f.startsWith("0086_")) body = "drop view if exists public.public_size_charts;\n" + body;
-    apply.push(`    ('${f.replace(/\.sql$/, "")}', ${tag}\n${body}\n${tag})`);
-  }
-  parts.push(apply.join(",\n"));
+  parts.push(files.filter((f) => f >= FIRST).map(applyRow).join(",\n"));
   parts.push(`  ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;
@@ -103,11 +109,147 @@ select * from catch_up_log order by step, migration;
   return parts.join("\n");
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const sigs = signatures();
+// The Supabase SQL editor refuses a query of about a megabyte ("Query is too large to be run via the SQL Editor"), and the single
+// file is past that. buildParts gives the same catch-up as numbered parts, each under maxBytes, run one after another in the editor.
+// Part 1 works out the first missing migration and keeps it in catch_up.state; every part applies its own migrations from that one on
+// and adds to catch_up.log; the last part shows the whole log and removes the catch_up schema. A part run out of order stops and says
+// which part is next. Running all the parts in order does exactly what catch-up-items.sql does in one go.
+export const PART_MAX_BYTES = 190_000;
+export function buildParts(validSigs, { maxBytes = PART_MAX_BYTES } = {}) {
+  const migrations = files.filter((f) => f >= FIRST).map((f) => ({ f: f.replace(/\.sql$/, ""), row: applyRow(f) }));
+  const detection = detectionRows(validSigs).join(",\n");
+  const wrapper = 6_000;
+  const chunks = [[]];
+  let size = detection.length + wrapper;
+  for (const m of migrations) {
+    const cur = chunks.at(-1);
+    if (cur.length && size + m.row.length + 2 > maxBytes) { chunks.push([]); size = wrapper; }
+    chunks.at(-1).push(m);
+    size += m.row.length + 2;
+  }
+  const total = chunks.length;
+  const out = chunks.map((chunk, i) => {
+    const n = i + 1;
+    const last = n === total;
+    const range = `${chunk[0].f.slice(0, 4)} to ${chunk.at(-1).f.slice(0, 4)}`;
+    const head = `-- EpicMKT catch-up, PART ${n} OF ${total} (migrations ${range}). Run the parts in order in the Supabase SQL editor: 1, 2, ... ${total}.
+-- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
+-- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
+-- happened and which part is next. ${n === 1 ? "If this part says 'Nothing to do', you are finished: skip the other parts." : "A part run before the one before it stops without changing anything."}
+-- A row that says SKIPPED means that migration failed: finish the parts, then send me the final table.
+-- Generated by supabase/tools/build-catch-up.mjs. Do not edit by hand.
+`;
+    const start = n === 1 ? `create schema if not exists catch_up;
+create table if not exists catch_up.state (id int primary key default 1 check (id = 1), first text, done int not null, total int not null, started timestamptz not null default now());
+create table if not exists catch_up.log (step int, migration text, result text);
+
+do $catchup$
+declare
+  v_first text;
+begin
+  -- A run left half-way more than a day ago is forgotten. One from today is carried on: part 1 run again keeps the migration it
+  -- found first and its log, and skips what it already applied.
+  delete from catch_up.state where started < now() - interval '1 day' or total <> ${total};
+  select first into v_first from catch_up.state;
+  if not found then
+    select x.f into v_first from (values
+${detection}
+    ) as x(f, ok) where not x.ok order by x.f limit 1;
+    insert into catch_up.state (first, done, total) values (v_first, 0, ${total});
+    truncate catch_up.log;
+    if v_first is null then
+      insert into catch_up.log values (0, '-', 'Nothing to do: the database is already up to date. You can skip the other parts.');
+    else
+      insert into catch_up.log values (0, v_first, 'First missing migration. The parts apply it and everything after it.');
+    end if;
+  end if;
+end
+$catchup$;
+` : "";
+    const apply = `
+do $catchup$
+declare
+  v_first text;
+  v_done int;
+  v_step int;
+  m record;
+begin
+  -- Two checks, not one with "or": Postgres resolves every table in a condition before running it.
+  if to_regclass('catch_up.state') is null then
+    raise exception 'Run part 1 first: it works out what your database is missing. If part 1 said "Nothing to do", you are finished.';
+  end if;
+  if not exists (select 1 from catch_up.state) then
+    raise exception 'Run part 1 first: it works out what your database is missing. If part 1 said "Nothing to do", you are finished.';
+  end if;
+  select first, done into v_first, v_done from catch_up.state;
+  if v_done < ${n - 1} then
+    raise exception 'Run part % next. Nothing was changed by this part.', v_done + 1;
+  end if;
+  select coalesce(max(step), 0) into v_step from catch_up.log;
+  if v_first is not null then
+    for m in select * from (values
+${chunk.map((m) => m.row).join(",\n")}
+    ) as t(f, body) order by t.f loop
+      -- A part run again skips what this catch-up already applied: running a migration twice can fail (a view cannot lose columns).
+      if m.f >= v_first and not exists (select 1 from catch_up.log l where l.migration = m.f and l.result = 'applied') then
+        v_step := v_step + 1;
+        begin
+          execute m.body;
+          insert into catch_up.log values (v_step, m.f, 'applied');
+        exception when others then
+          insert into catch_up.log values (v_step, m.f, 'SKIPPED: ' || sqlerrm);
+        end;
+      end if;
+    end loop;
+  end if;
+  update catch_up.state set done = greatest(done, ${n});
+end
+$catchup$;
+`;
+    // Every part ends the same way: the log so far plus a line saying what to do next. The last part (or part 1 when there is
+    // nothing to do) removes the catch_up schema, so nothing is left behind.
+    const next = last ? `Finished: all ${total} parts have run.` : `Next: run part ${n + 1} of ${total}.`;
+    const tail = `
+do $catchup$
+declare
+  v_nothing boolean;
+begin
+  create temp table if not exists catch_up_result (step int, migration text, result text);
+  truncate catch_up_result;
+  insert into catch_up_result select * from catch_up.log;
+  select first is null into v_nothing from catch_up.state;
+  insert into catch_up_result
+    select coalesce(max(step), 0) + 1, '-', case when v_nothing then 'Finished: nothing else to run.' else '${next}' end from catch_up.log;
+  if v_nothing or ${last} then
+    drop schema catch_up cascade;
+  end if;
+end
+$catchup$;
+
+select * from catch_up_result order by step, migration;
+`;
+    const text = head + "\n" + start + apply + tail;
+    if (text.length > maxBytes && chunk.length > 1) throw new Error(`part ${n} is ${text.length} bytes`);
+    return { name: `part-${String(n).padStart(2, "0")}-of-${String(total).padStart(2, "0")}.sql`, text };
+  });
+  return out;
+}
+
+// The signatures the scripts check: only parts listed in valid-signatures.json (objects later migrations drop are left out).
+export function checkedSignatures() {
   const valid = JSON.parse(readFileSync(join(here, "valid-signatures.json"), "utf8"));
   const filtered = {};
-  for (const [f, list] of Object.entries(sigs)) filtered[f] = list.filter((s) => valid.includes(JSON.stringify(s)));
+  for (const [f, list] of Object.entries(signatures())) filtered[f] = list.filter((s) => valid.includes(JSON.stringify(s)));
+  return filtered;
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const filtered = checkedSignatures();
   writeFileSync(join(here, "..", "catch-up-items.sql"), build(filtered));
   console.log("wrote supabase/catch-up-items.sql");
+  const partsDir = join(here, "..", "catch-up");
+  mkdirSync(partsDir, { recursive: true });
+  for (const old of readdirSync(partsDir)) if (/^part-\d+-of-\d+\.sql$/.test(old)) unlinkSync(join(partsDir, old));
+  for (const p of buildParts(filtered)) writeFileSync(join(partsDir, p.name), p.text);
+  console.log(`wrote supabase/catch-up/ (${readdirSync(partsDir).filter((x) => x.endsWith(".sql")).length} parts for the SQL editor)`);
 }
