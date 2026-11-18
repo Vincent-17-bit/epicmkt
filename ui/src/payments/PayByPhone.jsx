@@ -13,6 +13,16 @@ import styles from "./PayByPhone.module.css";
 const ICONS = { info: faSpinner, success: faCircleCheck, warning: faCircleExclamation, error: faCircleXmark };
 const TONE = { info: "isInfo", success: "isSuccess", warning: "isWarning", error: "isError" };
 
+function Btn({ cls, icon, spin = false, variant = "primary", size = "md", className = "", children, ...rest }) {
+  if (!cls) return <Button variant={variant} size={size} icon={icon} className={className} {...rest}>{children}</Button>;
+  return (
+    <button type="button" className={`${cls} ${className}`} {...rest}>
+      {icon && <FontAwesomeIcon icon={icon} spin={spin} aria-hidden="true" />}
+      <span>{children}</span>
+    </button>
+  );
+}
+
 /**
  * "Pay now" with M-Pesa: the payer confirms their number, presses Pay, and enters their PIN on the prompt that appears on the
  * phone. Nothing else is typed. The amount on the button is only a preview; the server works out the real amount and the
@@ -22,10 +32,14 @@ const TONE = { info: "isInfo", success: "isSuccess", warning: "isWarning", error
  * poll(requestId)  -> { request }
  * onPaid(request)  called once when the payment is recorded (refresh the page data there)
  * onFallback(code) called when paying by prompt is not possible (show the Paybill details)
+ * onWaitingChange(waiting) called when a prompt starts or stops waiting for the payer (lock what the amount depends on)
+ * buttonClassName / secondaryButtonClassName: an app's own button classes, so the buttons match the page around them
+ * (the seller portal's square buttons); without them the shared pill Button is used.
  */
 export default function PayByPhone({
   amount, defaultPhone = "", start, poll, onPaid, onFallback, disabled = false, disabledReason = "",
   title = "Pay with M-Pesa", payLabel, formatDay, now = () => Date.now(), pollMs = STK_POLL_MS,
+  buttonClassName = "", secondaryButtonClassName = "", onWaitingChange,
 }) {
   const id = useId();
   const [phone, setPhone] = useState(() => (stkPhone(defaultPhone) ? localPhone(defaultPhone) : ""));
@@ -57,6 +71,13 @@ export default function PayByPhone({
     }, pollMs);
     return () => { cancelled = true; clearTimeout(t); };
   }, [request, stage.waiting, timedOut, poll, pollMs, startedAt, now]);
+
+  const waiting = Boolean(request) && stage.waiting;
+  useEffect(() => { onWaitingChange?.(waiting); }, [waiting, onWaitingChange]);
+  // Leaving the page part (the payment arrived another way, or the payer switched to an upgrade) ends the wait for the caller too.
+  const waitingRef = useRef(onWaitingChange);
+  waitingRef.current = onWaitingChange;
+  useEffect(() => () => waitingRef.current?.(false), []);
 
   useEffect(() => {
     if (request?.status === "paid" && paidRef.current !== request.id) {
@@ -123,9 +144,9 @@ export default function PayByPhone({
           {phoneError
             ? <p id={`${id}-pe`} className={styles.fieldError} role="alert">{phoneError}</p>
             : <p id={`${id}-ph`} className={styles.hint}>The number that will pay. It can be different from your business number.</p>}
-          <Button type="submit" className={styles.pay} disabled={sending || disabled} icon={sending ? faSpinner : faMobileScreenButton}>
+          <Btn cls={buttonClassName} type="submit" className={styles.pay} disabled={sending || disabled} icon={sending ? faSpinner : faMobileScreenButton} spin={sending}>
             {sending ? "Sending request…" : label}
-          </Button>
+          </Btn>
           {disabled && disabledReason && <p className={styles.hint}>{disabledReason}</p>}
         </form>
       )}
@@ -153,11 +174,11 @@ export default function PayByPhone({
             )}
             <div className={styles.actions}>
               {stage.waiting && request.status === "pending" && elapsed > STK_RESEND_AFTER_MS && (
-                <Button variant="secondary" size="sm" icon={faRotateRight} onClick={send} disabled={sending}>Send the prompt again</Button>
+                <Btn cls={secondaryButtonClassName} variant="secondary" size="sm" icon={faRotateRight} onClick={send} disabled={sending}>Send the prompt again</Btn>
               )}
-              {timedOut && stage.waiting && <Button variant="secondary" size="sm" onClick={checkAgain}>Check again</Button>}
-              {stage.waiting && <Button variant="ghost" size="sm" onClick={reset}>Use a different number</Button>}
-              {stage.retry && <Button size="sm" icon={faRotateRight} onClick={reset}>Try again</Button>}
+              {timedOut && stage.waiting && <Btn cls={secondaryButtonClassName} variant="secondary" size="sm" onClick={checkAgain}>Check again</Btn>}
+              {stage.waiting && <Btn cls={secondaryButtonClassName} variant="ghost" size="sm" onClick={reset}>Use a different number</Btn>}
+              {stage.retry && <Btn cls={buttonClassName} size="sm" icon={faRotateRight} onClick={reset}>Try again</Btn>}
             </div>
             {error && <p className={styles.error} role="alert">{error.message}</p>}
           </div>
