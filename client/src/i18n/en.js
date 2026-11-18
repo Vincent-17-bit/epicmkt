@@ -277,6 +277,8 @@ export default {
   "store.directions": "Directions",
   "store.soldOut": "Sold out",
   "view3d.open": "View in 3D",
+  "view3d.openSpin": "See all sides (360°)",
+  "view3d.openHint": "Turn it with your finger",
   "view3d.title": "3D view of {name}",
   "view3d.close": "Close",
   "view3d.stage": "3D view. Use the arrow keys to turn it and plus or minus to zoom.",

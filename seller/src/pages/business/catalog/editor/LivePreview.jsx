@@ -1,11 +1,50 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ItemCard, ItemView } from "@epicmkt/ui";
 import { defaultVariantId } from "@epicmkt/shared";
+import * as api from "../../../../api/index.js";
 import { readDevicePref, storeDevicePref } from "../cardItem.js";
 import { prefersCalm } from "./hooks.js";
-import { publicItemOf } from "../panel/publicItem.js";
+import { clientBase, liveLinkOf, publicItemOf } from "../panel/publicItem.js";
 import { previewFieldsOf, previewItemOf, priceSummary } from "./model.js";
+import { previewPayload } from "./previewPayload.js";
 import styles from "./editor.module.css";
+
+const FRAME_HEIGHT = { mobile: 760, desktop: 820 };
+
+// The item page of the buyer site itself (its /preview/item page), in a frame at phone or laptop width. The form is posted to it as it
+// changes, so the seller sees the real page (photos, options and prices, size guide, specifications, 3D) and not an imitation of it.
+function SitePreview({ base, payload, device, slug }) {
+  const frame = useRef(null);
+  const ready = useRef(false);
+  const latest = useRef(payload);
+  latest.current = payload;
+  const [loaded, setLoaded] = useState(false);
+  const origin = useMemo(() => { try { return new URL(base).origin; } catch { return "*"; } }, [base]);
+  const send = () => frame.current?.contentWindow?.postMessage({ type: "epicmkt:item-preview", payload: latest.current }, origin);
+  useEffect(() => {
+    const onMessage = (e) => {
+      if (e.source !== frame.current?.contentWindow || e.data?.type !== "epicmkt:preview-ready") return;
+      ready.current = true;
+      setLoaded(true);
+      send();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!ready.current) return undefined;
+    const t = setTimeout(send, 200);
+    return () => clearTimeout(t);
+  }, [payload]); // eslint-disable-line react-hooks/exhaustive-deps
+  const src = `${base}/preview/item?shop=${encodeURIComponent(slug ?? "")}`;
+  return (
+    <div className={styles.siteFrame} style={{ blockSize: FRAME_HEIGHT[device] }}>
+      {!loaded && <p className={styles.siteLoading} role="status">Opening the item page…</p>}
+      <iframe ref={frame} title="Your item on EpicMKT" src={src} className={styles.siteIframe} loading="eager" />
+    </div>
+  );
+}
 
 const VIEWS = [["card", "Card"], ["page", "Page"]];
 const DEVICES = [["mobile", "Mobile"], ["desktop", "Desktop"]];
@@ -13,12 +52,14 @@ const DESIGN_WIDTH = { mobile: 375, desktop: 1040 };
 
 // The preview is drawn at a real phone or laptop width and then scaled to fit the pane, so what you see is the layout a
 // customer gets, not a squeezed one. It is inert: nothing in it can be tapped or tabbed to, so it never competes with the form.
-export function ScaledFrame({ width, children }) {
+export function ScaledFrame({ width, children, interactive = false }) {
   const outer = useRef(null);
   const inner = useRef(null);
   const [fit, setFit] = useState({ scale: 1, height: null });
   useLayoutEffect(() => {
-    inner.current?.setAttribute("inert", "");
+    // The drawn preview is inert; the real page (an iframe of the buyer site) can be tapped, so the seller can try the options.
+    if (interactive) inner.current?.removeAttribute("inert");
+    else inner.current?.setAttribute("inert", "");
     const measure = () => {
       const avail = outer.current?.clientWidth;
       if (!avail || !inner.current) return;
@@ -31,7 +72,7 @@ export function ScaledFrame({ width, children }) {
     ro.observe(outer.current);
     ro.observe(inner.current);
     return () => ro.disconnect();
-  }, [width]);
+  }, [width, interactive]);
   return (
     <div ref={outer} className={styles.frameOuter} style={fit.height ? { blockSize: fit.height } : undefined}>
       <div ref={inner} className={styles.frameInner} style={{ inlineSize: width, transform: `scale(${fit.scale})` }}>{children}</div>
@@ -72,11 +113,19 @@ function PageView({ form, images, media, hl }) {
   return <ItemView item={item} shown={shown} activeId={activeId} onVariant={setPick} layout="page" Heading="h3" marks={(part) => hl(...(PART_AREAS[part] ?? [part]))} />;
 }
 
-export default function LivePreview({ form, images, media, area }) {
+const props3dId = (item) => item?.id ?? null;
+
+export default function LivePreview({ form, images, media, area, tiles = [], item: itemProp = null, business = null, shop = null }) {
   const [view, setView] = useState(() => readDevicePref("seller.editor.previewView", "card", VIEWS.map((v) => v[0])));
   const [device, setDevice] = useState(() => readDevicePref("seller.editor.previewDevice", "mobile", DEVICES.map((d) => d[0])));
   const pick = (setter, key) => (value) => { setter(value); storeDevicePref(key, value); };
-  const item = useMemo(() => previewItemOf(form, images), [form, images]);
+  const card = useMemo(() => previewItemOf(form, images), [form, images]);
+  const site = clientBase();
+  const saved = props3dId(itemProp);
+  const view3d = useQuery({ queryKey: ["media3d", saved], queryFn: () => api.getItemMedia3d(saved), enabled: Boolean(site && saved && view === "page"), staleTime: 30_000 });
+  const payload = useMemo(() => (site && view === "page" ? previewPayload({ form, item: itemProp, business, shop, tiles, media3d: view3d.data?.media3d ?? [] }) : null), [site, view, form, itemProp, business, shop, tiles, view3d.data]);
+  const live = itemProp && !itemProp.draft && itemProp.visible ? liveLinkOf(shop?.slug, itemProp.id) : "";
+  const item = card;
   const hl = (...ids) => (ids.includes(area) ? "" : undefined);
   const body = useRef(null);
 
@@ -102,13 +151,17 @@ export default function LivePreview({ form, images, media, area }) {
       </header>
       <div ref={body} className={styles.previewBody} tabIndex={0} role="region" aria-label={`Preview of ${item.name}, ${view} view, ${device} size`}>
         <p className={styles.sr}>{item.name}. {priceSummary(form)}.</p>
-        <ScaledFrame width={DESIGN_WIDTH[device]}>
+        <ScaledFrame width={DESIGN_WIDTH[device]} interactive={Boolean(site && view === "page")}>
           <div className={styles.device} data-device={device}>
-            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : <PageView form={form} images={images} media={media} hl={hl} />}
+            {view === "card" ? <CardView form={form} item={item} hl={hl} device={device} /> : site ? <SitePreview base={site} payload={payload} device={device} slug={shop?.slug} /> : <PageView form={form} images={images} media={media} hl={hl} />}
           </div>
         </ScaledFrame>
       </div>
-      <p className={styles.previewNote}>Updates as you type. Customers see {view === "card" ? "the card" : "the item page"} like this on {device === "mobile" ? "a phone" : "a computer"}.</p>
+      <p className={styles.previewNote}>
+        {view === "page" && site ? "This is the real EpicMKT item page, filled with what you type. " : "Updates as you type. "}
+        Customers see {view === "card" ? "the card" : "the item page"} like this on {device === "mobile" ? "a phone" : "a computer"}.
+        {live && <> <a href={live} target="_blank" rel="noreferrer">Open the live page</a></>}
+      </p>
     </section>
   );
 }

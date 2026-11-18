@@ -22,10 +22,12 @@ describe("steps registry", () => {
     expect(visibleSteps(model({ form: form({ productTypeId: null }) })).map((s) => s.id)).toContain("type");
   });
 
-  it("shows the seller the same five steps as before (Options appears only for a typed item or one that has options)", () => {
+  it("shows every item the Options step, so any item can sell brands, weights, sizes or colours at their own prices", () => {
     const seen = visibleSteps(model());
-    expect(seen.map((s) => s.id)).toEqual(["media", "basics", "price", "details", "review"]);
-    expect(seen.map((s) => s.short)).toEqual(["Media", "Basics", "Price", "Details", "Review"]);
+    expect(seen.map((s) => s.id)).toEqual(["media", "basics", "options", "price", "details", "review"]);
+    expect(seen.map((s) => s.short)).toEqual(["Media", "Basics", "Options", "Price", "Details", "Review"]);
+    // A plan without options hides it again, unless the item already has some.
+    expect(visibleSteps({ ...model(), features: { options: false } }).map((s) => s.id)).not.toContain("options");
   });
 
   it("gives every step the full shape", () => {

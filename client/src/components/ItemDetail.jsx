@@ -43,7 +43,8 @@ const LEAVE_MS = 260;
 // `layout="sheet"` is the dialog laid over a store's page. `layout="page"` is the same content as a page of its own
 // (no scrim, no focus trap, no scroll lock): the item's address is /b/<store>/i/<item>.
 // This file owns the data, the timers and the handlers; what is drawn lives in ./item (see item/README.md for the slot map).
-export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport, layout = "sheet" }) {
+// `preview`: an item made by the seller's editor (see api/flash/preview.js). It is shown as it is: nothing is fetched, logged or counted.
+export default function ItemDetail({ business, itemId, distanceKm, onClose, onSelect, onReport, layout = "sheet", preview = null }) {
   const isPage = layout === "page";
   const Heading = isPage ? "h1" : "h2";
   const queryClient = useQueryClient();
@@ -59,14 +60,17 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   // Made to measure: whether the buyer chose it for this item, and what they gave (see item/MadeToMeasure.jsx).
   const [madeChoice, setMadeChoice] = useState({ itemId: null, on: false, result: null });
 
-  const { data: detail, isError, error, refetch, dataUpdatedAt } = useQuery({
+  const query = useQuery({
     queryKey: ["item", business.id, itemId],
     queryFn: () => items.getDetail(itemId, { businessId: business.id }),
     retry: false,
     staleTime: 30_000,
     refetchInterval: 30_000,
-    refetchOnWindowFocus: true
+    refetchOnWindowFocus: true,
+    enabled: !preview
   });
+  const detail = preview ?? query.data;
+  const { isError, error, refetch, dataUpdatedAt } = preview ? { isError: false, error: null, refetch: () => {}, dataUpdatedAt: 0 } : query;
 
   const gone = isError && error?.name === "NotFoundError";
   const fresh = !gone && detail?.id === itemId ? detail : null;
@@ -76,7 +80,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const lastLive = useRef(null);
   const current = hold && fresh && hold.id === fresh.id ? { ...fresh, flash: hold.flash, pricing: hold.pricing } : fresh;
 
-  useItemJsonLd(fresh);
+  useItemJsonLd(preview ? null : fresh);
 
   const flashEndsAt = fresh?.flash?.sale.endsAt ?? null;
   const flashUrgency = useUrgency(flashEndsAt);
@@ -163,11 +167,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   }, [itemId]);
 
   useEffect(() => {
+    if (preview) return;   // the seller is typing in the editor: the preview must not take the focus (or draw its ring)
     if (current || gone) titleRef.current?.focus({ preventScroll: true });
   }, [current?.id, gone, itemId]);
 
   useEffect(() => {
-    if (!current || viewed.current === current.id) return;
+    if (preview || !current || viewed.current === current.id) return;
     viewed.current = current.id;
     logEvent("item_view", { businessId: business.id, itemId: current.id, kind: current.kind, flash: Boolean(current.flash) });
     logContactEvent({ businessId: business.id, itemId: current.id, type: "view" });
@@ -205,13 +210,14 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const message = !current ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order });
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
 
-  const track = (name, extra) => logEvent(name, { businessId: business.id, itemId, ...extra });
+  const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };
   const onChat = (placement) => () => {
+    if (preview) return;
     logContactEvent({ businessId: business.id, itemId, type: "whatsapp" });
     track("chat_seller_click", { placement, variantId: variant?.id ?? null, flash: Boolean(current?.flash), ...(order ? { quantity: order.qty } : {}) });
   };
   const onVisit = (placement) => () => track("visit_store_click", { placement });
-  const onCall = () => logContactEvent({ businessId: business.id, itemId, type: "call" });
+  const onCall = () => { if (!preview) logContactEvent({ businessId: business.id, itemId, type: "call" }); };
 
   const onShare = async () => {
     const path = isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`;

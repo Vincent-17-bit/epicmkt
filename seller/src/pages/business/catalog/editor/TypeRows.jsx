@@ -43,11 +43,11 @@ function Row({ row, form, patch, source }) {
       </Field>
     );
   }
-  if (row.input === "number") return <Field {...common} max={SPEC_LIMITS.value} inputMode="decimal" autoComplete="off" />;
+  if (row.input === "number") return <Field {...common} maxLength={SPEC_LIMITS.value} inputMode="decimal" autoComplete="off" />;
   const kind = row.input === "openValue" ? valueKindOf(row) : null;
   if (kind) return <OpenRow row={row} kind={kind} label={label} form={form} patch={patch} source={source} />;
   // a dimension row uses the plain text field
-  return <Field {...common} max={SPEC_LIMITS.value} autoComplete="off" />;
+  return <Field {...common} maxLength={SPEC_LIMITS.value} autoComplete="off" />;
 }
 
 export default function TypeRows({ rows, form, patch, source }) {

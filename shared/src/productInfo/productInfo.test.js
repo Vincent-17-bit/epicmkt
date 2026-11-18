@@ -43,7 +43,7 @@ test("FAQs use long limits and stay out of the info table", () => {
   const out = cleanSpecs([long, { group: infoGroupKey("Power"), label: "Voltage", value: "5 volts" }]);
   assert.deepEqual(out.errors, {});
   assert.equal(out.specs.length, 2);
-  assert.equal(cleanSpecs([{ group: "Features & Specs", label: "q".repeat(150), value: "a" }]).errors[0].label.includes("40"), true);
+  assert.equal(cleanSpecs([{ group: "Features & Specs", label: "q".repeat(150), value: "a" }]).errors[0].label.includes("100"), true);
   assert.equal(buildFaqs(out.specs).length, 1);
   assert.equal(faqRows(out.specs)[0].answer.length, 500);
   assert.deepEqual(buildInfoGroups(out.specs).map((g) => g.name), ["Power"]);

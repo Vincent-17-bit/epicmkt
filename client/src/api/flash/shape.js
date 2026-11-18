@@ -27,8 +27,8 @@ export const mediaUrl = (path) => {
   return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/seller-media/${path}`;
 };
 
-const MAX_LIST = 20;
-const MAX_SPECS = 80;
+const MAX_LIST = 50;   // what's included can have 50 lines (migration 0136)
+const MAX_SPECS = 200;  // the database allows 200 rows (migration 0136)
 
 const textOf = (value) => (typeof value === "string" ? value.trim() : "");
 
@@ -119,7 +119,7 @@ export const rangeOfRow = (row) => {
   return Number.isFinite(min) && Number.isFinite(max) && min < max ? { min, max } : null;
 };
 
-export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, optionCount, priceRange }) => {
+export const itemOf = ({ id, businessId, businessSlug, name, description, shortDescription, brand, highlights, specs, includes, includeMedia, terms, packSize, price, priceType, unit, section, availability, stockLeft, variants, imagePaths, videoPaths, mediaPaths, createdAt, hasOptions, optionCount, priceRange }) => {
   // A photo's id is its database id when the card carries one (`media` entries have it). An option value points at a photo by that id
   // (`mediaId`), so it has to survive here; the counting names i1, i2 are only for older data that has no ids.
   const realIds = (kind) => (Array.isArray(mediaPaths) ? mediaPaths.filter((m) => m?.path && m.kind === kind).map((m) => (typeof m.id === "string" && m.id ? m.id : null)) : []);
@@ -148,6 +148,8 @@ export const itemOf = ({ id, businessId, businessSlug, name, description, shortD
     brand: textOf(brand) || null,
     highlights: highlightsOf(highlights),
     includes: listOf(includes),
+    // One photo per "What's included" line, or null (migration 0136). Only when at least one line has a photo.
+    ...(Array.isArray(includeMedia) && includeMedia.some((p) => typeof p === "string" && p) ? { includePhotos: listOf(includes).map((_, i) => (typeof includeMedia[i] === "string" && includeMedia[i] ? mediaUrl(includeMedia[i]) : null)) } : {}),
     terms: textOf(terms),
     duration: null,
     term: null,

@@ -318,11 +318,12 @@ describe("ItemDetail details", () => {
     await screen.findByRole("heading", { name: "Fade and beard" });
     expect(screen.getByText("Thermos")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "About this item" })).toBeInTheDocument();
-    expect(screen.getByText("Lead").tagName).toBe("STRONG");
-    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^Lead/.test(li.textContent))).toHaveLength(5);
+    // The bold lead is drawn in brackets, like 【Lead】: text.
+    expect(screen.getByText("【Lead】").tagName).toBe("STRONG");
+    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^【Lead】: /.test(li.textContent))).toHaveLength(5);
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: "Show all" }));
-    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^Lead/.test(li.textContent))).toHaveLength(7);
+    expect(screen.getAllByRole("listitem").filter((li) => /^Point|^【Lead】: /.test(li.textContent))).toHaveLength(7);
     await user.click(screen.getByRole("button", { name: "Show fewer" }));
     const about = screen.getByRole("heading", { name: "About this item" });
     const specs = screen.getByRole("button", { name: "Features & Specs" });

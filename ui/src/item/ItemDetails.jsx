@@ -16,7 +16,8 @@ function Highlights({ items, onMore, t, dataHl }) {
       <ul className={styles.bullets}>
         {shown.map((entry, index) => (
           <li key={index} className={styles.bullet}>
-            {entry.title && <strong className={styles.lead}>{entry.title} </strong>}
+            {entry.title && <strong className={styles.lead}>【{entry.title}】</strong>}
+            {entry.title ? <span className={styles.leadSep}>: </span> : null}
             {entry.text}
           </li>
         ))}

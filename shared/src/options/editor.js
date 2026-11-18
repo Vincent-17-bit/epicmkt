@@ -30,6 +30,7 @@ export const DISPLAYS = [
 export const AXIS_PRESETS = [
   { label: "Colour", display: "swatch" },
   { label: "Size", display: "button" },
+  { label: "Brand", display: "button" },
   { label: "Storage", display: "button" },
   { label: "Style", display: "button" },
   { label: "Volume", display: "button" },

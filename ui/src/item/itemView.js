@@ -14,7 +14,9 @@ const asGroup = (name, fallback) => (SPEC_GROUPS.includes(name) ? name : fallbac
 export function buildSpecGroups({ item, category, attributes }) {
   const buckets = new Map(SPEC_GROUPS.map((name) => [name, []]));
   const seen = new Set();
-  const add = (name, label, value) => {
+  const add = (name, raw, value) => {
+    // "• Dietary Claims:" reads as "Dietary Claims": the table draws the label column itself.
+    const label = typeof raw === "string" ? cleanLead(raw) || raw.trim() : raw;
     const key = typeof label === "string" ? label.trim().toLowerCase() : "";
     if (!key || isBlank(value) || seen.has(key)) return;
     seen.add(key);
@@ -36,14 +38,26 @@ export function buildSpecGroups({ item, category, attributes }) {
 
 export const countRows = (groups) => groups.reduce((sum, g) => sum + g.rows.length, 0);
 
+// The bold lead of a highlight, as sellers type it: "• Freshness Guaranteed:", "[Fast charging]", "【Big sound】 -". The page draws the
+// brackets and the colon itself, so whatever the seller typed around the words is taken off: bullets, dashes, brackets and a last colon.
+export const cleanLead = (title) =>
+  String(title ?? "")
+    .trim()
+    .replace(/^[\s•●▪■◆★✓✔*\-–—·>]+/u, "")
+    .replace(/[\s:：\-–—]+$/u, "")
+    .replace(/^[[【〔(（「『]+\s*/u, "")
+    .replace(/\s*[\]】〕)）」』]+$/u, "")
+    .replace(/[\s:：\-–—]+$/u, "")
+    .trim();
+
 export function normalizeHighlights(list) {
   if (!Array.isArray(list)) return [];
   const out = [];
   for (const entry of list) {
     const raw = typeof entry === "string" ? { text: entry } : entry;
     if (!raw || typeof raw !== "object") continue;
-    const text = typeof raw.text === "string" ? raw.text.trim() : "";
-    const title = typeof raw.title === "string" ? raw.title.trim() : "";
+    const text = typeof raw.text === "string" ? raw.text.trim().replace(/^[:：\-–—]\s*/u, "") : "";
+    const title = typeof raw.title === "string" ? cleanLead(raw.title) : "";
     if (!text && !title) continue;
     out.push(text ? { title, text } : { title: "", text: title });
   }

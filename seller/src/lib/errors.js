@@ -205,7 +205,16 @@ const isOffline = (e) => /failed to fetch|networkerror|network request failed|lo
 // What exactly is missing, for the administrator: the function or column named in the database message.
 const detail = (e) => String(e?.message ?? e?.code ?? "").replace(/\s+/g, " ").replace(/^Could not find the function /i, "missing function ").slice(0, 110).trim();
 const isOutOfDate = (e) => /could not find the function|schema cache|pgrst20\d|does not exist|function .* not found/i.test(`${e?.code ?? ""} ${e?.message ?? ""}`);
+// Problems on the server side of an upload, named so the seller (and support) can tell them apart from a bad connection.
+const SERVICE = {
+  function_missing: (fn) => `This feature is not switched on on the server yet${fn ? ` (${fn} is not deployed)` : ""}. Ask the site administrator to deploy the latest edge functions, then try again.`,
+  service_unreachable: (fn) => `We could not reach the EpicMKT server${fn ? ` (${fn})` : ""}. Check your internet connection. If it works, the server may be blocking this site; tell support.`,
+  service_unavailable: (fn) => `The EpicMKT server did not answer${fn ? ` (${fn})` : ""}. Please try again in a minute.`,
+  server_error: (fn) => `The server could not finish that${fn ? ` (${fn})` : ""}. Please try again; if it keeps happening, tell support.`,
+  unavailable: () => "The server is busy right now. Please try again in a minute.",
+};
 export const errorText = (e, fallback) => {
+  if (SERVICE[e?.code] && !(e.code === "service_unreachable" && typeof navigator !== "undefined" && navigator.onLine === false)) return SERVICE[e.code](e.fn);
   if (e?.code === "limit_reached") {
     const key = String(e.message ?? "").split(":")[1] ?? "items";
     if (LIMITS[key]) return LIMITS[key];

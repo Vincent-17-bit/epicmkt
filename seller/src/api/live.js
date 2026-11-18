@@ -15,8 +15,16 @@ const fn = async (name, body) => {
   const { data, error } = await need().functions.invoke(name, { body });
   if (error) {
     let payload = null;
+    const status = error.context?.status;
     try { payload = await error.context?.json?.(); } catch { payload = null; }
-    throw new ApiError(payload?.error ?? "request_failed", payload?.message, { status: error.context?.status, retryAfter: payload?.retryAfter, problems: payload?.problems });
+    // These used to all end up as "request_failed", so the seller saw "check your connection" even when the real cause was on the server.
+    //   - the request never reached the function (offline, or blocked by the browser: a CORS origin that does not include this site)
+    //   - the function is not deployed on this Supabase project (404 with no answer of ours)
+    //   - the Supabase relay could not start it
+    if (error.name === "FunctionsFetchError") throw new ApiError("service_unreachable", `${name}: ${error.context?.message ?? error.message}`, { fn: name });
+    if (error.name === "FunctionsRelayError") throw new ApiError("service_unavailable", name, { fn: name, status });
+    if (status === 404 && !payload?.error) throw new ApiError("function_missing", name, { fn: name, status });
+    throw new ApiError(payload?.error ?? (status >= 500 ? "server_error" : "request_failed"), payload?.message, { status, fn: name, retryAfter: payload?.retryAfter, problems: payload?.problems });
   }
   return data;
 };
@@ -324,6 +332,8 @@ export const uploadMedia3d = async (itemId, { role, file, optionIds = [], positi
 };
 // A 3D row is removed like a photo: delete the row, then the file follows (the database queues it).
 export const removeMedia3d = (path) => removeItemPhoto(path);
+// Puts the uploaded frames of one photo spin in a new order (migration 0136). `paths` must be every frame of that scope, once each.
+export const reorderSpinFrames = (itemId, { optionId = "", paths }) => rpc("seller_reorder_spin", { p_item: itemId, p_option: optionId || null, p_paths: paths });
 
 // `paths` must be every path of the item, once each, in the new order. Anything else is refused and nothing changes.
 export const reorderItemMedia = async (itemId, paths) => {
@@ -561,6 +571,8 @@ export const getItemOptions = (id) => rpc("seller_item_options", { p_id: id });
 // The seller's own size guide for one item (migration 0103): { unit, columns, rows } or null.
 export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id });
 export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
+// The photo next to each "What's included" line (migration 0136): [mediaId | null, ...] in the order of the saved lines.
+export const saveItemIncludeMedia = (id, list) => rpc("seller_set_item_include_media", { p_id: id, p_media: list ?? null });
 // The made-to-measure setting of one item (migration 0125): the saved config or null. saveItemCustomSize(id, null) clears it.
 export const getItemCustomSize = (id) => rpc("seller_item_custom_size", { p_id: id });
 export const saveItemCustomSize = (id, config) => rpc("seller_set_item_custom_size", { p_id: id, p_config: config ?? null });

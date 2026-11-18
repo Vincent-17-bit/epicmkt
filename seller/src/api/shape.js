@@ -96,6 +96,8 @@ export const catalogItem = (i) => ({
   inFlashSale: !!i.in_flash_sale, specs: Array.isArray(i.specs) ? i.specs : [],
   productTypeId: i.product_type_id ?? i.productTypeId ?? null,
   brand: i.brand ?? null, shortDescription: i.short_description ?? null, packSize: i.pack_size ?? null, terms: i.terms ?? null, includes: Array.isArray(i.includes) ? i.includes : [], highlights: Array.isArray(i.highlights) ? i.highlights : [],
+  // The photo next to each "What's included" line (migration 0136): a media id or null, in the same order as `includes`.
+  includeMedia: Array.isArray(i.include_media) ? i.include_media.map((x) => (typeof x === "string" && x ? x : null)) : [],
 });
 
 const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;

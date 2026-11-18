@@ -494,7 +494,7 @@ describe("quick actions", () => {
     await user.type(within(dialog).getByLabelText("Brand (optional)"), "Acme Bakers");
     await user.type(within(dialog).getByLabelText("Short description (optional)"), "Soft vanilla sponge");
     await user.type(within(dialog).getByLabelText("Pack size (optional)"), "Serves 10");
-    await user.type(within(dialog).getByLabelText("Terms (optional)"), "Order two days ahead");
+    await user.type(within(dialog).getByLabelText("Terms and notes (optional)"), "Order two days ahead");
     await user.click(within(dialog).getByRole("button", { name: "Add highlight" }));
     await user.type(within(dialog).getByLabelText("Highlight 1 title"), "Fresh");
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
@@ -746,7 +746,7 @@ describe("paste and CSV import", () => {
     const dialog = await screen.findByRole("dialog", { name: "Import items" });
     expect(dialog).toHaveTextContent("spec:Label");
     const head = "name\tprice\tbrand\tincludes\thighlights\tspec:Material\tspec:Measurements/Weight";
-    const text = [head, "Kettle\t3000\tAcme\tBase | Cord, 1 m\tBoils fast | Auto shut-off\tSteel\t1.2 kg", "Mug\t200\t\t\t\t\t", `Bad\t10\t\t\t\t${"s".repeat(121)}\t`].join("\n");
+    const text = [head, "Kettle\t3000\tAcme\tBase | Cord, 1 m\tBoils fast | Auto shut-off\tSteel\t1.2 kg", "Mug\t200\t\t\t\t\t", `Bad\t10\t\t\t\t${"s".repeat(2001)}\t`].join("\n");
     fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: text } });
     await user.click(within(dialog).getByRole("button", { name: "Preview" }));
     expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("2 ready to import, 1 rejected, 3 rows in total.");
@@ -754,7 +754,7 @@ describe("paste and CSV import", () => {
     expect(within(dialog).getByLabelText("Highlights column")).toHaveValue("4");
     const rejected = within(dialog).getByTestId("import-rejected");
     expect(rejected).toHaveTextContent("4");
-    expect(rejected).toHaveTextContent('Spec "Material": Use 120 characters or fewer.');
+    expect(rejected).toHaveTextContent('Spec "Material": Use 2000 characters or fewer.');
     await user.click(within(dialog).getByRole("button", { name: "Import 2 items" }));
     await waitFor(() => expect(M.state.items).toHaveLength(8));
     const kettle = M.state.items.find((i) => i.name === "Kettle");
@@ -960,6 +960,8 @@ describe("item editor sections", () => {
   it("adds a specification from a preset chip, disables used presets, and keeps each row's group", async () => {
     const user = userEvent.setup();
     const dialog = await openForm(user);
+    // The quick add suggests rows for the kind of item (a haircut gets service rows); the general list has Material and Dimensions.
+    await user.selectOptions(within(dialog).getByLabelText("Kind of item"), "general");
     const quick = within(within(dialog).getByRole("list", { name: "Quick add" }));
     await user.click(quick.getByRole("button", { name: "Material" }));
     expect(within(dialog).getByLabelText("Label")).toHaveValue("Material");
@@ -969,7 +971,7 @@ describe("item editor sections", () => {
     await user.click(within(dialog).getByRole("button", { name: "Add custom row" }));
     await user.type(within(dialog).getAllByLabelText("Label")[2], "weight");
     expect(quick.getByRole("button", { name: "Weight" })).toBeDisabled();
-    expect(within(dialog).getByText("3 of 20")).toBeInTheDocument();
+    expect(within(dialog).getByText("3 of 100")).toBeInTheDocument();
   });
 
   it("counts highlights and moves them up and down", async () => {
@@ -980,7 +982,7 @@ describe("item editor sections", () => {
       const boxes = within(dialog).getAllByLabelText(/^Highlight \d+ text$/);
       await user.type(boxes.at(-1), text);
     }
-    expect(within(dialog).getByText("3 of 8")).toBeInTheDocument();
+    expect(within(dialog).getByText("3 of 12")).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Move highlight 1 down" }));
     expect(within(dialog).getAllByLabelText(/^Highlight \d+ text$/).map((i) => i.value)).toEqual(["Two", "One", "Three"]);
     expect(within(dialog).getByRole("button", { name: "Move highlight 1 up" })).toBeDisabled();

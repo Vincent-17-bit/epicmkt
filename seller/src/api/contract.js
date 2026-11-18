@@ -32,6 +32,8 @@ export const SELLER_API = [
   "getItemMedia3d",
   "uploadMedia3d",
   "removeMedia3d",
+  "reorderSpinFrames",
+  "saveItemIncludeMedia",
   "listItemVideos",
   "getItemMedia",
   "listItemMedia",

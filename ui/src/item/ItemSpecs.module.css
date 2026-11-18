@@ -133,3 +133,8 @@
   margin-top: 0.3em;
   color: var(--verified);
 }
+
+.checks[data-photos] { gap: var(--space-3); }
+.checks[data-photos] .check { align-items: center; }
+.checks[data-photos] .tick { inline-size: 3.5rem; flex: none; }
+.includePhoto { flex: none; inline-size: 3.5rem; block-size: 3.5rem; object-fit: cover; border-radius: var(--radius-sm, 8px); border: 1px solid var(--border); background: var(--surface-2); }

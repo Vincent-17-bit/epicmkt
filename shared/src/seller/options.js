@@ -32,7 +32,7 @@ export const OPTION_LIMITS = {
   sku: 40,
   mediaPerVariant: 10,
   stock: 999999,
-  specs: SPEC_LIMITS.rows,
+  specs: 20, // rows per combination (item_options_apply caps them at 20)
 };
 
 export const SIZE_CHART_UNITS = ["cm", "in", "mm", "kg", "lb", "none"];

@@ -26,7 +26,7 @@ export async function checkModelFile(file) {
 
 // Upload, replace or remove the 3D model of an item (or of one option value). The model needs a poster picture: it is what shoppers
 // see while the model loads, and a model without one is not shown. `rows` are this scope's model and poster rows, if any.
-export default function ModelUpload({ itemId, scopeIds = [], model = null, poster = null, onChanged, previewLoad }) {
+export default function ModelUpload({ itemId, scopeIds = [], model = null, poster = null, hasSpin = false, onChanged, previewLoad }) {
   const uid = useId();
   const [file, setFile] = useState(null);
   const [posterFile, setPosterFile] = useState(null);
@@ -83,7 +83,9 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
   useEffect(() => {
     if (engineReady && file && needsPoster) capturePoster(true);
   }, [engineReady, file]); // eslint-disable-line react-hooks/exhaustive-deps
-  const canSave = !busy && Boolean(file ? poster || posterFile : posterFile);
+  // A model needs a poster. Without a new model file, only a new poster for an existing model (or spin) can be saved: a poster on its
+  // own shows nothing to buyers, and the button used to say "Upload the model" with no model chosen.
+  const canSave = !busy && (file ? Boolean(poster || posterFile) : Boolean(posterFile && (model || hasSpin)));
 
   const save = async () => {
     setBusy(true);
@@ -103,32 +105,49 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
       setProgress(null);
     }
   };
-  const remove = async () => {
+  // Removing the model keeps the poster when a photo spin still uses it. Each part can also go on its own.
+  const removeRows = async (rows) => {
     setBusy(true);
     setError("");
     try {
-      if (model) await api.removeMedia3d(model.path);
-      if (poster) await api.removeMedia3d(poster.path);
+      for (const r of rows) await api.removeMedia3d(r.path);
       await onChanged?.();
     } catch (err) {
       setError(errorText(err));
+      await onChanged?.();
     } finally {
       setBusy(false);
     }
   };
+  const remove = () => removeRows([model, hasSpin ? null : poster].filter(Boolean));
+  const removePoster = () => removeRows([poster].filter(Boolean));
+  const clearChosen = () => { setFile(null); setError(""); };
+  const clearPoster = () => { setPosterFile(null); setError(""); };
 
   const shown = localUrl || (model ? mediaUrl(model.path) : "");
+  const saveLabel = file ? (model ? "Replace the model" : "Upload the model") : model || hasSpin ? "Save the new poster" : "Upload the model";
   return (
     <section className={styles.block} aria-labelledby={`${uid}-t`}>
       <h3 id={`${uid}-t`} className={styles.h3}>3D model (.glb)</h3>
-      <p className={styles.hint}>Up to {MEDIA3D.modelMaxBytes / MB} MB. Export a binary glTF (.glb) with everything inside it. Shoppers see your poster picture while it loads.</p>
+      <p className={styles.hint}>A 3D model lets buyers turn, tilt and zoom the item. You need a .glb file made in a 3D app or by a 3D scanning app (up to {MEDIA3D.modelMaxBytes / MB} MB, everything inside one file), and a poster picture buyers see while it loads.</p>
 
       {shown && <ModelPreview url={shown} load={previewLoad} onEngine={onEngine} />}
-      {model && !file && <p className={styles.status}>A model is uploaded{model.size ? ` (${(model.size / MB).toFixed(1)} MB)` : ""}.</p>}
+      {model && !file && (
+        <div className={styles.fileRow}>
+          <span className={styles.fileName}>A model is uploaded{model.size ? ` (${(model.size / MB).toFixed(1)} MB)` : ""}.</span>
+          {!busy && <button type="button" className={`${styles.mini} ${styles.miniDanger}`} onClick={remove} aria-label="Delete the model" title="Delete the model">×</button>}
+        </div>
+      )}
+      {file && (
+        <div className={styles.fileRow}>
+          <span className={styles.fileName}>{file.name} ({(file.size / MB).toFixed(1)} MB), not uploaded yet</span>
+          {!busy && <button type="button" className={`${styles.mini} ${styles.miniDanger}`} onClick={clearChosen} aria-label={`Remove ${file.name}`} title="Remove this file">×</button>}
+        </div>
+      )}
 
       <div className={styles.row}>
         <label className={styles.file}>
-          <span className={styles.btn}>{model || file ? "Replace the model" : "Choose a .glb file"}</span>
+          <span className={styles.btn}>{model || file ? "Choose another model" : "Choose a .glb file"}</span>
           <input type="file" accept=".glb,model/gltf-binary" className={styles.input} onChange={pickModel} disabled={busy} aria-label="Model file (.glb)" />
         </label>
         <label className={styles.file}>
@@ -142,15 +161,24 @@ export default function ModelUpload({ itemId, scopeIds = [], model = null, poste
           <span className={styles.hint}>Turn the model to the view you want first.</span>
         </div>
       )}
-      {(posterUrl || poster) && <img className={styles.thumb} src={posterUrl || mediaUrl(poster.path)} alt="Poster picture" />}
+      {(posterUrl || poster) && (
+        <div className={styles.thumbWrap}>
+          <img className={styles.thumb} src={posterUrl || poster.url || mediaUrl(poster.path)} alt="Poster picture" />
+          {!busy && (posterUrl
+            ? <button type="button" className={`${styles.mini} ${styles.miniDanger} ${styles.thumbX}`} onClick={clearPoster} aria-label="Remove the new poster" title="Remove the new poster">×</button>
+            : <button type="button" className={`${styles.mini} ${styles.miniDanger} ${styles.thumbX}`} onClick={removePoster} aria-label="Delete the poster" title="Delete the poster">×</button>)}
+          {posterUrl && <span className={styles.cellBadge}>New</span>}
+        </div>
+      )}
+      {!file && !model && posterFile && !hasSpin && <p className={styles.note} role="status">Now choose the .glb model this poster belongs to.</p>}
       {file && needsPoster && <p className={styles.note} role="status">{engineReady ? "Making a poster from the preview… or choose your own picture." : "Choose a poster picture to go with this model."}</p>}
       {busy && <p role="status" className={styles.status}>{progress === null ? "Preparing…" : `Uploading ${Math.round(progress * 100)}%`}{progress !== null && <progress className={styles.progress} value={progress} max={1} aria-label="Upload progress" />}</p>}
       {error && <p role="alert" className={styles.error}>{error}</p>}
 
       <div className={styles.row}>
-        <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={!canSave} onClick={save}>{model ? "Save changes" : "Upload the model"}</button>
+        <button type="button" className={`${styles.btn} ${styles.primary}`} disabled={!canSave} onClick={save}>{model && !file && !posterFile ? "Save changes" : saveLabel}</button>
         {busy && <button type="button" className={styles.btn} onClick={() => abort.current?.abort()}>Cancel</button>}
-        {(model || poster) && !busy && <button type="button" className={`${styles.btn} ${styles.danger}`} onClick={remove}>Remove the model</button>}
+        {model && !busy && <button type="button" className={`${styles.btn} ${styles.danger}`} onClick={remove}>Remove the model</button>}
       </div>
     </section>
   );

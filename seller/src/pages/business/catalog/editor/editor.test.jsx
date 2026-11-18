@@ -106,7 +106,7 @@ describe("sections", () => {
     }
     expect(screen.queryByRole("button", { name: /^Remove$/ })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Remove highlight 2" }));
-    expect(screen.getByText("1 of 8")).toBeInTheDocument();
+    expect(screen.getByText("1 of 12")).toBeInTheDocument();
   });
 
   it("only asks for the price fields the price type needs", async () => {
@@ -182,7 +182,7 @@ describe("phone stepper", () => {
   it("shows one step at a time with progress, and moves with Back and Next", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    expect(screen.getByText(/Step 1 of 5/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 1 of 6/)).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Progress" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.queryByRole("heading", { level: 2, name: "Basics" })).toBeNull();
     expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
@@ -191,11 +191,11 @@ describe("phone stepper", () => {
     expect(screen.queryByRole("heading", { level: 2, name: "Media" })).toBeNull();
     expect(screen.getByRole("progressbar", { name: "Progress" })).toHaveAttribute("aria-valuenow", "2");
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Basics" })).toHaveFocus());
-    await user.click(screen.getByRole("button", { name: "Step 4: Details" }));
+    await user.click(screen.getByRole("button", { name: "Step 5: Details" }));
     expect(screen.getByRole("heading", { level: 2, name: "Details" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { level: 2, name: "Price and stock" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Step 5: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
     expect(screen.queryByRole("button", { name: /^Next/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument();
   });
@@ -203,7 +203,7 @@ describe("phone stepper", () => {
   it("jumps to the step with the first error and puts the cursor in the field", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    await user.click(screen.getByRole("button", { name: "Step 3: Price and stock" }));
+    await user.click(screen.getByRole("button", { name: "Step 4: Price and stock" }));
     expect(screen.queryByLabelText("Name")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Basics" })).toBeInTheDocument();
@@ -217,9 +217,11 @@ describe("phone stepper", () => {
     await openNew(375);
     await user.click(screen.getByRole("button", { name: "Next: Basics" }));
     await user.type(screen.getByLabelText("Name"), "Phone made");
+    await user.click(screen.getByRole("button", { name: "Next: Options" }));
+    expect(screen.getByRole("heading", { level: 2, name: "Options" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next: Price" }));
     await user.type(screen.getByLabelText("Price (KES)"), "250");
-    await user.click(screen.getByRole("button", { name: "Step 5: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
     await user.click(screen.getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Phone made", price: 250, draft: true }));
     expect(await screen.findByTestId("listing-grid")).toBeInTheDocument();
@@ -308,7 +310,7 @@ describe("review and quality", () => {
   it("opens the right step from a suggestion on a phone", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    await user.click(screen.getByRole("button", { name: "Step 5: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
     await user.click(screen.getByRole("button", { name: "Add a short description" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Basics" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Short description (optional)")).toHaveFocus());
@@ -517,11 +519,11 @@ describe("options (variants)", () => {
   it("offers options for a fixed or starting price only", async () => {
     const user = userEvent.setup();
     await openNew();
-    expect(screen.getByRole("heading", { name: "Options (optional)" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Simple price list (optional)" })).toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Price type"), "range");
-    expect(screen.queryByRole("heading", { name: "Options (optional)" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Simple price list (optional)" })).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("Price type"), "from");
-    expect(screen.getByRole("heading", { name: "Options (optional)" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Simple price list (optional)" })).toBeInTheDocument();
   });
 
   it("adds, reorders and removes options, and shows them in the page preview", async () => {

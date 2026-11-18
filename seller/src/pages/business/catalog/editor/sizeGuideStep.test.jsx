@@ -176,7 +176,8 @@ describe("Size guide step (seller)", () => {
     const { user, spy } = open({ productTypeId: "bakery", name: "White bread", options: axes(["Size", ["400g", "800g", "Family"]]) });
     expect(screen.getByText("Make your size guide for bread, cakes and food")).toBeInTheDocument();
     expect(screen.getByText("Shoe sizes in every system").closest("details")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Cakes/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Cakes\s*Diameter/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Cakes by weight/ })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /Bread and loaves/ }));
     expect(guidePayload(spy.current.sizeGuide).rows.map((r) => r[1])).toEqual(["400", "800", "–"]);
     await user.type(screen.getByLabelText("Weight (g) for Family"), "1200");

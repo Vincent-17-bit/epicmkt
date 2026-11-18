@@ -11,8 +11,9 @@ const money = (raw) => {
   return value > 9999999999.99 ? { error: true } : { value };
 };
 
-export const PLAIN_SPEC_ROWS = 20;
-export const SPEC_LIMITS = { rows: 80, label: 40, value: 120 };
+// Sellers can write as many facts as they need (migration 0136): the limits are only there to stop abuse, not to make anyone shorten.
+export const PLAIN_SPEC_ROWS = 100;
+export const SPEC_LIMITS = { rows: 200, label: 100, value: 2000 };
 export const SPEC_GROUPS = ["Features & Specs", "Measurements", "Additional details", "User guide", "Item details"];
 export const SPEC_DEFAULT_GROUP = SPEC_GROUPS[0];
 
@@ -44,13 +45,14 @@ export const cleanSpecs = (raw) => {
 };
 
 // Same limits as the items table (migration 0050), so the form catches a problem before the database does.
+// Raised in migration 0136: highlights 250 characters (was 200), 12 of them; what's included 50 lines of 300; pack size 120; terms 5000.
 export const ITEM_DETAIL_LIMITS = {
   brand: 60,
   shortDescription: 140,
-  packSize: 40,
-  terms: 500,
-  includes: { rows: 10, text: 80 },
-  highlights: { rows: 8, title: 40, text: 200 },
+  packSize: 120,
+  terms: 5000,
+  includes: { rows: 50, text: 300 },
+  highlights: { rows: 12, title: 60, text: 250 },
 };
 
 export const cleanIncludes = (raw) => {

@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faChevronLeft, faCopy, faFileImport, faTableList, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
 import * as api from "../../../api/index.js";
+import { EditorBrand } from "./editor/ItemEditor.jsx";
 import TypePicker from "./editor/steps/TypePicker.jsx";
 import { useProductTypes } from "./editor/steps/useProductTypes.js";
 import { pickerAvailable, recentTypeIds, requestType } from "./AddItem.data.js";
@@ -11,10 +14,10 @@ import styles from "./AddItem.module.css";
 const CATALOG = "/business/catalog";
 
 const WAYS = [
-  ["one", "One item, guided", "Pick what it is, then fill the few details a buyer needs."],
-  ["many", "Many of the same kind", "A table: one row per item, such as 20 bulbs or pens."],
-  ["import", "Import a file", "Bring a spreadsheet of items in one go."],
-  ["copy", "Copy an item", "Start from an item you already sell."]
+  ["one", "One item, guided", "Pick what it is, then fill the few details a buyer needs.", faWandMagicSparkles],
+  ["many", "Many of the same kind", "A table: one row per item, such as 20 bulbs or pens.", faTableList],
+  ["import", "Import a file", "Bring a spreadsheet of items in one go.", faFileImport],
+  ["copy", "Copy an item", "Start from an item you already sell.", faCopy]
 ];
 
 function CopyPicker({ items, onCopy, busy }) {
@@ -72,14 +75,24 @@ export default function AddItem() {
 
   return (
     <main className={styles.page}>
-      <Link className={styles.back} to={`${CATALOG}${from}`}>Back to your listings</Link>
-      <h1 className={styles.title}>What are you adding?</h1>
+      <header className={styles.top}>
+        <EditorBrand business={business} />
+        <Link className={styles.back} to={`${CATALOG}${from}`}><FontAwesomeIcon icon={faChevronLeft} aria-hidden="true" /> <span className={styles.backLong}>Back to your listings</span><span className={styles.backShort} aria-hidden="true">Listings</span></Link>
+      </header>
+      <div className={styles.intro}>
+        <p className={styles.stepNote}>Add item · Step 1 of 2</p>
+        <h1 className={styles.title}>What are you adding?</h1>
+        <p className={styles.lead}>Choose how to add, then pick the kind of item. Next you add photos, the name, the price and the details.</p>
+      </div>
       <ul className={styles.ways} aria-label="How do you want to add?">
-        {WAYS.map(([id, title, text]) => (
+        {WAYS.map(([id, title, text, icon]) => (
           <li key={id}>
             <button type="button" className={styles.way} aria-pressed={id === way} onClick={() => choose(id)}>
-              <span className={styles.wayTitle}>{title}</span>
-              <span className={styles.wayText}>{text}</span>
+              <span className={styles.wayIcon} aria-hidden="true"><FontAwesomeIcon icon={icon} /></span>
+              <span className={styles.wayBody}>
+                <span className={styles.wayTitle}>{title}</span>
+                <span className={styles.wayText}>{text}</span>
+              </span>
             </button>
           </li>
         ))}

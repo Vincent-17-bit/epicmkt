@@ -30,14 +30,39 @@ import styles from "./editor.module.css";
 
 const CATALOG = "/business/catalog";
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// The photos of the "What's included" lines (migration 0136), as the form keeps them: { mediaId } or null per line. Only an item that has some gets the key.
+const includeMediaOf = (item) => (item?.includeMedia?.some(Boolean) ? { includeMedia: item.includes.map((_, i) => (item.includeMedia[i] ? { mediaId: item.includeMedia[i] } : null)) } : {});
+// What is sent: one id or null per line that is kept (blank lines are dropped by the save, so their photos go too). `ids` maps a
+// photo still uploading (tile key) to the id it got.
+const includeMediaPayload = (form, ids = {}) => form.includes.flatMap((text, i) => {
+  if (!String(text ?? "").trim()) return [];
+  const p = form.includeMedia?.[i];
+  return [p?.mediaId ?? (p?.tile ? ids?.[p.tile] ?? null : null)];
+});
 // "type_not_allowed" is also the code of a refused file upload elsewhere in the app; saving an item it means the shop may not sell the chosen product type.
 const saveErrorText = (err) => (err?.code === "type_not_allowed" ? "Your shop is not set up to sell that product type. Choose another type, or request it from the Type step." : errorText(err));
 const detailsKey = (f) => JSON.stringify([f.productTypeId ?? null, f.specs ?? [], f.brand ?? "", f.packSize ?? "", f.includes ?? [], f.options?.axes ?? []]);
 
+// The shop logo, the shop name and "EpicMKT Seller": shown on every editor screen (loading and errors too), and opens My listings.
+export function EditorBrand({ business }) {
+  return (
+    <Link to={CATALOG} className={styles.brand} data-testid="editor-brand">
+      <ShopMark name={business?.name} logoPath={business?.logoPath} />
+      <span className={styles.brandText}>
+        <strong className={styles.brandShop}>{business?.name ?? "Your shop"}</strong>
+        <span className={styles.brandApp}>EpicMKT Seller</span>
+      </span>
+    </Link>
+  );
+}
+
 // The route element for both /business/catalog/new and /business/catalog/:itemId/edit.
 export default function ItemEditor() {
   const { itemId } = useParams();
-  const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog });
+  // The editor only needs the list once, to find the item and the section names. A background refresh (the seller came back from the
+  // photo picker, or a save asked for fresh data) that fails must never replace the form with an error page and lose the seller's work:
+  // the error page is only for a list that never loaded. Coming back to the tab does not refresh it either (the file picker blurs the tab).
+  const catalog = useQuery({ queryKey: ["catalog", "items"], queryFn: api.getCatalog, refetchOnWindowFocus: false, retry: 3, retryDelay: (n) => Math.min(1000 * 2 ** n, 8000) });
   const me = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
   const business = me.data?.business;
   // The editor sits outside the main shell, so a page opened straight from a link has not loaded the seller's settings yet.
@@ -46,20 +71,32 @@ export default function ItemEditor() {
   const settings = useQuery({ queryKey: ["settings"], queryFn: async () => { const raw = await api.getSettings(); useSettings.getState().load(raw); return raw; }, retry: false, staleTime: Infinity, refetchOnWindowFocus: false, enabled: !settingsLoaded });
 
   if (business?.status === "suspended") return <Navigate to="/business/notifications" replace />;
-  if (catalog.isError) {
+  if (catalog.isError && !catalog.data) {
     return (
       <div className={styles.standalone} role="alert">
+        <EditorBrand business={business} />
         <h1>We could not open the editor</h1>
         <p>{errorText(catalog.error)}</p>
-        <button type="button" className={styles.btnPrimary} onClick={() => catalog.refetch()}>Try again</button>
+        <div className={styles.leaveBtns}>
+          <button type="button" className={styles.btnPrimary} onClick={() => catalog.refetch()} disabled={catalog.isFetching}>{catalog.isFetching ? "Trying again…" : "Try again"}</button>
+          <Link className={styles.btnGhost} to={CATALOG}>Back to your listings</Link>
+        </div>
       </div>
     );
   }
-  if (catalog.isLoading || (!itemId && !settingsLoaded && settings.isLoading)) return <p className={styles.standalone} role="status">Loading</p>;
+  if (!catalog.data || (!itemId && !settingsLoaded && settings.isLoading)) {
+    return (
+      <div className={styles.standalone} role="status">
+        <EditorBrand business={business} />
+        <p>{catalog.failureCount > 0 ? "The connection is slow. Still trying…" : "Opening the editor…"}</p>
+      </div>
+    );
+  }
   const item = itemId ? catalog.data.items.find((i) => i.id === itemId && !i.removedByAdmin) ?? null : null;
   if (itemId && !item) {
     return (
       <div className={styles.standalone}>
+        <EditorBrand business={business} />
         <h1>We could not find that item</h1>
         <p>It may have been deleted, or the link is old.</p>
         <Link className={styles.btnPrimary} to={CATALOG}>Back to your listings</Link>
@@ -67,10 +104,10 @@ export default function ItemEditor() {
     );
   }
   const sections = [...new Set(catalog.data.items.map((i) => i.section).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} business={business} />;
+  return <EditorForm key={item?.id ?? "new"} item={item} sections={sections} category={business?.categoryName ?? ""} business={business} shop={catalog.data.shop} />;
 }
 
-function EditorForm({ item, sections, category, business }) {
+function EditorForm({ item, sections, category, business, shop = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const qc = useQueryClient();
@@ -92,7 +129,7 @@ function EditorForm({ item, sections, category, business }) {
     // The type picked on the Add item screen rides along in the route state; null means Other goods. Items with no type get no key at all.
     const picked = location.state && "productTypeId" in location.state ? { productTypeId: location.state.productTypeId ?? null } : {};
     const typed = item?.productTypeId ? { productTypeId: item.productTypeId } : {};
-    const saved = item ? { ...formFromItem(item), ...typed } : { ...fresh, ...picked };
+    const saved = item ? { ...formFromItem(item), ...typed, ...includeMediaOf(item) } : { ...fresh, ...picked };
     const base = JSON.stringify(saved);
     const draft = loadDraft(draftId, base);
     startRef.current = { base, saved, form: draft ? { ...saved, ...draft.form } : saved, restoredAt: draft?.savedAt ?? null };
@@ -351,6 +388,14 @@ function EditorForm({ item, sections, category, business }) {
       await linkBrand(id, valueId, Boolean(item?.brand || item?.productTypeId), spec);
       const { problems, leftover, ids } = await media.flush(id);
       if (guideProblem) problems.push(guideProblem);
+      // The photos next to the "What's included" lines, once every photo has its id. Sent only when the form has (or had) any.
+      if (form.includeMedia !== undefined || (item?.includeMedia ?? []).some(Boolean)) {
+        try {
+          await api.saveItemIncludeMedia(id, includeMediaPayload(form, ids));
+        } catch (err) {
+          problems.push(`The photos of "What is included" were not saved: ${blockedText(err) ?? saveErrorText(err)}`);
+        }
+      }
       if (customProblem) problems.push(customProblem);
       // Photos chosen for a size or type before the item existed (or while still uploading) have their ids only now: link them.
       // The re-read of the options further down then shows what was really stored.
@@ -396,7 +441,7 @@ function EditorForm({ item, sections, category, business }) {
         return;
       }
       const fresh = qc.getQueryData(["catalog", "items"])?.items.find((i) => i.id === id);
-      let next = fresh ? formFromItem(fresh) : form;
+      let next = fresh ? { ...formFromItem(fresh), ...includeMediaOf(fresh) } : form;
       if (fresh) {
         // formFromItem knows nothing of the type or the options: carry them over, re-reading the options so ids and stock are the saved ones.
         if ("productTypeId" in form) next = { ...next, productTypeId: form.productTypeId };
@@ -520,13 +565,7 @@ function EditorForm({ item, sections, category, business }) {
     <div ref={root} className={styles.editor} data-bp={bp}>
       <header className={styles.head}>
         {/* The shop logo stays in view here, as on every other screen, and opens My listings. Unsaved changes are still guarded. */}
-        <Link to={CATALOG} className={styles.brand} data-testid="editor-brand">
-          <ShopMark name={business?.name} logoPath={business?.logoPath} />
-          <span className={styles.brandText}>
-            <strong className={styles.brandShop}>{business?.name ?? "Your shop"}</strong>
-            <span className={styles.brandApp}>EpicMKT Seller</span>
-          </span>
-        </Link>
+        <EditorBrand business={business} />
         <IconBtn icon={faChevronLeft} label="Back to your listings" onClick={leave} />
         <div className={styles.headTitle}>
           <h1>{isNew ? "Add item" : "Edit item"}</h1>
@@ -578,7 +617,7 @@ function EditorForm({ item, sections, category, business }) {
           </form>
         </div>
 
-        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} /></aside>}
+        {split && <aside className={styles.previewCol}><LivePreview form={form} images={media.imageUrls} media={media.preview} area={area} tiles={media.tiles} item={item} business={business} shop={shop} /></aside>}
         {bp === "wide" && (
           <aside className={styles.checkCol} aria-label="Checklist">
             <QualityPanel checks={checks} onJump={goTo} headingLevel="h2" issues={publishIssues(form, { type, grandfathered, sizeChart, colourPhotos })} />
