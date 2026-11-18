@@ -687,3 +687,17 @@ Entry format:
 - What changed: `catch-up-items.sql` grew to about 1.2 MB and the Supabase SQL editor refuses it ("Query is too large to be run via the SQL Editor"). `supabase/tools/build-catch-up.mjs` now also writes `supabase/catch-up/part-NN-of-NN.sql`, each under 190 KB. Part 1 finds the first missing migration and keeps it in a temporary `catch_up` schema; each part applies its own migrations from that one on; the last part shows the whole log and removes the schema. A part run out of order stops and says which part is next; a part run again skips what it already applied. When nothing is missing, part 1 says so and the other parts are not needed. Tested on databases stopped after 0037, 0085, 0099, 0131 and 0135 (each part in its own session, as the editor runs them): every one ends with the same functions and columns as a full migration. A new test fails when the checked-in catch-up files are out of date. The Deploy Supabase workflow sends the parts through the SQL API in order.
 - Who must act: in the SQL editor, run the parts in order (1, 2, ...) instead of the single file. Nobody whose database is current needs to run anything. The single file stays for psql.
 - Request files: none
+
+## 2026-11-18 1.20: item page sections the seller sets (migration 0138)
+- Contract: v1 (new optional fields; nothing removed)
+- Lane / author: data, seller, client
+- What changed:
+  - items.delivery: null (same as the shop), { mode: 'custom', fee, area, time, notes, pickup } or { mode: 'none', notes, pickup }. 'custom' needs the plan's delivery feature when saved and when shown.
+  - items.notices: up to 3 notes buyers must see under "About this item" ({ tone: info|caution|warning, title ≤ 60, text ≤ 300 }).
+  - items.gallery: up to 5 pictures shown above the videos ({ id, label ≤ 30, caption ≤ 140 }). items.brand_page: "From the brand" ({ banner, cards ≤ 8 with caption ≤ 80 }).
+  - A new picture kind for these sections: item_media kind 'extra', role 'extra-image', upload purpose 'item_extra' (seller-media-ticket / seller-media3d-finalize). It never takes a photo slot and never shows among the photos; at most 80 per item. "What's included" photos may be extra pictures too.
+  - seller_set_item_page(p_id, p_page) sets any of delivery, notices, gallery, brand and includeMedia in one call, then deletes the item's extra pictures nothing points at. seller_set_item_include_media (0137) now goes through it. seller_item_extras(p_item) lists them.
+  - public_items appends delivery, notices, gallery (paths, sizes, label, caption) and brand_page (paths, sizes, captions). A duplicated item keeps its delivery and notes.
+  - "What's included" lines are "Name: details"; the page shows the name in bold whatever was typed, and the editor refuses a picture without a name.
+- Who must act: apply 0138 (the update file, or the catch-up parts), and deploy the new versions of seller-media-ticket and seller-media3d-finalize.
+- Request files: none

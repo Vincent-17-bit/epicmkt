@@ -26,9 +26,20 @@ describe("specifications and what's included", () => {
     expect(groups[0].rows[0]).toEqual({ label: "Dietary Claims", value: "Vegetarian" });
   });
 
-  it("shows a photo next to an included line that has one", () => {
-    const { container } = render(<ItemSpecs item={{ includes: ["Soundbar", "Remote"], includePhotos: [null, "https://img.test/remote.jpg"] }} />);
-    expect(screen.getByText("Remote")).toBeInTheDocument();
-    expect([...container.querySelectorAll("img")].map((i) => i.getAttribute("src"))).toEqual(["https://img.test/remote.jpg"]);
+  it("leaves What's included to its own section on the page (not repeated among the specs)", () => {
+    render(<ItemSpecs item={{ includes: ["Soundbar", "Remote"], includePhotos: [null, "https://img.test/remote.jpg"], terms: "Returns within 7 days" }} />);
+    expect(screen.queryByText("Remote")).not.toBeInTheDocument();
+  });
+
+  it("shows the seller's notes in a box right under About this item, with the tone in words", () => {
+    render(<ItemDetails item={{ id: "a", highlights: [{ title: "Lead", text: "Point" }], description: "Long text", notices: [{ tone: "caution", title: "Product voltage: 240 V", text: "Use a converter on 110 V." }, { tone: "loud", title: "", text: "" }] }} />);
+    const note = screen.getByRole("region", { name: /^Check before buying: Product voltage: 240 V$/ });
+    expect(note).toHaveTextContent("Use a converter on 110 V.");
+    expect(screen.getAllByRole("region", { name: /^(Note|Check before buying|Warning):/ })).toHaveLength(1);
+    // It sits after the highlights and before the description.
+    const about = screen.getByText("Point");
+    const desc = screen.getByText("Long text");
+    expect(about.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(note.compareDocumentPosition(desc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

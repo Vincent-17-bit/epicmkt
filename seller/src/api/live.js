@@ -322,13 +322,14 @@ export const uploadMedia3d = async (itemId, { role, file, optionIds = [], positi
     cloudinary = hostedFacts(await sendToCloudinary(ticket, file, { signal, onProgress: onProgress ? (f) => onProgress(f, "uploading") : undefined }));
   }
   onProgress?.(1, "finishing");
+  let done = null;
   try {
-    await raceAbort(fn("seller-media3d-finalize", { itemId, path, optionIds, ...(position === undefined ? {} : { position }), ...(cloudinary ? { cloudinary } : {}) }), signal);
+    done = await raceAbort(fn("seller-media3d-finalize", { itemId, path, optionIds, ...(position === undefined ? {} : { position }), ...(cloudinary ? { cloudinary } : {}) }), signal);
   } catch (e) {
-    if (e?.code === "already_attached") return { path };
+    if (e?.code === "already_attached") return { path, id: null };
     throw TICKET_ERRORS[e?.code] ? new ApiError(TICKET_ERRORS[e.code]) : e;
   }
-  return { path };
+  return { path, id: done?.id ?? null };
 };
 // A 3D row is removed like a photo: delete the row, then the file follows (the database queues it).
 export const removeMedia3d = (path) => removeItemPhoto(path);
@@ -578,6 +579,21 @@ export const getItemSizeGuide = (id) => rpc("seller_item_size_guide", { p_id: id
 export const saveItemSizeGuide = (id, guide) => rpc("seller_set_item_size_guide", { p_id: id, p_guide: guide ?? null });
 // The photo next to each "What's included" line (migration 0137): [mediaId | null, ...] in the order of the saved lines.
 export const saveItemIncludeMedia = (id, list) => rpc("seller_set_item_include_media", { p_id: id, p_media: list ?? null });
+// Page sections (migration 0138). "Extra" pictures are for What's included, the gallery and From the brand: they never take a photo slot
+// of the plan and never show among the photos. listItemExtras -> [{ id, path, width, height, size }].
+export const listItemExtras = (itemId) => rpc("seller_item_extras", { p_item: itemId });
+export const uploadItemExtra = async (itemId, file, opts = {}) => {
+  try {
+    const r = await uploadMedia3d(itemId, { role: "extra-image", file }, opts);
+    if (r.id) return r;
+    const again = await listItemExtras(itemId);   // finalize ran before but its answer was lost: find the row by its path
+    return { path: r.path, id: (again ?? []).find((x) => x.path === r.path)?.id ?? null };
+  } catch (e) {
+    throw e?.code === "media3d_limit" ? new ApiError("extras_limit") : e;
+  }
+};
+// page: any of { delivery, notices, gallery, brand, includeMedia }; a missing key keeps what is stored. Unused extra pictures are deleted.
+export const saveItemPage = (id, page) => rpc("seller_set_item_page", { p_id: id, p_page: page });
 // The made-to-measure setting of one item (migration 0125): the saved config or null. saveItemCustomSize(id, null) clears it.
 export const getItemCustomSize = (id) => rpc("seller_item_custom_size", { p_id: id });
 export const saveItemCustomSize = (id, config) => rpc("seller_set_item_custom_size", { p_id: id, p_config: config ?? null });

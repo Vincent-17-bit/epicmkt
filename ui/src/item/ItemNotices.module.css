@@ -1,0 +1,21 @@
+/* Notes buyers must see, under "About this item". Same look on every screen: a white card, a thick coloured edge, an icon and a bold title. */
+.list { display: grid; gap: var(--space-3); margin-block: var(--space-4); }
+.notice {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); align-items: start;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-3);
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--primary-pressed); border-inline-start-width: 8px; border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+}
+.notice[data-tone="caution"] { border-color: var(--status-warn); }
+.notice[data-tone="warning"] { border-color: var(--status-bad-border); border-inline-start-color: var(--status-bad); }
+.icon { font-size: 1.2rem; margin-block-start: 0.15rem; color: var(--primary-pressed); }
+.notice[data-tone="caution"] .icon { color: var(--status-warn-text); }
+.notice[data-tone="warning"] .icon { color: var(--status-bad-fg); }
+.body { min-width: 0; }
+.title { margin: 0; font-size: var(--text-lg); font-weight: 700; line-height: 1.3; color: var(--text); overflow-wrap: anywhere; }
+.text { margin: var(--space-1) 0 0; font-size: var(--text-sm); line-height: 1.55; color: var(--text); overflow-wrap: anywhere; white-space: pre-line; }
+@media (max-width: 30rem) {
+  .notice { padding: var(--space-3); }
+  .title { font-size: var(--text-md); }
+}

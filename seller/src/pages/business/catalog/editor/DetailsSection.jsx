@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { faBoxOpen, faListCheck, faPlus, faSliders, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup, isBrandGroup, isBrandImageGroup, isChoiceSpec, specExample, specKinds, specSuggestions } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup, isBrandGroup, isBrandImageGroup, isChoiceSpec, specExample, specKinds, specSuggestions, PAGE_LIMITS } from "@epicmkt/shared";
 import { LIMITS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
 import BrandEditor from "./BrandEditor.jsx";
+import NoticesEditor from "./NoticesEditor.jsx";
+import { emptyPage, rawDetails, rawJoin, rawName } from "./page.js";
 import FaqEditor from "./FaqEditor.jsx";
 import IncludePhoto from "./IncludePhoto.jsx";
 import ProductInfoEditor from "./ProductInfoEditor.jsx";
@@ -54,7 +56,11 @@ function SpecQuickAdd({ form, typeName, category, used, full, onAdd }) {
   );
 }
 
-export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore, category, media = null, goTo = null }) {
+const INCLUDE_NAME = PAGE_LIMITS.include.name;
+
+export default function DetailsSection({ form, patch, errors, focusOn, type, more, onMore, category, media = null, extras = null, goTo = null }) {
+  const page = form.page ?? emptyPage();
+  const setPage = (key, value) => patch("page", { ...page, [key]: value });
   const hl = LIMITS.highlights;
   const inc = LIMITS.includes;
   const plain = form.specs.filter((s) => !isInfoGroup(s.group));
@@ -124,6 +130,8 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
             />
           </div>
 
+          <NoticesEditor notices={page.notices} onChange={(v) => setPage("notices", v)} errors={errors.notices} focusOn={focusOn} />
+
           <div className={styles.subBlock} data-area="specs">
             <h3 className={styles.subTitle}>Specifications</h3>
             <p className={styles.hint}>Facts buyers check before they buy: size, weight, material, what it fits. Tap a suggestion or add your own row; write as much as you need. The <strong>group</strong> decides where the fact shows on the item page (Features & Specs, Measurements, Additional details, User guide or Item details).</p>
@@ -160,24 +168,40 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
 
           <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} category={category} typeId={form.productTypeId} name={form.name} />
 
-          <BrandEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isBrandGroup(s.group) && !isBrandImageGroup(s.group)).length} />
+          <BrandEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isBrandGroup(s.group) && !isBrandImageGroup(s.group)).length}
+            brand={page.brand} onBrand={(b) => setPage("brand", b)} extras={extras} />
 
           <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 
           <div className={styles.subBlock} data-area="includes">
             <h3 className={styles.subTitle}>What is included</h3>
-            <p className={styles.hint}>Everything that comes with one purchase or booking, one line each. A photo per line is optional: buyers see it next to the line.</p>
+            <p className={styles.hint}>Everything that comes with one purchase or booking, one line each. Give each a short name; details and a picture are optional, but a picture always needs a name.</p>
+            <div className={styles.example}>
+              <span className={styles.exampleTag}>Example</span>
+              <span>Name: <em>Remote control</em> · Details: <em>Batteries not included</em> · Picture: optional</span>
+              <span>Buyers see the name in bold: <strong>● Remote control:</strong> Batteries not included. With a picture, the name sits under it.</span>
+              <span className={styles.exampleNote}>No need to type bullets, colons or bold; we add them.</span>
+            </div>
             <RowList
               noun={{ key: "inc", label: "Included item", name: "included item" }} rows={incRows} max={inc.rows} onChange={setIncludes} focusOn={focusOn}
               blank={{ text: "", photo: null }} focusFirst={(n) => `inc-${n}`} addLabel="Add included item" addKey="add-include" icon={faBoxOpen}
-              empty={{ title: "Nothing listed yet", body: "Add what is in the box or the booking, like \"1 x 400 g loaf in a sealed bag\", \"Charger\" or \"Free touch-up\"." }}
+              empty={{ title: "Nothing listed yet", body: "Add what is in the box or the booking, like \"Power supply\", \"1 x 400 g loaf\" or \"Free touch-up within 7 days\"." }}
               error={errors.includesCount} errorKey="includesCount"
-              renderRow={(t, i, edit) => (
-                <div className={styles.incRow}>
-                  <IncludePhoto media={media} photo={t.photo} label={t.text || `Included item ${i + 1}`} onChange={(photo) => edit((r) => ({ ...r, photo }))} />
-                  <Field name={`inc-${i}`} as="textarea" label={`Included item ${i + 1}`} area="includes" max={inc.text} value={t.text} error={errors.includes?.[i]} placeholder="1 x White bread loaf (400 g) in a breathable, twist-tied bag" onChange={(e) => edit((r) => ({ ...r, text: e.target.value }))} />
-                </div>
-              )}
+              renderRow={(t, i, edit) => {
+                const name = rawName(t.text);
+                const details = rawDetails(t.text);
+                return (
+                  <div className={styles.incRow}>
+                    <IncludePhoto media={media} extras={extras} photo={t.photo} label={name.trim() || `Included item ${i + 1}`} onChange={(photo) => edit((r) => ({ ...r, photo }))} />
+                    <div className={styles.incFields}>
+                      <Field name={`inc-${i}`} className={styles.incName} label={`Included item ${i + 1}`} area="includes" max={INCLUDE_NAME} value={name} error={errors.includes?.[i]}
+                        placeholder="Remote control" autoComplete="off" onChange={(e) => edit((r) => ({ ...r, text: rawJoin(e.target.value, rawDetails(r.text)) }))} />
+                      <Field name={`inc-${i}-details`} label={`Details for included item ${i + 1} (optional)`} area="includes" max={Math.max(0, inc.text - name.length - 2)} value={details}
+                        placeholder="Batteries not included" autoComplete="off" onChange={(e) => edit((r) => ({ ...r, text: rawJoin(rawName(r.text), e.target.value) }))} />
+                    </div>
+                  </div>
+                );
+              }}
             />
           </div>
 

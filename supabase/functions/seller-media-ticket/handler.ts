@@ -12,7 +12,7 @@ const BUCKET = "seller-media";
 //   model-glb               a file in the Supabase bucket (up to 15 MB), finished by seller-media3d-finalize
 // optionIds (3D kinds only): none = the whole item, or exactly one option value id. Photos and videos get theirs from seller_set_media_options.
 const Body = z.object({
-  kind: z.enum(["image", "video", "model-glb", "spin-frame", "poster"]),
+  kind: z.enum(["image", "video", "model-glb", "spin-frame", "poster", "extra-image"]),
   itemId: z.string().uuid(),
   type: z.string().max(40),
   size: z.number().optional(),
@@ -60,17 +60,23 @@ export const sellerMediaTicket = (d: Deps) => wrap(async (req) => {
 
   // Say "limit reached" before the seller waits on an upload. attach_item_media3d enforces the same limits again under a lock.
   // A model or poster REPLACES the one in its scope, so only a spin frame can hit the per-scope limit; the whole-item cap applies to all.
+  // An extra picture (migration 0138: What's included, the gallery, From the brand) has its own limit and never counts as 3D.
+  if (rule.role === "extra-image") {
+    const extras = await d.db.from("item_media").select("id").eq("item_id", itemId).eq("kind", "extra").limit(MEDIA3D.extrasPerItem + 1);
+    if (extras.error) return json({ error: "server_error" }, 500);
+    if ((extras.data ?? []).length >= MEDIA3D.extrasPerItem) return json({ error: "limit_reached", limit: "extras", max: MEDIA3D.extrasPerItem }, 409);
+  }
   const rows = await d.db.from("item_media").select("kind, option_ids").eq("item_id", itemId).in("kind", ["model", "spin", "poster"]).limit(MEDIA3D.maxRowsPerItem + 1);
   if (rows.error) return json({ error: "server_error" }, 500);
   const have = (rows.data ?? []) as { kind: string; option_ids: string[] | null }[];
   const inScope = have.filter((r) => (r.option_ids?.[0] ?? "") === scopeId);
   const replaces = rule.role === "model-glb" ? inScope.some((r) => r.kind === "model") : rule.role === "poster" ? inScope.some((r) => r.kind === "poster") : false;
   if (rule.role === "spin-frame" && inScope.filter((r) => r.kind === "spin").length >= MEDIA3D.spinMaxFrames) return json({ error: "limit_reached", limit: "spin_frames", max: MEDIA3D.spinMaxFrames }, 409);
-  if (!replaces && have.length >= MEDIA3D.maxRowsPerItem) return json({ error: "limit_reached", limit: "media3d", max: MEDIA3D.maxRowsPerItem }, 409);
+  if (!replaces && rule.role !== "extra-image" && have.length >= MEDIA3D.maxRowsPerItem) return json({ error: "limit_reached", limit: "media3d", max: MEDIA3D.maxRowsPerItem }, 409);
 
   // Tickets that were handed out and never finished (the sweep removes them after an hour, a model after three) count against the item,
   // so a script cannot ask for tickets without ever uploading.
-  const pending = await d.db.from("media_uploads").select("public_id").eq("item_id", itemId).in("purpose", ["item_model", "item_poster", "item_spin"]).limit(MEDIA3D.maxPendingTickets);
+  const pending = await d.db.from("media_uploads").select("public_id").eq("item_id", itemId).in("purpose", ["item_model", "item_poster", "item_spin", "item_extra"]).limit(MEDIA3D.maxPendingTickets);
   if (pending.error) return json({ error: "server_error" }, 500);
   if ((pending.data ?? []).length >= MEDIA3D.maxPendingTickets) return json({ error: "too_many_pending", max: MEDIA3D.maxPendingTickets }, 429);
 

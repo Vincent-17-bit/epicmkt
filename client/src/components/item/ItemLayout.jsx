@@ -8,7 +8,7 @@ import Flash from "./Flash.jsx";
 import FlashSticky from "./FlashSticky.jsx";
 import Gallery from "./Gallery.jsx";
 import Header from "./Header.jsx";
-import { BrandStory, CompareTable, ItemVideos } from "./ItemSections.jsx";
+import { BrandStory, CompareTable, ItemImages, ItemIncluded, ItemVideos } from "./ItemSections.jsx";
 import Offers from "./Offers.jsx";
 import Options from "./Options.jsx";
 import ProductInformation, { ProductInfoLink, openProductInfo } from "./ProductInformation.jsx";
@@ -56,12 +56,16 @@ export default function ItemLayout({ ctx }) {
         seller={<SoldFrom ctx={ctx} />}
         after={selective}
       />
-      <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
-      <Recommend key={`similar-${item.id}`} ctx={ctx} />
+      {/* Below the top, in the order buyers read: what comes in the box, the seller's pictures, videos, product information and
+          questions, then the brand, the comparison and other items. */}
+      <ItemIncluded key={`included-${item.id}`} item={item} />
+      <ItemImages key={`images-${item.id}`} item={item} />
       <ItemVideos key={`videos-${item.id}`} item={item} />
+      <ProductInformation key={`info-${item.id}`} item={item} />
       <BrandStory key={`brand-${item.id}`} item={item} />
       <CompareTable key={`compare-${item.id}`} item={item} business={business} />
-      <ProductInformation key={`info-${item.id}`} item={item} />
+      <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
+      <Recommend key={`similar-${item.id}`} ctx={ctx} />
     </>
   );
 }

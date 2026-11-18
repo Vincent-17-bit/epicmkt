@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faChevronDown } from "@fortawesome/free-solid-svg-icons";
+import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { buildSpecGroups } from "./itemView.js";
 import { itemT } from "./labels.js";
 import styles from "./ItemSpecs.module.css";
@@ -59,10 +59,7 @@ export default function ItemSpecs({ item, category, attributes, onExpand, reveal
   const groups = buildSpecGroups({ item, category, attributes });
   const firstKey = groups.length ? GROUP_PANELS[groups[0].name].key : null;
   const [open, setOpen] = useState(firstKey ? { [firstKey]: true } : {});
-  const includes = item.includes ?? [];
-  // An optional photo per line (migration 0136): a url or null, in the same order as `includes`.
-  const includePhotos = Array.isArray(item.includePhotos) ? item.includePhotos : [];
-  const withPhotos = includePhotos.some(Boolean);
+  // "What's included" has its own section on the item page (first after the top), so it is not repeated here.
   const nodes = useRef({});
   const pending = useRef({ key: null, force: undefined });
   const toggle = (key) => () => {
@@ -108,22 +105,6 @@ export default function ItemSpecs({ item, category, attributes, onExpand, reveal
         )
       };
     }),
-    includes.length > 0 && {
-      key: "included",
-      title: t("item.included"),
-      body: (
-        <ul className={styles.checks} data-photos={withPhotos ? "" : undefined}>
-          {includes.map((entry, i) => (
-            <li key={`${i}-${entry}`} className={styles.check}>
-              {includePhotos[i]
-                ? <img className={styles.includePhoto} src={includePhotos[i]} alt="" loading="lazy" />
-                : <FontAwesomeIcon icon={faCheck} className={styles.tick} aria-hidden="true" />}
-              <span>{entry}</span>
-            </li>
-          ))}
-        </ul>
-      )
-    },
     item.terms && { key: "terms", title: t("item.terms"), body: <p className={styles.text}>{item.terms}</p> }
   ].filter(Boolean);
 

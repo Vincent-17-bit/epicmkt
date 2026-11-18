@@ -41,7 +41,7 @@ describe("Delivery states", () => {
     useGeoStore.setState({ request: ask });
     mount(delivers());
     expect(screen.getByText("Delivery KES 100")).toBeInTheDocument();
-    expect(screen.getByText(/Delivers to Milimani and CBD/)).toBeInTheDocument();
+    expect(screen.getByText("To Milimani and CBD")).toBeInTheDocument();
     expect(screen.getByText("Within 6 km of the shop")).toBeInTheDocument();
     expect(screen.getByText("Minimum order KES 200")).toBeInTheDocument();
     expect(screen.getByText("Before noon")).toBeInTheDocument();
@@ -80,7 +80,25 @@ describe("Delivery states", () => {
     expect(screen.queryByRole("button", { name: "Use my location" })).toBeNull();
     cleanup();
     mount(delivers({ fee: null }));
-    expect(screen.getByText("Delivers")).toBeInTheDocument();
+    expect(screen.getByText("Delivery available")).toBeInTheDocument();
+  });
+
+  it("an item's own delivery wins over the shop's: its fee, area and time, with the shop's radius kept", () => {
+    const own = { mode: "custom", fee: 0, area: "Kisumu CBD", time: "Same day before 4 pm", notes: null, pickup: true };
+    render(<Delivery ctx={{ seller: delivers(), item: { deliveryOverride: own } }} />);
+    expect(screen.getByText("Free delivery")).toBeInTheDocument();
+    expect(screen.getByText("To Kisumu CBD")).toBeInTheDocument();
+    expect(screen.getByText("Arrives: Same day before 4 pm")).toBeInTheDocument();
+    expect(screen.getByText("Within 6 km of the shop")).toBeInTheDocument();
+    expect(screen.getByText(/Pick it up at|Pick up from/)).toBeInTheDocument();
+    expect(screen.queryByText("Delivery KES 100")).toBeNull();
+  });
+
+  it("an item that is pickup only says so even when the shop delivers, with its own note", () => {
+    render(<Delivery ctx={{ seller: delivers(), item: { deliveryOverride: { mode: "none", notes: "Too heavy to deliver: collect at the back gate.", pickup: true } } }} />);
+    expect(screen.getByText("Pickup only")).toBeInTheDocument();
+    expect(screen.getByText("Too heavy to deliver: collect at the back gate.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use my location" })).toBeNull();
   });
 
   it("garbage in the setting is a no, never a broken line", () => {

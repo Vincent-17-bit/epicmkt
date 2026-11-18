@@ -7,7 +7,13 @@
 }
 .line, .reach { display: flex; gap: var(--space-2); align-items: flex-start; margin: 0; }
 .sub { margin: 0; color: var(--text-muted); }
-.facts { margin: 0; padding-left: calc(var(--space-4) + var(--space-2)); color: var(--text-muted); display: grid; gap: var(--space-1); }
+.facts { list-style: none; margin: 0; padding-left: calc(var(--space-4) + var(--space-2)); color: var(--text-muted); display: grid; gap: var(--space-1); }
+.facts li { display: flex; gap: var(--space-2); align-items: baseline; overflow-wrap: anywhere; }
+.factIcon { flex: none; inline-size: 0.9em; color: var(--text-muted); }
+.headline { font-size: 1.05em; }
+.pickup { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-2); align-items: baseline; margin: 0; color: var(--text-muted); }
+.inlineLink { text-decoration: underline; color: var(--text); min-height: var(--tap); display: inline-flex; align-items: center; }
+.inlineLink:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 .icon, .iconMuted { flex: none; margin-top: 0.2em; }
 .iconMuted { color: var(--text-muted); }
 .reach[data-status="inside"] { color: var(--status-ok-fg); }

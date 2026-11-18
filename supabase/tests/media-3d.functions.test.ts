@@ -366,3 +366,33 @@ Deno.test("duplicate item: a 3D copy the database refuses is reported and queued
   const r = await sellerItemCopyMedia(t.deps)(authed({ fromItemId: ITEM, toItemId: TARGET })).then(read);
   assertEquals([r.body.copied, r.body.failed.length, t.queued.length], [0, 1, 1]);
 });
+
+// ---- migration 0138: extra pictures (What's included, the gallery, From the brand) -------------------------------------------------
+
+Deno.test("extra picture: a Cloudinary picture under the item, its own purpose, no option value, its own cap of 80", async () => {
+  const t = setup();
+  const r = await ticket(t, { kind: "extra-image", type: "png", size: 2 * MB });
+  assertEquals(r.status, 200);
+  assert(new RegExp(`^${BIZ}/${ITEM}/[0-9a-f-]{36}$`).test(r.body.publicId));
+  assertEquals([r.body.role, t.uploads.get(r.body.publicId)?.purpose], ["extra-image", "item_extra"]);
+  assertEquals((await ticket(t, { kind: "extra-image", type: "png", size: 1, optionIds: ["grey"] })).body.error, "bad_option_ids");
+  assertEquals((await ticket(t, { kind: "extra-image", type: "glb", size: 1 })).status, 422);
+  const full = setup({ media: Array.from({ length: 80 }, () => ({ kind: "extra", option_ids: [] })) });
+  const refused = await ticket(full, { kind: "extra-image", type: "jpg", size: 1 });
+  assertEquals([refused.status, refused.body.limit, refused.body.max], [409, "extras", 80]);
+  // 3D assets do not count against extra pictures, and the other way round.
+  const busy3d = setup({ media: Array.from({ length: 500 }, () => ({ kind: "spin", option_ids: [] })) });
+  assertEquals((await ticket(busy3d, { kind: "extra-image", type: "jpg", size: 1 })).status, 200);
+});
+
+Deno.test("finalize extra picture: attached with the extra role, sizes kept, the id and path returned", async () => {
+  const t = setup();
+  const p = (await ticket(t, { kind: "extra-image", type: "jpg", size: 100 })).body.publicId;
+  const a = await finalize(t, { path: p, cloudinary: hosted() });
+  assertEquals([a.status, a.body.role, a.body.kind, a.body.path, a.body.width, a.body.height], [201, "extra-image", "extra", p, 1200, 800]);
+  assertEquals([t.attached[0].p_role, t.attached[0].p_position, t.attached[0].p_option_ids], ["extra-image", null, []]);
+  const limited = setup({ attachError: "limit_reached:extras" });
+  const q = (await ticket(limited, { kind: "extra-image", type: "jpg", size: 100 })).body.publicId;
+  const r = await finalize(limited, { path: q, cloudinary: hosted() });
+  assertEquals([r.status, r.body.limit], [409, "extras"]);
+});

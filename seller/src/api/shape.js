@@ -99,6 +99,11 @@ export const catalogItem = (i) => ({
   brand: i.brand ?? null, shortDescription: i.short_description ?? null, packSize: i.pack_size ?? null, terms: i.terms ?? null, includes: Array.isArray(i.includes) ? i.includes : [], highlights: Array.isArray(i.highlights) ? i.highlights : [],
   // The photo next to each "What's included" line (migration 0137): a media id or null, in the same order as `includes`.
   includeMedia: Array.isArray(i.include_media) ? i.include_media.map((x) => (typeof x === "string" && x ? x : null)) : [],
+  // Page sections (migration 0138): delivery for this item (null = the shop's), notes, the 5-picture gallery and From the brand.
+  delivery: i.delivery && typeof i.delivery === "object" ? i.delivery : null,
+  notices: Array.isArray(i.notices) ? i.notices : [],
+  gallery: Array.isArray(i.gallery) ? i.gallery : [],
+  brandPage: i.brand_page && typeof i.brand_page === "object" ? i.brand_page : i.brandPage ?? null,
 });
 
 const customerSees = (i) => i.visible && !i.draft && !i.hiddenByAdmin && !i.removedByAdmin;
