@@ -97,7 +97,15 @@ function Slot({ card, entry, docs, showErrors }) {
           ) : (
             <>
               <FontAwesomeIcon icon={faCloudArrowUp} className={styles.dropIcon} />
-              <p>{over ? "Drop the file here" : "Drag a file here, or"}</p>
+              {/* Dragging needs a mouse: a phone or tablet is told what it can do instead. */}
+              <p>
+                {over ? "Drop the file here" : (
+                  <>
+                    <span className={styles.mouseOnly}>Drag a file here, or</span>
+                    <span className={styles.touchOnly}>Choose a file or take a photo</span>
+                  </>
+                )}
+              </p>
               <div className={styles.dropBtns}>
                 <button type="button" className={styles.browse} onClick={() => input.current.click()}>
                   Browse files

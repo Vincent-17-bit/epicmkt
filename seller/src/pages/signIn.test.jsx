@@ -196,3 +196,17 @@ describe("signing in", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("That code is not valid or has expired.");
   });
 });
+
+describe("sign-in page help", () => {
+  it("says where the Seller ID came from, links to the application status page, and can show the password", async () => {
+    const user = userEvent.setup();
+    loginApp();
+    const id = await screen.findByLabelText("Seller ID or email");
+    expect(id).toHaveAccessibleDescription(/came by SMS and email when your shop went live/);
+    expect(screen.getByRole("link", { name: "Check your application" })).toHaveAttribute("href", expect.stringMatching(/\/become-a-seller\/status$/));
+    const pw = screen.getByLabelText("Password");
+    expect(pw).toHaveAttribute("type", "password");
+    await user.click(screen.getByRole("checkbox", { name: "Show password" }));
+    expect(pw).toHaveAttribute("type", "text");
+  });
+});

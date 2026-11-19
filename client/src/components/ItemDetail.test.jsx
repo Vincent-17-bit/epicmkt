@@ -47,6 +47,25 @@ const mount = (props = {}, client = new QueryClient({ defaultOptions: { queries:
 const chatHrefs = () => screen.getAllByRole("link", { name: /Chat Seller/ }).map((a) => decodeURIComponent(a.getAttribute("href")));
 
 describe("ItemDetail", () => {
+  it("moves focus to the title in the pop-up, and on the full page only after moving between pages in the app", async () => {
+    mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
+    mocks.getStoreSelective.mockResolvedValue([]);
+    const sheet = mount({ layout: "sheet" });
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Fade and beard" })).toHaveFocus());
+    sheet.unmount();
+    // The page opened straight from a link or the address bar (history index 0): the focus stays with the page.
+    const direct = mount({ layout: "page" });
+    const title = await screen.findByRole("heading", { name: "Fade and beard" });
+    await new Promise((r) => setTimeout(r, 30));
+    expect(title).not.toHaveFocus();
+    direct.unmount();
+    // Reached by moving inside the app: the title takes the focus, so a screen reader reads it.
+    window.history.replaceState({ idx: 2 }, "");
+    mount({ layout: "page" });
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Fade and beard" })).toHaveFocus());
+    window.history.replaceState(null, "");
+  });
+
   it("builds the regular chat message and links Visit Store", async () => {
     mocks.getDetail.mockResolvedValue({ ...base, pricing: pricing(300, 300) });
     mocks.getStoreSelective.mockResolvedValue([]);

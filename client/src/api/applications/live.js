@@ -77,6 +77,8 @@ async function call(name, body) {
 
 export const requestStatusOtp = ({ referenceNo, phone }) => call('status-request-otp', { referenceNo, phone });
 
+export const findReference = ({ phone }) => call('status-find-reference', { phone });
+
 export const verifyStatusOtp = ({ referenceNo, phone, code, remember }) => call('status-verify-otp', { referenceNo, phone, code, remember });
 
 export const endStatusSession = (session) => call('status-signout', { token: session.token });

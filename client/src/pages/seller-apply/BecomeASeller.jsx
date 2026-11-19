@@ -14,6 +14,7 @@ import { fieldId } from "./Field.jsx";
 import { useCatalog } from "./useCatalog.js";
 import { useDocs } from "./useDocs.js";
 import Intro from "./Intro.jsx";
+import { showFirstProblem } from "./firstProblem.js";
 import Stepper from "./Stepper.jsx";
 import CategoryPicker from "./CategoryPicker.jsx";
 import BusinessStep from "./StepBusiness.jsx";
@@ -160,16 +161,13 @@ export default function BecomeASeller() {
     requestAnimationFrame(() => title.current?.focus());
   }, []);
 
-  // Bring the first problem into the middle of the screen, right where its message sits.
-  const focusFirstError = () =>
-    requestAnimationFrame(() => {
-      const bad = document.querySelector('form [aria-invalid="true"]');
-      const note = document.querySelector("form [data-error]");
-      const target = bad ?? note?.closest("[data-invalid]") ?? note;
-      if (!target) return document.getElementById("error-summary")?.focus();
-      target.scrollIntoView?.({ block: "center", behavior: "smooth" });
-      if (bad) bad.focus({ preventScroll: true });
-    });
+  // Take the person to the first problem once its message is on the screen: the effect below runs after the render that drew the
+  // errors (see firstProblem.js for where it scrolls to).
+  const [problems, setProblems] = useState(0);
+  const focusFirstError = () => setProblems((n) => n + 1);
+  useEffect(() => {
+    if (problems) showFirstProblem();
+  }, [problems]);
 
   const next = async () => {
     const step = STEPS[idx];

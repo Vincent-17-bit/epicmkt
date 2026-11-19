@@ -87,7 +87,9 @@ export default function CategoryPicker({ catalog }) {
               />
             </div>
           </div>
-          <div role="radiogroup" aria-label="Business type" id={fieldId("categoryId")} aria-describedby={error ? "category-err" : undefined}>
+          {/* The message sits above the list, not under it: the list has every business type and runs thousands of pixels down. */}
+          <ErrorLine id="category-err" message={error} />
+          <div role="radiogroup" aria-label="Business type" id={fieldId("categoryId")} aria-describedby={error ? "category-err" : undefined} aria-invalid={error ? "true" : undefined}>
             {groups.map(([group, list]) => (
               <fieldset key={group} className={styles.group}>
                 <legend>{group}</legend>
@@ -114,8 +116,6 @@ export default function CategoryPicker({ catalog }) {
           )}
         </>
       )}
-      <ErrorLine id="category-err" message={error} />
-
       {chosen && !changing && (
         <section className={styles.docs} aria-live="polite">
           <h3>

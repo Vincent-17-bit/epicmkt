@@ -3,7 +3,6 @@ export const routes = Object.freeze({
   apply: "/become-a-seller",
   applyStatus: "/become-a-seller/status",
   sell: "/sell",
-  sellRegister: "/sell/register",
   pricing: "/pricing",
   sellerGuide: "/seller-guide",
   about: "/about",

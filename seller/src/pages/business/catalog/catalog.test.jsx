@@ -290,6 +290,23 @@ describe("saved views", () => {
 });
 
 describe("view modes and layout", () => {
+  it("on a phone keeps the layout buttons and saved views behind More options", async () => {
+    media(false);
+    const user = userEvent.setup();
+    await open();
+    await ready();
+    expect(screen.queryByRole("group", { name: "View mode" })).toBeNull();
+    expect(screen.queryByLabelText("Saved views")).toBeNull();
+    const more = screen.getByRole("button", { name: "More options" });
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    await user.click(more);
+    expect(screen.getByRole("group", { name: "View mode" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Saved views")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fewer options" })).toHaveAttribute("aria-expanded", "true");
+    // The sort list names the default plainly: the order customers see.
+    expect(screen.getByRole("option", { name: "Shop order" })).toBeInTheDocument();
+  });
+
   it("remembers the view mode on this device and has a list mode with rows", async () => {
     const user = userEvent.setup();
     const first = await open();

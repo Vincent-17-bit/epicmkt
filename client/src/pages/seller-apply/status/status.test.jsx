@@ -57,6 +57,19 @@ describe("check my application", () => {
     expect(localStorage.getItem("epicmkt.status.session")).toBeNull();
   }, 20000);
 
+  it("texts a lost reference to the phone number, with the same reply for every number", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText(/Enter the phone number you applied with/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Phone number"), "0700000001");
+    await user.click(screen.getByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText(/If an application was made with this number, we have sent its reference number/)).toBeInTheDocument();
+    // Asking again straight away is refused politely.
+    await user.click(screen.getByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText("Please wait a minute before asking again.")).toBeInTheDocument();
+  }, 20000);
+
   it("validates the form and gives the same reply for wrong details", async () => {
     const user = userEvent.setup();
     mount();
@@ -179,7 +192,11 @@ describe("check my application", () => {
     const user = userEvent.setup();
     mount();
     await signIn(user, "EPM-2026-DEMO07");
-    expect(await screen.findByText(/login details have been sent to your phone by SMS or WhatsApp/)).toBeInTheDocument();
+    expect(await screen.findByText(/We sent your Seller ID and a temporary password by SMS/)).toBeInTheDocument();
+    // The Seller ID itself, for a seller who lost that SMS, with the way to sign in.
+    const card = screen.getByTestId("seller-id");
+    expect(card).toHaveTextContent(/ES\d{6}/);
+    expect(within(card).getByRole("link", { name: "Sign in" })).toHaveAttribute("href", expect.stringMatching(/\/login$/));
   }, 20000);
 });
 

@@ -23,6 +23,8 @@ const pushEvent = (rec, type) => {
 };
 
 const normRef = (v) => String(v ?? '').trim().toUpperCase();
+// A steady demo Seller ID (ES and six digits, as the live ones) for an activated demo application.
+const demoSellerId = (rec) => `ES${100000 + ([...String(rec.referenceNo ?? '')].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 899999, 7))}`;
 const keyOf = (ref, phone) => `${ref}:${phone}`;
 
 // Same fields the live status-get returns. The account number is the application reference.
@@ -34,6 +36,25 @@ function paymentView(rec) {
     received, balance: Math.max(price - received, 0), months: price > 0 ? Math.floor(received / price) : 0, code: rec.paymentCode ?? null,
     stk: rec.status === 'approved', maxMonths: 12,
   };
+}
+
+const FIND_LOG_KEY = 'epicmkt.mock.findref';
+
+/** "Lost your reference?": the same generic reply whatever the number; the demo puts what it would text in the console. */
+export async function findReference({ phone }) {
+  await wait(300);
+  const generic = { ok: true, message: 'If an application was made with this number, we have sent its reference number to it by SMS.' };
+  const norm = normalizePhone(String(phone ?? ''));
+  if (!norm) return generic;
+  const log = readJson(FIND_LOG_KEY, {});
+  const now = Date.now();
+  const recent = (log[norm] ?? []).filter((t) => now - t < 86_400_000);
+  if (recent.length && now - recent[recent.length - 1] < 60_000) throw apiError('rate_limited', { retryAfter: 60 });
+  if (recent.length >= 3) throw apiError('rate_limited', { retryAfter: 3600 });
+  writeJson(FIND_LOG_KEY, { ...log, [norm]: [...recent, now] });
+  const refs = listApplications().filter((r) => r.payload?.phone === norm && r.status !== 'uploading').map((r) => r.referenceNo);
+  if (refs.length) console.info(`[demo SMS to ${norm}] Your application reference: ${refs.slice(0, 3).join(', ')}`);
+  return generic;
 }
 
 export async function requestStatusOtp({ referenceNo, phone }) {
@@ -143,6 +164,7 @@ async function view(rec) {
     documents,
     adminNote: rec.adminNote ?? null,
     rejectionReason: rec.status === 'rejected' ? rec.rejectionReason ?? null : null,
+    sellerId: rec.status === 'activated' ? rec.sellerId ?? demoSellerId(rec) : null,
     flags: (rec.flags ?? []).map(flagView),
     events: (rec.events ?? []).filter((e) => PUBLIC_EVENTS.includes(e.type)),
     payment: showPay

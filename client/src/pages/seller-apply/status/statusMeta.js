@@ -14,7 +14,7 @@ export const STATUS_META = {
   changes_requested: { label: "Changes requested", icon: faPenToSquare, text: "We need a few corrections before we can approve your application." },
   approved: { label: "Approved, awaiting payment", icon: faCircleCheck, text: "Your application is approved. Pay the monthly fee by M-Pesa to go live." },
   payment_confirming: { label: "Payment under confirmation", icon: faHourglassHalf, text: "We are confirming your M-Pesa payment. We will notify you by SMS." },
-  activated: { label: "Active", icon: faStore, text: "Your login details have been sent to your phone by SMS or WhatsApp. You will change the password on first login." },
+  activated: { label: "Active", icon: faStore, text: "Your shop is live. We sent your Seller ID and a temporary password by SMS, and by email if you gave one. You choose your own password the first time you sign in." },
   rejected: { label: "Not approved", icon: faCircleXmark, text: "We could not approve this application." }
 };
 

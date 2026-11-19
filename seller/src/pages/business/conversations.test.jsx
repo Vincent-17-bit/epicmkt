@@ -89,7 +89,7 @@ describe("strikes and suspension", () => {
     expect(await screen.findByTestId("suspended-banner")).toHaveTextContent("Selling counterfeit goods");
     const convo = await screen.findByTestId("conversation");
     expect(screen.queryByRole("link", { name: "Flash sales" })).toBeNull();
-    expect(screen.queryByRole("link", { name: "Exceptions" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Closed days" })).toBeNull();
     await user.type(within(convo).getByLabelText("Your reply"), "It was a mistake");
     await user.click(within(convo).getByRole("button", { name: "Send reply" }));
     await waitFor(() => expect(M.state.messages.some((x) => x.sender === "seller")).toBe(true));

@@ -84,8 +84,8 @@ describe("the editor", () => {
     // Images (Media step)
     const gallery = document.querySelector('[data-area="gallery"]');
     fireEvent.change(gallery.querySelector('input[type="file"]'), { target: { files: [png("a.png"), png("b.png")] } });
-    expect(await within(gallery).findByLabelText("Image 2: tab label (optional)")).toBeInTheDocument();
-    await user.type(within(gallery).getByLabelText("Image 1: tab label (optional)"), "Before and after");
+    expect(await within(gallery).findByLabelText("Image 2: title (optional)")).toBeInTheDocument();
+    await user.type(within(gallery).getByLabelText("Image 1: title (optional)"), "Before and after");
     // Delivery for this item (Price step)
     await user.click(screen.getByText("Set delivery for this item", { exact: true }));
     await user.type(screen.getByLabelText("Delivery fee (KES)"), "200");

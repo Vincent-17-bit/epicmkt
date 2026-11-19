@@ -40,6 +40,15 @@ function Item({ to, icon, children }) {
   );
 }
 
+function MoreGroup({ id, title, children }) {
+  return (
+    <div className={styles.moreGroup} role="group" aria-labelledby={id}>
+      <p id={id} className={styles.moreHead}>{title}</p>
+      {children}
+    </div>
+  );
+}
+
 export function Bell({ count }) {
   const label = count > 0 ? `Notifications, ${count} unread` : "Notifications";
   return (
@@ -117,7 +126,7 @@ export default function Layout() {
   const allowed = !suspended || /^\/business\/(notifications|questions|subscription)/.test(pathname) || /^\/business\/?$/.test(pathname);
   const notice = useRenewNotice();
   const renew = pathname.startsWith("/business/subscription") ? null : notice;
-  const moreActive = /^\/business\/(exceptions|flash|offers|demand|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
+  const moreActive = /^\/business\/(exceptions|closed-days|flash|offers|demand|qr|gallery|team|account|settings|help|onboarding)/.test(pathname);
 
   const toggle = () => {
     const next = theme === "dark" ? "light" : "dark";
@@ -165,16 +174,23 @@ export default function Layout() {
           </div>
           {!suspended && (
             <div id="more-links" className={styles.moreLinks} data-open={more}>
-              <Item to="/business/exceptions" icon={faCalendarXmark}>Exceptions</Item>
-              <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
-              <Item to="/business/offers" icon={faTag}>Offers</Item>
-              {features.demand && <Item to="/business/demand" icon={faMagnifyingGlassChart}>What shoppers want</Item>}
-              <Item to="/business/gallery" icon={faImages}>Gallery</Item>
-              <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
-              <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
-              <Item to="/business/account" icon={faUser}>Account</Item>
-              <Item to="/business/settings" icon={faGear}>Settings</Item>
-              <Item to="/business/help" icon={faCircleInfo}>Help</Item>
+              {/* Three small groups instead of ten links in a row: the shop itself, getting customers, and the seller's account. */}
+              <MoreGroup id="more-shop" title="Shop">
+                <Item to="/business/gallery" icon={faImages}>Gallery</Item>
+                <Item to="/business/team" icon={faUsers}>Team and schedule</Item>
+                <Item to="/business/exceptions" icon={faCalendarXmark}>Closed days</Item>
+              </MoreGroup>
+              <MoreGroup id="more-promote" title="Promote">
+                <Item to="/business/flash" icon={faBolt}>Flash sales</Item>
+                <Item to="/business/offers" icon={faTag}>Offers</Item>
+                <Item to="/business/qr" icon={faQrcode}>QR poster</Item>
+                {features.demand && <Item to="/business/demand" icon={faMagnifyingGlassChart}>What shoppers want</Item>}
+              </MoreGroup>
+              <MoreGroup id="more-account" title="Account">
+                <Item to="/business/account" icon={faUser}>Account</Item>
+                <Item to="/business/settings" icon={faGear}>Settings</Item>
+                <Item to="/business/help" icon={faCircleInfo}>Help</Item>
+              </MoreGroup>
             </div>
           )}
         </nav>

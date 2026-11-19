@@ -79,13 +79,16 @@ export default function SoldFrom({ ctx }) {
           <FontAwesomeIcon icon={faCommentDots} className={styles.icon} aria-hidden="true" />
           <span>{t("item.chatSeller")}</span>
         </a>
+        {/* Calling is a main way to reach the shop (it is a big button on the store page too), so it sits with Visit and Chat. */}
+        {seller.phone && (
+          <a href={telLink(seller.phone)} className={styles.outline} onClick={onCall}>
+            <FontAwesomeIcon icon={faPhone} className={styles.icon} aria-hidden="true" />
+            <span>{t("item.call")}</span>
+          </a>
+        )}
       </div>
 
       <div className={styles.secondary}>
-        <a href={telLink(seller.phone)} className={styles.ghost} onClick={onCall}>
-          <FontAwesomeIcon icon={faPhone} aria-hidden="true" />
-          <span>{t("item.call")}</span>
-        </a>
         <button type="button" className={styles.ghost} onClick={onShare}>
           <FontAwesomeIcon icon={faShareNodes} aria-hidden="true" />
           <span>{t("item.share")}</span>

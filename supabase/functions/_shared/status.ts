@@ -190,6 +190,9 @@ export async function viewApplication(db: any, a: any) {
     documents: (docs ?? []).map((d: any) => ({ slot: d.slot_key, name: d.original_name, mime: d.mime, size: d.size_bytes, url: urlOf(d.storage_path) })),
     adminNote: a.admin_note,
     rejectionReason: a.status === "rejected" ? a.rejection_reason : null,
+    // The Seller ID once the shop is live. This view is only reached with the reference number and an SMS code sent to the applicant's
+    // phone, the same phone the login SMS went to, so it can be shown again here for a seller who lost that message.
+    sellerId: a.status === "activated" ? a.seller_id ?? null : null,
     flags: (flags ?? []).map(flagView),
     events: (events ?? []).map((e: any) => ({ type: e.type, at: e.created_at })),
     payment: showPay

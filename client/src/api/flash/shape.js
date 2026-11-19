@@ -1,4 +1,5 @@
-import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, getUserTimeZone, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours, cleanNotices, imageSrcSet } from "@epicmkt/shared";
+import { variantPricing, variantsOf, BUSINESS_TIME_ZONE, distanceKm, imageUrl, isCloudinaryId, PLAN_FEATURES, slugify, statusOf, todayHours, cleanNotices, imageSrcSet } from "@epicmkt/shared";
+import { shopperZone } from "../../lib/shopperZone.js";
 
 const SHORT_MAX = 140;
 
@@ -327,7 +328,7 @@ export const businessOf = (row, { category, services, origin = null, gallery = [
   const hours = row.hours && typeof row.hours === "object" ? row.hours : {};
   const exceptions = exceptionsOf(row.exceptions);
   const timezone = row.timezone ?? BUSINESS_TIME_ZONE;
-  const status = statusFor(hours, exceptions, timezone, getUserTimeZone());
+  const status = statusFor(hours, exceptions, timezone, shopperZone());
   let today = null;
   try {
     today = todayHours(hours, undefined, timezone);

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "@epicmkt/ui";
-import { requestStatusOtp, verifyStatusOtp, devTools } from "../../../api/applications/index.js";
+import { findReference, requestStatusOtp, verifyStatusOtp, devTools } from "../../../api/applications/index.js";
 import { normalizePhone } from "../../../shared/validators.js";
 import { ErrorLine } from "../Field.jsx";
 import form from "../form.module.css";
@@ -15,6 +15,34 @@ export function RequestForm({ initial, onSent }) {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [lost, setLost] = useState({ busy: false, message: "", error: "" });
+
+  // "Lost your reference?": the phone number below is enough. The reply is the same whether or not it applied, and the SMS only
+  // goes to that phone, so nobody learns anything about someone else's number.
+  const sendReference = async () => {
+    const norm = normalizePhone(phone);
+    setFormError("");
+    if (!norm) {
+      setErrors({ phone: "Enter the phone number you applied with, then choose Text me my reference." });
+      document.getElementById("status-phone")?.focus();
+      return;
+    }
+    setErrors({});
+    setLost({ busy: true, message: "", error: "" });
+    try {
+      const res = await findReference({ phone: norm });
+      setLost({ busy: false, message: res.message, error: "" });
+    } catch (err) {
+      const key = err?.details?.error ?? err?.message;
+      setLost({
+        busy: false,
+        message: "",
+        error: key === "rate_limited"
+          ? err.details?.retryAfter > 60 ? "You have asked for your reference too many times. Please try again later." : "Please wait a minute before asking again."
+          : "We could not send it. Check your connection and try again."
+      });
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -52,6 +80,15 @@ export function RequestForm({ initial, onSent }) {
         <label htmlFor="status-ref" className={form.label}>Reference number</label>
         <input id="status-ref" className={form.input} value={ref} onChange={(e) => setRef(e.target.value.toUpperCase())} autoCapitalize="characters" autoComplete="off" placeholder={EXAMPLE} aria-invalid={errors.ref ? true : undefined} aria-describedby={errors.ref ? "status-ref-err" : undefined} />
         <ErrorLine id="status-ref-err" message={errors.ref} />
+        <p className={styles.small}>
+          Lost it? Enter your phone number below, then{" "}
+          <button type="button" className={styles.linkBtn} onClick={sendReference} disabled={lost.busy}>
+            {lost.busy ? "sending" : "text me my reference"}
+          </button>
+          .
+        </p>
+        {lost.message && <p role="status" className={styles.small}>{lost.message}</p>}
+        <ErrorLine message={lost.error} />
       </div>
       <div className={form.field}>
         <label htmlFor="status-phone" className={form.label}>Phone number</label>

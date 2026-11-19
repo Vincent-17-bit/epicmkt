@@ -51,7 +51,11 @@ describe("ClosedBanner closes text", () => {
     expect(screen.getByText("Special hours today")).toBeInTheDocument();
   });
   it("still says when a closed shop reopens", () => {
-    render(<ClosedBanner status={{ isOpen: false, reasonText: null, reopens: "Reopens tomorrow at 8:00 AM EAT", closes: null }} showCloses={false} />);
+    render(<ClosedBanner status={{ isOpen: false, reasonText: "Closed today: Stocktake", reopens: "Reopens tomorrow at 8:00 AM EAT", closes: null }} showCloses={false} />);
     expect(screen.getByText("Reopens tomorrow at 8:00 AM EAT")).toBeInTheDocument();
+  });
+  it("adds no banner for a shop that is only outside its hours (the status chip says it)", () => {
+    const { container } = render(<ClosedBanner status={{ isOpen: false, reasonText: null, reopens: "Reopens tomorrow at 8:00 AM EAT", closes: null }} showCloses={false} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });

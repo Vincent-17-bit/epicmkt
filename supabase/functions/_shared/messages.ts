@@ -22,6 +22,12 @@ const payLines = (m: Mpesa, ref: string) =>
 const payTo = (m: Mpesa, ref: string) =>
   m.type === "paybill" ? `Paybill ${m.number}, Account ${ref}` : `Till ${m.number}${m.name ? ` (${m.name})` : ""}`;
 
+/** "Lost your reference?" on the status page: the applications made with this phone, newest first. */
+export const referenceSms = (apps: { ref: string; business?: string | null }[]) =>
+  apps.length === 1
+    ? `EpicMKT: Your application reference is ${apps[0].ref}${apps[0].business ? ` (${apps[0].business})` : ""}. Use it with this phone number to check your application.`
+    : `EpicMKT: Your application references: ${apps.map((a) => `${a.ref}${a.business ? ` (${a.business})` : ""}`).join(", ")}. Use one with this phone number to check it.`;
+
 export const otpSms = (code: string, minutes: number) =>
   `EpicMKT: Your code is ${code}. It expires in ${minutes} minutes. Never share it.`;
 

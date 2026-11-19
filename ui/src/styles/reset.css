@@ -96,10 +96,13 @@ a {
   border: 0;
 }
 
-/* Headings and regions the app moves focus to after a page change (tabindex="-1") are not controls: no focus ring on them. */
+/* Headings and regions the app moves focus to after a page change (tabindex="-1") are not controls: no focus ring on them. The ring
+   is an outline plus a box-shadow (the !important one in :focus-visible above), so both go; an outline alone left a black frame. */
 h1[tabindex="-1"]:focus,
 h2[tabindex="-1"]:focus,
+h3[tabindex="-1"]:focus,
 main[tabindex="-1"]:focus,
 section[tabindex="-1"]:focus {
   outline: none;
+  box-shadow: none !important;
 }

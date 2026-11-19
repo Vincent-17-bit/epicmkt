@@ -8,6 +8,7 @@ import { APPLY_PATH, FinalCta, SellHero } from "../components/SellBlocks.jsx";
 import { routes } from "../config/routes.js";
 import { formatPrice, priceRange } from "../shared/billing.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
+import { APPLY_STEPS, haveReadyText } from "./seller-apply/howToApply.js";
 import { useCatalog } from "./seller-apply/useCatalog.js";
 import styles from "./Sell.module.css";
 
@@ -34,13 +35,6 @@ const benefits = [
   }
 ];
 
-const steps = [
-  { title: "Register your business", text: "Add your name, category, phone and WhatsApp number, location and opening hours." },
-  { title: "We check your details", text: "We review your listing so customers can trust it. Checked businesses earn a Verified badge." },
-  { title: "Go live", text: "Add photos, prices and offers. Your page, short link and QR code are ready to share." },
-  { title: "Get contacted", text: "Customers call, message or visit you directly. You keep the full sale, with no commission." }
-];
-
 const faqs = [
   {
     q: "Does EpicMKT take a cut of my sales?",
@@ -52,7 +46,8 @@ const faqs = [
   },
   {
     q: "What do I need to get listed?",
-    a: "Your business name and category, a phone and WhatsApp number, your location and opening hours. Photos, services and prices make your page stronger."
+    // The same list as the application page's "Have these ready".
+    a: haveReadyText()
   },
   {
     q: "What does Featured mean?",
@@ -122,17 +117,17 @@ export default function Sell() {
             <h2 id="how-title" className={styles.h2}>
               How it works
             </h2>
-            <p className={styles.lead}>From sign-up to your first customer in four steps.</p>
+            <p className={styles.lead}>From applying to going live in {APPLY_STEPS.length} steps. You pay only after we approve you.</p>
           </div>
           <ol className={styles.steps}>
-            {steps.map((step, i) => (
+            {APPLY_STEPS.map((step, i) => (
               <li key={step.title} className={styles.step}>
                 <span className={styles.stepNum} aria-hidden="true">
                   {i + 1}
                 </span>
                 <div>
                   <h3 className={styles.h3}>{step.title}</h3>
-                  <p>{step.text}</p>
+                  <p>{step.detail}</p>
                 </div>
               </li>
             ))}

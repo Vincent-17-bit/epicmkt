@@ -120,6 +120,8 @@ input[type="date"].input {
 
 .error {
   position: relative;
+  /* brought into view by its top when it sits above a long list (the business types): keep it clear of the sticky bars */
+  scroll-margin-top: calc(var(--header-h) + 5rem);
   display: flex;
   align-items: flex-start;
   gap: var(--space-2);

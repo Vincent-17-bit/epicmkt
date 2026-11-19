@@ -238,7 +238,7 @@ describe("noindex pages and crawler files", () => {
   });
   it("blocks private and transient pages in robots.txt and lists the featured page in the sitemap", () => {
     const txt = robotsTxt(origin);
-    for (const path of ["/search", "/s/", "/offline", "/sell/register"]) expect(txt).toContain(`Disallow: ${path}`);
+    for (const path of ["/search", "/s/", "/offline"]) expect(txt).toContain(`Disallow: ${path}`);
     expect(buildSitemap({ origin, businesses: [], items: [] })).toContain(`${origin}/featured`);
   });
 });

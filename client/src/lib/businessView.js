@@ -1,5 +1,6 @@
 import { faFacebook, faInstagram, faTiktok, faXTwitter } from "@fortawesome/free-brands-svg-icons";
-import { DAYS, formatInstant, getUserTimeZone, hoursRowsFor, nairobiNow, nextShopDateOf, safeShopZone, shopTimeNote, shopTimeText } from "@epicmkt/shared";
+import { DAYS, formatInstant, hoursRowsFor, nairobiNow, nextShopDateOf, safeShopZone, shopTimeNote, shopTimeText } from "@epicmkt/shared";
+import { shopperZone } from "./shopperZone.js";
 
 export const WEEK = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
@@ -21,9 +22,10 @@ export const formatTime = (time) => {
 
 /**
  * "Open now · Closes 6:00 PM EAT · 7:00 PM GST". The shop's own time always comes first with its zone name; the
- * viewer's reading follows when it is a different clock. business.timezone is the shop's IANA zone (default Nairobi).
+ * viewer's reading follows when it is a different clock. business.timezone is the shop's IANA zone (default Nairobi). A device that
+ * says UTC gets no second reading (shopperZone.js), so shoppers never see a "UTC" time.
  */
-export function statusText(business, viewerZone = getUserTimeZone()) {
+export function statusText(business, viewerZone = shopperZone()) {
   const shopZone = safeShopZone(business.timezone);
   const opts = { shopZone, viewerZone, now: new Date() };
   if (business.isOpen) {
@@ -43,10 +45,10 @@ export function statusText(business, viewerZone = getUserTimeZone()) {
 }
 
 /** Rows for the Opening hours table; exceptions replace the weekly hours for their date. Shop time, plus the viewer's. */
-export const hoursRows = (hours, exceptions, timeZone, viewerZone = getUserTimeZone()) => hoursRowsFor(hours, exceptions, new Date(), timeZone, viewerZone);
+export const hoursRows = (hours, exceptions, timeZone, viewerZone = shopperZone()) => hoursRowsFor(hours, exceptions, new Date(), timeZone, viewerZone);
 
 /** The line above the hours table that says which zone the hours are in. */
-export const hoursCaption = (timeZone, viewerZone = getUserTimeZone()) => shopTimeNote(new Date(), { shopZone: timeZone, viewerZone });
+export const hoursCaption = (timeZone, viewerZone = shopperZone()) => shopTimeNote(new Date(), { shopZone: timeZone, viewerZone });
 
 export const todayKey = (timeZone) => nairobiNow(new Date(), safeShopZone(timeZone)).day;
 

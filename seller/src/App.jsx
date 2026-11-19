@@ -51,6 +51,7 @@ export default function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="questions" element={<Questions />} />
           <Route path="exceptions" element={<Exceptions />} />
+          <Route path="closed-days" element={<Navigate to="/business/exceptions" replace />} />
           <Route path="account" element={<Account />} />
           <Route path="catalog" element={<Catalog />}>
             <Route path=":itemId" element={<ItemPanel />} />

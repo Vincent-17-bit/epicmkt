@@ -48,6 +48,7 @@ export default function Catalog() {
   const { itemId: openId } = useParams();
   const query = useMemo(() => parseCatalogQuery(params.toString()), [params]);
   const desktop = useMedia("(min-width: 1024px)");
+  const [extras, setExtras] = useState(false);
   const searchRef = useRef(null);
   const [qText, setQText] = useState(query.q);
   const [mode, setModeState] = useState(() => readDevicePref("seller.catalog.view", "comfortable", MODES.map((m) => m[0])));
@@ -361,7 +362,6 @@ export default function Catalog() {
         {summary.reasons.length > 0 && <span className={styles.summaryReasons}>{summary.reasons.map((r) => r.label).join(". ")}.</span>}
       </section>
 
-      {shop.live && <PerformancePanel title="How customers found you" />}
       {enriched.length > 0 && <Tracker stats={trackerStats} activeKey={activeTile} onPick={(key) => update({ ...trackerFilter(key), sort: query.sort })} />}
 
       {enriched.length === 0 ? (
@@ -401,18 +401,30 @@ export default function Catalog() {
                   {SORT_OPTIONS.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
                 </select>
               </label>
-              <div className={styles.modes} role="group" aria-label="View mode">
-                {MODES.map(([key, label]) => <button key={key} type="button" className={styles.modeBtn} aria-pressed={mode === key} onClick={() => setMode(key)}>{label}</button>)}
-              </div>
+              {(desktop || extras) && (
+                <div className={styles.modes} role="group" aria-label="View mode">
+                  {MODES.map(([key, label]) => <button key={key} type="button" className={styles.modeBtn} aria-pressed={mode === key} onClick={() => setMode(key)}>{label}</button>)}
+                </div>
+              )}
               {!desktop && <button type="button" className={styles.ghost} onClick={openSheet}>Filters{filterCount(query) ? ` (${filterCount(query)})` : ""}</button>}
+              {/* Phones: the layout buttons and saved views are one tap away, so search, sort and the items come first. */}
+              {!desktop && (
+                <button type="button" className={styles.ghost} aria-expanded={extras} aria-controls="catalog-more-options" onClick={() => setExtras((v) => !v)}>
+                  {extras ? "Fewer options" : "More options"}
+                </button>
+              )}
             </div>
 
-            <SavedViews
-              views={views.data ?? EMPTY}
-              currentQuery={buildCatalogQuery(query)}
-              onApply={(q) => setParams(new URLSearchParams(q))}
-              onSave={async (next) => { await api.saveSavedViews(next); await qc.invalidateQueries({ queryKey: ["catalog", "views"] }); }}
-            />
+            {(desktop || extras) && (
+              <div id="catalog-more-options">
+                <SavedViews
+                  views={views.data ?? EMPTY}
+                  currentQuery={buildCatalogQuery(query)}
+                  onApply={(q) => setParams(new URLSearchParams(q))}
+                  onSave={async (next) => { await api.saveSavedViews(next); await qc.invalidateQueries({ queryKey: ["catalog", "views"] }); }}
+                />
+              </div>
+            )}
 
             <div className={styles.resultBar}>
               <span data-testid="result-count" aria-live="polite">{filtered.length} of {enriched.length} {enriched.length === 1 ? "item" : "items"}</span>
@@ -506,6 +518,9 @@ export default function Catalog() {
           </div>
         </div>
       )}
+
+      {/* The numbers come after the items: the items are what a seller opens this page for. */}
+      {shop.live && <PerformancePanel title="How customers found you" />}
 
       <Modal
         open={sheet && !desktop}

@@ -8,7 +8,6 @@ export default {
   "breadcrumb.home": "Home",
   "breadcrumb.search": "Search",
   "breadcrumb.sell": "Become a seller",
-  "breadcrumb.register": "Register",
   "breadcrumb.pricing": "Pricing",
   "breadcrumb.sellerGuide": "Seller guide",
   "breadcrumb.about": "About",

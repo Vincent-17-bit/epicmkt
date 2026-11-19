@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.status-verify-otp]
 verify_jwt = false
 
+[functions.status-find-reference]
+verify_jwt = false
+
 [functions.status-get]
 verify_jwt = false
 
