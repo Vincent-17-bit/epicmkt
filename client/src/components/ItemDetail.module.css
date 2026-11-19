@@ -17,6 +17,9 @@
   position: relative;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
+  /* One column no wider than the sheet: an auto column grew to the widest row inside (the section links), so on a phone the pop-up's
+     content ran 30px past the screen's right edge. */
+  grid-template-columns: minmax(0, 1fr);
   width: 100%;
   max-width: 36rem;
   max-height: 92dvh;
@@ -193,9 +196,6 @@
   line-height: 1.2;
 }
 
-.title:focus {
-  outline: none;
-}
 
 .description {
   color: var(--text-muted);
@@ -508,20 +508,8 @@
   background: transparent;
 }
 
-@media (min-width: 48rem) {
-  .root[data-variant="page"] .header,
-  .root[data-variant="page"] .body {
-    padding-inline: var(--space-5);
-  }
-}
-
-@media (min-width: 80rem) {
-  .root[data-variant="page"] .header,
-  .root[data-variant="page"] .body {
-    padding-inline: var(--space-6);
-  }
-}
-
+/* One side margin for the trail and the page under it, at every size, so they line up (the wider ones never reached the body: a later
+   rule always reset it to this). */
 .root[data-variant="page"] .body {
   overflow: visible;
   padding-inline: var(--space-4);
@@ -592,8 +580,17 @@
   }
 }
 
-/* The item's own sections under them (What's included, Images, Videos, Product information, From the brand, Compare) line up with those
-   cards: centred 48rem columns on smaller screens, the page's full width from 64rem. */
+/* The item's own sections under them (What's included, Images, Videos, Product information, From the brand, Compare) are the same
+   white panels and line up with those cards: centred 48rem columns on smaller screens, the page's full width from 64rem. The panel
+   clips what runs to its edges on phones (pictures, the player, the table) to its round corners. */
+.root[data-variant="page"] .body > section[id^="item-"]:not(.similar) {
+  margin-block: var(--space-3) var(--space-4);
+  overflow: clip;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
 @media (min-width: 64rem) {
   .root[data-variant="page"] .body > section[id^="item-"] {
     max-width: none;
