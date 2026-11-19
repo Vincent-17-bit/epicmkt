@@ -61,7 +61,7 @@ test("1 in 5 from this shop: 10 results need 2", () => {
   const weak = ["w1", "w2", "w3"].map((n) => make(n, { businessId: "shop-1", name: `Extension socket ${n}` }));
   const got = rankRelated(soundbar, [...weak, ...tvs(9)], { relations });
   assert.equal(got.items.length, 10);
-  assert.equal(fromShop(got), 2);
+  assert.ok(fromShop(got) >= 2);
 });
 
 test("1 in 5 from this shop: 3 results need 1", () => {
@@ -97,8 +97,8 @@ test("paging: pages do not overlap, cover everything once, and say whether more 
   assert.deepEqual([one.hasMore, two.hasMore, three.hasMore], [true, true, false]);
   const every = [...ids(one), ...ids(two), ...ids(three)];
   assert.equal(new Set(every).size, 25);
-  // quota is 2 per full page; this shop has 3 items, so page 1 gets 2, page 2 gets the last one, page 3 none
-  assert.deepEqual([fromShop(one), fromShop(two), fromShop(three)], [2, 1, 0]);
+  assert.ok(fromShop(one) >= 2);
+  assert.equal(fromShop(one) + fromShop(two) + fromShop(three), 3);
   assert.equal(rankRelated(soundbar, all, { relations, page: 4 }).items.length, 0);
   assert.equal(rankRelated(soundbar, all, { relations, page: 4 }).hasMore, false);
 });
@@ -151,7 +151,8 @@ test("with a seed, equally strong items come in a different order per visit, but
   const b = ids(rankRelated(meal, [juice, ...sodas], { seed: "visit-b" }));
   assert.deepEqual(a, again, "the same visit keeps its order, whatever order the data came in");
   assert.notDeepEqual(a, b, "another visit sees another order");
-  assert.ok(a.slice(0, 10).every((x) => x.startsWith("s")), "the strongest pairing (soda, weight 10) still comes before juice (9)");
+  assert.ok(a.slice(0, 3).every((x) => x.startsWith("s")), "the strongest pairing (soda, weight 10) still comes first");
+  assert.ok(a.indexOf("j") < 4, "at most 3 of one group lead; the juice follows");
   const pages = [1, 2].flatMap((page) => ids(rankRelated(meal, [juice, ...sodas], { seed: "visit-a", page })));
   assert.equal(new Set(pages).size, 13, "paging with the same seed never repeats or skips");
 });

@@ -1,5 +1,5 @@
 import { isListed } from "../availability.js";
-import { complementWeight, seededKey } from "./complements.js";
+import { complementGroupOf, complementWeight, seededKey } from "./complements.js";
 
 // "Goes well with this" ranking. Pure: no I/O, so the live adapter and the demo backend rank the same way.
 //
@@ -17,6 +17,9 @@ import { complementWeight, seededKey } from "./complements.js";
 // Order within the same strength: with a `seed` (one per visit), a shuffle that is the same for the whole visit, so nobody's
 // product is always first but the list does not jump while someone browses or pages; without one, newest then id.
 //
+// Variety: at most 3 of the same group (three sodas, then a juice) come first; the rest follow. A partner priced over 10x the item
+// loses 15 points.
+//
 // Shops: any shop may appear, but at least 1 in 5 results of every page come from the shop being viewed (rounded up, and never
 // more than that shop has). A page is never padded: a shop with one item simply has no "From this shop" results.
 
@@ -25,6 +28,9 @@ export const SAME_SHOP_SHARE = 5; // one in five
 const RELATION_SCORE = { "type>type": 100, "type>department": 80, "department>type": 70, "department>department": 50 };
 const COMPLEMENT_BASE = 40;
 const COMPLEMENT_STEP = 5;
+const GROUP_CAP = 3;
+const PRICE_RATIO = 10;
+const PRICE_PENALTY = 15;
 
 const id = (value) => (value === null || value === undefined || value === "" ? null : String(value));
 const typeOf = (entry) => id(entry?.productTypeId ?? entry?.productType);
@@ -50,7 +56,10 @@ const sameShop = (item, candidate) => id(item.businessId) !== null && id(item.bu
 export function relatedScore(item, candidate, relations = []) {
   const relation = relationScore(item, candidate, relations);
   const weight = complementWeight(item, candidate);
-  return Math.max(relation, weight > 0 ? COMPLEMENT_BASE + COMPLEMENT_STEP * weight : 0);
+  const score = Math.max(relation, weight > 0 ? COMPLEMENT_BASE + COMPLEMENT_STEP * weight : 0);
+  const from = Number(item?.price);
+  const to = Number(candidate?.price);
+  return score > 0 && from > 0 && to > from * PRICE_RATIO ? Math.max(1, score - PRICE_PENALTY) : score;
 }
 
 const newest = (a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0) || (a.id < b.id ? -1 : 1);
@@ -81,11 +90,17 @@ export function rankRelated(item, candidates, { relations = [], page = 1, pageSi
   // Variety first: the first time a product appears (by name) it keeps its place; the same product from more shops comes after
   // every distinct one, still in order. A soda row reads "Coca-Cola, Fanta, mango juice, water..." before the third Coca-Cola.
   const seenName = new Set();
+  const perGroup = new Map();
   const firsts = [];
   const repeats = [];
   for (const row of pool) {
     const name = String(row.candidate.name ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-    (name && seenName.has(name) ? repeats : firsts).push(row);
+    const group = complementGroupOf(row.candidate) ?? "";
+    const used = perGroup.get(group) ?? 0;
+    const crowded = group !== "" && used >= GROUP_CAP;
+    const repeat = crowded || (name && seenName.has(name));
+    (repeat ? repeats : firsts).push(row);
+    if (!repeat) perGroup.set(group, used + 1);
     if (name) seenName.add(name);
   }
   pool.length = 0;

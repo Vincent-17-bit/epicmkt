@@ -10,7 +10,8 @@ import {
   NOUNS,
   COMPOUNDS,
   IRREGULAR_PLURALS,
-  INVARIANT_WORDS
+  INVARIANT_WORDS,
+  FILLING_WORDS
 } from "./similarVocab.js";
 
 // Ranking for "Similar items" on a product page. Pure: no I/O, so the demo backend and the live adapter rank the same way.
@@ -56,6 +57,7 @@ const UNITS = new Set(UNIT_WORDS);
 const NO_HEAD = new Set(NEVER_HEAD);
 const SHORT = new Set(SHORT_NOUNS);
 const INVARIANT = new Set(INVARIANT_WORDS);
+const FILLINGS = new Set(FILLING_WORDS);
 const COMPOUND_LIST = Object.entries(COMPOUNDS);
 // A joined name -> how it is said to a visitor ("phonecase" -> "phone case", "tshirt" -> "t-shirt": the first name that joins
 // into it) and the last word of every name that joins into it ("phonecase" -> case, cover), which is what the database can search
@@ -146,7 +148,11 @@ export function analyseName(name, brand = "") {
     all.push(...found);
     if (!chosen && found.length) chosen = found;
   }
-  const pick = chosen ? ([...chosen].reverse().find((token) => !token.floating) ?? chosen[chosen.length - 1]) : null;
+  let pick = chosen ? ([...chosen].reverse().find((token) => !token.floating) ?? chosen[chosen.length - 1]) : null;
+  if (pick && chosen && FILLINGS.has(pick.canon)) {
+    const earlier = chosen.slice(0, chosen.indexOf(pick)).reverse().find((token) => !token.floating && KNOWN.has(token.canon) && !FILLINGS.has(token.canon));
+    if (earlier) pick = earlier;
+  }
   const tokens = new Set(all.map((token) => token.canon));
   const mods = new Set(tokens);
   if (pick) mods.delete(pick.canon);
@@ -204,9 +210,10 @@ const judge = (a, b, inSection) => {
     state = inSection ? "unknown" : "differs";
   }
   if (state === "differs") return { state, score: 0, qualifies: false, inSection };
-  const shared = state === "same" || state === "related" ? Math.min(MOD_CAP, overlap(a.mods, b.mods)) : 0;
+  const shared = Math.min(MOD_CAP, overlap(a.mods, b.mods));
   const score = HEAD_SCORE[state] + (inSection ? SECTION_SCORE : 0) + shared * MOD_SCORE;
-  return { state, score, qualifies: score >= MIN_RELEVANCE, inSection };
+  const unsure = state === "opaque";
+  return { state, score, qualifies: score >= MIN_RELEVANCE && (!unsure || shared > 0), inSection };
 };
 
 /**
