@@ -71,3 +71,10 @@ test("words that look like food in other things: chocolate is not milk, a coffee
   assert.equal(complementWeight({ name: "White bread 400g" }, { name: "Toblerone milk chocolate 100g" }), 0);
   assert.equal(complementWeight({ name: "White bread 400g" }, { name: "Glass coffee table" }), 0);
 });
+
+test("a water jug is for the table, not the stove: never offered with a gas cylinder, still not drinking water", () => {
+  assert.equal(complementGroupOf({ name: "Water jug 2L" }), "utensils");
+  assert.equal(complementWeight({ name: "6kg gas cylinder with gas" }, { name: "Water jug 2L" }), 0);
+  assert.ok(complementWeight({ name: "6kg gas cylinder with gas" }, { name: "Aluminium sufuria set 3 pcs" }) > 0);
+  assert.ok(complementWeight({ name: "Milk pan" }, { name: "Gas regulator" }) > 0);
+});

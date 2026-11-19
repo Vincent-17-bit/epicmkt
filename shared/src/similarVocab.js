@@ -62,13 +62,24 @@ export const NOUNS = [
   "apple", "mango", "avocado", "honey", "jam", "cereal", "noodle", "pasta", "icecream",
   "table", "chair", "bed", "mattress", "shelf", "desk", "lamp", "curtain", "carpet", "pillow", "blanket", "sheet", "towel", "mirror", "cabinet", "door",
   "laptop", "tablet", "radio", "speaker", "headphone", "charger", "cable", "microwave", "kettle", "blender", "iron", "fan", "heater", "printer", "router", "camera", "battery",
+  "phonecase", "screenprotector", "powerbank", "memorycard", "flashdrive",
   "shirt", "tshirt", "jean", "trouser", "dress", "skirt", "jacket", "coat", "shoe", "sandal", "boot", "sock", "hat", "cap", "belt", "bag", "handbag", "backpack", "watch", "wallet", "suit", "scarf",
   "shampoo", "soap", "lotion", "cream", "perfume", "lipstick", "deodorant",
   "knife", "spoon", "fork", "plate", "cup", "bottle", "pot", "pan", "bucket", "broom", "hammer", "drill"
 ];
 
-// Two-word names that are one thing, joined before splitting: "T-Shirt" -> "tshirt".
-export const COMPOUNDS = { "t shirt": "tshirt", "ice cream": "icecream", "hand bag": "handbag", "cell phone": "cellphone" };
+// Two-word names that are one thing, joined before splitting: "T-Shirt" -> "tshirt". Several names can join into the same thing
+// ("phone cover" and "back cover" are a phone case). Phone accessories are here because their last word alone says too little:
+// "case" is also a pencil case and "protector" a surge protector, so the plain words stay unknown while the full names are known
+// and told apart (a screen protector is never "similar" to a phone case, even in a shared "Cases and protectors" section).
+export const COMPOUNDS = {
+  "t shirt": "tshirt", "ice cream": "icecream", "hand bag": "handbag", "cell phone": "cellphone",
+  "phone case": "phonecase", "phone cover": "phonecase", "back cover": "phonecase", "flip cover": "phonecase",
+  "screen protector": "screenprotector", "screen guard": "screenprotector", "tempered glass": "screenprotector",
+  "power bank": "powerbank",
+  "memory card": "memorycard", "sd card": "memorycard", "micro sd": "memorycard",
+  "flash disk": "flashdrive", "flash drive": "flashdrive", "usb drive": "flashdrive"
+};
 
 // Plurals the simple rules get wrong. Maps the plural to its singular.
 export const IRREGULAR_PLURALS = {
