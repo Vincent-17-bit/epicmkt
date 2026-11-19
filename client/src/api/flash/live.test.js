@@ -490,9 +490,9 @@ describe("live item and business pages", () => {
       expect(page.items.find((r) => r.name === "Fanta Orange 500ml").fromThisShop).toBe(true);
     });
 
-    it("a haircut asks for nothing and has nothing", async () => {
+    it("a medicine asks for nothing and has nothing", async () => {
       setup();
-      db().items = [itemRow({ name: "Haircut" }), at(1, B, { name: "Coca-Cola 500ml" })];
+      db().items = [itemRow({ name: "Paracetamol 500mg" }), at(1, B, { name: "Coca-Cola 500ml" })];
       db().rpc.related_item_candidates = () => null;
       db().rpc.similar_item_candidates = vi.fn(() => []);
       expect(await live.getRelatedPage(SEED)).toMatchObject({ items: [], total: 0 });

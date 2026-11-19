@@ -30,8 +30,8 @@ test("names decide the group, the most specific phrase first", () => {
   for (const [name, want] of Object.entries(cases)) assert.equal(group(name), want, name);
 });
 
-test("services, medicine, liquor, staples and household things have groups but nothing goes with them", () => {
-  for (const name of ["Haircut", "Fade and beard", "Phone repair", "Sugar test", "Paracetamol 500mg", "Tusker 500ml", "Maize flour 2kg", "Toilet rolls 10 pack"]) {
+test("medicine, liquor, tests and printing things have groups but nothing goes with them", () => {
+  for (const name of ["Sugar test", "Paracetamol 500mg", "Tusker 500ml", "Lamination"]) {
     assert.ok(group(name), name);
     assert.equal(hasComplements({ name }), false, name);
   }
@@ -39,7 +39,7 @@ test("services, medicine, liquor, staples and household things have groups but n
 
 test("the product type is the fallback when the name says nothing", () => {
   assert.equal(group("Special of the day", { productTypeId: "restaurant-meal" }), "restaurant-meal");
-  assert.equal(group("Style 2", { productTypeId: "barbershop-service" }), "services");
+  assert.equal(group("Style 2", { productTypeId: "barbershop-service" }), "barber-service");
   assert.equal(group("Item"), null);
 });
 

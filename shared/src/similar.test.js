@@ -91,11 +91,14 @@ test("related heads need the section too, and opaque heads (names the vocabulary
   assert.equal(relevance(sofa, make("a", { name: "Velvet armchair", section: "Seating" })).state, "related");
   assert.equal(relevance(sofa, make("b", { name: "Velvet armchair", section: "Other" })).qualifies, false);
   const galaxy = { id: "cur", businessId: "b0", name: "Samsung Galaxy A15 128GB", section: "Phones" };
-  const spark = relevance(galaxy, make("c", { name: "Tecno Spark 10", section: "Phones" }));
-  assert.equal(spark.state, "opaque");
+  const spark = relevance(galaxy, make("c", { name: "Tecno Spark 10", section: "Other" }));
+  assert.equal(spark.state, "same");
   assert.equal(spark.qualifies, true);
-  assert.equal(relevance(galaxy, make("d", { name: "Tecno Spark 10", section: "Other" })).qualifies, false);
   assert.equal(relevance(galaxy, make("e", { name: "Brown bread", section: "Phones" })).qualifies, false);
+  const zork = { id: "cur", businessId: "b0", name: "Zork 5", section: "Odds" };
+  assert.equal(relevance(zork, make("f", { name: "Blip 9", section: "Odds" })).state, "opaque");
+  assert.equal(relevance(zork, make("f", { name: "Blip 9", section: "Odds" })).qualifies, false);
+  assert.equal(relevance(zork, make("g", { name: "Zork 9 Pro", section: "Odds" })).qualifies, true);
   assert.ok(MIN_RELEVANCE > 0);
 });
 
@@ -152,7 +155,8 @@ test("units, pack sizes, models and brands are ignored when working out what an 
   assert.equal(analyseName("Brown Breads").headWord, "breads");
   assert.deepEqual([...analyseName("Brown Bread 400g").mods], ["brown"]);
   assert.equal(analyseName("Brown Bread 400g").known, true);
-  assert.equal(analyseName("Samsung Galaxy A15").known, false);
+  assert.equal(analyseName("Samsung Galaxy A15").known, true);
+  assert.equal(analyseName("Zork Blip 5").known, false);
   assert.equal(analyseName("Item").known, false);
 });
 
