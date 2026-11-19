@@ -52,6 +52,8 @@ import {
 // different featured stores that really have this kind of item, then the rest (see `compose`). A short row is better
 // than a wrong one, so nothing is ever added to reach `limit`.
 
+// Names are at most 120 characters in the database; anything longer is not a name, and is not worth scanning.
+const MAX_NAME = 200;
 export const MIN_RELEVANCE = 20;
 const HEAD_SCORE = { same: 60, related: 30, opaque: 0, unknown: 0 };
 const SECTION_SCORE = 20;
@@ -116,7 +118,7 @@ const fold = (value) =>
 
 /** Folds a plural to its singular: "shoes" -> "shoe", "boxes" -> "box", "berries" -> "berry", "loaves" -> "loaf". */
 export const singular = (word) => {
-  if (IRREGULAR_PLURALS[word]) return IRREGULAR_PLURALS[word];
+  if (Object.hasOwn(IRREGULAR_PLURALS, word)) return IRREGULAR_PLURALS[word];
   if (INVARIANT.has(word)) return word;
   if (word.length > 4 && word.endsWith("ies")) return `${word.slice(0, -3)}y`;
   if (word.length > 4 && word.endsWith("ie")) return `${word.slice(0, -2)}y`;
@@ -165,7 +167,7 @@ export function analyseName(name, brand = "") {
   for (const word of fold(brand).split(" ")) if (word) own.add(word).add(singular(word));
   const all = [];
   let chosen = null;
-  for (const segment of String(name ?? "").toLowerCase().split(SEGMENTS)) {
+  for (const segment of String(name ?? "").slice(0, MAX_NAME).toLowerCase().split(SEGMENTS)) {
     const found = tokensOf(segment, own);
     all.push(...found);
     if (!chosen && found.length) chosen = found;
@@ -175,8 +177,9 @@ export function analyseName(name, brand = "") {
   const lastReal = [...candidates].reverse().find((token) => !isBrand(token.word));
   let pick = chosen ? (lastReal ?? candidates[candidates.length - 1] ?? chosen[chosen.length - 1]) : null;
   // "Samsung A15 case" / "Tecno cover": a bare case, cover or protector next to a phone brand is a phone accessory.
-  if (pick && DEVICE_ACCESSORY_HEADS[singular(pick.word)] && (chosen ?? []).some((token) => isBrand(token.word))) {
-    const joined = DEVICE_ACCESSORY_HEADS[singular(pick.word)];
+  const accessory = pick && Object.hasOwn(DEVICE_ACCESSORY_HEADS, singular(pick.word)) ? DEVICE_ACCESSORY_HEADS[singular(pick.word)] : null;
+  if (accessory && (chosen ?? []).some((token) => isBrand(token.word))) {
+    const joined = accessory;
     pick = { ...pick, word: joined, canon: canonOf(joined) };
   }
   const tokens = new Set(all.map((token) => token.canon));

@@ -140,6 +140,17 @@ test("accessories are never similar to each other or to the device, even in a sh
   assert.equal(relevance({ id: "c", businessId: "b0", name: "Tote bag", section: "Bags" }, make("o", { name: "Tea bags 100", section: "Bags" })).qualifies, false);
 });
 
+test("words that are also Object.prototype keys are just words", () => {
+  for (const word of ["constructor", "toString", "hasOwnProperty", "__proto__", "valueOf"]) {
+    const a = analyseName(`Wooden ${word}`);
+    assert.equal(a.head, word.toLowerCase() === "__proto__" ? "proto" : word.toLowerCase().replace(/s$/, ""), word);
+    assert.equal(typeof a.head, "string", word);
+    assert.equal(relevance({ id: "c", name: word, section: "A" }, make("o", { name: word, section: "A" })).state, "same", word);
+  }
+  assert.equal(singular("constructor"), "constructor");
+  assert.equal(singular("hasOwnProperty"), "hasOwnProperty");
+});
+
 test("the heading names the kind, never a model or a phrase that stands for it", () => {
   const said = (name) => analyseName(name).headWord;
   assert.equal(said("Mobile phone"), "phone");

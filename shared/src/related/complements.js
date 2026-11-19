@@ -20,8 +20,12 @@ const PATTERNS = PHRASES.map(([group, phrases]) => [group, phrases.map(phraseRe)
 const DEVICES = DEVICE_WORDS.map(phraseRe);
 const ACCESSORIES = DEVICE_ACCESSORIES.map(([group, words]) => [group, words.map(phraseRe)]);
 
+// A key such as "constructor" or "toString" (a product type id, or a word in a name) must never find Object.prototype.
+const ownValue = (table, key) => (typeof key === "string" && Object.hasOwn(table, key) ? table[key] : undefined);
+
 const norm = (text) =>
   String(text ?? "")
+    .slice(0, 200) // names are at most 120 characters in the database
     .toLowerCase()
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -37,7 +41,7 @@ const norm = (text) =>
  */
 export function complementGroupOf(item) {
   const type = item?.productTypeId ?? item?.productType ?? null;
-  const typeGroup = type ? TYPE_GROUPS[type] ?? String(type) : null;
+  const typeGroup = type ? ownValue(TYPE_GROUPS, type) ?? String(type) : null;
   if (typeGroup && LOCKED_GROUPS.has(typeGroup)) return typeGroup;
   const name = norm(item?.name);
   let group = null;
@@ -52,7 +56,7 @@ export function complementGroupOf(item) {
 
 /** The groups that go with `group`, strongest first: [{ group, weight }]. [] when nothing does. */
 export function complementsOf(group) {
-  return (COMPLEMENTS[group] ?? []).map(([g, weight]) => ({ group: g, weight })).sort((a, b) => b.weight - a.weight);
+  return (ownValue(COMPLEMENTS, group) ?? []).map(([g, weight]) => ({ group: g, weight })).sort((a, b) => b.weight - a.weight);
 }
 
 /** Whether anything at all goes with this item: decides if the section is worth asking for. */
@@ -63,7 +67,7 @@ export function complementWeight(item, candidate) {
   const from = complementGroupOf(item);
   const to = complementGroupOf(candidate);
   if (!from || !to || from === to) return 0;
-  return (COMPLEMENTS[from] ?? []).find(([g]) => g === to)?.[1] ?? 0;
+  return (ownValue(COMPLEMENTS, from) ?? []).find(([g]) => g === to)?.[1] ?? 0;
 }
 
 /**

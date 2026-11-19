@@ -7,7 +7,7 @@ import { ALL_TYPES } from "./seeds/index.mjs";
 import { COMPLEMENTS, NO_PARTNERS, complementGroupOf, complementWeight, complementsOf, hasComplements } from "../shared/src/related/complements.js";
 import { LOCKED_GROUPS, PHRASES, TYPE_GROUPS } from "../shared/src/related/data/complementMap.js";
 
-const groupOfType = (id) => TYPE_GROUPS[id] ?? id;
+const groupOfType = (id) => (Object.hasOwn(TYPE_GROUPS, id) ? TYPE_GROUPS[id] : id);
 const decided = (group) => group in COMPLEMENTS || group in NO_PARTNERS;
 const NEVER_SUGGESTED = ["services", "accommodation", "property", "medicine", "vitamins-supplements", "skin-hair-medical", "first-aid-devices", "liquor"];
 
@@ -129,4 +129,20 @@ test("the section hides itself where the owner said nothing goes with the produc
   for (const name of ["Haircut", "Phone repair", "Paracetamol tablets", "Tusker 500ml", "Maize flour 2kg", "Toilet rolls 10 pack", "Hostel bed per night", "Wedding photography package"]) {
     assert.equal(hasComplements({ name }), false, name);
   }
+});
+
+test("a word or product type id that is also an Object.prototype key is just a word", () => {
+  for (const key of ["constructor", "__proto__", "toString", "hasOwnProperty", "valueOf"]) {
+    assert.equal(complementGroupOf({ name: "x", productTypeId: key }), key, `type ${key}`);
+    assert.deepEqual(complementsOf(key), [], `partners ${key}`);
+    assert.equal(complementWeight({ name: "x", productTypeId: key }, { name: "x", productTypeId: "phone" }), 0, `weight ${key}`);
+    assert.equal(typeof complementGroupOf({ name: key }) === "function", false, `name ${key}`);
+  }
+});
+
+test("a name far longer than the database allows is still classified, quickly", () => {
+  const long = `${"x".repeat(150)} phone case ${"y".repeat(20000)}`;
+  const start = performance.now();
+  complementGroupOf({ name: long });
+  assert.ok(performance.now() - start < 100);
 });
