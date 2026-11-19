@@ -5,6 +5,7 @@ export const getLegalDocs = async (...args) => (await adapter()).getLegalDocs(..
 export const submitApplication = async (...args) => (await adapter()).submitApplication(...args);
 
 export const requestStatusOtp = async (...args) => (await adapter()).requestStatusOtp(...args);
+export const findReference = async (...args) => (await adapter()).findReference(...args);
 export const verifyStatusOtp = async (...args) => (await adapter()).verifyStatusOtp(...args);
 export const endStatusSession = async (...args) => (await adapter()).endStatusSession(...args);
 export const getApplication = async (...args) => (await adapter()).getApplication(...args);

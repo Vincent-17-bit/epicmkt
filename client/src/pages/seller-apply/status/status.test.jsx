@@ -57,6 +57,19 @@ describe("check my application", () => {
     expect(localStorage.getItem("epicmkt.status.session")).toBeNull();
   }, 20000);
 
+  it("texts a lost reference to the phone number, with the same reply for every number", async () => {
+    const user = userEvent.setup();
+    mount();
+    await user.click(await screen.findByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText(/Enter the phone number you applied with/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Phone number"), "0700000001");
+    await user.click(screen.getByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText(/If an application was made with this number, we have sent its reference number/)).toBeInTheDocument();
+    // Asking again straight away is refused politely.
+    await user.click(screen.getByRole("button", { name: "text me my reference" }));
+    expect(await screen.findByText("Please wait a minute before asking again.")).toBeInTheDocument();
+  }, 20000);
+
   it("validates the form and gives the same reply for wrong details", async () => {
     const user = userEvent.setup();
     mount();

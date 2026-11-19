@@ -166,9 +166,17 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     if (!isPage && bodyRef.current) bodyRef.current.scrollTop = 0;
   }, [itemId]);
 
+  // Focus moves to the title so a screen reader reads the item that opened. The pop-up always does it. The full page does it after
+  // moving from one page to another inside the app, but not on the page's very first load, where the browser already starts at the
+  // top (history index 0): there it only took the focus away from the page itself.
+  const titled = useRef(false);
   useEffect(() => {
     if (preview) return;   // the seller is typing in the editor: the preview must not take the focus (or draw its ring)
-    if (current || gone) titleRef.current?.focus({ preventScroll: true });
+    if (!current && !gone) return;
+    const first = !titled.current;
+    titled.current = true;
+    if (isPage && first && (window.history.state?.idx ?? 0) === 0) return;
+    titleRef.current?.focus({ preventScroll: true });
   }, [current?.id, gone, itemId]);
 
   useEffect(() => {

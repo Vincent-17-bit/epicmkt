@@ -46,7 +46,8 @@ export const BADGE_OPTIONS = [
 ];
 
 export const SORT_OPTIONS = [
-  { key: "manual", label: "Manual order" },
+  // The order customers see on the shop page, which the seller can rearrange (only in this order can items be moved).
+  { key: "manual", label: "Shop order" },
   { key: "name_asc", label: "Name A to Z" },
   { key: "name_desc", label: "Name Z to A" },
   { key: "price_asc", label: "Price low to high" },

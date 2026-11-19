@@ -309,10 +309,15 @@
   color: var(--text-muted);
 }
 
+/* Visit store, Chat and Call: side by side when they fit, else two on a row and the third the full width under them. */
 .actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
+}
+
+.actions > * {
+  flex: 1 1 8.5rem;
 }
 
 .outline,

@@ -117,6 +117,9 @@ describe("adding", () => {
     window.matchMedia = (q) => ({ matches: q.includes("pointer: coarse"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false });
     const user = userEvent.setup();
     render(<Host />);
+    // A phone cannot drag or paste: the line above the button says what to tap instead.
+    expect(screen.getByText("Tap Add photos or videos to choose them or take a photo.")).toBeInTheDocument();
+    expect(screen.queryByText(/Drag photos and videos here/)).toBeNull();
     await user.click(screen.getByRole("button", { name: "Add photos or videos" }));
     const sheet = await screen.findByRole("dialog", { name: "Add photos or videos" });
     expect(within(sheet).getByRole("button", { name: "Take photo" })).toBeEnabled();

@@ -98,4 +98,4 @@ export async function submitApplication({ payload, files, startedAt, hp }, onFil
   return { referenceNo: ref, session: startSession(ref, true) };
 }
 
-export { requestStatusOtp, verifyStatusOtp, endStatusSession, getApplication, saveCorrections, resubmitApplication, startStkPayment, getStkPayment } from './mockStatus';
+export { findReference, requestStatusOtp, verifyStatusOtp, endStatusSession, getApplication, saveCorrections, resubmitApplication, startStkPayment, getStkPayment } from './mockStatus';

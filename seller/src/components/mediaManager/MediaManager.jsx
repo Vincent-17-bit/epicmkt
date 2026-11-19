@@ -161,7 +161,10 @@ export default function MediaManager({ manager, hasItem, disabled = false }) {
       )}
       <div className={styles.zone}>
         <p className={styles.zoneText}>
-          {tiles.length === 0 ? "Drag photos and videos here, paste an image, or add them below." : "Drop more files here, or paste an image."}
+          {/* Dragging and pasting need a mouse and a keyboard: on a phone or tablet only the button below is said. */}
+          {camera
+            ? tiles.length === 0 ? "Tap Add photos or videos to choose them or take a photo." : "Tap Add photos or videos to add more."
+            : tiles.length === 0 ? "Drag photos and videos here, paste an image, or add them below." : "Drop more files here, or paste an image."}
         </p>
         <button type="button" ref={addRef} data-focus="media-add" className={styles.add} onClick={openAdd} disabled={addDisabled} aria-describedby={noteIds.length ? "media-limit-note" : undefined}>
           <FontAwesomeIcon icon={faPlus} aria-hidden="true" />

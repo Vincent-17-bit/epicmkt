@@ -1,4 +1,5 @@
-import { getUserTimeZone, parseInstant, zoneLabel } from "@epicmkt/shared";
+import { BUSINESS_TIME_ZONE, parseInstant, zoneLabel } from "@epicmkt/shared";
+import { shopperZone } from "./shopperZone.js";
 import { t } from "../i18n/index.js";
 
 const SECOND = 1000;
@@ -78,12 +79,14 @@ export function fuseShare(startsAt, endsAt, now) {
   return Math.min(1, Math.max(0, (end - now) / span));
 }
 
-/** "Sun 8 Nov, 6:00 PM EAT": when a sale ends, in the VIEWER's time zone, with the zone named (GMT-5 for New York). */
+/** "Sun 8 Nov, 6:00 PM EAT": when a sale ends, in the VIEWER's time zone, with the zone named (GMT-5 for New York). A device that only
+ *  says UTC gets Kenya time, the marketplace's own clock, rather than a "UTC" label. */
 export function formatEndsAt(endsAt) {
   const date = parseInstant(endsAt);
   if (!date) return "";
+  const zone = shopperZone() ?? BUSINESS_TIME_ZONE;
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: getUserTimeZone(),
+    timeZone: zone,
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -92,5 +95,5 @@ export function formatEndsAt(endsAt) {
     hour12: true
   }).formatToParts(date);
   const get = (type) => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} ${zoneLabel(date)}`;
+  return `${get("weekday")} ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")} ${get("dayPeriod").toUpperCase()} ${zoneLabel(date, zone)}`;
 }

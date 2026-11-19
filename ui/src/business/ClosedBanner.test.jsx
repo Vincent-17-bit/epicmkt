@@ -9,9 +9,9 @@ describe("ClosedBanner", () => {
     expect(screen.getByText("Reopens tomorrow at 8:00 AM")).toBeInTheDocument();
   });
 
-  it("falls back to a plain closed message outside normal hours", () => {
-    render(<ClosedBanner status={{ isOpen: false, reasonText: null, reopens: "Reopens today at 8:00 AM" }} />);
-    expect(screen.getByText("Closed right now")).toBeInTheDocument();
+  it("shows nothing when the shop is simply outside its hours: the status chip already says closed and when it opens", () => {
+    const { container } = render(<ClosedBanner status={{ isOpen: false, reasonText: null, reopens: "Reopens today at 8:00 AM" }} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("shows nothing for a normally open shop", () => {

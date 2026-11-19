@@ -197,6 +197,19 @@ describe("page", () => {
     expect(document.documentElement.dataset.theme).toBe("light");
   });
 
+  it("Continue on an empty first step shows the business type problem above the list and moves focus into it", async () => {
+    mountPage();
+    const group = await screen.findByRole("radiogroup", { name: "Business type" });
+    fireEvent.click(screen.getByRole("button", { name: /continue/i }));
+    // After the render that draws the errors (not before it): the list is marked, its message sits above it, focus is in it.
+    await waitFor(() => expect(group).toHaveAttribute("aria-invalid", "true"));
+    const message = document.getElementById("category-err");
+    expect(message.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(group).toHaveAttribute("aria-describedby", "category-err");
+    await waitFor(() => expect(within(group).getAllByRole("radio")[0]).toHaveFocus());
+    expect(screen.getByRole("alert")).toHaveTextContent(/need[s]? your attention/);
+  });
+
   it("lists all categories, folds the grid once one is chosen and shows the documents needed", async () => {
     const user = userEvent.setup();
     mountPage();

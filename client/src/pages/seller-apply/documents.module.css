@@ -151,13 +151,22 @@
   padding: 0 var(--space-5);
 }
 
-.phoneOnly {
+.phoneOnly,
+.touchOnly {
   display: none;
 }
 
 @media (pointer: coarse) {
   .phoneOnly {
     display: inline-flex;
+  }
+
+  .touchOnly {
+    display: inline;
+  }
+
+  .mouseOnly {
+    display: none;
   }
 }
 

@@ -52,6 +52,26 @@
   color: var(--text-muted);
 }
 
+.linkBtn {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.linkBtn:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 .sellerId {
   font-size: var(--text-2xl);
   font-weight: 800;
