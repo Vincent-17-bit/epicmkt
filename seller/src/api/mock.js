@@ -7,7 +7,7 @@ import { PAGE_LIMITS, checkItemDelivery, checkNotices, isMediaId } from "@epicmk
 import { buildAvailability, cleanSizeChartOverride, comboKey, productTypeById, scalePrice, sellerProductTypesPayload, specIssues, storedOptions } from "@epicmkt/shared";
 import { listSizeCharts as demoSizeCharts } from "@epicmkt/backend";
 import { BULK_ACTIONS, EXCEPTION_LIMIT, lastDayOf, FLASH_MAX_MS, checkProofBatch, checkReply, flashQuota, inspectProof, validateException, validateFlashSale, validateOffer, offerPhase, offerQuota } from "@epicmkt/shared";
-import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, normalizeMpesaCode, renewalPlan } from "@epicmkt/shared/billing";
+import { addCalendarMonth, buildPaymentInstructions, categoryChangeQuote, dayOf, isMpesaCode, listingState, normalizeMpesaCode, renewalPlan } from "@epicmkt/shared/billing";
 
 
 const DEMO = { sellerId: "ES100001", password: "Demo-Passw0rd", phone: "+254712345678", name: "Demo Shop", plan: "standard", status: "live" };
@@ -539,6 +539,7 @@ const CATEGORIES = {
   "salon-beauty": { id: "salon-beauty", name: "Hair and beauty", group: "Beauty", prices: { standard: 800, premium: 2000 } },
   "gym-fitness": { id: "gym-fitness", name: "Fitness club", group: "Fitness", prices: { standard: 1000, premium: 2500 } },
   kiosk: { id: "kiosk", name: "Kiosk", group: "Retail", prices: { standard: 300, premium: 900 } },
+  bakery: { id: "bakery", name: "Bakery", group: "Food and drink", prices: { standard: 500, premium: 1100 } },
 };
 const FEATURES = {
   standard: { Visibility: ["Listed in category lists and search"], Catalog: ["Unlimited items", "Up to 7 photos and 1 video per item", "Up to 5 FAQs"], Support: ["Standard support"] },
@@ -685,8 +686,10 @@ export const getPaymentInstructions = async ({ purpose = null, targetPlan = null
   await wait();
   const r = instructionsFor({ purpose, targetPlan, category });
   const credit = bill.business.creditKes ?? 0;
-  return { ...r, creditKes: credit, amountDue: Math.max(r.amount - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted"),
-    stk: !!r.configured && bill.paybill?.stk !== false, phone: DEMO.phone };
+  const cat = CATEGORIES[bill.business.categoryId];
+  return { ...r, creditKes: credit, amountDue: Math.max(r.amount + (r.switchKes ?? 0) - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted"),
+    stk: !!r.configured && bill.paybill?.stk !== false, phone: DEMO.phone,
+    planChoices: bill.noPlanChoice ? null : Object.fromEntries(Object.entries(cat.prices).filter(([, v]) => v > 0)), currentPlan: bill.business.planKey };
 };
 // Spend credit on an upgrade or category change: a confirmed payment funded from credit (the server does the same).
 const spendCredit = (q, changeId = null) => {
@@ -705,14 +708,17 @@ export const applyCredit = async ({ purpose = null, targetPlan = null, category 
   await wait();
   const q = instructionsFor({ purpose, targetPlan, category });
   if (q.amount <= 0) throw new ApiError("nothing_to_pay");
-  if ((bill.business.creditKes ?? 0) < q.amount) throw new ApiError("not_enough_credit");
+  if ((bill.business.creditKes ?? 0) < q.amount + (q.switchKes ?? 0)) throw new ApiError("not_enough_credit");
+  if (q.purpose === "renewal" && q.planKey !== bill.business.planKey) bill.intent = { purpose: "plan_switch", targetPlan: q.planKey };
   if (q.purpose === "category_change" && !bill.changes.some((c) => c.id === changeId && c.status === "pending" && c.newValue === category)) throw new ApiError("change_not_found");
   if (q.purpose === "first" || q.purpose === "renewal") return __mock.autoPay(0);
   return spendCredit(q, changeId);
 };
 export const setPaymentIntent = async ({ purpose = null, targetPlan = null, category = null, changeId = null } = {}) => {
   signedIn();
-  bill.intent = purpose === "upgrade" || purpose === "category_change" ? { purpose, targetPlan, category, changeId } : null;
+  const switching = (purpose ?? "renewal") === "renewal" && targetPlan && targetPlan !== bill.business.planKey && bill.business.paidUntil;
+  bill.intent = purpose === "upgrade" || purpose === "category_change" ? { purpose, targetPlan, category, changeId }
+    : switching ? { purpose: "plan_switch", targetPlan } : null;
 };
 // M-Pesa "Pay now" (demo). The prompt "is answered" on the third status check: a phone ending in 0 cancels, any other pays.
 const stkRequests = new Map();
@@ -729,10 +735,12 @@ export const startStkPayment = async ({ phone, months = 1, purpose = null, targe
   const allowed = prepay ? renewalNow().allowed : 1;
   if (allowed < 1) throw new ApiError("paid_ahead", "You are already paid ahead for the most allowed, 12 months.");
   const n = prepay ? Math.min(Math.max(1, Number(months) || 1), allowed) : 1;
-  const amount = Math.ceil(q.amount * n - credit);
+  const amount = Math.ceil(q.amount * n + (prepay ? q.switchKes ?? 0 : 0) - credit);
   if (amount <= 0) throw new ApiError("use_credit", "Your credit already covers this. Use the credit instead.");
   const r = { id: `stk-${++bill.seq}`, status: "pending", message: "A payment request is on your phone. Enter your M-Pesa PIN there to pay.", amount, months: n, phone: normalized,
-    account: bill.business.sellerId, purpose: q.purpose, checks: 0, intent: q.purpose === "upgrade" || q.purpose === "category_change" ? { purpose: q.purpose, targetPlan, category, changeId } : null };
+    account: bill.business.sellerId, purpose: q.purpose, checks: 0,
+    intent: q.purpose === "upgrade" || q.purpose === "category_change" ? { purpose: q.purpose, targetPlan, category, changeId }
+      : q.purpose === "renewal" && q.planKey !== bill.business.planKey ? { purpose: "plan_switch", targetPlan: q.planKey } : null };
   stkRequests.set(r.id, r);
   return { request: stkOut(r) };
 };
@@ -769,7 +777,8 @@ export const quoteCategoryChange = async (category) => {
   const next = priceOf(category, bill.business.planKey);
   if (next == null) throw new ApiError("invalid_category");
   const old = priceOf(bill.business.categoryId, bill.business.planKey);
-  return { ...categoryChangeQuote({ oldPrice: old, newPrice: next, paidUntil: bill.business.paidUntil, now: clockNow() }), oldMonthlyPrice: old, dearer: next > old };
+  return { ...categoryChangeQuote({ oldPrice: old, newPrice: next, paidUntil: bill.business.paidUntil, now: clockNow() }), oldMonthlyPrice: old, dearer: next > old,
+    listingState: bill.business.paidUntil ? listingState(bill.business.paidUntil, clockNow(), bill.business.graceDays ?? 1) : "none" };
 };
 export const listCategoryPlans = async () => { signedIn(); await wait(); return copy(Object.values(CATEGORIES)); };
 
@@ -1808,6 +1817,31 @@ export const __mock = {
   autoPay(amount) {
     const price = priceOf(bill.business.categoryId, bill.business.planKey);
     bill.business.creditKes = (bill.business.creditKes ?? 0) + amount;
+    // Renewing on the other plan (as migration 0139): switch first if the money covers the switch and a month, else hold it.
+    if (bill.intent?.purpose === "plan_switch") {
+      const target = bill.intent.targetPlan;
+      let q = null;
+      try { q = instructionsFor({ purpose: "renewal", targetPlan: target }); } catch { q = null; }
+      if (q && q.planKey !== bill.business.planKey) {
+        const due = q.quote?.switchDue ?? 0;
+        const back = q.quote?.switchCredit ?? 0;
+        if (bill.business.creditKes + back >= q.amount + due) {
+          bill.intent = null;
+          if (due > 0) {
+            spendCredit({ ...q, purpose: "upgrade", amount: due, planKey: target });
+          } else {
+            bill.business.planKey = target;
+            bill.business.creditKes += back;
+            post("payment", "Plan changed", `You are now on ${target === "premium" ? "Premium" : "Standard"} at KES ${q.amount} a month.${back > 0 ? ` KES ${back} for the unused days is kept as credit toward your renewal.` : ""}`, {}, null);
+          }
+          return __mock.autoPay(0);
+        }
+        post("payment", "Payment received, balance due", `We received KES ${amount} toward renewing on ${target}. KES ${q.amount + due - back - bill.business.creditKes} more is needed.`, {}, null);
+        emit("businesses", "UPDATE", bill.business);
+        return { outcome: "held", credit: bill.business.creditKes };
+      }
+      bill.intent = null;
+    }
     if (bill.intent) {
       // Money for an upgrade or category change is held for it, never taken as a renewal month.
       let q = null;

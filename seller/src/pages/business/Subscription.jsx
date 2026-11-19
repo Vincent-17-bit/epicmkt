@@ -32,6 +32,8 @@ export default function Subscription() {
     queryFn: () => api.getPaymentInstructions({ purpose: mode.purpose, targetPlan: mode.targetPlan ?? null, category: mode.category ?? null }),
     enabled: !!sub.data,
     retry: false,
+    // Switching plan or months keeps the card on screen while the new amounts load.
+    placeholderData: (prev) => prev,
   });
 
   // The seller's own payment and business rows. When a payment arrives (automatically, or confirmed by an admin),
@@ -121,12 +123,20 @@ export default function Subscription() {
           <PaymentCard
             instructions={instr.data} openPayment={open} received={received} onApplyCredit={applyCredit} onDismissReceived={() => setReceived(null)}
             mode={mode} onPaid={refreshAfterPayment} business={business} view={view}
+            onPlan={suspended ? null : (k) => { setReceived(null); setMode({ purpose: null, targetPlan: k }); }}
           />
         )}
       </div>
 
       <SetupCard />
-      {suspended ? null : <PlanCompare subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })} />}
+      {suspended ? null : (
+        <PlanCompare
+          subscription={sub.data} listingState={view.state} onUpgrade={() => choose({ purpose: "upgrade", targetPlan: "premium" })}
+          canRenewOn={!!instr.data?.planChoices && instr.data?.purpose !== "first"}
+          renewingOn={mode.purpose ? null : mode.targetPlan ?? business.planKey}
+          onRenewOn={(k) => choose({ purpose: null, targetPlan: k === business.planKey ? null : k })}
+        />
+      )}
       {suspended ? null : <CategoryChange business={business} payments={payments.data ?? []} onPay={choose} />}
       <PaymentHistory payments={payments.data ?? []} />
     </div>

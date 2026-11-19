@@ -110,7 +110,7 @@ export function planImpact(row, newPrice) {
     lines.push(`New and unpaid applications will owe ${formatKes(newPrice)} a month instead of ${formatKes(row.price_kes)} (${diff > 0 ? "+" : "-"}${formatKes(Math.abs(diff))}), straight away on the seller and application pages.`);
     lines.push(live === 0
       ? "No live businesses are on this plan."
-      : `${live} live ${live === 1 ? "business keeps" : "businesses keep"} the monthly price already set on ${live === 1 ? "its" : "their"} account (${formatKes(row.live_monthly_kes)} a month in total). Only a plan change by the seller picks up the new price.`);
+      : `${live} live ${live === 1 ? "business pays" : "businesses pay"} the new price from ${live === 1 ? "its" : "their"} next payment (${formatKes(row.live_monthly_kes)} a month in total today). Time already paid for does not change, and each seller gets a message.`);
   }
   return lines;
 }

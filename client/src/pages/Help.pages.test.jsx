@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { REPORT_REASONS } from "@epicmkt/shared";
 import { allFaqs, popularFaqs } from "../data/faqs.js";
@@ -122,12 +123,14 @@ describe("Suggest a business page", () => {
   };
   const open = () =>
     render(
-      <MemoryRouter initialEntries={["/suggest-a-business"]}>
-        <Routes>
-          <Route path="/suggest-a-business" element={<SuggestBusiness />} />
-          <Route path="/contact" element={<Where />} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={["/suggest-a-business"]}>
+          <Routes>
+            <Route path="/suggest-a-business" element={<SuggestBusiness />} />
+            <Route path="/contact" element={<Where />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
   it("has one h1 and the form fields", () => {

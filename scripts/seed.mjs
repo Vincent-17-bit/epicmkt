@@ -35,12 +35,13 @@ await check(
       template: c.keyFields,
       extra_docs: c.extraDocs,
     })),
-    { onConflict: 'id' },
+    // Adds what is missing and never overwrites: names, on/off switches and prices are the admin's once a category exists.
+    { onConflict: 'id', ignoreDuplicates: true },
   ),
 );
 
 const plans = categories.flatMap((c) => planRows(c.id, c.tier));
-await check(`plans (${plans.length})`, db.from('plans').upsert(plans, { onConflict: 'category_id,plan_key' }));
+await check(`plans (${plans.length})`, db.from('plans').upsert(plans, { onConflict: 'category_id,plan_key', ignoreDuplicates: true }));
 
 await check(
   `legal docs (${legalDocs.length})`,

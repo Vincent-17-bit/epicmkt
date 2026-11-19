@@ -208,6 +208,20 @@ test("start (seller): the database decides the amount; the browser cannot send o
   assert.equal(db.log.find((x) => x.name === "mpesa_stk_mark_sent")!.args.p_checkout, "ws_CO_9");
 });
 
+test("start (seller): a renewal can name Standard or Premium; the plan goes to the database, nothing else does", async () => {
+  for (const plan of ["standard", "premium"]) {
+    const db = fakeDb({ mpesa_stk_prepare: () => ({ data: { reused: false, request: view() } }), mpesa_stk_mark_sent: () => ({ data: view({ status: "pending" }) }) });
+    const { d } = deps(db);
+    const r = await body(await startStk(d)(req("Bearer seller"), { phone: "0712345678", months: 3, targetPlan: plan }));
+    assert.equal(r.status, 200);
+    const prep = db.log.find((x) => x.name === "mpesa_stk_prepare")!.args;
+    assert.deepEqual([prep.p_purpose, prep.p_target_plan, prep.p_months], [null, plan, 3]);
+  }
+  const db = fakeDb({});
+  const bad = await body(await startStk(deps(db).d)(req("Bearer seller"), { phone: "0712345678", targetPlan: "gold" }));
+  assert.equal(bad.status, 400);
+});
+
 test("start (applicant): the status session decides who pays; the purpose is always the first payment", async () => {
   const db = fakeDb({ mpesa_stk_prepare: () => ({ data: { reused: false, request: view({ account: "2026ABC234", purpose: "first" }) } }), mpesa_stk_mark_sent: () => ({ data: view({ status: "pending" }) }) });
   const { d } = deps(db);

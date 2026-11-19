@@ -25,6 +25,11 @@ export const instructions = (r) => ({
   method: r.method ?? null, number: r.number ?? null, name: r.name ?? null, hasOpenSubmission: !!r.has_open_submission,
   creditKes: Number(r.credit_kes ?? 0), amountDue: r.amount_due_kes ?? r.amount_kes, maxPrepayMonths: r.max_prepay_months ?? 12,
   stk: !!r.stk, phone: r.phone ?? null,
+  // 0139: the plans this shop can renew on ({ standard, premium } prices) and the one it is on. Absent before 0139, and then the
+  // page does not offer a choice.
+  planChoices: r.plan_choices && Object.keys(r.plan_choices).length ? r.plan_choices : null,
+  currentPlan: r.current_plan ?? null,
+  switchKes: Number(r.switch_kes ?? 0),
 });
 
 // One row of an item's media sequence, and the plan limits beside it. Live and mock return the same shape.

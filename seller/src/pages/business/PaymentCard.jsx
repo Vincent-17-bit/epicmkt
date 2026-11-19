@@ -1,7 +1,7 @@
 import { useCallback, useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { PayByPhone } from "@epicmkt/ui";
-import { formatPrice, formatDay, PAYMENT_KIND_LABELS, renewalPlan } from "@epicmkt/shared/billing";
+import { formatPrice, formatDay, PAYMENT_KIND_LABELS, planLabel, renewalPlan } from "@epicmkt/shared/billing";
 import * as api from "../../api/index.js";
 import { copyText } from "../../lib/copy.js";
 import { errorText } from "../../lib/errors.js";
@@ -28,6 +28,18 @@ function CopyButton({ value, label }) {
 
 const TITLES = { first: "Pay for your first month", upgrade: "Upgrade to Premium", category_change: "Pay for your category change" };
 const monthsText = (n) => (n === 1 ? "1 month" : `${n} months`);
+const PLAN_ORDER = ["standard", "premium"];
+
+// What moving to the chosen plan means for the days left, in one line (nothing when there is no switch).
+function switchNote(instructions, state) {
+  const q = instructions.quote;
+  if (!q || !q.toPlan || q.toPlan === q.fromPlan) return null;
+  const to = planLabel(q.toPlan);
+  const from = planLabel(q.fromPlan);
+  if (q.switchDue > 0) return `${to} starts as soon as you pay. ${formatPrice(q.switchDue)} for the ${q.daysLeft} day${q.daysLeft === 1 ? "" : "s"} left on ${from} is added.`;
+  if (q.switchCredit > 0) return `${to} starts as soon as you pay. ${formatPrice(q.switchCredit)} for the ${q.daysLeft} unused ${from} day${q.daysLeft === 1 ? "" : "s"} is taken off.`;
+  return state === "active" ? `${to} starts as soon as you pay.` : `Your shop moves to ${to} when the payment arrives.`;
+}
 
 // The renewal heading and the line under it, for where the subscription stands.
 function renewalHead(purpose, state, plan, graceEndsDay) {
@@ -51,7 +63,7 @@ function renewalHead(purpose, state, plan, graceEndsDay) {
  * For a renewal the seller picks how many months; each choice shows its price and the paid-until date it gives, by the same rule
  * the server credits with (renewalPlan), and only the months the server will add are offered.
  */
-export default function PaymentCard({ instructions, openPayment, received, onApplyCredit, onDismissReceived, mode = {}, onPaid, business = null, view = null }) {
+export default function PaymentCard({ instructions, openPayment, received, onApplyCredit, onDismissReceived, mode = {}, onPaid, business = null, view = null, onPlan = null }) {
   const id = useId();
   const [months, setMonths] = useState(1);
   const [error, setError] = useState("");
@@ -106,8 +118,19 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
   if (!instructions) return <section className={`${ui.card} ${styles.payLoading}`} aria-busy="true"><p className={ui.muted}>Loading payment options…</p></section>;
   const { configured, method, number, name, account, amount, creditKes = 0, maxPrepayMonths = 12 } = instructions;
   const paybill = method !== "till";
-  const total = Math.max(amount * n - creditKes, 0);
-  const canUseCredit = creditKes >= amount && amount > 0;
+  // Renewing on the other plan adds (or takes off) the difference for the days left; the server works it out (switch_kes).
+  const switchKes = purpose === "renewal" ? Number(instructions.switchKes ?? 0) : 0;
+  const gross = amount * n + switchKes;
+  const total = Math.max(gross - creditKes, 0);
+  const canUseCredit = amount > 0 && creditKes + Math.max(-switchKes, 0) >= amount + Math.max(switchKes, 0) && (creditKes > 0 || switchKes < 0);
+  // Standard or Premium, when the server offers the choice (migration 0139) and this is a renewal.
+  const planChoices = purpose === "renewal" && instructions.planChoices && onPlan
+    ? PLAN_ORDER.filter((k) => instructions.planChoices[k] > 0)
+    : [];
+  // The plan the seller picked shows as chosen at once; the amounts follow when the server's answer for it arrives.
+  const chosenPlan = (mode.purpose ? null : mode.targetPlan) ?? instructions.currentPlan ?? instructions.planKey;
+  const updating = planChoices.length > 1 && instructions.planKey !== chosenPlan;
+  const note = purpose === "renewal" ? switchNote(instructions, view?.state) : null;
   const head = prepay ? renewalHead(purpose, view?.state, plan, view?.graceEndsDay) : { title: TITLES[purpose] ?? "Pay by M-Pesa", lead: null };
   const full = prepay && plan.allowed === 0;
 
@@ -165,6 +188,7 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
       <PayByPhone
         key={purpose}
         amount={total}
+        disabled={updating}
         defaultPhone={instructions.phone ?? ""}
         start={start}
         poll={poll}
@@ -195,6 +219,27 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
         {head.lead && !full && <p className={ui.muted}>{head.lead}</p>}
       </header>
 
+      {planChoices.length > 1 && !full && (
+        <fieldset className={styles.plans} disabled={waiting} data-testid="pay-plans">
+          <legend className={ui.label}>Which plan do you want?</legend>
+          <div className={styles.planGrid}>
+            {planChoices.map((k) => (
+              <label key={k} className={styles.planPick} data-checked={k === chosenPlan}>
+                <input
+                  type="radio" name={`${id}-plan`} value={k} checked={k === chosenPlan} onChange={() => onPlan(k === instructions.currentPlan ? null : k)}
+                  aria-label={`${planLabel(k)}${k === instructions.currentPlan ? ", your plan" : ""}, ${formatPrice(instructions.planChoices[k])} a month`}
+                />
+                <span className={styles.monthDot} aria-hidden="true" />
+                <span className={styles.monthCount}>{planLabel(k)}</span>
+                <span className={styles.monthPrice}>{formatPrice(instructions.planChoices[k])}</span>
+                <span className={styles.monthUntil}>a month{k === instructions.currentPlan ? " · your plan" : ""}</span>
+              </label>
+            ))}
+          </div>
+          {note && <p className={styles.note} data-testid="pay-switch">{note}</p>}
+        </fieldset>
+      )}
+
       {creditKes > 0 && !full && (
         <p className={styles.credit} role="status" data-testid="pay-credit">
           You have <strong>{formatPrice(creditKes)}</strong> credit from earlier payments.
@@ -203,7 +248,9 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
       )}
       {canUseCredit && !full && (
         <div>
-          <button type="button" className={ui.btn} disabled={busy} onClick={useCredit}>{busy ? "Applying" : `Use my ${formatPrice(amount)} credit`}</button>
+          <button type="button" className={ui.btn} disabled={busy} onClick={useCredit}>
+            {busy ? "Applying" : switchKes === 0 ? `Use my ${formatPrice(amount)} credit` : creditKes > 0 ? `Use my ${formatPrice(creditKes)} credit` : `Switch to ${planLabel(chosenPlan)} now`}
+          </button>
           {error && <p className={ui.error} role="alert">{error}</p>}
         </div>
       )}
@@ -224,7 +271,10 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
                 <div className={styles.monthGrid}>
                   {plan.choices.map((m) => (
                     <label key={m} className={styles.month} data-checked={m === n}>
-                      <input type="radio" name={`${id}-months`} value={m} checked={m === n} onChange={() => setMonths(m)} />
+                      <input
+                        type="radio" name={`${id}-months`} value={m} checked={m === n} onChange={() => setMonths(m)}
+                        aria-label={`${monthsText(m)}, ${formatPrice(amount * m)}, paid until ${formatDay(plan.until(m))}`}
+                      />
                       <span className={styles.monthDot} aria-hidden="true" />
                       <span className={styles.monthCount}>{monthsText(m)}</span>
                       <span className={styles.monthPrice}>{formatPrice(amount * m)}</span>
@@ -239,11 +289,15 @@ export default function PaymentCard({ instructions, openPayment, received, onApp
                 You can add up to {monthsText(plan.allowed)} now. Nobody is paid more than {monthsText(maxPrepayMonths)} ahead.
               </p>
             )}
-            <div className={styles.total} data-testid="pay-total" aria-live="polite">
+            <div className={styles.total} data-testid="pay-total" aria-live="polite" aria-busy={updating} data-updating={updating}>
               <div>
                 <span>You pay</span>
-                <strong>{formatPrice(total)}</strong>
-                {creditKes > 0 && total < amount * n ? <small>{formatPrice(amount * n)} less {formatPrice(Math.min(creditKes, amount * n))} credit</small> : <small>{monthsText(n)} × {formatPrice(amount)}</small>}
+                <strong>{total > 0 ? formatPrice(total) : "KES 0"}</strong>
+                <small>
+                  {monthsText(n)} × {formatPrice(amount)}
+                  {switchKes > 0 ? <> + {formatPrice(switchKes)} for the days left</> : switchKes < 0 ? <> − {formatPrice(-switchKes)} unused days</> : null}
+                  {creditKes > 0 && total < gross ? <> − {formatPrice(Math.min(creditKes, Math.max(gross, 0)))} credit</> : null}
+                </small>
               </div>
               <div>
                 <span>Paid until</span>
