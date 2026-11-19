@@ -21,7 +21,6 @@
 .headText { min-inline-size: 0; }
 .title { margin: 0; color: var(--text); font-size: var(--text-lg); font-weight: 700; line-height: 1.25; }
 .note { margin: 2px 0 0; color: var(--text-muted); font-size: var(--text-sm); line-height: 1.35; overflow-wrap: anywhere; }
-.counter { margin: 0; color: var(--text-muted); font-size: var(--text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* Phones: edge to edge inside the panel; flush with its bottom too when it is the last thing in it. */
@@ -54,60 +53,23 @@
 .incDot { inline-size: 0.375rem; block-size: 0.375rem; border-radius: 50%; background: var(--text); transform: translateY(-0.15em); }
 .incLabel { font-weight: 700; }
 
-/* ---- Images: one dark showcase, like a brand's picture tour. It keeps its own dark colours in both themes (as a video player does),
-   so the pictures always sit on the same ground. On bigger screens its width is held so the names bar and the 16:9 frame fit on the
-   screen at once. -------------------------------------------------------------------------------------------------------------- */
-.show {
-  --show-bg: #0d0d0d;
-  --show-bar: #1c1c1c;
-  --show-ink: #ffffff;
-  --show-ink-soft: rgb(255 255 255 / 0.72);
-  position: relative;
-  display: grid;
-  min-inline-size: 0;
-  overflow: hidden;
-  background: var(--show-bg);
-  color: var(--show-ink);
-}
+/* ---- Images: pictures one under another, each whole at the panel's width (edge to edge on phones), no frame, no gap between
+   pictures without words. Big screens hold them to a 60rem column, as Amazon does, so a tall picture stays a sensible size. ---- */
+.stack { display: grid; justify-items: center; min-inline-size: 0; }
+.picture { display: grid; inline-size: 100%; max-inline-size: 60rem; min-inline-size: 0; margin: 0; }
+.picture img { display: block; inline-size: 100%; block-size: auto; background: var(--surface-2); user-select: none; -webkit-user-drag: none; }
+.pictureText { display: grid; gap: 2px; padding: var(--space-2) var(--space-3) var(--space-3); overflow-wrap: anywhere; }
+.pictureTitle { color: var(--text); font-size: var(--text-md); font-weight: 700; line-height: 1.3; }
+.pictureCaption { color: var(--text-muted); font-size: var(--text-sm); line-height: 1.45; white-space: pre-line; }
 @media (min-width: 40rem) {
-  .show { inline-size: min(100%, max(20rem, calc((100svh - var(--header-h) - 7rem) * 16 / 9))); justify-self: center; border-radius: var(--radius-sm); }
+  .pictureText { padding-inline: 0; }
+  .picture:first-child img { border-start-start-radius: var(--radius-sm); border-start-end-radius: var(--radius-sm); }
+  .picture:last-child:not([data-words]) img { border-end-start-radius: var(--radius-sm); border-end-end-radius: var(--radius-sm); }
 }
-.showBar { display: flex; justify-content: safe center; gap: clamp(var(--space-4), 3vw, var(--space-7)); overflow-x: auto; scrollbar-width: none; padding-inline: var(--space-4); background: var(--show-bar); box-shadow: inset 0 -1px 0 rgb(255 255 255 / 0.08); }
-.showBar::-webkit-scrollbar { display: none; }
-.showTab { position: relative; flex: none; min-block-size: 2.75rem; padding: 0 2px; border: 0; background: none; color: var(--show-ink-soft); font: inherit; font-size: var(--text-sm); font-weight: 600; white-space: nowrap; cursor: pointer; }
-.showTab::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0; block-size: 3px; border-radius: 3px 3px 0 0; background: var(--show-ink); transform: scaleX(0); }
-.showTab:hover, .showTab[aria-selected="true"] { color: var(--show-ink); }
-.showTab[aria-selected="true"]::after { transform: scaleX(1); }
-.showTab:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -0.35rem; border-radius: 4px; box-shadow: none !important; }
-.stage { position: relative; min-inline-size: 0; }
-.track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
-.track::-webkit-scrollbar { display: none; }
-.track:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -3px; box-shadow: none !important; }
-.slide { position: relative; display: grid; align-content: start; min-inline-size: 0; margin: 0; scroll-snap-align: start; scroll-snap-stop: always; }
-.frame { display: grid; place-items: center; inline-size: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: var(--show-bg); }
-.frame img { display: block; inline-size: 100%; block-size: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; }
-.frame[data-fill] img { object-fit: cover; }   /* a 16:9 picture (within 3%) fills the frame edge to edge */
-.caption { margin: 0; padding: var(--space-2) var(--space-3) var(--space-3); color: var(--show-ink); font-size: var(--text-sm); font-weight: 600; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
-.chevron { position: absolute; inset-block-start: 50%; translate: 0 -50%; display: grid; place-items: center; inline-size: 2.75rem; block-size: 4.5rem; padding: 0; border: 0; background: none; color: var(--show-ink); filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.8)); opacity: 0.85; cursor: pointer; }
-.chevron:hover { opacity: 1; }
-.chevron:disabled { opacity: 0; pointer-events: none; }
-.chevron:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -2px; border-radius: 4px; opacity: 1; box-shadow: none !important; }
-.chevronPrev { inset-inline-start: var(--space-2); }
-.chevronNext { inset-inline-end: var(--space-2); }
-.showDots { display: flex; justify-content: center; gap: 6px; padding: var(--space-2) 0 var(--space-3); }
-.showDot { inline-size: 0.5rem; block-size: 0.5rem; padding: 0; border: 0; border-radius: var(--radius-pill); background: rgb(255 255 255 / 0.35); cursor: pointer; }
-.showDot[data-on] { inline-size: 1.25rem; background: var(--show-ink); }
-@media (min-width: 48rem) {
-  /* The caption sits over the bottom of the picture on a soft shade, like the title line of a picture tour. */
-  .caption { position: absolute; inset-inline: 0; inset-block-end: 0; padding: clamp(var(--space-6), 4vw, 3.5rem) clamp(var(--space-5), 6vw, 5rem) clamp(var(--space-3), 1.6vw, var(--space-5)); background: linear-gradient(to top, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0)); font-size: clamp(var(--text-md), 1.6vw, var(--text-xl)); font-weight: 700; text-shadow: 0 1px 3px rgb(0 0 0 / 0.6); pointer-events: none; }
-  .showDots { position: absolute; inset-inline: 0; inset-block-end: 0; padding-block: var(--space-2); pointer-events: none; }
-  .showDot { pointer-events: auto; }
-  .show[data-captions] .showDots { position: static; }
-}
+/* A picture after a caption starts a new block: a hairline keeps the caption with its own picture. */
+.picture[data-words] + .picture { border-block-start: 1px solid var(--border); padding-block-start: var(--space-3); }
 @media (max-width: 39.99rem) {
-  .chevron { display: none; }   /* phones swipe; the names bar or the dots say where they are */
-  .showBar { justify-content: flex-start; padding-inline: var(--space-3); -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent 100%); mask-image: linear-gradient(to right, #000 calc(100% - var(--space-6)), transparent 100%); }
-  .showTab { min-block-size: 2.5rem; font-size: var(--text-xs); }
+  .picture[data-words] + .picture { padding-block-start: 0; }
 }
 
 /* ---- Videos: the player, and the list of videos beside it (big screens) or a swipeable row under it. ------------------------------ */
@@ -231,8 +193,5 @@ a.name:hover { text-decoration: underline; text-decoration-color: var(--link-und
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .showDot { transition: inline-size 160ms ease, background-color 160ms ease; }
-  .showTab, .chevron { transition: color 160ms ease, opacity 160ms ease; }
-  .showTab::after { transition: transform 220ms ease; }
   .switchTrack, .switchTrack::after { transition: background-color 160ms ease, transform 160ms ease; }
 }

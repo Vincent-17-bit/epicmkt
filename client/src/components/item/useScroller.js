@@ -28,8 +28,8 @@ const nearestOf = (el) => {
  *   prevOff/nextOff  whether the arrows have nowhere to go
  *   arrows           false when every slide already fits, so arrows would do nothing
  *
- * While go() scrolls, `index` stays on the slide it was asked for (the names bar and the dots do not flicker through the slides it
- * passes); a swipe updates it as the strip moves.
+ * While go() scrolls, `index` stays on the slide it was asked for (the arrows do not flicker through the slides it passes); a swipe
+ * updates it as the strip moves.
  */
 export function useScroller(count) {
   const ref = useRef(null);

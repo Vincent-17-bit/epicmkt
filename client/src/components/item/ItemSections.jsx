@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
 import { buildInfoGroups, includeRows, plainSpecs } from "@epicmkt/shared";
@@ -83,85 +83,32 @@ export function ItemIncluded({ item }) {
 // Images
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-// Up to 5 pictures the seller chose, above the videos, as one dark showcase like a brand's picture tour on Amazon: the pictures' names on
-// a bar across the top (the one showing underlined), the picture filling the frame, thin arrows at its sides and its caption over the
-// bottom of it (under it on phones, where the names or the dots are used instead of arrows). Every slide has the same 16:9 frame; a
-// picture of another shape is shown whole on the dark background instead of being stretched or cropped. srcset serves a size that stays
-// sharp on the screen. The showcase is never taller than the screen, so the names, the picture and its caption are seen at once.
-const FRAME = 16 / 9;
-const fills = (g) => g.width > 0 && g.height > 0 && Math.abs(g.width / g.height / FRAME - 1) <= 0.03;
-
-function Chevron({ dir }) {
-  return (
-    <svg viewBox="0 0 20 48" width="20" height="48" aria-hidden="true">
-      <path d={dir < 0 ? "M17 3L3 24l14 21" : "M3 3l14 21L3 45"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
+// Up to 5 pictures the seller chose, above the videos, one under another like the description pictures on Amazon or Kilimall: each
+// shown whole at the full width of the panel (edge to edge on phones), at its own shape, never cropped or stretched. Pictures with no
+// words follow each other with no gap, so a set made to be read top to bottom reads as one long picture; a picture's title and
+// caption sit right under it. Width and height come from the upload, so the page does not jump as they load.
 export function ItemImages({ item }) {
-  const list = item?.galleryImages ?? [];
-  const strip = useScroller(list.length);
-  const bar = useRef(null);
-  // The name of the picture showing stays in view when the bar scrolls (phones, long names). Only the bar moves, never the page.
-  useEffect(() => {
-    const el = bar.current;
-    const tab = el?.children?.[strip.index];
-    if (!el || !tab || el.scrollWidth <= el.clientWidth) return;
-    const left = tab.getBoundingClientRect().left - el.getBoundingClientRect().left + el.scrollLeft - (el.clientWidth - tab.offsetWidth) / 2;
-    if (typeof el.scrollTo === "function") el.scrollTo({ left: Math.max(0, left), behavior: "smooth" });
-  }, [strip.index]);
+  const list = (item?.galleryImages ?? []).filter((g) => g?.url);
   if (!list.length) return null;
-  const many = list.length > 1;
-  const tabs = many && list.some((g) => g.label);
-  const nameOf = (g, i) => g.label || `Image ${i + 1}`;
-  const onTabKey = (e) => {
-    const last = list.length - 1;
-    const to = { ArrowRight: strip.index + 1, ArrowLeft: strip.index - 1, Home: 0, End: last }[e.key];
-    if (to === undefined) return;
-    e.preventDefault();
-    const n = Math.max(0, Math.min(last, to));
-    strip.go(n);
-    bar.current?.children?.[n]?.focus();
-  };
   return (
     <section id="item-images" className={styles.section} aria-labelledby="item-images-title">
-      <SectionHead id="item-images-title" title="Images">
-        {many && <p className={styles.counter} aria-hidden="true">{strip.index + 1} / {list.length}</p>}
-      </SectionHead>
-      <div className={`${styles.show} ${styles.bleed}`} data-captions={list.some((g) => g.caption) ? "" : undefined}>
-        {tabs && (
-          <div ref={bar} className={styles.showBar} role="tablist" aria-label="Images" onKeyDown={onTabKey}>
-            {list.map((g, i) => (
-              <button key={`tab-${i}`} type="button" role="tab" id={`item-image-tab-${i}`} aria-selected={i === strip.index} aria-controls={`item-image-${i}`}
-                tabIndex={i === strip.index ? 0 : -1} className={styles.showTab} onClick={() => strip.go(i)}>{nameOf(g, i)}</button>
-            ))}
-          </div>
-        )}
-        <div className={styles.stage}>
-          <div ref={strip.ref} className={styles.track} tabIndex={0} onKeyDown={strip.onKeyDown} aria-label={`Images, ${list.length}. Swipe or use the arrow keys.`}>
-            {list.map((g, i) => (
-              <figure key={`img-${i}`} id={`item-image-${i}`} className={styles.slide} {...(tabs ? { role: "tabpanel", "aria-labelledby": `item-image-tab-${i}` } : { "aria-label": `${i + 1} of ${list.length}` })}>
-                <div className={styles.frame} data-fill={fills(g) ? "" : undefined}>
-                  <img src={g.url} srcSet={g.srcSet || undefined} sizes="(min-width: 80rem) 1280px, 100vw" alt={g.caption || g.label || `${item.name}, picture ${i + 1}`}
-                    loading={i === 0 ? "eager" : "lazy"} decoding="async" draggable="false" {...(g.width && g.height ? { width: g.width, height: g.height } : {})} />
-                </div>
-                {(g.caption || (g.label && !tabs)) && <figcaption className={styles.caption}>{g.caption || g.label}</figcaption>}
-              </figure>
-            ))}
-          </div>
-          {strip.arrows && (
-            <>
-              <button type="button" className={`${styles.chevron} ${styles.chevronPrev}`} onClick={() => strip.go(strip.index - 1)} disabled={strip.prevOff} aria-label="Previous image"><Chevron dir={-1} /></button>
-              <button type="button" className={`${styles.chevron} ${styles.chevronNext}`} onClick={() => strip.go(strip.index + 1)} disabled={strip.nextOff} aria-label="Next image"><Chevron dir={1} /></button>
-            </>
-          )}
-        </div>
-        {many && !tabs && (
-          <div className={styles.showDots} aria-hidden="true">
-            {list.map((_, i) => <button key={`dot-${i}`} type="button" tabIndex={-1} className={styles.showDot} data-on={i === strip.index ? "" : undefined} onClick={() => strip.go(i)} />)}
-          </div>
-        )}
+      <SectionHead id="item-images-title" title="Images" />
+      <div className={`${styles.stack} ${styles.bleed}`}>
+        {list.map((g, i) => {
+          const words = Boolean(g.label || g.caption);
+          return (
+            <figure key={`img-${i}`} id={`item-image-${i}`} className={styles.picture} data-words={words ? "" : undefined}>
+              <img src={g.url} srcSet={g.srcSet || undefined} sizes="(min-width: 60rem) 960px, 100vw" alt={g.caption || g.label || `${item.name}, picture ${i + 1} of ${list.length}`}
+                loading="lazy" decoding="async" draggable="false" {...(g.width > 0 && g.height > 0 ? { width: g.width, height: g.height } : {})} />
+              {words && (
+                <figcaption className={styles.pictureText}>
+                  {g.label && <strong className={styles.pictureTitle}>{g.label}</strong>}
+                  {g.caption && <span className={styles.pictureCaption}>{g.caption}</span>}
+                </figcaption>
+              )}
+            </figure>
+          );
+        })}
       </div>
     </section>
   );

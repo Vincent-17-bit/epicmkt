@@ -216,6 +216,6 @@ export function brandPayload(brand) {
 
 /** The smallest width that still looks sharp in the gallery frame on a big screen, in pixels. */
 export const SHARP_WIDTH = 1200;
-/** Gallery frames are 16:9 everywhere, so every picture takes the same space; a picture of another shape is shown whole, never stretched. */
+/** The frame of a picture's thumbnail in the seller's editor. On the item page each picture is shown whole at its own shape. */
 export const GALLERY_RATIO = "16 / 9";
 export const BRAND_CARD_RATIO = "4 / 5";
