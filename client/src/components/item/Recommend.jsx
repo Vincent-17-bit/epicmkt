@@ -13,7 +13,7 @@ import rec from "./Recommend.module.css";
 // Enough for the carousel's pages in one request; the ranking caps a page at 50.
 const PAGE_SIZE = 48;
 
-// Similar products: the same kind of product from other shops, the last section of the page.
+// Similar products: the same kind of product from other shops, right after "Goes well with this" and before What's included.
 // The caller keys it by the item so one product's results can never show under another.
 export default function Recommend({ ctx }) {
   const { item, business } = ctx;

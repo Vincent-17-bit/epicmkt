@@ -8,14 +8,14 @@ export const SECTIONS = [
   { id: "item-specs", label: "Specifications" },
   { id: "item-delivery", label: "Delivery" },
   { id: "item-store", label: "From the store" },
+  { id: "item-recommend", label: "Goes well with" },
+  { id: "item-similar", label: "Similar products" },
   { id: "item-included", label: "What's included" },
   { id: "item-images", label: "Images" },
   { id: "item-videos", label: "Videos" },
   { id: "item-product-info", label: "Product information" },
   { id: "item-brand", label: "From the brand" },
-  { id: "item-compare", label: "Compare" },
-  { id: "item-recommend", label: "Goes well with" },
-  { id: "item-similar", label: "Similar products" }
+  { id: "item-compare", label: "Compare" }
 ];
 
 const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;

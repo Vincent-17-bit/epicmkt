@@ -570,7 +570,7 @@
   }
 }
 
-/* ---- Similar items: the last section, a full-width card after the specs and above the sticky action bar ---- */
+/* ---- Goes well with and Similar products: full-width cards right after the top of the page, before What's included ---- */
 
 .similar {
   margin-bottom: var(--space-3);
@@ -589,6 +589,14 @@
   .root[data-variant="page"] .body .similar {
     max-width: none;
     margin-inline: 0;
+  }
+}
+
+/* The item's own sections under them (What's included, Images, Videos, Product information, From the brand, Compare) line up with those
+   cards: centred 48rem columns on smaller screens, the page's full width from 64rem. */
+@media (min-width: 64rem) {
+  .root[data-variant="page"] .body > section[id^="item-"] {
+    max-width: none;
   }
 }
 

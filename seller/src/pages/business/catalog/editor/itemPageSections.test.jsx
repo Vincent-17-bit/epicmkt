@@ -127,3 +127,15 @@ describe("the editor", () => {
     expect(save.mock.calls.at(-1)[1].includeMedia).toHaveLength(1);
   }, 30000);
 });
+
+describe("From the brand in the editor", () => {
+  it("sets only the banner and the achievement cards: the old story blocks are not offered", async () => {
+    const { render } = await import("@testing-library/react");
+    const { default: BrandEditor } = await import("./BrandEditor.jsx");
+    const extras = { pic: () => null, add: vi.fn(), saved: [], version: 0 };
+    render(<BrandEditor brand={{ banner: null, cards: [] }} onBrand={() => {}} extras={extras} />);
+    expect(screen.getByRole("heading", { name: /from the brand/i })).toBeInTheDocument();
+    expect(screen.queryByText(/brand story/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add block/i })).not.toBeInTheDocument();
+  });
+});

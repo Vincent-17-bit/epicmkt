@@ -3,7 +3,7 @@
 .hidden { position: absolute; inline-size: 1px; block-size: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .videoGrid { display: grid; gap: var(--space-4); align-items: start; }
 .player { display: grid; gap: var(--space-3); min-inline-size: 0; }
-.video { inline-size: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-card); background: var(--text); object-fit: contain; }
+.video { inline-size: 100%; aspect-ratio: 16 / 9; max-block-size: min(75svh, 46rem); border-radius: var(--radius-card); background: #000000; object-fit: contain; }
 .reel { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .reelBtn { min-block-size: var(--tap); padding: 0 var(--space-4); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
 .reelBtn[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-tint); color: var(--on-primary-tint); }
@@ -13,12 +13,6 @@
 .checks { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .check { display: flex; align-items: flex-start; gap: var(--space-3); color: var(--text); font-size: var(--text-sm); overflow-wrap: anywhere; }
 .tick { flex: none; margin-block-start: 0.3em; color: var(--primary); }
-.story { display: grid; gap: var(--space-4); }
-.block { display: grid; gap: 0; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); box-shadow: var(--shadow-1); overflow: clip; }
-.shot { inline-size: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--surface-3); }
-.copy { display: grid; align-content: center; gap: var(--space-2); padding: var(--space-5); min-inline-size: 0; }
-.heading { margin: 0; font-size: var(--text-lg); color: var(--text); overflow-wrap: anywhere; }
-.text { margin: 0; color: var(--text); font-size: var(--text-md); line-height: 1.65; overflow-wrap: anywhere; white-space: pre-line; }
 .head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
 .sub { margin: var(--space-1) 0 0; color: var(--text-muted); font-size: var(--text-sm); }
 .switch { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: var(--tap); color: var(--text); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
@@ -51,9 +45,6 @@ a.name { color: var(--text); text-decoration: underline; text-underline-offset: 
   .section { padding-inline: var(--space-5); }
   .videoGrid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
   .videoGrid[data-solo] { grid-template-columns: minmax(0, 1fr); }
-  .block:not([data-solo]) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .block[data-flip] .shot { order: 2; }
-  .shot { block-size: 100%; aspect-ratio: auto; min-block-size: 14rem; }
 }
 
 /* ---- Sections the seller sets (migration 0138) ------------------------------------------------------------------------------- */
@@ -73,29 +64,43 @@ a.name { color: var(--text); text-decoration: underline; text-underline-offset: 
 .incDot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: var(--text); transform: translateY(-0.12em); }
 .incLabel { font-weight: 700; }
 
-/* Images: one 16:9 frame for every slide, the picture shown whole inside it. */
-.tabs { display: flex; gap: var(--space-1); overflow-x: auto; scrollbar-width: none; border-block-end: 1px solid var(--border); }
-.tabs::-webkit-scrollbar { display: none; }
-.tab { flex: none; min-block-size: var(--tap); padding: 0 var(--space-4); border: 0; border-block-end: 3px solid transparent; background: none; color: var(--text-muted); font: inherit; font-size: var(--text-sm); font-weight: 700; cursor: pointer; white-space: nowrap; }
-.tab[aria-selected="true"] { color: var(--text); border-block-end-color: var(--primary); }
-.tab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+/* Images: one dark showcase, like a brand's picture tour. It keeps its own dark colours in both themes (as a video player does), so the
+   pictures always sit on the same ground. Its width is held so the bar and the 16:9 frame always fit on the screen at once. */
+.show {
+  --show-bg: #111111;
+  --show-bar: #262626;
+  --show-ink: #ffffff;
+  --show-ink-soft: rgb(255 255 255 / 0.74);
+  display: grid; gap: var(--space-4); min-inline-size: 0;
+  inline-size: min(100%, max(20rem, calc((100svh - var(--header-h) - 10rem) * 16 / 9)));
+  margin-inline: auto;
+}
+.showcase { position: relative; overflow: hidden; border-radius: var(--radius-card); background: var(--show-bg); color: var(--show-ink); box-shadow: var(--shadow-md); }
+.showBar { display: flex; justify-content: safe center; gap: clamp(var(--space-5), 4vw, 3.5rem); overflow-x: auto; scrollbar-width: none; padding-inline: var(--space-5); background: var(--show-bar); }
+.showBar::-webkit-scrollbar { display: none; }
+.showTab { position: relative; flex: none; min-block-size: 3.25rem; padding: 0 var(--space-1); border: 0; background: none; color: var(--show-ink-soft); font: inherit; font-size: var(--text-sm); font-weight: 700; letter-spacing: 0.01em; white-space: nowrap; cursor: pointer; }
+.showTab::after { content: ""; position: absolute; inset-inline: 0; inset-block-end: 0.7rem; block-size: 2px; border-radius: 1px; background: var(--show-ink); transform: scaleX(0); }
+.showTab:hover, .showTab[aria-selected="true"] { color: var(--show-ink); }
+.showTab[aria-selected="true"]::after { transform: scaleX(1); }
+.showTab:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -0.4rem; border-radius: var(--radius-sm); }
 .stage { position: relative; min-inline-size: 0; }
-.track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; border-radius: var(--radius-card); }
+.track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; }
 .track::-webkit-scrollbar { display: none; }
-.track:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.slide { margin: 0; scroll-snap-align: start; display: grid; gap: var(--space-2); align-content: start; min-inline-size: 0; }
-.frame { aspect-ratio: 16 / 9; inline-size: 100%; display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-card); background: var(--surface-2); }
-.frame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; }
-.caption { margin: 0; color: var(--text); font-size: var(--text-md); line-height: 1.5; text-align: center; overflow-wrap: anywhere; }
-.arrow { position: absolute; inset-block-start: calc(50% - 1.5rem); display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; padding: 0; border: 1px solid var(--border-strong); border-radius: 50%; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); cursor: pointer; }
-.arrow:disabled { opacity: 0; pointer-events: none; }
-.arrow:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.arrowPrev { inset-inline-start: var(--space-2); }
-.arrowNext { inset-inline-end: var(--space-2); }
-.stage .arrow { inset-block-start: calc(50% - 1.5rem - 1rem); }
-.dots { display: flex; justify-content: center; gap: var(--space-2); }
-.dot { inline-size: 0.6rem; block-size: 0.6rem; padding: 0; border: 0; border-radius: 50%; background: var(--border-strong); cursor: pointer; }
-.dot[data-on] { background: var(--text); inline-size: 1.4rem; border-radius: var(--radius-pill); }
+.track:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -3px; }
+.slide { position: relative; margin: 0; scroll-snap-align: start; scroll-snap-stop: always; display: grid; align-content: start; min-inline-size: 0; }
+.frame { aspect-ratio: 16 / 9; inline-size: 100%; display: grid; place-items: center; overflow: hidden; background: var(--show-bg); }
+.frame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; user-select: none; -webkit-user-drag: none; }
+.frame[data-fill] img { object-fit: cover; }   /* a 16:9 picture (within 3%) fills the frame edge to edge */
+.caption { margin: 0; padding: var(--space-3) var(--space-4) var(--space-4); color: var(--show-ink); font-size: var(--text-md); font-weight: 600; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.chevron { position: absolute; inset-block-start: 50%; translate: 0 -50%; display: grid; place-items: center; inline-size: 3rem; block-size: 5rem; padding: 0; border: 0; background: none; color: var(--show-ink); filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.7)); opacity: 0.9; cursor: pointer; }
+.chevron:hover { opacity: 1; }
+.chevron:disabled { opacity: 0; pointer-events: none; }
+.chevron:focus-visible { outline: 2px solid var(--show-ink); outline-offset: -2px; border-radius: var(--radius-sm); opacity: 1; }
+.chevronPrev { inset-inline-start: var(--space-2); }
+.chevronNext { inset-inline-end: var(--space-2); }
+.showDots { display: flex; justify-content: center; gap: var(--space-2); }
+.showDot { inline-size: 0.55rem; block-size: 0.55rem; padding: 0; border: 0; border-radius: var(--radius-pill); background: var(--border-strong); cursor: pointer; }
+.showDot[data-on] { inline-size: 1.4rem; background: var(--text); }
 
 /* From the brand: cards on a wide banner (or a dark band when there is none). */
 .brandStage { position: relative; isolation: isolate; overflow: hidden; border-radius: var(--radius-card); background: var(--featured-bg); padding: clamp(var(--space-5), 5vw, var(--space-8)) clamp(var(--space-4), 4vw, var(--space-7)); min-block-size: 12rem; }
@@ -107,18 +112,35 @@ a.name { color: var(--text); text-decoration: underline; text-underline-offset: 
 .brandCard { margin: 0; scroll-snap-align: start; display: grid; gap: var(--space-2); align-content: start; min-inline-size: 0; }
 .brandFrame { aspect-ratio: 4 / 5; display: grid; place-items: center; overflow: hidden; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-lg); }
 .brandFrame img { inline-size: 100%; block-size: 100%; object-fit: contain; display: block; }
+.edgeArrow { position: absolute; inset-block-start: 50%; translate: 0 -50%; display: grid; place-items: center; inline-size: 2.25rem; block-size: 4rem; padding: 0; border: 0; background: var(--surface); color: var(--text); box-shadow: var(--shadow-md); cursor: pointer; }
+.edgeArrow:disabled { opacity: 0; pointer-events: none; }
+.edgeArrow:hover { background: var(--surface-2); }
+.edgeArrow:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.edgePrev { inset-inline-start: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.edgeNext { inset-inline-end: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
 .brandCaption { margin: 0; color: var(--featured-text); font-size: var(--text-sm); font-weight: 700; text-align: center; text-shadow: 0 1px 2px rgb(0 0 0 / 0.6); overflow-wrap: anywhere; }
 
 @media (min-width: 900px) {
   .incList { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: var(--space-6); }
 }
+@media (min-width: 48rem) {
+  /* The caption sits over the bottom of the picture on a soft shade, like the title line of a picture tour. */
+  .caption { position: absolute; inset-inline: 0; inset-block-end: 0; padding: clamp(var(--space-6), 6vw, 4.5rem) clamp(var(--space-6), 8vw, 6rem) clamp(var(--space-4), 2.4vw, var(--space-6)); background: linear-gradient(to top, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0)); font-size: clamp(var(--text-md), 1.9vw, var(--text-2xl)); font-weight: 700; text-shadow: 0 1px 3px rgb(0 0 0 / 0.55); pointer-events: none; }
+  .chevronPrev { inset-inline-start: var(--space-3); }
+  .chevronNext { inset-inline-end: var(--space-3); }
+}
 @media (max-width: 40rem) {
   .incGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-  .arrow { inline-size: 2.5rem; block-size: 2.5rem; }
+  .chevron, .edgeArrow { display: none; }   /* phones swipe; the bar and the dots say where they are */
+  .showBar { justify-content: flex-start; padding-inline: var(--space-4); -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - var(--space-6)), transparent 100%); mask-image: linear-gradient(to right, transparent 0, #000 var(--space-4), #000 calc(100% - var(--space-6)), transparent 100%); }
+  .showTab { min-block-size: 2.875rem; font-size: var(--text-xs); }
+  .showTab::after { inset-block-end: 0.55rem; }
   .brandTrack { grid-auto-columns: 62vw; }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .dot { transition: inline-size 160ms ease, background-color 160ms ease; }
+  .showDot { transition: inline-size 160ms ease, background-color 160ms ease; }
+  .showTab, .chevron { transition: color 160ms ease, opacity 160ms ease; }
+  .showTab::after { transition: transform 220ms ease; }
 }
 
 /* Picture sections use the page's full width on big screens, so the pictures are large and several brand cards fit. */

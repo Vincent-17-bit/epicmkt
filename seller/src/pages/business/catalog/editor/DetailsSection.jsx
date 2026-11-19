@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { faBoxOpen, faListCheck, faPlus, faSliders, faLayerGroup } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup, isBrandGroup, isBrandImageGroup, isChoiceSpec, specExample, specKinds, specSuggestions, PAGE_LIMITS } from "@epicmkt/shared";
+import { SPEC_DEFAULT_GROUP, SPEC_GROUPS, SPEC_LIMITS, PLAIN_SPEC_ROWS, isInfoGroup, isFaqGroup, isChoiceSpec, specExample, specKinds, specSuggestions, PAGE_LIMITS } from "@epicmkt/shared";
 import { LIMITS } from "./model.js";
 import { Field, RowList, SectionCard } from "./parts.jsx";
 import BrandEditor from "./BrandEditor.jsx";
@@ -168,8 +168,7 @@ export default function DetailsSection({ form, patch, errors, focusOn, type, mor
 
           <ProductInfoEditor specs={form.specs} onChange={(next) => patch("specs", next)} plainCount={plain.length} category={category} typeId={form.productTypeId} name={form.name} />
 
-          <BrandEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isBrandGroup(s.group) && !isBrandImageGroup(s.group)).length}
-            brand={page.brand} onBrand={(b) => setPage("brand", b)} extras={extras} />
+          <BrandEditor brand={page.brand} onBrand={(b) => setPage("brand", b)} extras={extras} />
 
           <FaqEditor specs={form.specs} onChange={(next) => patch("specs", next)} focusOn={focusOn} usedElsewhere={form.specs.filter((s) => !isFaqGroup(s.group)).length} />
 
