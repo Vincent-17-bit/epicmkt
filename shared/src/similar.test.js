@@ -71,6 +71,12 @@ test("the same head noun beats a shared section, and a shared section only quali
     ]
   });
   assert.deepEqual(ids(rows), ["same-head", "section-only"]);
+  // A different product type vetoes even that: the catalogue says what it is, so the seller's section cannot.
+  const typed = rankSimilar({
+    current: { ...current, productTypeId: "table" },
+    candidates: [make("typed", { section: "Other", name: "Item", productTypeId: "table" }), make("other-type", { section: " tables ", name: "Item", productTypeId: "chair" })]
+  });
+  assert.deepEqual(ids(typed), ["typed"]);
 });
 
 test("same section but a different head noun ranks below the same head noun, and an unrelated one is out", () => {
@@ -86,17 +92,64 @@ test("same section but a different head noun ranks below the same head noun, and
   assert.deepEqual(ids(rows), ["couch", "armchair"]);
 });
 
-test("related heads need the section too, and opaque heads (names the vocabulary does not know) fall back to the section", () => {
+test("related heads need the section too, and opaque heads need the section AND a shared word", () => {
   const sofa = { id: "cur", businessId: "b0", name: "Leather sofa", section: "Seating" };
   assert.equal(relevance(sofa, make("a", { name: "Velvet armchair", section: "Seating" })).state, "related");
   assert.equal(relevance(sofa, make("b", { name: "Velvet armchair", section: "Other" })).qualifies, false);
-  const galaxy = { id: "cur", businessId: "b0", name: "Samsung Galaxy A15 128GB", section: "Phones" };
-  const spark = relevance(galaxy, make("c", { name: "Tecno Spark 10", section: "Phones" }));
-  assert.equal(spark.state, "opaque");
-  assert.equal(spark.qualifies, true);
-  assert.equal(relevance(galaxy, make("d", { name: "Tecno Spark 10", section: "Other" })).qualifies, false);
-  assert.equal(relevance(galaxy, make("e", { name: "Brown bread", section: "Phones" })).qualifies, false);
+  // Names the vocabulary does not know: "kiondo" and "mkeka" are not in it.
+  const kiondo = { id: "cur", businessId: "b0", name: "Sisal kiondo", section: "Crafts" };
+  const alone = relevance(kiondo, make("c", { name: "Woven mkeka", section: "Crafts" }));
+  assert.equal(alone.state, "opaque");
+  assert.equal(alone.qualifies, false, "a shared section alone is not proof");
+  assert.equal(relevance(kiondo, make("d", { name: "Sisal mkeka", section: "Crafts" })).qualifies, true, "a shared word is");
+  assert.equal(relevance(kiondo, make("e", { name: "Sisal mkeka", section: "Other" })).qualifies, false, "and the section is still needed");
+  assert.equal(relevance(kiondo, make("f", { name: "Brown bread", section: "Crafts" })).qualifies, false);
   assert.ok(MIN_RELEVANCE > 0);
+});
+
+test("phone model lines are phones: Galaxy, Spark and Hot no longer depend on the seller's section", () => {
+  const galaxy = { id: "cur", businessId: "b0", name: "Samsung Galaxy A15 128GB", section: "Phones" };
+  for (const name of ["Tecno Spark 10", "Infinix Hot 40", "Redmi Note 13", "iPhone 13", "Itel A60", "Mobile phone"]) {
+    const verdict = relevance(galaxy, make("x", { name, section: "Other" }));
+    assert.equal(verdict.state, "same", name);
+    assert.equal(verdict.qualifies, true, name);
+  }
+  assert.equal(relevance(galaxy, make("y", { name: "Samsung Galaxy Tab A9", section: "Phones" })).qualifies, false, "a tablet is not a phone");
+  assert.equal(relevance(galaxy, make("z", { name: "Tecno spark plug", section: "Phones" })).qualifies, false);
+});
+
+test("the product type is evidence: the same type joins unknown names, different types cancel a shared section", () => {
+  const a = { id: "cur", businessId: "b0", name: "Zuri 5", section: "Gadgets", productTypeId: "phone" };
+  assert.equal(relevance(a, make("same", { name: "Omega 9", section: "Other", productTypeId: "phone" })).qualifies, true);
+  assert.equal(relevance(a, make("diff", { name: "Omega 9", section: "Gadgets", productTypeId: "tablet" })).qualifies, false);
+  assert.equal(relevance(a, make("none", { name: "Omega 9", section: "Gadgets" })).qualifies, false, "one side untyped: two unreadable names and only a section");
+  // Known different heads still never match, even in the same type.
+  assert.equal(relevance({ ...a, name: "Leather sofa" }, make("k", { name: "Fabric table", productTypeId: "phone" })).qualifies, false);
+});
+
+test("accessories are never similar to each other or to the device, even in a shared section", () => {
+  const section = "Cases and protectors";
+  const pairs = [
+    ["Silicone phone case", "Tempered glass screen protector"],
+    ["iPhone 13 case", "Glass protector"],
+    ["Shockproof phone case", "Camera lens protector"],
+    ["Phone cover Samsung A15", "Screen guard A15"]
+  ];
+  for (const [x, y] of pairs) assert.equal(relevance({ id: "c", businessId: "b0", name: x, section }, make("o", { name: y, section })).qualifies, false, `${x} ~ ${y}`);
+  assert.equal(relevance({ id: "c", businessId: "b0", name: "Silicone phone case", section }, make("o", { name: "Phone cover Samsung A15", section })).qualifies, true);
+  assert.equal(relevance({ id: "c", businessId: "b0", name: "Tote bag", section: "Bags" }, make("o", { name: "Tea bags 100", section: "Bags" })).qualifies, false);
+});
+
+test("the heading names the kind, never a model or a phrase that stands for it", () => {
+  const said = (name) => analyseName(name).headWord;
+  assert.equal(said("Mobile phone"), "phone");
+  assert.equal(said("Samsung Galaxy A15"), "phone", "a model line is never named to a visitor");
+  assert.equal(said("MacBook Air M1"), "laptop");
+  assert.equal(said("Egg"), "egg");
+  assert.equal(said("Total gas 6kg"), "gas");
+  assert.equal(said("Tea bags"), "tea bag");
+  assert.equal(said("Phone case for iPhone 13"), "phone case");
+  assert.equal(said("Loaves"), "loaves", "plain synonyms still read as written");
 });
 
 test("category and tags only break ties between items that already match", () => {
@@ -152,7 +205,8 @@ test("units, pack sizes, models and brands are ignored when working out what an 
   assert.equal(analyseName("Brown Breads").headWord, "breads");
   assert.deepEqual([...analyseName("Brown Bread 400g").mods], ["brown"]);
   assert.equal(analyseName("Brown Bread 400g").known, true);
-  assert.equal(analyseName("Samsung Galaxy A15").known, false);
+  assert.equal(analyseName("Samsung Galaxy A15").head, "phone");
+  assert.equal(analyseName("Sisal kiondo").known, false);
   assert.equal(analyseName("Item").known, false);
 });
 

@@ -125,7 +125,7 @@ describe("SimilarItems", () => {
     const { unmount } = mount({ name: "Brown Bread 400g" });
     expect(await screen.findByText("Other stores selling bread")).toBeInTheDocument();
     unmount();
-    mount({ name: "Samsung Galaxy A15", brand: "Samsung" });
+    mount({ name: "Sisal kiondo", brand: "Zuri" }); // a name the vocabulary cannot read
     await screen.findByText("Other 0");
     expect(screen.queryByText(/Other stores selling/)).toBeNull();
   });

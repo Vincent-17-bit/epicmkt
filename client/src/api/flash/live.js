@@ -317,7 +317,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
   if (!isLiveId(itemId)) return [];
   // abortSignal belongs before maybeSingle() / await: it is not available on the builder maybeSingle() returns.
   const read = (query) => (signal ? query.abortSignal(signal) : query);
-  const seed = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).eq("id", itemId)).maybeSingle());
+  const seed = unwrap(await read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("id", itemId)).maybeSingle());
   if (!seed) return [];
   const base = unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("id", seed.business_id)).maybeSingle());
   if (!base) return [];
@@ -340,7 +340,19 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
 
   const listed = [...rows.values()].filter(isListed);
   if (!listed.length) return [];
-  await loadStores([...new Set(listed.map((row) => row.business_id))]);
+  // The product type of each candidate is the strongest evidence of what it is, when the seller (or an admin) set one. The database
+  // function returns no type, so it is read in one small query by primary key, in parallel with the stores so it adds no round trip.
+  // Evidence only: if it cannot be read the ranking falls back to names and sections, which still works.
+  const types = new Map();
+  const loadTypes = async () => {
+    try {
+      const ids = listed.map((row) => row.id).slice(0, SIMILAR_POOL * 2);
+      for (const row of unwrap(await read(supabase.from("public_items").select("id,product_type_id").in("id", ids))) ?? []) if (row.product_type_id) types.set(row.id, row.product_type_id);
+    } catch {
+      // names and sections only
+    }
+  };
+  await Promise.all([loadStores([...new Set(listed.map((row) => row.business_id))]), loadTypes()]);
   if (signal?.aborted) return [];
   const usable = listed.filter((row) => stores.has(row.business_id));
   if (!usable.length) return [];
@@ -368,7 +380,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
   });
   const seedPrice = seed.price === null ? NaN : Number(seed.price);
   const ranked = rankSimilar({
-    current: { id: seed.id, businessId: base.id, categoryId: base.category_id, name: seed.name, brand: seed.brand, section: seed.section, price: sales.get(seed.id)?.pricing?.salePrice ?? seedPrice, tags: base.tags, ...(pointOf(base) ?? {}) },
+    current: { id: seed.id, businessId: base.id, categoryId: base.category_id, name: seed.name, brand: seed.brand, productTypeId: seed.product_type_id ?? null, section: seed.section, price: sales.get(seed.id)?.pricing?.salePrice ?? seedPrice, tags: base.tags, ...(pointOf(base) ?? {}) },
     candidates: shaped.map((s) => ({
       id: s.item.id,
       businessId: s.business.id,
@@ -376,6 +388,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
       categoryId: s.business.category_id,
       name: s.item.name,
       brand: s.brand,
+      productTypeId: types.get(s.item.id) ?? null,
       section: s.item.section,
       price: s.pricing?.salePrice ?? null,
       tags: s.business.tags,

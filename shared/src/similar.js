@@ -9,6 +9,9 @@ import {
   RELATED_GROUPS,
   NOUNS,
   COMPOUNDS,
+  ALIAS_PHRASES,
+  DEVICE_BRANDS,
+  DEVICE_ACCESSORY_HEADS,
   IRREGULAR_PLURALS,
   INVARIANT_WORDS
 } from "./similarVocab.js";
@@ -22,9 +25,18 @@ import {
 //
 //   same     the same head noun                                   qualifies on its own
 //   related  a sibling kind (sofa / armchair)                     only in the same section, ranks below `same`
-//   opaque   neither head is in the vocabulary (a model name)     only in the same section
-//   unknown  one side has no head noun at all ("Item")           only in the same section
+//   opaque   neither head is in the vocabulary (a model name)     same section or product type, AND a shared word
+//   unknown  one side has no head noun at all ("Item")           only in the same section (or the same product type)
 //   differs  two different heads, at least one of them known      never ("bread" is never "cake", whatever the section)
+//
+// A shared section alone is never enough for two different names the vocabulary does not know. Sellers name sections loosely ("Cases and
+// protectors", "Accessories", "New arrivals"), so a section is a hint, not a proof: without a second signal (a shared word, or the
+// same product type) "Phone case" and "Surge protector" would qualify as the same thing the moment their heads were unknown.
+// (A name with no head noun at all, "Item", makes no claim about its kind, so the section still lets it in.)
+//
+// The product type, when both items have one, is the strongest signal there is: the same type counts like a shared section for
+// names the vocabulary does not know ("Galaxy" and "Camon" are both phones), and two different types rule out any match that
+// rests on a section or on a related kind ("Screen protector" in phone accessories is never a "Phone case" in cases).
 //
 // Qualifying items must reach MIN_RELEVANCE. They are then ordered by strict tiers, a later tier only mattering when every
 // earlier one ties. Continuous values (price, distance) are put into bands first, otherwise they would almost never tie.
@@ -57,14 +69,18 @@ const NO_HEAD = new Set(NEVER_HEAD);
 const SHORT = new Set(SHORT_NOUNS);
 const INVARIANT = new Set(INVARIANT_WORDS);
 const COMPOUND_LIST = Object.entries(COMPOUNDS);
+// Compounds first, then aliases: the same matching, but only COMPOUNDS decide how a kind is said (SAID below).
+const PHRASE_LIST = [...COMPOUND_LIST, ...Object.entries(ALIAS_PHRASES)];
+const BRANDS = new Set(DEVICE_BRANDS);
+const isBrand = (word) => BRANDS.has(word) || BRANDS.has(singular(word));
 // A joined name -> how it is said to a visitor ("phonecase" -> "phone case", "tshirt" -> "t-shirt": the first name that joins
 // into it) and the last word of every name that joins into it ("phonecase" -> case, cover), which is what the database can search
 // for: names in the database are never joined.
 const SAID = new Map();
 const JOINED = new Map();
-for (const [from, to] of COMPOUND_LIST) {
+for (const [from, to] of PHRASE_LIST) {
   const words = from.split(" ");
-  if (!SAID.has(to)) SAID.set(to, words[0].length === 1 ? words.join("-") : from);
+  if (from in COMPOUNDS && !SAID.has(to)) SAID.set(to, words[0].length === 1 ? words.join("-") : from);
   JOINED.set(to, [...(JOINED.get(to) ?? []), words[words.length - 1]]);
 }
 
@@ -87,8 +103,6 @@ const related = (a, b) => {
   for (const id of left) if (right.has(id)) return true;
   return false;
 };
-// Heads the vocabulary knows. Two different known heads are never similar; an unknown head falls back to the section.
-const KNOWN = new Set([...NOUNS, ...SYNONYM_GROUPS.flat(), ...RELATED_GROUPS.flat()].map(canonOf));
 
 const fold = (value) =>
   typeof value === "string"
@@ -111,16 +125,26 @@ export const singular = (word) => {
   return word;
 };
 
+// Heads the vocabulary knows. Two different known heads are never similar; an unknown head falls back to the section.
+const KNOWN = new Set([...NOUNS, ...SYNONYM_GROUPS.flat(), ...RELATED_GROUPS.flat()].map((word) => canonOf(singular(word))));
+
 // "Brown bread, Brookside 400g" -> "Brown bread" first: what comes after a comma, a dash or a word like "with" or "for"
 // describes the product ("Phone case for iPhone 13" is a case) rather than naming it.
 const SEGMENTS = /\s[-\u2013\u2014]\s|[,;|()[\]/]|\s(?:with|for|of|in|by|from)\s/;
 
 const tokensOf = (segment, brand) => {
-  let text = ` ${fold(segment)} `;
-  for (const [from, to] of COMPOUND_LIST) text = text.split(` ${from} `).join(` ${to} `);
+  // Compounds are matched on the singular of each word, so "Tea bags" and "Phone cases" join exactly like "Tea bag" and "Phone case".
+  // Model numbers and sizes go first, so "iPhone 13 case" reads as "iphone case".
+  let words = fold(segment).split(" ").filter((word) => word && !/\d/.test(word));
+  for (const [from, to] of PHRASE_LIST) {
+    const parts = from.split(" ");
+    for (let i = 0; i + parts.length <= words.length; i += 1) {
+      if (parts.every((part, k) => singular(words[i + k]) === part)) words = [...words.slice(0, i), to, ...words.slice(i + parts.length)];
+    }
+  }
   const out = [];
-  for (const word of text.split(" ")) {
-    if (!word || /\d/.test(word)) continue; // quantities, sizes and model codes: 400g, x6, A15
+  for (const word of words) {
+    if (!word) continue;
     if (word.length < 3 && !SHORT.has(word)) continue;
     const one = singular(word);
     if (STOP.has(word) || STOP.has(one) || UNITS.has(word) || UNITS.has(one) || brand.has(word) || brand.has(one)) continue;
@@ -146,11 +170,19 @@ export function analyseName(name, brand = "") {
     all.push(...found);
     if (!chosen && found.length) chosen = found;
   }
-  const pick = chosen ? ([...chosen].reverse().find((token) => !token.floating) ?? chosen[chosen.length - 1]) : null;
+  // A device brand after the product is a description of what it fits ("Phone cover Samsung A15" is a cover), unless it is all there is.
+  const candidates = chosen ? chosen.filter((token) => !token.floating) : [];
+  const lastReal = [...candidates].reverse().find((token) => !isBrand(token.word));
+  let pick = chosen ? (lastReal ?? candidates[candidates.length - 1] ?? chosen[chosen.length - 1]) : null;
+  // "Samsung A15 case" / "Tecno cover": a bare case, cover or protector next to a phone brand is a phone accessory.
+  if (pick && DEVICE_ACCESSORY_HEADS[singular(pick.word)] && (chosen ?? []).some((token) => isBrand(token.word))) {
+    const joined = DEVICE_ACCESSORY_HEADS[singular(pick.word)];
+    pick = { ...pick, word: joined, canon: canonOf(joined) };
+  }
   const tokens = new Set(all.map((token) => token.canon));
   const mods = new Set(tokens);
   if (pick) mods.delete(pick.canon);
-  return { head: pick?.canon ?? null, headWord: pick ? SAID.get(pick.word) ?? pick.word : null, known: pick ? KNOWN.has(pick.canon) : false, tokens, mods };
+  return { head: pick?.canon ?? null, headWord: pick ? (isBrand(pick.word) && pick.canon !== pick.word ? pick.canon : SAID.get(pick.word) ?? pick.word) : null, known: pick ? KNOWN.has(pick.canon) : false, tokens, mods };
 }
 
 /** Every significant word of a name, folded. Kept for callers that only want the words. */
@@ -181,32 +213,48 @@ export function similarTerms(name, brand = "") {
   return [...out].filter((word) => /^[a-z0-9]{2,30}$/.test(word)).sort();
 }
 
+const typeIdOf = (entry) => {
+  const id = entry?.productTypeId ?? entry?.productTypeSlug ?? null;
+  return typeof id === "string" && id.trim() ? id.trim().toLowerCase() : null;
+};
+
 const profileOf = (entry) => {
   const base = analyseName(entry?.name, entry?.brand);
+  const typeId = typeIdOf(entry);
   const type = fold(entry?.productType).split(" ").filter(Boolean).pop();
-  if (!type) return base;
+  if (!type) return { ...base, typeId };
   const head = canonOf(singular(type));
   const mods = new Set(base.tokens);
   mods.delete(head);
-  return { ...base, head, mods };
+  return { ...base, head, mods, typeId };
 };
 
 const sectionOf = (entry) => fold(entry?.section);
 
 const judge = (a, b, inSection) => {
+  const typed = Boolean(a.typeId && b.typeId);
+  const sameType = typed && a.typeId === b.typeId;
+  const otherType = typed && !sameType;
+  // What puts two items "together" for names the vocabulary cannot tell apart: the same section, or the same product type. Two
+  // different product types cancel a shared section: the seller's section cannot override what the catalogue says they are.
+  const together = !otherType && (inSection || sameType);
   let state;
   if (a.head && b.head) {
     if (a.head === b.head) state = "same";
-    else if (related(a.head, b.head)) state = inSection ? "related" : "differs";
+    else if (related(a.head, b.head)) state = together ? "related" : "differs";
     else if (KNOWN.has(a.head) || KNOWN.has(b.head)) state = "differs";
-    else state = inSection ? "opaque" : "differs";
+    else state = together ? "opaque" : "differs";
   } else {
-    state = inSection ? "unknown" : "differs";
+    state = together ? "unknown" : "differs";
   }
   if (state === "differs") return { state, score: 0, qualifies: false, inSection };
-  const shared = state === "same" || state === "related" ? Math.min(MOD_CAP, overlap(a.mods, b.mods)) : 0;
-  const score = HEAD_SCORE[state] + (inSection ? SECTION_SCORE : 0) + shared * MOD_SCORE;
-  return { state, score, qualifies: score >= MIN_RELEVANCE, inSection };
+  const shared = Math.min(MOD_CAP, overlap(a.mods, b.mods));
+  const score = HEAD_SCORE[state] + (together ? SECTION_SCORE : 0) + shared * MOD_SCORE;
+  // Two DIFFERENT names the vocabulary cannot read (opaque) are a claim that they are the same kind with nothing behind it but a
+  // section, which is how a "protector" ended up under a "case". They need a second signal. A name that says nothing at all
+  // ("Item", unknown) makes no such claim, so a shared section stays enough for it.
+  const proven = state !== "opaque" || sameType || shared > 0;
+  return { state, score, qualifies: score >= MIN_RELEVANCE && proven, inSection };
 };
 
 /**

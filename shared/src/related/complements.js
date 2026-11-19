@@ -11,14 +11,14 @@
 //
 // Admin relations (product_relations, the Relations page) still apply on top of this map: they can add pairs the map does not know.
 
-import { COMPLEMENTS, PHRASES, TYPE_GROUPS } from "./data/complementMap.js";
+import { COMPLEMENTS, DEVICE_ACCESSORIES, DEVICE_WORDS, LOCKED_GROUPS, NO_PARTNERS, PHRASES, TYPE_GROUPS } from "./data/complementMap.js";
 
-export { COMPLEMENTS };
+export { COMPLEMENTS, NO_PARTNERS };
 
-const PATTERNS = PHRASES.map(([group, phrases]) => [
-  group,
-  phrases.map((p) => new RegExp(`(^|[^a-z0-9])${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-\s]+/g, "[-\\s]*")}($|[^a-z0-9])`))
-]);
+const phraseRe = (p) => new RegExp(`(^|[^a-z0-9])${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-\s]+/g, "[-\\s]*")}(?:e?s)?($|[^a-z0-9])`);
+const PATTERNS = PHRASES.map(([group, phrases]) => [group, phrases.map(phraseRe)]);
+const DEVICES = DEVICE_WORDS.map(phraseRe);
+const ACCESSORIES = DEVICE_ACCESSORIES.map(([group, words]) => [group, words.map(phraseRe)]);
 
 const norm = (text) =>
   String(text ?? "")
@@ -29,16 +29,25 @@ const norm = (text) =>
 
 /**
  * The group of an item: { name, productTypeId? } -> "restaurant-meal", "gas-accessory", ... or null when nothing is known.
- * The name decides first (it is the most specific); the product type is the fallback.
+ *   1. A product type in a locked group (services, medicine, school uniform, pet accessories...) wins: a typed "Sofa cleaning" is
+ *      a service, never a sofa.
+ *   2. Otherwise the name decides, the most specific phrase first ("Gas regulator" is a gas accessory even if the seller filed it
+ *      under cooking gas). A phone or tablet brand next to an accessory word ("iPhone 13 case") is the accessory, not the device.
+ *   3. Otherwise the product type is the fallback.
  */
 export function complementGroupOf(item) {
-  const name = norm(item?.name);
-  if (name) {
-    for (const [group, patterns] of PATTERNS) if (patterns.some((re) => re.test(name))) return group;
-  }
   const type = item?.productTypeId ?? item?.productType ?? null;
-  if (type) return TYPE_GROUPS[type] ?? String(type);
-  return null;
+  const typeGroup = type ? TYPE_GROUPS[type] ?? String(type) : null;
+  if (typeGroup && LOCKED_GROUPS.has(typeGroup)) return typeGroup;
+  const name = norm(item?.name);
+  let group = null;
+  if (name) {
+    for (const [g, patterns] of PATTERNS) if (patterns.some((re) => re.test(name))) { group = g; break; }
+    if ((group === null || group === "phone" || group === "tablet") && DEVICES.some((re) => re.test(name))) {
+      for (const [g, patterns] of ACCESSORIES) if (patterns.some((re) => re.test(name))) { group = g; break; }
+    }
+  }
+  return group ?? typeGroup;
 }
 
 /** The groups that go with `group`, strongest first: [{ group, weight }]. [] when nothing does. */
