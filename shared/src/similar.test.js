@@ -138,7 +138,7 @@ test("units, pack sizes, models and brands are ignored when working out what an 
   assert.equal(analyseName("Milk Brookside", "Brookside").head, "milk");
   assert.equal(analyseName("Chocolate Cake").head, "cake");
   assert.equal(analyseName("Sliced bread loaf 400g").head, "bread");
-  assert.equal(analyseName("Phone case for iPhone 13").head, "case");
+  assert.equal(analyseName("Phone case for iPhone 13").head, "phonecase");   // a joined name: "case" alone is also a pencil case
   assert.equal(analyseName("Pack of 6 eggs").head, "egg");
   assert.equal(analyseName("Leather Sofa Black").head, "sofa");
   assert.equal(analyseName("Brown bread, Brookside 400g").head, "bread");
@@ -294,4 +294,17 @@ test("with a seed, equally good matches are shuffled per visit; the best stay fi
   assert.ok(!a.includes("c"), "a cake is never similar to bread");
   assert.notDeepEqual(a, b, "another visit, another order");
   assert.deepEqual(rankSimilar({ current, candidates: [...loaves].reverse(), seed: "visit-a", limit: 10 }).map((r) => r.id), a);
+});
+
+test("phone accessories are told apart by their full names, even in a shared section", () => {
+  const item = (id, name, section = "Cases and protectors") => make(id, { name, section });
+  const phoneCase = { id: "cur", businessId: "b0", name: "Silicone phone case", section: "Cases and protectors" };
+  assert.equal(relevance(phoneCase, item("p", "Tempered glass screen protector")).qualifies, false);
+  assert.equal(relevance(phoneCase, item("c", "Phone cover for Tecno Spark 10", "Covers")).state, "same");
+  assert.equal(relevance(phoneCase, item("k", "Pencil case", "Cases and protectors")).qualifies, false);
+  assert.equal(relevance({ ...phoneCase, name: "Screen guard" }, item("t", "Tempered glass")).state, "same");
+  // Said as written to a shopper, and searched for by the words the database has.
+  assert.equal(analyseName("Silicone phone case").headWord, "phone case");
+  assert.ok(similarTerms("Silicone phone case").includes("case") && similarTerms("Silicone phone case").includes("cover"));
+  assert.ok(similarTerms("SanDisk micro SD card 64GB").includes("card"));
 });

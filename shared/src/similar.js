@@ -57,6 +57,16 @@ const NO_HEAD = new Set(NEVER_HEAD);
 const SHORT = new Set(SHORT_NOUNS);
 const INVARIANT = new Set(INVARIANT_WORDS);
 const COMPOUND_LIST = Object.entries(COMPOUNDS);
+// A joined name -> how it is said to a visitor ("phonecase" -> "phone case", "tshirt" -> "t-shirt": the first name that joins
+// into it) and the last word of every name that joins into it ("phonecase" -> case, cover), which is what the database can search
+// for: names in the database are never joined.
+const SAID = new Map();
+const JOINED = new Map();
+for (const [from, to] of COMPOUND_LIST) {
+  const words = from.split(" ");
+  if (!SAID.has(to)) SAID.set(to, words[0].length === 1 ? words.join("-") : from);
+  JOINED.set(to, [...(JOINED.get(to) ?? []), words[words.length - 1]]);
+}
 
 // word -> the first word of its synonym group
 const CANON = new Map(SYNONYM_GROUPS.flatMap((group) => group.map((word) => [word, group[0]])));
@@ -140,7 +150,7 @@ export function analyseName(name, brand = "") {
   const tokens = new Set(all.map((token) => token.canon));
   const mods = new Set(tokens);
   if (pick) mods.delete(pick.canon);
-  return { head: pick?.canon ?? null, headWord: pick?.word ?? null, known: pick ? KNOWN.has(pick.canon) : false, tokens, mods };
+  return { head: pick?.canon ?? null, headWord: pick ? SAID.get(pick.word) ?? pick.word : null, known: pick ? KNOWN.has(pick.canon) : false, tokens, mods };
 }
 
 /** Every significant word of a name, folded. Kept for callers that only want the words. */
@@ -163,6 +173,7 @@ export function similarTerms(name, brand = "") {
   if (!head) return [];
   const out = new Set();
   for (const word of GROUP_MEMBERS.get(head) ?? [head]) forms(word, out);
+  for (const word of JOINED.get(head) ?? []) forms(word, out);
   if (headWord) {
     out.add(headWord);
     forms(singular(headWord), out);

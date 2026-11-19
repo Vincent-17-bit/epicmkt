@@ -39,7 +39,9 @@ export const PHRASES = [
   // Words that would otherwise fall into a food or drink group: a coffee table is not coffee, a kettle is not tea.
   ["table", ["coffee table", "side table", "tea table"]],
   ["appliance", ["coffee maker", "coffee machine", "kettle", "blender", "toaster", "microwave", "juicer", "juice extractor", "water dispenser", "fridge", "refrigerator"]],
-  ["cookware", ["milk pan", "tea pot", "teapot", "water jug", "jug"]],
+  ["cookware", ["milk pan", "tea pot", "teapot"]],
+  // A jug is for the table, not the stove: with the cups and plates, never offered with a gas cylinder (and not drinking water).
+  ["utensils", ["water jug", "juice jug", "jug"]],
   ["bread", ["bread", "loaf", "buns", "rolls"]],
   ["cupcakes-pastries", ["cupcake", "cupcakes", "muffin", "doughnut", "donut", "croissant", "mandazi", "samosa", "cookie", "cookies", "biscuit", "biscuits", "scone"]],
   ["cake", ["cake"]],
