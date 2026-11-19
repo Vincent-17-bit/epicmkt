@@ -56,16 +56,17 @@ export default function ItemLayout({ ctx }) {
         seller={<SoldFrom ctx={ctx} />}
         after={selective}
       />
-      {/* Below the top, in the order buyers read: what comes in the box, the seller's pictures, videos, product information and
-          questions, then the brand, the comparison and other items. */}
+      {/* Below the top: first other products (what goes with this one, then similar products from other shops), then this item's own
+          sections in the order buyers read them: what comes in the box, the seller's pictures, videos, product information and
+          questions, the brand, and the comparison. */}
+      <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
+      <Recommend key={`similar-${item.id}`} ctx={ctx} />
       <ItemIncluded key={`included-${item.id}`} item={item} />
       <ItemImages key={`images-${item.id}`} item={item} />
       <ItemVideos key={`videos-${item.id}`} item={item} />
       <ProductInformation key={`info-${item.id}`} item={item} />
       <BrandStory key={`brand-${item.id}`} item={item} />
       <CompareTable key={`compare-${item.id}`} item={item} business={business} />
-      <RecommendSection key={`recommend-${item.id}`} ctx={ctx} />
-      <Recommend key={`similar-${item.id}`} ctx={ctx} />
     </>
   );
 }
