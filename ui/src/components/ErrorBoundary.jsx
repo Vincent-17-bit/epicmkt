@@ -9,7 +9,7 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("Seller portal render error", error, info?.componentStack);
+    console.error(this.props.logLabel ?? "EpicMKT render error", error, info?.componentStack);
   }
 
   render() {

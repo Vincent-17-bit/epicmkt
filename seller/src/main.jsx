@@ -7,7 +7,7 @@ import "@epicmkt/ui/tokens.css";
 import "@epicmkt/ui/reset.css";
 import "./styles/seller.css";
 import App from "./App.jsx";
-import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { ErrorBoundary } from "@epicmkt/ui";
 
 // A data router, because the item editor blocks navigation while there are unsaved changes (useBlocker needs one).
 const router = createBrowserRouter([{ path: "*", element: <App /> }]);
@@ -16,7 +16,7 @@ const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 10
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ErrorBoundary>
+    <ErrorBoundary logLabel="Seller portal render error">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
       </QueryClientProvider>

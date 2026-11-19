@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DEFAULT_SETTINGS, IDLE_OPTIONS, idleMinutes } from "@epicmkt/shared";
 
-export const IDLE_OPTIONS = [15, 30, 60, 120];
-export const DEFAULT_IDLE = 60;
+export { IDLE_OPTIONS, idleMinutes };
+export const DEFAULT_IDLE = DEFAULT_SETTINGS.idle_minutes;
 export const WARN_SECONDS = 60;
 
-export const idleMinutes = (value) => (IDLE_OPTIONS.includes(value) ? value : DEFAULT_IDLE);
 
 const EVENTS = ["pointerdown", "keydown", "touchstart", "wheel", "scroll"];
 

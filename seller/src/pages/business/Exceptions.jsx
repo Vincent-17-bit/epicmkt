@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  BREAK_WEEKDAYS, DAYS, EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
-  addDays, breaksOn, dayLabel, describeException, describeExceptionForViewer, describeWeekdays, formatClock, getUserTimeZone, hoursRowsFor, nairobiNow, openMinutesOn, safeShopZone, shopTimeNote, statusOf, isOvernight, upcomingExceptions, validateException, zonedTimeToUtc,
-} from "@epicmkt/shared";
+  BREAK_WEEKDAYS, DAY_MS, DAYS, EXCEPTION_LIMIT, EXCEPTION_MAX_DAYS_AHEAD, EXCEPTION_MAX_INTERVALS, EXCEPTION_NOTE_MAX,
+  addDays, breaksOn, dayLabel, describeException, describeExceptionForViewer, describeWeekdays, formatClock, getUserTimeZone, hoursRowsFor, nairobiNow, openMinutesOn, safeShopZone, shopTimeNote, statusOf, isOvernight, upcomingExceptions, validateException, zonedTimeToUtc } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { now } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
@@ -18,7 +17,6 @@ const todayOf = (zone) => nairobiNow(now(), zone).date;
 const viewerLine = (e, shopZone) => describeExceptionForViewer(e, { shopZone, viewerZone: getUserTimeZone() }).viewerText;
 const nextDayLabel = (date) => (date ? dayLabel(addDays(date, 1)) : "the next day");
 
-const DAY_MS = 86_400_000;
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const utc = (day) => new Date(`${day}T00:00:00Z`);

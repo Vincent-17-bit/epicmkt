@@ -8,7 +8,7 @@ import { setImageTransform } from "@epicmkt/ui";
 import { RouterProvider } from "react-router-dom";
 import { queryClient } from "./lib/queryClient.js";
 import { router } from "./router.jsx";
-import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { ErrorBoundary } from "@epicmkt/ui";
 import CountdownProvider from "./components/CountdownProvider.jsx";
 import { useUiStore } from "./stores/ui.js";
 import { watchSystem } from "./lib/theme.js";
