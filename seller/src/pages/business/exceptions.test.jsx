@@ -42,7 +42,7 @@ describe("upcoming list", () => {
     expect(await screen.findByText("Today")).toBeInTheDocument();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: `Delete Mon 12 Oct 2026` }));
-    expect(await screen.findByTestId("empty")).toHaveTextContent("No upcoming exceptions");
+    expect(await screen.findByTestId("empty")).toHaveTextContent("No upcoming closed days or special hours");
   });
 });
 
@@ -56,7 +56,7 @@ describe("shop in another zone", () => {
     await screen.findAllByTestId("exception");
     expect(rows()).toHaveLength(1);
     expect(rows()[0]).toHaveTextContent("Today");
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     expect(screen.getByLabelText("Date")).toHaveAttribute("min", today);
     expect(screen.getByLabelText("Date")).toHaveAttribute("max", addDays(today, 730));
   });
@@ -67,7 +67,7 @@ describe("add", () => {
     const user = userEvent.setup();
     await open([ex("a", "2026-10-13"), ex("c", "2026-12-25")]);
     await screen.findAllByTestId("exception");
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     setDate("2026-11-20");
     await user.type(screen.getByLabelText(/Note/), "Family event");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -75,14 +75,14 @@ describe("add", () => {
     expect(dates()).toEqual(["Tue 13 Oct 2026", "Fri 20 Nov 2026", "Fri 25 Dec 2026"]);
     expect(rows()[1]).toHaveTextContent("Closed all day");
     expect(rows()[1]).toHaveTextContent("Family event");
-    expect(screen.queryByRole("heading", { name: "Add an exception" })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Add a date" })).toBeNull();
     expect(M.state.exceptions.find((e) => e.date === "2026-11-20")).toMatchObject({ kind: "closed", intervals: [], note: "Family event" });
   });
 
   it("adds special hours with two intervals, and offers at most three", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     setDate("2026-10-31");
     await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "08:00", "12:00");
@@ -100,7 +100,7 @@ describe("add", () => {
   it("the date picker starts at today and ends within two years", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     const input = screen.getByLabelText("Date");
     expect(input).toHaveAttribute("type", "date");
     expect(input).toHaveAttribute("min", TODAY);
@@ -111,7 +111,7 @@ describe("add", () => {
   it("today only allows times from the shop's current time on", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     await user.click(screen.getByRole("radio", { name: /Different hours/ }));
     setDate(TODAY);
     expect(screen.getByLabelText("Interval 1 opens")).toHaveAttribute("min", "12:00");
@@ -129,7 +129,7 @@ describe("add", () => {
   it("a later day has no time limit, and a typed past date snaps back to today", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     await user.click(screen.getByRole("radio", { name: /Different hours/ }));
     setDate(addDays(TODAY, 1));
     expect(screen.getByLabelText("Interval 1 opens")).not.toHaveAttribute("min");
@@ -143,7 +143,7 @@ describe("add", () => {
     const user = userEvent.setup();
     await open([ex("a", "2026-10-20")]);
     await screen.findAllByTestId("exception");
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
     await save();
     expect(await screen.findByRole("alert")).toHaveTextContent("Choose a valid date");
@@ -152,7 +152,7 @@ describe("add", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Past dates cannot be added");
     setDate("2026-10-20");
     await save();
-    expect(screen.getByRole("alert")).toHaveTextContent("already have an exception on that date");
+    expect(screen.getByRole("alert")).toHaveTextContent("That date already has closed or special hours");
     setDate("2026-10-25");
     await user.click(screen.getByLabelText("Different hours"));
     fireEvent.change(screen.getByLabelText("Interval 1 opens"), { target: { value: "" } });
@@ -171,7 +171,7 @@ describe("add", () => {
     await open([]);
     await screen.findByTestId("empty");
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     setDate("2026-10-23");
     await user.click(screen.getByLabelText("Different hours"));
     expect(screen.getByText(/Open past midnight\? Set the closing time earlier than the opening time/)).toBeInTheDocument();
@@ -189,7 +189,7 @@ describe("add", () => {
     await open([]);
     await screen.findByTestId("empty");
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     setDate("2026-10-23");
     await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "20:00", "02:00");
@@ -204,7 +204,7 @@ describe("add", () => {
     await open([]);
     await screen.findByTestId("empty");
     const save = () => user.click(screen.getByRole("button", { name: "Save" }));
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     setDate("2026-10-23");
     await user.click(screen.getByLabelText("Different hours"));
     setTimes(0, "20:00", "02:00");
@@ -218,7 +218,7 @@ describe("add", () => {
   it("cancel closes the form without saving", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     setDate("2026-11-01");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByLabelText("Date")).toBeNull();
@@ -228,7 +228,7 @@ describe("add", () => {
   it("notes are plain text", async () => {
     const user = userEvent.setup();
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     setDate("2026-11-01");
     await user.type(screen.getByLabelText(/Note/), "<img src=x onerror=alert(1)>");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -244,7 +244,7 @@ describe("edit", () => {
     await open([ex("keep", "2026-10-20", { note: "Old note" }), ex("other", "2026-10-30")]);
     await screen.findAllByTestId("exception");
     await user.click(screen.getByRole("button", { name: "Edit Tue 20 Oct 2026" }));
-    expect(screen.getByRole("heading", { name: "Edit exception" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Edit this date" })).toBeInTheDocument();
     expect(screen.getByLabelText("Date")).toHaveValue("2026-10-20");
     expect(screen.getByLabelText(/Note/)).toHaveValue("Old note");
     setDate("2026-11-05");
@@ -277,7 +277,7 @@ describe("delete with Undo", () => {
     await waitFor(() => expect(rows()).toHaveLength(2));
     expect(M.state.exceptions.map((e) => e.id)).toEqual(["a", "c"]);
     const toast = within(screen.getByTestId("toasts"));
-    expect(toast.getByText("Exception for Mon 2 Nov 2026 deleted.")).toBeInTheDocument();
+    expect(toast.getByText("Mon 2 Nov 2026 deleted.")).toBeInTheDocument();
     await user.click(toast.getByRole("button", { name: "Undo" }));
     await waitFor(() => expect(rows()).toHaveLength(3));
     expect(dates()).toEqual(["Tue 13 Oct 2026", "Mon 2 Nov 2026", "Fri 25 Dec 2026"]);
@@ -321,7 +321,7 @@ describe("delete with Undo", () => {
     await screen.findByRole("button", { name: "Undo" });
     M.state.exceptions.push(ex("new", "2026-10-13", { note: "Added elsewhere" }));
     await user.click(screen.getByRole("button", { name: "Undo" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("could not restore the exception for Tue 13 Oct 2026");
+    expect(await screen.findByRole("alert")).toHaveTextContent("could not put back Tue 13 Oct 2026");
     expect(M.state.exceptions).toHaveLength(1);
     expect(M.state.exceptions[0].note).toBe("Added elsewhere");
   });
@@ -330,9 +330,9 @@ describe("delete with Undo", () => {
     const user = userEvent.setup();
     await open([ex("a", "2026-10-13")]);
     await user.click(await screen.findByRole("button", { name: "Edit Tue 13 Oct 2026" }));
-    expect(screen.getByRole("heading", { name: "Edit exception" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Edit this date" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Delete Tue 13 Oct 2026" }));
-    await waitFor(() => expect(screen.queryByRole("heading", { name: "Edit exception" })).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("heading", { name: "Edit this date" })).toBeNull());
   });
 });
 
@@ -345,15 +345,15 @@ describe("limit of 60", () => {
     await screen.findAllByTestId("exception");
     expect(screen.getByTestId("exc-count")).toHaveTextContent("60 of 60 upcoming");
     const notice = screen.getByTestId("limit-notice");
-    expect(notice).toHaveTextContent("You have 60 upcoming exceptions, the most we can keep.");
+    expect(notice).toHaveTextContent("You have 60 upcoming dates, the most we can keep.");
     expect(notice).toHaveTextContent("Delete one you no longer need, or wait for a date to pass");
-    expect(screen.getByRole("button", { name: "Add exception" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add a date" })).toBeDisabled();
     await user.click(screen.getAllByRole("button", { name: /^Edit / })[0]);
-    expect(screen.getByRole("heading", { name: "Edit exception" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Edit this date" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await user.click(screen.getAllByRole("button", { name: /^Delete / })[0]);
     await waitFor(() => expect(screen.queryByTestId("limit-notice")).toBeNull());
-    expect(screen.getByRole("button", { name: "Add exception" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add a date" })).toBeEnabled();
   });
 
   it("59 is fine; the 61st is refused by the server too, with the same friendly words", async () => {
@@ -363,14 +363,14 @@ describe("limit of 60", () => {
     await api.saveException({ date: addDays(TODAY, 90), kind: "closed" });
     const err = await api.saveException({ date: addDays(TODAY, 91), kind: "closed" }).catch((e) => e);
     expect(err.code).toBe("limit_reached");
-    expect(errorText(err)).toContain("limit of 60 upcoming exceptions");
+    expect(errorText(err)).toContain("limit of 60 upcoming closed days and special hours");
   });
 
   it("past exceptions do not count toward the 60", async () => {
     await open([...sixty().slice(0, 59), ex("old1", "2026-01-01"), ex("old2", "2026-02-01")]);
     await screen.findAllByTestId("exception");
     expect(screen.getByTestId("exc-count")).toHaveTextContent("59 of 60 upcoming");
-    expect(screen.getByRole("button", { name: "Add exception" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Add a date" })).toBeEnabled();
   });
 });
 
@@ -379,7 +379,7 @@ describe("access and layout", () => {
     for (const status of ["paused", "expired"]) {
       const user = userEvent.setup();
       const { unmount } = await signedInApp("/business/exceptions", () => { setTime(NOW); M.state.business.status = status; M.state.exceptions = []; });
-      await user.click(await screen.findByRole("button", { name: "Add exception" }));
+      await user.click(await screen.findByRole("button", { name: "Add a date" }));
       setDate("2026-11-10");
       await user.click(screen.getByRole("button", { name: "Save" }));
       await waitFor(() => expect(rows()).toHaveLength(1));
@@ -387,14 +387,17 @@ describe("access and layout", () => {
     }
     await signedInApp("/business/exceptions", () => { setTime(NOW); M.state.business.status = "suspended"; M.state.exceptions = []; });
     expect(await screen.findByTestId("locked")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add exception" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add a date" })).toBeNull();
   });
 
   it("is in the navigation", async () => {
     await open([]);
     const nav = await screen.findByRole("navigation", { name: "Business" });
     await userEvent.setup().click(within(nav).getByRole("button", { name: "More" }));
-    expect(within(nav).getByRole("link", { name: "Exceptions" })).toHaveAttribute("href", "/business/exceptions");
+    expect(within(nav).getByRole("link", { name: "Closed days" })).toHaveAttribute("href", "/business/exceptions");
+    // The More links come in three labelled groups; Closed days is with the shop's own pages.
+    expect(within(nav).getAllByRole("group").map((g) => g.getAttribute("aria-labelledby"))).toEqual(["more-shop", "more-promote", "more-account"]);
+    expect(within(within(nav).getByRole("group", { name: "Shop" })).getByRole("link", { name: "Closed days" })).toBeInTheDocument();
   });
 
   it("stacks on phones and keeps the Undo bar above the safe area", () => {
@@ -410,7 +413,7 @@ describe("access and layout", () => {
 describe("closed for a while", () => {
   const addBreak = async (user) => {
     await open([]);
-    await user.click(await screen.findByRole("button", { name: "Add exception" }));
+    await user.click(await screen.findByRole("button", { name: "Add a date" }));
     await user.click(screen.getByLabelText(/Closed for a while/));
   };
   const saved = () => M.state.exceptions.find((e) => e.kind === "break");
@@ -507,7 +510,7 @@ describe("closed for a while", () => {
     const user = userEvent.setup();
     await open([ex("b", "2026-10-13", { kind: "break", intervals: [["13:00", "14:00"]], until: null, weekdays: null })]);
     await screen.findAllByTestId("exception");
-    await user.click(screen.getByRole("button", { name: "Add exception" }));
+    await user.click(screen.getByRole("button", { name: "Add a date" }));
     setDate("2026-10-13");
     await user.click(screen.getByLabelText(/Closed for a while/));
     fireEvent.change(screen.getByLabelText("Closed from"), { target: { value: "16:00" } });

@@ -23,6 +23,8 @@ const pushEvent = (rec, type) => {
 };
 
 const normRef = (v) => String(v ?? '').trim().toUpperCase();
+// A steady demo Seller ID (ES and six digits, as the live ones) for an activated demo application.
+const demoSellerId = (rec) => `ES${100000 + ([...String(rec.referenceNo ?? '')].reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 899999, 7))}`;
 const keyOf = (ref, phone) => `${ref}:${phone}`;
 
 // Same fields the live status-get returns. The account number is the application reference.
@@ -143,6 +145,7 @@ async function view(rec) {
     documents,
     adminNote: rec.adminNote ?? null,
     rejectionReason: rec.status === 'rejected' ? rec.rejectionReason ?? null : null,
+    sellerId: rec.status === 'activated' ? rec.sellerId ?? demoSellerId(rec) : null,
     flags: (rec.flags ?? []).map(flagView),
     events: (rec.events ?? []).filter((e) => PUBLIC_EVENTS.includes(e.type)),
     payment: showPay

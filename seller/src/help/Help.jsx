@@ -11,7 +11,7 @@ import styles from "./help.module.css";
 
 const GUIDE_LINKS = {
   items: ["/business/catalog", "My listings"],
-  closing: ["/business/exceptions", "Exceptions"],
+  closing: ["/business/exceptions", "Closed days"],
   prices: ["/business/catalog", "My listings"],
   questions: ["/business/questions", "Questions"],
   pay: ["/business/subscription", "Subscription"],

@@ -1,20 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faClipboardCheck, faClock, faFileSignature, faMoneyBillTransfer, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faClock } from "@fortawesome/free-solid-svg-icons";
+import { APPLY_STEPS as HOW, HAVE_READY as BEFORE } from "./howToApply.js";
 import styles from "./intro.module.css";
-
-const HOW = [
-  { icon: faFileSignature, title: "Apply", text: "Five short steps, about 5 minutes." },
-  { icon: faClipboardCheck, title: "Review", text: "We check your details and may ask for fixes." },
-  { icon: faMoneyBillTransfer, title: "Pay", text: "After approval, pay the monthly fee by M-Pesa." },
-  { icon: faStore, title: "Go live", text: "We send your login and your listing goes live." }
-];
-
-const BEFORE = [
-  "Your National ID, Maisha Card or passport",
-  "Your Single Business Permit",
-  "A photo of your signboard or shop front",
-  "Your KRA PIN and registration certificate, if registered"
-];
 
 export default function Intro() {
   return (

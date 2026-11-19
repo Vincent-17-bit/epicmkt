@@ -190,7 +190,7 @@ function ExceptionForm({ initial, existing, onSave, onCancel, shopZone, hours })
     }
   };
 
-  const title = initial ? "Edit exception" : "Add an exception";
+  const title = initial ? "Edit this date" : "Add a date";
   const viewerZone = getUserTimeZone();
   const shape = { mode, date, until: lastDay, weekdays };
   const usual = isBreak && hours ? hoursRowsFor(hours, [], now(), shopZone) : [];
@@ -444,7 +444,7 @@ export default function Exceptions() {
       await refresh();
     } catch (err) {
       dropToast(toast.key);
-      setError(`We could not restore the exception for ${dayLabel(toast.item.date)}. ${errorText(err)}`);
+      setError(`We could not put back ${dayLabel(toast.item.date)}. ${errorText(err)}`);
     }
   };
 
@@ -454,17 +454,17 @@ export default function Exceptions() {
     <div className={ui.page}>
       <div className={styles.head}>
         <div className={ui.pageHead}>
-          <h1>Opening exceptions</h1>
+          <h1>Closed days and special hours</h1>
           <p className={styles.count} data-testid="exc-count">{list.length} of {EXCEPTION_LIMIT} upcoming</p>
           <div className={styles.meter} aria-hidden="true"><span style={{ width: `${Math.min(100, (list.length / EXCEPTION_LIMIT) * 100)}%` }} data-full={full || undefined} /></div>
         </div>
-        <button type="button" className={ui.btn} onClick={() => setForm({ initial: null })} disabled={full || !!form}>Add exception</button>
+        <button type="button" className={ui.btn} onClick={() => setForm({ initial: null })} disabled={full || !!form}>Add a date</button>
       </div>
       <Intro>Days when you are closed or open at different times from your usual hours. Customers see these on your shop page. Dates that have passed are removed automatically.</Intro>
 
       {full && (
         <div className={styles.notice} role="status" data-testid="limit-notice">
-          <p><strong>You have {EXCEPTION_LIMIT} upcoming exceptions, the most we can keep.</strong> Delete one you no longer need, or wait for a date to pass, and you can add another. You can still edit the ones you have.</p>
+          <p><strong>You have {EXCEPTION_LIMIT} upcoming dates, the most we can keep.</strong> Delete one you no longer need, or wait for a date to pass, and you can add another. You can still edit the ones you have.</p>
         </div>
       )}
       {error && <p className={ui.error} role="alert">{error}</p>}
@@ -474,16 +474,16 @@ export default function Exceptions() {
       {q.isLoading ? (
         <p role="status">Loading</p>
       ) : q.error ? (
-        <p className={ui.error} role="alert">We could not load your exceptions. Check your connection and refresh.</p>
+        <p className={ui.error} role="alert">We could not load your closed days and special hours. Check your connection and refresh.</p>
       ) : list.length === 0 ? (
         <div className={styles.empty} data-testid="empty">
-          <p><strong>No upcoming exceptions.</strong> Add one for a holiday, a stock take or an early close, so customers do not turn up to a locked door.</p>
+          <p><strong>No upcoming closed days or special hours.</strong> Add one for a holiday, a stock take or an early close, so customers do not turn up to a locked door.</p>
         </div>
       ) : (
         months.map(([key, items]) => (
           <section key={key} className={styles.month} aria-label={monthTitle(`${key}-01`)}>
             <h2 className={styles.monthTitle}>{monthTitle(`${key}-01`)}</h2>
-            <ul className={styles.list} aria-label={`Exceptions in ${monthTitle(`${key}-01`)}`}>
+            <ul className={styles.list} aria-label={`Closed days and special hours in ${monthTitle(`${key}-01`)}`}>
               {items.map((e) => (
                 <li key={e.id} className={styles.row} data-kind={e.kind} data-testid="exception">
                   <div className={styles.leaf} aria-hidden="true">
@@ -516,7 +516,7 @@ export default function Exceptions() {
       <div className={styles.toasts} role="status" aria-live="polite" data-testid="toasts">
         {toasts.map((t) => (
           <div key={t.key} className={styles.toast}>
-            <span>Exception for {dayLabel(t.item.date)} deleted.</span>
+            <span>{dayLabel(t.item.date)} deleted.</span>
             <button type="button" className={styles.toastBtn} onClick={() => undo(t)}>Undo</button>
           </div>
         ))}

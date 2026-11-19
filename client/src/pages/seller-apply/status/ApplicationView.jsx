@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleExclamation, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faCircleExclamation, faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { routes } from "../../../config/routes.js";
 import { Button } from "@epicmkt/ui";
 import { formatPrice } from "../../../shared/billing.js";
@@ -14,6 +14,12 @@ import Timeline from "./Timeline.jsx";
 import { DocRow, Row, flagState } from "./Rows.jsx";
 import { DOC_LABELS, ID_TYPE, REG_TYPE, STATUS_META } from "./statusMeta.js";
 import styles from "./status.module.css";
+
+// Where sellers sign in: the first address in VITE_SELLER_URL (a custom domain), else the seller site on Vercel.
+export const sellerSignInUrl = (env = import.meta.env.VITE_SELLER_URL) => {
+  const first = String(env ?? "").split(",").map((s) => s.trim()).find(Boolean);
+  return `${(first || "https://epicmkt-seller.vercel.app").replace(/\/+$/, "")}/login`;
+};
 
 const ERRORS = {
   session_expired: "Your session ended. Check your application again to continue.",
@@ -126,6 +132,17 @@ export default function ApplicationView({ app, session, onRefresh, onExpired, on
       </section>
 
       <Timeline app={app} />
+
+      {app.sellerId && (
+        <section className={styles.card} aria-labelledby="seller-id-title" data-testid="seller-id">
+          <h2 id="seller-id-title">Your Seller ID</h2>
+          <p className={styles.sellerId}>{app.sellerId}</p>
+          <p className={styles.small}>Sign in with it and your password. Forgot the password? Choose Forgot password on the sign-in page and we text you a code.</p>
+          <div className={styles.actions}>
+            <Button as="a" href={sellerSignInUrl()} iconRight={faArrowRight}>Sign in</Button>
+          </div>
+        </section>
+      )}
 
       {app.adminNote && (
         <section className={styles.card} aria-labelledby="note-title">

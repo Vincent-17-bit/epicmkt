@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import Home from "./pages/Home.jsx";
 import NotFound from "./pages/NotFound.jsx";
@@ -47,7 +47,8 @@ export const router = createBrowserRouter([
           { path: "sell", lazy: async () => ({ Component: (await import("./pages/Sell.jsx")).default }) },
           { path: "pricing", lazy: async () => ({ Component: (await import("./pages/Pricing.jsx")).default }) },
           { path: "seller-guide", lazy: async () => ({ Component: (await import("./pages/SellerGuide.jsx")).default }) },
-          { path: "sell/register", lazy: async () => ({ Component: (await import("./pages/SellRegister.jsx")).default }) },
+          // The old "Registration opens soon" page. Applying happens at /become-a-seller (Vercel also answers this path with a 301).
+          { path: "sell/register", element: <Navigate to={routes.apply} replace /> },
           { path: "privacy", lazy: async () => ({ Component: (await import("./pages/Privacy.jsx")).default }) },
           { path: "terms", lazy: async () => ({ Component: (await import("./pages/Terms.jsx")).default }) },
           { path: "cookies", lazy: async () => ({ Component: (await import("./pages/Cookies.jsx")).default }) },

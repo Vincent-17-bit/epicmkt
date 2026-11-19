@@ -202,6 +202,26 @@
   visibility: visible;
 }
 
+/* The groups take no box of their own: their heading spans the two columns and their links fall into the grid. */
+.moreGroup {
+  display: contents;
+}
+
+.moreHead {
+  grid-column: 1 / -1;
+  margin: var(--space-2) 0 0;
+  padding: 0 var(--space-1);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.moreGroup:first-child .moreHead {
+  margin-top: 0;
+}
+
 .moreLinks a {
   flex-direction: row;
   justify-content: flex-start;
@@ -394,7 +414,12 @@
     outline-offset: 2px;
   }
 
-  .moreLinks a:first-child {
+  .moreHead {
+    margin: var(--space-3) 0 var(--space-1);
+    padding: 0 var(--space-3);
+  }
+
+  .moreGroup:first-child .moreHead {
     margin-top: var(--space-3);
   }
 

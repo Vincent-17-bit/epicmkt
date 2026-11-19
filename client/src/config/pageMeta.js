@@ -22,6 +22,6 @@ export const PAGE_DESCRIPTIONS = {
 
 // Pages that should not appear in search results: results of a search, private or transient screens, redirects.
 const exactly = (path) => new RegExp(`^${path.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`);
-export const NOINDEX_PATTERNS = [/^\/search$/, /^\/offline$/, /^\/s\/.+/, exactly(routes.sellRegister), exactly(routes.applyStatus)];
+export const NOINDEX_PATTERNS = [/^\/search$/, /^\/offline$/, /^\/s\/.+/, exactly(routes.applyStatus)];
 
 export const isNoindexPath = (pathname) => NOINDEX_PATTERNS.some((re) => re.test(pathname));

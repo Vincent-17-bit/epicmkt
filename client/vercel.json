@@ -10,6 +10,9 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
     }
   ],
+  "redirects": [
+    { "source": "/sell/register", "destination": "/become-a-seller", "statusCode": 301 }
+  ],
   "rewrites": [
     { "source": "/b/:slug/i/:itemId", "destination": "/api/preview?slug=:slug&item=:itemId" },
     { "source": "/b/:slug", "destination": "/api/preview?slug=:slug" },

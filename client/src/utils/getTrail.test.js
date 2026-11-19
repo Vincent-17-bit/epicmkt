@@ -111,7 +111,6 @@ describe("getTrail", () => {
     ["/flash", ["Home", "Flash sales"]],
     ["/offers", ["Home", "Offers"]],
     ["/sell", ["Home", "Become a seller"]],
-    ["/sell/register", ["Home", "Become a seller", "Register"]],
     ["/pricing", ["Home", "Pricing"]],
     ["/seller-guide", ["Home", "Seller guide"]],
     ["/about", ["Home", "About"]],
@@ -153,10 +152,6 @@ describe("getTrail", () => {
   it("never adds Flash sales or Offers to a business or item trail", () => {
     const r = getTrail({ ...base, business, pathname: "/b/fade-kings", search: "?item=skin-fade&from=flash" });
     expect(labels(r)).toEqual(["Home", "Barbershops", "Maseno", "Fade Kings Barbershop", "Skin fade"]);
-  });
-
-  it("links the seller crumb on the register page", () => {
-    expect(targets(getTrail({ ...base, pathname: "/sell/register" }))).toEqual(["/", "/sell", undefined]);
   });
 
   it("has no trail on unknown pages (404)", () => {

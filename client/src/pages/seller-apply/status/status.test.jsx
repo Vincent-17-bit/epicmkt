@@ -179,7 +179,11 @@ describe("check my application", () => {
     const user = userEvent.setup();
     mount();
     await signIn(user, "EPM-2026-DEMO07");
-    expect(await screen.findByText(/login details have been sent to your phone by SMS or WhatsApp/)).toBeInTheDocument();
+    expect(await screen.findByText(/We sent your Seller ID and a temporary password by SMS/)).toBeInTheDocument();
+    // The Seller ID itself, for a seller who lost that SMS, with the way to sign in.
+    const card = screen.getByTestId("seller-id");
+    expect(card).toHaveTextContent(/ES\d{6}/);
+    expect(within(card).getByRole("link", { name: "Sign in" })).toHaveAttribute("href", expect.stringMatching(/\/login$/));
   }, 20000);
 });
 

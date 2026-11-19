@@ -29,7 +29,7 @@ const MESSAGES = {
   date_in_past: "Choose today or a later date. Past dates cannot be added.",
   time_in_past: "That time has already passed today. Choose the current time or a later one.",
   date_too_far: "Choose a date within the next 2 years.",
-  date_taken: "You already have an exception on that date. Edit it instead.",
+  date_taken: "That date already has closed or special hours. Edit it instead.",
   invalid_kind: "Choose Closed all day, Closed for a while or Different hours.",
   break_order: "A break has to end after it starts.",
   until_before_date: "The last day cannot be before the first day.",
@@ -46,7 +46,7 @@ const MESSAGES = {
   interval_order: "Each interval must end after it starts.", // no longer raised: an earlier end means "until the next day"
   intervals_overlap: "Intervals cannot overlap or touch. Merge them into one. An interval that runs past midnight fills the rest of its day, so nothing else can start later that day.",
   invalid_note: "Keep the note between 2 and 80 characters of plain text.",
-  limit_reached: "You have reached the limit of 60 upcoming exceptions. Delete one you no longer need, then try again.",
+  limit_reached: "You have reached the limit of 60 upcoming closed days and special hours. Delete one you no longer need, then try again.",
   invalid_stock: "Check the stock numbers. Use whole numbers such as 12.",
   stock_count_required: "Enter how many you have now.",
   invalid_discount: "Enter a valid discount: 1 to 99 percent, or an amount above 0.",

@@ -11,7 +11,6 @@ export const STATIC_TRAILS = {
   "/offers": [{ key: "breadcrumbs.offers" }],
   "/featured": [{ key: "breadcrumbs.featured" }],
   [routes.sell]: [{ key: "breadcrumb.sell" }],
-  [routes.sellRegister]: [{ key: "breadcrumb.sell", to: routes.sell }, { key: "breadcrumb.register" }],
   [routes.pricing]: [{ key: "breadcrumb.pricing" }],
   [routes.sellerGuide]: [{ key: "breadcrumb.sellerGuide" }],
   "/about": [{ key: "breadcrumb.about" }],
