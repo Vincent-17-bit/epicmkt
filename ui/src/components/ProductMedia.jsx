@@ -9,6 +9,7 @@ import styles from "./ProductMedia.module.css";
 
 // How many photo thumbnails the rail shows before the "N+" tile takes over.
 const RAIL_PHOTOS = 5;
+const VIEW_WIDTH = () => (typeof window !== "undefined" && window.devicePixelRatio >= 2 ? 2000 : 1600);
 const ZOOM_WIDTH = () => (typeof window !== "undefined" && window.devicePixelRatio >= 2 ? 2400 : 1600);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])';
 
@@ -235,6 +236,35 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
   const current = photos[photo];
   const video = clips[clip];
 
+  const [sharp, setSharp] = useState(() => new Set());
+  const sharpUrl = (p) => resizedUrl(p.url, VIEW_WIDTH());
+  const markSharp = (url) => setSharp((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  useEffect(() => {
+    if (!current) return undefined;
+    const url = sharpUrl(current);
+    if (sharp.has(url)) return undefined;
+    let alive = true;
+    const img = new Image();
+    img.decoding = "async";
+    img.onload = () => alive && markSharp(url);
+    img.src = url;
+    return () => {
+      alive = false;
+    };
+  }, [current?.url, sharp]);
+  useEffect(() => {
+    if (!current || !sharp.has(sharpUrl(current)) || photos.length < 2) return undefined;
+    const next = [photos[(photo + 1) % photos.length], photos[(photo - 1 + photos.length) % photos.length]];
+    const warm = next.map((p) => {
+      const img = new Image();
+      img.decoding = "async";
+      img.fetchPriority = "low";
+      img.src = sharpUrl(p);
+      return img;
+    });
+    return () => warm.forEach((img) => { img.src = ""; });
+  }, [photo, sharp]);
+
   const openedAt = useRef(Date.now());
   const spot = (event) => {
     const box = event.currentTarget.getBoundingClientRect();
@@ -280,7 +310,7 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
               <button type="button" className={styles.zoomBox} data-zoomed={zoom ? "" : undefined} onClick={toggleZoom} onPointerMove={lookAround} onPointerLeave={() => setZoom(null)} aria-label={zoom ? text.zoomOut : text.zoomIn}>
                 <img
                   key={current.id}
-                  src={resizedUrl(current.url, 2400)}
+                  src={sharp.has(sharpUrl(current)) ? sharpUrl(current) : resizedUrl(current.url, 1200)}
                   alt={current.caption || name}
                   style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
                 />
@@ -307,7 +337,7 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
               <div className={styles.grid}>
                 {photos.map((p, i) => (
                   <button key={p.id} type="button" className={styles.gridThumb} aria-current={i === photo ? "true" : undefined} aria-label={fill(text.photo, { n: i + 1, total: photos.length })} onClick={() => { setZoom(null); setPhoto(i); }}>
-                    <img src={resizedUrl(p.url, 200)} alt="" loading="lazy" decoding="async" />
+                    <img src={resizedUrl(p.url, 200)} alt="" loading="lazy" decoding="async" fetchpriority="low" />
                   </button>
                 ))}
               </div>
