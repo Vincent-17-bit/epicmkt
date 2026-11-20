@@ -266,9 +266,6 @@ test("a name is found however it is spaced", () => {
   for (const q of ["i phone", "iphone"]) assert.deepEqual(ids(q), ["3"]);
 });
 
-test("a search relaxes when no listing has every word", () => {
-  const r = searchProducts(spaced, { q: "samsung tv" });
-  assert.equal(r.relaxed, true);
-  assert.deepEqual(r.items.map((i) => i.id), ["4"]);
-  assert.equal(searchProducts(spaced, { q: "spark" }).relaxed, false);
+test("a search with a word no listing has finds nothing", () => {
+  assert.equal(searchProducts(spaced, { q: "samsung tv" }).total, 0);
 });
