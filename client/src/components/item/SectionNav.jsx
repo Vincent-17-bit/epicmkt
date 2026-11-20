@@ -4,10 +4,10 @@ import styles from "./SectionNav.module.css";
 // The item page's sections, in page order. A section is offered only when it is on the page and has something in it.
 export const SECTIONS = [
   { id: "item-overview", label: "Overview" },
-  { id: "item-details", label: "Details" },
-  { id: "item-specs", label: "Specifications" },
   { id: "item-delivery", label: "Delivery" },
   { id: "item-store", label: "From the store" },
+  { id: "item-details", label: "Details" },
+  { id: "item-specs", label: "Specifications" },
   { id: "item-recommend", label: "Goes well with" },
   { id: "item-similar", label: "Similar products" },
   { id: "item-included", label: "What's included" },
