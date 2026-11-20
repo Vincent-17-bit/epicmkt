@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import styles from "./HoverZoom.module.css";
 
 export const HOVER_ZOOM_DEFAULTS = {
-  scale: 3,
+  scale: 2,
   width: 560,
   height: null,
   gap: 16,
@@ -23,6 +23,7 @@ const warm = (url) => {
   img.src = url;
 };
 
+const SMOOTH = 0.22;
 const FINE_HOVER = "(hover: hover) and (pointer: fine)";
 
 function contentRect(img) {
@@ -49,6 +50,7 @@ function contentRect(img) {
 export default function HoverZoom({ src, options }) {
   const o = { ...HOVER_ZOOM_DEFAULTS, ...options };
   const lensRef = useRef(null);
+  const paneRef = useRef(null);
   const anchorRef = useRef(null);
   const [pane, setPane] = useState(null);
   const srcRef = useRef(src);
@@ -66,7 +68,38 @@ export default function HoverZoom({ src, options }) {
   useEffect(() => {
     const host = anchorRef.current?.parentElement;
     if (!host || typeof window === "undefined" || !window.matchMedia) return undefined;
+    let geo = null;
+    let frame = 0;
+    const place = () => {
+      if (!geo) return;
+      const { area, hostBox, scale, cx, cy } = geo;
+      const lens = lensRef.current;
+      if (lens) {
+        lens.style.left = `${cx - hostBox.left}px`;
+        lens.style.top = `${cy - hostBox.top}px`;
+      }
+      if (paneRef.current) paneRef.current.style.backgroundPosition = `${-(cx - area.left) * scale}px ${-(cy - area.top) * scale}px, ${-(cx - area.left) * scale}px ${-(cy - area.top) * scale}px`;
+    };
+    const glide = () => {
+      frame = 0;
+      if (!geo) return;
+      const dx = geo.tx - geo.cx;
+      const dy = geo.ty - geo.cy;
+      if (Math.abs(dx) < 0.3 && Math.abs(dy) < 0.3) {
+        geo.cx = geo.tx;
+        geo.cy = geo.ty;
+        place();
+        return;
+      }
+      geo.cx += dx * SMOOTH;
+      geo.cy += dy * SMOOTH;
+      place();
+      frame = requestAnimationFrame(glide);
+    };
     const hide = () => {
+      geo = null;
+      if (frame) cancelAnimationFrame(frame);
+      frame = 0;
       if (lensRef.current) lensRef.current.style.display = "none";
       setPane(null);
     };
@@ -87,21 +120,24 @@ export default function HoverZoom({ src, options }) {
       const lensH = height / scale;
       const inside = event.clientX >= area.left && event.clientX <= area.left + area.width && event.clientY >= area.top && event.clientY <= area.top + area.height;
       if (!inside) return hide();
-      const lx = Math.min(Math.max(event.clientX - lensW / 2, area.left), area.left + area.width - lensW);
-      const ly = Math.min(Math.max(event.clientY - lensH / 2, area.top), area.top + area.height - lensH);
+      const tx = Math.min(Math.max(event.clientX - lensW / 2, area.left), area.left + area.width - lensW);
+      const ty = Math.min(Math.max(event.clientY - lensH / 2, area.top), area.top + area.height - lensH);
+      const first = !geo;
+      geo = { area, hostBox, scale, lensW, lensH, tx, ty, cx: first ? tx : geo.cx, cy: first ? ty : geo.cy };
       const lens = lensRef.current;
-      if (lens) {
-        Object.assign(lens.style, { display: "block", width: `${lensW}px`, height: `${lensH}px`, left: `${lx - hostBox.left}px`, top: `${ly - hostBox.top}px` });
-      }
-      setPane({
+      if (lens) Object.assign(lens.style, { display: "block", width: `${lensW}px`, height: `${lensH}px` });
+      const next = {
         left,
         top: Math.min(Math.max(hostBox.top, 8), Math.max(window.innerHeight - height - 8, 8)),
         width,
         height,
         low: img.currentSrc || img.src,
         size: `${area.width * scale}px ${area.height * scale}px`,
-        position: `${-(lx - area.left) * scale}px ${-(ly - area.top) * scale}px`
-      });
+        position: `${-(geo.cx - area.left) * scale}px ${-(geo.cy - area.top) * scale}px`
+      };
+      setPane((prev) => (prev && ["left", "top", "width", "height", "low", "size"].every((k) => prev[k] === next[k]) ? prev : { ...next, position: next.position }));
+      place();
+      if (!frame) frame = requestAnimationFrame(glide);
     };
     const prime = () => warm(srcRef.current);
     host.addEventListener("pointerenter", prime);
@@ -109,6 +145,7 @@ export default function HoverZoom({ src, options }) {
     host.addEventListener("pointerleave", hide);
     window.addEventListener("scroll", hide, { passive: true });
     return () => {
+      if (frame) cancelAnimationFrame(frame);
       host.removeEventListener("pointerenter", prime);
       host.removeEventListener("pointermove", move);
       host.removeEventListener("pointerleave", hide);
@@ -128,6 +165,7 @@ export default function HoverZoom({ src, options }) {
       {pane &&
         createPortal(
           <div
+            ref={paneRef}
             className={styles.pane}
             aria-hidden="true"
             style={{
