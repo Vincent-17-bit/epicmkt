@@ -16,6 +16,8 @@ const api = {
   listCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "tailor", name: "Tailor" }]),
   getSettings: vi.fn(async () => ({ graceDays: 1, strikeThreshold: 3, smsSender: "EpicMKT", quietStart: "21:00", quietEnd: "07:00" })),
   saveSettings: vi.fn(async (values) => values),
+  getZoomSettings: vi.fn(async () => ({ enabled: true, scale: 2, lens: "sky" })),
+  saveZoomSettings: vi.fn(async (values) => values),
 };
 vi.mock("../api/index.js", () => ({ api, default: api }));
 vi.mock("../components/Toast.jsx", () => ({ useToast: () => ({ push: vi.fn() }) }));

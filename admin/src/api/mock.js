@@ -7,6 +7,7 @@ import { normalizeCounts } from "../lib/counts.js";
 export { bulkBusinessAction, listAuditEntries, undoBulkBusinessAction } from "./mockBusinessActions.js";
 export { getSettings, saveSettings, setBusinessGrace } from "./mockSettings.js";
 export { getHealthConfig, saveHealthConfig } from "./mockHealth.js";
+export { getZoomSettings, saveZoomSettings } from "./mockZoom.js";
 export { endFlashSale, listFlashSales } from "./mockFlash.js";
 export { getAnalytics, getAuditGroups, listAudit } from "./mockAudit.js";
 export { getPlanHistory, getPlanLimits, listCategories, listPlans, saveCategory, savePlan, savePlanLimits } from "./mockCatalogue.js";

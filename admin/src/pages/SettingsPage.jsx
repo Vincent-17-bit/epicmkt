@@ -7,6 +7,7 @@ import LoadError from "../components/LoadError.jsx";
 import { useToast } from "../components/Toast.jsx";
 import { friendlyError } from "../lib/businessDetail.js";
 import HealthSettings from "./settings/HealthSettings.jsx";
+import ZoomSettings from "./settings/ZoomSettings.jsx";
 
 const FIELDS = ["graceDays", "strikeThreshold", "smsSender", "quietStart", "quietEnd"];
 
@@ -93,6 +94,8 @@ export default function SettingsPage() {
           </div>
         </div>
       </form>
+
+      <ZoomSettings />
 
       <HealthSettings />
     </div>

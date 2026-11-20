@@ -22,7 +22,7 @@ const galleryLabels = (t) => ({
 // The Gallery slot: the item's photos and videos. ItemView keeps the wrapper that places it in the layout.
 // Photos and videos in the marketplace layout (rail, "N+" tile, video tile, "Click to see full view" with VIDEOS / IMAGES tabs).
 // `variantLabel` ("Colour: Black") is shown in the full view under the item's name.
-export default function ItemGallery({ item, t = itemT, focus = null, variantLabel = "" }) {
+export default function ItemGallery({ item, t = itemT, focus = null, variantLabel = "", zoom = null }) {
   const labels = galleryLabels(t);
   return (
     <ProductMedia
@@ -33,6 +33,7 @@ export default function ItemGallery({ item, t = itemT, focus = null, variantLabe
       name={item.name}
       focus={focus}
       variantLabel={variantLabel}
+      zoom={zoom}
       labels={{ previous: labels.previous, next: labels.next }}
     />
   );

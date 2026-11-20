@@ -32,6 +32,7 @@
 @import "./pages/audit-analytics.css";
 @import "./components/theme-toggle.css";
 @import "./components/live-activity.css";
+@import "./components/zoom-settings.css";
 @import "./layout-responsive.css";
 @import "./responsive.css";
 @import "./login.css";
