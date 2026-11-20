@@ -66,6 +66,9 @@ export function createFakeSupabase() {
       state.calls.push(table);
       if (signal?.aborted) return { data: null, error: { name: "AbortError", message: "AbortError: The user aborted a request." } };
       if (state.failing) return { data: null, error: state.failing };
+      // Fail one kind of query only: `failWhen(table, inFilters)` returns an error object (or a falsy value to let it through).
+      const targeted = state.failWhen?.(table, inFilters);
+      if (targeted) return { data: null, error: targeted };
       let data = rowsOf(table).filter((row) => filters.every(([col, value]) => row[col] === value) && inFilters.every(([col, values]) => values.includes(row[col])) && tests.every((test) => test(row)));
       const total = data.length;
       if (window) data = data.slice(window[0], window[1] + 1);

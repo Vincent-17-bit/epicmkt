@@ -41,6 +41,7 @@ export const SYNONYM_GROUPS = [
   ["bread", "loaf"],
   ["sofa", "couch", "settee"],
   ["phone", "mobile", "smartphone", "cellphone", "iphone", "galaxy", "tecno", "infinix", "redmi", "oppo", "itel", "nokia", "pixel", "xiaomi", "realme", "camon", "spark"],
+  ["lpg", "gas"],
   ["tv", "television"],
   ["fridge", "refrigerator"],
   ["sneaker", "trainer"],
@@ -79,6 +80,7 @@ export const NOUNS = [
   "apple", "mango", "avocado", "honey", "jam", "cereal", "noodle", "pasta", "icecream",
   "table", "chair", "bed", "mattress", "shelf", "desk", "lamp", "curtain", "carpet", "pillow", "blanket", "sheet", "towel", "mirror", "cabinet", "door",
   "laptop", "tablet", "radio", "speaker", "headphone", "charger", "cable", "microwave", "kettle", "blender", "iron", "fan", "heater", "printer", "router", "camera", "battery",
+  "brakepad", "bindingwire", "weldingrod", "carbattery", "oilfilter", "waterrefill", "shoepolish", "shoerepair", "carwash", "dryclean",
   "phonecase", "screenprotector", "powerbank", "memorycard", "flashdrive",
   "shirt", "tshirt", "jean", "trouser", "dress", "skirt", "jacket", "coat", "shoe", "sandal", "boot", "sock", "hat", "cap", "belt", "bag", "handbag", "backpack", "watch", "wallet", "suit", "scarf",
   "shampoo", "soap", "lotion", "cream", "perfume", "lipstick", "deodorant",
@@ -90,10 +92,9 @@ export const NOUNS = [
 // "case" is also a pencil case and "protector" a surge protector, so the plain words stay unknown while the full names are known
 // and told apart (a screen protector is never "similar" to a phone case, even in a shared "Cases and protectors" section).
 export const COMPOUNDS = {
-  "gas hose pipe": "gashose", "gas cylinder": "lpg", "gas refill": "lpg", "cooking gas": "lpg", "lpg gas": "lpg", "gas cooker": "cooker", "gas stove": "stove", "gas hose": "gashose", "hose pipe": "gashose", "gas pipe": "gashose", "gas regulator": "regulator",
+  "gas hose pipe": "gashose", "gas hose": "gashose", "hose pipe": "gashose", "gas pipe": "gashose",
   "pvc pipe": "pvcpipe", "ppr pipe": "pvcpipe", "engine oil": "engineoil", "motor oil": "engineoil", "cooking oil": "cookingoil", "vegetable oil": "cookingoil",
-  "sukuma wiki": "kale", "tea leaves": "tea", "tea bags": "tea", "tea masala": "tea", "washing powder": "detergent", "laundry soap": "detergent",
-  "mineral water": "water", "drinking water": "water", "bottled water": "water", "water refill": "waterrefill",
+  "water refill": "waterrefill",
   "spark plug": "sparkplug", "brake pad": "brakepad", "steel bar": "steelbar", "binding wire": "bindingwire", "welding rod": "weldingrod",
   "solar panel": "solarpanel", "washing machine": "washer", "car battery": "carbattery", "oil filter": "oilfilter", "air filter": "oilfilter",
   "hair cut": "haircut", "shoe polish": "shoepolish", "shoe repair": "shoerepair", "car wash": "carwash", "dry cleaning": "dryclean",
@@ -104,6 +105,31 @@ export const COMPOUNDS = {
   "memory card": "memorycard", "sd card": "memorycard", "micro sd": "memorycard",
   "flash disk": "flashdrive", "flash drive": "flashdrive", "usb drive": "flashdrive"
 };
+
+// Phrases that are an ordinary word under another name. They are matched like COMPOUNDS, but they are NOT a joined name: the word they
+// stand for already exists ("tecno spark" is a phone, "tea bags" are tea), so they never decide how a kind is said to a visitor
+// (a heading must not read "Other stores selling tea leaves" under a plain "Tea").
+export const ALIAS_PHRASES = {
+  "tea leaves": "tea", "tea bags": "tea", "tea masala": "tea",
+  "mineral water": "water", "drinking water": "water", "bottled water": "water",
+  "sukuma wiki": "kale", "washing powder": "detergent", "laundry soap": "detergent",
+  // Cooking gas is one thing whatever the seller calls it: cylinder, refill or just "6kg gas"
+  "gas cylinder": "gas", "gas refill": "gas", "cooking gas": "gas", "lpg gas": "gas", "gas bottle": "gas",
+  "gas cooker": "cooker", "gas stove": "stove", "gas regulator": "regulator",
+  // Model lines whose last word is a common word: "Tecno Spark" is not a spark plug, "Galaxy Tab" is not a phone
+  "tecno spark": "phone", "tecno camon": "phone", "redmi note": "phone", "galaxy tab": "tablet", "galaxy watch": "watch",
+  "ipad air": "tablet", "ipad mini": "tablet", "ipad pro": "tablet", "macbook air": "laptop", "macbook pro": "laptop"
+};
+
+// Phone and laptop brands and model lines. Last in a name they say what the product FITS, not what it is ("Phone cover Samsung A15"
+// is a cover), so the head noun is the word before them whenever there is one. A name that is only a brand ("Samsung Galaxy A15") keeps it.
+export const DEVICE_BRANDS = [
+  "samsung", "apple", "tecno", "infinix", "itel", "redmi", "xiaomi", "oppo", "huawei", "nokia", "realme", "vivo", "oneplus", "pixel", "iphone", "galaxy", "ipad", "macbook", "camon", "spark"
+];
+
+// A bare "case", "cover" or "protector" is only a phone accessory when a phone brand sits next to it ("iPhone case", "Samsung A15 cover"):
+// alone it may be a pencil case or a surge protector. Without a brand the full compound names above decide.
+export const DEVICE_ACCESSORY_HEADS = { case: "phonecase", cover: "phonecase", bumper: "phonecase", pouch: "phonecase", protector: "screenprotector", guard: "screenprotector" };
 
 // Plurals the simple rules get wrong. Maps the plural to its singular.
 export const IRREGULAR_PLURALS = {

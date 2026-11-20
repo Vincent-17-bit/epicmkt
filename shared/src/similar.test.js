@@ -312,3 +312,47 @@ test("phone accessories are told apart by their full names, even in a shared sec
   assert.ok(similarTerms("Silicone phone case").includes("case") && similarTerms("Silicone phone case").includes("cover"));
   assert.ok(similarTerms("SanDisk micro SD card 64GB").includes("card"));
 });
+
+test("a heading names the kind, never a model line or a particular phrase", () => {
+  const said = (name) => analyseName(name).headWord;
+  assert.equal(said("Tea"), "tea");
+  assert.equal(said("Tea bags 100"), "tea");
+  assert.equal(said("Samsung Galaxy A15"), "phone");
+  assert.equal(said("Tecno Spark 20"), "phone");
+  assert.equal(said("Gas refill 6kg"), "gas");
+  assert.equal(said("Mobile phone"), "phone");
+  assert.equal(said("Silicone phone case"), "phone case");
+  assert.equal(said("T-shirt"), "t-shirt");
+});
+
+test("plurals, model numbers and a trailing device brand do not hide an accessory", () => {
+  const phoneCase = { id: "cur", businessId: "b0", name: "Silicone phone case", section: "Cases" };
+  const item = (id, name, section = "Cases") => make(id, { name, section });
+  assert.equal(analyseName("Phone cases").head, "phonecase");
+  assert.equal(analyseName("Phone cases").known, true);
+  for (const name of ["iPhone 13 case", "Phone cover Samsung A15", "Tecno Camon 20 case", "Samsung A15 cover"]) {
+    assert.equal(relevance(phoneCase, item("x", name)).state, "same", name);
+  }
+  // A bare case is not a phone accessory without a phone around it, and a phone is not its own case.
+  assert.equal(relevance(phoneCase, item("p", "Pencil case")).qualifies, false);
+  assert.equal(relevance(phoneCase, item("m", "Samsung Galaxy A15")).state === "same", false);
+  assert.equal(relevance(phoneCase, item("s", "Screen protector for iPhone 13")).qualifies, false);
+});
+
+test("the product type is evidence: the same type connects names the vocabulary does not know, a different type cancels a section", () => {
+  const a = { id: "cur", businessId: "b0", name: "Zorbo", section: "Stuff", productTypeId: "type-phone" };
+  const b = (over) => make("b", { name: "Quazle", section: "Other", ...over });
+  assert.equal(relevance(a, b({ productTypeId: "type-phone" })).qualifies, true);
+  assert.equal(relevance(a, b({ productTypeId: "type-fridge", section: "Stuff" })).qualifies, false);
+  // Without a type on either side nothing changes: opaque names still need the same section and a shared word.
+  assert.equal(relevance({ ...a, productTypeId: undefined }, b({ section: "Stuff" })).qualifies, false);
+});
+
+test("keys that exist on every object are just words", () => {
+  for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty", "valueOf"]) {
+    assert.doesNotThrow(() => analyseName(key));
+    assert.equal(typeof analyseName(key).headWord, "string");
+    assert.equal(singular(key), key.endsWith("s") && key.length > 3 && !/(ss|us|is)$/.test(key) ? key.slice(0, -1) : key);
+    assert.doesNotThrow(() => rankSimilar({ current: make("c", { name: key }), candidates: [make("d", { name: key, productTypeId: key })], limit: 5 }));
+  }
+});

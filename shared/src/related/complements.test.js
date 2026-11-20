@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { complementGroupOf, complementWeight, complementSearchWords, hasComplements } from "./complements.js";
+import { complementGroupOf, complementWeight, complementSearchWords, complementsOf, hasComplements } from "./complements.js";
 
 const group = (name, extra = {}) => complementGroupOf({ name, ...extra });
 
@@ -77,4 +77,13 @@ test("a water jug is for the table, not the stove: never offered with a gas cyli
   assert.equal(complementWeight({ name: "6kg gas cylinder with gas" }, { name: "Water jug 2L" }), 0);
   assert.ok(complementWeight({ name: "6kg gas cylinder with gas" }, { name: "Aluminium sufuria set 3 pcs" }) > 0);
   assert.ok(complementWeight({ name: "Milk pan" }, { name: "Gas regulator" }) > 0);
+});
+
+test("a product type id such as constructor or toString is just an unknown type, never Object.prototype", () => {
+  for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+    assert.equal(complementGroupOf({ name: "", productTypeId: key }), key);
+    assert.deepEqual(complementsOf(key), []);
+    assert.equal(hasComplements({ productTypeId: key }), false);
+    assert.equal(complementWeight({ productTypeId: key }, { productTypeId: "soda" }), 0);
+  }
 });

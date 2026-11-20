@@ -11,7 +11,9 @@
 //
 // Admin relations (product_relations, the Relations page) still apply on top of this map: they can add pairs the map does not know.
 
-import { COMPLEMENTS, PHRASES, TYPE_GROUPS } from "./data/complementMap.js";
+import { COMPLEMENTS, LOCKED_TYPES, PHRASES, TYPE_GROUPS } from "./data/complementMap.js";
+
+const LOCKED = new Set(LOCKED_TYPES);
 
 export { COMPLEMENTS };
 
@@ -19,6 +21,9 @@ const PATTERNS = PHRASES.map(([group, phrases]) => [
   group,
   phrases.map((p) => new RegExp(`(^|[^a-z0-9])${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/[-\s]+/g, "[-\\s]*")}($|[^a-z0-9])`))
 ]);
+
+// A key such as "constructor" or "toString" (a product type id) must never find Object.prototype.
+const ownValue = (table, key) => (typeof key === "string" && Object.hasOwn(table, key) ? table[key] : undefined);
 
 const norm = (text) =>
   String(text ?? "")
@@ -29,21 +34,23 @@ const norm = (text) =>
 
 /**
  * The group of an item: { name, productTypeId? } -> "restaurant-meal", "gas-accessory", ... or null when nothing is known.
- * The name decides first (it is the most specific); the product type is the fallback.
+ * The name decides first (it is the most specific); the product type is the fallback, except for the locked types (LOCKED_TYPES).
  */
 export function complementGroupOf(item) {
+  const type = item?.productTypeId ?? item?.productType ?? null;
+  // A seller-chosen product type that is in the locked list is what the item IS, whatever words its name contains.
+  if (typeof type === "string" && LOCKED.has(type)) return ownValue(TYPE_GROUPS, type) ?? type;
   const name = norm(item?.name);
   if (name) {
     for (const [group, patterns] of PATTERNS) if (patterns.some((re) => re.test(name))) return group;
   }
-  const type = item?.productTypeId ?? item?.productType ?? null;
-  if (type) return TYPE_GROUPS[type] ?? String(type);
+  if (type) return ownValue(TYPE_GROUPS, type) ?? String(type);
   return null;
 }
 
 /** The groups that go with `group`, strongest first: [{ group, weight }]. [] when nothing does. */
 export function complementsOf(group) {
-  return (COMPLEMENTS[group] ?? []).map(([g, weight]) => ({ group: g, weight })).sort((a, b) => b.weight - a.weight);
+  return (ownValue(COMPLEMENTS, group) ?? []).map(([g, weight]) => ({ group: g, weight })).sort((a, b) => b.weight - a.weight);
 }
 
 /** Whether anything at all goes with this item: decides if the section is worth asking for. */
@@ -54,7 +61,7 @@ export function complementWeight(item, candidate) {
   const from = complementGroupOf(item);
   const to = complementGroupOf(candidate);
   if (!from || !to || from === to) return 0;
-  return (COMPLEMENTS[from] ?? []).find(([g]) => g === to)?.[1] ?? 0;
+  return (ownValue(COMPLEMENTS, from) ?? []).find(([g]) => g === to)?.[1] ?? 0;
 }
 
 /**

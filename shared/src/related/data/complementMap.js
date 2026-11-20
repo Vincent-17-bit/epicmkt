@@ -5,6 +5,23 @@
 // [group, phrases]. Matched on whole words, lower case. Order matters only between groups that share a word: the more specific
 // group comes first (a "phone case" is a case, not a phone; a "laptop bag" is a bag, not a laptop).
 export const PHRASES = [
+  // specific names whose words also belong to a bigger group further down: they must be read first ("brake pads" are not "pads",
+  // a "table fan" is not a table, "curry powder" is a spice and not a meal)
+  ["brake-parts", ["brake pads", "brake pad", "brake shoes", "brake disc"]],
+  ["oil-filter", ["fan belt", "timing belt", "v belt"]],
+  ["appliance", ["table fan", "standing fan", "pedestal fan", "ceiling fan", "electric fan"]],
+  ["water-dispenser", ["table top dispenser", "tabletop dispenser"]],
+  ["car-accessory", ["phone holder", "car phone holder", "bike phone holder"]],
+  ["farm-tools", ["milk can", "milk churn", "fencing wire", "fence wire", "barbed wire", "chain link"]],
+  ["nail-care", ["false nails", "press on nails", "artificial nails", "false lashes"]],
+  ["sauces-spices", ["curry powder", "pilau masala", "garam masala", "masala powder", "chilli powder"]],
+  ["cupcakes-pastries", ["meat pie", "sausage roll"]],
+  ["poultry-supplies", ["egg tray", "egg crate"]],
+  ["makeup-skincare", ["body butter", "shea butter", "cocoa butter"]],
+  ["cleaning-supplies", ["hand wash", "handwash", "hand sanitizer", "sanitizer"]],
+  ["event-decor", ["table cloth", "table cloths", "tablecloth", "tablecloths", "chair cover", "chair covers"]],
+  ["health-service", ["liver function", "kidney function", "lipid profile", "full blood count"]],
+  ["welding-supplies", ["welding machine", "welder"]],
   // exact things whose words belong to a bigger group elsewhere: they must win ("tea masala" is tea, not a meal)
   ["tea-coffee", ["tea masala", "masala tea", "masala chai", "chai"]],
   ["animal-feed", ["dairy meal", "layers mash", "growers mash", "chick mash", "chick starter", "pig finisher", "pig feed", "calf pellets", "sow and weaner", "fish feed", "animal feed", "poultry feed", "broiler starter", "broiler finisher", "hay bale", "hay", "napier"]],
@@ -111,8 +128,8 @@ export const PHRASES = [
   ["fertilizer", ["fertilizer", "fertiliser", "dap", "npk", "urea", "manure", "can fertilizer"]],
   ["crop-protection", ["pesticide", "insecticide", "herbicide", "fungicide", "duduthrin", "roundup"]],
   ["farm-tools", ["sprayer", "knapsack", "jembe", "panga", "spade", "shovel", "hoe", "wheelbarrow", "machete", "secateurs", "watering can", "irrigation", "drip kit", "greenhouse"]],
-  ["poultry-supplies", ["chicks", "day old chicks", "feeders", "drinkers", "incubator", "brooder"]],
-  ["poultry", ["whole chicken", "broiler", "kienyeji", "drumsticks", "chicken wings", "chicken breast"]],
+  ["poultry-supplies", ["feeders", "drinkers", "incubator", "brooder"]],
+  ["poultry", ["chicks", "day old chicks", "whole chicken", "broiler", "kienyeji", "drumsticks", "chicken wings", "chicken breast"]],
   ["meat", ["beef", "goat meat", "goat", "mutton", "pork", "sausages", "sausage", "mince", "steak", "ribs", "offal", "liver", "tripe", "bacon", "matumbo", "meat"]],
   ["fish", ["fish", "tilapia", "omena", "nile perch", "sardines", "mkavu"]],
   ["produce-veg", ["tomatoes", "tomato", "onions", "onion", "sukuma", "kale", "cabbage", "spinach", "carrots", "capsicum", "garlic", "ginger", "coriander", "dhania", "vegetables", "lettuce", "pumpkin", "cucumber", "chilli"]],
@@ -231,8 +248,54 @@ export const TYPE_GROUPS = {
   "computer-internet-use": "services",
   "photo-package": "photo-video",
   "prescription-medicine": "medicine",
-  "vet-medicine": "vet-supplies"
+  "vet-medicine": "vet-supplies",
+  // Every other seeded product type, so the section still works when a name says nothing ("Zuri 5" typed as a phone is a phone).
+  // Goods land in a group that has partners; services land in the group of the same trade (they pair as service bundles).
+  "hair-wigs": "hair-care", "power-adapter": "phone-charger", "travel-adapter": "phone-charger", "adapter-converter": "phone-charger",
+  "led-strip": "led-bulb", "large-battery": "solar-storage",
+  "notebooks-exercise-books": "school-books", "envelopes-files-folders": "pens-pencils-markers", "staplers-glue-tape-scissors": "pens-pencils-markers", calculator: "pens-pencils-markers",
+  "meat-by-weight": "meat", produce: "produce-veg", frames: "eyewear-frames", agrochemicals: "crop-protection", "agrovet-supplies": "vet-supplies",
+  tiles: "cement-sand-bags", "door-window": "locks-security", "rope-wire-by-metre": "steel-reinforcement", "wardrobe-cabinet": "wardrobe", "fabric-by-metre": "fabric-sewing",
+  "wiper-blade": "car-accessory", "spare-part": "oil-filter", "used-spare-part": "oil-filter", "water-dispenser-filter": "water-filter", "lpg-accessories": "gas-accessory",
+  "buns-doughnuts-snacks": "cupcakes-pastries", "custom-cake-order": "cake", "bakery-bulk-order": "cupcakes-pastries", "smoothie-fruit-salad": "juice", "bottled-juice-event": "juice",
+  "restaurant-drink": "soft-drink", "processed-meat": "meat", "offal-bones": "meat", "dressed-chicken": "meat", "mama-mboga-produce": "produce-veg", "herbs-spices": "sauces-spices",
+  "cooking-oil-fat": "cooking-oil", "flour-cereals-rice": "flour", "tea-coffee-sugar": "tea-coffee", "dairy-eggs-chilled": "milk", "snacks-biscuits-sweets": "confectionery",
+  "soft-drinks-bottled-water": "soft-drink", "household-consumables": "household", "baby-food-formula": "baby-care",
+  "beer-cider": "liquor", wine: "liquor", spirits: "liquor", "bar-menu-drink": "liquor",
+  "seeds-seedlings": "seeds", "fertiliser-manure": "fertilizer", "farm-tools-equipment": "farm-tools", "day-old-chicks": "poultry", "live-birds": "poultry", "poultry-equipment": "poultry-supplies",
+  "pet-accessories": "pet-supplies", "vitamins-supplements": "supplements", "first-aid-devices": "first-aid", "sanitary-baby-care": "baby-care",
+  "contact-lenses": "lenses", "grooming-products": "grooming-tools", "hair-care-products": "hair-care", "body-care-lotions": "makeup-skincare", "nail-lash-tools": "nail-care",
+  "fitness-equipment": "fitness-gear", "baby-clothing": "baby-wear", "baby-feeding-toys": "baby-care", "books-textbooks": "school-books", "storybooks-general": "books",
+  "hand-power-tools": "hand-tools", "locks-hardware": "locks-security", "paint-supplies-finishes": "paint-tools", "solar-battery-inverter": "inverter",
+  "cctv-camera-kit": "locks-security", "alarm-electric-fence": "locks-security", "fridge-freezer": "appliance", "cooker-microwave": "appliance", "washing-machine": "appliance", "fan-heater-small-appliance": "appliance",
+  "suit-formalwear": "clothing", "traditional-bridal-wear": "clothing", "underwear-socks": "socks", "car-accessories-care": "car-accessory", "motorbike-sale": "motorbike", "motorbike-parts-gear": "moto-gear",
+  "agrovet-service": "vet-supplies", "pet-grooming-boarding": "pet-service", "clinic-consultation": "health-service", "lab-test": "health-service", vaccination: "health-service",
+  "dental-service": "health-service", "maternity-physio": "health-service", "eye-test": "health-service", "kids-haircut": "barber-service",
+  "braiding-service": "beauty-service", "nails-service": "beauty-service", "makeup-service": "beauty-service", "spa-package-membership": "spa-service", "sauna-steam": "spa-service",
+  "gym-class-training": "fitness-service", "tuition-lessons": "education-service", "computer-music-classes": "education-service", "daycare-childcare": "education-service", "driving-school": "education-service",
+  "mpesa-agent-service": "mobile-money", "airtime-bills-tokens": "mobile-money", "hotel-room": "lodging", "hostel-bed": "lodging", "hotel-day-use-package": "lodging",
+  "conference-venue": "event-rental", "property-rental": "rental", "commercial-space-rental": "rental", "tool-hire": "rental", "vehicle-hire": "transport-service",
+  "professional-consultation": "services", "legal-service": "services", "accounting-tax-service": "services", "architecture-survey-service": "services", "property-management-service": "services", "property-sale": "services",
+  "welding-fabrication": "building-service", "furniture-custom-order": "services", "house-cleaning": "cleaning-service", "fumigation-pest": "cleaning-service", "solar-system-install": "solar-panel",
+  "security-install-maintenance": "security-service", "alterations-repairs": "tailoring-service", "tyre-fitting-alignment": "garage-service", "bodywork-spraying": "garage-service",
+  "towing-recovery": "transport-service", "car-detailing": "car-wash", "passenger-ride": "transport-service", "school-staff-transport": "transport-service", "freight-haulage": "transport-service",
+  "parcel-delivery-moving": "moving-service", "event-hire-furniture": "event-rental", "event-hire-sound-lighting": "event-rental", "event-decor-planning": "event-decor",
+  "drone-video-service": "photo-video", "creative-digital-service": "photo-video"
 };
+
+// Product types whose own group beats the words in the name. These are the types whose names routinely contain another product's word
+// ("Brake pads" typed as a spare part, "Table cloths" hired for an event, "Liver function" as a lab test, "Chain" as a lock): the seller
+// said what it is, and the name only describes it. Every service type is here, so a typed service is never taken for a product.
+export const LOCKED_TYPES = [
+  "spare-part", "used-spare-part", "rope-wire-by-metre", "locks-hardware", "wiper-blade", "motorbike-parts-gear", "car-accessories-care", "pet-accessories", "farm-tools-equipment", "herbs-spices",
+  "dressed-chicken", "processed-meat", "offal-bones", "first-aid-devices", "water-dispenser-filter", "nail-lash-tools", "body-care-lotions", "hand-power-tools", "alarm-electric-fence", "cctv-camera-kit",
+  "agrovet-service", "pet-grooming-boarding", "clinic-consultation", "lab-test", "vaccination", "dental-service", "maternity-physio", "eye-test", "kids-haircut", "braiding-service", "nails-service", "makeup-service",
+  "spa-package-membership", "sauna-steam", "gym-class-training", "tuition-lessons", "computer-music-classes", "daycare-childcare", "driving-school", "mpesa-agent-service", "airtime-bills-tokens",
+  "professional-consultation", "legal-service", "accounting-tax-service", "architecture-survey-service", "property-management-service", "tool-hire", "vehicle-hire", "welding-fabrication",
+  "furniture-custom-order", "house-cleaning", "fumigation-pest", "security-install-maintenance", "alterations-repairs", "tyre-fitting-alignment", "bodywork-spraying", "towing-recovery", "car-detailing",
+  "passenger-ride", "school-staff-transport", "freight-haulage", "parcel-delivery-moving", "event-hire-furniture", "event-hire-sound-lighting", "event-decor-planning", "drone-video-service", "creative-digital-service",
+  "printing", "scanning", "lamination", "binding", "typing-documents", "passport-photos", "banners-posters-cards", "computer-internet-use", "milling-service"
+];
 
 // group -> [[partner group, weight 1-10], ...]. Weight = how natural the pairing is; it orders the section.
 // Groups with no entry (services, medicine, liquor, produce, ...) have nothing that goes with them.
