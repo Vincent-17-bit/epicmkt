@@ -53,7 +53,7 @@ describe("zoom plan for small photos", () => {
 describe("full view photo box", () => {
   it("sizes the photo to its box so a big photo is never cut", async () => {
     const { readFileSync } = await import("node:fs");
-    const css = readFileSync(new URL("./ProductMedia.module.css", import.meta.url), "utf8");
+    const css = readFileSync(`${process.cwd()}/src/components/ProductMedia.module.css`, "utf8");
     const rule = css.match(/\.zoomBox img \{[^}]*\}/)[0];
     expect(rule).toMatch(/width: 100%/);
     expect(rule).toMatch(/height: 100%/);
