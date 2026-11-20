@@ -118,11 +118,11 @@ describe("ItemPage", () => {
     expect(document.getElementById("item-similar-title")).toHaveTextContent("Similar products");
   });
 
-  it("leaves nothing behind when there are fewer than two similar items: no section, no gap", async () => {
+  it("leaves nothing behind when there are no similar items: no section, no gap", async () => {
     mocks.getBusiness.mockResolvedValue(biz);
     mocks.getDetail.mockResolvedValue(detail);
     mocks.getStoreSelective.mockResolvedValue([]);
-    mocks.getSimilar.mockResolvedValue(similarRows(1));
+    mocks.getSimilar.mockResolvedValue([]);
     const { container } = mount();
     await screen.findByRole("heading", { level: 1, name: "Fade and beard" });
     await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());

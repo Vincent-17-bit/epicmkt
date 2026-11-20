@@ -10,7 +10,8 @@ import { visitSeed } from "../lib/visitSeed.js";
 import styles from "./SimilarItems.module.css";
 
 const LIMIT = 24;
-const MIN_SHOWN = 2;
+// One match is enough: with a few stores on the site, "the other muffin" is a real answer, and hiding it left both pages empty.
+const MIN_SHOWN = 1;
 
 // A position only nudges the order (nearer stores first), so a coarse key keeps the cache steady as it jitters.
 const roundOf = (coords) =>
@@ -32,7 +33,7 @@ export function useSimilar(itemId, enabled) {
 
 // "Similar products", the last section of the product page: the same KIND of product from other stores (white bread at one bakery
 // finds white bread at another bakery or a supermarket; pilau at one cafe finds pilau at another), best match first, shown as the
-// recommendation carousel. It is a nicety, so a failed or thin result (fewer than two) renders nothing at all,
+// recommendation carousel. It is a nicety, so a failed or empty result renders nothing at all,
 // not even an empty gap: until the section is near the screen it is only a zero-height marker, while it loads it holds the height
 // the cards will take (no layout shift), and when there is nothing to show it is gone.
 export default function SimilarItems({ itemId, businessId, name = "", brand = "", className = "" }) {

@@ -50,8 +50,8 @@ describe("SimilarItems", () => {
     expect(mocks.getSimilar).toHaveBeenCalledWith("cur", expect.objectContaining({ limit: 24, seed: expect.any(String) }));
   });
 
-  it("renders nothing with fewer than two results, on failure, or when empty", async () => {
-    for (const answer of [similar(1), [], null]) {
+  it("renders nothing on failure or when empty", async () => {
+    for (const answer of [[], null]) {
       mocks.getSimilar.mockResolvedValue(answer);
       const { container, unmount } = mount();
       await waitFor(() => expect(container.querySelector("[aria-busy='true']")).toBeNull());
@@ -62,6 +62,13 @@ describe("SimilarItems", () => {
     mount();
     await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
     await waitFor(() => expect(screen.queryByRole("heading", { name: "Similar products" })).toBeNull());
+  });
+
+  it("one similar item is enough to show the row (two stores, one muffin each)", async () => {
+    mocks.getSimilar.mockResolvedValue(similar(1));
+    mount();
+    expect(await screen.findByRole("link", { name: /Other 0/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Similar products" })).toBeInTheDocument();
   });
 
   it("each card links to the item in its own store, and names the store under the price", async () => {
@@ -203,7 +210,7 @@ describe("SimilarItems, lazy", () => {
   });
 
   it("leaves no trace at all when it turns out there is nothing to show", async () => {
-    mocks.getSimilar.mockResolvedValue(similar(1));
+    mocks.getSimilar.mockResolvedValue([]);
     const { container } = mount();
     act(() => observers[0].callback([{ isIntersecting: true }]));
     await waitFor(() => expect(mocks.getSimilar).toHaveBeenCalled());
