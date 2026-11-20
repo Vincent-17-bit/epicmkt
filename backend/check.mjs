@@ -169,7 +169,9 @@ console.log("all checks passed");
   const selective = await getStoreSelective("b_001", { excludeItemId: "b_001-haircut", limit: 12 });
   assert.ok(selective.every((i) => i.id !== "b_001-haircut"));
   assert.equal(selective.length, 9);
-  assert.equal(selective[0].id, "b_001-fade-and-beard");
+  // The same kind first ("Kids cut" is a haircut: cut and haircut are one word to the vocabulary), then the rest of the section.
+  assert.equal(selective[0].id, "b_001-kids-cut");
+  assert.equal(selective[1].id, "b_001-fade-and-beard");
   const sameSection = selective.filter((i) => i.section === "Cuts").length;
   assert.ok(selective.slice(0, sameSection).every((i) => i.section === "Cuts"));
   const sectionLast = (await getStoreSelective("b_017", { excludeItemId: "b_017-wig-install" })).map((i) => i.id);

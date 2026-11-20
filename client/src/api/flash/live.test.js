@@ -40,6 +40,7 @@ beforeEach(() => {
   db().items = [];
   db().businesses = [];
   db().failing = null;
+  db().failWhen = null;
 });
 
 afterEach(() => {
@@ -371,7 +372,7 @@ describe("live item and business pages", () => {
         db().calls = [];
       });
 
-      it("asks once, with the head-noun forms, and takes no other item query", async () => {
+      it("asks once, with the head-noun forms, and takes no other item search (only the seed and one product-type read by id)", async () => {
         setup();
         db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, C, { name: "White bread", section: "Food" })];
         const asked = [];
@@ -382,7 +383,29 @@ describe("live item and business pages", () => {
         expect(asked[0].p_item_id).toBe(SEED);
         for (const word of ["bread", "breads", "loaf", "loaves"]) expect(asked[0].p_terms).toContain(word);
         expect(asked[0].p_limit).toBeGreaterThan(0);
-        expect(heavy("public_items")).toBe(1);
+        expect(heavy("public_items")).toBe(2); // the seed, and the product types of the candidates by primary key
+      });
+
+      it("uses the product type as evidence: the same type joins names the vocabulary cannot read, a different type cancels a shared section", async () => {
+        setup();
+        db().items = [
+          seedItem({ name: "Zuri 5", section: "Gadgets", product_type_id: "phone" }),
+          at(1, B, { name: "Omega 9", section: "Elsewhere", product_type_id: "phone" }),
+          at(2, B, { name: "Omega 9", section: "Gadgets", product_type_id: "tablet" }),
+          at(3, C, { name: "Omega 9", section: "Gadgets" })
+        ];
+        db().rpc.similar_item_candidates = () => db().items.filter((r) => r.business_id !== A);
+        expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
+      });
+
+      it("still ranks by name and section when the product types cannot be read", async () => {
+        setup();
+        db().items = [seedItem(), at(1, B, { name: "Wheat loaf" })];
+        db().rpc.similar_item_candidates = (args) => net(args);
+        // Only the read of product types (public_items by a list of ids) fails; the seed, the stores and the function still answer.
+        db().failWhen = (table, inFilters) => (table === "public_items" && inFilters.some(([col]) => col === "id") ? { message: "types unavailable" } : null);
+        expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
+        expect(db().calls.filter((c) => c === "public_items")).toHaveLength(2); // it was tried
       });
 
       it("still applies the relevance gate to whatever the database returns", async () => {

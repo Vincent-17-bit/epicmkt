@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { STOP_WORDS, UNIT_WORDS, NEVER_HEAD, SHORT_NOUNS, SYNONYM_GROUPS, RELATED_GROUPS, NOUNS, COMPOUNDS, IRREGULAR_PLURALS, INVARIANT_WORDS } from "./similarVocab.js";
+import { STOP_WORDS, UNIT_WORDS, NEVER_HEAD, SHORT_NOUNS, SYNONYM_GROUPS, RELATED_GROUPS, NOUNS, COMPOUNDS, ALIAS_PHRASES, IRREGULAR_PLURALS, INVARIANT_WORDS } from "./similarVocab.js";
 import { singular, relevance } from "./similar.js";
 
 const WORD = /^[a-z0-9]+$/;
@@ -13,7 +13,7 @@ test("every entry is a lowercase single word", () => {
   for (const [name, list] of Object.entries({ STOP_WORDS, UNIT_WORDS, NEVER_HEAD, SHORT_NOUNS, NOUNS, synonyms: flat(SYNONYM_GROUPS), related: flat(RELATED_GROUPS), invariant: INVARIANT_WORDS })) {
     for (const word of list) assert.match(word, WORD, `${name}: ${word}`);
   }
-  for (const [from, to] of Object.entries({ ...COMPOUNDS, ...IRREGULAR_PLURALS })) {
+  for (const [from, to] of Object.entries({ ...COMPOUNDS, ...ALIAS_PHRASES, ...IRREGULAR_PLURALS })) {
     assert.ok(from.split(" ").every((w) => WORD.test(w)) && WORD.test(to), `${from} -> ${to}`);
   }
 });
@@ -63,4 +63,8 @@ test("the synonym and related pairs the product depends on", () => {
 test("short nouns are the only allowed words under three letters", () => {
   for (const word of SHORT_NOUNS) assert.ok(word.length < 3, word);
   for (const word of [...NOUNS, ...flat(SYNONYM_GROUPS)]) if (word.length < 3) assert.ok(SHORT_NOUNS.includes(word), `${word} needs to be in SHORT_NOUNS`);
+});
+
+test("a phrase is either a joined name or an alias, never both", () => {
+  for (const key of Object.keys(ALIAS_PHRASES)) assert.ok(!(key in COMPOUNDS), key);
 });
