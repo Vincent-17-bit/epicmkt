@@ -24,6 +24,7 @@ const warm = (url) => {
   sizes.set(url, null);
   const img = new Image();
   img.decoding = "async";
+  img.fetchPriority = "low";
   img.onload = () => sizes.set(url, VECTOR.test(url) ? Infinity : img.naturalWidth || null);
   img.onerror = () => {
     sizes.set(url, null);
@@ -85,13 +86,6 @@ export default function HoverZoom({ src: wanted, fallback = null, options }) {
   srcRef.current = src;
   const optRef = useRef(o);
   optRef.current = o;
-
-  useEffect(() => {
-    const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 300));
-    const cancel = window.cancelIdleCallback ?? clearTimeout;
-    const id = idle(() => warm(src));
-    return () => cancel(id);
-  }, [src]);
 
   useEffect(() => {
     const host = anchorRef.current?.parentElement;
@@ -172,7 +166,9 @@ export default function HoverZoom({ src: wanted, fallback = null, options }) {
       place();
       if (!frame) frame = requestAnimationFrame(glide);
     };
-    const prime = () => warm(srcRef.current);
+    const prime = (event) => {
+      if (event.pointerType === "mouse") warm(srcRef.current);
+    };
     host.addEventListener("pointerenter", prime);
     host.addEventListener("pointermove", move);
     host.addEventListener("pointerleave", hide);

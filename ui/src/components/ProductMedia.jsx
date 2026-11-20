@@ -9,7 +9,7 @@ import styles from "./ProductMedia.module.css";
 
 // How many photo thumbnails the rail shows before the "N+" tile takes over.
 const RAIL_PHOTOS = 5;
-const ZOOM_WIDTH = () => (typeof window !== "undefined" && window.devicePixelRatio >= 2 ? 3840 : 2400);
+const ZOOM_WIDTH = () => (typeof window !== "undefined" && window.devicePixelRatio >= 2 ? 2400 : 1600);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])';
 
 export const PRODUCT_MEDIA_LABELS = {

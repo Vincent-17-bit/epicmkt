@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueries } from "@tanstack/react-query";
 import { buildInfoGroups, includeRows, plainSpecs } from "@epicmkt/shared";
@@ -265,6 +265,14 @@ const pictureOf = (item) => item.imageUrl || item.images?.[0]?.url || "";
 
 export function CompareTable({ item, business }) {
   const query = useSimilar(item?.id, false);
+  const [node, setNode] = useState(null);
+  const [near, setNear] = useState(typeof IntersectionObserver === "undefined");
+  useEffect(() => {
+    if (near || !node) return undefined;
+    const watch = new IntersectionObserver((entries) => entries.some((e) => e.isIntersecting) && setNear(true), { rootMargin: "800px 0px" });
+    watch.observe(node);
+    return () => watch.disconnect();
+  }, [node, near]);
   const rows = (Array.isArray(query.data) ? query.data : []).filter((r) => r?.id && r.business?.id && r.id !== item?.id).slice(0, MAX_COLS);
   const details = useQueries({
     queries: rows.map((r) => ({
@@ -272,7 +280,7 @@ export function CompareTable({ item, business }) {
       queryFn: () => itemsApi.getDetail(r.id, { businessId: r.business.id }),
       staleTime: 60_000,
       retry: false,
-      enabled: Boolean(item)
+      enabled: Boolean(item) && near
     }))
   });
   const phone = useMediaQuery(PHONE);
@@ -337,7 +345,7 @@ export function CompareTable({ item, business }) {
   const colId = (i) => `compare-col-${i}`;
 
   return (
-    <section id="item-compare" className={styles.section} aria-labelledby="item-compare-title" aria-busy={loading || undefined}>
+    <section ref={setNode} id="item-compare" className={styles.section} aria-labelledby="item-compare-title" aria-busy={loading || undefined}>
       <SectionHead id="item-compare-title" title="Compare with similar items" note={loading ? "Loading product details" : `${plural(total, "feature")} across ${cols.length} items`}>
         <label className={styles.switch}>
           <input type="checkbox" role="switch" checked={diff} onChange={(e) => { setDiff(e.target.checked); setAll(false); }} />
