@@ -11,8 +11,19 @@
   z-index: var(--z-popover, 60);
   pointer-events: none;
   box-sizing: border-box;
-  border: 1px solid;
+  border: 1px solid #000;
   border-radius: 0;
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.28);
   background-repeat: no-repeat;
+}
+.inner {
+  z-index: var(--z-lightbox, 90);
+  box-shadow: none;
+  border-color: transparent;
+}
+:global([data-theme="dark"]) .lens {
+  border-color: var(--zoom-lens-border-dark);
+}
+:global([data-theme="dark"]) .pane:not(.inner) {
+  border-color: #e5e7eb;
 }

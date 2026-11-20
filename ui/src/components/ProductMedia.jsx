@@ -133,7 +133,7 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
                 </button>
               ))}
             </div>
-            {zoom !== false && <HoverZoom src={resizedUrl(photos[index].url, ZOOM_WIDTH())} options={zoom} />}
+            {zoom !== false && <HoverZoom src={resizedUrl(photos[index].url, ZOOM_WIDTH())} fallback={photos[index].url} options={zoom} />}
             {photos.length > 1 && (
               <span className={styles.counter} aria-hidden="true">
                 {index + 1} / {photos.length}

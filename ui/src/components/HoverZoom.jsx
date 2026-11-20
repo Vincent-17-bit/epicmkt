@@ -10,18 +10,26 @@ export const HOVER_ZOOM_DEFAULTS = {
   lensColor: "#3b82f6",
   lensOpacity: 0.18,
   lensBorder: "#1d4ed8",
-  borderColor: "#000000",
+  borderColor: null,
+  lensBorderDark: "#93c5fd",
   background: "#ffffff",
   minWidth: 1024
 };
 
 const sizes = new Map();
+const failed = new Set();
+const listeners = new Set();
 const warm = (url) => {
   if (!url || sizes.has(url) || typeof Image === "undefined") return;
   sizes.set(url, null);
   const img = new Image();
   img.decoding = "async";
   img.onload = () => sizes.set(url, VECTOR.test(url) ? Infinity : img.naturalWidth || null);
+  img.onerror = () => {
+    sizes.set(url, null);
+    failed.add(url);
+    listeners.forEach((fn) => fn());
+  };
   img.src = url;
 };
 const NO_ZOOM = 1.15;
@@ -51,7 +59,7 @@ function contentRect(img) {
 /**
  * Amazon-style hover zoom. Put it inside a `position: relative` photo box: while the pointer is over that box a lens
  * follows it and a magnified pane appears beside the box, floating over the page, so nothing on the page moves.
- *   src: the large picture of the photo being shown
+ *   src: the large picture of the photo being shown; fallback: the original url, used when src cannot be loaded
  *   scale, width, height (px; height defaults to the photo box's height), gap (px), lensColor (fill), lensOpacity, lensBorder, borderColor,
  *   background, minWidth (viewport px below which it stays off): see HOVER_ZOOM_DEFAULTS.
  * The pane takes the left and width of the nearest [data-zoom-fit] element in the same layout (the item's info column); without one it
@@ -60,12 +68,19 @@ function contentRect(img) {
  * A photo too small to stay sharp at the set scale gets a lower scale and a smaller pane; one that cannot be magnified at all gets no zoom.
  * Off on touch screens and narrow windows, where there is no hover or no room beside the photo.
  */
-export default function HoverZoom({ src, options }) {
+export default function HoverZoom({ src: wanted, fallback = null, options }) {
   const o = { ...HOVER_ZOOM_DEFAULTS, ...options };
   const lensRef = useRef(null);
   const paneRef = useRef(null);
   const anchorRef = useRef(null);
   const [pane, setPane] = useState(null);
+  const [, bump] = useState(0);
+  useEffect(() => {
+    const fn = () => bump((n) => n + 1);
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }, []);
+  const src = failed.has(wanted) && fallback ? fallback : wanted;
   const srcRef = useRef(src);
   srcRef.current = src;
   const optRef = useRef(o);
@@ -124,9 +139,11 @@ export default function HoverZoom({ src, options }) {
       if (!area) return hide();
       const hostBox = host.getBoundingClientRect();
       const fit = host.closest("[data-variant]")?.querySelector("[data-zoom-fit]")?.getBoundingClientRect();
-      const left = fit && fit.left > hostBox.right ? fit.left : hostBox.right + cfg.gap;
-      const roomWidth = fit && fit.left > hostBox.right ? fit.width : Math.min(cfg.width, window.innerWidth - hostBox.right - cfg.gap - 16);
-      const roomHeight = cfg.height ?? hostBox.height;
+      const beside = Boolean(fit && fit.left > hostBox.right);
+      const inner = !beside;
+      const left = inner ? hostBox.left : fit.left;
+      const roomWidth = inner ? hostBox.width : fit.width;
+      const roomHeight = inner ? hostBox.height : cfg.height ?? hostBox.height;
       if (roomWidth < 240) return hide();
       const plan = zoomPlan({ area, roomWidth, roomHeight, scale: cfg.scale, real: sizes.get(srcRef.current), dpr: window.devicePixelRatio || 1 });
       if (!plan) return hide();
@@ -140,17 +157,18 @@ export default function HoverZoom({ src, options }) {
       const first = !geo;
       geo = { area, hostBox, scale, lensW, lensH, tx, ty, cx: first ? tx : geo.cx, cy: first ? ty : geo.cy };
       const lens = lensRef.current;
-      if (lens) Object.assign(lens.style, { display: "block", width: `${lensW}px`, height: `${lensH}px` });
+      if (lens) Object.assign(lens.style, { display: inner ? "none" : "block", width: `${lensW}px`, height: `${lensH}px` });
       const next = {
         left,
-        top: Math.min(Math.max(hostBox.top, 8), Math.max(window.innerHeight - height - 8, 8)),
+        inner,
+        top: inner ? hostBox.top : Math.min(Math.max(hostBox.top, 8), Math.max(window.innerHeight - height - 8, 8)),
         width,
         height,
         low: img.currentSrc || img.src,
         size: `${area.width * scale}px ${area.height * scale}px`,
         position: `${-(geo.cx - area.left) * scale}px ${-(geo.cy - area.top) * scale}px`
       };
-      setPane((prev) => (prev && ["left", "top", "width", "height", "low", "size"].every((k) => prev[k] === next[k]) ? prev : { ...next, position: next.position }));
+      setPane((prev) => (prev && ["left", "top", "width", "height", "low", "size", "inner"].every((k) => prev[k] === next[k]) ? prev : { ...next, position: next.position }));
       place();
       if (!frame) frame = requestAnimationFrame(glide);
     };
@@ -175,20 +193,20 @@ export default function HoverZoom({ src, options }) {
         ref={lensRef}
         className={styles.lens}
         aria-hidden="true"
-        style={{ "--zoom-lens": o.lensColor, "--zoom-lens-border": o.lensBorder, "--zoom-lens-opacity": o.lensOpacity, display: "none" }}
+        style={{ "--zoom-lens": o.lensColor, "--zoom-lens-border": o.lensBorder, "--zoom-lens-border-dark": o.lensBorderDark, "--zoom-lens-opacity": o.lensOpacity, display: "none" }}
       />
       {pane &&
         createPortal(
           <div
             ref={paneRef}
-            className={styles.pane}
+            className={`${styles.pane} ${pane.inner ? styles.inner : ""}`}
             aria-hidden="true"
             style={{
               left: pane.left,
               top: pane.top,
               width: pane.width,
               height: pane.height,
-              borderColor: o.borderColor,
+              ...(o.borderColor ? { borderColor: o.borderColor } : null),
               backgroundColor: o.background,
               backgroundImage: `url("${src}"), url("${pane.low}")`,
               backgroundSize: `${pane.size}, ${pane.size}`,
