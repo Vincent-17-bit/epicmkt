@@ -9,6 +9,7 @@ import styles from "./ProductMedia.module.css";
 
 // How many photo thumbnails the rail shows before the "N+" tile takes over.
 const RAIL_PHOTOS = 5;
+const ZOOM_WIDTH = () => (typeof window !== "undefined" && window.devicePixelRatio >= 2 ? 3840 : 2400);
 const FOCUSABLE = 'a[href], button:not([disabled]), video[controls], [tabindex]:not([tabindex="-1"])';
 
 export const PRODUCT_MEDIA_LABELS = {
@@ -132,7 +133,7 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
                 </button>
               ))}
             </div>
-            {zoom !== false && <HoverZoom src={resizedUrl(photos[index].url, 2000)} options={zoom} />}
+            {zoom !== false && <HoverZoom src={resizedUrl(photos[index].url, ZOOM_WIDTH())} options={zoom} />}
             {photos.length > 1 && (
               <span className={styles.counter} aria-hidden="true">
                 {index + 1} / {photos.length}
