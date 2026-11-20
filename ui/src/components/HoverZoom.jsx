@@ -3,13 +3,13 @@ import { createPortal } from "react-dom";
 import styles from "./HoverZoom.module.css";
 
 export const HOVER_ZOOM_DEFAULTS = {
-  scale: 2.5,
+  scale: 3,
   width: 560,
   height: null,
   gap: 16,
-  lensColor: "#16a34a",
-  lensOpacity: 0.22,
-  borderColor: "#d5d9d9",
+  lensColor: "#2f7bff",
+  lensOpacity: 0.2,
+  borderColor: "#a6a6a6",
   background: "#ffffff",
   minWidth: 1024
 };
