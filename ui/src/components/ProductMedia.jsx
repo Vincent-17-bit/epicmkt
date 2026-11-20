@@ -26,7 +26,8 @@ export const PRODUCT_MEDIA_LABELS = {
   videoCountOne: "1 video",
   viewer: "{name}: photos and videos",
   zoomIn: "Zoom in",
-  zoomOut: "Zoom out"
+  zoomOut: "Zoom out",
+  zoomHint: "Move to look around. Click to see the whole photo."
 };
 const fill = (text, values) => Object.entries(values).reduce((out, [k, v]) => out.replace(`{${k}}`, String(v)), text);
 
@@ -234,10 +235,17 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
   const current = photos[photo];
   const video = clips[clip];
 
-  const toggleZoom = (event) => {
-    if (zoom) return setZoom(null);
+  const openedAt = useRef(Date.now());
+  const spot = (event) => {
     const box = event.currentTarget.getBoundingClientRect();
-    setZoom({ x: ((event.clientX - box.left) / box.width) * 100, y: ((event.clientY - box.top) / box.height) * 100 });
+    return { x: ((event.clientX - box.left) / box.width) * 100, y: ((event.clientY - box.top) / box.height) * 100 };
+  };
+  const toggleZoom = (event) => {
+    if (Date.now() - openedAt.current < 400) return;
+    setZoom(zoom ? null : spot(event));
+  };
+  const lookAround = (event) => {
+    if (zoom) setZoom(spot(event));
   };
 
   return createPortal(
@@ -269,12 +277,12 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
         {tab === "images" && current && (
           <div id={`${uid}-panel-images`} role="tabpanel" aria-labelledby={`${uid}-tab-images`} className={styles.viewerBody}>
             <div className={styles.viewerMain}>
-              <button type="button" className={styles.zoomBox} data-zoomed={zoom ? "" : undefined} onClick={toggleZoom} aria-label={zoom ? text.zoomOut : text.zoomIn}>
+              <button type="button" className={styles.zoomBox} data-zoomed={zoom ? "" : undefined} onClick={toggleZoom} onPointerMove={lookAround} onPointerLeave={() => setZoom(null)} aria-label={zoom ? text.zoomOut : text.zoomIn}>
                 <img
                   key={current.id}
-                  src={resizedUrl(current.url, 1600)}
+                  src={resizedUrl(current.url, 2400)}
                   alt={current.caption || name}
-                  style={zoom ? { transform: "scale(2.2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
+                  style={zoom ? { transform: "scale(2)", transformOrigin: `${zoom.x}% ${zoom.y}%` } : undefined}
                 />
               </button>
               {photos.length > 1 && (
@@ -287,6 +295,7 @@ export function MediaViewer({ name, variantLabel, photos, clips, start, text, on
                   </button>
                 </>
               )}
+              {zoom && <p className={styles.zoomHint}>{text.zoomHint}</p>}
               <p className={styles.caption} aria-live="polite">
                 {fill(text.photo, { n: photo + 1, total: photos.length })}
                 {current.caption ? ` · ${current.caption}` : ""}
