@@ -4,11 +4,13 @@ import { api } from "../../api/index.js";
 import Button from "../../components/Button.jsx";
 import LoadError from "../../components/LoadError.jsx";
 import Modal from "../../components/Modal.jsx";
+import PlansSheet from "./PlansSheet.jsx";
 import PlanLimitsPanel from "./PlanLimitsPanel.jsx";
 import { useToast } from "../../components/Toast.jsx";
 import { usePermissions } from "../../hooks/usePermissions.js";
 import { BADGES, groupPlans, planImpact, planProblems } from "../../lib/catalogue.js";
 import { stampDayYear } from "../../lib/time.js";
+import { faPrint } from "@fortawesome/free-solid-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 
 const day = stampDayYear;
@@ -92,6 +94,10 @@ export default function PlansPage() {
   const { data = [], isLoading, isError, error, refetch } = useQuery({ queryKey: ["admin-plans"], queryFn: () => api.listPlans() });
   const groups = groupPlans(data);
   const canEdit = can("plans.edit");
+  const print = async () => {
+    await refetch();
+    requestAnimationFrame(() => window.print());
+  };
 
   const cell = (row) => (!row ? <td>–</td> : (
     <td>
@@ -107,7 +113,10 @@ export default function PlansPage() {
   return (
     <div className="page-shell">
       <section className="panel">
-        <div className="panel__header"><h2 className="heading-sm">Plans and pricing</h2></div>
+        <div className="panel__header">
+          <h2 className="heading-sm">Plans and pricing</h2>
+          <Button icon={faPrint} disabled={isLoading || isError || groups.length === 0} onClick={print}>Print plans PDF</Button>
+        </div>
         <p className="muted">These prices are what every site shows and charges: the application form and pricing page on the client site, and the renewal, plan choice and category list on the seller site. A change reaches them straight away. Sellers already live pay the new price from their next payment; time they have already paid for is not changed. Sellers choose Standard or Premium when they renew, so both plans of a category need a price.</p>
         {isError ? <LoadError what="plans" error={error} onRetry={refetch} /> : (
           <div className="table-shell">
@@ -127,6 +136,7 @@ export default function PlansPage() {
           </div>
         )}
       </section>
+      <PlansSheet groups={groups} />
       <PlanLimitsPanel rows={data} />
       {editing && <EditDialog row={editing} onClose={() => setEditing(null)} />}
       {viewing && <HistoryDialog row={viewing} onClose={() => setViewing(null)} />}

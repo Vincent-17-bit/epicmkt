@@ -1,0 +1,12 @@
+.plans-sheet { display: none; }
+
+@media print {
+  #root { display: none; }
+  .plans-sheet { display: block; color: #111; background: #fff; font: 11pt/1.4 system-ui, sans-serif; }
+  .plans-sheet h1 { font-size: 20pt; margin: 0 0 4pt; }
+  .plans-sheet h2 { font-size: 13pt; margin: 16pt 0 6pt; break-after: avoid; }
+  .plans-sheet table { width: 100%; border-collapse: collapse; }
+  .plans-sheet th, .plans-sheet td { text-align: left; padding: 4pt 6pt; border-bottom: 1px solid #ccc; }
+  .plans-sheet tr { break-inside: avoid; }
+  .plans-sheet section { break-inside: auto; }
+}
