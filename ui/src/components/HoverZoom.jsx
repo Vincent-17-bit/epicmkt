@@ -14,17 +14,27 @@ export const HOVER_ZOOM_DEFAULTS = {
   minWidth: 1024
 };
 
-const warmed = new Set();
+const sizes = new Map();
 const warm = (url) => {
-  if (!url || warmed.has(url) || typeof Image === "undefined") return;
-  warmed.add(url);
+  if (!url || sizes.has(url) || typeof Image === "undefined") return;
+  sizes.set(url, null);
   const img = new Image();
   img.decoding = "async";
+  img.onload = () => sizes.set(url, VECTOR.test(url) ? Infinity : img.naturalWidth || null);
   img.src = url;
 };
+const NO_ZOOM = 1.15;
+const VECTOR = /^data:image\/svg|\.svg(\?|$)/i;
 
 const SMOOTH = 0.22;
 const FINE_HOVER = "(hover: hover) and (pointer: fine)";
+
+export function zoomPlan({ area, roomWidth, roomHeight, scale, real, dpr = 1 }) {
+  const sharp = real ? real / (area.width * dpr) : Infinity;
+  if (sharp < NO_ZOOM) return null;
+  const fitted = sharp < scale ? sharp : Math.max(scale, roomWidth / area.width, roomHeight / area.height);
+  return { scale: fitted, width: Math.min(roomWidth, area.width * fitted), height: Math.min(roomHeight, area.height * fitted) };
+}
 
 function contentRect(img) {
   const box = img.getBoundingClientRect();
@@ -45,6 +55,8 @@ function contentRect(img) {
  *   background, minWidth (viewport px below which it stays off): see HOVER_ZOOM_DEFAULTS.
  * The pane takes the left and width of the nearest [data-zoom-fit] element in the same layout (the item's info column); without one it
  * uses `width` and `gap`.
+
+ * A photo too small to stay sharp at the set scale gets a lower scale and a smaller pane; one that cannot be magnified at all gets no zoom.
  * Off on touch screens and narrow windows, where there is no hover or no room beside the photo.
  */
 export default function HoverZoom({ src, options }) {
@@ -112,10 +124,12 @@ export default function HoverZoom({ src, options }) {
       const hostBox = host.getBoundingClientRect();
       const fit = host.closest("[data-variant]")?.querySelector("[data-zoom-fit]")?.getBoundingClientRect();
       const left = fit && fit.left > hostBox.right ? fit.left : hostBox.right + cfg.gap;
-      const width = fit && fit.left > hostBox.right ? fit.width : Math.min(cfg.width, window.innerWidth - hostBox.right - cfg.gap - 16);
-      const height = cfg.height ?? hostBox.height;
-      if (width < 240) return hide();
-      const scale = Math.max(cfg.scale, width / area.width, height / area.height);
+      const roomWidth = fit && fit.left > hostBox.right ? fit.width : Math.min(cfg.width, window.innerWidth - hostBox.right - cfg.gap - 16);
+      const roomHeight = cfg.height ?? hostBox.height;
+      if (roomWidth < 240) return hide();
+      const plan = zoomPlan({ area, roomWidth, roomHeight, scale: cfg.scale, real: sizes.get(srcRef.current), dpr: window.devicePixelRatio || 1 });
+      if (!plan) return hide();
+      const { scale, width, height } = plan;
       const lensW = width / scale;
       const lensH = height / scale;
       const inside = event.clientX >= area.left && event.clientX <= area.left + area.width && event.clientY >= area.top && event.clientY <= area.top + area.height;
