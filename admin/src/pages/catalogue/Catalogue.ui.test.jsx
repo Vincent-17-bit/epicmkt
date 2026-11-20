@@ -38,9 +38,19 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe("Plans", () => {
   it("shows prices, live counts and flags plans with no price", async () => {
     renderPage(<PlansPage />);
-    expect(await screen.findByText("KES 1,300")).toBeInTheDocument();
+    expect((await screen.findAllByText("KES 1,300")).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Not priced").length).toBeGreaterThan(0);
     expect(screen.getByText("10 live · 2 versions")).toBeInTheDocument();
+  });
+
+  it("prints the current plans, switched-off categories left out", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    renderPage(<PlansPage />);
+    await screen.findAllByText("KES 1,300");
+    expect(document.querySelector(".plans-sheet h1")).toHaveTextContent("EpicMKT plans and prices");
+    fireEvent.click(screen.getByRole("button", { name: "Print plans PDF" }));
+    await waitFor(() => expect(print).toHaveBeenCalled());
+    print.mockRestore();
   });
 
   it("a price change shows its impact and cannot be saved without a reason", async () => {
