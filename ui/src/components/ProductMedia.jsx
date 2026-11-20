@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faChevronRight, faPlay, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { resizedUrl } from "../lib/imageUrl.js";
 import { formatDuration, normalizeMedia } from "../lib/media.js";
+import HoverZoom from "./HoverZoom.jsx";
 import styles from "./ProductMedia.module.css";
 
 // How many photo thumbnails the rail shows before the "N+" tile takes over.
@@ -35,8 +36,10 @@ const fill = (text, values) => Object.entries(values).reduce((out, [k, v]) => ou
  *   media: [{ id, kind: "image" | "video", url, poster?, caption?, duration?, by? }]   (or images / videos)
  *   focus: { id, n }: show that photo (a picked colour jumps to its photo); n changes on every pick.
  *   variantLabel: "Colour: Black", shown in the viewer under the item's name.
+ *   zoom: hover zoom beside the photo on desktop. false turns it off; an object sets scale, width, height, lensColor, lensOpacity,
+ *     borderColor, background (see HOVER_ZOOM_DEFAULTS).
  */
-export default function ProductMedia({ media, images, videos, name = "", labels, focus = null, variantLabel = "", className = "" }) {
+export default function ProductMedia({ media, images, videos, name = "", labels, focus = null, variantLabel = "", zoom = null, className = "" }) {
   const text = { ...PRODUCT_MEDIA_LABELS, ...labels };
   const list = useMemo(() => normalizeMedia(media ? { media } : { images, videos }), [media, images, videos]);
   const photos = useMemo(() => list.filter((m) => m.kind === "image"), [list]);
@@ -129,6 +132,7 @@ export default function ProductMedia({ media, images, videos, name = "", labels,
                 </button>
               ))}
             </div>
+            {zoom !== false && <HoverZoom src={resizedUrl(photos[index].url, 2000)} options={zoom} />}
             {photos.length > 1 && (
               <span className={styles.counter} aria-hidden="true">
                 {index + 1} / {photos.length}
