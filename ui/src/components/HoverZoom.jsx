@@ -9,7 +9,7 @@ export const HOVER_ZOOM_DEFAULTS = {
   gap: 16,
   lensColor: "#2f7bff",
   lensOpacity: 0.2,
-  borderColor: "#a6a6a6",
+  borderColor: "#000000",
   background: "#ffffff",
   minWidth: 1024
 };
