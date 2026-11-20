@@ -3,7 +3,7 @@
   z-index: 2;
   pointer-events: none;
   box-sizing: border-box;
-  border: 1px solid var(--zoom-lens);
+  border: 1px solid var(--zoom-lens-border);
   background: color-mix(in srgb, var(--zoom-lens) calc(var(--zoom-lens-opacity) * 100%), transparent);
 }
 .pane {
