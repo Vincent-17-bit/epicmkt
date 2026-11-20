@@ -7,8 +7,9 @@ export const HOVER_ZOOM_DEFAULTS = {
   width: 560,
   height: null,
   gap: 16,
-  lensColor: "#2f7bff",
-  lensOpacity: 0.2,
+  lensColor: "#3b82f6",
+  lensOpacity: 0.18,
+  lensBorder: "#1d4ed8",
   borderColor: "#000000",
   background: "#ffffff",
   minWidth: 1024
@@ -51,7 +52,7 @@ function contentRect(img) {
  * Amazon-style hover zoom. Put it inside a `position: relative` photo box: while the pointer is over that box a lens
  * follows it and a magnified pane appears beside the box, floating over the page, so nothing on the page moves.
  *   src: the large picture of the photo being shown
- *   scale, width, height (px; height defaults to the photo box's height), gap (px), lensColor, lensOpacity, borderColor,
+ *   scale, width, height (px; height defaults to the photo box's height), gap (px), lensColor (fill), lensOpacity, lensBorder, borderColor,
  *   background, minWidth (viewport px below which it stays off): see HOVER_ZOOM_DEFAULTS.
  * The pane takes the left and width of the nearest [data-zoom-fit] element in the same layout (the item's info column); without one it
  * uses `width` and `gap`.
@@ -174,7 +175,7 @@ export default function HoverZoom({ src, options }) {
         ref={lensRef}
         className={styles.lens}
         aria-hidden="true"
-        style={{ "--zoom-lens": o.lensColor, "--zoom-lens-opacity": o.lensOpacity, display: "none" }}
+        style={{ "--zoom-lens": o.lensColor, "--zoom-lens-border": o.lensBorder, "--zoom-lens-opacity": o.lensOpacity, display: "none" }}
       />
       {pane &&
         createPortal(
