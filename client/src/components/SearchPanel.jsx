@@ -13,7 +13,7 @@ import {
   faArrowRight,
   faArrowTrendUp
 } from "@fortawesome/free-solid-svg-icons";
-import { formatTime, resizeImageUrl } from "@epicmkt/shared";
+import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
@@ -227,7 +227,6 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   };
 
   const suggestTo = `/contact?suggest=${encodeURIComponent(normalized)}`;
-  const hour = trending.data?.computedAt && !trending.data.live ? formatTime(trending.data.computedAt) : null;
   const trend = trending.data?.items ?? [];
 
   return (
@@ -429,7 +428,6 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                     <h2 id="search-top" className={styles.label}>
                       <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
                     </h2>
-                    {hour && <span className={styles.updated}>Updated {hour}</span>}
                   </div>
                   <ol className={styles.ranked}>
                     {trending.isPending ? (

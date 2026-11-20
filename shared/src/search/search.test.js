@@ -251,3 +251,24 @@ test("Model follows Make, and car parts read make, model and year", () => {
   const toyota = searchProducts(items, { ...EMPTY_SEARCH, kind: "auto-parts", facets: { vehicle: ["toyota"] } });
   assert.deepEqual(toyota.facets.find((f) => f.id === "carModel").values.map((v) => v.label).sort(), ["Fielder", "Probox / Succeed"]);
 });
+
+const spaced = [
+  { id: "1", name: "Power bank 20000mAh", description: "", business: {} },
+  { id: "2", name: "Tecno Spark 20 128GB", description: "", business: {} },
+  { id: "3", name: "Refurbished iPhone 11 64GB", description: "", business: {} },
+  { id: "4", name: "Samsung 2.1 soundbar", description: "", business: {} }
+];
+const ids = (q) => searchProducts(spaced, { q }).items.map((i) => i.id);
+
+test("a name is found however it is spaced", () => {
+  for (const q of ["powerbank", "power bank"]) assert.deepEqual(ids(q), ["1"]);
+  for (const q of ["tecnospark", "tecno spark", "spark"]) assert.deepEqual(ids(q), ["2"]);
+  for (const q of ["i phone", "iphone"]) assert.deepEqual(ids(q), ["3"]);
+});
+
+test("a search relaxes when no listing has every word", () => {
+  const r = searchProducts(spaced, { q: "samsung tv" });
+  assert.equal(r.relaxed, true);
+  assert.deepEqual(r.items.map((i) => i.id), ["4"]);
+  assert.equal(searchProducts(spaced, { q: "spark" }).relaxed, false);
+});

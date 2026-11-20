@@ -374,10 +374,10 @@ describe("/api/products", () => {
     it("serves trending searches cached until a few minutes past the next hour", async () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2026-03-01T10:50:00Z"));
-      answer({ top_searches_hourly: () => new Response(JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "milk", count: 9, hot: true }] }), { status: 200 }) });
+      answer({ top_searches_hourly: () => new Response(JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "bread", count: 9, hot: true }] }), { status: 200 }) });
       const res = await call("op=trending");
       expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=900\b/);
-      expect((await res.json()).items[0].term).toBe("milk");
+      expect((await res.json()).items[0].term).toBe("bread");
     });
 
     it("falls back to the live count for trending when the hourly list is missing", async () => {
