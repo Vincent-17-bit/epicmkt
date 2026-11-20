@@ -2,7 +2,7 @@ import { Link, useMatch } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
-import { formatTime, resizeImageUrl } from "@epicmkt/shared";
+import { resizeImageUrl } from "@epicmkt/shared";
 import { flash, getCategories, items, logSearch } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
 import Flame from "./Flame.jsx";
@@ -40,7 +40,6 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
     refetchInterval: open ? 10 * 60_000 : false
   });
   const trend = (trending.data?.items ?? []).slice(0, 10);
-  const updated = trending.data?.computedAt && !trending.data.live ? formatTime(trending.data.computedAt) : null;
 
   const submit = (event) => {
     event.preventDefault();
@@ -91,9 +90,6 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                 <h2 id="menu-trending" className={styles.label}>
                   <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
                 </h2>
-                <span className={styles.trendNote}>
-                  {updated ? `Updated ${updated}` : "Updated hourly"}
-                </span>
               </div>
               <ol className={styles.trendList}>
                 {trending.isPending

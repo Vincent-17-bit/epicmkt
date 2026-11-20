@@ -101,7 +101,8 @@ describe("search type-ahead", () => {
   it("before typing, shows the hourly trending searches", async () => {
     panel();
     const section = (await screen.findByRole("heading", { name: /Trending searches/ })).closest("section");
-    expect(await within(section).findByText(/Updated/)).toBeInTheDocument();
+    expect((await within(section).findAllByRole("button")).length).toBe(2);
+    expect(within(section).queryByText(/Updated/)).toBeNull();
     expect(within(section).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringContaining("milk"), expect.stringContaining("panadol")]);
   });
 });

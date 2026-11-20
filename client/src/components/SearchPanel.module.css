@@ -460,11 +460,6 @@
   text-transform: uppercase;
 }
 
-.updated {
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-}
-
 .clearAll {
   padding: 0.25rem 0.5rem;
   border: 0;

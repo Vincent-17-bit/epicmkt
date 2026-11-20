@@ -2,6 +2,7 @@
 // filter option (each one counted as if the shopper ticked it, the way Amazon counts), filter, rank, sort and page.
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
 import { normalizeText } from "../utils.js";
+import { LOCAL_SYNONYMS } from "./localWords.js";
 import { normalizeValueKey } from "../openValues.js";
 import { deliveryInfo } from "../delivery.js";
 import { COLOURS, COMMON_FACETS, FACETS, KINDS, KIND_BY_ID, KIND_BY_TYPE, SERVICE_CATEGORIES, readNumber, readers } from "./data/facetCatalog.js";
@@ -32,7 +33,7 @@ const CONDITIONS = [
   { id: "used", label: "Used" }
 ];
 
-const SYNONYMS = {
+const BASE_SYNONYMS = {
   tv: ["television"], television: ["tv"], phone: ["smartphone"], smartphone: ["phone"], fridge: ["refrigerator"], soda: ["soft drink"],
   sofa: ["couch", "seater"], couch: ["sofa"], perfume: ["fragrance", "cologne", "parfum"], earphone: ["earbud", "headphone"],
   earbud: ["earphone"], laptop: ["notebook"], speaker: ["soundbar", "sound"], soundbar: ["speaker"], shoe: ["sneaker", "sandal"],
@@ -40,6 +41,12 @@ const SYNONYMS = {
   usb: ["flash"], flash: ["usb"], carpet: ["rug"], rug: ["carpet"], massage: ["spa"], cyber: ["printing", "photocopy"], chocolate: ["sweet"],
   wood: ["timber"], timber: ["wood"], bulb: ["light"]
 };
+
+const SYNONYMS = (() => {
+  const merged = { ...BASE_SYNONYMS };
+  for (const [word, more] of Object.entries(LOCAL_SYNONYMS)) merged[word] = [...new Set([...(merged[word] ?? []), ...more])];
+  return merged;
+})();
 
 // "speakers" -> "speaker", "batteries" -> "battery", "shoes" -> "shoe"; short words stay as they are.
 export const stem = (word) => {
@@ -49,6 +56,39 @@ export const stem = (word) => {
   if (/[^s]s$/.test(word)) return word.slice(0, -1);
   return word;
 };
+// What the catalogue calls things: its words, and the pairs it writes apart ("power bank"), so a shopper's "powerbank" finds
+// "Power bank" and "i phone" finds "iPhone", whichever way each side spaces it.
+const vocabs = new WeakMap();
+function vocabOf(products) {
+  let v = vocabs.get(products);
+  if (v) return v;
+  v = { words: new Set(), pairs: new Map() };
+  for (const p of products) {
+    const words = [...describe(p).name];
+    for (let i = 0; i < words.length; i++) {
+      v.words.add(words[i]);
+      if (words[i + 1] && words[i].length >= 3 && words[i + 1].length >= 3) v.pairs.set(words[i] + words[i + 1], [words[i], words[i + 1]]);
+    }
+  }
+  vocabs.set(products, v);
+  return v;
+}
+function refineTokens(tokens, products) {
+  if (!tokens.length) return tokens;
+  const v = vocabOf(products);
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    const next = tokens[i + 1];
+    if (next && !v.words.has(t) && v.words.has(t + next)) {
+      out.push(t + next);
+      i++;
+    } else if (!v.words.has(t) && v.pairs.has(t)) out.push(...v.pairs.get(t));
+    else out.push(t);
+  }
+  return out;
+}
+
 const tokensOf = (text) => normalizeText(text).split(" ").filter(Boolean).map(stem);
 
 // ---- reading one product ------------------------------------------------------------------------------------------
@@ -261,16 +301,20 @@ export function writeSearch(search) {
 // "pen" is not "pencil" or "pendant", "cup" is not "cupcake", "bed" is not "bedsheet".
 const ENDING = /^(?:e?s|ing|ed|er|ers|y|ies)$/;
 const wordMatches = (word, wanted) => word === wanted || (word.startsWith(wanted) && ENDING.test(word.slice(wanted.length)));
-function textScore(d, tokens) {
+function textScore(d, tokens, allowMissing = 0) {
   if (!tokens.length) return 1;
   let score = 0;
+  let missing = 0;
   for (const t of tokens) {
     const options = [t, ...(SYNONYMS[t] ?? []).map(stem)];
     // The word itself in the name counts most; a synonym in the name ("light" for "bulb") less; anywhere else least.
     const exactName = [...d.name].some((w) => wordMatches(w, t));
     const inName = exactName || options.some((o) => [...d.name].some((w) => wordMatches(w, o)));
     const inHay = inName || options.some((o) => [...d.hay].some((w) => wordMatches(w, o)));
-    if (!inHay) return 0;
+    if (!inHay) {
+      if (++missing > allowMissing || missing >= tokens.length) return 0;
+      continue;
+    }
     score += exactName ? 3 : inName ? 2 : 1;
     if (d.brandKey && options.some((o) => d.brandKey.startsWith(o))) score += 2;
   }
@@ -636,6 +680,18 @@ function relatedSearches(rows, search) {
   return out.slice(0, 6);
 }
 
+function rank(products, tokens, allowMissing) {
+  const matched = [];
+  for (const p of products) {
+    const d = describe(p);
+    const score = textScore(d, tokens, allowMissing) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
+    // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
+    const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
+    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });
+  }
+  return matched;
+}
+
 /**
  * Runs a search. Returns { total, page, pageSize, pages, items, facets, quick, listing, related } where each item is the
  * product plus `search`: { kind, listing, price, facts } for its card. `facets` is the filter column in order (hidden filters
@@ -644,14 +700,13 @@ function relatedSearches(rows, search) {
  */
 export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
   const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
-  const tokens = tokensOf(s.q);
-  const matched = [];
-  for (const p of products) {
-    const d = describe(p);
-    const score = textScore(d, tokens) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
-    // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
-    const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
-    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });
+  const tokens = refineTokens(tokensOf(s.q), products);
+  let matched = [];
+  let relaxed = false;
+  for (let pass = 0; pass < 2 && !matched.length; pass++) {
+    if (pass === 1 && tokens.length < 2) break;
+    relaxed = pass === 1;
+    matched = rank(products, tokens, pass);
   }
   // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
   const [first, second] = dominantKinds(matched, { ...s, kind: "" });
@@ -661,7 +716,7 @@ export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEA
   const pages = Math.max(1, Math.ceil(kept.length / pageSize));
   const page = Math.min(s.page, pages);
   const items = kept.slice((page - 1) * pageSize, page * pageSize).map(({ p, d }) => ({ ...p, search: rowFacts(p, d) }));
-  const base = { total: kept.length, matched: matched.length, page, pageSize, pages, items };
+  const base = { total: kept.length, matched: matched.length, relaxed, page, pageSize, pages, items };
   if (itemsOnly) return base;
   // The filters follow the listing type picked: services show service filters, products product ones.
   const typed = s.type ? matched.filter((r) => r.d.listing === s.type) : matched;

@@ -31,6 +31,7 @@ import { isListed } from "../../shared/src/availability.js";
 import { EMPTY_FILTERS, countActive } from "../src/lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../src/lib/productQuery.js";
 import { FEED_MAX_PAGES, blendFeed, clampEpoch, clampVariant, pagesOf } from "../src/lib/feed.js";
+import { tidyTrending } from "../../shared/src/search/trending.js";
 import { buildSuggestIndex, correctWord, suggestFrom, suggestKey } from "../src/lib/suggest.js";
 import { parseRequest } from "./_lib/productParams.js";
 import { parseSearch, searchProducts } from "../../shared/src/search/search.js";
@@ -422,6 +423,17 @@ async function suggestions(q) {
 }
 
 async function trending() {
+  const base = await rawTrending();
+  try {
+    const snap = await snapshot();
+    return { ...base, items: tidyTrending(base.items, snap.products, 10) };
+  } catch (error) {
+    console.warn(`[products] trending top-up skipped (${error?.message ?? error})`);
+    return base;
+  }
+}
+
+async function rawTrending() {
   try {
     const data = await rpc("top_searches_hourly", { p_limit: 10 }, { timeoutMs: 3_000 });
     if (data && Array.isArray(data.items)) return data;

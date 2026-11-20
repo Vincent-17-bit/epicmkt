@@ -2,6 +2,7 @@ import * as backend from "@epicmkt/backend";
 import { EMPTY_FILTERS } from "../../lib/productFilters.js";
 import { countsSummary, facetsSummary, pageOf } from "../../lib/productQuery.js";
 import { buildSuggestIndex, suggestFrom } from "../../lib/suggest.js";
+import { tidyTrending } from "@epicmkt/shared";
 import { isLive } from "../flash/mode.js";
 
 // With Supabase configured, products come from the cached /api/products endpoint (see ./live.js).
@@ -34,10 +35,6 @@ export const getSuggest = async (prefix) => {
 export const getTrending = async () => {
   if (isLive()) return (await live()).getTrending();
   const rows = await backend.getTopSearches(10).catch(() => []);
-  const index = await demo();
-  const items = rows.map((r) => {
-    const p = suggestFrom(index, r.term).products[0];
-    return { term: r.term, count: r.count, hot: r.hot, ...(p ? { itemId: p.id, label: p.name, slug: p.slug, image: p.image, price: p.price } : {}) };
-  });
+  const items = tidyTrending(rows.map((r) => ({ term: r.term, count: r.count, hot: r.hot })), await backend.getAllProducts(), 10);
   return { computedAt: new Date().toISOString(), live: true, items };
 };
