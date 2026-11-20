@@ -7,11 +7,20 @@ export const HOVER_ZOOM_DEFAULTS = {
   width: 560,
   height: null,
   gap: 16,
-  lensColor: "#007185",
-  lensOpacity: 0.16,
+  lensColor: "#16a34a",
+  lensOpacity: 0.22,
   borderColor: "#d5d9d9",
   background: "#ffffff",
   minWidth: 1024
+};
+
+const warmed = new Set();
+const warm = (url) => {
+  if (!url || warmed.has(url) || typeof Image === "undefined") return;
+  warmed.add(url);
+  const img = new Image();
+  img.decoding = "async";
+  img.src = url;
 };
 
 const FINE_HOVER = "(hover: hover) and (pointer: fine)";
@@ -33,6 +42,8 @@ function contentRect(img) {
  *   src: the large picture of the photo being shown
  *   scale, width, height (px; height defaults to the photo box's height), gap (px), lensColor, lensOpacity, borderColor,
  *   background, minWidth (viewport px below which it stays off): see HOVER_ZOOM_DEFAULTS.
+ * The pane takes the left and width of the nearest [data-zoom-fit] element in the same layout (the item's info column); without one it
+ * uses `width` and `gap`.
  * Off on touch screens and narrow windows, where there is no hover or no room beside the photo.
  */
 export default function HoverZoom({ src, options }) {
@@ -44,6 +55,13 @@ export default function HoverZoom({ src, options }) {
   srcRef.current = src;
   const optRef = useRef(o);
   optRef.current = o;
+
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 300));
+    const cancel = window.cancelIdleCallback ?? clearTimeout;
+    const id = idle(() => warm(src));
+    return () => cancel(id);
+  }, [src]);
 
   useEffect(() => {
     const host = anchorRef.current?.parentElement;
@@ -59,7 +77,9 @@ export default function HoverZoom({ src, options }) {
       const area = img ? contentRect(img) : null;
       if (!area) return hide();
       const hostBox = host.getBoundingClientRect();
-      const width = Math.min(cfg.width, window.innerWidth - hostBox.right - cfg.gap - 16);
+      const fit = host.closest("[data-variant]")?.querySelector("[data-zoom-fit]")?.getBoundingClientRect();
+      const left = fit && fit.left > hostBox.right ? fit.left : hostBox.right + cfg.gap;
+      const width = fit && fit.left > hostBox.right ? fit.width : Math.min(cfg.width, window.innerWidth - hostBox.right - cfg.gap - 16);
       const height = cfg.height ?? hostBox.height;
       if (width < 240) return hide();
       const scale = Math.max(cfg.scale, width / area.width, height / area.height);
@@ -74,18 +94,22 @@ export default function HoverZoom({ src, options }) {
         Object.assign(lens.style, { display: "block", width: `${lensW}px`, height: `${lensH}px`, left: `${lx - hostBox.left}px`, top: `${ly - hostBox.top}px` });
       }
       setPane({
-        left: hostBox.right + cfg.gap,
+        left,
         top: Math.min(Math.max(hostBox.top, 8), Math.max(window.innerHeight - height - 8, 8)),
         width,
         height,
+        low: img.currentSrc || img.src,
         size: `${area.width * scale}px ${area.height * scale}px`,
         position: `${-(lx - area.left) * scale}px ${-(ly - area.top) * scale}px`
       });
     };
+    const prime = () => warm(srcRef.current);
+    host.addEventListener("pointerenter", prime);
     host.addEventListener("pointermove", move);
     host.addEventListener("pointerleave", hide);
     window.addEventListener("scroll", hide, { passive: true });
     return () => {
+      host.removeEventListener("pointerenter", prime);
       host.removeEventListener("pointermove", move);
       host.removeEventListener("pointerleave", hide);
       window.removeEventListener("scroll", hide);
@@ -113,9 +137,9 @@ export default function HoverZoom({ src, options }) {
               height: pane.height,
               borderColor: o.borderColor,
               backgroundColor: o.background,
-              backgroundImage: `url("${src}")`,
-              backgroundSize: pane.size,
-              backgroundPosition: pane.position
+              backgroundImage: `url("${src}"), url("${pane.low}")`,
+              backgroundSize: `${pane.size}, ${pane.size}`,
+              backgroundPosition: `${pane.position}, ${pane.position}`
             }}
           />,
           document.body

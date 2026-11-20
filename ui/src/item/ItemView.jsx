@@ -57,7 +57,7 @@ export default function ItemView({
         {fill(gallery, { item, t }, ItemGallery)}
       </div>
       <div className={styles.content}>
-        <div className={styles.details}>
+        <div className={styles.details} data-zoom-fit="">
           {flash}
 
           <div className={styles.info}>
