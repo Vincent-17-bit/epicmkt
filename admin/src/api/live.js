@@ -717,6 +717,11 @@ export const getSettings = async () => check(await client().rpc("admin_get_setti
 export const saveSettings = async (settings, reason = null) =>
   check(await client().rpc("admin_save_settings", { p_settings: settings, p_reason: reason })).data;
 
+// Photo hover zoom for the whole site. site_settings 'zoom', migration 0140_zoom_settings.sql.
+export const getZoomSettings = async () => check(await client().rpc("zoom_settings")).data;
+export const saveZoomSettings = async (settings, reason = null) =>
+  check(await client().rpc("admin_save_zoom_settings", { p_settings: settings, p_reason: reason })).data;
+
 // Business health weights and thresholds (owner only). site_settings 'health_config', migration 0078_business_health.sql.
 export const getHealthConfig = async () => check(await client().rpc("admin_get_health_config")).data;
 export const saveHealthConfig = async (config, reason = null) =>
