@@ -301,20 +301,16 @@ export function writeSearch(search) {
 // "pen" is not "pencil" or "pendant", "cup" is not "cupcake", "bed" is not "bedsheet".
 const ENDING = /^(?:e?s|ing|ed|er|ers|y|ies)$/;
 const wordMatches = (word, wanted) => word === wanted || (word.startsWith(wanted) && ENDING.test(word.slice(wanted.length)));
-function textScore(d, tokens, allowMissing = 0) {
+function textScore(d, tokens) {
   if (!tokens.length) return 1;
   let score = 0;
-  let missing = 0;
   for (const t of tokens) {
     const options = [t, ...(SYNONYMS[t] ?? []).map(stem)];
     // The word itself in the name counts most; a synonym in the name ("light" for "bulb") less; anywhere else least.
     const exactName = [...d.name].some((w) => wordMatches(w, t));
     const inName = exactName || options.some((o) => [...d.name].some((w) => wordMatches(w, o)));
     const inHay = inName || options.some((o) => [...d.hay].some((w) => wordMatches(w, o)));
-    if (!inHay) {
-      if (++missing > allowMissing || missing >= tokens.length) return 0;
-      continue;
-    }
+    if (!inHay) return 0;
     score += exactName ? 3 : inName ? 2 : 1;
     if (d.brandKey && options.some((o) => d.brandKey.startsWith(o))) score += 2;
   }
@@ -680,11 +676,11 @@ function relatedSearches(rows, search) {
   return out.slice(0, 6);
 }
 
-function rank(products, tokens, allowMissing) {
+function rank(products, tokens) {
   const matched = [];
   for (const p of products) {
     const d = describe(p);
-    const score = textScore(d, tokens, allowMissing) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
+    const score = textScore(d, tokens) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
     // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
     const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
     if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });
@@ -701,13 +697,7 @@ function rank(products, tokens, allowMissing) {
 export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
   const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
   const tokens = refineTokens(tokensOf(s.q), products);
-  let matched = [];
-  let relaxed = false;
-  for (let pass = 0; pass < 2 && !matched.length; pass++) {
-    if (pass === 1 && tokens.length < 2) break;
-    relaxed = pass === 1;
-    matched = rank(products, tokens, pass);
-  }
+  const matched = rank(products, tokens);
   // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
   const [first, second] = dominantKinds(matched, { ...s, kind: "" });
   for (const r of matched) r.score += r.d.kind && r.d.kind === first ? 1.5 : r.d.kind && r.d.kind === second ? 0.75 : 0;
@@ -716,7 +706,7 @@ export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEA
   const pages = Math.max(1, Math.ceil(kept.length / pageSize));
   const page = Math.min(s.page, pages);
   const items = kept.slice((page - 1) * pageSize, page * pageSize).map(({ p, d }) => ({ ...p, search: rowFacts(p, d) }));
-  const base = { total: kept.length, matched: matched.length, relaxed, page, pageSize, pages, items };
+  const base = { total: kept.length, matched: matched.length, page, pageSize, pages, items };
   if (itemsOnly) return base;
   // The filters follow the listing type picked: services show service filters, products product ones.
   const typed = s.type ? matched.filter((r) => r.d.listing === s.type) : matched;
