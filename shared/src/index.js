@@ -25,6 +25,7 @@ export * from "./seller/itemForm.js";
 export * from "./receipts.js";
 export * from "./shopLink.js";
 export * from "./similar.js";
+export * from "./productType/suggest.js";
 export * from "./seller/settings.js";
 export * from "./seller/limits.js";
 export * from "./seller/performance.js";
