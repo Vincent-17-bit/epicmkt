@@ -90,3 +90,78 @@ test("browser roles cannot read or write the tables", async () => {
     await c.query("rollback");
   }
 });
+
+// ---- 0144: the list falls back to wider windows instead of going blank ---------------------------------------------------------
+const age = (term, hours) => sql(c, `update search_events set at = now() - make_interval(hours => $2) where term = $1`, [term, hours]);
+const seed = async (term, n, hours) => {
+  for (let i = 0; i < n; i += 1) await from(`10.${term.length}.${hours}.${i + 1}`, term);
+  await age(term, hours);
+};
+
+test("a quiet last 24 hours shows the previous day's trending term instead of nothing", async () => {
+  await seed("bread", 4, 30);
+  const rows = await top();
+  assert.deepEqual(rows.map((r) => [r.term, r.count, r.hot]), [["bread", 4, false]]);
+});
+
+test("the last 7 days are used when the last 48 hours have nothing", async () => {
+  await seed("cakes", 3, 100);
+  assert.deepEqual((await top()).map((r) => r.term), ["cakes"]);
+});
+
+test("older than 7 days is still not trending", async () => {
+  await seed("bread", 5, 24 * 8);
+  assert.deepEqual(await top(), []);
+});
+
+test("a term with fewer than 3 searchers never shows, in any window", async () => {
+  await seed("bread", 2, 30);
+  await seed("cakes", 2, 100);
+  assert.deepEqual(await top(), []);
+});
+
+test("the first window with a result decides the whole list: a busy day is not mixed with older searches", async () => {
+  await seed("today", 3, 1);
+  await seed("yesterday", 6, 30);
+  assert.deepEqual((await top()).map((r) => r.term), ["today"]);
+});
+
+test("a fallback list is sorted by searchers, then by term", async () => {
+  await seed("bread", 4, 30);
+  await seed("cakes", 4, 31);
+  await seed("shirt", 6, 40);
+  assert.deepEqual((await top()).map((r) => [r.term, r.count]), [["shirt", 6], ["bread", 4], ["cakes", 4]]);
+});
+
+test("the blocklist and the limit still apply to a fallback list", async () => {
+  await seed("bread", 3, 30);
+  await seed("badword shop", 3, 30);
+  await sql(c, `insert into search_blocklist (term) values ('badword')`);
+  assert.deepEqual((await top()).map((r) => r.term), ["bread"]);
+  await c.query("begin");
+  try {
+    await c.query(`set local role anon`);
+    assert.equal((await c.query(`select * from top_searches(1)`)).rows.length, 1);
+  } finally {
+    await c.query("commit");
+  }
+});
+
+test("the same searchers repeating in a wider window still count once", async () => {
+  for (let i = 0; i < 6; i += 1) await from("7.7.7.7", "bread");
+  await age("bread", 30);
+  assert.deepEqual(await top(), []);
+});
+
+test("top_searches_hourly falls back to the live list, which now has the wider window", async () => {
+  await seed("bread", 3, 30);
+  await c.query("begin");
+  try {
+    await c.query(`set local role anon`);
+    const out = (await c.query(`select top_searches_hourly(10) as r`)).rows[0].r;
+    assert.equal(out.live, true);
+    assert.deepEqual(out.items.map((i) => i.term), ["bread"]);
+  } finally {
+    await c.query("commit");
+  }
+});
