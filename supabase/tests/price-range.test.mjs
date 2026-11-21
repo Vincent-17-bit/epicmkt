@@ -2,7 +2,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { priceBounds } from "../../shared/src/pricing.js";
-import { createDatabase, connect, seedFixtures, tx, sql, ids, asA } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, ids, asA, withType } from "./db.mjs";
 
 let c;
 const anon = { role: "anon" };
@@ -29,7 +29,7 @@ const BLACK_L = "colour=black|size=l";
 const GREY_S = "colour=grey|size=s";
 const GREY_L = "colour=grey|size=l";
 
-const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
+const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]), { commit: true }).then((r) => r[0].id);
 const base = (o = {}) => ({ name: "Thing", description: "", section: "S", price_type: "fixed", price: 100, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
 const optioned = (variants, o = {}) => base({ price_type: "from", price: 20, options: { axes, variants }, ...o });
 const live = (id) => sql(c, `update items set visible = true, draft = false where id = $1`, [id]);
@@ -55,7 +55,7 @@ const T = [{ minQty: 1, maxQty: 10, unitPrice: 10 }, { minQty: 11, maxQty: 100, 
 
 test("an item with no options: price_min = price_max = price", async () => {
   const id = await save(null, base({ price: 80 }));
-  assert.deepEqual(await row(id), { price_min: 80, price_high: 80, has_options: false, department_id: null, product_type_id: null, has_3d: false });
+  assert.deepEqual(await row(id), { price_min: 80, price_high: 80, has_options: false, department_id: null, product_type_id: "other", has_3d: false });
   await save(id, base({ price: 95 }));
   assert.deepEqual(await range(id), [95, 95]);
 });
@@ -74,7 +74,7 @@ test("an item's own sale price is what a buyer can pay", async () => {
 
 test("an option item runs from its cheapest to its dearest combination", async () => {
   const id = await save(null, optioned(four()));
-  assert.deepEqual(await row(id), { price_min: 20, price_high: 50, has_options: true, department_id: null, product_type_id: null, has_3d: false });
+  assert.deepEqual(await row(id), { price_min: 20, price_high: 50, has_options: true, department_id: null, product_type_id: "other", has_3d: false });
   await save(id, optioned(four([25, 30, 40, 60])));
   assert.deepEqual(await range(id), [25, 60]);
 });
@@ -171,7 +171,7 @@ test("bulk price changes keep the range right", async () => {
 test("a seller cannot write the range columns directly", async () => {
   const id = await save(null, base({ price: 100 }));
   await tx(c, asA, (k) => sql(k, `update items set price_min = 1, price_high = 2, has_options = true, department_id = 'clothing' where id = $1`, [id]), { commit: true });
-  assert.deepEqual(await row(id), { price_min: 100, price_high: 100, has_options: false, department_id: null, product_type_id: null, has_3d: false });
+  assert.deepEqual(await row(id), { price_min: 100, price_high: 100, has_options: false, department_id: null, product_type_id: "other", has_3d: false });
 });
 
 test("department follows the product type, and a department change reaches its items", async () => {
@@ -219,7 +219,7 @@ test("the list payload carries the range fields, and an item without options loo
   const s = await snapshot();
   const plain = s.items.find((i) => i.id === plainId);
   const opt = s.items.find((i) => i.id === optId);
-  assert.deepEqual([Number(plain.price_min), Number(plain.price_max), plain.has_price_range, plain.has_options, plain.department_id, plain.product_type_id, plain.has_3d], [80, 80, false, false, null, null, false]);
+  assert.deepEqual([Number(plain.price_min), Number(plain.price_max), plain.has_price_range, plain.has_options, plain.department_id, plain.product_type_id, plain.has_3d], [80, 80, false, false, null, "other", false]);
   assert.deepEqual([Number(opt.price_min), Number(opt.price_max), opt.has_price_range, opt.has_options], [20, 50, true, true]);
   for (const key of ["id", "business_id", "name", "description", "section", "price", "price_type", "unit", "availability", "stock_left", "video_paths", "created_at", "image_path", "brand", "sale_id", "sale_price"]) assert.ok(key in plain, key);
 });

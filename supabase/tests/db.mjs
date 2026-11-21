@@ -89,6 +89,10 @@ export async function tx(c, who, fn, { commit = false } = {}) {
 }
 
 export const seller = (sub) => ({ sub });
+
+// A NEW item must carry a product type (migration 0141: seller_save_item refuses it with product_type_required). Most fixtures do not care
+// which, so a save with no id and no type gets "other" (the real "no type fits" row); a test that cares passes its own productTypeId.
+export const withType = (id, fields) => (id == null && fields && typeof fields === "object" && !("productTypeId" in fields) ? { productTypeId: "other", ...fields } : fields);
 export const asA = { sub: ids.userA };
 export const asB = { sub: ids.userB };
 export const asAdmin = { sub: ids.admin };

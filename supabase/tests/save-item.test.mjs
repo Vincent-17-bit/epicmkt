@@ -1,7 +1,7 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { storedItemDetails } from "../../shared/src/seller/itemForm.js";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 
@@ -23,8 +23,8 @@ const item = async (biz, extra = {}) => {
   return r[0].id;
 };
 const row = async (id) => (await sql(c, `select * from items where id = $1`, [id]))[0];
-const save = (who, id, fields) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
-const saveFails = (who, id, fields, pattern) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
+const save = (who, id, fields) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]), { commit: true }).then((r) => r[0].id);
+const saveFails = (who, id, fields, pattern) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
 const flash = (itemId, extra = "") => sql(c, `insert into flash_sales (business_id, item_id, starts_at, ends_at, discount_type, discount_value) values ($1, $2, now(), now() + interval '6 hours', 'percent', 20) returning id`, [ids.bizA, itemId]).then((r) => r[0].id);
 
 const full = (o = {}) => ({ name: "Fade cut", description: "", section: "Cuts", price_type: "fixed", price: 1200, price_max: null, sale_price: null, unit: null, availability: "available", ...o });

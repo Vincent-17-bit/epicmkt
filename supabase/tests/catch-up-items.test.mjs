@@ -80,7 +80,7 @@ test("saving an item works after the catch-up on a hand-patched database", async
     await sql(c, `update businesses set status = 'live', paid_until = now() + interval '30 days'`);
     const f = { name: "Whole Wheat Loaf", description: "x", section: "Bread", price_type: "fixed", price: 120, availability: "available", track_stock: false, low_stock_threshold: 3, show_stock_count: false,
       brand: "B", short_description: "s", pack_size: "1", terms: "t", includes: ["bag"], highlights: [{ text: "h" }], specs: [{ group: "Features & Specs", label: "Weight", value: "400 g" }] };
-    const id = (await tx(c, asA, (k) => sql(k, `select seller_save_item(null, $1::jsonb) as id`, [JSON.stringify(f)]), { commit: true }))[0].id;
+    const id = (await tx(c, asA, (k) => sql(k, `select seller_save_item(null, $1::jsonb) as id`, [JSON.stringify({ productTypeId: "other", ...f })]), { commit: true }))[0].id;
     await tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify({ ...f, name: "Renamed", price: 150 })]), { commit: true });
     const [row] = await sql(c, `select name, price from items where id = $1`, [id]);
     assert.equal(row.name, "Renamed"); assert.equal(Number(row.price), 150);

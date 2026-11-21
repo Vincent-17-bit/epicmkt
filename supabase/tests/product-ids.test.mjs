@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 
@@ -17,7 +17,7 @@ beforeEach(async () => {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const fields = (o = {}) => ({ name: "Fade cut", description: "", section: "Cuts", price_type: "fixed", price: 1200, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
-const save = (who, id, f) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(f)]), { commit: true }).then((r) => r[0].id);
+const save = (who, id, f) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, f))]), { commit: true }).then((r) => r[0].id);
 
 test("every new product gets its own id, even when the name, price and shop are identical", async () => {
   const made = [];

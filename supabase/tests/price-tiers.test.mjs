@@ -1,7 +1,7 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { validateTiers } from "../../shared/src/pricing/tiers.js";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 
@@ -19,8 +19,8 @@ beforeEach(async () => {
 });
 
 const base = (o = {}) => ({ name: "Printing", description: "", section: "Print", price_type: "from", price: 10, price_max: null, sale_price: null, unit: "page", availability: "available", ...o });
-const save = (id, fields, who = asA) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
-const saveFails = (id, fields, pattern, who = asA) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
+const save = (id, fields, who = asA) => tx(c, who, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]), { commit: true }).then((r) => r[0].id);
+const saveFails = (id, fields, pattern, who = asA) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
 const row = async (id) => (await sql(c, `select price_tiers, price_tier_mode, price_type from items where id = $1`, [id]))[0];
 const variants = (id) => sql(c, `select choice, price_tiers from item_variants where item_id = $1 order by sort`, [id]);
 const flash = async (itemId) => {
@@ -171,7 +171,7 @@ test("a duplicate keeps the item and variant tiers and the mode", async () => {
 });
 
 test("seller_check_item reports bad tiers and saves nothing", async () => {
-  const check = (fields) => tx(c, asA, (k) => sql(k, `select seller_check_item(null, $1::jsonb) as r`, [JSON.stringify(fields)])).then((r) => r[0].r);
+  const check = (fields) => tx(c, asA, (k) => sql(k, `select seller_check_item(null, $1::jsonb) as r`, [JSON.stringify(withType(null, fields))])).then((r) => r[0].r);
   assert.deepEqual(await check(base({ priceTiers: [{ minQty: 2, maxQty: null, unitPrice: 5 }] })), { ok: false, issues: [{ code: "invalid_price_tiers" }] });
   assert.deepEqual(await check(base({ price_type: "fixed", priceTiers: T })), { ok: false, issues: [{ code: "tiers_need_from_price" }] });
   assert.equal((await check(base({ priceTiers: T }))).ok, true);

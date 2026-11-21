@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, withType } from "./db.mjs";
 
 let c;
 
@@ -18,8 +18,8 @@ beforeEach(async () => {
 });
 
 const full = (o = {}) => ({ name: "Fade cut", description: "", section: "Cuts", price_type: "fixed", price: 500, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
-const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
-const saveFails = (id, fields, pattern) => rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
+const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]), { commit: true }).then((r) => r[0].id);
+const saveFails = (id, fields, pattern) => rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
 const stored = async (id) => (await sql(c, `select variants from items where id = $1`, [id]))[0].variants;
 const publish = (id) => sql(c, `update items set visible = true, draft = false where id = $1`, [id]);
 const publicVariants = async (id) => (await sql(c, `select variants from public_items where id = $1`, [id]))[0]?.variants;
