@@ -68,7 +68,7 @@ describe("quantity on the item page: units", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it");
     expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 256 GB) (KES 24,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
   });
 
@@ -146,7 +146,7 @@ describe("quantity on the item page: measured (kg)", () => {
     await userEvent.clear(box());
     await userEvent.type(box(), "1.5");
     await userEvent.tab();
-    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Fresh beef, 1.5 kg, KES 1,200 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi Shop, I'd like to order:\n\n*Fresh beef*\nAmount: 1.5 kg\nPrice: KES 800 per kg\nTotal: KES 1,200\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it");
   });
 
   it("corrects 0 and a negative to the least, and passes axe", async () => {
@@ -173,7 +173,7 @@ describe("quantity on the item page: quantity tiers", () => {
     await userEvent.clear(box);
     await userEvent.type(box, "11");
     expect(screen.getByTestId("tiers-total").textContent).toContain("KES 77");
-    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Photocopy, x11, KES 77 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi Shop, I'd like to order:\n\n*Photocopy*\nQuantity: 11\nTotal: KES 77\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it");
     expect(screen.queryByTestId("quantity")).toBeNull();   // one control, not two
   });
 });

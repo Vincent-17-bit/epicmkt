@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildItemJsonLd, buildSpecGroups, chatMessage, countdown, countRows, defaultVariantId, normalizeHighlights, offerExpiry, offerTarget, offerValueLabel } from "./itemView.js";
+import { buildItemJsonLd, buildSpecGroups, chatMessage, choiceLines, countdown, countRows, defaultVariantId, normalizeHighlights, offerExpiry, offerTarget, offerValueLabel, orderMessage } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -211,5 +211,24 @@ describe("offerTarget", () => {
   it("sends item offers to the section of the first sectioned item", () => {
     expect(offerTarget({ appliesTo: "items", itemIds: ["wig", "haircut"] }, business)).toBe("/b/fade-kings?section=cuts");
     expect(offerTarget({ appliesTo: "items", itemIds: ["wig"] }, business)).toBe("/b/fade-kings");
+  });
+});
+
+describe("choiceLines and orderMessage", () => {
+  const option = { axes: [{ key: "c", label: "Colour", values: [{ id: "g", label: "Grey" }] }, { key: "s", label: "Size", values: [{ id: "8", label: "8" }] }], choice: { c: "g", s: "8" } };
+
+  it("lists each option axis with the chosen value, skipping axes with no pick", () => {
+    expect(choiceLines(option)).toEqual([{ label: "Colour", value: "Grey" }, { label: "Size", value: "8" }]);
+    expect(choiceLines({ ...option, choice: { c: "g" } })).toEqual([{ label: "Colour", value: "Grey" }]);
+  });
+
+  it("falls back to the variant label, and to nothing", () => {
+    expect(choiceLines(null, { label: "Small" })).toEqual([{ label: "Option", value: "Small" }]);
+    expect(choiceLines(null, null)).toEqual([]);
+  });
+
+  it("writes a whole message with no shop and no choices", () => {
+    const text = orderMessage({ item, order: { qty: 3, unit: 300, total: 900, measure: false } });
+    expect(text).toBe("Hi, I'd like to order:\n\n*Fade and beard*\nQuantity: 3\nPrice: KES 300 each\nTotal: KES 900\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT");
   });
 });

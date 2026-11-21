@@ -1,4 +1,4 @@
-import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -67,9 +67,28 @@ export function orderLine({ shown, tiers = null, info = null, qty }) {
   return { qty, unit: one, total, measure: info?.mode === "measure", unitLabel: info?.unit ?? null };
 }
 
-export function orderMessage({ item, variant, order }) {
-  const parts = [item.name, ...(variant?.label ? String(variant.label).split(" / ") : []), order.measure ? amountText(order.qty, order.unitLabel) : `x${order.qty}`, formatKes(order.total)];
-  return `Hi, I'd like ${parts.join(", ")} on EpicMKT`;
+export function choiceLines(option, variant) {
+  if (option?.axes?.length) {
+    return option.axes
+      .map((axis) => {
+        const value = axis.values?.find((v) => v.id === option.choice?.[axis.key]);
+        return value ? { label: axis.label, value: value.label } : null;
+      })
+      .filter(Boolean);
+  }
+  return variant?.label ? [{ label: "Option", value: String(variant.label) }] : [];
+}
+
+const plain = (text) => String(text ?? "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
+
+export function orderMessage({ item, shop = "", choices = [], order }) {
+  const verb = item.kind === "service" ? "book" : "order";
+  const lines = [`Hi${shop ? ` ${plain(shop)}` : ""}, I'd like to ${verb}:`, "", `*${plain(item.name)}*`];
+  for (const c of choices) lines.push(`${plain(c.label)}: ${plain(c.value)}`);
+  lines.push(order.measure ? `Amount: ${amountText(order.qty, order.unitLabel)}` : `Quantity: ${order.qty}`);
+  if (Number.isFinite(order.unit)) lines.push(`Price: ${order.measure ? perUnitText(order.unit, order.unitLabel) : `${formatKes(order.unit)} each`}`);
+  lines.push(`Total: ${formatKes(order.total)}`, "", "Please confirm it is available and how I can pay and receive it.", "Sent from EpicMKT");
+  return lines.join("\n");
 }
 
 export function chatMessage({ item, variant, pricing, greeting }) {

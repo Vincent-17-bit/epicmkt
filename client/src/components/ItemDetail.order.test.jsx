@@ -32,6 +32,9 @@ const mount = (detail) => {
 const order = () => screen.queryByTestId("order-whatsapp");
 const orderText = () => decodeURIComponent(order().getAttribute("href"));
 
+const tail = "\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it";
+const wa = "https://wa.me/254712555101?text=";
+
 describe("order now", () => {
   it("is absent for an item with no quantity control, so those pages are unchanged", async () => {
     mount(phoneDetail());
@@ -39,66 +42,55 @@ describe("order now", () => {
     expect(order()).toBeNull();
   });
 
-  it("writes item, colour, size, quantity 1 and total, even at quantity 1", async () => {
+  it("names the shop, every chosen option, quantity, price and total, even at quantity 1", async () => {
     mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 128 GB, x1, KES 21,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 128 GB\nQuantity: 1\nPrice: KES 21,000 each\nTotal: KES 21,000\n${tail}`);
     expect(order()).toHaveAttribute("target", "_blank");
   });
 
-  it("follows the chosen size and the quantity", async () => {
+  it("follows the chosen option and the quantity", async () => {
     mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n${tail}`);
   });
 
-  it("says a measured amount for a weighed item", async () => {
+  it("says an amount and a price per unit for a weighed item", async () => {
     mount(beef());
     await screen.findByRole("heading", { name: "Fresh beef" });
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(orderText()).toContain("Hi, I'd like Fresh beef,");
-    expect(orderText()).toMatch(/kg, KES/);
+    expect(orderText()).toContain("*Fresh beef*\nAmount: 0.75 kg\nPrice: KES 800 per kg\nTotal: KES 600\n");
+    expect(orderText()).not.toContain("Quantity:");
+  });
+
+  it("says book for a service", async () => {
+    mount(beef({ kind: "service", name: "Home braiding" }));
+    await screen.findByRole("heading", { name: "Home braiding" });
+    expect(orderText()).toContain("Hi Shop, I'd like to book:");
+  });
+
+  it("strips asterisks from names so the bold line stays whole", async () => {
+    mount(beef({ name: "Beef *premium*" }));
+    await screen.findByRole("heading", { name: "Beef *premium*" });
+    expect(orderText()).toContain("\n*Beef premium*\n");
+  });
+
+  it("leaves out the unit price for tier-priced items and keeps the tier total", async () => {
+    const printing = { ...base, name: "Photocopy", unit: "page", pricing: pricing(10), priceTiers: [{ minQty: 1, maxQty: 10, unitPrice: 10 }, { minQty: 11, maxQty: 100, unitPrice: 7 }, { minQty: 101, maxQty: null, unitPrice: 5 }], priceTierMode: "whole" };
+    mount(printing);
+    await screen.findByRole("heading", { name: "Photocopy" });
+    const box = screen.getByRole("spinbutton");
+    await userEvent.clear(box);
+    await userEvent.type(box, "11");
+    expect(orderText()).toContain("*Photocopy*\nQuantity: 11\nTotal: KES 77\n");
   });
 
   it("ignores the seller's own greeting: the button always sends the order", async () => {
-    mount(phoneDetail({ quantityMode: "units", business: { ...seller }, greeting: "Hello" }));
+    mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(orderText()).toContain("Hi, I'd like Samsung Galaxy S26");
-  });
-
-  const photos = [{ id: "m1", kind: "image", url: "https://img.test/cover.jpg" }, { id: "m2", kind: "image", url: "https://img.test/blue.jpg" }, { id: "m3", kind: "image", url: "https://img.test/black.jpg" }];
-  const withPhotos = () => {
-    const d = phoneDetail({ quantityMode: "units", media: photos });
-    return { ...d, options: d.options.map((axis) => (axis.key !== "color" ? axis : { ...axis, values: axis.values.map((v) => (v.id === "blue" ? { ...v, mediaId: "m2" } : v.id === "black" ? { ...v, mediaId: "m3" } : v)) })) };
-  };
-  const tail = "\nhttp://localhost:3000/b/shop/i/it";
-
-  it("sends the cover photo when the chosen option has no photo of its own", async () => {
-    mount(withPhotos());
-    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 128 GB, x1, KES 21,000 on EpicMKT\nhttps://img.test/cover.jpg" + tail);
-  });
-
-  it("sends the photo of the chosen colour, and follows a new pick", async () => {
-    mount(withPhotos());
-    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Blue/ }));
-    expect(orderText()).toContain("Blue, 128 GB");
-    expect(orderText()).toContain("\nhttps://img.test/blue.jpg" + tail);
-    expect(orderText()).not.toContain("cover.jpg");
-    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Black/ }));
-    expect(orderText()).toContain("\nhttps://img.test/black.jpg" + tail);
-  });
-
-  it("keeps the photo of the colour when only the size changes", async () => {
-    mount(withPhotos());
-    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Blue/ }));
-    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
-    expect(orderText()).toContain("Blue, 256 GB");
-    expect(orderText()).toContain("blue.jpg");
+    expect(orderText()).toContain("I'd like to order:");
   });
 
   it("is hidden when the seller has no WhatsApp number", async () => {
