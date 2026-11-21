@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { TOWNS } from "@epicmkt/shared";
 import { coarsenCoords } from "@epicmkt/backend";
 import { queryClient } from "../lib/queryClient.js";
+import { reversePlace } from "../lib/places.js";
 
 const KEY = "epicmkt.town";
 // Set when the shopper clears their location. While it is set we never ask the browser again on our own,
@@ -11,18 +12,28 @@ const OPT_OUT_KEY = "epicmkt.geo.off";
 // Query keys that embed a position. Dropped on reset so no stale fix lingers in the cache.
 const POSITIONAL_QUERIES = new Set(["nearby", "flash-page", "offers-page", "flash-strip", "similar-items"]);
 
+const validPlace = (p) => p && typeof p.name === "string" && p.name && Number.isFinite(p.lat) && Number.isFinite(p.lng) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+
+// A chosen place is kept as { name, lat, lng }; a plain town name saved by an older version is still read.
 const readTown = () => {
   try {
-    return TOWNS.find((t) => t.name === localStorage.getItem(KEY)) ?? null;
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    if (raw.startsWith("{")) {
+      const p = JSON.parse(raw);
+      return validPlace(p) ? { name: p.name, lat: p.lat, lng: p.lng } : null;
+    }
+    return TOWNS.find((t) => t.name === raw) ?? null;
   } catch {
     return null;
   }
 };
 
-const writeTown = (name) => {
+const writeTown = (place) => {
   try {
-    if (name) localStorage.setItem(KEY, name);
-    else localStorage.removeItem(KEY);
+    if (!place) localStorage.removeItem(KEY);
+    else if (TOWNS.some((t) => t.name === place.name && t.lat === place.lat && t.lng === place.lng)) localStorage.setItem(KEY, place.name);
+    else localStorage.setItem(KEY, JSON.stringify({ name: place.name, lat: place.lat, lng: place.lng }));
   } catch {
     return;
   }
@@ -49,6 +60,7 @@ const fromTown = (town) => ({
   status: "granted",
   source: "town",
   town: town.name,
+  place: null,
   coords: { lat: town.lat, lng: town.lng }
 });
 
@@ -84,7 +96,12 @@ export const useGeoStore = create((set, get) => {
         }
         writeTown(null);
         writeOptOut(false);
-        set({ status: "granted", source: "device", town: null, coords, deviceBlocked: false, explaining: false });
+        set({ status: "granted", source: "device", town: null, place: null, coords, deviceBlocked: false, explaining: false });
+        // The area name is looked up after the fix is kept, so a slow or failed lookup never delays or blocks the location itself.
+        reversePlace(coords).then((label) => {
+          const now = get();
+          if (mine === ticket && label && now.source === "device" && now.coords?.lat === coords.lat && now.coords?.lng === coords.lng) set({ place: label });
+        });
       },
       () => {
         if (mine !== ticket) return;
@@ -98,6 +115,7 @@ export const useGeoStore = create((set, get) => {
     status: saved ? "granted" : "idle",
     source: saved ? "town" : null,
     town: saved?.name ?? null,
+    place: null,
     coords: saved ? { lat: saved.lat, lng: saved.lng } : null,
     deviceBlocked: false,
     explaining: false,
@@ -123,10 +141,15 @@ export const useGeoStore = create((set, get) => {
     chooseTown: (name) => {
       const town = TOWNS.find((t) => t.name === name);
       if (!town) return;
+      get().choosePlace({ name: town.name, lat: town.lat, lng: town.lng });
+    },
+    // Any area the shopper picked or searched for: { name, lat, lng } (name is what the header shows, e.g. "Kilimani, Nairobi").
+    choosePlace: (place) => {
+      if (!validPlace(place)) return;
       ticket += 1;
-      writeTown(town.name);
+      writeTown(place);
       writeOptOut(false);
-      set({ ...fromTown(town), deviceBlocked: false, explaining: false });
+      set({ ...fromTown(place), deviceBlocked: false, explaining: false });
     },
     // Forget the location entirely: stored town, in-memory fix, cached results that used it, and any
     // request still in flight. Back to the same state as a first visit, plus the opt-out flag.
@@ -135,7 +158,7 @@ export const useGeoStore = create((set, get) => {
       writeTown(null);
       writeOptOut(true);
       queryClient.removeQueries({ predicate: (q) => POSITIONAL_QUERIES.has(q.queryKey?.[0]) });
-      set({ status: "idle", source: null, town: null, coords: null, deviceBlocked: false, explaining: false });
+      set({ status: "idle", source: null, town: null, place: null, coords: null, deviceBlocked: false, explaining: false });
     },
     close: () => set({ explaining: false })
   };

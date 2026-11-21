@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { faLocationCrosshairs, faRotateLeft, faXmark } from "@fortawesome/free-solid-svg-icons";
-import { TOWNS } from "@epicmkt/shared";
 import { useGeoStore } from "../stores/geo.js";
 import { showToast } from "../stores/toast.js";
-import { Button, Field, IconButton, Select } from "@epicmkt/ui";
+import { Button, IconButton } from "@epicmkt/ui";
+import PlaceSearch from "./PlaceSearch.jsx";
 import styles from "./LocationDialog.module.css";
 
 export default function LocationDialog() {
@@ -14,10 +14,10 @@ export default function LocationDialog() {
   const town = useGeoStore((s) => s.town);
   const deviceBlocked = useGeoStore((s) => s.deviceBlocked);
   const allow = useGeoStore((s) => s.allow);
-  const chooseTown = useGeoStore((s) => s.chooseTown);
+  const place = useGeoStore((s) => s.place);
+  const choosePlace = useGeoStore((s) => s.choosePlace);
   const close = useGeoStore((s) => s.close);
   const reset = useGeoStore((s) => s.reset);
-  const [choice, setChoice] = useState("");
   const isSet = status === "granted";
   const canLocate = typeof navigator !== "undefined" && "geolocation" in navigator && !deviceBlocked;
 
@@ -25,20 +25,14 @@ export default function LocationDialog() {
     const dialog = ref.current;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
-    if (open) setChoice(town ?? "");
   }, [open]);
-
-  const submit = (event) => {
-    event.preventDefault();
-    if (choice) chooseTown(choice);
-  };
 
   const clear = () => {
     reset();
     showToast("Location reset");
   };
 
-  const current = !isSet ? null : source === "town" && town ? town : "Your approximate location";
+  const current = !isSet ? null : source === "town" && town ? town : place ?? "Your approximate location";
 
   return (
     <dialog
@@ -69,21 +63,11 @@ export default function LocationDialog() {
           </p>
         )}
 
-        <form className={styles.form} onSubmit={submit}>
-          <Field label={canLocate ? "Or choose a town" : "Choose a town"}>
-            <Select value={choice} onChange={(e) => setChoice(e.target.value)}>
-              <option value="">Select a town</option>
-              {TOWNS.map((t) => (
-                <option key={t.name} value={t.name}>
-                  {t.name}, {t.county}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Button type="submit" variant={canLocate ? "secondary" : "primary"} disabled={!choice || choice === town}>
-            Use this town
-          </Button>
-        </form>
+        <PlaceSearch
+          label={canLocate ? "Or search for your area" : "Search for your area"}
+          placeholder="Type an area or town, e.g. Kilimani"
+          onPick={choosePlace}
+        />
 
         {isSet && (
           <Button variant="ghost" icon={faRotateLeft} onClick={clear}>

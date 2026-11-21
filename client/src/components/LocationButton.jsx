@@ -4,9 +4,9 @@ import { useGeoStore } from "../stores/geo.js";
 import styles from "./LocationButton.module.css";
 
 // The short name shown in the header. Never coordinates.
-export function locationLabel({ status, source, town }) {
+export function locationLabel({ status, source, town, place }) {
   if (status === "asking") return "Locating…";
-  if (status === "granted") return source === "town" && town ? town : "Near you";
+  if (status === "granted") return source === "town" && town ? town : place || "Near you";
   return "Set location";
 }
 
@@ -15,8 +15,9 @@ export default function LocationButton() {
   const status = useGeoStore((s) => s.status);
   const source = useGeoStore((s) => s.source);
   const town = useGeoStore((s) => s.town);
+  const place = useGeoStore((s) => s.place);
   const request = useGeoStore((s) => s.request);
-  const label = locationLabel({ status, source, town });
+  const label = locationLabel({ status, source, town, place });
   const set = status === "granted";
 
   return (

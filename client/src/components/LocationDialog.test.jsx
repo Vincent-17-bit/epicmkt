@@ -5,7 +5,7 @@ import { useGeoStore } from "../stores/geo.js";
 import { useToastStore } from "../stores/toast.js";
 import LocationDialog from "./LocationDialog.jsx";
 
-const idle = { status: "idle", source: null, town: null, coords: null, deviceBlocked: false, explaining: false };
+const idle = { status: "idle", source: null, town: null, place: null, coords: null, deviceBlocked: false, explaining: false };
 
 beforeEach(() => {
   localStorage.clear();
@@ -27,16 +27,22 @@ describe("LocationDialog", () => {
     openSheet();
     render(<LocationDialog />);
     expect(screen.getByRole("button", { name: "Use my location" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use this town" })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: "Or search for your area" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /reset/i })).not.toBeInTheDocument();
   });
 
   it("applies a chosen town and closes", async () => {
     openSheet();
     render(<LocationDialog />);
-    await userEvent.selectOptions(screen.getByRole("combobox"), "Maseno");
-    await userEvent.click(screen.getByRole("button", { name: "Use this town" }));
-    expect(useGeoStore.getState()).toMatchObject({ status: "granted", town: "Maseno", explaining: false });
+    await userEvent.type(screen.getByRole("combobox"), "mase");
+    await userEvent.click(await screen.findByRole("option", { name: /Maseno/ }));
+    expect(useGeoStore.getState()).toMatchObject({ status: "granted", town: "Maseno, Kisumu", explaining: false });
+  });
+
+  it("shows the area name found for the device location instead of a generic label", () => {
+    useGeoStore.setState({ status: "granted", source: "device", coords: { lat: -1.29, lng: 36.78 }, place: "Kilimani, Nairobi", explaining: true });
+    render(<LocationDialog />);
+    expect(screen.getByText("Kilimani, Nairobi")).toBeInTheDocument();
   });
 
   it("resets the location, says so, and returns to unset", async () => {
@@ -54,6 +60,6 @@ describe("LocationDialog", () => {
     render(<LocationDialog />);
     expect(screen.queryByRole("button", { name: "Use my location" })).not.toBeInTheDocument();
     expect(screen.getByText("Location is blocked in this browser.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use this town" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Search for your area" })).toBeInTheDocument();
   });
 });

@@ -72,8 +72,9 @@ export default function Delivery({ ctx }) {
   }
 
   const feeText = info.fee === 0 ? t("delivery.free") : info.fee != null ? fill("delivery.fee", { fee: kes(info.fee) }) : t("delivery.available");
-  const fromTown = geo.source === "town" && geo.town;
-  const away = reach.distanceKm != null ? (fromTown ? fill("delivery.awayTown", { km: km(reach.distanceKm), town: geo.town }) : fill("delivery.away", { km: km(reach.distanceKm) })) : null;
+  const where = geo.source === "town" ? geo.town : geo.place;
+  const fromTown = Boolean(where);
+  const away = reach.distanceKm != null ? (fromTown ? fill("delivery.awayTown", { km: km(reach.distanceKm), town: where }) : fill("delivery.away", { km: km(reach.distanceKm) })) : null;
   const icon = status === "inside" ? faCircleCheck : status === "outside" ? faCircleExclamation : faCircleQuestion;
   const headline = status === "inside" ? t("delivery.inside") : status === "outside" ? t("delivery.outside") : info.radiusKm != null ? t("delivery.unknown") : null;
 
