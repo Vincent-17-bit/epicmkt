@@ -23,6 +23,12 @@ export function tidyTrending(items, products, limit = 10) {
   };
   for (const item of items ?? []) {
     if (out.length >= limit) break;
+    // A store, a flash sale or a category was already checked live by the database (trending_lists). A store's name rarely matches a
+    // product, so it is not looked up in the catalogue again; only a product word (or one of unknown kind) must still find something.
+    if (item.kind && item.kind !== "product") {
+      take({ ...item });
+      continue;
+    }
     const found = entry(item.term, products, { count: item.count, hot: item.hot });
     if (found) take({ ...item, ...found, image: found.image ?? item.image ?? null });
   }
@@ -36,7 +42,7 @@ export function tidyTrending(items, products, limit = 10) {
   const ranked = [...tally].sort((a, b) => b[1] - a[1]).map(([id]) => noun.get(id)).filter(Boolean);
   for (const term of ranked) {
     if (out.length >= limit) break;
-    const found = entry(term, products, { count: 0, hot: false });
+    const found = entry(term, products, { count: 0, hot: false, kind: "product" });
     if (found && found.image) take(found);
   }
   return out;

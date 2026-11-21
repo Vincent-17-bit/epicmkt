@@ -118,4 +118,4 @@ export async function getSimilarBusinesses(ref, limit = 4) {
 }
 
 export const getTopSearches = (limit) => legacy.getTopSearches(limit);
-export const logSearch = (term) => legacy.logSearch(term);
+export const logSearch = (term, county) => legacy.logSearch(term, county);

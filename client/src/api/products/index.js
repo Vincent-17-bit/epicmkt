@@ -30,11 +30,24 @@ export const getSuggest = async (prefix) => {
   return { ...suggestFrom(await demo(), prefix), source: "demo" };
 };
 
-// The most searched terms of the last 24 hours, worked out on the hour. Demo: the in-memory backend's live count, each term
-// with a picture from a product it finds (as the database does).
-export const getTrending = async () => {
-  if (isLive()) return (await live()).getTrending();
+// What shoppers search for. Demo: the in-memory backend's live count, each term with a picture and a kind. The demo suggestion index only
+// knows products, so a store or category is recognised from the demo backend's own shops and categories; "rising" is the terms that are
+// hot right now. The database does the real ranking.
+const demoNorm = (v) => String(v ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/s$/, "");
+export const getTrending = async (county = null) => {
+  if (isLive()) return (await live()).getTrending(county);
   const rows = await backend.getTopSearches(10).catch(() => []);
-  const items = tidyTrending(rows.map((r) => ({ term: r.term, count: r.count, hot: r.hot })), await backend.getAllProducts(), 10);
-  return { computedAt: new Date().toISOString(), live: true, items };
+  const [products, cats, found] = await Promise.all([
+    backend.getAllProducts(),
+    backend.getCategories().catch(() => []),
+    backend.searchBusinesses({ pageSize: 200 }).catch(() => null)
+  ]);
+  const shops = found?.items ?? found?.results ?? found?.businesses ?? (Array.isArray(found) ? found : []);
+  const shopNames = new Set(shops.map((b) => demoNorm(b.name)));
+  const catNames = new Set(cats.flatMap((c) => [demoNorm(c.name), demoNorm(c.singular)]));
+  const kindOf = (term) => (shopNames.has(demoNorm(term)) ? "store" : catNames.has(demoNorm(term)) ? "category" : "product");
+  // tidyTrending checks product words against the catalogue, keeps a store or category as it is, and tops the list up to 10
+  const popular = tidyTrending(rows.map((r) => ({ term: r.term, count: r.count, hot: r.hot, kind: kindOf(r.term) })), products, 10).map((x, i) => ({ ...x, rank: i + 1 }));
+  const rising = popular.filter((x) => x.hot).map((x, i) => ({ ...x, rank: i + 1, ratio: null }));
+  return { computedAt: new Date().toISOString(), live: true, scope: "*", county, fallback: "none", popular, rising, items: popular };
 };

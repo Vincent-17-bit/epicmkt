@@ -88,6 +88,11 @@ one-statement file). Then schedule the hourly `search-rollups` job (`supabase/cr
 `select public.refresh_search_rollups();` once by hand. Until the dictionary exists, suggestions come from the product snapshot.
 `supabase/tests/search-index.test.mjs` covers visibility, ranking, typo correction, the dictionary and the feed pool.
 
+Trending is `0141_trending_v2.sql` (design and operation: `docs/trending.md`): one ranking of what shoppers search for, every kind together
+(store, product, flash sale, category), as "popular this week" and "rising now", rebuilt every hour by the `trending` job
+(`supabase/cron/schedule.sql`) from a permanent daily summary. `0128`'s hourly list stays as the fallback for older clients.
+`supabase/tests/trending.test.mjs` covers it.
+
 ### 3. First admin
 
 Create the user in Supabase Auth, then make them the owner:

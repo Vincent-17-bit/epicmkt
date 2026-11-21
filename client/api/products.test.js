@@ -371,19 +371,58 @@ describe("/api/products", () => {
       expect(rpcs()).toEqual([]);
     });
 
-    it("serves trending searches cached until a few minutes past the next hour", async () => {
+    const lists = { computedAt: "2026-03-01T10:12:00Z", live: false, scope: "*", fallback: "none",
+      popular: [{ rank: 1, term: "gas cylinder", count: 9, hot: true, kind: "product" }, { rank: 2, term: "shop a", count: 6, hot: false, kind: "store" }],
+      rising: [{ rank: 1, term: "solar lamp", count: 9, ratio: 9, hot: true, kind: "product" }] };
+    lists.items = lists.popular;
+
+    it("serves popular and rising together, every kind in one ranking, from trending_lists", async () => {
+      answer({ trending_lists: () => new Response(JSON.stringify(lists), { status: 200 }) });
+      const body = await (await call("op=trending")).json();
+      expect(body.popular.map((x) => [x.term, x.kind])).toEqual([["gas cylinder", "product"], ["shop a", "store"]]);
+      expect(body.rising[0]).toMatchObject({ term: "solar lamp", ratio: 9 });
+      expect(body.items).toEqual(body.popular);
+      expect(rpcs()).toEqual(["trending_lists"]);
+    });
+
+    it("is cached until 20 minutes past the next hour (the list is rebuilt every hour)", async () => {
+      answer({ trending_lists: () => new Response(JSON.stringify(lists), { status: 200 }) });
       vi.useFakeTimers({ toFake: ["Date"] });
-      vi.setSystemTime(new Date("2026-03-01T10:50:00Z"));
-      answer({ top_searches_hourly: () => new Response(JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "bread", count: 9, hot: true }] }), { status: 200 }) });
-      const res = await call("op=trending");
-      expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=900\b/);
-      expect((await res.json()).items[0].term).toBe("bread");
+      const maxage = async (iso) => {
+        vi.setSystemTime(new Date(iso));
+        return Number((await call("op=trending")).headers.get("Cache-Control").match(/s-maxage=(\d+)/)[1]);
+      };
+      expect(await maxage("2026-03-01T10:50:00Z")).toBe(30 * 60); // 10:50 -> 11:20
+      expect(await maxage("2026-03-01T11:59:00Z")).toBe(21 * 60); // 11:59 -> 12:20
+      expect(await maxage("2026-03-01T12:10:00Z")).toBe(10 * 60); // the new list is not cached before 12:20
+      expect(await maxage("2026-03-01T12:30:00Z")).toBe(50 * 60); // 12:30 -> 13:20
+      expect(await maxage("2026-03-01T12:20:00Z")).toBe(60); // never less than a minute
+    });
+
+    it("passes a known county to the database and ignores anything else", async () => {
+      const seen = [];
+      answer({ trending_lists: (body) => { seen.push(body); return new Response(JSON.stringify(lists), { status: 200 }); } });
+      await call("op=trending&county=kisumu");
+      await call("op=trending&county=Uasin%20Gishu");
+      await call("op=trending&county=Narnia");
+      await call("op=trending&county=%27%3B%20drop%20table");
+      await call("op=trending");
+      expect(seen.map((b) => b.p_county)).toEqual(["Kisumu", "Uasin Gishu", null, null, null]);
+      expect(seen.every((b) => b.p_limit === 10)).toBe(true);
+    });
+
+    it("uses the older hourly list when trending_lists is not in the database yet", async () => {
+      answer({ top_searches_hourly: () => new Response(JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "milk", count: 9, hot: true }] }), { status: 200 }) });
+      const body = await (await call("op=trending")).json();
+      expect(body.popular).toEqual([{ term: "milk", count: 9, hot: true }]);
+      expect(body.items).toEqual(body.popular);
+      expect(body.rising).toEqual([]);
     });
 
     it("falls back to the live count for trending when the hourly list is missing", async () => {
       answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
       const body = await (await call("op=trending")).json();
-      expect(body).toMatchObject({ live: true, items: [{ term: "bread", count: 4, hot: false }] });
+      expect(body).toMatchObject({ live: true, items: [{ term: "bread", count: 4, hot: false }], popular: [{ term: "bread" }], rising: [] });
     });
 
     it("builds the unfiltered feed from the hour's pool once the catalogue is bigger than the snapshot, and keeps its order", async () => {

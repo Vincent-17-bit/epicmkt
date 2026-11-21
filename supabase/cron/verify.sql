@@ -1,6 +1,6 @@
 -- Run after schedule.sql, then again a few minutes later. Read-only.
 
--- 1. All five jobs exist and are active (search-rollups runs inside the database, so it has no HTTP answer in 3).
+-- 1. All six jobs exist and are active (search-rollups runs inside the database, so it has no HTTP answer in 3).
 select jobname, schedule, active from cron.job order by jobname;
 
 -- 2. What the scheduler itself did. "succeeded" only means the HTTP request was queued, not that the function worked: see 3.
@@ -27,3 +27,10 @@ select (select max(refreshed_at) from public.search_terms) as dictionary_refresh
        (select count(*) from public.search_terms) as dictionary_rows,
        (select max(computed_at) from public.search_top_hourly) as trending_computed,
        (select count(*) from public.search_top_hourly) as trending_rows;
+
+-- 5b. Trending (0141): the hourly rebuild ran within stale_hours (ok = true). If ok is false the menu is showing the live count.
+select public.trending_status() as trending_status,
+       (select count(*) from public.search_trending where scope = '*' and list = 'popular') as popular_rows,
+       (select count(*) from public.search_trending where scope = '*' and list = 'rising') as rising_rows,
+       (select count(distinct scope) - 1 from public.search_trending) as county_lists,
+       (select count(*) from public.search_term_daily) as daily_summary_rows;

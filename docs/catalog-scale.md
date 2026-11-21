@@ -25,7 +25,7 @@ Edge         /api/products and /api/browse: memory snapshot (newest 10,000) + th
    │
 Redis        optional shared copy of snapshots and feed pools (Upstash), never a single point of failure
    │
-Postgres     indexes on items (full-text + trigram), the type-ahead dictionary and trending list rebuilt hourly by pg_cron
+Postgres     indexes on items (full-text + trigram), the type-ahead dictionary and the trending lists rebuilt hourly by pg_cron
 ```
 
 Every request does a bounded amount of work, whatever the size of the catalogue: one page of about 50, at most 600 search candidates
@@ -97,6 +97,8 @@ Every request does a bounded amount of work, whatever the size of the catalogue:
 * **The home page search bar opens search on its own** (`hooks/useOpenSearch.js`); the menu's search box opens it over the menu.
 
 ## Trending searches (menu and empty search panel)
+
+> Superseded by migration 0141: see `docs/trending.md`. The hourly list below is still built and is the fallback for older clients.
 
 `refresh_top_searches()` (hourly) stores the top 20 terms of the last 24 hours (at least 3 different searchers, blocklist
 respected, flame for a 3-hour spike) with a picture from a matching product. `/api/products?op=trending` caches it until 5 minutes

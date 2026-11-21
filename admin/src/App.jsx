@@ -34,6 +34,7 @@ import RelationsPage from "./pages/catalogue/RelationsPage.jsx";   // C26
 import DepartmentsPage from "./pages/catalogue/DepartmentsPage.jsx";   // B28
 import TypeRequestsPage from "./pages/catalogue/TypeRequestsPage.jsx";   // B28
 import DemandPage from "./pages/catalogue/DemandPage.jsx";   // C30
+import TrendingPage from "./pages/catalogue/TrendingPage.jsx";   // 0141
 
 // /admin/table-test is a developer page for the data table. It exists in `vite dev` only: in a production build
 // import.meta.env.DEV is false, so this is `null`, the route below is not registered, and the page and its chunk are
@@ -65,6 +66,7 @@ export default function App() {
           <Route path="relations" element={<RoleGuard permission="producttypes.view"><RelationsPage /></RoleGuard>} />
           <Route path="type-requests" element={<RoleGuard permission="producttypes.view"><TypeRequestsPage /></RoleGuard>} />
           <Route path="demand" element={<RoleGuard permission="plans.view"><DemandPage /></RoleGuard>} />
+          <Route path="trending" element={<RoleGuard permission="trending.view"><TrendingPage /></RoleGuard>} />
           <Route path="kits" element={<RoleGuard permission="producttypes.view"><KitPage /></RoleGuard>} />
           <Route path="analytics" element={<RoleGuard permission="analytics.view"><AnalyticsPage /></RoleGuard>} />
           <Route path="audit" element={<RoleGuard permission="audit.view"><AuditPage /></RoleGuard>} />

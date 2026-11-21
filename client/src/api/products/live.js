@@ -109,9 +109,12 @@ export async function getSuggest(prefix) {
   return withPicture(result);
 }
 
-// Trending searches for the menu, worked out on the hour. Unreachable: nothing (the menu simply leaves the list out).
-export const getTrending = () =>
-  viaEndpoint("op=trending", async () => ({ computedAt: null, live: true, items: [] })).then((data) => ({
-    ...data,
-    items: (data.items ?? []).map((i) => ({ ...i, image: i.image && !/^https?:\/\//.test(i.image) ? mediaUrl(i.image) : i.image ?? null }))
-  }));
+// What shoppers search for: popular this week and rising now, every kind in one ranking, for a county or everywhere (rebuilt every
+// hour). Unreachable: nothing (the menu simply leaves the list out). `items` is the popular list, for an older cached response.
+const withImages = (rows) => (rows ?? []).map((i) => ({ ...i, image: i.image && !/^https?:\/\//.test(i.image) ? mediaUrl(i.image) : i.image ?? null }));
+export const getTrending = (county = null) =>
+  viaEndpoint(`op=trending${county ? `&county=${encodeURIComponent(county)}` : ""}`, async () => ({ computedAt: null, live: true, items: [] })).then((data) => {
+    const popular = withImages(data.popular ?? data.items);
+    return { ...data, popular, items: popular, rising: withImages(data.rising) };
+  });
+

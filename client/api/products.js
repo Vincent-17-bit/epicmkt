@@ -20,11 +20,13 @@
 //   * op=search: when the catalogue is bigger than the snapshot, the indexed search_product_candidates adds what the snapshot
 //     cannot hold, so an old product is still found; ranking, filters and facets are unchanged.
 //   * op=suggest: type-ahead from the search_suggest dictionary (a few ms whatever the catalogue size); the snapshot otherwise.
-//   * op=trending: the most searched terms, worked out on the hour, cached until a few minutes past the next hour.
+//   * op=trending: what shoppers search for, every kind ranked together (store, product, flash sale, category), as "popular this week"
+//     and "rising now", rebuilt every hour. Optional &county=Kisumu (a known county, otherwise ignored). Cached until 20 minutes
+//     past the next hour.
 //
 // Only data the anon key can already read leaves here. No service-role key is used.
 
-import { PLAN_FEATURES } from "../../shared/src/constants.js";
+import { PLAN_FEATURES, TOWNS } from "../../shared/src/constants.js";
 import { normalizeText } from "../../shared/src/utils.js";
 import { isOpenAllDay, statusOf } from "../../shared/src/openState.js";
 import { isListed } from "../../shared/src/availability.js";
@@ -422,30 +424,53 @@ async function suggestions(q) {
   return memo(suggestMemo, key, { at: Date.now(), value }).value;
 }
 
-async function trending() {
-  const base = await rawTrending();
+// The counties a shopper can pick (from the town list). Anything else is ignored, so nobody can fill the cache with made-up values.
+const COUNTIES = new Map(TOWNS.map((t) => [t.county.toLowerCase(), t.county]));
+const countyOf = (value) => COUNTIES.get(String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ")) ?? null;
+
+// trending_lists (0141): popular + rising, every kind in one ranking, for a county or everywhere. `items` repeats `popular` so a cached
+// older client keeps working. If the new function is not there yet (code deployed before the migration) the hourly list (0128) is used,
+// and below that the live count of the last 24 hours.
+async function rawTrending(county) {
+  try {
+    const data = await rpc("trending_lists", { p_county: county, p_limit: 10 }, { timeoutMs: 3_000 });
+    if (data && Array.isArray(data.popular)) return data;
+  } catch (error) {
+    console.warn(`[products] trending_lists unavailable (${error?.message ?? error}); using the hourly list`);
+  }
+  try {
+    const data = await rpc("top_searches_hourly", { p_limit: 10 }, { timeoutMs: 3_000 });
+    if (data && Array.isArray(data.items)) return { ...data, popular: data.items, rising: [] };
+  } catch (error) {
+    console.warn(`[products] top_searches_hourly unavailable (${error?.message ?? error}); using the live count`);
+  }
+  const rows = await rpc("top_searches", { p_limit: 10 }, { timeoutMs: 3_000 }).catch(() => []);
+  const items = (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot }));
+  return { computedAt: new Date().toISOString(), live: true, items, popular: items, rising: [] };
+}
+
+// What goes out: the stored lists, checked once more against the product snapshot. Words the database already checked (a store, a flash
+// sale, a category) are kept as they are; a product word must still match something, is shown with its picture, and the list is topped up
+// with the commonest kinds of product so the menu is never short.
+async function trending(county) {
+  const base = await rawTrending(county);
   try {
     const snap = await snapshot();
-    return { ...base, items: tidyTrending(base.items, snap.products, 10) };
+    const popular = tidyTrending(base.popular ?? base.items, snap.products, 10);
+    return { ...base, popular, items: popular };
   } catch (error) {
     console.warn(`[products] trending top-up skipped (${error?.message ?? error})`);
     return base;
   }
 }
 
-async function rawTrending() {
-  try {
-    const data = await rpc("top_searches_hourly", { p_limit: 10 }, { timeoutMs: 3_000 });
-    if (data && Array.isArray(data.items)) return data;
-  } catch (error) {
-    console.warn(`[products] top_searches_hourly unavailable (${error?.message ?? error}); using the live count`);
-  }
-  const rows = await rpc("top_searches", { p_limit: 10 }, { timeoutMs: 3_000 }).catch(() => []);
-  return { computedAt: new Date().toISOString(), live: true, items: (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot })) };
-}
-
-// The trending list changes on the hour (pg_cron at :02): cache it until 5 minutes past the next hour.
-const untilNextHour = (now) => Math.max(60, Math.ceil((3_600_000 - (now % 3_600_000)) / 1000) + 300);
+// The lists are rebuilt every hour (pg_cron at :12 past each hour): cache until 20 minutes past the next hour.
+const TRENDING_PERIOD_MS = 3_600_000;
+const TRENDING_OFFSET_MS = 1_200_000;
+const untilNextRefresh = (now) => {
+  const next = Math.ceil((now - TRENDING_OFFSET_MS) / TRENDING_PERIOD_MS) * TRENDING_PERIOD_MS + TRENDING_OFFSET_MS;
+  return Math.max(60, Math.ceil((next - now) / 1000));
+};
 
 const reply = (body, status, cache) =>
   new Response(JSON.stringify(body), {
@@ -528,8 +553,8 @@ export default async function handler(req) {
   if (params.get("op") === "trending") {
     const now = Date.now();
     try {
-      const age = untilNextHour(now);
-      return reply(await trending(), 200, `public, max-age=${Math.min(age, 600)}, s-maxage=${age}, stale-while-revalidate=600, stale-if-error=86400`);
+      const age = untilNextRefresh(now);
+      return reply(await trending(countyOf(params.get("county"))), 200, `public, max-age=${Math.min(age, 600)}, s-maxage=${age}, stale-while-revalidate=600, stale-if-error=86400`);
     } catch (error) {
       console.error(`[products] trending unavailable: ${error?.message ?? error}`);
       return reply({ error: "unavailable" }, 502, "no-store");

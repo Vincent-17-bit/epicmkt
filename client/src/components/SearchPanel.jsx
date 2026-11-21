@@ -15,6 +15,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
+import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
+import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
@@ -120,14 +122,8 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
     }
   }, [open]);
 
-  const trending = useQuery({
-    queryKey: ["trending"],
-    queryFn: () => items.getTrending(),
-    enabled: open,
-    staleTime: 10 * 60_000,
-    refetchInterval: open && !typing ? 10 * 60_000 : false,
-    placeholderData: keepPreviousData
-  });
+  // Popular this week and rising now, every kind of search in one ranking (migration 0141). Paused while the shopper is typing.
+  const { query: trending, county, tab, setTab, list: trend, hasRising, scopeNote } = useTrending({ enabled: open, refetch: !typing });
 
   const suggestions = useQuery({
     queryKey: ["suggest", debounced],
@@ -139,12 +135,14 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   });
   const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000, enabled: open });
 
-  const commit = (value) => {
+  // A word the shopper typed or picked from suggestions is a search and is counted (with their county, if they chose a town). A tap on a
+  // trending row is not: counting it would make the list vote for itself. `to` sends a trending store straight to its page.
+  const commit = (value, { fromTrending = false, to = null } = {}) => {
     const clean = normalizeTerm(value);
     if (!clean) return;
     addRecent(clean);
-    logSearch(clean);
-    onSelect(scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`);
+    if (!fromTrending) logSearch(clean, county);
+    onSelect(to ?? (scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`));
   };
 
   // Every row in one list for the arrow keys: phrases, products, stores, categories, then "see all results".
@@ -227,7 +225,6 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   };
 
   const suggestTo = `/contact?suggest=${encodeURIComponent(normalized)}`;
-  const trend = trending.data?.items ?? [];
 
   return (
     <>
@@ -429,18 +426,28 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                       <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
                     </h2>
                   </div>
+                  <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
+                  {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
                   <ol className={styles.ranked}>
                     {trending.isPending ? (
                       <Rows count={6} />
                     ) : (
                       trend.map((item, index) => (
                         <li key={item.term}>
-                          <button type="button" className={styles.rankRow} onClick={() => commit(item.term)}>
+                          <button
+                            type="button"
+                            className={styles.rankRow}
+                            onClick={() => {
+                              const to = trendPath(item, null);
+                              commit(item.term, { fromTrending: true, to });
+                            }}
+                          >
                             <span className={styles.rank} data-top={index < 3 || undefined}>
                               {index + 1}
                             </span>
                             <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
                             <span className={styles.rowLabel}>{item.term}</span>
+                            <TrendKind kind={item.kind} />
                             {item.hot && <Flame className={styles.fire} />}
                           </button>
                         </li>
