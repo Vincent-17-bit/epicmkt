@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { multipackOf, packSizeInName, pieceCountOf, unitPrice, unitPrices } from "./unitPrice.js";
+import { multipackOf, sizeInItemName, pieceCountOf, unitPrice, unitPrices } from "./unitPrice.js";
 
 test("a pack, set, box or pieces size gives a price per piece", () => {
   assert.deepEqual(unitPrice(1500, "Pack of 6"), { amount: 250, unit: "piece", text: "KES 250 per piece" });
@@ -58,12 +58,22 @@ test("a multipack gives per piece and per litre or kilo of everything in it", ()
   assert.equal(multipackOf("6 x Large"), null);
 });
 
-test("the pack size an item's name states, only when it states exactly one", () => {
-  assert.equal(packSizeInName("Soda 24 Pack"), "24 pack");
-  assert.equal(packSizeInName("Water 6 x 500 ml"), "6 x 500 ml");
-  assert.equal(packSizeInName("Cola Pack of 6 x 500ml"), "pack of 6 x 500ml");
-  assert.equal(packSizeInName("Eggs half dozen"), "half dozen");
-  assert.equal(packSizeInName("Red Bull Assorted (250 mL & 355 mL)"), "");
-  assert.equal(packSizeInName("Socks 3 pairs or 6 pairs"), "");
-  assert.equal(packSizeInName("Bread 400g"), "");
+test("the size an item's name states, only when it states exactly one", () => {
+  assert.equal(sizeInItemName("Soda 24 Pack"), "24 Pack");
+  assert.equal(sizeInItemName("Water 6 x 500 ml"), "6 x 500 ml");
+  assert.equal(sizeInItemName("Cola Pack of 6 x 500ml"), "Pack of 6 x 500ml");
+  assert.equal(sizeInItemName("Eggs half dozen"), "half dozen");
+  assert.equal(sizeInItemName("Bread 400g"), "400g");
+  assert.equal(sizeInItemName("Cooking Oil 1.5 Litres"), "1.5 Litres");
+  assert.equal(sizeInItemName("Red Bull Assorted (250 mL & 355 mL)"), "");
+  assert.equal(sizeInItemName("Socks 3 pairs or 6 pairs"), "");
+  assert.equal(sizeInItemName("Tecno Spark 5G phone"), "");
+  assert.equal(sizeInItemName("Phone 128GB 8GB RAM"), "");
+  assert.equal(sizeInItemName("Soda"), "");
+});
+
+test("a count and a measure in one name read as a multipack", () => {
+  assert.equal(sizeInItemName("Soda 500 ml 24 Pack"), "24 x 500 ml");
+  assert.deepEqual(unitPrices(2400, sizeInItemName("Soda 500 ml 24 Pack")).map((x) => x.text), ["KES 100 per piece", "KES 200 per L"]);
+  assert.equal(sizeInItemName("Socks 400 g 3 pairs"), "");
 });

@@ -57,6 +57,7 @@ describe("unit price under the price", () => {
   it("falls back to the one pack size in the item name, with the price shown", () => {
     expect(unitPricesFor(null, { name: "Soda 24 Pack" }, { price: 2400 }).map((x) => x.text)).toEqual(["KES 100 per piece"]);
     expect(unitPricesFor(null, { name: "Soda 24 Pack" }, { price: 2400, salePrice: 1200 }).map((x) => x.text)).toEqual(["KES 50 per piece"]);
+    expect(unitPricesFor(null, { name: "Bread 400g" }, { price: 60 }).map((x) => x.text)).toEqual(["KES 150 per kg"]);
     expect(unitPricesFor(null, { name: "Soda" }, { price: 2400 })).toEqual([]);
     expect(unitPricesFor(null, { name: "Soda 24 Pack" }, null)).toEqual([]);
   });

@@ -91,19 +91,38 @@ export function unitPrice(price, size) {
   return unitPrices(price, size)[0] ?? null;
 }
 
-const NAME_SIZES = [
-  /\b(?:pack|set|box|case|carton)\s+of\s+\d+(?:\s*[x×]\s*\d+(?:[.,]\d+)?\s*[a-z]+)?/g,
-  /\b\d+\s*[x×]\s*\d+(?:[.,]\d+)?\s*(?:kgs?|g|gm|ml|cl|l|ltr|litres?|liters?)\b/g,
-  /\b\d+\s*-?\s*(?:pack|pcs|pc|pieces|piece)\b/g,
-  /\b(?:half\s+)?(?:\d+\s+)?dozen\b/g,
-  /\b\d+\s*pairs\b/g
+const MULTI_IN_NAME = [
+  /\b(?:pack|set|box|case|carton)\s+of\s+\d+\s*[x×]\s*\d+(?:[.,]\d+)?\s*(?:kgs?|g|gm|ml|cl|l|ltr|litres?|liters?)\b/gi,
+  /\b\d+\s*[x×]\s*\d+(?:[.,]\d+)?\s*(?:kgs?|g|gm|ml|cl|l|ltr|litres?|liters?)\b/gi,
+  /\b\d+(?:[.,]\d+)?\s*(?:kgs?|g|gm|ml|cl|l|ltr|litres?|liters?)\s*[x×]\s*\d+\b/gi
 ];
+const COUNT_IN_NAME = [
+  /\b(?:pack|set|box|case|carton)\s+of\s+\d+\b/gi,
+  /\b\d+\s*-?\s*(?:pack|pcs|pc|pieces|piece)\b/gi,
+  /\b(?:half\s+)?(?:\d+\s+)?dozen\b/gi,
+  /\b\d+\s*pairs\b/gi
+];
+const MEASURE_IN_NAME = /\b(\d+(?:[.,]\d+)?)\s*(kgs?|kilograms?|grams?|gm|g|mg|ml|cl|litres?|liters?|ltr|l)\b/gi;
 
-/** The one pack size an item's name states ("Soda 24 Pack", "Water 6 x 500 ml"), or "" when it states none or more than one different. */
-export function packSizeInName(name) {
-  const found = new Set();
-  for (const re of NAME_SIZES) for (const m of String(name ?? "").toLowerCase().matchAll(re)) found.add(m[0].replace(/\s+/g, " ").trim());
-  const sizes = [...found].filter((t) => unitPrices(100, t).length);
-  const joined = sizes.filter((t) => !sizes.some((o) => o !== t && o.includes(t)));
-  return joined.length === 1 ? joined[0] : "";
+const distinct = (text, patterns, keep = () => true) => {
+  const found = new Map();
+  for (const re of patterns) for (const m of text.matchAll(re)) if (keep(m)) found.set(m[0].toLowerCase().replace(/\s+/g, " ").trim(), m[0]);
+  const keys = [...found.keys()];
+  return keys.filter((t) => !keys.some((o) => o !== t && o.includes(t))).map((t) => found.get(t));
+};
+const notNetwork = (m) => !(m[2] === "G" && Number(m[1]) <= 6);
+
+/** The one size an item's name states, as text unitPrices can read: a multipack ("6 x 500 ml"), a pack count ("24 pack"), a weight or volume ("400 g", "1.5 L"), or a count and a measure together ("500 ml 24 pack" -> "24 x 500 ml"). "" when the name states none, or more than one different size ("250 mL & 355 mL"). A network name like 5G is not a weight. */
+export function sizeInItemName(name) {
+  const text = String(name ?? "");
+  const multi = distinct(text, MULTI_IN_NAME).filter((t) => unitPrices(100, t).length);
+  if (multi.length) return multi.length === 1 ? multi[0] : "";
+  const counts = distinct(text, COUNT_IN_NAME).filter((t) => unitPrices(100, t).length);
+  const measures = distinct(text, [MEASURE_IN_NAME], notNetwork).filter((t) => measureOf(t));
+  if (counts.length > 1 || measures.length > 1) return "";
+  if (counts.length && measures.length) {
+    const count = pieceCountOf(counts[0]);
+    return count && count.unit === "piece" ? `${count.n} x ${measures[0]}` : "";
+  }
+  return counts[0] ?? measures[0] ?? "";
 }

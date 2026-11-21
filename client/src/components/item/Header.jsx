@@ -1,5 +1,5 @@
 import { ItemHeader } from "@epicmkt/ui";
-import { packSizeInName, unitPrices } from "@epicmkt/shared";
+import { sizeInItemName, unitPrices } from "@epicmkt/shared";
 import { stateLabels, variantOverrides } from "../../lib/itemView.js";
 import styles from "./Header.module.css";
 
@@ -7,8 +7,8 @@ import styles from "./Header.module.css";
 // focus when an item opens, so Heading and headingRef come through `slot` unchanged. Condition, authenticity, fragrance state and
 // charger kind show as text badges above the brand.
 // "KES 150 per kg", "KES 250 per piece": every unit price of the chosen size, from the price the buyer pays now, as [{ amount, unit, text }].
-// The chosen size comes first; when none of the chosen sizes is a weight, volume or count, the one pack size the item's name states is used
-// ("Soda 24 Pack") with the shown price.
+// The chosen size comes first; when none of the chosen sizes is a weight, volume or count, the one size the item's name states is used
+// ("Soda 24 Pack", "Bread 400g") with the shown price.
 export function unitPricesFor(option, item, shown) {
   const v = option?.variant;
   if (v && Number.isFinite(v.price)) {
@@ -19,7 +19,7 @@ export function unitPricesFor(option, item, shown) {
       if (found.length) return found;
     }
   }
-  const size = packSizeInName(item?.name);
+  const size = sizeInItemName(item?.name);
   const base = v && Number.isFinite(v.price) ? v : shown;
   const price = Number.isFinite(base?.salePrice) && base.salePrice < base.price ? base.salePrice : base?.price;
   return size && Number.isFinite(price) ? unitPrices(price, size) : [];
