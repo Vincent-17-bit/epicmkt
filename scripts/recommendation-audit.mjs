@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { ALL_TYPES } from "./seeds/index.mjs";
 import { complementGroupOf, complementsOf } from "../shared/src/related/complements.js";
 import { analyseName, relevance, similarTerms } from "../shared/src/similar.js";
+import { hasNoTypeEvidence } from "../shared/src/productType/other.js";
 
 // Axes whose values name a different product or service, not a size or a colour of the same one.
 const WHAT_AXES = new Set(["item", "service", "kind", "vehicle", "bird", "test", "event", "package", "dish", "product"]);
@@ -66,7 +67,7 @@ export function runAudit(items = buildCatalogue(), opts = {}) {
   // Similar, same type: pairs of items of one type.
   const byType = new Map();
   for (const x of analysed) byType.set(x.item.typeId, [...(byType.get(x.item.typeId) ?? []), x]);
-  let samePairs = 0, sameQualNameOnly = 0, sameQualTyped = 0, sameReachByWords = 0;
+  let samePairs = 0, sameQualNameOnly = 0, sameQualTyped = 0, sameReachByWords = 0, sameReachTypedPool = 0;
   const reached = new Set();
   const total = new Set();
   for (const list of byType.values()) {
@@ -78,9 +79,12 @@ export function runAudit(items = buildCatalogue(), opts = {}) {
         const nameOnly = qualifies(p, q, false);
         if (nameOnly) sameQualNameOnly += 1;
         if (qualifies(p, q, true)) { sameQualTyped += 1; reached.add(p.id).add(q.id); }
-        // Could the database's name-word net even fetch it? (the typed pool, change 2, fetches every one of these.)
+        // Could the database's name-word net even fetch it? (the typed pool, 0143, fetches every one of these: counted below.)
         const terms = new Set(similarTerms(p.name));
-        if (terms.size && [...new Set(similarTerms(q.name))].some((t) => terms.has(t))) sameReachByWords += 1;
+        const sharesWord = terms.size > 0 && [...new Set(similarTerms(q.name))].some((t) => terms.has(t));
+        if (sharesWord) sameReachByWords += 1;
+        // With the typed pool (0143) the database also fetches every item of the same real type (not null, not "other") from other stores.
+        if (sharesWord || !hasNoTypeEvidence(p.typeId)) sameReachTypedPool += 1;
       }
     }
   }
@@ -122,7 +126,8 @@ export function runAudit(items = buildCatalogue(), opts = {}) {
       recallNameOnlyPct: pct(sameQualNameOnly, samePairs),
       recallTypedPct: pct(sameQualTyped, samePairs),
       itemsWithASameTypeMatchPct: pct(reached.size, total.size),
-      pairsFoundByNameWordsPct: pct(sameReachByWords, samePairs)
+      pairsFoundByNameWordsPct: pct(sameReachByWords, samePairs),
+      pairsFetchedWithTypedPoolPct: pct(sameReachTypedPool, samePairs)
     },
     wrongType: { pairs: wrongPairs, sameDepartmentPairs: wrongSameDept, goodVsServicePairs: wrongGoodService, itemsShowingOne: wrongItems.size, itemsShowingOnePct: pct(wrongItems.size, items.length), examples: wrongSamples }
   };
@@ -139,6 +144,7 @@ export function toMarkdown(r) {
     ["Similar: same-type pairs judged similar, type passed", `${r.sameType.recallTypedPct}%`],
     ["Similar: items with at least one same-type match (type passed)", `${r.sameType.itemsWithASameTypeMatchPct}%`],
     ["Similar: same-type pairs the name-word net can fetch", `${r.sameType.pairsFoundByNameWordsPct}%`],
+    ["Similar: same-type pairs fetched with the typed pool (0143)", `${r.sameType.pairsFetchedWithTypedPoolPct}%`],
     ["Wrong-type pairs that qualify (type passed)", `${r.wrongType.pairs} (${r.wrongType.sameDepartmentPairs} same department, ${r.wrongType.goodVsServicePairs} good vs service)`],
     ["Items that would show a wrong-type item", `${r.wrongType.itemsShowingOne} (${r.wrongType.itemsShowingOnePct}%)`]
   ];
