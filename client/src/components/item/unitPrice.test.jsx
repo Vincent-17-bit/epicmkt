@@ -6,7 +6,7 @@ import { getFixture } from "@epicmkt/shared";
 import { useOptionSelection } from "../../hooks/useOptionSelection.js";
 import { seriousViolations } from "../../test/axe.js";
 import Options from "./Options.jsx";
-import Header from "./Header.jsx";
+import Header, { unitPriceFor } from "./Header.jsx";
 
 // The unit price line sits under the price, so the harness draws the picker and the header slot the way the page does.
 function Harness({ item }) {
@@ -40,6 +40,13 @@ describe("unit price under the price", () => {
   it("shows nothing for sizes that are not a weight or a volume (shoes)", () => {
     mount("fx-shoes");
     expect(screen.queryByTestId("unit-price")).not.toBeInTheDocument();
+  });
+
+  it("gives a price per piece for a pack size, from the sale price when there is one", () => {
+    const option = (size, variant) => ({ axes: [{ key: "pack", values: [{ id: "a", label: size }] }], choice: { pack: "a" }, variant });
+    expect(unitPriceFor(option("Pack of 6", { price: 1500 }))?.text).toBe("KES 250 per piece");
+    expect(unitPriceFor(option("Pack of 6", { price: 1500, salePrice: 1200 }))?.text).toBe("KES 200 per piece");
+    expect(unitPriceFor(option("42", { price: 1500 }))).toBeNull();
   });
 
   it("has no serious accessibility violations", async () => {
