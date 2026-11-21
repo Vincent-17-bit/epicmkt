@@ -55,7 +55,7 @@ describe("saving from the editor", () => {
   const named = async (name) => (await api.listItems()).find((i) => i.name === name);
   it("saves a phone with storage sizes, and the stored scale values come back when it is read", async () => {
     const user = userEvent.setup();
-    const { router } = await signedInApp("/business/catalog/new");
+    const { router } = await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
     router.navigate("/business/catalog/new", { state: { productTypeId: "pt-phone" } });
     await screen.findByLabelText("Name");
     await user.type(screen.getByLabelText("Name"), "Galaxy A");

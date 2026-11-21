@@ -28,7 +28,7 @@ describe("the editor stays open", () => {
 
   it("says so, with the shop and EpicMKT Seller still shown, when the list never loaded", async () => {
     vi.spyOn(mock, "getCatalog").mockRejectedValue(new ApiError("request_failed", "TypeError: Failed to fetch"));
-    await signedInApp("/business/catalog/new");
+    await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
     expect(await screen.findByText("We could not open the editor", {}, { timeout: 12000 })).toBeInTheDocument();
     expect(screen.getByTestId("editor-brand")).toHaveTextContent("EpicMKT Seller");
     expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument();

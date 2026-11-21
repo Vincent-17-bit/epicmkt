@@ -82,7 +82,7 @@ describe("the mock API keeps a combination's own tiers", () => {
     await api.login("ES100001", "Demo-Passw0rd");
     const axes = [{ key: "size", label: "Size", display: "button", values: [{ id: "a4", label: "A4" }, { id: "a3", label: "A3" }] }];
     const tiers = [{ minQty: 1, maxQty: 9, unitPrice: 50 }, { minQty: 10, maxQty: null, unitPrice: 45 }];
-    const body = (priceType, priceTiers) => ({ name: "Printing", description: "", section: "", priceType, price: 50, availability: "available",
+    const body = (priceType, priceTiers) => ({ productTypeId: "other", name: "Printing", description: "", section: "", priceType, price: 50, availability: "available",
       options: { axes, variants: [{ choice: { size: "a4" }, price: 50, ...(priceTiers !== undefined ? { priceTiers } : {}) }, { choice: { size: "a3" }, price: 90 }], defaultChoice: null } });
     const id = await api.saveItem(null, body("from", tiers));
     expect((await api.getItemTiers(id)).variants).toEqual([{ choice: { size: "a4" }, tiers }]);
