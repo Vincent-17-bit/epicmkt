@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 1 OF 8 (migrations 0038 to 0053). Run the parts in order in the Supabase SQL editor: 1, 2, ... 8.
+-- EpicMKT catch-up, PART 1 OF 9 (migrations 0038 to 0053). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. If this part says 'Nothing to do', you are finished: skip the other parts.
@@ -15,7 +15,7 @@ declare
 begin
   -- A run left half-way more than a day ago is forgotten. One from today is carried on: part 1 run again keeps the migration it
   -- found first and its log, and skips what it already applied.
-  delete from catch_up.state where started < now() - interval '1 day' or total <> 8;
+  delete from catch_up.state where started < now() - interval '1 day' or total <> 9;
   select first into v_first from catch_up.state;
   if not found then
     select x.f into v_first from (values
@@ -73,7 +73,7 @@ begin
     ('0138_item_page_sections', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'page_text_ok') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'page_media_id_ok') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'item_delivery_valid') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'item_notices_valid') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'item_gallery_valid') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'item_brand_page_valid') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'item_page_media_ok') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'seller_set_item_page') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'seller_item_extras') and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'items' and column_name = 'delivery') and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'items' and column_name = 'notices') and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'items' and column_name = 'gallery') and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'items' and column_name = 'brand_page')),
     ('0139_renew_plan_choice', exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'plan_switch_quote') and exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'mpesa_plan_switch'))
     ) as x(f, ok) where not x.ok order by x.f limit 1;
-    insert into catch_up.state (first, done, total) values (v_first, 0, 8);
+    insert into catch_up.state (first, done, total) values (v_first, 0, 9);
     truncate catch_up.log;
     if v_first is null then
       insert into catch_up.log values (0, '-', 'Nothing to do: the database is already up to date. You can skip the other parts.');
@@ -2532,7 +2532,7 @@ begin
   insert into catch_up_result select * from catch_up.log;
   select first is null into v_nothing from catch_up.state;
   insert into catch_up_result
-    select coalesce(max(step), 0) + 1, '-', case when v_nothing then 'Finished: nothing else to run.' else 'Next: run part 2 of 8.' end from catch_up.log;
+    select coalesce(max(step), 0) + 1, '-', case when v_nothing then 'Finished: nothing else to run.' else 'Next: run part 2 of 9.' end from catch_up.log;
   if v_nothing or false then
     drop schema catch_up cascade;
   end if;

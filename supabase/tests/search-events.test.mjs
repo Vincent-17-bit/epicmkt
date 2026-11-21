@@ -120,10 +120,10 @@ test("a term with fewer than 3 searchers never shows, in any window", async () =
   assert.deepEqual(await top(), []);
 });
 
-test("the first window with a result decides the whole list: a busy day is not mixed with older searches", async () => {
+test("a busy day comes first; older terms only top it up after it, never above it", async () => {
   await seed("today", 3, 1);
   await seed("yesterday", 6, 30);
-  assert.deepEqual((await top()).map((r) => r.term), ["today"]);
+  assert.deepEqual((await top()).map((r) => r.term), ["today", "yesterday"]);
 });
 
 test("a fallback list is sorted by searchers, then by term", async () => {
@@ -164,4 +164,113 @@ test("top_searches_hourly falls back to the live list, which now has the wider w
   } finally {
     await c.query("commit");
   }
+});
+
+// ---- 0145: variants fold together, shop names are not product trends, short lists are topped up ----------------------------------
+const people = async (term, ips) => { for (const ip of ips) await from(ip, term); };
+const shop = async (name, status = "live") => {
+  await sql(c, `insert into categories (id, name, grp, tier, sort) values ('barber', 'Barber', 'Services', 'A', 1) on conflict do nothing`);
+  const n = String(Math.floor(Math.random() * 1e9)).padStart(9, "0");
+  const user = `00000000-0000-0000-0000-000${n}`;
+  await sql(c, `insert into auth.users (id, email) values ('${user}', 's${n}@test')`);
+  await sql(c, `insert into businesses (id, seller_id, user_id, slug, name, category_id, plan_key, status, phone, paid_until) values (gen_random_uuid(), 'ES${n}', '${user}', 's-${n}', $1, 'barber', 'standard', $2, '+254713${n.slice(0, 6)}', now() + interval '30 days')`, [name, status]);
+};
+const clear = () => sql(c, `delete from businesses where slug like 's-%'; delete from auth.users where email like 's%@test'`);
+
+test("spacing and plural variants are one search, and a person who typed two variants counts once", async () => {
+  await people("red bull", ["1.0.0.1", "1.0.0.2"]);
+  await people("redbull", ["1.0.0.2", "1.0.0.3"]);
+  await people("red bulls", ["1.0.0.4"]);
+  const rows = await top();
+  assert.deepEqual(rows.map((r) => [r.term, r.count]), [["red bull", 4]]);
+});
+
+test("the shown spelling is the one most people typed, the spaced one on a tie", async () => {
+  await people("redbull", ["1.0.1.1", "1.0.1.2"]);
+  await people("red bull", ["1.0.1.3", "1.0.1.4"]);
+  assert.deepEqual((await top()).map((r) => r.term), ["red bull"]);
+  await sql(c, `delete from search_events`);
+  await people("redbull", ["1.0.1.1", "1.0.1.2", "1.0.1.5"]);
+  await people("red bull", ["1.0.1.3"]);
+  assert.deepEqual((await top()).map((r) => r.term), ["redbull"]);
+});
+
+test("cake and cakes are one search", async () => {
+  await people("cake", ["1.0.2.1", "1.0.2.2"]);
+  await people("cakes", ["1.0.2.3"]);
+  assert.deepEqual((await top()).map((r) => [r.term, r.count]), [["cake", 3]]);
+});
+
+test("a typo of a popular term joins it, but different words do not", async () => {
+  await people("bread", ["1.0.3.1", "1.0.3.2", "1.0.3.3", "1.0.3.4"]);
+  await people("brread", ["1.0.3.5", "1.0.3.6"]);
+  assert.deepEqual((await top()).map((r) => [r.term, r.count]), [["bread", 6]]);
+  await sql(c, `delete from search_events`);
+  await people("shirt", ["1.0.4.1", "1.0.4.2", "1.0.4.3"]);
+  await people("skirt", ["1.0.4.4", "1.0.4.5", "1.0.4.6"]);
+  assert.deepEqual((await top()).map((r) => r.term).sort(), ["shirt", "skirt"]);
+});
+
+test("short terms are never folded by spelling distance", async () => {
+  await people("tea", ["1.0.5.1", "1.0.5.2", "1.0.5.3"]);
+  await people("tee", ["1.0.5.4", "1.0.5.5", "1.0.5.6"]);
+  assert.deepEqual((await top()).map((r) => r.term).sort(), ["tea", "tee"]);
+});
+
+test("a live shop's name is not a product trend; a suspended shop's name is, and a product word that starts a shop name stays", async () => {
+  await clear();
+  await shop("Sunrise Bakery");
+  await shop("Kevin Bakery");
+  await shop("Bread Basket");
+  await shop("Old Shop", "suspended");
+  await people("sunrise bakery", ["1.0.6.1", "1.0.6.2", "1.0.6.3"]);
+  await people("kevin bakeries", ["1.0.6.4", "1.0.6.5", "1.0.6.6"]);
+  await people("bread", ["1.0.6.7", "1.0.6.8", "1.0.6.9"]);
+  await people("old shop", ["1.0.6.10", "1.0.6.11", "1.0.6.12"]);
+  assert.deepEqual((await top()).map((r) => r.term).sort(), ["bread", "old shop"]);
+  await clear();
+});
+
+test("a window whose only qualifying terms are shop names counts as empty: the next window is used", async () => {
+  await clear();
+  await shop("Sunrise Bakery");
+  await people("sunrise bakery", ["1.0.7.1", "1.0.7.2", "1.0.7.3"]);
+  await seed("bread", 3, 30);
+  assert.deepEqual((await top()).map((r) => r.term), ["bread"]);
+  await clear();
+});
+
+test("a short list is topped up from the wider windows, below the busy terms, without repeats", async () => {
+  await seed("today", 3, 1);
+  await seed("day before", 4, 30);
+  await seed("last week", 5, 100);
+  await seed("tody", 2, 100); // a typo variant of a term already listed is not listed twice
+  const rows = await top();
+  assert.deepEqual(rows.map((r) => r.term), ["today", "day before", "last week"]);
+  assert.ok(rows.every((r) => r.hot === false || r.term === "today"));
+});
+
+test("a list that already has 5 terms is not padded, and the limit caps the top-up", async () => {
+  for (const [i, t] of ["alpha", "bravo", "cobra", "delta", "eagle"].entries()) await seed(t, 3, 2 + i);
+  await seed("older", 9, 100);
+  assert.equal((await top()).length, 5);
+  assert.ok(!(await top()).map((r) => r.term).includes("older"));
+  await sql(c, `delete from search_events`);
+  await seed("today", 3, 1);
+  await seed("older", 9, 100);
+  await c.query("begin");
+  try {
+    await c.query(`set local role anon`);
+    assert.equal((await c.query(`select * from top_searches(1)`)).rows.length, 1);
+  } finally {
+    await c.query("commit");
+  }
+});
+
+test("the hourly job stores the folded, topped-up list", async () => {
+  await people("red bull", ["1.0.8.1", "1.0.8.2"]);
+  await people("redbull", ["1.0.8.3"]);
+  await sql(c, `select refresh_top_searches()`);
+  const rows = await sql(c, `select term, searches from search_top_hourly order by rank`);
+  assert.deepEqual(rows.map((r) => [r.term, Number(r.searches)]), [["red bull", 3]]);
 });
