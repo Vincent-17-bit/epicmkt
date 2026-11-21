@@ -19,7 +19,7 @@ export function unitPricesFor(option, item, shown) {
       if (found.length) return found;
     }
   }
-  const size = sizeInItemName(item?.name);
+  const size = sizeInItemName(item?.name, { productType: item?.productType });
   const base = v && Number.isFinite(v.price) ? v : shown;
   const price = Number.isFinite(base?.salePrice) && base.salePrice < base.price ? base.salePrice : base?.price;
   return size && Number.isFinite(price) ? unitPrices(price, size) : [];

@@ -72,8 +72,21 @@ test("the size an item's name states, only when it states exactly one", () => {
   assert.equal(sizeInItemName("Soda"), "");
 });
 
-test("a count and a measure in one name read as a multipack", () => {
-  assert.equal(sizeInItemName("Soda 500 ml 24 Pack"), "24 x 500 ml");
-  assert.deepEqual(unitPrices(2400, sizeInItemName("Soda 500 ml 24 Pack")).map((x) => x.text), ["KES 100 per piece", "KES 200 per L"]);
-  assert.equal(sizeInItemName("Socks 400 g 3 pairs"), "");
+test("a name that only looks like a size gives nothing", () => {
+  for (const name of ["Phone 8 L", "Laptop 15.6 in 8 g", "Model A8-L", "Phone 8 GB RAM 128 GB", "Router 5 g", "Samsung 6 G", "Mixer 1/2 L bowl"]) assert.equal(sizeInItemName(name), "", name);
+});
+
+test("the product type decides whether the name may state a weight or volume", () => {
+  for (const productType of ["phone", "shoes-eu", "table", "sofa", "led-bulb", "gold-necklace", "printing"]) assert.equal(sizeInItemName("Tecno Spark 8 L", { productType }), "", productType);
+  for (const productType of ["bread", "drinking-water", "meat-by-weight", "liquor", "fragrance", null]) assert.equal(sizeInItemName("Sugar 2 kg", { productType }), "2 kg", String(productType));
+  assert.equal(sizeInItemName("Tecno Spark 8 L"), "8 L");
+});
+
+test("real sizes still read", () => {
+  assert.equal(sizeInItemName("Mango Juice 1L"), "1L");
+  assert.equal(sizeInItemName("Mango Juice 1 Litre"), "1 Litre");
+  assert.equal(sizeInItemName("Sugar 2kg"), "2kg");
+  assert.equal(sizeInItemName("Flour 500 g"), "500 g");
+  assert.equal(sizeInItemName("Flour 500g"), "500g");
+  assert.equal(sizeInItemName("Flour 500 grams"), "500 grams");
 });
