@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 6 OF 8 (migrations 0126 to 0131). Run the parts in order in the Supabase SQL editor: 1, 2, ... 8.
+-- EpicMKT catch-up, PART 6 OF 9 (migrations 0126 to 0131). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. A part run before the one before it stops without changing anything.
@@ -1136,7 +1136,7 @@ begin
   insert into catch_up_result select * from catch_up.log;
   select first is null into v_nothing from catch_up.state;
   insert into catch_up_result
-    select coalesce(max(step), 0) + 1, '-', case when v_nothing then 'Finished: nothing else to run.' else 'Next: run part 7 of 8.' end from catch_up.log;
+    select coalesce(max(step), 0) + 1, '-', case when v_nothing then 'Finished: nothing else to run.' else 'Next: run part 7 of 9.' end from catch_up.log;
   if v_nothing or false then
     drop schema catch_up cascade;
   end if;
