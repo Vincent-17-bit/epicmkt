@@ -104,7 +104,7 @@ export function runAudit(items = buildCatalogue(), opts = {}) {
         if (!qualifies(p, q, true)) continue;
         wrongPairs += 1;
         if (p.departmentId === q.departmentId) wrongSameDept += 1;
-        if ((p.kind === "service") !== (q.kind === "service")) wrongGoodService += 1;
+        if ((p.kind === "good") !== (q.kind === "good")) wrongGoodService += 1; // a package counts with services
         wrongItems.add(p.id).add(q.id);
         if (wrongSamples.length < 12 && p.departmentId !== q.departmentId) wrongSamples.push(`${p.name} [${p.typeId}] ~ ${q.name} [${q.typeId}]`);
       }
@@ -114,7 +114,7 @@ export function runAudit(items = buildCatalogue(), opts = {}) {
   return {
     items: items.length,
     types: new Set(items.map((i) => i.typeId)).size,
-    services: items.filter((i) => i.kind === "service").length,
+    services: items.filter((i) => i.kind !== "good").length,
     goesWith: {
       itemsWithGroup: pct(items.filter((i) => withPartners(i, true)).length, items.length),
       itemsWithGroupNameOnly: pct(items.filter((i) => withPartners(i, false)).length, items.length),

@@ -1,7 +1,7 @@
 // "No category name hard-coded in source outside data and tests" (Prompt 11.4). The scan is pure: the caller passes the files in.
 
 /** Paths that are data or sample data by nature. Anything else that names a category needs an entry below. */
-export const DATA_PATH = /(^|\/)(data|fixtures|seeds?)\/|\.(test|spec)\.[jt]sx?$|(^|\/)mock[A-Za-z]*\.js$|\.seed\.js$|\.fixtures?\.js$|(^|\/)synced\//;
+export const DATA_PATH = /(^|\/)(data|fixtures|seeds?)\/|\.(test|spec)\.[jt]sx?$|(^|\/)mock[A-Za-z]*\.js$|\.seed\.js$|\.generated\.js$|\.fixtures?\.js$|(^|\/)synced\//;
 
 /**
  * Code that names a category today. Each entry says why it is allowed, and every one is a request to remove it, not a licence:
