@@ -21,7 +21,7 @@ const viewport = (px) => {
 const form = (extra = {}) => ({ ...emptyItemForm(), ...extra });
 const openNew = async (width = 1000) => {
   viewport(width);
-  const app = await signedInApp("/business/catalog/new");
+  const app = await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
   await screen.findByRole("heading", { level: 1, name: "Add item" });
   return app;
 };
@@ -182,7 +182,7 @@ describe("phone stepper", () => {
   it("shows one step at a time with progress, and moves with Back and Next", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    expect(screen.getByText(/Step 1 of 6/)).toBeInTheDocument();
+    expect(screen.getByText(/Step 1 of 7/)).toBeInTheDocument();
     expect(screen.getByRole("progressbar", { name: "Progress" })).toHaveAttribute("aria-valuenow", "1");
     expect(screen.queryByRole("heading", { level: 2, name: "Basics" })).toBeNull();
     expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
@@ -191,11 +191,11 @@ describe("phone stepper", () => {
     expect(screen.queryByRole("heading", { level: 2, name: "Media" })).toBeNull();
     expect(screen.getByRole("progressbar", { name: "Progress" })).toHaveAttribute("aria-valuenow", "2");
     await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: "Basics" })).toHaveFocus());
-    await user.click(screen.getByRole("button", { name: "Step 5: Details" }));
+    await user.click(screen.getByRole("button", { name: "Step 6: Details" }));
     expect(screen.getByRole("heading", { level: 2, name: "Details" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(screen.getByRole("heading", { level: 2, name: "Price and stock" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 7: Review" }));
     expect(screen.queryByRole("button", { name: /^Next/ })).toBeNull();
     expect(screen.getByRole("button", { name: "Add item" })).toBeInTheDocument();
   });
@@ -203,7 +203,7 @@ describe("phone stepper", () => {
   it("jumps to the step with the first error and puts the cursor in the field", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    await user.click(screen.getByRole("button", { name: "Step 4: Price and stock" }));
+    await user.click(screen.getByRole("button", { name: "Step 5: Price and stock" }));
     expect(screen.queryByLabelText("Name")).toBeNull();
     await user.click(screen.getByRole("button", { name: "Save draft" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Basics" })).toBeInTheDocument();
@@ -217,11 +217,13 @@ describe("phone stepper", () => {
     await openNew(375);
     await user.click(screen.getByRole("button", { name: "Next: Basics" }));
     await user.type(screen.getByLabelText("Name"), "Phone made");
+    await user.click(screen.getByRole("button", { name: "Next: Type" }));   // a new item always has a Type step (it arrives with the type chosen first)
+    expect(screen.getByRole("heading", { level: 2, name: "Type" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next: Options" }));
     expect(screen.getByRole("heading", { level: 2, name: "Options" })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Next: Price" }));
     await user.type(screen.getByLabelText("Price (KES)"), "250");
-    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 7: Review" }));
     await user.click(screen.getByRole("button", { name: "Add item" }));
     await waitFor(() => expect(M.state.items.at(-1)).toMatchObject({ name: "Phone made", price: 250, draft: true }));
     expect(await screen.findByTestId("listing-grid")).toBeInTheDocument();
@@ -310,7 +312,7 @@ describe("review and quality", () => {
   it("opens the right step from a suggestion on a phone", async () => {
     const user = userEvent.setup();
     await openNew(375);
-    await user.click(screen.getByRole("button", { name: "Step 6: Review" }));
+    await user.click(screen.getByRole("button", { name: "Step 7: Review" }));
     await user.click(screen.getByRole("button", { name: "Add a short description" }));
     expect(await screen.findByRole("heading", { level: 2, name: "Basics" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByLabelText("Short description (optional)")).toHaveFocus());

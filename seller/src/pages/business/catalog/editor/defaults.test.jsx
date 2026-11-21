@@ -7,7 +7,7 @@ import { useSettings } from "../../../../state/settings.js";
 beforeEach(() => useSettings.getState().reset());
 
 const openNew = async (catalog) => {
-  const app = await signedInApp("/business/catalog/new", async () => {
+  const app = await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } }, async () => {
     if (catalog) await api.saveSettings({ catalog });
   });
   await screen.findByRole("heading", { level: 1, name: "Add item" });

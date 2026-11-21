@@ -3,7 +3,7 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { REGULATED_TYPES } from "../../shared/src/types/restrictions.js";
 import { categories as liveCategories } from "../../client/src/data/categories.js";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asAdmin, withType } from "./db.mjs";
 
 let c;
 const U = (n) => `00000000-0000-0000-0000-0000000001${n}`;
@@ -35,8 +35,8 @@ beforeEach(async () => {
 
 const as = (w, text, params) => tx(c, w, (k) => sql(k, text, params), { commit: true });
 const base = (o = {}) => ({ name: "Thing", description: "", section: "General", price_type: "fixed", price: 1000, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
-const save = (w, id, fields) => as(w, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
-const saveFails = (w, id, fields, pattern) => rejects(c, w, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
+const save = (w, id, fields) => as(w, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
+const saveFails = (w, id, fields, pattern) => rejects(c, w, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
 const typeOf = (id) => sql(c, `select product_type_id as t from items where id = $1`, [id]).then((r) => r[0].t);
 const itemCount = () => sql(c, `select count(*)::int as n from items`).then((r) => r[0].n);
 
@@ -72,6 +72,7 @@ test("the seeded restricted_to lists are exactly shared REGULATED_TYPES, and not
 test("every seeded type points at a real department and its categories exist in the live category list", async () => {
   const live = new Set(liveCategories.map((x) => x.id));
   for (const t of await sql(c, `select t.id, t.category_ids, t.restricted_to, d.id as dept from product_types t left join departments d on d.id = t.department_id`)) {
+    if (t.id === "other") continue; // the explicit "no type fits" row (0141) belongs to no department on purpose
     assert.ok(t.dept, `${t.id} has no department`);
     for (const k of [...t.category_ids, ...t.restricted_to]) assert.ok(live.has(k), `${t.id} names unknown category ${k}`);
   }
@@ -120,16 +121,34 @@ test("moving an existing item onto a forbidden type is refused and the item keep
   assert.equal(await typeOf(id), "fragrance");
 });
 
-test("Other goods: a null type is always allowed, and clears an earlier type", async () => {
+test("Other goods: an existing item can still be edited to no type, and a new item can be typed Other", async () => {
   const id = await save(who("boutique"), null, base({ productTypeId: "fragrance" }));
-  await save(who("boutique"), id, base({ productTypeId: null }));
+  await save(who("boutique"), id, base({ productTypeId: null }));   // editing is never forced to keep a type (0141 only guards NEW items)
   assert.equal(await typeOf(id), null);
-  assert.equal(await typeOf(await save(who("chemist"), null, base({ productTypeId: null }))), null);
+  assert.equal(await typeOf(await save(who("chemist"), null, base({ productTypeId: "other" }))), "other");
 });
 
-test("items that never send productTypeId behave as before, and editing keeps the type already there", async () => {
-  const plain = await save(who("boutique"), null, base({ name: "Dress" }));
-  assert.equal(await typeOf(plain), null);
+test("a NEW item must carry a type: missing, null and blank are refused with product_type_required; Other is accepted", async () => {
+  const before = await itemCount();
+  for (const fields of [base({ name: "No key" }), base({ productTypeId: null }), base({ productTypeId: "" }), base({ productTypeId: "   " })]) {
+    await as(who("boutique"), `select seller_save_item($1::uuid, $2::jsonb) as id`, [null, JSON.stringify(fields)]).then(() => assert.fail("saved without a type"), (e) => assert.match(String(e.message), /product_type_required/));
+  }
+  assert.equal(await itemCount(), before, "a refused save leaves nothing behind");
+  // the same rule through the dry run the form uses
+  const check = await as(who("boutique"), `select seller_check_item($1::uuid, $2::jsonb) as r`, [null, JSON.stringify(base({ name: "No key" }))]).then((r) => r, (e) => ({ refused: String(e.message) }));
+  assert.match(String(check.refused ?? JSON.stringify(check)), /product_type_required/);
+  assert.equal(await typeOf(await save(who("boutique"), null, base({ name: "Odd listing", productTypeId: "other" }))), "other");
+});
+
+test("an old item with no type stays editable without being forced to pick one", async () => {
+  const [{ id }] = await sql(c, `insert into items (business_id, name, price_type, price, availability) values ($1, 'Old dress', 'fixed', 1000, 'available') returning id`, [shops.boutique[1]]);
+  assert.equal(await typeOf(id), null);
+  await save(who("boutique"), id, base({ name: "Old dress, renamed", price: 1100 }));   // no productTypeId key
+  assert.equal(await typeOf(id), null);
+  assert.equal((await sql(c, `select name from items where id = $1`, [id]))[0].name, "Old dress, renamed");
+});
+
+test("items that never send productTypeId on an edit keep the type already there", async () => {
   const typed = await save(who("boutique"), null, base({ productTypeId: "fragrance" }));
   await save(who("boutique"), typed, base({ name: "Renamed", price: 1200 }));    // no productTypeId key
   assert.equal(await typeOf(typed), "fragrance");
@@ -232,7 +251,7 @@ test("a seller who cannot find a type requests it and still adds the item as Oth
   assert.equal(row.note, "Small gifts for guests");
   assert.equal(row.status, "pending");
   assert.equal(row.business_id, shops.boutique[1]);
-  assert.equal(await typeOf(await save(who("boutique"), null, base({ name: "Favour box", productTypeId: null }))), null);
+  assert.equal(await typeOf(await save(who("boutique"), null, base({ name: "Favour box", productTypeId: "other" }))), "other");
 });
 
 test("asking again for the same name returns the open request; another shop gets its own row", async () => {

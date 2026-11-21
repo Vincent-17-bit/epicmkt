@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { publicOptions } from "../../shared/src/seller/options.js";
 import { dependentValues, reconcileSelection, variantForChoice, findDefaultVariant, generateCombinations } from "../../shared/src/options/index.js";
 import { sandisk, phone } from "../../shared/src/options/fixtures.js";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 
@@ -27,9 +27,9 @@ const newItem = async (biz = ids.bizA, extra = {}) => {
   return (await sql(c, `insert into items (business_id, ${keys.join(",")}) values ($1, ${keys.map((_, i) => `$${i + 2}`).join(",")}) returning id`, [biz, ...Object.values(f)]))[0].id;
 };
 const base = (o = {}) => ({ name: "Card", description: "", section: "Shoes", price_type: "fixed", price: 1000, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
-const save = (who, id, fields) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
-const saveFails = (who, id, fields, pattern) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
-const check = (who, id, fields) => as(who, `select seller_check_item($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(fields)]).then((r) => r[0].r);
+const save = (who, id, fields) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
+const saveFails = (who, id, fields, pattern) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
+const check = (who, id, fields) => as(who, `select seller_check_item($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].r);
 const sellerRead = (id, who = asA) => as(who, `select seller_item_options($1) as r`, [id]).then((r) => r[0].r);
 const publicRead = (id) => as(anon, `select public_item_options($1) as r`, [id]).then((r) => r[0].r);
 const variantRows = (id) => sql(c, `select * from item_variants where item_id = $1 order by sort`, [id]);
@@ -113,7 +113,7 @@ test("dependsOn must name an earlier axis; self, later and unknown references fa
 test("the table constraint rejects a stored axis list with a bad dependsOn even if the function is bypassed", async () => {
   const id = await newItem();
   const bad = small().axes; bad[0].dependsOn = "cap";
-  await assert.rejects(sql(c, `update items set option_axes = $2::jsonb where id = $1`, [id, JSON.stringify(bad)]), /items_option_axes_shape/);
+  await assert.rejects(sql(c, `update items set option_axes = $2::jsonb where id = $1`, [id, JSON.stringify(withType(id, bad))]), /items_option_axes_shape/);
 });
 
 // ---- default variant ----

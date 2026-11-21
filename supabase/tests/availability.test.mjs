@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import { asA, asB, connect, createDatabase, ids, rejects, seedFixtures, sql, tx } from "./db.mjs";
+import { asA, asB, connect, createDatabase, ids, rejects, seedFixtures, sql, tx, withType } from "./db.mjs";
 
 let c;
 before(async () => {
@@ -20,7 +20,7 @@ const item = async (name, extra = {}, biz = ids.bizA) => {
 const row = (id) => sql(c, `select * from items where id = $1`, [id]).then((r) => r[0]);
 const as = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
 const publicNames = async () => (await sql(c, `select name from public_items order by name`)).map((r) => r.name);
-const save = (who, id, fields) => as(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
+const save = (who, id, fields) => as(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
 const stock = (who, id, action, count = null) => as(who, `select seller_item_stock($1, $2, $3) as r`, [id, action, count]).then((r) => r[0].r);
 
 const base = { name: "Loaf", price_type: "fixed", price: "100", availability: "available" };
@@ -83,10 +83,10 @@ test("a counted item ignores a chosen status, and a caller that sends no stock f
 });
 
 test("bad stock input is refused cleanly", async () => {
-  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ ...base, track_stock: true })], /invalid_stock/);
-  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ ...base, track_stock: true, stock_count: "-1" })], /invalid_stock/);
-  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ ...base, track_stock: "maybe", stock_count: "1" })], /invalid_stock/);
-  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ ...base, low_stock_threshold: "x" })], /invalid_stock/);
+  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ productTypeId: "other", ...base, track_stock: true })], /invalid_stock/);
+  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ productTypeId: "other", ...base, track_stock: true, stock_count: "-1" })], /invalid_stock/);
+  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ productTypeId: "other", ...base, track_stock: "maybe", stock_count: "1" })], /invalid_stock/);
+  await rejects(c, asA, `select seller_save_item(null, $1::jsonb)`, [JSON.stringify({ productTypeId: "other", ...base, low_stock_threshold: "x" })], /invalid_stock/);
 });
 
 test("mark out of stock, then back in stock, for an item that is not counted", async () => {

@@ -292,11 +292,11 @@ describe("Add item page and Type step", () => {
     await waitFor(() => expect(within(step()).getByText("Shoes (EU sizes)")).toBeInTheDocument());
   });
 
-  it("leaves an item with no type exactly as before: no Type step", async () => {
+  it("a new item opened with no type goes through the picker first (see requiredType.test.jsx)", async () => {
     viewport(1000);
     await signedInApp("/business/catalog/new");
-    await screen.findByRole("heading", { level: 1, name: "Add item" });
-    expect(document.getElementById("sec-type")).toBeNull();
+    expect(await screen.findByRole("heading", { level: 1, name: "What are you adding?" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1, name: "Add item" })).toBeNull();
   });
 
   it("has no serious violations on the Add item page", async () => {

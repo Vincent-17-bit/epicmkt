@@ -233,8 +233,8 @@ const named = async (n) => (await api.listItems()).find((i) => i.name === n);
 
 describe("in the editor", () => {
   const openTyped = async () => {
-    const { router } = await signedInApp("/business/catalog/new");
-    router.navigate("/business/catalog/new", { state: { productTypeId: null } });
+    const { router } = await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
+    router.navigate("/business/catalog/new", { state: { productTypeId: "other" } });
     await screen.findByLabelText("Name");
     return router;
   };
@@ -273,7 +273,7 @@ describe("in the editor", () => {
 
   it("an item with no type can use Options too, and one left without options saves as before", async () => {
     const user = userEvent.setup();
-    await signedInApp("/business/catalog/new");
+    await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
     await user.type(await screen.findByLabelText("Name"), "Plain item");
     await user.type(screen.getByLabelText("Price (KES)"), "500");
     expect(screen.getByRole("heading", { name: "Options" })).toBeInTheDocument();

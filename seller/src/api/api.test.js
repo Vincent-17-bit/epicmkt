@@ -55,7 +55,7 @@ test("specs: the mock stores and returns them, and items without specs are uncha
   const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
   assert.deepEqual((await find("it-fade")).specs, []);
   const item = await find("it-fade");
-  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  const form = { productTypeId: "other", name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
   await mock.saveItem("it-fade", { ...form, specs: [{ label: "Brand", value: "Nike" }] });
   assert.deepEqual((await find("it-fade")).specs, [{ group: "Features & Specs", label: "Brand", value: "Nike" }]);
   await mock.saveItem("it-fade", form);
@@ -82,7 +82,7 @@ test("item details: the mock saves them, keeps them when the form omits them, an
   const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
   const item = await find("it-fade");
   assert.deepEqual(item.highlights, []);
-  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  const form = { productTypeId: "other", name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
   await mock.saveItem("it-fade", { ...form, brand: " Acme ", shortDescription: "Fresh", packSize: "Box of 6", terms: "Order ahead", includes: ["Candles"], highlights: [{ title: "Soft", text: "Baked today" }, { title: "", text: "Nut free" }] });
   const saved = await find("it-fade");
   assert.deepEqual([saved.brand, saved.shortDescription, saved.packSize, saved.terms, saved.includes], ["Acme", "Fresh", "Box of 6", "Order ahead", ["Candles"]]);
@@ -165,7 +165,7 @@ const signedInMock = async () => {
   await mock.login("es100001", "Demo-Passw0rd");
   const find = async (id) => (await mock.getCatalog()).items.find((i) => i.id === id);
   const item = await find("it-fade");
-  const form = { name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
+  const form = { productTypeId: "other", name: item.name, priceType: item.priceType, price: item.price, availability: item.availability };
   return { find, form };
 };
 const NONE = { brand: null, shortDescription: null, highlights: [], includes: [], terms: null, packSize: null };

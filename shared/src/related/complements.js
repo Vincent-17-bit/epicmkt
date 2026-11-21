@@ -12,6 +12,7 @@
 // Admin relations (product_relations, the Relations page) still apply on top of this map: they can add pairs the map does not know.
 
 import { COMPLEMENTS, LOCKED_TYPES, PHRASES, TYPE_GROUPS } from "./data/complementMap.js";
+import { hasNoTypeEvidence } from "../productType/other.js";
 
 const LOCKED = new Set(LOCKED_TYPES);
 
@@ -37,7 +38,9 @@ const norm = (text) =>
  * The name decides first (it is the most specific); the product type is the fallback, except for the locked types (LOCKED_TYPES).
  */
 export function complementGroupOf(item) {
-  const type = item?.productTypeId ?? item?.productType ?? null;
+  const given = item?.productTypeId ?? item?.productType ?? null;
+  // The "Other" type says no type fits: the name decides, exactly as for an item with no type.
+  const type = hasNoTypeEvidence(given) ? null : given;
   // A seller-chosen product type that is in the locked list is what the item IS, whatever words its name contains.
   if (typeof type === "string" && LOCKED.has(type)) return ownValue(TYPE_GROUPS, type) ?? type;
   const name = norm(item?.name);

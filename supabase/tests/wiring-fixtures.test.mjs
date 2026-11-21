@@ -7,7 +7,7 @@ import { phone } from "../../shared/src/contracts/fixtures/phone.js";
 import { memoryCard } from "../../shared/src/contracts/fixtures/memoryCard.js";
 import { bread } from "../../shared/src/contracts/fixtures/bread.js";
 import { printing } from "../../shared/src/contracts/fixtures/printing.js";
-import { createDatabase, connect, seedFixtures, tx, sql, ids, asA } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, ids, asA, withType } from "./db.mjs";
 
 let c;
 before(async () => { c = await connect(await createDatabase({ database: "epicmkt_wiring" })); await seedFixtures(c); await sql(c, `update plans set items_limit = 50 where category_id = 'barber'`); });
@@ -18,7 +18,7 @@ beforeEach(async () => {
 });
 
 const as = (text, params) => tx(c, asA, (k) => sql(k, text, params), { commit: true });
-const call = (fn, id, f) => as(`select ${fn}($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(f)]).then((r) => r[0].r);
+const call = (fn, id, f) => as(`select ${fn}($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(withType(id, f))]).then((r) => r[0].r);
 const stored = (spec) => {
   const r = storedOptions({ axes: spec.axes.map((a) => (a.dependsOn ? { ...a, dependsOn: a.dependsOn.axis } : a)),
     variants: spec.variants.map(({ key, id, dimensions, weightGrams, priceTiers, ...v }) => v) });
@@ -121,7 +121,11 @@ test("relations: a missing target is refused, and removing a type removes its re
 });
 
 test("a legacy item (no type, no options) saves and reads exactly as before", async () => {
-  const id = await call("seller_save_item", null, { name: "Plain", description: "", section: "S", price_type: "fixed", price: 50, price_max: null, sale_price: null, unit: null, availability: "available", track_stock: false, stock_count: null, low_stock_threshold: 3, show_stock_count: false });
+  // An item from before types were required: made with a type, then put back to the old no-type state (editing it must not force one).
+  const fields = { name: "Plain", description: "", section: "S", price_type: "fixed", price: 50, price_max: null, sale_price: null, unit: null, availability: "available", track_stock: false, stock_count: null, low_stock_threshold: 3, show_stock_count: false };
+  const id = await call("seller_save_item", null, fields);
+  await sql(c, `update items set product_type_id = null where id = $1`, [id]);
+  await call("seller_save_item", id, fields);
   const row = await item(id);
   assert.equal(row.has_options, false); assert.equal(row.product_type_id, null);
 });

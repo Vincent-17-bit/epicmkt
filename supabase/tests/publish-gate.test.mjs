@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { specIssues } from "../../shared/src/specRules/index.js";
 import { PRODUCT_TYPES, getFixtures } from "../../shared/src/contracts/index.js";
 import { normalizeValueKey } from "../../shared/src/openValues.js";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 const TAGS = { gold: ["precious-metal"], silver: ["precious-metal"], aurum: ["precious-metal"] };
@@ -34,11 +34,11 @@ beforeEach(async () => {
 const as = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
 const base = (o = {}) => ({ name: "Thing", description: "", section: "General", price_type: "fixed", price: 1000, price_max: null, sale_price: null, unit: null, availability: "available", ...o });
 const spec = (label, value) => ({ group: "Item details", label, value });
-const save = (id, fields, who = asA) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
-const saveFails = (id, fields, pattern, who = asA) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(fields)], pattern);
+const save = (id, fields, who = asA) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
+const saveFails = (id, fields, pattern, who = asA) => rejects(c, who, `select seller_save_item($1::uuid, $2::jsonb)`, [id, JSON.stringify(withType(id, fields))], pattern);
 const bulk = (action, list, who = asA) => as(who, `select seller_bulk_items($1, $2::uuid[]) as r`, [action, list]).then((r) => r[0].r);
 const bulkFails = (action, list, pattern, who = asA) => rejects(c, who, `select seller_bulk_items($1, $2::uuid[])`, [action, list], pattern);
-const check = (id, fields, who = asA) => as(who, `select seller_check_item($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(fields)]).then((r) => r[0].r);
+const check = (id, fields, who = asA) => as(who, `select seller_check_item($1::uuid, $2::jsonb) as r`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].r);
 const row = (id) => sql(c, `select draft, visible, spec_gate_exempt as exempt, specs from items where id = $1`, [id]).then((r) => r[0]);
 const verdict = (item, who = asA) => as(who, `select item_check_publish($1::jsonb) as r`, [JSON.stringify(item)]).then((r) => r[0].r);
 

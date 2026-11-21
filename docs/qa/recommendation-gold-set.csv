@@ -1,0 +1,12 @@
+# Gold set for the product-page rows. Fill this in with REAL listings from the live catalogue; it is the only honest test of the
+# recommendations (the seed catalogue is synthetic: scripts/recommendation-audit.mjs says so too).
+#
+# row:    goes_well_with | similar
+# label:  good        = a shopper would be glad to see it here
+#         acceptable  = not wrong, not helpful
+#         bad         = wrong kind of thing, wrong department, or a service shown for a good (or the reverse)
+# Aim for 100+ rows across many types, with at least 30 bad cases you have actually seen. Names exactly as listed. Do not include phone numbers or customer data.
+item_name,item_shop,candidate_name,candidate_shop,row,label,note
+"Samsung Galaxy A15 128GB","Shop A","Tecno Spark 20 128GB","Shop B",similar,good,"same kind of phone, other shop"
+"Dress shirt, white","Shop C","Shirt wash and iron","Laundry D",similar,bad,"a shirt for sale next to a laundry service"
+"Samsung Galaxy A15 128GB","Shop A","Phone case, clear","Shop E",goes_well_with,good,

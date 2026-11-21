@@ -1,7 +1,7 @@
 // Migration 0117: reading quantity tiers back. Buyers see them only for public items; sellers only their own.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 before(async () => {
@@ -18,7 +18,7 @@ beforeEach(async () => {
 const T = [{ minQty: 1, maxQty: 10, unitPrice: 10 }, { minQty: 11, maxQty: 100, unitPrice: 7 }, { minQty: 101, maxQty: null, unitPrice: 5 }];
 const T3 = [{ minQty: 1, maxQty: 49, unitPrice: 40 }, { minQty: 50, maxQty: null, unitPrice: 30 }];
 const axes = [{ key: "paper", label: "Paper", display: "button", values: [{ id: "a4", label: "A4" }, { id: "a3", label: "A3" }] }];
-const save = (fields) => tx(c, asA, (k) => sql(k, `select seller_save_item(null::uuid, $1::jsonb) as id`, [JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
+const save = (fields) => tx(c, asA, (k) => sql(k, `select seller_save_item(null::uuid, $1::jsonb) as id`, [JSON.stringify(withType(null, fields))]), { commit: true }).then((r) => r[0].id);
 const read = (who, fn, id) => tx(c, who, (k) => sql(k, `select ${fn}($1) as r`, [id]))
   .then((r) => r[0].r);
 const make = async (extra = {}) => {

@@ -1,6 +1,6 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, ids, asA } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, ids, asA, withType } from "./db.mjs";
 
 let c;
 before(async () => { c = await connect(await createDatabase()); await seedFixtures(c); await sql(c, `update plans set items_limit = 50 where category_id = 'barber'`); });
@@ -10,7 +10,7 @@ beforeEach(async () => {
   await sql(c, `update businesses set status = 'live', paid_until = now() + interval '30 days'`);
 });
 const as = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
-const save = (id, f) => as(asA, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(f)]).then((r) => r[0].id);
+const save = (id, f) => as(asA, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, f))]).then((r) => r[0].id);
 const catalog = () => as(asA, `select seller_catalog_items() as r`).then((r) => { const v = r[0].r; return Array.isArray(v) ? v : (v.items ?? v); });
 
 // What the seller app's itemRow sends for a normal edit.

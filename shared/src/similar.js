@@ -1,5 +1,6 @@
 import { distanceKm } from "./utils.js";
 import { seededKey } from "./related/complements.js";
+import { hasNoTypeEvidence } from "./productType/other.js";
 import {
   STOP_WORDS,
   UNIT_WORDS,
@@ -215,7 +216,8 @@ export function similarTerms(name, brand = "") {
 
 const typeIdOf = (entry) => {
   const id = entry?.productTypeId ?? entry?.productTypeSlug ?? null;
-  return typeof id === "string" && id.trim() ? id.trim().toLowerCase() : null;
+  // "Other" is the seller saying no type fits: it is no evidence, the same as no type.
+  return typeof id === "string" && !hasNoTypeEvidence(id) ? id.trim().toLowerCase() : null;
 };
 
 const profileOf = (entry) => {

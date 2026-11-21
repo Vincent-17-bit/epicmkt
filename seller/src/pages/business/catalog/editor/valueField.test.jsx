@@ -18,7 +18,7 @@ beforeEach(wide);
 afterEach(() => { window.matchMedia = realMatchMedia; });
 
 const openNew = async () => {
-  const app = await signedInApp("/business/catalog/new");
+  const app = await signedInApp({ pathname: "/business/catalog/new", state: { productTypeId: "other" } });
   await screen.findByRole("heading", { level: 1, name: "Add item" });
   return app;
 };

@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService, withType } from "./db.mjs";
 
 // Migration 0137: longer details, a photo for each "What's included" line, and reordering the frames of a photo spin.
 let c;
@@ -14,7 +14,7 @@ after(async () => { await c.end(); });
 const uuid = () => crypto.randomUUID();
 const svc = (text, params) => tx(c, asService, (k) => sql(k, text, params), { commit: true });
 const mine = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
-const save = (who, id, fields) => mine(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
+const save = (who, id, fields) => mine(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
 const base = { name: "White bread", price_type: "fixed", price: 65, availability: "available" };
 
 test("a highlight can be 250 characters with a 60 character lead; 251 is refused", async () => {

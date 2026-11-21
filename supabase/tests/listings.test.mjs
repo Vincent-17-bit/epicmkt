@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, withType } from "./db.mjs";
 
 let c;
 
@@ -313,7 +313,7 @@ const json = JSON.stringify;
 const spec = (n, extra = {}) => ({ group: "Features & Specs", label: `Label ${n}`, value: `Value ${n}`, ...extra });
 const specList = (n) => Array.from({ length: n }, (_, i) => spec(i));
 const detailFields = { name: "Detail item", price_type: "fixed", price: "1200", availability: "available" };
-const save = (who, fields, id = null) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, json(fields)]).then((r) => r[0].id);
+const save = (who, fields, id = null) => as(who, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, json(withType(id, fields))]).then((r) => r[0].id);
 
 test("item details with a bad shape or length cannot be stored", async () => {
   await sql(c, `delete from items`);
@@ -382,7 +382,7 @@ test("the 201st spec is refused by the save function and the table", async () =>
   const id = await save(asA, { ...detailFields, specs: specList(20) });
   assert.equal((await row(id)).specs.length, 20);
   await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, specs: specList(201) })], /invalid_details/);
-  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, specs: specList(201) })], /invalid_details/);
+  await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ productTypeId: "other", ...detailFields, specs: specList(201) })], /invalid_details/);
   assert.equal((await row(id)).specs.length, 20);
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
   await assert.rejects(sql(c, `update items set specs = $2::jsonb where id = $1`, [id, json(specList(201))]), /items_specs_shape/);
@@ -433,7 +433,7 @@ test("the save function writes, keeps and clears the details and rejects bad one
     { includes: ["ok", " "] },
   ]) {
     await rejects(c, asA, `select seller_save_item($1::uuid, $2::jsonb)`, [id, json({ ...detailFields, ...bad })], /invalid_details/);
-    await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ ...detailFields, ...bad })], /invalid_details/);
+    await rejects(c, asA, `select seller_save_item(null::uuid, $1::jsonb)`, [json({ productTypeId: "other", ...detailFields, ...bad })], /invalid_details/);
   }
   assert.equal((await sql(c, `select count(*)::int as n from items`))[0].n, 1);
 });

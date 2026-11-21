@@ -1,7 +1,7 @@
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { validateFlashVariants } from "../../shared/src/flash/validateFlashVariants.js";
-import { createDatabase, connect, seedFixtures, tx, sql, ids, asA } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, ids, asA, withType } from "./db.mjs";
 
 let c;
 const anon = { role: "anon" };
@@ -30,7 +30,7 @@ const GREY_64 = "colour=grey|storage=64";
 const GREY_128 = "colour=grey|storage=128";
 const combos = [BLACK_64, BLACK_128, GREY_64, GREY_128];
 
-const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(fields)]), { commit: true }).then((r) => r[0].id);
+const save = (id, fields) => tx(c, asA, (k) => sql(k, `select seller_save_item($1::uuid, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]), { commit: true }).then((r) => r[0].id);
 
 const phone = async (variants) => {
   const id = await save(null, {

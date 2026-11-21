@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asB, asService, withType } from "./db.mjs";
 
 // Migration 0138: delivery for one item, notes buyers must see, a 5-picture gallery, "From the brand" cards, and the "extra" picture kind
 // those sections use (it never takes a photo slot and never shows among the photos).
@@ -16,8 +16,8 @@ after(async () => { await c.end(); });
 const uuid = () => crypto.randomUUID();
 const svc = (text, params) => tx(c, asService, (k) => sql(k, text, params), { commit: true });
 const mine = (who, text, params) => tx(c, who, (k) => sql(k, text, params), { commit: true });
-const save = (who, id, fields) => mine(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(fields)]).then((r) => r[0].id);
-const page = (who, id, p) => mine(who, `select seller_set_item_page($1, $2::jsonb) as r`, [id, JSON.stringify(p)]).then((r) => r[0].r);
+const save = (who, id, fields) => mine(who, `select seller_save_item($1, $2::jsonb) as id`, [id, JSON.stringify(withType(id, fields))]).then((r) => r[0].id);
+const page = (who, id, p) => mine(who, `select seller_set_item_page($1, $2::jsonb) as r`, [id, JSON.stringify(withType(id, p))]).then((r) => r[0].r);
 const base = { name: "Soundbar KY-8000", price_type: "fixed", price: 8500, availability: "available" };
 const listed = async (id) => sql(c, `update items set draft = false, visible = true where id = $1`, [id]);
 // An extra picture, attached the way seller-media3d-finalize does it.

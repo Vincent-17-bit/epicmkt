@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { suggestProductType } from "@epicmkt/shared";
 import { departmentOf, groupByDepartment, searchTypes, suggestedTypes } from "../../AddItem.data.js";
 import s from "./TypePicker.module.css";
 
@@ -10,7 +11,7 @@ import s from "./TypePicker.module.css";
 //   currentId            the type already chosen, if any
 //   onPick(type)         a type was chosen
 //   onRequestType({name, note}) -> Promise   sends the "Tell us what you sell" request (seller_request_type)
-//   onOther({name, note, requested})        the seller goes on as Other goods
+//   onOther({name, note, requested})        the seller goes on as Other (a real type, "Other goods" to the seller)
 export default function TypePicker({ types, departments = [], categoryId, recentIds = [], currentId = null, onPick, onRequestType, onOther, autoFocus = false }) {
   const uid = useId();
   const ids = { search: `${uid}-search`, hint: `${uid}-hint`, status: `${uid}-status`, name: `${uid}-name`, nameErr: `${uid}-name-err`, note: `${uid}-note`, ask: `${uid}-ask` };
@@ -31,6 +32,9 @@ export default function TypePicker({ types, departments = [], categoryId, recent
 
   const query = q.trim();
   const found = searchTypes(types, departments, query);
+  // A name typed in the box (not only a type word) is read for a likely type, offered as one tap. Never chosen for the seller.
+  const guess = query.length >= 3 ? suggestProductType(query, types, { categoryId }) : null;
+  const guessed = guess?.typeId ? types.find((t) => t.id === guess.typeId) ?? null : null;
   const chips = suggestedTypes(types, { categoryId, recentIds });
   const groups = groupByDepartment(types, departments);
 
@@ -79,6 +83,13 @@ export default function TypePicker({ types, departments = [], categoryId, recent
       <p id={ids.status} role="status" className={query ? s.status : s.sr}>
         {query ? (found.length ? `${found.length} ${found.length === 1 ? "type" : "types"} found` : `No type matches “${query}”`) : ""}
       </p>
+
+      {query && guessed && guessed.id !== currentId ? (
+        <p className={s.hint} data-testid="type-suggestion">
+          {guess.confidence === "high" ? "Looks like" : "Could be"} <strong>{guessed.name}</strong>{" "}
+          <button type="button" className={s.link} onClick={() => onPick(guessed)}>Use {guessed.name}</button>
+        </p>
+      ) : null}
 
       {query ? (
         found.length > 0 && <ul className={s.list} aria-label="Search results">{found.map((t) => <li key={t.id}>{option(t)}</li>)}</ul>

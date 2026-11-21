@@ -1,5 +1,6 @@
 import { isListed } from "../availability.js";
 import { complementGroupOf, complementWeight, seededKey } from "./complements.js";
+import { hasNoTypeEvidence } from "../productType/other.js";
 
 // "Goes well with this" ranking. Pure: no I/O, so the live adapter and the demo backend rank the same way.
 //
@@ -33,7 +34,8 @@ const PRICE_RATIO = 10;
 const PRICE_PENALTY = 15;
 
 const id = (value) => (value === null || value === undefined || value === "" ? null : String(value));
-const typeOf = (entry) => id(entry?.productTypeId ?? entry?.productType);
+// "Other" says no type fits, so it never matches an admin relation that names a type.
+const typeOf = (entry) => { const value = id(entry?.productTypeId ?? entry?.productType); return value === null || hasNoTypeEvidence(value) ? null : value; };
 const departmentOf = (entry) => id(entry?.departmentId ?? entry?.department);
 
 /** A relation row as stored: { fromKind, fromId, toKind, toId, weight?, active? }. Inactive rows are ignored. */
