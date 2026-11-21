@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { whatsappLink } from "@epicmkt/shared";
+import { focusMediaId, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
 import { tiersFor } from "./item/Tiers.jsx";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
-import { coverUrl, metaDescription } from "@epicmkt/ui";
+import { coverUrl, metaDescription, normalizeMedia } from "@epicmkt/ui";
 
 import { useOptionSelection } from "../hooks/useOptionSelection.js";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -216,11 +216,13 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}` : "";
-  const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
+  const withLink = (text, ...extra) => [text, ...extra, itemLink].filter(Boolean).join("\n");
+  const variantPhotoId = option ? focusMediaId({ axes: option.axes, variant: option.variant, choice: option.choice, lastAxisKey: option.lastAxisKey }) : null;
+  const orderPhoto = current && !preview ? (variantPhotoId ? normalizeMedia(current).find((m) => m.kind === "image" && m.id === variantPhotoId)?.url : null) ?? coverUrl(current) : null;
   const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
   const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
-  const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, variant, order }));
+  const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, variant, order }), orderPhoto);
   const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
 
   const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };

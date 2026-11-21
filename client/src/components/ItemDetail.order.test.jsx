@@ -32,7 +32,7 @@ const mount = (detail) => {
 const order = () => screen.queryByTestId("order-whatsapp");
 const orderText = () => decodeURIComponent(order().getAttribute("href"));
 
-describe("send my choice on WhatsApp", () => {
+describe("order now", () => {
   it("is absent for an item with no quantity control, so those pages are unchanged", async () => {
     mount(phoneDetail());
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
@@ -66,6 +66,39 @@ describe("send my choice on WhatsApp", () => {
     mount(phoneDetail({ quantityMode: "units", business: { ...seller }, greeting: "Hello" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(orderText()).toContain("Hi, I'd like Samsung Galaxy S26");
+  });
+
+  const photos = [{ id: "m1", kind: "image", url: "https://img.test/cover.jpg" }, { id: "m2", kind: "image", url: "https://img.test/blue.jpg" }, { id: "m3", kind: "image", url: "https://img.test/black.jpg" }];
+  const withPhotos = () => {
+    const d = phoneDetail({ quantityMode: "units", media: photos });
+    return { ...d, options: d.options.map((axis) => (axis.key !== "color" ? axis : { ...axis, values: axis.values.map((v) => (v.id === "blue" ? { ...v, mediaId: "m2" } : v.id === "black" ? { ...v, mediaId: "m3" } : v)) })) };
+  };
+  const tail = "\nhttp://localhost:3000/b/shop/i/it";
+
+  it("sends the cover photo when the chosen option has no photo of its own", async () => {
+    mount(withPhotos());
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 128 GB, x1, KES 21,000 on EpicMKT\nhttps://img.test/cover.jpg" + tail);
+  });
+
+  it("sends the photo of the chosen colour, and follows a new pick", async () => {
+    mount(withPhotos());
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Blue/ }));
+    expect(orderText()).toContain("Blue, 128 GB");
+    expect(orderText()).toContain("\nhttps://img.test/blue.jpg" + tail);
+    expect(orderText()).not.toContain("cover.jpg");
+    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Black/ }));
+    expect(orderText()).toContain("\nhttps://img.test/black.jpg" + tail);
+  });
+
+  it("keeps the photo of the colour when only the size changes", async () => {
+    mount(withPhotos());
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Color:/ })).getByRole("radio", { name: /Blue/ }));
+    await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
+    expect(orderText()).toContain("Blue, 256 GB");
+    expect(orderText()).toContain("blue.jpg");
   });
 
   it("is hidden when the seller has no WhatsApp number", async () => {
