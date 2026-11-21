@@ -54,7 +54,7 @@ describe("made to measure on the item page", () => {
     expect(chat()).toContain("(KES 21,000)");
     await userEvent.type(screen.getByLabelText(/Waist/), "74");
     expect(screen.getAllByText("KES 4,500").length).toBeGreaterThan(0);
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Made to measure: Bust 92 cm, Waist 74 cm, KES 4,500 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Made to measure: Bust 92 cm, Waist 74 cm, KES 4,500 on EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=grey.128");
   });
 
   it("switching it off goes back to the plain message", async () => {

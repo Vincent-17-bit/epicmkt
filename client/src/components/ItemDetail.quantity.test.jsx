@@ -68,8 +68,8 @@ describe("quantity on the item page: units", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(order()).toBe("https://wa.me/254712555101?text=Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it");
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 256 GB) (KES 24,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=grey.256");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 256 GB) (KES 24,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=grey.256");
   });
 
   it("never goes below 1: the minus button stops, and typed 0 and -2 are corrected", async () => {

@@ -9,13 +9,13 @@
 // (This cannot be a Supabase edge function: on the default domain those return HTML as text/plain, which crawlers ignore.)
 
 import { categories } from "../src/data/categories.js";
-import { buildMeta, injectHead, isUuid, notFoundMeta } from "./_lib/meta.js";
-import { cloudinaryCloud, configured, rest, siteOrigin, supabaseUrl } from "./_lib/supabase.js";
+import { buildMeta, injectHead, isUuid, notFoundMeta, variantImagePath } from "./_lib/meta.js";
+import { cloudinaryCloud, configured, rest, rpc, siteOrigin, supabaseUrl } from "./_lib/supabase.js";
 
 export const config = { runtime: "edge" };
 
 const BUSINESS = "id,slug,name,category_id,tagline,description,phone,socials,county,town,address,lat,lng,logo_path,cover_path";
-const ITEM = "id,business_id,name,description,short_description,price,price_max,price_type,availability,image_paths";
+const ITEM = "id,business_id,name,description,short_description,price,price_max,price_type,availability,image_paths,media";
 
 const html = (body, status, cache) =>
   new Response(body, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": cache } });
@@ -25,6 +25,7 @@ export default async function handler(req) {
   const origin = siteOrigin(req);
   const slug = (url.searchParams.get("slug") ?? "").trim();
   const itemId = (url.searchParams.get("item") ?? "").trim();
+  const variant = (url.searchParams.get("v") ?? "").trim().slice(0, 200);
 
   // /index.html is a real file, and Vercel serves files before rewrites, so this is the built shell and not this function.
   const shellRes = await fetch(new URL("/index.html", url.origin)).catch(() => null);
@@ -45,7 +46,9 @@ export default async function handler(req) {
     // The admin's name for the category (it can be renamed or added in the admin site); the built-in name if that lookup fails.
     const [cat] = await rest(`categories?select=name&id=eq.${encodeURIComponent(business.category_id ?? "")}&limit=1`).catch(() => []);
     const categoryName = cat?.name ?? categories.find((c) => c.id === business.category_id)?.name ?? "";
-    const page = injectHead(shell, buildMeta({ origin, supabaseUrl: supabaseUrl(), cloudName: cloudinaryCloud(), business, item, categoryName }));
+    const options = item && variant ? await rpc("public_item_options", { p_item: item.id }, { timeoutMs: 2500 }).catch(() => null) : null;
+    const variantPath = options ? variantImagePath({ options, param: variant, media: item.media }) : null;
+    const page = injectHead(shell, buildMeta({ origin, supabaseUrl: supabaseUrl(), cloudName: cloudinaryCloud(), business, item, categoryName, variantPath }));
     return html(page, 200, "public, s-maxage=300, stale-while-revalidate=86400");
   } catch {
     return html(shell, 200, "no-store");

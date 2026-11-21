@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMeta, buildSitemap, clip, esc, headTags, injectHead, isUuid, kes, notFoundMeta, priceLine, robotsTxt } from "./meta.js";
+import { buildMeta, buildSitemap, clip, esc, headTags, injectHead, isUuid, kes, notFoundMeta, priceLine, robotsTxt, variantImagePath } from "./meta.js";
 
 const origin = "https://epicmkt.example";
 const supabaseUrl = "https://x.supabase.co";
@@ -240,5 +240,58 @@ describe("noindex pages and crawler files", () => {
     const txt = robotsTxt(origin);
     for (const path of ["/search", "/s/", "/offline"]) expect(txt).toContain(`Disallow: ${path}`);
     expect(buildSitemap({ origin, businesses: [], items: [] })).toContain(`${origin}/featured`);
+  });
+});
+
+describe("variantImagePath", () => {
+  const MA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  const MB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const media = [{ id: MA, kind: "image", path: "p/cover.webp" }, { id: MB, kind: "image", path: "p/blue.webp" }, { id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", kind: "video", path: "p/clip.mp4" }];
+  const options = {
+    options: [
+      { key: "color", label: "Color", values: [{ id: "grey", label: "Grey" }, { id: "blue", label: "Blue", mediaId: MB }] },
+      { key: "storage", label: "Storage", values: [{ id: "128", label: "128 GB" }, { id: "256", label: "256 GB" }] }
+    ],
+    optionVariants: [
+      { id: "v1", choice: { color: "grey", storage: "128" }, status: "available", mediaIds: [] },
+      { id: "v2", choice: { color: "blue", storage: "256" }, status: "available", mediaIds: [] }
+    ]
+  };
+
+  it("finds the photo of the chosen option", () => {
+    expect(variantImagePath({ options, param: "blue.256", media })).toBe("p/blue.webp");
+    expect(variantImagePath({ options, param: "blue.128", media })).toBe("p/blue.webp");
+  });
+
+  it("prefers the combination's own photo", () => {
+    const own = { ...options, optionVariants: [{ ...options.optionVariants[0], mediaIds: [MA] }, options.optionVariants[1]] };
+    expect(variantImagePath({ options: own, param: "grey.128", media })).toBe("p/cover.webp");
+  });
+
+  it("gives nothing when the choice has no photo, is partial, unknown or malformed", () => {
+    expect(variantImagePath({ options, param: "grey.128", media })).toBeNull();
+    expect(variantImagePath({ options, param: "blue", media })).toBeNull();
+    expect(variantImagePath({ options, param: "red.128", media })).toBeNull();
+    expect(variantImagePath({ options, param: "", media })).toBeNull();
+    expect(variantImagePath({ options, param: "blue.256.x", media })).toBeNull();
+  });
+
+  it("gives nothing when the photo is not an image of this item, or the payload is empty", () => {
+    expect(variantImagePath({ options, param: "blue.256", media: [{ id: MB, kind: "video", path: "p/x.mp4" }] })).toBeNull();
+    expect(variantImagePath({ options, param: "blue.256", media: [] })).toBeNull();
+    expect(variantImagePath({ options: null, param: "blue.256", media })).toBeNull();
+    expect(variantImagePath({ options: { options: [], optionVariants: [] }, param: "blue.256", media })).toBeNull();
+  });
+});
+
+describe("buildMeta with a variant photo", () => {
+  it("uses it as the share image and keeps the plain item page as the canonical address", () => {
+    const meta = buildMeta({ origin, supabaseUrl, business, item, variantPath: `${BID}/blue.webp` });
+    expect(meta.image).toBe(`${supabaseUrl}/storage/v1/object/public/seller-media/${BID}/blue.webp`);
+    expect(meta.canonical).toBe(`${origin}/b/fade-kings/i/${ID}`);
+  });
+
+  it("falls back to the first photo without one", () => {
+    expect(buildMeta({ origin, supabaseUrl, business, item, variantPath: null }).image).toBe(buildMeta({ origin, supabaseUrl, business, item }).image);
   });
 });

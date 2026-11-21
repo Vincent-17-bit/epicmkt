@@ -40,7 +40,7 @@ describe("ItemDetail with options", () => {
     mount();
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(screen.getAllByText("KES 21,000").length).toBeGreaterThan(0);
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 128 GB) (KES 21,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 128 GB) (KES 21,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=grey.128");
   });
 
   it("follows the choice: header price and message change, and ?v= is written", async () => {
@@ -71,7 +71,7 @@ describe("ItemDetail with options", () => {
     mount("/?item=it&v=blue.512");
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(screen.getByText(/combination is not available/i)).toBeInTheDocument();
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Blue / 512 GB) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Blue / 512 GB) on EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=blue.512");
     expect(document.querySelector("[class*=priceBlock]")).toBeNull();
   });
 
@@ -82,7 +82,7 @@ describe("ItemDetail with options", () => {
     await screen.findByRole("heading", { name: "SanDisk microSD card" });
     expect(screen.getAllByText("KES 12,078").length).toBeGreaterThan(0);
     expect(document.querySelector("s")).not.toBeNull();
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw SanDisk microSD card (New Version / 256 GB) (KES 12,078) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw SanDisk microSD card (New Version / 256 GB) (KES 12,078) on EpicMKT\nhttp://localhost:3000/b/shop/i/it?v=new.256gb");
   });
 
   it("the chat click reports the chosen variant", async () => {

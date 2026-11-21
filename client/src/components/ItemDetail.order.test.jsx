@@ -32,7 +32,7 @@ const mount = (detail) => {
 const order = () => screen.queryByTestId("order-whatsapp");
 const orderText = () => decodeURIComponent(order().getAttribute("href"));
 
-const tail = "\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it";
+const tail = (v = "") => `\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT\nhttp://localhost:3000/b/shop/i/it${v ? `?v=${v}` : ""}`;
 const wa = "https://wa.me/254712555101?text=";
 
 describe("order now", () => {
@@ -45,7 +45,7 @@ describe("order now", () => {
   it("names the shop, every chosen option, quantity, price and total, even at quantity 1", async () => {
     mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 128 GB\nQuantity: 1\nPrice: KES 21,000 each\nTotal: KES 21,000\n${tail}`);
+    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 128 GB\nQuantity: 1\nPrice: KES 21,000 each\nTotal: KES 21,000\n${tail("grey.128")}`);
     expect(order()).toHaveAttribute("target", "_blank");
   });
 
@@ -54,7 +54,7 @@ describe("order now", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n${tail}`);
+    expect(orderText()).toBe(`${wa}Hi Shop, I'd like to order:\n\n*Samsung Galaxy S26*\nColor: Grey\nStorage: 256 GB\nQuantity: 2\nPrice: KES 24,000 each\nTotal: KES 48,000\n${tail("grey.256")}`);
   });
 
   it("says an amount and a price per unit for a weighed item", async () => {

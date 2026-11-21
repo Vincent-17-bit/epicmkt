@@ -2,6 +2,9 @@
 // ../sitemap.js do the fetching and call these. Kept apart so they can be unit tested.
 
 import { imageUrl } from "../../../shared/src/seller/images.js";
+import { focusMediaId } from "../../../shared/src/options/optionPhotos.js";
+import { choiceFromParam } from "../../../shared/src/options/selection.js";
+import { variantForChoice } from "../../../shared/src/options/dependent.js";
 
 export const BRAND = "EpicMKT";
 export const DEFAULT_DESCRIPTION =
@@ -41,6 +44,17 @@ export function mediaUrl(supabaseUrl, path, cloudName) {
 
 const absolute = (origin, url) => (!url ? null : /^https?:\/\//i.test(url) ? url : `${origin}${url.startsWith("/") ? "" : "/"}${url}`);
 
+export function variantImagePath({ options, param, media }) {
+  const axes = Array.isArray(options?.options) ? options.options : [];
+  const variants = Array.isArray(options?.optionVariants) ? options.optionVariants : [];
+  const choice = choiceFromParam(axes, param);
+  if (axes.length === 0 || Object.keys(choice).length !== axes.length) return null;
+  const id = focusMediaId({ axes, variant: variantForChoice(axes, variants, choice), choice });
+  if (!id) return null;
+  const hit = (Array.isArray(media) ? media : []).find((m) => m?.kind === "image" && m.id === id);
+  return hit?.path ?? null;
+}
+
 export function priceLine(item) {
   if (!item || item.price === null || item.price === undefined) return item?.price_type === "free" ? "Free" : "";
   const price = Number(item.price);
@@ -54,14 +68,14 @@ export function priceLine(item) {
 const where = (business) => [business.town, business.county].filter(Boolean).join(", ");
 
 // One object describing everything the head needs. `business` and `item` are rows of public_businesses / public_items.
-export function buildMeta({ origin, supabaseUrl, cloudName = "", business, item = null, categoryName = "" }) {
+export function buildMeta({ origin, supabaseUrl, cloudName = "", business, item = null, categoryName = "", variantPath = null }) {
   const home = `${origin}/`;
   const fallbackImage = `${origin}/icon-512.png`;
   const place = where(business);
 
   if (item) {
     const canonical = `${origin}/b/${business.slug}/i/${encodeURIComponent(item.id)}`;
-    const image = mediaUrl(supabaseUrl, item.image_paths?.[0], cloudName) ?? mediaUrl(supabaseUrl, business.cover_path, cloudName) ?? mediaUrl(supabaseUrl, business.logo_path, cloudName) ?? fallbackImage;
+    const image = mediaUrl(supabaseUrl, variantPath, cloudName) ?? mediaUrl(supabaseUrl, item.image_paths?.[0], cloudName) ?? mediaUrl(supabaseUrl, business.cover_path, cloudName) ?? mediaUrl(supabaseUrl, business.logo_path, cloudName) ?? fallbackImage;
     const price = priceLine(item);
     const about = item.short_description || item.description;
     const lead = [price, about ? clip(about, 110) : ""].filter(Boolean).join(". ");

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { whatsappLink } from "@epicmkt/shared";
+import { choiceToParam, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, choiceLines, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
 import { tiersFor } from "./item/Tiers.jsx";
@@ -215,7 +215,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
-  const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}` : "";
+  const variantParam = option ? choiceToParam(option.axes, option.choice) : "";
+  const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}${variantParam ? `?v=${encodeURIComponent(variantParam)}` : ""}` : "";
   const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
   const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
