@@ -141,6 +141,25 @@ export function offerValueLabel(offer) {
   return "Offer";
 }
 
+export function offerValidity(offer, zone = "Africa/Nairobi") {
+  const day = (iso, withYear) => {
+    const ms = Date.parse(iso);
+    if (!Number.isFinite(ms)) return null;
+    try {
+      return new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: zone });
+    } catch {
+      return new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}), timeZone: "Africa/Nairobi" });
+    }
+  };
+  const year = (iso) => day(iso, true)?.split(" ").pop();
+  const from = offer?.startsAt ? day(offer.startsAt, false) : null;
+  const to = offer?.endsAt ? day(offer.endsAt, true) : null;
+  if (from && to) return year(offer.startsAt) === year(offer.endsAt) ? `${from} - ${to}` : `${day(offer.startsAt, true)} - ${to}`;
+  if (to) return `Until ${to}`;
+  if (from) return `From ${day(offer.startsAt, true)}`;
+  return null;
+}
+
 export function offerExpiry(remainingMs) {
   if (remainingMs == null) return null;
   const hours = Math.floor(remainingMs / 3600000);

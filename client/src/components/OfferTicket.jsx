@@ -12,7 +12,7 @@ import {
   offerSteps,
   whatsappLink
 } from "@epicmkt/shared";
-import { offerExpiry } from "../lib/itemView.js";
+import { offerExpiry, offerValidity } from "../lib/itemView.js";
 import { t } from "../i18n/index.js";
 import styles from "./OfferTicket.module.css";
 
@@ -47,7 +47,7 @@ function CopyCode({ code }) {
  * product's real price, how to get it, what else is in it, and one tap to claim it with the seller.
  * `item` is the product being viewed; `price` is what it costs now (a flash price counts).
  */
-export default function OfferTicket({ view, item, price, onOpenProduct }) {
+export default function OfferTicket({ view, item, price, onOpenProduct, showDates = false }) {
   const { offer, remainingMs, products = [], availableNow = true } = view;
   const others = products.filter((p) => p.id !== item.id);
   const savings = offerSavings(offer, { price, companions: others });
@@ -58,6 +58,7 @@ export default function OfferTicket({ view, item, price, onOpenProduct }) {
   const whatsapp = item.business?.whatsapp;
   const claim = whatsapp ? whatsappLink(whatsapp, offerClaimMessage(offer, item.name)) : null;
   const together = offer.kind === "bundle";
+  const valid = showDates ? offerValidity(offer, item.business?.timezone || undefined) : null;
 
   return (
     <article className={styles.ticket} data-kind={offer.kind}>
@@ -127,6 +128,11 @@ export default function OfferTicket({ view, item, price, onOpenProduct }) {
           <span className={`${styles.ends} ${urgent ? styles.urgent : ""}`}>{ends ? `${t("offer.endsIn")} ${ends}` : t("item.noLimit")}</span>
         </div>
         {offer.terms && <p className={styles.terms}>{offer.terms}</p>}
+        {valid && (
+          <p className={styles.valid}>
+            {t("offer.valid")}: {valid}
+          </p>
+        )}
 
         {claim && (
           <a href={claim} {...external} className={styles.claim}>

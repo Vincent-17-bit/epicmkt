@@ -287,7 +287,7 @@ describe("ItemDetail", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("renders the flash banner, two offers with See all, and JSON-LD", async () => {
+  it("renders the flash banner, the offers row that opens to every offer, and JSON-LD", async () => {
     const view = (id) => ({ offer: { id, title: `Offer ${id}`, kind: "percent_off", value: 10, conditions: {} }, remainingMs: 86400000, appliesToLabel: "Whole store" });
     mocks.getDetail.mockResolvedValue({
       ...base,
@@ -299,8 +299,8 @@ describe("ItemDetail", () => {
     mount();
     expect(await screen.findByText("Weekend deal")).toBeInTheDocument();
     expect(screen.getByText("While stock lasts")).toBeInTheDocument();
-    expect(screen.getAllByRole("article")).toHaveLength(2);
-    await userEvent.setup().click(screen.getByRole("button", { name: "See all 3" }));
+    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    await userEvent.setup().click(screen.getByRole("button", { name: /Claim now/ }));
     expect(screen.getAllByRole("article")).toHaveLength(3);
     const ld = JSON.parse(document.getElementById("item-jsonld").textContent);
     expect(ld["@type"]).toBe("Service");

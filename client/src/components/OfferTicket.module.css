@@ -271,6 +271,11 @@
   overflow-wrap: anywhere;
 }
 
+.valid {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
 .claim {
   display: inline-flex;
   align-items: center;

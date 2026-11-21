@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -123,6 +123,8 @@ describe("item slots", () => {
     });
     it("lists the offers the item is in", () => {
       mount(<Offers ctx={make({ item: { ...item, offers: [offerView("a")] } })} />);
+      expect(screen.queryByText("Offer a")).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: /Claim now/ }));
       expect(screen.getByText("Offer a")).toBeInTheDocument();
     });
   });
