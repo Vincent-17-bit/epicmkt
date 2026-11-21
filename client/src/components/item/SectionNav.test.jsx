@@ -14,9 +14,9 @@ const Page = () => (
   <>
     <SectionNav itemId="x" />
     <div id="item-overview">photos</div>
+    <div id="item-store">shop</div>
     <div id="item-details">details</div>
     <div id="item-specs" data-empty="1" />
-    <div id="item-store">shop</div>
     <div id="item-similar">similar</div>
   </>
 );
@@ -32,7 +32,7 @@ describe("section bar (C10)", () => {
     render(<Page />);
     await flush();
     const links = screen.getAllByRole("link", { hidden: true }).map((a) => a.textContent);
-    expect(links).toEqual(["Overview", "Details", "From the store", "Similar products"]);
+    expect(links).toEqual(["Overview", "From the store", "Details", "Similar products"]);
   });
 
   it("slides in when scrolling down past the top, and hides at once when scrolling up", async () => {

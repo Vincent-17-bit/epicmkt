@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, defaultVariantId, orderLine, quantityInfo } from "../lib/itemView.js";
+import { chatMessage, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
 import { tiersFor } from "./item/Tiers.jsx";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
@@ -217,6 +217,9 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const message = !current ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order });
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
+  const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
+  const orderText = !orderReady ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, variant, order });
+  const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
 
   const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };
   const onChat = (placement) => () => {
@@ -263,6 +266,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     sellerCount,
     distanceKm,
     chatHref,
+    orderHref,
     hold,
     bannerRef,
     bannerInView,
