@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
-import { formatKes } from "@epicmkt/shared";
+import { faCheck, faChevronDown, faCopy, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { formatKes, offerValidity } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import LazyImage from "../components/LazyImage.jsx";
 import BusinessSection from "./BusinessSection.jsx";
@@ -16,7 +16,9 @@ const DEFAULT_LABELS = {
   noEnd: "No end date",
   onlyNow: "Not running at this hour",
   openProduct: "Open",
-  wholeShop: "Whole shop"
+  wholeShop: "Whole shop",
+  claimNow: "Claim now",
+  valid: "Valid"
 };
 
 export function expiryText(ms, endsIn = DEFAULT_LABELS.endsIn) {
@@ -30,6 +32,7 @@ export function expiryText(ms, endsIn = DEFAULT_LABELS.endsIn) {
 }
 
 const MAX_SHOWN = 4;
+const TAGS = 3;
 
 function CopyCode({ code, labels, disabled }) {
   const [done, setDone] = useState(false);
@@ -62,6 +65,7 @@ function Deal({ deal, labels, mode, onOpenItem }) {
   const hidden = deal.products.length - shown.length;
   const ends = expiryText(deal.remainingMs, labels.endsIn);
   const urgent = deal.remainingMs != null && deal.remainingMs < 24 * 3600000;
+  const validity = offerValidity(deal);
 
   return (
     <li className={styles.deal} data-kind={deal.kind}>
@@ -110,6 +114,7 @@ function Deal({ deal, labels, mode, onOpenItem }) {
           {deal.code && <CopyCode code={deal.code} labels={labels} disabled={preview} />}
           {ends && <span className={`${styles.ends} ${urgent ? styles.urgent : ""}`}>{ends}</span>}
         </div>
+        {validity && <p className={styles.valid}>{labels.valid}: {validity}</p>}
         {deal.terms && <p className={styles.terms}>{deal.terms}</p>}
       </div>
     </li>
@@ -122,13 +127,33 @@ function Deal({ deal, labels, mode, onOpenItem }) {
  */
 export default function Offers({ offers, mode = "live", onOpenItem, labels: given }) {
   const labels = { ...DEFAULT_LABELS, ...given };
+  const [opened, setOpened] = useState(false);
+  const preview = isPreview(mode);
+  const open = opened || preview;
+  const panel = useId();
+  const tags = offers.slice(0, TAGS);
+  const rest = offers.length - tags.length;
   return (
     <BusinessSection title={labels.title} id="offers">
-      <ul className={styles.deals}>
-        {offers.map((deal) => (
-          <Deal key={deal.id} deal={deal} labels={labels} mode={mode} onOpenItem={onOpenItem} />
-        ))}
-      </ul>
+      <button type="button" className={styles.bar} aria-expanded={open} aria-controls={open ? panel : undefined} {...actionProps(preview).button(() => setOpened((v) => !v))}>
+        <span className={styles.tags}>
+          {tags.map((deal) => (
+            <span key={deal.id} className={styles.tag}>{deal.label || deal.title}</span>
+          ))}
+          {rest > 0 && <span className={styles.tag}>+{rest}</span>}
+        </span>
+        <span className={styles.claim}>
+          {labels.claimNow}
+          <FontAwesomeIcon icon={faChevronDown} className={open ? styles.up : styles.chevron} aria-hidden="true" />
+        </span>
+      </button>
+      {open && (
+        <ul id={panel} className={styles.deals}>
+          {offers.map((deal) => (
+            <Deal key={deal.id} deal={deal} labels={labels} mode={mode} onOpenItem={onOpenItem} />
+          ))}
+        </ul>
+      )}
     </BusinessSection>
   );
 }

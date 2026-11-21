@@ -149,7 +149,9 @@ export default function Business() {
         endsIn: t("offer.endsIn"),
         noEnd: t("offer.noEnd"),
         onlyNow: t("offer.onlyNow"),
-        openProduct: t("offer.openProduct")
+        openProduct: t("offer.openProduct"),
+        claimNow: t("offer.claimNow"),
+        valid: t("offer.valid")
       }}
       details={hasDetails ? <TemplateDetails fields={data.category.fields} attributes={data.attributes} /> : null}
       detailsTitle={`${data.category?.singular} details`}

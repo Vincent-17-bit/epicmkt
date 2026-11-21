@@ -1,4 +1,4 @@
-import { BUSINESS_TIME_ZONE, formatInstant, LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -141,21 +141,7 @@ export function offerValueLabel(offer) {
   return "Offer";
 }
 
-export function offerValidity(offer, zone = BUSINESS_TIME_ZONE) {
-  // formatInstant draws an instant in a zone and returns "" for a bad value; an unknown zone throws, and then the shop's zone is used.
-  const draw = (iso, opts, timeZone) => formatInstant(iso, { locale: "en-GB", day: "numeric", month: "short", ...opts, timeZone });
-  const day = (iso, withYear) => {
-    const opts = withYear ? { year: "numeric" } : {};
-    try { return draw(iso, opts, zone) || null; } catch { return draw(iso, opts, BUSINESS_TIME_ZONE) || null; }
-  };
-  const year = (iso) => day(iso, true)?.split(" ").pop();
-  const from = offer?.startsAt ? day(offer.startsAt, false) : null;
-  const to = offer?.endsAt ? day(offer.endsAt, true) : null;
-  if (from && to) return year(offer.startsAt) === year(offer.endsAt) ? `${from} - ${to}` : `${day(offer.startsAt, true)} - ${to}`;
-  if (to) return `Until ${to}`;
-  if (from) return `From ${day(offer.startsAt, true)}`;
-  return null;
-}
+export { offerValidity } from "@epicmkt/shared";
 
 export function offerExpiry(remainingMs) {
   if (remainingMs == null) return null;

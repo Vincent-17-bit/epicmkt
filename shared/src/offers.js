@@ -9,6 +9,7 @@
 // a database test keeps the two equal.
 import { DAYS, formatKes, nairobiNow } from "./utils.js";
 import { safeShopZone } from "./shopTime.js";
+import { BUSINESS_TIME_ZONE, formatInstant, isValidTimeZone } from "./time.js";
 
 export const OFFER_MAX_ITEMS = 12;
 export const OFFER_MAX_DAYS = 365;
@@ -602,3 +603,15 @@ export const STORE_OFFER_RECIPES = [
 
 export const recipesFor = (scope) => (scope === "store" ? STORE_OFFER_RECIPES : OFFER_RECIPES);
 export const offerRecipe = (key) => [...OFFER_RECIPES, ...STORE_OFFER_RECIPES].find((r) => r.key === key) ?? null;
+
+export function offerValidity(offer, given = BUSINESS_TIME_ZONE) {
+  const zone = isValidTimeZone(given) ? given : BUSINESS_TIME_ZONE;
+  const day = (iso, withYear) => formatInstant(iso, { timeZone: zone, day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) }) || null;
+  const year = (iso) => day(iso, true)?.split(" ").pop();
+  const from = offer?.startsAt ? day(offer.startsAt, false) : null;
+  const to = offer?.endsAt ? day(offer.endsAt, true) : null;
+  if (from && to) return year(offer.startsAt) === year(offer.endsAt) ? `${from} - ${to}` : `${day(offer.startsAt, true)} - ${to}`;
+  if (to) return `Until ${to}`;
+  if (from) return `From ${day(offer.startsAt, true)}`;
+  return null;
+}

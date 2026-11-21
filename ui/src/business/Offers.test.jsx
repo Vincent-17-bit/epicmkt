@@ -2,6 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import Offers, { expiryText } from "./Offers.jsx";
 
+const show = (ui) => {
+  const out = render(ui);
+  fireEvent.click(screen.getByRole("button", { name: /Claim now/ }));
+  return out;
+};
+
 const deal = (over = {}) => ({
   id: "o1",
   kind: "buy_x_get_y",
@@ -33,7 +39,7 @@ describe("expiryText", () => {
 
 describe("store page offers", () => {
   it("prints the deal, its products, conditions, code, end and terms", () => {
-    render(<Offers offers={[deal()]} />);
+    show(<Offers offers={[deal()]} />);
     expect(screen.getByRole("heading", { name: "Offers" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Bread deal" })).toBeInTheDocument();
     expect(screen.getByText("Buy 2, get 1 free")).toBeInTheDocument();
@@ -46,25 +52,25 @@ describe("store page offers", () => {
 
   it("opens the product the customer taps", () => {
     const onOpenItem = vi.fn();
-    render(<Offers offers={[deal({ products: [{ id: "a", name: "A", role: "main" }, { id: "b", name: "B", role: "with" }], kind: "bundle" })]} onOpenItem={onOpenItem} />);
+    show(<Offers offers={[deal({ products: [{ id: "a", name: "A", role: "main" }, { id: "b", name: "B", role: "with" }], kind: "bundle" })]} onOpenItem={onOpenItem} />);
     fireEvent.click(screen.getByRole("button", { name: "Open B" }));
     expect(onOpenItem).toHaveBeenCalledWith("b");
   });
 
   it("shows a few products and counts the rest", () => {
     const products = Array.from({ length: 7 }, (_, n) => ({ id: `p${n}`, name: `P${n}`, role: "main" }));
-    render(<Offers offers={[deal({ products })]} />);
+    show(<Offers offers={[deal({ products })]} />);
     expect(screen.getAllByRole("button", { name: /^Open P/ })).toHaveLength(4);
     expect(screen.getByText("+3")).toBeInTheDocument();
   });
 
   it("says when a happy-hour deal is not running at this hour", () => {
-    render(<Offers offers={[deal({ availableNow: false })]} />);
+    show(<Offers offers={[deal({ availableNow: false })]} />);
     expect(screen.getByText("Not running at this hour")).toBeInTheDocument();
   });
 
   it("has no end text for an offer that does not end, and no code row without a code", () => {
-    render(<Offers offers={[deal({ remainingMs: null, code: null, conditions: [], terms: null })]} />);
+    show(<Offers offers={[deal({ remainingMs: null, code: null, conditions: [], terms: null })]} />);
     expect(screen.queryByText(/Ends in/)).not.toBeInTheDocument();
     expect(screen.queryByText("Code")).not.toBeInTheDocument();
   });
@@ -72,7 +78,7 @@ describe("store page offers", () => {
   it("copies the code", async () => {
     const writeText = vi.fn().mockResolvedValue();
     Object.assign(navigator, { clipboard: { writeText } });
-    render(<Offers offers={[deal()]} />);
+    show(<Offers offers={[deal()]} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy code BREAD" }));
     expect(writeText).toHaveBeenCalledWith("BREAD");
     expect(await screen.findByText("Copied")).toBeInTheDocument();
@@ -80,17 +86,39 @@ describe("store page offers", () => {
 
   it("is inert in the seller's preview", () => {
     const onOpenItem = vi.fn();
-    render(<Offers offers={[deal()]} mode="preview" onOpenItem={onOpenItem} />);
+    show(<Offers offers={[deal()]} mode="preview" onOpenItem={onOpenItem} />);
     expect(screen.getByRole("button", { name: "Copy code BREAD" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Open Bread 400g" }));
     expect(onOpenItem).not.toHaveBeenCalled();
   });
 
   it("prints a shop offer with no products and says it covers the whole shop", () => {
-    render(<Offers offers={[deal({ id: "s1", scope: "store", title: "Weekend special", label: "10% off", headline: "10% off your whole order", products: [], conditions: ["Weekends"] })]} />);
+    show(<Offers offers={[deal({ id: "s1", scope: "store", title: "Weekend special", label: "10% off", headline: "10% off your whole order", products: [], conditions: ["Weekends"] })]} />);
     expect(screen.getByRole("heading", { name: "Weekend special" })).toBeInTheDocument();
     expect(screen.getByText("Whole shop")).toBeInTheDocument();
     expect(screen.getByText("Weekends")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Open/ })).toBeNull();
+  });
+
+  it("starts closed with a tag per offer, and opens the cards on Claim now", () => {
+    render(<Offers offers={[deal({ id: "a", label: "Tag a" }), deal({ id: "b", label: "Tag b" })]} />);
+    expect(screen.getByText("Tag a")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Bread deal" })).toBeNull();
+    const bar = screen.getByRole("button", { name: /Claim now/ });
+    expect(bar).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(bar);
+    expect(bar).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("heading", { name: "Bread deal" })).toHaveLength(2);
+  });
+
+  it("shows three tags and counts the rest", () => {
+    render(<Offers offers={["a", "b", "c", "d", "e"].map((id) => deal({ id, label: `Tag ${id}` }))} />);
+    expect(screen.queryByText("Tag d")).toBeNull();
+    expect(screen.getByText("+2")).toBeInTheDocument();
+  });
+
+  it("prints the valid-from to valid-to dates", () => {
+    show(<Offers offers={[deal({ startsAt: "2026-10-30T00:00:00+03:00", endsAt: "2026-11-30T20:00:00+03:00" })]} />);
+    expect(screen.getByText("Valid: 30 Oct - 30 Nov 2026")).toBeInTheDocument();
   });
 });
