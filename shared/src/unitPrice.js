@@ -57,27 +57,28 @@ export function multipackOf(size) {
 }
 
 const money = (amount, unit) => ({ amount, unit, text: `${formatKes(amount)} per ${unit}` });
-const perMeasure = (p, { scale, amount }) => {
+const perMeasure = (p, { scale, amount }, small = false) => {
   const { base, unit } = SCALES[scale];
+  if (small) return money(Math.round((p * 100) / amount), `100 ${unit === "kg" ? "g" : "ml"}`);
   return money(Math.round((p * base) / amount), unit);
 };
 
 /** Every unit price the size supports, best first: a weight or volume gives per kg / per L; a pack count gives per piece (or per pair); a multipack gives both, per piece then per kg / L. Whole shillings, half up. -> [{ amount, unit, text }] */
 export function unitPrices(price, size, allow = {}) {
-  const { measure = true, count: counts = true } = allow;
+  const { measure = true, count: counts = true, small = false } = allow;
   const p = Number(price);
   if (!Number.isFinite(p) || p <= 0) return [];
   const out = [];
   const single = measureOf(size);
   if (single) {
-    if (measure && single.amount > 0) out.push(perMeasure(p, single));
+    if (measure && single.amount > 0) out.push(perMeasure(p, single, small));
     return out;
   }
   const multi = multipackOf(size);
   if (multi) {
     const each = Math.round(p / multi.n);
     if (counts && each >= 1) out.push(money(each, "piece"));
-    if (measure) out.push(perMeasure(p, { scale: multi.measure.scale, amount: multi.measure.amount * multi.n }));
+    if (measure) out.push(perMeasure(p, { scale: multi.measure.scale, amount: multi.measure.amount * multi.n }, small));
     return out;
   }
   const count = counts ? pieceCountOf(size) : null;
@@ -116,20 +117,21 @@ const distinct = (text, patterns, keep = () => true) => {
 const plainMeasure = (m) => !(m[3] === "G" && Number(m[1]) <= 6);
 const groupOf = (productType) => PRODUCT_TYPES.find((t) => t.id === productType)?.group ?? null;
 
-const NO_MEASURE_GROUPS = new Set(["electronics", "fashion", "furniture", "lighting", "jewellery", "beauty", "services"]);
+const NO_MEASURE_GROUPS = new Set(["electronics", "fashion", "furniture", "lighting", "jewellery", "services"]);
+const SMALL_GROUPS = new Set(["beauty"]);
 const MEASURE_GROUPS = new Set(["food-drink"]);
 
 /**
  * What the item page may say a price is "per". It needs positive evidence, never a guess from words alone:
- *  - measure (per kg / per L) from a size the seller chose: any item that is not a service and not electronics, fashion, furniture, lighting, jewellery or beauty (5 g of gold is not a price per kg, and a 50 ml perfume is not a price per litre).
+ *  - measure (per kg / per L) from a size the seller chose: any item that is not a service and not electronics, fashion, furniture, lighting, or jewellery (5 g of gold is not a price per kg). Beauty items (perfume, cosmetics) are priced per 100 ml or 100 g, never per litre.
  *  - nameMeasure: a weight or volume read from the item's name: only when the product type is food and drink. An untyped item, or one of any other type, never gets one from its name.
  *  - count (per piece / per pair): any item that is not a service.
  */
 export function unitPricePolicy({ productType = null, kind = null } = {}) {
   const group = groupOf(productType);
-  if (kind === "service" || group === "services") return { measure: false, nameMeasure: false, count: false };
+  if (kind === "service" || group === "services") return { measure: false, nameMeasure: false, count: false, small: false };
   const sizes = !NO_MEASURE_GROUPS.has(group);
-  return { measure: sizes, nameMeasure: sizes && MEASURE_GROUPS.has(group), count: true };
+  return { measure: sizes, nameMeasure: sizes && MEASURE_GROUPS.has(group), count: true, small: SMALL_GROUPS.has(group) };
 }
 
 /** The one size an item's name states, as text unitPrices can read: a multipack ("6 x 500 ml"), a pack count ("24 pack"), a weight or volume ("400 g", "1.5 L"), or a count and a measure together ("500 ml 24 pack" -> "24 x 500 ml"). "" when the name states none, or more than one different size ("250 mL & 355 mL"). The weight or volume is read only when the caller says the item may have one (measure: true, from unitPricePolicy); a name that sounds like electronics gives none either; 5G and spec words (RAM, storage, battery, inch) are not measures; and a number glued to a model code ("A8-L") is skipped. */

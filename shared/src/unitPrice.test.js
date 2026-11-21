@@ -106,12 +106,12 @@ test("unitPrices can leave out weights and volumes, or counts", () => {
 
 test("the policy asks for positive evidence before reading a measure from a name", () => {
   const p = unitPricePolicy;
-  assert.deepEqual(p({ productType: "bread" }), { measure: true, nameMeasure: true, count: true });
-  assert.deepEqual(p({ productType: "fragrance" }), { measure: false, nameMeasure: false, count: true });
-  assert.deepEqual(p({ productType: "meat-by-weight" }), { measure: true, nameMeasure: true, count: true });
-  for (const productType of ["phone", "memory-card", "shoes-eu", "table", "sofa", "led-bulb", "gold-necklace"]) assert.deepEqual(p({ productType }), { measure: false, nameMeasure: false, count: true }, productType);
-  assert.deepEqual(p({ productType: "printing" }), { measure: false, nameMeasure: false, count: false });
-  assert.deepEqual(p({ kind: "service", productType: "bread" }), { measure: false, nameMeasure: false, count: false });
+  assert.deepEqual(p({ productType: "bread" }), { measure: true, nameMeasure: true, count: true, small: false });
+  assert.deepEqual(p({ productType: "fragrance" }), { measure: true, nameMeasure: false, count: true, small: true });
+  assert.deepEqual(p({ productType: "meat-by-weight" }), { measure: true, nameMeasure: true, count: true, small: false });
+  for (const productType of ["phone", "memory-card", "shoes-eu", "table", "sofa", "led-bulb", "gold-necklace"]) assert.deepEqual(p({ productType }), { measure: false, nameMeasure: false, count: true, small: false }, productType);
+  assert.deepEqual(p({ productType: "printing" }), { measure: false, nameMeasure: false, count: false, small: false });
+  assert.deepEqual(p({ kind: "service", productType: "bread" }), { measure: false, nameMeasure: false, count: false, small: false });
 });
 
 test("an untyped item or an item of another type never reads a measure from its name, but can still count", () => {
@@ -119,4 +119,11 @@ test("an untyped item or an item of another type never reads a measure from its 
   assert.equal(unitPricePolicy({ productType: "liquor" }).nameMeasure, true);
   assert.equal(unitPricePolicy({}).count, true);
   assert.equal(unitPricePolicy({}).measure, true);
+});
+
+test("beauty is priced per 100 ml or 100 g, never per litre", () => {
+  const p = unitPricePolicy({ productType: "fragrance" });
+  assert.equal(unitPrices(5000, "50 ml", p)[0].text, "KES 10,000 per 100 ml");
+  assert.equal(unitPrices(1000, "500 g", p)[0].text, "KES 200 per 100 g");
+  assert.equal(unitPrices(5000, "50 ml")[0].text, "KES 100,000 per L");
 });
