@@ -261,8 +261,9 @@ const SIMILAR_STORES = 100;
 const SIMILAR_POOL = 120;
 const SIMILAR_FEATURED_POOL = 60;
 const SIMILAR_STORE_COLUMNS = "id,slug,name,category_id,tags,county,town,lat,lng,verification_level,plan_key,hours,exceptions,timezone";
-// The card columns plus the brand, which the ranking strips from names. Never the heavy fields (specs, highlights, terms).
-const SIMILAR_ITEM_COLUMNS = `${CARD_COLUMNS},brand`;
+// The card columns plus the brand (which the ranking strips from names) and the product type (the strongest evidence of what an item is).
+// Never the heavy fields (specs, highlights, terms).
+const SIMILAR_ITEM_COLUMNS = `${CARD_COLUMNS},brand,product_type_id`;
 // The function is not deployed yet (migration 0069 not applied): Postgres 42883, or PostgREST PGRST202.
 const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
 const likeEscape = (value) => value.replace(/[\\%_]/g, (c) => `\\${c}`);
@@ -317,7 +318,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
   if (!isLiveId(itemId)) return [];
   // abortSignal belongs before maybeSingle() / await: it is not available on the builder maybeSingle() returns.
   const read = (query) => (signal ? query.abortSignal(signal) : query);
-  const seed = unwrap(await read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("id", itemId)).maybeSingle());
+  const seed = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).eq("id", itemId)).maybeSingle());
   if (!seed) return [];
   const base = unwrap(await read(supabase.from("public_businesses").select(SIMILAR_STORE_COLUMNS).eq("id", seed.business_id)).maybeSingle());
   if (!base) return [];
@@ -340,19 +341,12 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
 
   const listed = [...rows.values()].filter(isListed);
   if (!listed.length) return [];
-  // The product type of each candidate is the strongest evidence of what it is, when the seller (or an admin) set one. The database
-  // function returns no type, so it is read in one small query by primary key, in parallel with the stores so it adds no round trip.
-  // Evidence only: if it cannot be read the ranking falls back to names and sections, which still works.
+  // The product type of each candidate is the strongest evidence of what it is, when the seller (or an admin) set one. It comes back on
+  // every row (migration 0143, and the item columns of the query fallback). A database that does not have 0143 yet returns rows without it:
+  // those candidates have no type here and the ranking falls back to names and sections, which still works.
   const types = new Map();
-  const loadTypes = async () => {
-    try {
-      const ids = listed.map((row) => row.id).slice(0, SIMILAR_POOL * 2);
-      for (const row of unwrap(await read(supabase.from("public_items").select("id,product_type_id").in("id", ids))) ?? []) if (row.product_type_id) types.set(row.id, row.product_type_id);
-    } catch {
-      // names and sections only
-    }
-  };
-  await Promise.all([loadStores([...new Set(listed.map((row) => row.business_id))]), loadTypes()]);
+  for (const row of listed) if (row.product_type_id) types.set(row.id, row.product_type_id);
+  await loadStores([...new Set(listed.map((row) => row.business_id))]);
   if (signal?.aborted) return [];
   const usable = listed.filter((row) => stores.has(row.business_id));
   if (!usable.length) return [];
@@ -432,7 +426,7 @@ export async function getRelatedPage(itemId, { page = 1, pageSize = 10, seed = n
   const empty = { items: [], page, pageSize, hasMore: false, total: 0 };
   if (!isLiveId(itemId)) return empty;
   const read = (query) => (signal ? query.abortSignal(signal) : query);
-  const self = unwrap(await read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("id", itemId)).maybeSingle());
+  const self = unwrap(await read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).eq("id", itemId)).maybeSingle());
   if (!self) return empty;
   const asCandidate = (row) => ({
     id: row.id,
@@ -459,7 +453,7 @@ export async function getRelatedPage(itemId, { page = 1, pageSize = 10, seed = n
     words.length
       ? similarViaRpc(itemId, words, read).then((rows) => rows ?? similarViaQueries({ seed: self, base: { id: self.business_id }, terms: words, section: "", read }))
       : Promise.resolve([]),
-    read(supabase.from("public_items").select(`${SIMILAR_ITEM_COLUMNS},product_type_id`).eq("business_id", self.business_id).neq("id", itemId).order("created_at", { ascending: false }).limit(RELATED_OWN)).then((r) => unwrap(r) ?? [])
+    read(supabase.from("public_items").select(SIMILAR_ITEM_COLUMNS).eq("business_id", self.business_id).neq("id", itemId).order("created_at", { ascending: false }).limit(RELATED_OWN)).then((r) => unwrap(r) ?? [])
   ]);
   const pool = new Map();
   for (const row of [...typed.candidates, ...byName, ...own]) {

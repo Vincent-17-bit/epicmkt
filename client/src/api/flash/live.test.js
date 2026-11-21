@@ -372,7 +372,7 @@ describe("live item and business pages", () => {
         db().calls = [];
       });
 
-      it("asks once, with the head-noun forms, and takes no other item search (only the seed and one product-type read by id)", async () => {
+      it("asks once, with the head-noun forms, and takes no other item search (only the seed: the type comes back on the rows)", async () => {
         setup();
         db().items = [seedItem(), at(1, B, { name: "Wheat loaf" }), at(2, C, { name: "White bread", section: "Food" })];
         const asked = [];
@@ -383,7 +383,7 @@ describe("live item and business pages", () => {
         expect(asked[0].p_item_id).toBe(SEED);
         for (const word of ["bread", "breads", "loaf", "loaves"]) expect(asked[0].p_terms).toContain(word);
         expect(asked[0].p_limit).toBeGreaterThan(0);
-        expect(heavy("public_items")).toBe(2); // the seed, and the product types of the candidates by primary key
+        expect(heavy("public_items")).toBe(1); // the seed only; no second read for the product types
       });
 
       it("uses the product type as evidence: the same type joins names the vocabulary cannot read, a different type cancels a shared section", async () => {
@@ -398,14 +398,25 @@ describe("live item and business pages", () => {
         expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
       });
 
-      it("still ranks by name and section when the product types cannot be read", async () => {
+      it("still ranks by name and section when the rows carry no product type (a database without migration 0143)", async () => {
         setup();
-        db().items = [seedItem(), at(1, B, { name: "Wheat loaf" })];
-        db().rpc.similar_item_candidates = (args) => net(args);
-        // Only the read of product types (public_items by a list of ids) fails; the seed, the stores and the function still answer.
-        db().failWhen = (table, inFilters) => (table === "public_items" && inFilters.some(([col]) => col === "id") ? { message: "types unavailable" } : null);
+        db().items = [seedItem(), at(1, B, { name: "Wheat loaf", product_type_id: "bread" }), at(2, C, { name: "Omega 9", section: "Elsewhere", product_type_id: "phone" })];
+        const strip = (rows) => rows.map(({ product_type_id, ...rest }) => rest);
+        db().rpc.similar_item_candidates = (args) => strip(net(args));
         expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
-        expect(db().calls.filter((c) => c === "public_items")).toHaveLength(2); // it was tried
+        expect(db().calls.filter((c) => c === "public_items")).toHaveLength(1); // no second read
+      });
+
+      it("takes the type from the returned rows: two same-type names with no common word match, a different type does not", async () => {
+        setup();
+        db().items = [
+          seedItem({ name: "Zuri 5", section: "Gadgets", product_type_id: "phone" }),
+          at(1, B, { name: "Omega 9", section: "Elsewhere", product_type_id: "phone" }),
+          at(2, C, { name: "Omega 9", section: "Gadgets", product_type_id: "tablet" })
+        ];
+        db().rpc.similar_item_candidates = () => db().items.filter((r) => r.business_id !== A);
+        expect((await live.getSimilarItems(SEED)).map((r) => r.id)).toEqual([id(1)]);
+        expect(db().calls.filter((c) => c === "public_items")).toHaveLength(1);
       });
 
       it("still applies the relevance gate to whatever the database returns", async () => {
