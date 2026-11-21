@@ -54,14 +54,23 @@ describe("unit price under the price", () => {
     expect(unitPricesFor(option).map((x) => x.text)).toEqual(["KES 200 per piece", "KES 400 per L"]);
   });
 
-  it("falls back to the one pack size in the item name, with the price shown", () => {
-    expect(unitPricesFor(null, { name: "Soda 24 Pack" }, { price: 2400 }).map((x) => x.text)).toEqual(["KES 100 per piece"]);
-    expect(unitPricesFor(null, { name: "Soda 24 Pack" }, { price: 2400, salePrice: 1200 }).map((x) => x.text)).toEqual(["KES 50 per piece"]);
-    expect(unitPricesFor(null, { name: "Bread 400g" }, { price: 60 }).map((x) => x.text)).toEqual(["KES 150 per kg"]);
-    expect(unitPricesFor(null, { name: "Tecno Spark 8 L", productType: "phone" }, { price: 20000 })).toEqual([]);
-    expect(unitPricesFor(null, { name: "Sugar 2 kg", productType: "bread" }, { price: 300 }).map((x) => x.text)).toEqual(["KES 150 per kg"]);
-    expect(unitPricesFor(null, { name: "Soda" }, { price: 2400 })).toEqual([]);
-    expect(unitPricesFor(null, { name: "Soda 24 Pack" }, null)).toEqual([]);
+  it("falls back to the one size in the item name, with the price shown, only where a measure is credible", () => {
+    const names = (item, shown) => unitPricesFor(null, item, shown).map((x) => x.text);
+    expect(names({ name: "Soda 24 Pack" }, { price: 2400 })).toEqual(["KES 100 per piece"]);
+    expect(names({ name: "Soda 24 Pack" }, { price: 2400, salePrice: 1200 })).toEqual(["KES 50 per piece"]);
+    expect(names({ name: "Soda 24 Pack" }, null)).toEqual([]);
+    expect(names({ name: "Bread 400g", productType: "bread" }, { price: 60 })).toEqual(["KES 150 per kg"]);
+    expect(names({ name: "Sugar 2 kg" }, { price: 300 })).toEqual([]);
+    expect(names({ name: "Tecno Spark 8 L" }, { price: 20000 })).toEqual([]);
+    expect(names({ name: "Tecno Spark 8 L", productType: "phone" }, { price: 20000 })).toEqual([]);
+    expect(names({ name: "Soda" }, { price: 2400 })).toEqual([]);
+  });
+
+  it("says nothing for a service, and no weight price for gold or electronics", () => {
+    const option = (size) => ({ axes: [{ key: "s", values: [{ id: "a", label: size }] }], choice: { s: "a" }, variant: { price: 100000 } });
+    expect(unitPricesFor(option("5 g"), { name: "Chain", productType: "gold-necklace" })).toEqual([]);
+    expect(unitPricesFor(option("1 L"), { name: "Cleaning", kind: "service" })).toEqual([]);
+    expect(unitPricesFor(option("Pack of 4"), { name: "Chain", productType: "gold-necklace" }).map((x) => x.text)).toEqual(["KES 25,000 per piece"]);
   });
 
   it("has no serious accessibility violations", async () => {

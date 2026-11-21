@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { multipackOf, sizeInItemName, pieceCountOf, unitPrice, unitPrices } from "./unitPrice.js";
+import { multipackOf, sizeInItemName, pieceCountOf, unitPrice, unitPricePolicy, unitPrices } from "./unitPrice.js";
 
 test("a pack, set, box or pieces size gives a price per piece", () => {
   assert.deepEqual(unitPrice(1500, "Pack of 6"), { amount: 250, unit: "piece", text: "KES 250 per piece" });
@@ -58,35 +58,65 @@ test("a multipack gives per piece and per litre or kilo of everything in it", ()
   assert.equal(multipackOf("6 x Large"), null);
 });
 
+const M = { measure: true };
+
 test("the size an item's name states, only when it states exactly one", () => {
   assert.equal(sizeInItemName("Soda 24 Pack"), "24 Pack");
-  assert.equal(sizeInItemName("Water 6 x 500 ml"), "6 x 500 ml");
-  assert.equal(sizeInItemName("Cola Pack of 6 x 500ml"), "Pack of 6 x 500ml");
+  assert.equal(sizeInItemName("Water 6 x 500 ml", M), "6 x 500 ml");
+  assert.equal(sizeInItemName("Cola Pack of 6 x 500ml", M), "Pack of 6 x 500ml");
   assert.equal(sizeInItemName("Eggs half dozen"), "half dozen");
-  assert.equal(sizeInItemName("Bread 400g"), "400g");
-  assert.equal(sizeInItemName("Cooking Oil 1.5 Litres"), "1.5 Litres");
-  assert.equal(sizeInItemName("Red Bull Assorted (250 mL & 355 mL)"), "");
+  assert.equal(sizeInItemName("Bread 400g", M), "400g");
+  assert.equal(sizeInItemName("Cooking Oil 1.5 Litres", M), "1.5 Litres");
+  assert.equal(sizeInItemName("Red Bull Assorted (250 mL & 355 mL)", M), "");
   assert.equal(sizeInItemName("Socks 3 pairs or 6 pairs"), "");
-  assert.equal(sizeInItemName("Tecno Spark 5G phone"), "");
-  assert.equal(sizeInItemName("Phone 128GB 8GB RAM"), "");
-  assert.equal(sizeInItemName("Soda"), "");
+  assert.equal(sizeInItemName("Soda", M), "");
 });
 
-test("a name that only looks like a size gives nothing", () => {
-  for (const name of ["Phone 8 L", "Laptop 15.6 in 8 g", "Model A8-L", "Phone 8 GB RAM 128 GB", "Router 5 g", "Samsung 6 G", "Mixer 1/2 L bowl"]) assert.equal(sizeInItemName(name), "", name);
+test("a weight or volume is read from the name only when the caller allows it", () => {
+  assert.equal(sizeInItemName("Bread 400g"), "");
+  assert.equal(sizeInItemName("Bread 400g", { measure: false }), "");
+  assert.equal(sizeInItemName("Bread 400g", M), "400g");
+  assert.equal(sizeInItemName("Soda 500 ml 24 Pack"), "24 Pack");
 });
 
-test("the product type decides whether the name may state a weight or volume", () => {
-  for (const productType of ["phone", "shoes-eu", "table", "sofa", "led-bulb", "gold-necklace", "printing"]) assert.equal(sizeInItemName("Tecno Spark 8 L", { productType }), "", productType);
-  for (const productType of ["bread", "drinking-water", "meat-by-weight", "liquor", "fragrance", null]) assert.equal(sizeInItemName("Sugar 2 kg", { productType }), "2 kg", String(productType));
-  assert.equal(sizeInItemName("Tecno Spark 8 L"), "8 L");
+test("a count and a measure in one name read as a multipack", () => {
+  assert.equal(sizeInItemName("Soda 500 ml 24 Pack", M), "24 x 500 ml");
+  assert.deepEqual(unitPrices(2400, sizeInItemName("Soda 500 ml 24 Pack", M)).map((x) => x.text), ["KES 100 per piece", "KES 200 per L"]);
+  assert.equal(sizeInItemName("Socks 400 g 3 pairs", M), "");
 });
 
-test("real sizes still read", () => {
-  assert.equal(sizeInItemName("Mango Juice 1L"), "1L");
-  assert.equal(sizeInItemName("Mango Juice 1 Litre"), "1 Litre");
-  assert.equal(sizeInItemName("Sugar 2kg"), "2kg");
-  assert.equal(sizeInItemName("Flour 500 g"), "500 g");
-  assert.equal(sizeInItemName("Flour 500g"), "500g");
-  assert.equal(sizeInItemName("Flour 500 grams"), "500 grams");
+test("a name that only looks like a size gives nothing, even when measures are allowed", () => {
+  for (const name of ["Phone 8 L", "Laptop 15.6 in 8 g", "Model A8-L", "Phone 8 GB RAM 128 GB", "Router 5 g", "Samsung 6 G", "Mixer 1/2 L bowl", "Tecno Spark 5G"]) assert.equal(sizeInItemName(name, M), "", name);
+});
+
+test("real sizes read when measures are allowed", () => {
+  assert.equal(sizeInItemName("Mango Juice 1L", M), "1L");
+  assert.equal(sizeInItemName("Mango Juice 1 Litre", M), "1 Litre");
+  assert.equal(sizeInItemName("Sugar 2kg", M), "2kg");
+  assert.equal(sizeInItemName("Flour 500 g", M), "500 g");
+  assert.equal(sizeInItemName("Flour 500 grams", M), "500 grams");
+});
+
+test("unitPrices can leave out weights and volumes, or counts", () => {
+  assert.deepEqual(unitPrices(1200, "6 x 500 ml", { measure: false }).map((x) => x.text), ["KES 200 per piece"]);
+  assert.deepEqual(unitPrices(1200, "6 x 500 ml", { count: false }).map((x) => x.text), ["KES 400 per L"]);
+  assert.deepEqual(unitPrices(1200, "1 kg", { measure: false }), []);
+  assert.deepEqual(unitPrices(1200, "Pack of 6", { count: false }), []);
+});
+
+test("the policy asks for positive evidence before reading a measure from a name", () => {
+  const p = unitPricePolicy;
+  assert.deepEqual(p({ productType: "bread" }), { measure: true, nameMeasure: true, count: true });
+  assert.deepEqual(p({ productType: "fragrance" }), { measure: false, nameMeasure: false, count: true });
+  assert.deepEqual(p({ productType: "meat-by-weight" }), { measure: true, nameMeasure: true, count: true });
+  for (const productType of ["phone", "memory-card", "shoes-eu", "table", "sofa", "led-bulb", "gold-necklace"]) assert.deepEqual(p({ productType }), { measure: false, nameMeasure: false, count: true }, productType);
+  assert.deepEqual(p({ productType: "printing" }), { measure: false, nameMeasure: false, count: false });
+  assert.deepEqual(p({ kind: "service", productType: "bread" }), { measure: false, nameMeasure: false, count: false });
+});
+
+test("an untyped item or an item of another type never reads a measure from its name, but can still count", () => {
+  assert.equal(unitPricePolicy({}).nameMeasure, false);
+  assert.equal(unitPricePolicy({ productType: "liquor" }).nameMeasure, true);
+  assert.equal(unitPricePolicy({}).count, true);
+  assert.equal(unitPricePolicy({}).measure, true);
 });

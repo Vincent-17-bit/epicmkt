@@ -1,5 +1,5 @@
 import { ItemHeader } from "@epicmkt/ui";
-import { sizeInItemName, unitPrices } from "@epicmkt/shared";
+import { sizeInItemName, unitPricePolicy, unitPrices } from "@epicmkt/shared";
 import { stateLabels, variantOverrides } from "../../lib/itemView.js";
 import styles from "./Header.module.css";
 
@@ -10,19 +10,21 @@ import styles from "./Header.module.css";
 // The chosen size comes first; when none of the chosen sizes is a weight, volume or count, the one size the item's name states is used
 // ("Soda 24 Pack", "Bread 400g") with the shown price.
 export function unitPricesFor(option, item, shown) {
+  const policy = unitPricePolicy({ productType: item?.productType, kind: item?.kind });
+  if (!policy.measure && !policy.count) return [];
   const v = option?.variant;
   if (v && Number.isFinite(v.price)) {
     const pay = Number.isFinite(v.salePrice) && v.salePrice < v.price ? v.salePrice : v.price;
     for (const axis of option.axes ?? []) {
       const size = axis.values?.find((x) => x.id === option.choice?.[axis.key])?.label;
-      const found = size ? unitPrices(pay, size) : [];
+      const found = size ? unitPrices(pay, size, policy) : [];
       if (found.length) return found;
     }
   }
-  const size = sizeInItemName(item?.name, { productType: item?.productType });
+  const size = sizeInItemName(item?.name, { measure: policy.nameMeasure });
   const base = v && Number.isFinite(v.price) ? v : shown;
   const price = Number.isFinite(base?.salePrice) && base.salePrice < base.price ? base.salePrice : base?.price;
-  return size && Number.isFinite(price) ? unitPrices(price, size) : [];
+  return size && Number.isFinite(price) ? unitPrices(price, size, policy) : [];
 }
 
 export const unitPriceFor = (option, item, shown) => unitPricesFor(option, item, shown)[0] ?? null;
