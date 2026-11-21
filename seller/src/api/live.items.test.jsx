@@ -62,7 +62,7 @@ describe("live saveItem with the new fields", () => {
     await expect(live.saveItem(null, { ...base, brand: "b".repeat(61) })).rejects.toMatchObject({ code: "invalid_details" });
     mock.resetMock();
     await mock.login("es100001", "Demo-Passw0rd");
-    await expect(mock.saveItem(null, { ...base, brand: "b".repeat(61) })).rejects.toMatchObject({ code: "invalid_details" });
+    await expect(mock.saveItem(null, { ...base, productTypeId: "other", brand: "b".repeat(61) })).rejects.toMatchObject({ code: "invalid_details" });
   });
 });
 

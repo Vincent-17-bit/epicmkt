@@ -114,6 +114,7 @@ const MESSAGES = {
   bad_option_ids: "Pick one option value, or the whole item.",
   one_option_only: "A 3D view belongs to the whole item or to one value, not several.",
   unknown_option_value: "That option value is not on this item any more.",
+  product_type_required: "Pick what you are adding before you save. Choose a type, or Other if none fits.",
   unknown_product_type: "That product type is no longer available. Choose another type on the Type step.",
   invalid_variants: "Check the options: each needs a name, and options need a fixed or starting price.",
   invalid_price_tiers: "Check the price tiers: each tier needs a quantity and a price.",

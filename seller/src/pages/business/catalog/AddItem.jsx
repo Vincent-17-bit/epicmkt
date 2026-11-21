@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faChevronLeft, faCopy, faFileImport, faTableList, faWandMagicSparkles } from "@fortawesome/free-solid-svg-icons";
+import { OTHER_TYPE_ID } from "@epicmkt/shared";
 import * as api from "../../../api/index.js";
 import { EditorBrand } from "./editor/ItemEditor.jsx";
 import TypePicker from "./editor/steps/TypePicker.jsx";
@@ -51,10 +52,11 @@ export default function AddItem() {
   if (!pickerAvailable()) return <Navigate to={`${CATALOG}/new`} replace state={location.state} />;
   if (business?.status === "suspended") return <Navigate to="/business/notifications" replace />;
 
-  // The picker never blocks adding an item: with no type, the editor opens exactly as it always did.
+  // The picker never blocks adding an item: a seller who finds no fitting type goes on as "Other", a real type (migration 0141) that the
+  // ranking reads as no type evidence. A new item always carries a type, so "no type" is not a way through any more.
   const go = (state) => navigate(`${CATALOG}/new`, { state: { from, ...state } });
   const pick = (t) => go({ productTypeId: t.id });
-  const other = ({ name }) => go({ productTypeId: null, ...(name ? { typeRequestName: name } : {}) });
+  const other = ({ name }) => go({ productTypeId: OTHER_TYPE_ID, ...(name ? { typeRequestName: name } : {}) });
 
   const choose = (id) => {
     if (id === "many") navigate(`${CATALOG}/add/table`, { state: { from } });
@@ -110,7 +112,7 @@ export default function AddItem() {
           <p>We could not load the list of types.</p>
           <div className={styles.row}>
             <button type="button" className={styles.primary} onClick={retry}>Try again</button>
-            <button type="button" className={styles.ghost} onClick={() => other({})}>Add item without a type</button>
+            <button type="button" className={styles.ghost} onClick={() => other({})}>Add item as Other</button>
           </div>
         </div>
       ) : (

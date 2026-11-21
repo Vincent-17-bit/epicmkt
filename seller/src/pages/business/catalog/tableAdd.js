@@ -1,4 +1,4 @@
-import { SPEC_DEFAULT_GROUP, specIssues } from "@epicmkt/shared";
+import { OTHER_TYPE_ID, SPEC_DEFAULT_GROUP, specIssues } from "@epicmkt/shared";
 import { rowsOf } from "./editor/typedRows.js";
 
 export const MAX_ROWS = 200;
@@ -91,7 +91,7 @@ export function rowFields(r, type) {
   const fields = {
     name: r.name.trim(), description: "", priceType: price === null ? "contact" : "fixed", price: price ?? null, availability: "in_stock",
     trackStock: stock !== null && Number.isInteger(stock) && stock >= 0, stockCount: stock !== null && Number.isInteger(stock) && stock >= 0 ? stock : null,
-    productTypeId: type?.id ?? null, specs: specList(r, type)
+    productTypeId: type?.id ?? OTHER_TYPE_ID, specs: specList(r, type)
   };
   if (!fields.trackStock) delete fields.stockCount;
   return fields;

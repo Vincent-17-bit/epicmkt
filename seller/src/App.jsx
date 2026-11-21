@@ -16,6 +16,7 @@ import Account from "./pages/business/Account.jsx";
 import Catalog from "./pages/business/catalog/Catalog.jsx";
 import ItemPanel from "./pages/business/catalog/panel/ItemPanel.jsx";
 import ItemEditor from "./pages/business/catalog/editor/ItemEditor.jsx";
+import NewItemGate from "./pages/business/catalog/NewItemGate.jsx";
 import AddItem from "./pages/business/catalog/AddItem.jsx";
 import TableAdd from "./pages/business/catalog/TableAdd.jsx";
 import MergeItems from "./pages/business/catalog/MergeItems.jsx";
@@ -42,7 +43,7 @@ export default function App() {
         <Route path="/business/catalog/add" element={<AddItem />} />
         <Route path="/business/catalog/add/table" element={<TableAdd />} />
         <Route path="/business/catalog/merge" element={<MergeItems />} />
-        <Route path="/business/catalog/new" element={<ItemEditor />} />
+        <Route path="/business/catalog/new" element={<NewItemGate />} />
         <Route path="/business/catalog/:itemId/edit" element={<ItemEditor />} />
         <Route path="/business" element={<Layout />}>
           <Route index element={<Home />} />
