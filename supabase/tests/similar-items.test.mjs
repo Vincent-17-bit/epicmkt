@@ -77,7 +77,7 @@ test("at most three items per store, and each store's best item comes before any
 
 test("returns only the card columns, never the heavy ones", async () => {
   const [row] = await ask(["loaf"], { limit: 1 });
-  assert.deepEqual(Object.keys(row).sort(), ["availability", "brand", "business_id", "created_at", "description", "id", "image_paths", "media", "name", "price", "price_type", "section", "sort", "stock_left", "unit", "video_paths"]);
+  assert.deepEqual(Object.keys(row).sort(), ["availability", "brand", "business_id", "created_at", "description", "id", "image_paths", "media", "name", "price", "price_type", "product_type_id", "section", "sort", "stock_left", "unit", "video_paths"]);
 });
 
 test("odd input is harmless: hostile, empty and null terms, an unknown item, a clamped limit, and no signal at all", async () => {
