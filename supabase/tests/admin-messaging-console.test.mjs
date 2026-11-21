@@ -128,7 +128,7 @@ test("automation status says plainly when pg_cron is not installed, and the cont
   const s = await call(asSupport, `select admin_automation_status() as r`);
   assert.equal(s.cron_installed, false);
   assert.deepEqual(s.jobs, []);
-  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups", "pay-reconcile"], "all six scheduled jobs are watched");
+  assert.deepEqual(s.expected, ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups", "pay-reconcile", "trending"], "all seven scheduled jobs are watched");
   assert.equal(typeof s.queue.queued, "number");
   await rejects(c, asAdmin, `select admin_set_job_active('dispatch-messages', false)`, [], /cron_not_installed/);
   await rejects(c, asAdmin, `select admin_run_job('dispatch-messages')`, [], /automation_not_configured/);

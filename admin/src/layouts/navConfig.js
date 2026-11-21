@@ -3,7 +3,7 @@ import {
   faGear, faGears, faHourglassHalf, faLayerGroup, faShieldHalved, faSitemap, faStore, faUserCheck,
 } from "@fortawesome/free-solid-svg-icons";
 
-import { faInbox, faBoxArchive, faMagnifyingGlassChart, faBoxesStacked, faClipboardCheck, faListCheck, faRulerCombined, faTags } from "@fortawesome/free-solid-svg-icons";
+import { faArrowTrendUp, faInbox, faBoxArchive, faMagnifyingGlassChart, faBoxesStacked, faClipboardCheck, faListCheck, faRulerCombined, faTags } from "@fortawesome/free-solid-svg-icons";
 
 // The sidebar, as data. A group's `label` is its section heading; the first group has none.
 export const navGroups = [
@@ -48,6 +48,7 @@ export const navGroups = [
       { label: "Spec rules", to: "/admin/spec-rules", icon: faListCheck, permission: "specrules.view" },
       { label: "Readiness", to: "/admin/readiness", icon: faClipboardCheck, permission: "plans.view" },
       { label: "Demand", to: "/admin/demand", icon: faMagnifyingGlassChart, permission: "plans.view" },
+      { label: "Trending", to: "/admin/trending", icon: faArrowTrendUp, permission: "trending.view", hint: "popular and rising searches" },
       { label: "Departments", to: "/admin/departments", icon: faSitemap, permission: "producttypes.view" },
       { label: "Relations", to: "/admin/relations", icon: faSitemap, permission: "producttypes.view", hint: "related products" },
       { label: "Type requests", to: "/admin/type-requests", icon: faInbox, permission: "producttypes.view", hint: "type requests from sellers" },

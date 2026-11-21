@@ -746,6 +746,17 @@ export const importOptionValue = (kind, label, fields = null) => detailRpc("admi
 // -> { period, total, rows: [{ categoryId, productTypeId, filters, count, shops: [{ id, slug, name, count }] }] }
 export const getUnmetDemand = (period = 7, category = null) => detailRpc("admin_unmet_demand", { p_period: period, p_category: category });
 
+// Trending (migration 0146): one ranking of what shoppers search for (stores, products, flash sales, categories together), popular this week
+// and rising now, rebuilt every hour. The overview is { status: { ok, computedAt, ageMinutes, staleAfterHours, minPeople }, popular, rising,
+// counties, pins, hidden, synonyms }. Hiding takes the word out at once; a pin lasts `days` and still needs something live to show.
+export const getTrendingOverview = () => detailRpc("admin_trending_overview");
+export const pinTrending = (term, days = 7, note = null) => detailRpc("admin_trending_pin", { p_term: term, p_days: days, p_note: note });
+export const unpinTrending = (term) => detailRpc("admin_trending_unpin", { p_term: term });
+export const hideTrending = (term) => detailRpc("admin_trending_hide", { p_term: term });
+export const unhideTrending = (term) => detailRpc("admin_trending_unhide", { p_term: term });
+export const setSynonym = (variant, canonical) => detailRpc("admin_synonym_set", { p_variant: variant, p_canonical: canonical });
+export const removeSynonym = (variant) => detailRpc("admin_synonym_remove", { p_variant: variant });
+
 // Departments (migration 0118) and what sellers asked for when no product type fit (migration 0091).
 // listDepartments -> [{ id, name, sort, active, types, items }]; saveDepartment(id, { name?, sort?, active? }) -> id
 export const listDepartments = () => detailRpc("admin_departments_list");

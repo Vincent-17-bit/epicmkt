@@ -12,6 +12,7 @@ running, and lets the owner pause or run each one.
 | `proofs-purge` | 01:00 UTC (04:00 Nairobi) | Deletes proof uploads 90 days after their flag was resolved, and uploads that were never finalized |
 | `media-gc` | every 10 minutes | Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos, deleted shops) and settles unfinished uploads. See `docs/cloudinary-images.md` |
 | `search-rollups` | hourly at :02 | Rebuilds the type-ahead dictionary and the menu's trending searches (plain SQL inside the database, no function or secret). See `docs/catalog-scale.md` |
+| `trending` | hourly at :12 | Rebuilds the stored trending lists, "Popular this week" and "Rising now" (nationally and per county), from the permanent daily search summary. Every kind of search ranks in one list: store, product, flash sale, category. Plain SQL inside the database. Runs after `search-rollups` because it reads the dictionary. A list older than 3 hours is not served (the live count is), and `select public.trending_status()` says so. See `docs/trending.md` |
 | `pay-reconcile` | every 2 minutes | M-Pesa "Pay now" (STK Push): finishes Safaricom answers that were stored but not processed, asks Safaricom about prompts whose answer is late, expires prompts nobody answered. See `docs/PAYMENTS.md` |
 
 The schedule is **not a migration** because it needs secrets that differ per project. Do this once per environment.

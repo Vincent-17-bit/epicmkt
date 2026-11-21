@@ -112,6 +112,7 @@ select cron.schedule(
 --   select cron.unschedule('proofs-purge');
 --   select cron.unschedule('media-gc');
 --   select cron.unschedule('search-rollups');
+--   select cron.unschedule('trending');
 --   select cron.unschedule('pay-reconcile');
 
 -- media-gc: every 10 minutes. Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos,
@@ -142,6 +143,18 @@ select cron.schedule(
   'search-rollups',
   '2 * * * *',
   $$ select public.refresh_search_rollups(); $$
+);
+
+-- trending: every hour at :12, migration 0146. Rebuilds the stored trending lists ("Popular this week", "Rising
+-- now", nationally and per county) from the daily search summary. It runs after search-rollups on purpose: it reads the type-ahead
+-- dictionary to tell a store from a product from a category. Plain SQL inside the database.
+-- /api/products caches the list until 20 minutes past the next hour, so visitors see the new list within minutes.
+-- A list older than trending_settings.stale_hours (3) is not served: the live count of the last 24 hours is shown instead, and
+-- trending_status() says "ok: false" (check 5b in verify.sql). Without this job nothing breaks, it just falls back to the live count.
+select cron.schedule(
+  'trending',
+  '12 * * * *',
+  $$ select public.refresh_trending(); $$
 );
 
 -- pay-reconcile: every 2 minutes. M-Pesa "Pay now" (STK Push): finishes Safaricom callbacks that were stored but not processed,

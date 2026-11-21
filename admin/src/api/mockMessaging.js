@@ -163,7 +163,7 @@ export async function sendBroadcast(payload) {
 export async function getAutomationStatus() {
   await latency();
   return {
-    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups", "pay-reconcile"], jobs: jobs.map((j) => ({ ...j })),
+    cron_installed: true, net_installed: true, expected: ["dispatch-messages", "daily-lifecycle", "proofs-purge", "media-gc", "search-rollups", "pay-reconcile", "trending"], jobs: jobs.map((j) => ({ ...j })),
     queue: { queued: 1, due_now: 1, oldest_due_at: at(-2 * MIN), failed_7d: log.filter((m) => m.status === "failed").length },
     last_sent_at: at(-19 * MIN), last_reminder_at: at(-20 * MIN),
   };

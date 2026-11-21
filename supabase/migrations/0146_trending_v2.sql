@@ -1,0 +1,505 @@
+-- 0146: trending v2. One ranked list of what shoppers search for, whatever it is (a store, a product, a flash sale, a category),
+-- in two views: "Popular this week" and "Rising now". Built every hour from a permanent daily summary.
+--
+--   search_term_daily       one row per (day, term group, scope): how many different people searched it that day. The raw
+--                           search_events stay for 2 days only (0039); this is what makes a 7-day window possible.
+--   search_synonyms         "gesi" -> "gas": variants that must count as one thing. Plural endings are already merged by
+--                           search_query_tokens (0128), so "gas cylinder" and "gas cylinders" group without a row here.
+--   search_trending_pins    an admin pins a term to the top of Popular for a few days (a campaign). It still has to be live.
+--   trending_settings       the thresholds, one row, editable without a deploy.
+--   search_trending         the stored lists (national and per county), rebuilt by refresh_trending().
+--
+-- Nothing from 0039/0128 is removed: top_searches, top_searches_hourly and the hourly rollup keep working for older clients.
+-- Hiding a term uses the existing search_blocklist (a term containing a blocked word is never shown).
+--
+-- What a "person" is does not change: a salted hash of the network address that also changes every day (0039). So the weekly
+-- number counts person-days, which is also why a heavy searcher cannot be followed across days.
+-- The shopper's county (only when they chose a town themselves) is stored next to that anonymous hash, never with it.
+
+-- 1. county on the raw events; log_search takes it as an optional second argument -----------------------------------------------
+
+alter table public.search_events add column if not exists county text check (county is null or char_length(county) between 2 and 40);
+
+drop function if exists public.log_search(text);
+
+create or replace function public.log_search(p_term text, p_county text default null) returns void
+-- timezone is pinned to UTC as 0048 did for the one-argument version: current_date below is part of the anonymous hash, so it must not move with
+-- the connection's zone (supabase/tests/timezone.test.mjs).
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '2s' set timezone = 'UTC' as
+$$
+declare
+  v_term text := lower(regexp_replace(btrim(coalesce(p_term, '')), '\s+', ' ', 'g'));
+  v_county text := lower(regexp_replace(btrim(coalesce(p_county, '')), '\s+', ' ', 'g'));
+  v_headers jsonb;
+  v_ip text;
+  v_client text;
+begin
+  if char_length(v_term) < 2 or char_length(v_term) > 60
+    or cardinality(string_to_array(v_term, ' ')) > 6
+    or v_term !~ '^[[:alnum:] ''&-]+$'
+    or v_term !~ '[[:alpha:]]' then
+    return;
+  end if;
+  if v_county !~ '^[a-z][a-z '' -]{1,39}$' then v_county := null; end if;
+
+  v_headers := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb;
+  v_ip := coalesce(nullif(btrim(v_headers ->> 'cf-connecting-ip'), ''), nullif(btrim(v_headers ->> 'x-real-ip'), ''));
+  if v_ip is null then
+    return;
+  end if;
+
+  v_client := encode(digest((select salt from public.search_salt limit 1) || ':' || current_date::text || ':' || v_ip, 'sha256'), 'hex');
+
+  if (select count(*) from public.search_events where client_hash = v_client and at > now() - interval '1 minute') >= 12 then
+    return;
+  end if;
+  if (select count(*) from public.search_events where at > now() - interval '1 minute') >= 300 then
+    return;
+  end if;
+
+  insert into public.search_events (term, client_hash, bucket, county)
+  values (v_term, v_client, floor(extract(epoch from now()) / 3600)::bigint, v_county)
+  on conflict do nothing;
+
+  if random() < 0.01 then
+    delete from public.search_events
+    where id in (select id from public.search_events where at < now() - interval '2 days' order by at limit 5000);
+  end if;
+exception when others then
+  return;
+end $$;
+revoke all on function public.log_search(text, text) from public;
+grant execute on function public.log_search(text, text) to anon, authenticated, service_role;
+
+-- 2. tables -------------------------------------------------------------------------------------------------------------------
+
+create table if not exists public.trending_settings (
+  id boolean primary key default true check (id),
+  min_people integer not null default 3 check (min_people >= 1),             -- different people needed, at the quietest
+  min_people_pct numeric not null default 0.005 check (min_people_pct >= 0),  -- ...grows with traffic: this share of the last 48 h's searchers
+  min_people_cap integer not null default 50 check (min_people_cap >= 1),
+  rising_min_ratio numeric not null default 1.5 check (rising_min_ratio >= 1),  -- last 24 h against the term's own daily average
+  popular_days integer not null default 7 check (popular_days between 1 and 30),
+  county_min_terms integer not null default 5 check (county_min_terms >= 1),    -- fewer than this and the county shows the national list
+  stale_hours integer not null default 3 check (stale_hours >= 1),              -- a list older than this is not served, and the status says "stale"
+  keep_days integer not null default 120 check (keep_days >= 8),
+  last_run_at timestamptz                                                      -- set by every rebuild, even one with nothing to rank
+);
+insert into public.trending_settings (id) values (true) on conflict do nothing;
+
+create table if not exists public.search_synonyms (
+  variant text primary key check (variant = lower(btrim(variant)) and char_length(variant) >= 2),
+  canonical text not null check (canonical = lower(btrim(canonical)) and char_length(canonical) >= 2)
+);
+
+create table if not exists public.search_trending_pins (
+  term text primary key check (term = lower(btrim(term)) and char_length(term) >= 2),
+  note text,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.search_term_daily (
+  day date not null,
+  term text not null,                 -- the group key: plural endings merged, synonyms applied
+  scope text not null,                -- '*' = everywhere, otherwise a county in lower case
+  label text not null,                -- what to show: the synonym's canonical word, or the most common spelling
+  people integer not null check (people > 0),
+  primary key (day, scope, term)
+);
+create index if not exists search_term_daily_term_idx on public.search_term_daily (term, day desc);
+
+create table if not exists public.search_trending (
+  list text not null check (list in ('popular', 'rising')),
+  scope text not null,
+  rank integer not null,
+  term text not null,                 -- group key
+  label text not null,                -- shown and searched
+  kind text not null check (kind in ('store', 'flash', 'category', 'product')),
+  name text,                          -- the store, item or category it resolved to
+  people integer not null,
+  ratio numeric,
+  hot boolean not null default false,
+  pinned boolean not null default false,
+  item_id uuid,
+  slug text,
+  image text,
+  price numeric(12, 2),
+  computed_at timestamptz not null default now(),
+  primary key (list, scope, rank)
+);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['trending_settings', 'search_synonyms', 'search_trending_pins', 'search_term_daily', 'search_trending'] loop
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from public, anon, authenticated', t);
+    execute format('grant select, insert, update, delete on public.%I to service_role', t);
+  end loop;
+end $$;
+
+-- A few words shoppers use for the same thing. Edit freely (admin_synonym_set / admin_synonym_remove).
+insert into public.search_synonyms (variant, canonical) values
+  ('gesi', 'gas'), ('maji', 'water'), ('mkate', 'bread'), ('unga', 'flour'), ('sukari', 'sugar'), ('maziwa', 'milk'),
+  ('simu', 'phone'), ('viatu', 'shoes'), ('nguo', 'clothes'), ('mafuta ya kupikia', 'cooking oil')
+on conflict do nothing;
+
+-- 3. grouping and resolving -----------------------------------------------------------------------------------------------------
+
+-- What to show for a search: its synonym's canonical word when there is one, otherwise the text itself.
+create or replace function public.search_canon_label(p_term text) returns text
+language sql stable set search_path = public, extensions as $$
+  select coalesce(
+    (select s.canonical from public.search_synonyms s where s.variant = n.t),
+    (select s.canonical from public.search_synonyms s where s.variant = n.k limit 1),
+    n.t)
+  from (select lower(regexp_replace(btrim(coalesce(p_term, '')), '\s+', ' ', 'g')) as t,
+               array_to_string(public.search_query_tokens(coalesce(p_term, '')), ' ') as k) n
+$$;
+
+-- What counts as the same thing: the words as search itself reads them (plural endings merged).
+create or replace function public.search_group_key(p_label text) returns text
+language sql stable set search_path = public, extensions as $$
+  select array_to_string(public.search_query_tokens(coalesce(p_label, '')), ' ')
+$$;
+
+-- Is this term something a shopper can actually reach right now, and what is it? No row = nothing live, so it is not shown.
+-- Order: a store with that name, a category, an item on a running flash sale, then any visible item (the same rules the search page uses).
+create or replace function public.search_trending_resolve(p_label text)
+returns table (kind text, item_id uuid, name text, slug text, image text, price numeric)
+language plpgsql stable security definer set search_path = public, extensions set statement_timeout = '5s' as
+$$
+declare
+  v_key text := public.search_key(p_label);
+  r record;
+begin
+  if v_key = '' then return; end if;
+
+  select st.label, st.ref as slug, st.image into r
+  from public.search_terms st
+  join public.businesses b on b.slug = st.ref and public.business_is_visible(b)
+  where st.kind = 'store' and st.key = v_key limit 1;
+  if found then
+    return query select 'store'::text, null::uuid, r.label, r.slug, r.image, null::numeric;
+    return;
+  end if;
+
+  select st.label, st.ref as slug into r from public.search_terms st where st.kind = 'category' and st.key = v_key limit 1;
+  if found then
+    return query select 'category'::text, null::uuid, r.label, r.slug, null::text, null::numeric;
+    return;
+  end if;
+
+  select i.id as item_id, i.name, b.slug,
+         (select x.path from public.item_media x where x.item_id = i.id and x.kind = 'image' order by x.sort, x.created_at, x.id limit 1) as image,
+         coalesce(i.price_min, i.price) as price into r
+  from public.flash_sales fs
+  join public.items i on i.id = fs.item_id
+  join public.businesses b on b.id = fs.business_id
+  where fs.status = 'live' and fs.starts_at <= now() and fs.ends_at > now()
+    and public.item_is_public(i.visible, i.draft, i.hidden_by_admin, i.removed_by_admin, i.availability)
+    and public.business_is_visible(b)
+    and public.item_search_doc(i.name, i.brand, i.section) @@ public.search_tsquery(public.search_query_tokens(p_label))
+  order by fs.ends_at limit 1;
+  if found then
+    return query select 'flash'::text, r.item_id, r.name, r.slug, r.image, r.price;
+    return;
+  end if;
+
+  return query select 'product'::text, e.item_id, e.label, e.slug, e.image, e.price from public.search_example_item(p_label) e;
+end $$;
+
+-- 4. the rebuild (every hour) ----------------------------------------------------------------------------------------------
+
+create or replace function public.refresh_trending() returns void
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '90s' as
+$$
+declare
+  s public.trending_settings;
+  v_today date := (now() at time zone 'Africa/Nairobi')::date;
+  v_from timestamptz := (((now() at time zone 'Africa/Nairobi')::date - 1)::timestamp at time zone 'Africa/Nairobi');
+  v_traffic integer;
+  v_min integer;
+begin
+  select * into s from public.trending_settings limit 1;
+  select count(distinct client_hash) into v_traffic from public.search_events where at > now() - interval '48 hours';
+  v_min := least(s.min_people_cap, greatest(s.min_people, ceil(coalesce(v_traffic, 0) * s.min_people_pct)::integer));
+
+  drop table if exists t_ev, t_cand, t_res;
+
+  -- a) the daily summary: today and yesterday are always complete in search_events (kept 2 days); a count never goes down.
+  create temp table t_ev on commit drop as
+    select (e.at at time zone 'Africa/Nairobi')::date as day, e.client_hash, e.county,
+           public.search_group_key(l.label) as key, l.label
+    from public.search_events e
+    cross join lateral (select public.search_canon_label(e.term) as label) l
+    where e.at >= v_from;
+  delete from t_ev where key = '';
+
+  insert into public.search_term_daily (day, term, scope, label, people)
+  select day, key, '*', mode() within group (order by label), count(distinct client_hash) from t_ev group by day, key
+  union all
+  select day, key, county, mode() within group (order by label), count(distinct client_hash) from t_ev where county is not null group by day, key, county
+  on conflict (day, scope, term) do update
+    set people = greatest(public.search_term_daily.people, excluded.people), label = excluded.label;
+
+  delete from public.search_term_daily where day < v_today - s.keep_days;
+
+  -- b) candidates: popular (the window's people) and rising (last 24 h against the term's own average of the 7 days before today).
+  create temp table t_cand on commit drop as
+  with pop as (
+    select d.scope, d.term as key, sum(d.people)::integer as people,
+           (array_agg(d.label order by d.people desc, d.day desc))[1] as label
+    from public.search_term_daily d
+    where d.day between v_today - (s.popular_days - 1) and v_today
+    group by d.scope, d.term
+  ), r24 as (
+    select scope, key, count(distinct client_hash)::integer as people, mode() within group (order by label) as label
+    from (
+      select '*' as scope, public.search_group_key(l.label) as key, e.client_hash, l.label
+      from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+      where e.at > now() - interval '24 hours'
+      union all
+      select e.county, public.search_group_key(l.label), e.client_hash, l.label
+      from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+      where e.at > now() - interval '24 hours' and e.county is not null
+    ) x where key <> '' group by scope, key
+  ), base as (
+    select scope, term as key, sum(people)::numeric / 7.0 as per_day
+    from public.search_term_daily where day between v_today - 7 and v_today - 1 group by scope, term
+  )
+  select 'popular'::text as list, p.scope, p.key, p.label, p.people, null::numeric as ratio
+  from pop p where p.people >= v_min
+  union all
+  select 'rising', r.scope, r.key, r.label, r.people, round(r.people / greatest(coalesce(b.per_day, 0), 1.0), 2)
+  from r24 r left join base b on b.scope = r.scope and b.key = r.key
+  where r.people >= v_min and r.people / greatest(coalesce(b.per_day, 0), 1.0) >= s.rising_min_ratio;
+
+  -- hidden words never show; a county needs a shop in it; pins are added to every popular list.
+  delete from t_cand c where exists (select 1 from public.search_blocklist b where position(b.term in c.label) > 0 or position(b.term in c.key) > 0);
+  delete from t_cand c where c.scope <> '*' and not exists (
+    select 1 from public.businesses b where lower(b.county) = c.scope and public.business_is_visible(b));
+
+  insert into t_cand (list, scope, key, label, people, ratio)
+  select 'popular', sc.scope, public.search_group_key(public.search_canon_label(p.term)), public.search_canon_label(p.term), 0, null
+  from public.search_trending_pins p
+  cross join (select '*' as scope union select distinct scope from t_cand where scope <> '*') sc
+  where p.expires_at > now()
+    and not exists (select 1 from public.search_blocklist b where position(b.term in p.term) > 0);
+  delete from t_cand where key = '';
+
+  -- c) resolve each distinct term once: only what a shopper can reach right now survives.
+  create temp table t_res on commit drop as
+  select k.key, k.label, r.*
+  from (select distinct on (key) key, label from t_cand order by key, people desc) k
+  cross join lateral public.search_trending_resolve(k.label) r;
+
+  -- d) store the lists.
+  delete from public.search_trending;
+
+  insert into public.search_trending (list, scope, rank, term, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price)
+  select list, scope, row_number() over (partition by list, scope order by pinned desc, sortv desc, label) as rank,
+         key, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price
+  from (
+    select c.list, c.scope, c.key, c.label, c.people, c.ratio, r.kind, r.name, r.item_id, r.slug, r.image, r.price,
+           (c.list = 'popular' and exists (select 1 from t_cand x where x.list = 'rising' and x.scope = c.scope and x.key = c.key)) as hot,
+           (c.list = 'popular' and exists (select 1 from public.search_trending_pins p
+                                           where p.expires_at > now() and public.search_group_key(public.search_canon_label(p.term)) = c.key)) as pinned,
+           case when c.list = 'rising' then coalesce(c.ratio, 0) * 1000 + c.people else c.people end as sortv
+    from (select distinct on (list, scope, key) * from t_cand order by list, scope, key, people desc) c
+    join t_res r on r.key = c.key
+  ) q;
+
+  delete from public.search_trending where rank > 20;
+  -- a county list needs enough terms of its own, otherwise the national list is shown instead
+  delete from public.search_trending t where t.scope <> '*' and t.list = 'popular'
+    and (select count(*) from public.search_trending x where x.list = 'popular' and x.scope = t.scope) < s.county_min_terms;
+  delete from public.search_trending t where t.scope <> '*'
+    and not exists (select 1 from public.search_trending x where x.list = 'popular' and x.scope = t.scope);
+
+  update public.trending_settings set last_run_at = now();
+end $$;
+revoke all on function public.refresh_trending() from public, anon, authenticated;
+grant execute on function public.refresh_trending() to service_role;
+
+-- 5. reading -------------------------------------------------------------------------------------------------------------------
+
+create or replace function public.trending_status() returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object(
+    'computedAt', s.last_run_at,
+    'ageMinutes', case when s.last_run_at is null then null else floor(extract(epoch from (now() - s.last_run_at)) / 60)::integer end,
+    'staleAfterHours', s.stale_hours,
+    'ok', coalesce(s.last_run_at > now() - make_interval(hours => s.stale_hours), false),
+    'minPeople', s.min_people)
+  from public.trending_settings s
+$$;
+revoke all on function public.trending_status() from public, anon, authenticated;
+grant execute on function public.trending_status() to service_role;
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_county text := nullif(lower(regexp_replace(btrim(coalesce(p_county, '')), '\s+', ' ', 'g')), '');
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+begin
+  if v_fresh then
+    if v_county is not null then
+      if exists (select 1 from public.search_trending where scope = v_county and list = 'popular') then v_scope := v_county; else v_fallback := 'national'; end if;
+      if exists (select 1 from public.search_trending where scope = v_county and list = 'rising') then v_rscope := v_county; end if;
+    end if;
+    select last_run_at into v_at from public.trending_settings limit 1;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending where list = 'popular' and scope = v_scope order by rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending where list = 'rising' and scope = v_rscope order by rank limit v_limit) t;
+  else
+    -- the stored list is missing or older than stale_hours: the live count (0039) of the last 24 hours, kind unknown
+    v_live := true;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    -- a young site: nothing has been searched enough yet, so show the busiest categories
+    v_fallback := 'categories';
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by weight desc, label) as rn, label, ref as slug
+                       from public.search_terms where kind = 'category' order by weight desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'county', v_county, 'fallback', v_fallback,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+revoke all on function public.trending_lists(text, integer) from public;
+grant execute on function public.trending_lists(text, integer) to anon, authenticated, service_role;
+
+-- 6. admin: pin, hide, synonyms, and a look at what is stored ----------------------------------------------------------------------
+
+create or replace function public.admin_trending_overview() returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  return jsonb_build_object(
+    'status', public.trending_status(),
+    'popular', coalesce((select jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'kind', kind, 'name', name, 'people', people, 'hot', hot, 'pinned', pinned) order by rank)
+                         from public.search_trending where list = 'popular' and scope = '*'), '[]'::jsonb),
+    'rising', coalesce((select jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'kind', kind, 'name', name, 'people', people, 'ratio', ratio) order by rank)
+                        from public.search_trending where list = 'rising' and scope = '*'), '[]'::jsonb),
+    'counties', coalesce((select jsonb_agg(distinct scope) from public.search_trending where scope <> '*'), '[]'::jsonb),
+    'pins', coalesce((select jsonb_agg(jsonb_build_object('term', term, 'note', note, 'expiresAt', expires_at) order by expires_at)
+                      from public.search_trending_pins where expires_at > now()), '[]'::jsonb),
+    'hidden', coalesce((select jsonb_agg(term order by term) from public.search_blocklist), '[]'::jsonb),
+    'synonyms', coalesce((select jsonb_agg(jsonb_build_object('variant', variant, 'canonical', canonical) order by variant) from public.search_synonyms), '[]'::jsonb));
+end $$;
+
+create or replace function public.admin_trending_pin(p_term text, p_days integer default 7, p_note text default null) returns void
+language plpgsql volatile security definer set search_path = public as $$
+declare v_term text := lower(regexp_replace(btrim(coalesce(p_term, '')), '\s+', ' ', 'g'));
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  if char_length(v_term) < 2 or char_length(v_term) > 60 then raise exception 'term must be 2 to 60 characters'; end if;
+  if (select count(*) from public.search_trending_pins where expires_at > now() and term <> v_term) >= 3 then
+    raise exception 'at most 3 pinned terms at a time';
+  end if;
+  insert into public.search_trending_pins (term, note, expires_at)
+  values (v_term, nullif(btrim(p_note), ''), now() + make_interval(days => least(greatest(coalesce(p_days, 7), 1), 30)))
+  on conflict (term) do update set note = excluded.note, expires_at = excluded.expires_at;
+end $$;
+
+create or replace function public.admin_trending_unpin(p_term text) returns void
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  delete from public.search_trending_pins where term = lower(btrim(p_term));
+end $$;
+
+-- Hiding is immediate: it goes in the blocklist and out of the stored lists (a term containing the word is hidden, as in 0039).
+create or replace function public.admin_trending_hide(p_term text) returns void
+language plpgsql volatile security definer set search_path = public as $$
+declare v_term text := lower(regexp_replace(btrim(coalesce(p_term, '')), '\s+', ' ', 'g'));
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  if char_length(v_term) < 2 then raise exception 'term must be at least 2 characters'; end if;
+  insert into public.search_blocklist (term) values (v_term) on conflict do nothing;
+  delete from public.search_trending where position(v_term in lower(label)) > 0 or position(v_term in term) > 0;
+  delete from public.search_trending_pins where position(v_term in term) > 0;
+end $$;
+
+create or replace function public.admin_trending_unhide(p_term text) returns void
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  delete from public.search_blocklist where term = lower(btrim(p_term));
+end $$;
+
+create or replace function public.admin_synonym_set(p_variant text, p_canonical text) returns void
+language plpgsql volatile security definer set search_path = public as $$
+declare v text := lower(regexp_replace(btrim(coalesce(p_variant, '')), '\s+', ' ', 'g'));
+        c text := lower(regexp_replace(btrim(coalesce(p_canonical, '')), '\s+', ' ', 'g'));
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  if char_length(v) < 2 or char_length(c) < 2 or v = c then raise exception 'two different words of at least 2 characters are needed'; end if;
+  insert into public.search_synonyms (variant, canonical) values (v, c) on conflict (variant) do update set canonical = excluded.canonical;
+end $$;
+
+create or replace function public.admin_synonym_remove(p_variant text) returns void
+language plpgsql volatile security definer set search_path = public as $$
+begin
+  if not public.has_role(array['reviewer', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  delete from public.search_synonyms where variant = lower(btrim(p_variant));
+end $$;
+
+revoke all on function public.admin_trending_overview(), public.admin_trending_pin(text, integer, text), public.admin_trending_unpin(text),
+  public.admin_trending_hide(text), public.admin_trending_unhide(text), public.admin_synonym_set(text, text), public.admin_synonym_remove(text)
+  from public, anon;
+grant execute on function public.admin_trending_overview(), public.admin_trending_pin(text, integer, text), public.admin_trending_unpin(text),
+  public.admin_trending_hide(text), public.admin_trending_unhide(text), public.admin_synonym_set(text, text), public.admin_synonym_remove(text)
+  to authenticated, service_role;
+
+-- 7. Admin > Automation: the job is watched, paused and run from there like the others (scripts/cron-schedule.test.mjs requires every scheduled
+-- job to be in this list). Like search-rollups it is plain SQL, so Run now calls it directly, with no HTTP request.
+create or replace function public.admin_job_names() returns text[]
+language sql immutable as $$ select array['dispatch-messages', 'daily-lifecycle', 'proofs-purge', 'media-gc', 'search-rollups', 'pay-reconcile', 'trending'] $$;
+
+create or replace function public.admin_run_job(p_name text) returns bigint
+language plpgsql security definer set search_path = public as $$
+declare v_url text; v_secret text; v_req bigint;
+begin
+  if not public.has_role(array['owner']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  if not (p_name = any (public.admin_job_names())) then raise exception 'unknown_job'; end if;
+  if p_name = 'search-rollups' then
+    perform public.admin_audit_action('job.run', 'job', p_name, null, public.refresh_search_rollups(), null, null);
+    return 0;
+  end if;
+  if p_name = 'trending' then
+    perform public.refresh_trending();
+    perform public.admin_audit_action('job.run', 'job', p_name, null, public.trending_status(), null, null);
+    return 0;
+  end if;
+  if to_regprocedure('net.http_post(text, jsonb, jsonb, jsonb, integer)') is null or to_regclass('vault.decrypted_secrets') is null then
+    raise exception 'automation_not_configured';
+  end if;
+  execute $q$select decrypted_secret from vault.decrypted_secrets where name = 'project_url'$q$ into v_url;
+  execute $q$select decrypted_secret from vault.decrypted_secrets where name = 'cron_secret'$q$ into v_secret;
+  if v_url is null or v_secret is null then raise exception 'automation_not_configured'; end if;
+  execute 'select net.http_post(url := $1, headers := $2, body := $3, timeout_milliseconds := 55000)'
+    into v_req using v_url || '/functions/v1/' || p_name,
+    jsonb_build_object('Content-Type', 'application/json', 'x-cron-secret', v_secret), '{}'::jsonb;
+  perform public.admin_audit_action('job.run', 'job', p_name, null, jsonb_build_object('request_id', v_req), null, null);
+  return v_req;
+end $$;
