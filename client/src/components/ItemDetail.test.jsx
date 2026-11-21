@@ -71,7 +71,7 @@ describe("ItemDetail", () => {
     mocks.getStoreSelective.mockResolvedValue([]);
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT\nhttp://localhost:3000/b/fade-kings/i/fade");
     expect(screen.getAllByRole("link", { name: /Visit Store/ })[0]).toHaveAttribute("href", "/b/fade-kings");
   });
 
@@ -174,7 +174,7 @@ describe("ItemDetail", () => {
     mocks.getStoreSelective.mockResolvedValue([]);
     mount();
     await screen.findByRole("heading", { name: "Fade and beard" });
-    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw the flash sale on Fade and beard: KES 240 (was KES 300) on EpicMKT");
+    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw the flash sale on Fade and beard: KES 240 (was KES 300) on EpicMKT\nhttp://localhost:3000/b/fade-kings/i/fade");
     expect(screen.getByText("KES 240")).toBeInTheDocument();
   });
 
@@ -417,7 +417,7 @@ describe("ItemDetail flash expiry", () => {
     });
     expect(screen.queryByText(/Flash sale ended/)).toBeNull();
     expect(screen.queryByText("Weekend deal")).toBeNull();
-    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT");
+    expect(chatHrefs()[0]).toBe("https://wa.me/254712555101?text=Hi, I saw Fade and beard (KES 300) on EpicMKT\nhttp://localhost:3000/b/fade-kings/i/fade");
   });
 
   it("shows the no longer available state when the item was unlisted after the sale", async () => {

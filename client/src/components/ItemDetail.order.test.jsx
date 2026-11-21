@@ -42,7 +42,7 @@ describe("send my choice on WhatsApp", () => {
   it("writes item, colour, size, quantity 1 and total, even at quantity 1", async () => {
     mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 128 GB, x1, KES 21,000 on EpicMKT");
+    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 128 GB, x1, KES 21,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
     expect(order()).toHaveAttribute("target", "_blank");
   });
 
@@ -51,7 +51,7 @@ describe("send my choice on WhatsApp", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT");
+    expect(orderText()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
   });
 
   it("says a measured amount for a weighed item", async () => {

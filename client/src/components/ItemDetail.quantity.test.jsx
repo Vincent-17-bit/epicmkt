@@ -32,6 +32,7 @@ const mount = (detail) => {
   );
 };
 const chat = () => decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"));
+const order = () => decodeURIComponent(screen.getByTestId("order-whatsapp").getAttribute("href"));
 const box = () => screen.getByRole("textbox", { name: /How (many|much)/ });
 const total = () => screen.getByTestId("quantity-total").textContent;
 
@@ -67,7 +68,8 @@ describe("quantity on the item page: units", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
+    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I saw Samsung Galaxy S26 (Grey / 256 GB) (KES 24,000) on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
   });
 
   it("never goes below 1: the minus button stops, and typed 0 and -2 are corrected", async () => {
@@ -144,7 +146,7 @@ describe("quantity on the item page: measured (kg)", () => {
     await userEvent.clear(box());
     await userEvent.type(box(), "1.5");
     await userEvent.tab();
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I'd like Fresh beef, 1.5 kg, KES 1,200 on EpicMKT");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Fresh beef, 1.5 kg, KES 1,200 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
   });
 
   it("corrects 0 and a negative to the least, and passes axe", async () => {
@@ -171,7 +173,7 @@ describe("quantity on the item page: quantity tiers", () => {
     await userEvent.clear(box);
     await userEvent.type(box, "11");
     expect(screen.getByTestId("tiers-total").textContent).toContain("KES 77");
-    expect(chat()).toBe("https://wa.me/254712555101?text=Hi, I'd like Photocopy, x11, KES 77 on EpicMKT");
+    expect(order()).toBe("https://wa.me/254712555101?text=Hi, I'd like Photocopy, x11, KES 77 on EpicMKT\nhttp://localhost:3000/b/shop/i/it");
     expect(screen.queryByTestId("quantity")).toBeNull();   // one control, not two
   });
 });

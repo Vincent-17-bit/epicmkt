@@ -67,26 +67,19 @@ export function orderLine({ shown, tiers = null, info = null, qty }) {
   return { qty, unit: one, total, measure: info?.mode === "measure", unitLabel: info?.unit ?? null };
 }
 
-// "Samsung Galaxy S26, Grey, 256 GB, x2, KES 48,000" (a measured item: "Fresh beef, Beef steak, 1.5 kg, KES 1,125").
-const orderDetail = (order) => `${order.measure ? amountText(order.qty, order.unitLabel) : `x${order.qty}`}, ${formatKes(order.total)}`;
 export function orderMessage({ item, variant, order }) {
   const parts = [item.name, ...(variant?.label ? String(variant.label).split(" / ") : []), order.measure ? amountText(order.qty, order.unitLabel) : `x${order.qty}`, formatKes(order.total)];
   return `Hi, I'd like ${parts.join(", ")} on EpicMKT`;
 }
 
-export function chatMessage({ item, variant, pricing, greeting, order = null }) {
-  // A quantity other than one (or any measured amount) says what the buyer wants, with the total. Quantity 1 keeps the plain message.
-  const ordering = Boolean(order && (order.measure || order.qty !== 1));
-  const ownGreeting = typeof greeting === "string" && greeting.trim() && greetingProblems(greeting).length === 0;
-  if (ordering && !ownGreeting) return orderMessage({ item, variant, order });
+export function chatMessage({ item, variant, pricing, greeting }) {
   const name = variant ? `${item.name} (${variant.label})` : item.name;
   const shown = variant ?? pricing;
   // The seller's own greeting wins when they saved a valid one. {item} and {price} are filled in; it never carries links or numbers.
   if (typeof greeting === "string" && greeting.trim() && greetingProblems(greeting).length === 0) {
     const live = shown && Number.isFinite(shown.regularPrice) ? (shown.savings > 0 ? shown.salePrice : shown.regularPrice) : null;
     const text = renderGreeting(greeting, { item: name, price: live === null ? "" : formatKes(live) });
-    // The seller's words stay as they wrote them; what the buyer chose follows, so the seller never has to ask "how many?".
-    return ordering ? `${text} (${orderDetail(order)})` : text;
+    return text;
   }
   if (!shown || !Number.isFinite(shown.regularPrice)) return `Hi, I saw ${name} on EpicMKT`;
   // An option's own sale price (not a flash sale) says what the buyer would pay, without the flash wording.

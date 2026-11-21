@@ -33,12 +33,11 @@ describe("chatMessage", () => {
     expect(chatMessage({ item, pricing: null, greeting })).toBe("Hello! Is Fade and beard in stock?");
   });
 
-  it("keeps the seller's greeting and adds what the buyer chose when the quantity is not one", () => {
+  it("keeps the seller's greeting as written, whatever quantity the buyer picked", () => {
     const greeting = "Hello! Is {item} in stock?";
     const pricing = { regularPrice: 300, salePrice: 300, savings: 0 };
-    expect(chatMessage({ item, pricing, greeting, order: { qty: 3, total: 900, measure: false } })).toBe("Hello! Is Fade and beard in stock? (x3, KES 900)");
-    expect(chatMessage({ item, pricing, greeting, order: { qty: 1.5, total: 450, measure: true, unitLabel: "kg" } })).toMatch(/^Hello! Is Fade and beard in stock\? \(1\.5 kg, KES 450\)$/);
-    expect(chatMessage({ item, pricing, greeting, order: { qty: 1, total: 300, measure: false } })).toBe("Hello! Is Fade and beard in stock?");
+    expect(chatMessage({ item, pricing, greeting, order: { qty: 3, total: 900, measure: false } })).toBe("Hello! Is Fade and beard in stock?");
+    expect(chatMessage({ item, pricing, order: { qty: 3, total: 900, measure: false } })).toBe("Hi, I saw Fade and beard (KES 300) on EpicMKT");
   });
 
   it("ignores a greeting that is empty or unsafe and keeps the standard text", () => {

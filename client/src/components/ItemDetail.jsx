@@ -215,10 +215,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
-  const message = !current ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting, order });
+  const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}` : "";
+  const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
+  const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
   const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
-  const orderText = !orderReady ? "" : madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, variant, order });
+  const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, variant, order }));
   const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
 
   const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };
