@@ -1,3 +1,4 @@
+import { typesCompatible } from "./productType/registry.js";
 import { distanceKm } from "./utils.js";
 import { seededKey } from "./related/complements.js";
 import { hasNoTypeEvidence } from "./productType/other.js";
@@ -236,6 +237,9 @@ const judge = (a, b, inSection) => {
   const typed = Boolean(a.typeId && b.typeId);
   const sameType = typed && a.typeId === b.typeId;
   const otherType = typed && !sameType;
+  // The registry (R3) knows the department and kind of every seeded type: a different department, or a good against a service, is never
+  // "the same kind of thing", whatever the head word says. "Other" and types it does not know are untouched.
+  if (otherType && !typesCompatible(a.typeId, b.typeId)) return { state: "differs", score: 0, qualifies: false, inSection };
   // What puts two items "together" for names the vocabulary cannot tell apart: the same section, or the same product type. Two
   // different product types cancel a shared section: the seller's section cannot override what the catalogue says they are.
   const together = !otherType && (inSection || sameType);
