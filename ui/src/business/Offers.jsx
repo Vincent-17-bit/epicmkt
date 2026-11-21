@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faChevronDown, faCopy, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faChevronDown, faCopy, faTicket, faImage, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { formatKes, offerValidity } from "@epicmkt/shared";
 import { actionProps, isPreview } from "../preview.js";
 import LazyImage from "../components/LazyImage.jsx";
@@ -136,15 +136,21 @@ export default function Offers({ offers, mode = "live", onOpenItem, labels: give
   return (
     <BusinessSection title={labels.title} id="offers">
       <button type="button" className={styles.bar} aria-expanded={open} aria-controls={open ? panel : undefined} {...actionProps(preview).button(() => setOpened((v) => !v))}>
-        <span className={styles.tags}>
-          {tags.map((deal) => (
-            <span key={deal.id} className={styles.tag}>{deal.label || deal.title}</span>
-          ))}
-          {rest > 0 && <span className={styles.tag}>+{rest}</span>}
+        <span className={styles.barStub} aria-hidden="true">
+          <FontAwesomeIcon icon={faTicket} className={styles.barIcon} />
+          <span className={styles.barCount}>{offers.length}</span>
         </span>
-        <span className={styles.claim}>
-          {labels.claimNow}
-          <FontAwesomeIcon icon={faChevronDown} className={open ? styles.up : styles.chevron} aria-hidden="true" />
+        <span className={styles.barBody}>
+          <span className={styles.tags}>
+            {tags.map((deal) => (
+              <span key={deal.id} className={styles.tag}>{deal.label || deal.title}</span>
+            ))}
+            {rest > 0 && <span className={styles.tag}>+{rest}</span>}
+          </span>
+          <span className={styles.claim}>
+            {labels.claimNow}
+            <FontAwesomeIcon icon={faChevronDown} className={open ? styles.up : styles.chevron} aria-hidden="true" />
+          </span>
         </span>
       </button>
       {open && (
