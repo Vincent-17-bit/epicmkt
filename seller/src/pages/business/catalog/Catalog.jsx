@@ -14,6 +14,7 @@ import ui from "../../../styles/ui.module.css";
 import BulkBar, { AvailabilityDialog, PriceDialog, SectionDialog, TypeDialog } from "./BulkBar.jsx";
 import FilterPanel from "./FilterPanel.jsx";
 import ImportDialog from "./ImportDialog.jsx";
+import ShareDialog from "./ShareDialog.jsx";
 import { setTypeReport } from "@epicmkt/shared";
 import ItemInsights from "./ItemInsights.jsx";
 import PerformancePanel from "../PerformancePanel.jsx";
@@ -341,6 +342,7 @@ export default function Catalog() {
         <div className={styles.headActions}>
           <button type="button" className={styles.primary} onClick={() => openEditor(null)}>Add item</button>
           <Link className={styles.ghost} to="/business/catalog/merge">Combine similar</Link>
+          <button type="button" className={styles.ghost} onClick={() => setDialog("share")} disabled={enriched.length === 0}>Share catalogue</button>
           <button type="button" className={styles.ghost} onClick={() => setDialog("import")}>Import items{shop.planKey !== "premium" ? " (Premium)" : ""}</button>
         </div>
       </header>
@@ -542,6 +544,7 @@ export default function Catalog() {
       {dialog === "section" && <SectionDialog open sections={sections} onClose={() => setDialog(null)} onApply={(section) => applyBulk(() => api.bulkItems("move_section", selectedIds, { section }), (r) => `${r.affected} moved.`)} />}
       {dialog === "type" && <TypeDialog open count={selectedItems.length} untyped={selectedItems.filter((i) => !i.productTypeId).length} onClose={() => setDialog(null)} onApply={(typeId) => applyBulk(() => api.setItemTypes(selectedItems.filter((i) => !i.productTypeId).map((i) => i.id), typeId), setTypeReport)} />}
       {dialog === "availability" && <AvailabilityDialog open onClose={() => setDialog(null)} onApply={(availability) => applyBulk(() => api.bulkItems("set_availability", selectedIds, { availability }), (r) => `${r.affected} updated.`)} />}
+      {dialog === "share" && <ShareDialog open onClose={() => setDialog(null)} items={enriched} shop={shop} makePdf={async (opts, file) => (await import("../../../lib/cataloguePdf.js")).downloadCataloguePdf(opts, file)} />}
       {insightsFor && <ItemInsights item={insightsFor} onClose={() => setInsightsFor(null)} />}
       {dialog === "import" && (
         <ImportDialog
