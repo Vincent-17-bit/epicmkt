@@ -1,5 +1,7 @@
-.dialog {
-  width: min(26rem, calc(100vw - var(--space-5)));
+@media (min-width: 40rem) {
+  .dialog {
+    width: min(26rem, calc(100vw - var(--space-5)));
+  }
 }
 
 .body {
