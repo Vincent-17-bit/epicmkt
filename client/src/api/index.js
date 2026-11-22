@@ -4,6 +4,7 @@ import * as flashApi from "./flash/index.js";
 import * as browse from "./browse/index.js";
 import * as offersApi from "./offers/index.js";
 import * as products from "./products/index.js";
+import * as savedApi from "./saved/index.js";
 import { isLive } from "./flash/mode.js";
 import { getShoeConversion as shoeConversion } from "./shoeConversion.js";
 
@@ -47,6 +48,8 @@ export const items = {
   // Items that go with this one, from any shop, one page at a time: { items, page, pageSize, hasMore, total } (C19).
   getRelated: (itemId, opts) => flashApi.getRelatedPage(itemId, opts),
   getAll: () => flashApi.getAllProducts(),
+  // The Saved drawer: today's data for a list of item ids, { items, redirects, shops, now, fetchedAt } (api/saved.js live, flash/mock.js in demo mode).
+  getSaved: (ids) => savedApi.getSaved(ids),
   // The home grid asks the server for one page at a time, plus the filter options and live option counts.
   getPage: (filters, opts) => products.getPage(filters, opts),
   getFacets: () => products.getFacets(),

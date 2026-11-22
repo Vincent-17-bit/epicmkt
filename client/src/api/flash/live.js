@@ -4,7 +4,7 @@ import { NotFoundError, getCategories } from "@epicmkt/backend";
 import { supabase } from "../applications/supabaseClient";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
-import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, statusCard, entryOf, flashParts, itemOf, pricingOf, cardPricing, rangeOfRow, serviceOf } from "./shape.js";
+import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, cardBusinessOf, statusCard, entryOf, flashParts, itemOf, pricingOf, cardPricing, rangeOfRow, serviceOf } from "./shape.js";
 import { chipsByItem, dealsForStore, viewsForItem } from "../offers/live.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -400,17 +400,7 @@ export async function getSimilarItems(itemId, { limit = 12, origin = null, seed:
     pricing: s.pricing,
     flash: s.entry ? flashParts(s.entry, live.now) : null,
     offer: chips.get(s.item.id) ?? null,
-    business: {
-      id: s.business.id,
-      slug: s.business.slug,
-      name: s.business.name,
-      verified: s.business.verification_level === "verified",
-      featured: PLAN_FEATURES[s.business.plan_key]?.featured === true,
-      categoryId: s.business.category_id,
-      town: s.business.town ?? "",
-      county: s.business.county ?? "",
-      ...statusCard(s.business.hours, s.business.exceptions, s.business.timezone)
-    }
+    business: cardBusinessOf(s.business, { featured: PLAN_FEATURES[s.business.plan_key]?.featured === true })
   }));
 }
 
@@ -673,3 +663,6 @@ export function subscribe(onEvent, onStatus) {
   };
 }
 
+
+// Read by api/saved.js (the Saved drawer), which loads items the way getItemDetail does but for many ids at once.
+export { itemRow, liveEntries, optionsFor, tiersFor, quantityModeFor, CARD_COLUMNS, MISSING_FUNCTION, unwrap, failure };

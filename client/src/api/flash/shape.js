@@ -399,3 +399,17 @@ export const serviceOf = (row) => ({
   stockLeft: Number.isInteger(row.stock_left) && row.stock_left > 0 ? row.stock_left : null,
   imageUrl: mediaUrl(row.image_paths?.[0])
 });
+
+// The business fields every item card carries (the home grid, Similar items, the Saved drawer): one shape, so a card looks and behaves the same
+// wherever it is drawn. `row` is a public_businesses row.
+export const cardBusinessOf = (row, { featured = false } = {}) => ({
+  id: row.id,
+  slug: row.slug,
+  name: row.name,
+  verified: row.verification_level === "verified",
+  featured,
+  categoryId: row.category_id,
+  town: row.town ?? "",
+  county: row.county ?? "",
+  ...statusCard(row.hours, row.exceptions, row.timezone)
+});
