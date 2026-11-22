@@ -21,7 +21,7 @@ const MORE = {
   dawa: ["medicine", "drug", "pharmacy"], homa: ["fever", "flu", "pain"], miwani: ["glasses", "spectacles"], kioo: ["screen", "glass", "mirror"],
   chaja: ["charger", "charging"], earfones: ["earphone", "earbud"], kuosha: ["wash", "cleaning"], mekanika: ["mechanic", "garage", "repair"], simiti: ["cement"],
   stima: ["electricity", "electrical", "electrician"], mbao: ["timber", "wood"], mbwa: ["dog", "puppy"], mbegu: ["seed", "seeds"], mahindi: ["maize", "corn"],
-  kunyoa: ["shave", "haircut", "barber"], broken: ["repair", "fix"], cracked: ["repair", "fix", "screen"], fix: ["repair"], repair: ["fix"],
+  kunyoa: ["shave", "haircut", "barber"], broken: ["repair", "fix", "replacement"], cracked: ["repair", "fix", "replacement"], smashed: ["repair", "replacement"], damaged: ["repair", "replacement"], fix: ["repair", "replacement"], repair: ["fix", "replacement"],
   photocopy: ["printing", "cyber"], ecitizen: ["cyber", "printing"], kra: ["cyber", "tax"], mpesa: ["agent"], tutor: ["tuition", "teacher"], tuition: ["tutor", "teacher"],
   bedsitter: ["studio", "bedsit"]
 };

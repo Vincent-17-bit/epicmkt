@@ -94,11 +94,31 @@ const tokensOf = (text) => normalizeText(text).split(" ").filter(Boolean).map(st
 
 const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n", "na", "ya", "wa", "za", "kwa", "la", "cha", "vya"]);
 
-function queryTokens(q) {
-  const { rest, measures } = splitMeasures(q);
+const CONDITION_PHRASES = [
+  [/(?<![a-z])ex[- ]?(?:uk|japan|jp|dubai|usa|us|germany)(?![a-z])/g, ["refurbished", "used"]],
+  [/(?<![a-z])(?:second[- ]?hand|pre[- ]?owned|mtumba|mitumba|used)(?![a-z])/g, ["used", "refurbished"]],
+  [/(?<![a-z])(?:refurbished|refurb|renewed|grade a)(?![a-z])/g, ["refurbished"]],
+  [/(?<![a-z])(?:brand[- ]?new|sealed)(?![a-z])/g, ["new"]]
+];
+const SERVICE_INTENT = new Set(["broken", "cracked", "smashed", "shattered", "fix", "fixing", "repair", "repairs", "replace", "replacement", "damaged", "faulty", "install", "installation", "servicing"]);
+const GOODS_INTENT = new Set(["protector", "protectors", "tempered", "case", "cover", "guard", "sleeve", "pouch", "holder", "charger", "cable", "adapter"]);
+
+function parseQuery(q) {
+  let text = String(q ?? "").toLowerCase();
+  const conditions = new Set();
+  for (const [re, found] of CONDITION_PHRASES) {
+    text = text.replace(re, () => {
+      for (const c of found) conditions.add(c);
+      return " ";
+    });
+  }
+  const { rest, measures } = splitMeasures(text);
   const words = tokensOf(rest);
   const real = words.filter((w) => !JOINERS.has(w));
-  return [...(real.length || measures.length ? real : words), ...measures];
+  const tokens = [...(real.length || measures.length ? real : words), ...measures];
+  const service = tokens.some((t) => SERVICE_INTENT.has(t));
+  const goods = tokens.some((t) => GOODS_INTENT.has(t));
+  return { tokens, conditions: [...conditions], intent: service && !goods ? "service" : goods && !service ? "product" : null };
 }
 
 // ---- reading one product ------------------------------------------------------------------------------------------
@@ -707,8 +727,11 @@ function rank(products, tokens) {
  */
 export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
   const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
-  const tokens = refineTokens(queryTokens(s.q), products);
+  const parsed = parseQuery(s.q);
+  if (parsed.conditions.length && !s.conditions.length) s.conditions = parsed.conditions;
+  const tokens = refineTokens(parsed.tokens, products);
   const matched = rank(products, tokens);
+  if (parsed.intent) for (const r of matched) if (r.d.listing === parsed.intent) r.score += 6;
   // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
   const [first, second] = dominantKinds(matched, { ...s, kind: "" });
   for (const r of matched) r.score += r.d.kind && r.d.kind === first ? 1.5 : r.d.kind && r.d.kind === second ? 0.75 : 0;

@@ -159,3 +159,44 @@ test("Swahili joiners and words", () => {
   assert.deepEqual(hits("maji 20 lita"), ["water"]);
   assert.deepEqual(hits("refill 6kg"), ["gas"]);
 });
+
+const SHOP = [
+  prod("repair", "Phone Screen Repair and Replacement", [], { kind: "service" }),
+  prod("protector", "Tempered Glass Screen Protector for iPhone 13"),
+  prod("screen", "iPhone 13 Replacement Screen Display"),
+  prod("phone", "Tecno Spark 10 Phone 128GB"),
+  prod("phonefix", "Phone Repair - Charging Port and Battery", [], { kind: "service" }),
+  prod("exuk", "HP EliteBook Laptop Core i5 Ex-UK"),
+  prod("used", "Dell Latitude Laptop Core i7 used"),
+  prod("newlap", "Lenovo IdeaPad Laptop Core i5 brand new sealed"),
+  prod("plain", "Asus Laptop Core i3")
+];
+const order = (q) => searchProducts(SHOP, { q }).items.map((x) => x.id);
+
+test("a broken screen finds the repair first, a screen protector finds the product first", () => {
+  assert.equal(order("broken screen")[0], "repair");
+  assert.ok(!order("broken screen").includes("protector"));
+  assert.equal(order("screen protector")[0], "protector");
+  assert.equal(order("tempered glass")[0], "protector");
+  assert.equal(order("cracked screen")[0], "repair");
+  assert.deepEqual(order("fix phone").slice(0, 2).sort(), ["phonefix", "repair"]);
+  assert.equal(order("phone repair")[0] === "repair" || order("phone repair")[0] === "phonefix", true);
+});
+
+test("ex uk, used and new in the words of the shopper", () => {
+  assert.deepEqual(order("ex uk laptop").sort(), ["exuk", "used"]);
+  assert.deepEqual(order("ex-uk laptop").sort(), ["exuk", "used"]);
+  assert.deepEqual(order("used laptop").sort(), ["exuk", "used"]);
+  assert.deepEqual(order("mtumba laptop").sort(), ["exuk", "used"]);
+  assert.deepEqual(order("refurbished laptop"), ["exuk"]);
+  assert.deepEqual(order("brand new laptop").sort(), ["newlap", "plain"]);
+});
+
+test("the condition a query names is shown as a selected filter and can be cleared", () => {
+  const result = searchProducts(SHOP, { q: "ex uk laptop" });
+  const facet = result.facets.find((f) => f.id === "condition");
+  assert.ok(facet);
+  assert.ok(facet.values.some((v) => v.selected));
+  const cleared = searchProducts(SHOP, { q: "ex uk laptop", conditions: ["new"] });
+  assert.deepEqual(cleared.items.map((x) => x.id).sort(), ["newlap", "plain"]);
+});
