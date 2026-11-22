@@ -15,8 +15,8 @@ before(async () => {
 after(async () => { await c.end(); });
 
 const reset = () => sql(c, `update global_limits set standard = jsonb_set(standard, '{galleryPhotos}', '5'); delete from timetable_slots; delete from staff_services; delete from staff_members; delete from gallery_photos; delete from media_gc; delete from media_uploads;
-  update businesses set status = 'live', plan_key = 'standard', category_id = 'barber' where id = '${A}';
-  update businesses set status = 'live', plan_key = 'premium', category_id = 'barber' where id = '${B}'`);
+  update businesses set status = 'live', plan_key = 'standard', category_id = 'barber', paid_until = now() + interval '30 days', deleted_at = null where id = '${A}';
+  update businesses set status = 'live', plan_key = 'premium', category_id = 'barber', paid_until = now() + interval '30 days', deleted_at = null where id = '${B}'`);
 const attach = (biz, path, extra = []) => sql(c, `select attach_gallery_photo($1, $2, 'image/webp', 800, 600, 1000, $3, $4, $5) as id`, [biz, path, extra[0] ?? null, extra[1] ?? null, extra[2] ?? null]);
 
 test("attach is service only, takes only the shop's own gallery ids and appends in order", async () => {
@@ -170,4 +170,11 @@ test("public views show live, unhidden rows; the timetable is premium only; admi
   await sql(c, `update businesses set status = 'suspended' where id = $1`, [A]);
   await sql(c, `update gallery_photos set hidden_by_admin = false, admin_status = null where business_id = $1`, [A]);
   assert.equal((await sql(c, `select id from public_gallery_photos where business_id = $1`, [A])).length, 0);
+  // 0146: a live shop whose subscription ended (and whose grace is used up) shows none of its gallery, team or timetable
+  await sql(c, `update businesses set status = 'live' where id = $1`, [A]);
+  assert.equal((await sql(c, `select id from public_gallery_photos where business_id = $1`, [A])).length, 1);
+  await sql(c, `update businesses set paid_until = now() - interval '10 days' where id = $1`, [A]);
+  assert.equal((await sql(c, `select id from public_gallery_photos where business_id = $1`, [A])).length, 0);
+  await sql(c, `update businesses set paid_until = now() - interval '1 day', grace_days = 3 where id = $1`, [A]);
+  assert.equal((await sql(c, `select id from public_gallery_photos where business_id = $1`, [A])).length, 1);
 });

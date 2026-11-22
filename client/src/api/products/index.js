@@ -36,5 +36,5 @@ export const getTrending = async () => {
   if (isLive()) return (await live()).getTrending();
   const rows = await backend.getTopSearches(10).catch(() => []);
   const items = tidyTrending(rows.map((r) => ({ term: r.term, count: r.count, hot: r.hot })), await backend.getAllProducts(), 10);
-  return { computedAt: new Date().toISOString(), live: true, items };
+  return { computedAt: new Date().toISOString(), live: true, items, stores: [] };
 };

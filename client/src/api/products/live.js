@@ -111,7 +111,8 @@ export async function getSuggest(prefix) {
 
 // Trending searches for the menu, worked out on the hour. Unreachable: nothing (the menu simply leaves the list out).
 export const getTrending = () =>
-  viaEndpoint("op=trending", async () => ({ computedAt: null, live: true, items: [] })).then((data) => ({
+  viaEndpoint("op=trending", async () => ({ computedAt: null, live: true, items: [], stores: [] })).then((data) => ({
     ...data,
+    stores: Array.isArray(data.stores) ? data.stores : [],
     items: (data.items ?? []).map((i) => ({ ...i, image: i.image && !/^https?:\/\//.test(i.image) ? mediaUrl(i.image) : i.image ?? null }))
   }));

@@ -11,10 +11,28 @@ after(async () => {
   await c.end();
 });
 beforeEach(async () => {
+  autoItems = true;
   await sql(c, `delete from search_events; delete from search_blocklist`);
 });
 
+// Trending only lists terms a visitor can open (0146), so every searched term gets one visible product in a visible shop,
+// unless a test switches this off to test the opposite.
+let autoItems = true;
+let mallId = null;
+const stocked = new Set();
+const stock = async (term) => {
+  if (typeof term !== "string" || !/[a-z]{2}/i.test(term) || stocked.has(term.trim().toLowerCase())) return;
+  stocked.add(term.trim().toLowerCase());
+  if (!mallId) {
+    await sql(c, `insert into categories (id, name, grp, tier, sort) values ('barber', 'Barber', 'Services', 'A', 1) on conflict do nothing`);
+    await sql(c, `insert into auth.users (id, email) values ('00000000-0000-0000-0000-00000000fff1', 'mall@test') on conflict do nothing`);
+    mallId = (await sql(c, `insert into businesses (id, seller_id, user_id, slug, name, category_id, plan_key, status, phone, paid_until)
+      values (gen_random_uuid(), 'ESMALL', '00000000-0000-0000-0000-00000000fff1', 'mall-x', 'Zzq Mall', 'barber', 'standard', 'live', '+254713000001', now() + interval '60 days') returning id`))[0].id;
+  }
+  await sql(c, `insert into items (business_id, name, price, visible, draft) values ($1, $2, 100, true, false)`, [mallId, term.trim()]).catch(() => {}); // junk terms are not valid names
+};
 const from = async (ip, term, role = "anon") => {
+  if (autoItems && ip) await stock(term);
   await c.query("begin");
   try {
     await c.query(`set local role ${role}`);
@@ -217,8 +235,10 @@ test("short terms are never folded by spelling distance", async () => {
   assert.deepEqual((await top()).map((r) => r.term).sort(), ["tea", "tee"]);
 });
 
-test("a live shop's name is not a product trend; a suspended shop's name is, and a product word that starts a shop name stays", async () => {
+test("a live shop's name is not a product trend; a suspended shop's name is not either (nothing to open), and a product word that starts a shop name stays", async () => {
   await clear();
+  await stock("bread");
+  autoItems = false;
   await shop("Sunrise Bakery");
   await shop("Kevin Bakery");
   await shop("Bread Basket");
@@ -227,7 +247,7 @@ test("a live shop's name is not a product trend; a suspended shop's name is, and
   await people("kevin bakeries", ["1.0.6.4", "1.0.6.5", "1.0.6.6"]);
   await people("bread", ["1.0.6.7", "1.0.6.8", "1.0.6.9"]);
   await people("old shop", ["1.0.6.10", "1.0.6.11", "1.0.6.12"]);
-  assert.deepEqual((await top()).map((r) => r.term).sort(), ["bread", "old shop"]);
+  assert.deepEqual((await top()).map((r) => r.term).sort(), ["bread"]);
   await clear();
 });
 

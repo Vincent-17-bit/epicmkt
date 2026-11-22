@@ -107,6 +107,23 @@ describe("search type-ahead", () => {
   });
 });
 
+describe("trending stores", () => {
+  it("lists the shops people searched for by name and opens one", async () => {
+    vi.mocked(items.getTrending).mockResolvedValue({ computedAt: null, live: false, items: [{ term: "milk", count: 9, hot: true }], stores: [{ name: "Sunrise Bakery", slug: "sunrise-bakery", count: 5, hot: true }, { name: "Quokka Cuts", slug: "quokka-cuts", count: 3, hot: false }] });
+    const { onSelect } = panel();
+    const section = (await screen.findByRole("heading", { name: /Trending stores/ })).closest("section");
+    expect(within(section).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringContaining("Sunrise Bakery"), expect.stringContaining("Quokka Cuts")]);
+    await userEvent.click(within(section).getByRole("button", { name: /Sunrise Bakery/ }));
+    expect(onSelect).toHaveBeenCalledWith("/b/sunrise-bakery");
+  });
+
+  it("shows no stores heading when none trend", async () => {
+    panel();
+    await screen.findByRole("heading", { name: /Trending searches/ });
+    expect(screen.queryByRole("heading", { name: /Trending stores/ })).toBeNull();
+  });
+});
+
 describe("opening search", () => {
   const Where = () => {
     const location = useLocation();

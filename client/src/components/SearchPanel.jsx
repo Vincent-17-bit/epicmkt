@@ -228,6 +228,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
 
   const suggestTo = `/contact?suggest=${encodeURIComponent(normalized)}`;
   const trend = trending.data?.items ?? [];
+  const trendStores = (trending.data?.stores ?? []).slice(0, 5);
 
   return (
     <>
@@ -446,6 +447,30 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                         </li>
                       ))
                     )}
+                  </ol>
+                </section>
+              )}
+
+              {trendStores.length > 0 && (
+                <section aria-labelledby="search-top-stores">
+                  <div className={styles.head}>
+                    <h2 id="search-top-stores" className={styles.label}>
+                      <FontAwesomeIcon icon={faStore} aria-hidden="true" /> Trending stores
+                    </h2>
+                  </div>
+                  <ol className={styles.ranked}>
+                    {trendStores.map((store, index) => (
+                      <li key={store.slug}>
+                        <button type="button" className={styles.rankRow} onClick={() => onSelect(`/b/${store.slug}`)}>
+                          <span className={styles.rank} data-top={index < 3 || undefined}>
+                            {index + 1}
+                          </span>
+                          <Thumb src={null} icon={faStore} />
+                          <span className={styles.rowLabel}>{store.name}</span>
+                          {store.hot && <Flame className={styles.fire} />}
+                        </button>
+                      </li>
+                    ))}
                   </ol>
                 </section>
               )}

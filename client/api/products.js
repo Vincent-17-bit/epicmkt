@@ -422,14 +422,21 @@ async function suggestions(q) {
   return memo(suggestMemo, key, { at: Date.now(), value }).value;
 }
 
+// The shops people searched by name (migration 0146), as the database re-checked them: name, slug, count. Nothing else leaves.
+const tidyStores = (stores) =>
+  (Array.isArray(stores) ? stores : [])
+    .filter((s) => s && typeof s.slug === "string" && typeof s.name === "string")
+    .slice(0, 5)
+    .map((s) => ({ name: s.name, slug: s.slug, count: s.count ?? 0, hot: Boolean(s.hot) }));
+
 async function trending() {
   const base = await rawTrending();
   try {
     const snap = await snapshot();
-    return { ...base, items: tidyTrending(base.items, snap.products, 10) };
+    return { ...base, items: tidyTrending(base.items, snap.products, 10), stores: tidyStores(base.stores) };
   } catch (error) {
     console.warn(`[products] trending top-up skipped (${error?.message ?? error})`);
-    return base;
+    return { ...base, stores: tidyStores(base.stores) };
   }
 }
 
@@ -441,7 +448,13 @@ async function rawTrending() {
     console.warn(`[products] top_searches_hourly unavailable (${error?.message ?? error}); using the live count`);
   }
   const rows = await rpc("top_searches", { p_limit: 10 }, { timeoutMs: 3_000 }).catch(() => []);
-  return { computedAt: new Date().toISOString(), live: true, items: (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot })) };
+  const shops = await rpc("top_shop_searches", { p_limit: 5 }, { timeoutMs: 3_000 }).catch(() => []);
+  return {
+    computedAt: new Date().toISOString(),
+    live: true,
+    items: (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot })),
+    stores: (Array.isArray(shops) ? shops : []).map((r) => ({ name: r.name, slug: r.slug, count: r.count, hot: r.hot }))
+  };
 }
 
 // The trending list changes on the hour (pg_cron at :02): cache it until 5 minutes past the next hour.

@@ -23,6 +23,13 @@ export function tidyTrending(items, products, limit = 10) {
   };
   for (const item of items ?? []) {
     if (out.length >= limit) break;
+    // An example the database confirmed on the last read (shop and product visible right now) wins over the snapshot, which can be
+    // minutes older: a shop that lapsed since must not lend its product to a trending card. The snapshot only adds a picture.
+    if (item.itemId && item.slug) {
+      const same = products.find((p) => p.id === item.itemId);
+      take({ ...item, image: item.image ?? (same ? pictured(same) : null) });
+      continue;
+    }
     const found = entry(item.term, products, { count: item.count, hot: item.hot });
     if (found) take({ ...item, ...found, image: found.image ?? item.image ?? null });
   }

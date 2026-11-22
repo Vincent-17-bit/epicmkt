@@ -380,6 +380,27 @@ describe("/api/products", () => {
       expect((await res.json()).items[0].term).toBe("bread");
     });
 
+    it("passes the trending stores through as name, slug and count only, dropping malformed rows", async () => {
+      answer({
+        top_searches_hourly: () =>
+          new Response(
+            JSON.stringify({ computedAt: "2026-03-01T10:02:00Z", live: false, items: [{ term: "bread", count: 9, hot: true }], stores: [{ name: "Sunrise Bakery", slug: "sunrise-bakery", count: 5, hot: true, business_id: "secret" }, { name: "No slug" }, null] }),
+            { status: 200 }
+          )
+      });
+      const body = await (await call("op=trending")).json();
+      expect(body.stores).toEqual([{ name: "Sunrise Bakery", slug: "sunrise-bakery", count: 5, hot: true }]);
+    });
+
+    it("asks for the trending shops too when it falls back to the live count", async () => {
+      answer({
+        top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }),
+        top_shop_searches: () => new Response(JSON.stringify([{ business_id: "x", slug: "sunrise-bakery", name: "Sunrise Bakery", count: 3, hot: false }]), { status: 200 })
+      });
+      const body = await (await call("op=trending")).json();
+      expect(body.stores).toEqual([{ name: "Sunrise Bakery", slug: "sunrise-bakery", count: 3, hot: false }]);
+    });
+
     it("falls back to the live count for trending when the hourly list is missing", async () => {
       answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
       const body = await (await call("op=trending")).json();
