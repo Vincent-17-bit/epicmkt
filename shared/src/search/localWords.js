@@ -1,4 +1,4 @@
-export const LOCAL_SYNONYMS = {
+const FIRST = {
   simu: ["phone", "smartphone"], kiatu: ["shoe", "sandal", "sneaker"], viatu: ["shoe", "sandal", "sneaker"], nguo: ["clothes", "dress", "shirt", "trouser", "top"],
   unga: ["flour"], sukari: ["sugar"], mchele: ["rice"], mafuta: ["oil"], mkate: ["bread"], maziwa: ["milk"], chai: ["tea"], nyama: ["meat", "beef", "goat", "chicken"],
   samaki: ["fish", "tilapia"], kuku: ["chicken"], mayai: ["egg"], viazi: ["potato"], nyanya: ["tomato"], vitunguu: ["onion"], sukuma: ["kale"], maharagwe: ["bean"],
@@ -14,3 +14,22 @@ export const LOCAL_SYNONYMS = {
   kicks: ["sneaker", "shoe"], heel: ["shoe"], makeup: ["cosmetic"], cosmetic: ["makeup"], mattress: ["bed"], bicycle: ["bike"], bike: ["bicycle"], hairdresser: ["salon", "hair"], salon: ["hair", "beauty"],
   chips: ["fries", "potato"], maandazi: ["mandazi"], mandazi: ["maandazi"], ugali: ["flour", "unga"], pilau: ["rice"], nduthi: ["motorbike", "boda"], matatu: ["transport", "van"], jiko: ["cooker", "stove", "charcoal"]
 };
+
+const MORE = {
+  mtungi: ["gas", "cylinder", "lpg"], lpg: ["gas", "cylinder"], cylinder: ["gas", "lpg"], refill: ["gas", "refilling"], refil: ["refill"],
+  machungwa: ["orange"], tangawizi: ["ginger"], ndengu: ["green", "gram"], kamande: ["lentil"], omena: ["fish", "sardine"], kienyeji: ["indigenous", "free"],
+  dawa: ["medicine", "drug", "pharmacy"], homa: ["fever", "flu", "pain"], miwani: ["glasses", "spectacles"], kioo: ["screen", "glass", "mirror"],
+  chaja: ["charger", "charging"], earfones: ["earphone", "earbud"], kuosha: ["wash", "cleaning"], mekanika: ["mechanic", "garage", "repair"], simiti: ["cement"],
+  stima: ["electricity", "electrical", "electrician"], mbao: ["timber", "wood"], mbwa: ["dog", "puppy"], mbegu: ["seed", "seeds"], mahindi: ["maize", "corn"],
+  kunyoa: ["shave", "haircut", "barber"], broken: ["repair", "fix"], cracked: ["repair", "fix", "screen"], fix: ["repair"], repair: ["fix"],
+  photocopy: ["printing", "cyber"], ecitizen: ["cyber", "printing"], kra: ["cyber", "tax"], mpesa: ["agent"], tutor: ["tuition", "teacher"], tuition: ["tutor", "teacher"],
+  bedsitter: ["studio", "bedsit"]
+};
+
+const merge = (a, b) => {
+  const out = { ...a };
+  for (const [word, more] of Object.entries(b)) out[word] = [...new Set([...(out[word] ?? []), ...more])];
+  return out;
+};
+
+export const LOCAL_SYNONYMS = merge(FIRST, MORE);

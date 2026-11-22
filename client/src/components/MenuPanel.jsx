@@ -7,7 +7,7 @@ import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
 import Flame from "./Flame.jsx";
 import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
-import { trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { routes } from "../config/routes.js";
@@ -107,7 +107,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                           {item.image ? (
                             <img className={styles.trendImg} src={resizeImageUrl(item.image, 64)} alt="" width="22" height="22" loading="lazy" decoding="async" />
                           ) : null}
-                          <span className={styles.trendTerm}>{item.term}</span>
+                          <span className={styles.trendTerm}>{trendLabel(item)}</span>
                           <TrendKind kind={item.kind} />
                           {item.hot && <Flame className={styles.trendFire} />}
                         </Link>

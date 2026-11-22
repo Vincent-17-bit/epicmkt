@@ -12,7 +12,7 @@ const STOP = new Set([
 ]);
 import { canonicalMeasureKey } from "../../../shared/src/search/measure.js";
 
-const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n"]);
+const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n", "na", "ya", "wa", "za", "kwa", "la", "cha", "vya"]);
 const EMPTY = Object.freeze({ terms: [], products: [], stores: [], categories: [], corrected: null });
 
 /** The JS twin of search_key(): lower case, accents dropped, anything else one space. */

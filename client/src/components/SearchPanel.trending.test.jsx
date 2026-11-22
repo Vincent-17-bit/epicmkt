@@ -54,10 +54,10 @@ describe("trending in the search panel", () => {
   it("ranks every kind of search in one list and says what each one is", async () => {
     panel();
     const s = await section();
-    await within(s).findByText("gas cylinder");
+    await within(s).findByText("Gas Cylinder 6kg");
     const rows = within(s).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === null);
     expect(rows.map((r) => r.textContent)).toEqual([
-      expect.stringContaining("gas cylinder"),
+      expect.stringContaining("Gas Cylinder 6kg"),
       expect.stringContaining("mama njeri bakery"),
       expect.stringContaining("flash sneakers"),
       expect.stringContaining("barber")
@@ -74,10 +74,10 @@ describe("trending in the search panel", () => {
     expect(await within(s).findByRole("button", { name: "Popular this week" })).toHaveAttribute("aria-pressed", "true");
     await userEvent.click(within(s).getByRole("button", { name: "Rising now" }));
     expect(within(s).getByRole("button", { name: "Rising now" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(s).getByText("solar lamp")).toBeInTheDocument();
-    expect(within(s).queryByText("gas cylinder")).toBeNull();
+    expect(within(s).getByText("Solar Lamp")).toBeInTheDocument();
+    expect(within(s).queryByText("Gas Cylinder 6kg")).toBeNull();
     await userEvent.click(within(s).getByRole("button", { name: "Popular this week" }));
-    expect(within(s).getByText("gas cylinder")).toBeInTheDocument();
+    expect(within(s).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
   });
 
   it("with nothing rising there is nothing to switch to: just a caption", async () => {
@@ -99,8 +99,19 @@ describe("trending in the search panel", () => {
   it("a tap on a trending row is not counted as a search, so the list cannot vote for itself", async () => {
     const { onSelect } = panel();
     const s = await section();
-    await userEvent.click(await within(s).findByText("gas cylinder"));
+    await userEvent.click(await within(s).findByText("Gas Cylinder 6kg"));
     expect(onSelect).toHaveBeenCalledWith(expect.stringContaining("q=gas%20cylinder"));
+    expect(logSearch).not.toHaveBeenCalled();
+  });
+
+  it("a product word shows the exact product it finds and opens that product", async () => {
+    vi.mocked(items.getTrending).mockResolvedValue(
+      lists({ popular: [{ rank: 1, term: "red bull", count: 9, hot: false, itemId: "item-9", slug: "mama-njeri", label: "Red Bull Energy Drink - Assorted Flavors" }] })
+    );
+    const { onSelect } = panel();
+    const s = await section();
+    await userEvent.click(await within(s).findByText("Red Bull Energy Drink - Assorted Flavors"));
+    expect(onSelect).toHaveBeenCalledWith("/b/mama-njeri/i/item-9");
     expect(logSearch).not.toHaveBeenCalled();
   });
 

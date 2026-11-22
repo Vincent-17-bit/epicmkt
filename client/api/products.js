@@ -444,10 +444,12 @@ async function suggestions(q) {
     const snap = await snapshot();
     snap.suggest ??= buildSuggestIndex(snap.products);
     value = { ...suggestFrom(snap.suggest, q), source: "snapshot" };
-  } else if (state.snap) {
-    const snap = state.snap;
-    snap.suggest ??= buildSuggestIndex(snap.products);
-    value = mergeSuggest(value, suggestFrom(snap.suggest, q));
+  } else if (state.snap || !value.products?.length) {
+    const snap = state.snap ?? (await snapshot().catch(() => null));
+    if (snap) {
+      snap.suggest ??= buildSuggestIndex(snap.products);
+      value = mergeSuggest(value, suggestFrom(snap.suggest, q));
+    }
   }
   return memo(suggestMemo, key, { at: Date.now(), value }).value;
 }

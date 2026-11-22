@@ -142,6 +142,7 @@
 }
 
 .trendTerm {
+  max-width: min(18rem, 62vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -6,19 +6,26 @@ const keyOf = (term) => normalizeText(term).split(" ").filter(Boolean).map(stem)
 const pathOf = (value) => (typeof value === "string" && value ? value : typeof value?.url === "string" && value.url ? value.url : typeof value?.path === "string" && value.path ? value.path : null);
 const pictured = (p) => pathOf(p.image) ?? pathOf(p.imagePath) ?? pathOf(p.imageUrl) ?? pathOf(p.images?.[0]) ?? null;
 
-function entry(term, products, extra = {}) {
+function entry(term, products, extra = {}, taken = new Set()) {
   const found = searchProducts(products, { q: term }, { pageSize: 8, itemsOnly: true });
   if (!found.total) return null;
-  const top = found.items.find((p) => pictured(p)) ?? found.items[0];
+  const free = found.items.filter((p) => !taken.has(p.id));
+  const top = free.find((p) => pictured(p)) ?? free[0];
+  if (!top) return null;
   return { term, ...extra, itemId: top.id, label: top.name, slug: top.slug, image: pictured(top), price: top.price ?? null };
 }
 
 export function tidyTrending(items, products, limit = 10) {
   const out = [];
   const seen = new Set();
+  const pictures = new Set();
   const take = (candidate) => {
     const key = keyOf(candidate.term);
     if (!key || seen.has(key)) return;
+    if (candidate.itemId && (!candidate.kind || candidate.kind === "product")) {
+      if (pictures.has(candidate.itemId)) return;
+      pictures.add(candidate.itemId);
+    }
     seen.add(key);
     out.push(candidate);
   };
@@ -30,7 +37,7 @@ export function tidyTrending(items, products, limit = 10) {
       take({ ...item });
       continue;
     }
-    const found = entry(item.term, products, { count: item.count, hot: item.hot });
+    const found = entry(item.term, products, { count: item.count, hot: item.hot }, pictures);
     if (found) take({ ...item, ...found, image: found.image ?? item.image ?? null });
   }
   if (out.length >= limit) return out;
@@ -43,7 +50,7 @@ export function tidyTrending(items, products, limit = 10) {
   const ranked = [...tally].sort((a, b) => b[1] - a[1]).map(([id]) => noun.get(id)).filter(Boolean);
   for (const term of ranked) {
     if (out.length >= limit) break;
-    const found = entry(term, products, { count: 0, hot: false, kind: "product" });
+    const found = entry(term, products, { count: 0, hot: false, kind: "product" }, pictures);
     if (found && found.image) take(found);
   }
   return out;

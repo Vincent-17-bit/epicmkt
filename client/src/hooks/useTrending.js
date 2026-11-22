@@ -31,5 +31,14 @@ export function useTrending({ enabled = true, refetch = true } = {}) {
   return { query, county, tab, setTab, list, hasRising: rising.length > 0, scopeNote };
 }
 
-// Where a trending row goes: a store opens its page, everything else opens the search for that word.
-export const trendPath = (item, searchPath) => (item.kind === "store" && item.slug ? `/b/${item.slug}` : searchPath);
+const isProduct = (item) => !item.kind || item.kind === "product";
+
+// A product word shows the exact product it finds (its full name) rather than the word that was typed.
+export const trendLabel = (item) => (isProduct(item) && item.label ? item.label : item.term);
+
+// Where a trending row goes: a store opens its page, a product word opens the product it found, everything else opens the search for that word.
+export const trendPath = (item, searchPath) => {
+  if (item.kind === "store" && item.slug) return `/b/${item.slug}`;
+  if (isProduct(item) && item.itemId && item.slug) return `/b/${item.slug}/i/${encodeURIComponent(item.itemId)}`;
+  return searchPath;
+};

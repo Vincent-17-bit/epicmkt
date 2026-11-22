@@ -92,7 +92,7 @@ function refineTokens(tokens, products) {
 
 const tokensOf = (text) => normalizeText(text).split(" ").filter(Boolean).map(stem);
 
-const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n"]);
+const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n", "na", "ya", "wa", "za", "kwa", "la", "cha", "vya"]);
 
 function queryTokens(q) {
   const { rest, measures } = splitMeasures(q);
@@ -690,7 +690,8 @@ function rank(products, tokens) {
   const matched = [];
   for (const p of products) {
     const d = describe(p);
-    const score = textScore(d, tokens) + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0);
+    const text = textScore(d, tokens);
+    const score = text > 0 ? text + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0) : 0;
     // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
     const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
     if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });

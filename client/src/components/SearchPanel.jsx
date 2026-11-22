@@ -16,7 +16,7 @@ import {
 import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
 import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
-import { trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
@@ -446,7 +446,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                               {index + 1}
                             </span>
                             <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
-                            <span className={styles.rowLabel}>{item.term}</span>
+                            <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
                             <TrendKind kind={item.kind} />
                             {item.hot && <Flame className={styles.fire} />}
                           </button>
