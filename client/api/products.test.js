@@ -431,6 +431,13 @@ describe("/api/products", () => {
       expect(body.popular[0]).toMatchObject({ term: "bread", image: "b1/one.webp" });
     });
 
+    it("a fallback list is cached for minutes, not an hour, so a brief database hiccup heals itself", async () => {
+      answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
+      const res = await call("op=trending");
+      expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=120/);
+      expect((await res.json()).degraded).toBe(true);
+    });
+
     it("builds the unfiltered feed from the hour's pool once the catalogue is bigger than the snapshot, and keeps its order", async () => {
       payload = { ...snapshotPayload(60), truncated: true };
       const pool = { ...snapshotPayload(80), facts: {} };

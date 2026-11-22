@@ -34,7 +34,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   });
 
   // What shoppers search for, every kind in one ranking: popular this week and rising now, rebuilt every hour (migration 0146).
-  const { query: trending, tab, setTab, list: trend, hasRising, scopeNote } = useTrending({ enabled: open });
+  const { query: trending, tab, setTab, list: trend, real, filler, hasRising, scopeNote } = useTrending({ enabled: open });
 
   const submit = (event) => {
     event.preventDefault();
@@ -95,7 +95,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                         <Skeleton width={`${5 + (i % 3) * 1.5}rem`} height="34px" radius="999px" />
                       </li>
                     ))
-                  : trend.map((item, index) => (
+                  : real.map((item, index) => (
                       <li key={item.term}>
                         <Link
                           to={trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)}
@@ -114,6 +114,21 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                       </li>
                     ))}
               </ol>
+              {!trending.isPending && filler.length > 0 && (
+                <>
+                  <h3 className={styles.moreLabel}>Popular products</h3>
+                  <ol className={styles.trendList}>
+                    {filler.map((item) => (
+                      <li key={item.term}>
+                        <Link to={trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} replace className={styles.trend} onClick={() => addRecent(item.term)}>
+                          {item.image ? <img className={styles.trendImg} src={resizeImageUrl(item.image, 64)} alt="" width="22" height="22" loading="lazy" decoding="async" /> : null}
+                          <span className={styles.trendTerm}>{trendLabel(item)}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ol>
+                </>
+              )}
             </section>
           )}
 

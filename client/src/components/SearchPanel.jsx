@@ -123,7 +123,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   }, [open]);
 
   // Popular this week and rising now, every kind of search in one ranking (migration 0146). Paused while the shopper is typing.
-  const { query: trending, county, tab, setTab, list: trend, hasRising, scopeNote } = useTrending({ enabled: open, refetch: !typing });
+  const { query: trending, county, tab, setTab, list: trend, real, filler, hasRising, scopeNote } = useTrending({ enabled: open, refetch: !typing });
 
   const suggestions = useQuery({
     queryKey: ["suggest", debounced],
@@ -428,32 +428,49 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                   </div>
                   <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
                   {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
-                  <ol className={styles.ranked}>
-                    {trending.isPending ? (
-                      <Rows count={6} />
-                    ) : (
-                      trend.map((item, index) => (
-                        <li key={item.term}>
-                          <button
-                            type="button"
-                            className={styles.rankRow}
-                            onClick={() => {
-                              const to = trendPath(item, null);
-                              commit(item.term, { fromTrending: true, to });
-                            }}
-                          >
-                            <span className={styles.rank} data-top={index < 3 || undefined}>
-                              {index + 1}
-                            </span>
-                            <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
-                            <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
-                            <TrendKind kind={item.kind} />
-                            {item.hot && <Flame className={styles.fire} />}
-                          </button>
-                        </li>
-                      ))
-                    )}
-                  </ol>
+                  {(trending.isPending || real.length > 0) && (
+                    <ol className={styles.ranked}>
+                      {trending.isPending ? (
+                        <Rows count={6} />
+                      ) : (
+                        real.map((item, index) => (
+                          <li key={item.term}>
+                            <button
+                              type="button"
+                              className={styles.rankRow}
+                              onClick={() => {
+                                const to = trendPath(item, null);
+                                commit(item.term, { fromTrending: true, to });
+                              }}
+                            >
+                              <span className={styles.rank} data-top={index < 3 || undefined}>
+                                {index + 1}
+                              </span>
+                              <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
+                              <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
+                              <TrendKind kind={item.kind} />
+                              {item.hot && <Flame className={styles.fire} />}
+                            </button>
+                          </li>
+                        ))
+                      )}
+                    </ol>
+                  )}
+                  {!trending.isPending && filler.length > 0 && (
+                    <>
+                      <h3 className={styles.moreLabel}>Popular products</h3>
+                      <ol className={styles.ranked}>
+                        {filler.map((item) => (
+                          <li key={item.term}>
+                            <button type="button" className={styles.rankRow} onClick={() => commit(item.term, { fromTrending: true, to: trendPath(item, null) })}>
+                              <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
+                              <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
                 </section>
               )}
             </div>

@@ -28,7 +28,9 @@ export function useTrending({ enabled = true, refetch = true } = {}) {
     if (data.fallback === "national") scopeNote = `Not many searches in ${county} yet, showing all of Kenya`;
     else if (data.scope && data.scope !== "*") scopeNote = `Trending in ${county}`;
   }
-  return { query, county, tab, setTab, list, hasRising: rising.length > 0, scopeNote };
+  const real = list.filter((item) => !item.filler);
+  const filler = list.filter((item) => item.filler);
+  return { query, county, tab, setTab, list, real, filler, hasRising: rising.length > 0, scopeNote };
 }
 
 const isProduct = (item) => !item.kind || item.kind === "product";

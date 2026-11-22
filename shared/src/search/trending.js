@@ -50,7 +50,7 @@ export function tidyTrending(items, products, limit = 10) {
   const ranked = [...tally].sort((a, b) => b[1] - a[1]).map(([id]) => noun.get(id)).filter(Boolean);
   for (const term of ranked) {
     if (out.length >= limit) break;
-    const found = entry(term, products, { count: 0, hot: false, kind: "product" }, pictures);
+    const found = entry(term, products, { count: 0, hot: false, kind: "product", filler: true }, pictures);
     if (found && found.image) take(found);
   }
   return out;

@@ -470,13 +470,13 @@ async function rawTrending(county) {
   }
   try {
     const data = await rpc("top_searches_hourly", { p_limit: 10 }, { timeoutMs: 3_000 });
-    if (data && Array.isArray(data.items)) return { ...data, popular: data.items, rising: [] };
+    if (data && Array.isArray(data.items)) return { ...data, popular: data.items, rising: [], degraded: true };
   } catch (error) {
     console.warn(`[products] top_searches_hourly unavailable (${error?.message ?? error}); using the live count`);
   }
   const rows = await rpc("top_searches", { p_limit: 10 }, { timeoutMs: 3_000 }).catch(() => []);
   const items = (Array.isArray(rows) ? rows : []).map((r) => ({ term: r.term, count: r.count, hot: r.hot }));
-  return { computedAt: new Date().toISOString(), live: true, items, popular: items, rising: [] };
+  return { computedAt: new Date().toISOString(), live: true, items, popular: items, rising: [], degraded: true };
 }
 
 // What goes out: the stored lists, checked once more against the product snapshot. Words the database already checked (a store, a flash
@@ -584,7 +584,9 @@ export default async function handler(req) {
     const now = Date.now();
     try {
       const age = untilNextRefresh(now);
-      return reply(await trending(countyOf(params.get("county"))), 200, `public, max-age=${Math.min(age, 600)}, s-maxage=${age}, stale-while-revalidate=600, stale-if-error=86400`);
+      const body = await trending(countyOf(params.get("county")));
+      const cache = body.degraded ? "public, max-age=60, s-maxage=120, stale-while-revalidate=120, stale-if-error=3600" : `public, max-age=${Math.min(age, 600)}, s-maxage=${age}, stale-while-revalidate=600, stale-if-error=86400`;
+      return reply(body, 200, cache);
     } catch (error) {
       console.error(`[products] trending unavailable: ${error?.message ?? error}`);
       return reply({ error: "unavailable" }, 502, "no-store");
