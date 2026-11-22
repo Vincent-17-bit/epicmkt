@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { matchTowns, mergePlaces, searchPlaces } from "../lib/places.js";
 import styles from "./PlaceSearch.module.css";
 
@@ -13,6 +15,7 @@ export default function PlaceSearch({ label, placeholder, onPick, near = null, s
   const [active, setActive] = useState(-1);
   const [open, setOpen] = useState(false);
   const run = useRef(0);
+  const inputRef = useRef(null);
 
   const query = text.trim();
   const items = query.length >= 2 || (query.length === 1 && matchTowns(query).length) ? mergePlaces(matchTowns(query), remote) : [];
@@ -74,37 +77,49 @@ export default function PlaceSearch({ label, placeholder, onPick, near = null, s
   return (
     <div className={styles.root}>
       <label className={styles.label} htmlFor={`${id}-input`}>{label}</label>
-      <input
-        id={`${id}-input`}
-        className={styles.input}
-        type="search"
-        role="combobox"
-        aria-expanded={listed}
-        aria-controls={`${id}-list`}
-        aria-autocomplete="list"
-        aria-activedescendant={listed && active >= 0 ? `${id}-o${active}` : undefined}
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        enterKeyHint="search"
-        placeholder={placeholder}
-        value={text}
-        maxLength={80}
-        onChange={(e) => { setText(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        onKeyDown={onKey}
-      />
+      <div className={styles.box}>
+        <input
+          id={`${id}-input`}
+          ref={inputRef}
+          className={styles.input}
+          type="text"
+          inputMode="search"
+          role="combobox"
+          aria-expanded={listed}
+          aria-controls={`${id}-list`}
+          aria-autocomplete="list"
+          aria-activedescendant={listed && active >= 0 ? `${id}-o${active}` : undefined}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="search"
+          placeholder={placeholder}
+          value={text}
+          maxLength={80}
+          onChange={(e) => { setText(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKey}
+        />
+        {text && (
+          <button type="button" className={styles.clear} aria-label="Clear" onClick={() => { setText(""); setOpen(false); inputRef.current?.focus(); }}>
+            <FontAwesomeIcon icon={faXmark} aria-hidden="true" />
+          </button>
+        )}
+      </div>
       <ul id={`${id}-list`} className={styles.list} role="listbox" aria-label={label} hidden={!listed}>
         {items.map((p, i) => (
           <li key={`${p.label}-${p.lat}`} id={`${id}-o${i}`} role="option" aria-selected={i === active} className={styles.option} data-active={i === active ? "" : undefined}
             onMouseDown={(e) => e.preventDefault()} onClick={() => pick(p)}>
-            <span className={styles.name}>{p.name}</span>
+            <span className={styles.main}>
+              <span className={styles.name}>{p.name}</span>
+              {p.kind && p.kind !== "town" && <span className={styles.kind}>{p.kind}</span>}
+            </span>
             {p.label !== p.name && <span className={styles.context}>{p.label.slice(p.name.length + 2)}</span>}
-            {p.kind && p.kind !== "town" && <span className={styles.kind}>{p.kind}</span>}
           </li>
         ))}
       </ul>
-      <p className={styles.status} role="status" aria-live="polite">{status}</p>
+      {none && open && <p className={styles.empty}>{status}</p>}
+      <p className={styles.sr} role="status" aria-live="polite">{status}</p>
     </div>
   );
 }
