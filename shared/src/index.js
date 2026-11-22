@@ -95,3 +95,4 @@ export * from "./search/index.js";
 export * from "./productInfo/index.js";
 export * from "./zoomSettings.js";
 export * from "./productType/registry.js";
+export * from "./shareLinks.js";

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { BusinessPage, BusinessPageError, BusinessPageSkeleton } from "@epicmkt/ui";
+import { BusinessPage, BusinessPageError, BusinessPageSkeleton, ShareSheet } from "@epicmkt/ui";
 import { distanceKm, shopUrl } from "@epicmkt/shared";
 import { coarsenCoords } from "@epicmkt/backend";
 import { getBusiness, logContactEvent } from "../api/index.js";
@@ -21,6 +21,7 @@ import FlashStrip from "../components/FlashStrip.jsx";
 import QrCode from "../components/QrCode.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
 import NotFound from "./NotFound.jsx";
+import { shareLabels } from "../lib/shareLabels.js";
 
 export default function Business() {
   const { slug } = useParams();
@@ -29,7 +30,7 @@ export default function Business() {
   const [searchParams, setSearchParams] = useSearchParams();
   const itemId = searchParams.get("item");
   const [reporting, setReporting] = useState(false);
-  const [shareNote, setShareNote] = useState("");
+  const [sharing, setSharing] = useState(false);
   const geo = useGeoStore();
   const [live, setLive] = useState(null);
 
@@ -112,21 +113,6 @@ export default function Business() {
   const hasDetails = visibleFields(data.category?.fields, data.attributes).some((f) => f.key in (data.attributes ?? {}));
   const reviews = data.reviewCount > 0 ? `${data.rating.toFixed(1)} (${data.reviewCount})` : "New";
 
-  const share = async () => {
-    const payload = { title: data.name, text: `${data.name} on EpicMKT`, url: shortUrl };
-    try {
-      if (navigator.share) {
-        await navigator.share(payload);
-        return;
-      }
-      await navigator.clipboard.writeText(shortUrl);
-      setShareNote("Link copied");
-    } catch (err) {
-      if (err?.name !== "AbortError") setShareNote("Could not share");
-    }
-    window.setTimeout(() => setShareNote(""), 2500);
-  };
-
   const locateLabel =
     geo.status === "asking" ? "Finding you" : geo.status === "denied" || geo.status === "unsupported" ? "Choose your town to see distance" : "Show distance from me";
 
@@ -164,11 +150,10 @@ export default function Business() {
       hitSection={hit}
       focusSection={sectionId}
       focusItem={itemId}
-      shareNote={shareNote}
       crumbInert={Boolean(itemId)}
       breadcrumbs={<PageBreadcrumbs />}
       onContact={(business, type) => logContactEvent({ businessId: business.id, type })}
-      onShare={share}
+      onShare={() => setSharing(true)}
       onOpenItem={openItem}
       onReport={() => setReporting(true)}
     >
@@ -183,6 +168,7 @@ export default function Business() {
         />
       )}
       <ReportDialog business={data} open={reporting} onClose={() => setReporting(false)} />
+      <ShareSheet open={sharing} onClose={() => setSharing(false)} url={shortUrl} title={data.name} text={`${data.name} on EpicMKT`} labels={shareLabels()} />
     </BusinessPage>
   );
 }

@@ -5,9 +5,9 @@ import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, choiceLines, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
 import { tiersFor } from "./item/Tiers.jsx";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
-import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
-import { coverUrl, metaDescription } from "@epicmkt/ui";
+import { ShareSheet, coverUrl, metaDescription } from "@epicmkt/ui";
+import { shareLabels } from "../lib/shareLabels.js";
 
 import { useOptionSelection } from "../hooks/useOptionSelection.js";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -77,6 +77,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const failed = isError && !gone && !fresh;
   const vanished = gone && detail?.id === itemId;
   const [hold, setHold] = useState(null);
+  const [sharing, setSharing] = useState(false);
   const lastLive = useRef(null);
   const current = hold && fresh && hold.id === fresh.id ? { ...fresh, flash: hold.flash, pricing: hold.pricing } : fresh;
 
@@ -233,20 +234,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const onVisit = (placement) => () => track("visit_store_click", { placement });
   const onCall = () => { if (!preview) logContactEvent({ businessId: business.id, itemId, type: "call" }); };
 
-  const onShare = async () => {
-    const path = isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
-    const url = `${window.location.origin}${path}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: current?.name, text: `${current?.name} on EpicMKT`, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      showToast(t("item.linkCopied"));
-    } catch (err) {
-      if (err?.name !== "AbortError") showToast(t("item.shareFailed"));
-    }
-  };
+  const shareUrl = `${typeof window === "undefined" ? "" : window.location.origin}${isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`}`;
+  const onShare = () => setSharing(true);
 
   // Everything a slot may read. Slots take this one object and pick what they need, so adding a field here does not touch the others.
   const ctx = {
@@ -310,6 +299,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
         <StickyNav ctx={ctx} />
       </section>
+      <ShareSheet open={sharing} onClose={() => setSharing(false)} url={shareUrl} title={current?.name ?? business.name} text={`${current?.name ?? business.name} on EpicMKT`} labels={shareLabels()} />
     </div>
   );
 }

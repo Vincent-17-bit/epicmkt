@@ -4,11 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { signedInApp } from "../../../test/utils.jsx";
 
 const download = vi.fn(async () => {});
-vi.mock("../../../lib/cataloguePdf.js", () => ({ downloadCataloguePdf: (...a) => download(...a) }));
+const build = vi.fn(async () => new Blob(["%PDF"], { type: "application/pdf" }));
+vi.mock("../../../lib/cataloguePdf.js", () => ({ downloadCataloguePdf: (...a) => download(...a), buildCataloguePdf: (...a) => build(...a) }));
 
 const realMatchMedia = window.matchMedia;
 beforeEach(() => {
   download.mockClear();
+  build.mockClear();
+  delete navigator.canShare;
+  delete navigator.share;
   window.matchMedia = (q) => ({ matches: q.includes("min-width: 1024px"), media: q, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => false });
   try { localStorage.clear(); } catch { /* none */ }
 });
@@ -107,5 +111,55 @@ describe("Share catalogue", () => {
     const after = Number(within(dialog).getByTestId("share-count").textContent.match(/\d+/)[0]);
     expect(after).toBeLessThan(before);
     expect(within(dialog).getByTestId("share-count").textContent).toMatch(/chosen section/);
+  });
+
+  it("Share shop link opens a sheet with WhatsApp, Facebook, X and Copy link", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog");
+    const dialog = await open(user);
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: /Share shop link/ })).toBeEnabled());
+    await user.click(within(dialog).getByRole("button", { name: /Share shop link/ }));
+    const sheet = await screen.findByRole("dialog", { name: "Share" });
+    expect(within(sheet).getByRole("link", { name: "Facebook" }).getAttribute("href")).toMatch(/facebook\.com\/sharer.*%2Fs%2F/);
+    expect(within(sheet).getByRole("link", { name: "X" }).getAttribute("href")).toMatch(/x\.com\/intent\/post/);
+    expect(within(sheet).getByRole("link", { name: "WhatsApp" })).toBeTruthy();
+    expect(within(sheet).getByRole("button", { name: "Copy link" })).toBeTruthy();
+  });
+
+  it("Share PDF is hidden when the device cannot share files", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog");
+    const dialog = await open(user);
+    expect(within(dialog).queryByRole("button", { name: "Share PDF" })).toBeNull();
+  });
+
+  it("Share PDF hands the file to the device share sheet", async () => {
+    navigator.canShare = () => true;
+    navigator.share = vi.fn(async () => {});
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog");
+    const dialog = await open(user);
+    const button = await within(dialog).findByRole("button", { name: "Share PDF" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(navigator.share).toHaveBeenCalled());
+    const arg = navigator.share.mock.calls[0][0];
+    expect(arg.files[0].type).toBe("application/pdf");
+    expect(arg.files[0].name).toMatch(/\.pdf$/);
+    expect(build).toHaveBeenCalledTimes(1);
+    expect(download).not.toHaveBeenCalled();
+  });
+
+  it("cancelling the device share sheet is not an error", async () => {
+    navigator.canShare = () => true;
+    navigator.share = vi.fn(async () => { throw Object.assign(new Error("cancel"), { name: "AbortError" }); });
+    const user = userEvent.setup();
+    await signedInApp("/business/catalog");
+    const dialog = await open(user);
+    const button = await within(dialog).findByRole("button", { name: "Share PDF" });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(navigator.share).toHaveBeenCalled());
+    expect(within(dialog).queryByRole("alert")).toBeNull();
   });
 });

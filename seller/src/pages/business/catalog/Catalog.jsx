@@ -544,7 +544,7 @@ export default function Catalog() {
       {dialog === "section" && <SectionDialog open sections={sections} onClose={() => setDialog(null)} onApply={(section) => applyBulk(() => api.bulkItems("move_section", selectedIds, { section }), (r) => `${r.affected} moved.`)} />}
       {dialog === "type" && <TypeDialog open count={selectedItems.length} untyped={selectedItems.filter((i) => !i.productTypeId).length} onClose={() => setDialog(null)} onApply={(typeId) => applyBulk(() => api.setItemTypes(selectedItems.filter((i) => !i.productTypeId).map((i) => i.id), typeId), setTypeReport)} />}
       {dialog === "availability" && <AvailabilityDialog open onClose={() => setDialog(null)} onApply={(availability) => applyBulk(() => api.bulkItems("set_availability", selectedIds, { availability }), (r) => `${r.affected} updated.`)} />}
-      {dialog === "share" && <ShareDialog open onClose={() => setDialog(null)} items={enriched} shop={shop} makePdf={async (opts, file) => (await import("../../../lib/cataloguePdf.js")).downloadCataloguePdf(opts, file)} />}
+      {dialog === "share" && <ShareDialog open onClose={() => setDialog(null)} items={enriched} shop={shop} makePdf={async (opts, file) => (await import("../../../lib/cataloguePdf.js")).downloadCataloguePdf(opts, file)} buildPdf={async (opts) => (await import("../../../lib/cataloguePdf.js")).buildCataloguePdf(opts)} />}
       {insightsFor && <ItemInsights item={insightsFor} onClose={() => setInsightsFor(null)} />}
       {dialog === "import" && (
         <ImportDialog
