@@ -7,6 +7,7 @@ import { FeaturedMark, VerifiedMark } from "./components/Marks.jsx";
 import { cardBlurb, coverUrl } from "./lib/media.js";
 import LazyImage from "./components/LazyImage.jsx";
 import StockTag from "./components/StockTag.jsx";
+import SaveButton from "./components/SaveButton.jsx";
 import styles from "./ProductTile.module.css";
 
 const DEFAULT_LABELS = {
@@ -54,6 +55,8 @@ const SWATCHES = 5;
  *   titleLines 2 (default) or 3;  blurb false hides the short description after the name;  priority loads the picture first
  *   onClick    called when the card is opened (search logs the position)
  *   tag        a short label on the picture, top right ("From this shop")
+ *   action     { saved, onToggle, label } adds a Save heart. The card is then a div, the NAME is the link (stretched over the card)
+ *              and the heart is its own button above it, so a tap on the heart never opens the item. Without it, nothing changes.
  *
  * Availability: an available item shows nothing extra, one running low gets "Low stock" / "Only 3 left" on the picture, and a
  * sold-out item is not drawn at all (sold-out items are not listed to customers, so one reaching here is a bug elsewhere).
@@ -74,6 +77,7 @@ export default function ProductTile({
   priority = false,
   onClick,
   tag = null,
+  action = null,
   className = ""
 }) {
   const preview = isPreview(mode);
@@ -96,45 +100,10 @@ export default function ProductTile({
 
   if (!isListed(item)) return null;
 
-  return (
-    <Link href={preview ? undefined : href} className={`${styles.tile} ${className}`} data-mode={preview ? "preview" : undefined} style={{ "--title-lines": titleLines }} onClick={preview ? undefined : onClick}>
-      <span className={styles.media}>
-        <LazyImage fill src={coverUrl(item)} className={styles.img} priority={priority} />
-        {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
-        {item.flash?.sale && renderFlash?.(styles.flash)}
-        {tag && <span className={styles.tag}>{tag}</span>}
-        <OfferChip offer={item.offer} className={`${styles.offer} ${tag ? styles.offerLow : ""} ${onSale && !ranged ? styles.offerBesideSale : ""}`} labels={text.offerChip} />
-        <StockTag item={item} labels={text} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
-        {hasVideo && (
-          <span className={styles.video} title={text.videos}>
-            <FontAwesomeIcon icon={faPlay} aria-hidden="true" />
-            <span className="sr-only">{text.videos}</span>
-          </span>
-        )}
-      </span>
+  // Opt-in: the seller's preview never shows the heart, whatever is passed.
+  const save = action && !preview ? action : null;
 
-      <span className={styles.body}>
-        <span className={styles.copy}>
-          <span className={styles.name}>{item.name}</span>
-          {blurb && <span className={styles.blurb}>{blurb}</span>}
-        </span>
-        {facts?.length > 0 && <span className={styles.facts}>{facts.join(" · ")}</span>}
-        {(dots.length > 1 || optionsText) && (
-          <span className={styles.variants}>
-            {dots.length > 1 ? (
-              <span className={styles.dots} role="img" aria-label={text.colours.replace("{n}", String(dots.length))}>
-                {dots.slice(0, SWATCHES).map((s) => (
-                  <span key={s.id ?? s.label} className={styles.dot} style={{ "--sw": s.color ?? "var(--surface-3)" }} title={s.label} />
-                ))}
-                {dots.length > SWATCHES && <span className={styles.moreDots}>+{dots.length - SWATCHES}</span>}
-              </span>
-            ) : null}
-            {optionsText && <span className={styles.options}>{optionsText}</span>}
-          </span>
-        )}
-
-        <span className={styles.foot}>
-          {pricing ? (
+  const priceBlock = pricing ? (
             <span className={styles.prices}>
               {ranged && <span className={styles.from}>{text.from}</span>}
               {ranged && " "}
@@ -153,6 +122,62 @@ export default function ProductTile({
             </span>
           ) : (
             <span className={styles.ask}>{text.ask}</span>
+          );
+
+  const picture = (
+      <span className={styles.media}>
+        <LazyImage fill src={coverUrl(item)} className={styles.img} priority={priority} />
+        {onSale && !ranged && <span className={styles.sale}>-{pricing.discountPercent}%</span>}
+        {item.flash?.sale && renderFlash?.(styles.flash)}
+        {tag && <span className={styles.tag}>{tag}</span>}
+        <OfferChip offer={item.offer} className={`${styles.offer} ${tag ? styles.offerLow : ""} ${onSale && !ranged ? styles.offerBesideSale : ""}`} labels={text.offerChip} />
+        <StockTag item={item} labels={text} className={styles.stockTag} onPicture lifted={Boolean(item.flash?.sale)} />
+        {hasVideo && (
+          <span className={styles.video} title={text.videos}>
+            <FontAwesomeIcon icon={faPlay} aria-hidden="true" />
+            <span className="sr-only">{text.videos}</span>
+          </span>
+        )}
+      </span>
+  );
+
+  const body = (
+      <span className={styles.body}>
+        <span className={styles.copy}>
+          <span className={styles.name}>
+            {save ? (
+              <Link href={href} className={styles.nameLink} onClick={onClick}>
+                {item.name}
+              </Link>
+            ) : (
+              item.name
+            )}
+          </span>
+          {blurb && <span className={styles.blurb}>{blurb}</span>}
+        </span>
+        {facts?.length > 0 && <span className={styles.facts}>{facts.join(" · ")}</span>}
+        {(dots.length > 1 || optionsText) && (
+          <span className={styles.variants}>
+            {dots.length > 1 ? (
+              <span className={styles.dots} role="img" aria-label={text.colours.replace("{n}", String(dots.length))}>
+                {dots.slice(0, SWATCHES).map((s) => (
+                  <span key={s.id ?? s.label} className={styles.dot} style={{ "--sw": s.color ?? "var(--surface-3)" }} title={s.label} />
+                ))}
+                {dots.length > SWATCHES && <span className={styles.moreDots}>+{dots.length - SWATCHES}</span>}
+              </span>
+            ) : null}
+            {optionsText && <span className={styles.options}>{optionsText}</span>}
+          </span>
+        )}
+
+        <span className={styles.foot}>
+          {save ? (
+            <span className={styles.priceRow}>
+              {priceBlock}
+              <SaveButton className={styles.save} saved={save.saved} onToggle={save.onToggle} label={save.label} size={20} />
+            </span>
+          ) : (
+            priceBlock
           )}
           {delivery?.text && (
             <span className={styles.delivery} data-kind={delivery.kind}>
@@ -174,6 +199,21 @@ export default function ProductTile({
           {cta && <span className={styles.cta} aria-hidden="true">{cta}</span>}
         </span>
       </span>
+  );
+
+  if (save) {
+    return (
+      <div className={`${styles.tile} ${styles.tileSave} ${className}`} style={{ "--title-lines": titleLines }}>
+        {picture}
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Link href={preview ? undefined : href} className={`${styles.tile} ${className}`} data-mode={preview ? "preview" : undefined} style={{ "--title-lines": titleLines }} onClick={preview ? undefined : onClick}>
+      {picture}
+      {body}
     </Link>
   );
 }

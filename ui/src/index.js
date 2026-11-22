@@ -40,6 +40,7 @@ export { groupServices } from "./business/groupServices.js";
 export { isPreview } from "./preview.js";
 export { default as ItemCard } from "./ItemCard.jsx";
 export { default as ProductTile } from "./ProductTile.jsx";
+export { default as SaveButton } from "./components/SaveButton.jsx";
 export { default as Logo, LogoMark } from "./components/Logo.jsx";
 export { default as ItemView } from "./item/ItemView.jsx";
 export { default as ItemSpecs } from "./item/ItemSpecs.jsx";

@@ -92,6 +92,11 @@
   --status-warn-bg: #ffedd5;
   --status-warn-text: #9a3412;
   --status-bad: #dc2626;
+  /* Saved list: the heart and its count badge reuse the palette's red; the media stage is the grey cards already use. */
+  --saved: var(--status-bad);
+  --on-saved: #ffffff;
+  --media-stage: #f5f5f6;
+  --z-saved: 85;
   --star: #d98a00;
   --scrim: rgb(17 17 17 / 0.5);
   --skeleton-base: #e5e7eb;
@@ -164,6 +169,10 @@
   --status-warn-bg: #3a2210;
   --status-warn-text: #fdba74;
   --status-bad: #f87171;
+  --saved: var(--status-bad);
+  --on-saved: #111111;
+  --media-stage: #ececee;
+  --z-saved: 85;
   --star: #f0a020;
   --scrim: rgb(0 0 0 / 0.7);
   --skeleton-base: #232323;
