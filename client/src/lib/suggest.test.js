@@ -33,7 +33,7 @@ describe("type-ahead fallback (the same rules as search_suggest)", () => {
   });
 
   it("corrects a misspelling to the closest known word", () => {
-    expect(editDistance("mlik", "milk")).toBe(2);
+    expect(editDistance("mlik", "milk")).toBe(1);   // a swap of two neighbours is one slip
     expect(correctWord(index, "mlik")).toBe("milk");
     expect(correctWord(index, "milk")).toBeNull();
     const out = suggestFrom(index, "mlik");
@@ -77,5 +77,25 @@ describe("type-ahead reads variants", () => {
   it("a size matches however it is typed", () => {
     for (const typed of ["250ml", "250 ml", "0.25l"]) expect(suggestFrom(withDrink, typed).products.map((p) => p.id), typed).toContain("d");
     for (const typed of ["1l", "1 l", "1000ml"]) expect(suggestFrom(withDrink, typed).products.map((p) => p.id), typed).toContain("d");
+  });
+});
+
+describe("what shoppers type into the search box", () => {
+  const idx = buildSuggestIndex([
+    { id: "1", name: "Refurbished iPhone 11 64GB", business: { slug: "a", name: "A" } },
+    { id: "2", name: "Haircut", business: { slug: "b", name: "B" } },
+    { id: "3", name: "Soda crate 24", business: { slug: "c", name: "C" } }
+  ]);
+
+  it("suggests for the words, not the request around them", () => {
+    expect(suggestFrom(idx, "cheap iphone under 20k").terms[0].label).toBe("iphone");
+  });
+
+  it("offers what a word means when nothing starts with it", () => {
+    expect(suggestFrom(idx, "kinyozi").terms.map((t) => t.label)).toContain("haircut");
+  });
+
+  it("never turns a real word into a different one", () => {
+    expect(suggestFrom(idx, "sofa").corrected).toBeNull();
   });
 });

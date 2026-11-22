@@ -3,3 +3,5 @@ export { searchProducts, parseSearch, writeSearch, describe as describeForSearch
 export { FACETS, KINDS, KIND_BY_ID, COLOURS as SEARCH_COLOURS, readNumber, readers as searchReaders } from "./data/facetCatalog.js";
 export { tidyTrending } from "./trending.js";
 export { measureTokens, splitMeasures, canonicalMeasureKey } from "./measure.js";
+export { understandQuery, placePhrases } from "./understand.js";
+export { distance, closestWords } from "./fuzzy.js";

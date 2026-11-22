@@ -1,6 +1,8 @@
 // Product search: match the words, work out what kind of product each result is, read its filter values, count every
 // filter option (each one counted as if the shopper ticked it, the way Amazon counts), filter, rank, sort and page.
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
+import { understandQuery, placePhrases } from "./understand.js";
+import { closestWords } from "./fuzzy.js";
 import { normalizeText } from "../utils.js";
 import { measureTokens, splitMeasures } from "./measure.js";
 import { LOCAL_SYNONYMS } from "./localWords.js";
@@ -102,6 +104,13 @@ const CONDITION_PHRASES = [
 ];
 const SERVICE_INTENT = new Set(["broken", "cracked", "smashed", "shattered", "fix", "fixing", "repair", "repairs", "replace", "replacement", "damaged", "faulty", "install", "installation", "servicing"]);
 const GOODS_INTENT = new Set(["protector", "protectors", "tempered", "case", "cover", "guard", "sleeve", "pouch", "holder", "charger", "cable", "adapter"]);
+
+// "fix my screen" wants the repair; "screen protector" wants the thing. Decided from the words, the same way parseQuery does it.
+function intentOf(tokens) {
+  const service = tokens.some((t) => SERVICE_INTENT.has(t));
+  const goods = tokens.some((t) => GOODS_INTENT.has(t));
+  return service && !goods ? "service" : goods && !service ? "product" : null;
+}
 
 function parseQuery(q) {
   let text = String(q ?? "").toLowerCase();
@@ -329,7 +338,7 @@ export function writeSearch(search) {
 // A search word matches a product word when they are the same word, or the product word only adds an ending ("print" finds
 // "printing" and "printer"). A longer word that merely starts the same is a different thing: "table" is not "tablets",
 // "pen" is not "pencil" or "pendant", "cup" is not "cupcake", "bed" is not "bedsheet".
-const ENDING = /^(?:e?s|ing|ed|er|ers|y|ies)$/;
+const ENDING = /^(?:e?s|ing|ed|er|ers|y|ies|ly)$/;
 const wordMatches = (word, wanted) => word === wanted || (word.startsWith(wanted) && ENDING.test(word.slice(wanted.length)));
 function textScore(d, tokens) {
   if (!tokens.length) return 1;
@@ -435,7 +444,12 @@ function valueBonus(d, tokens) {
   return bonus;
 }
 
-const isStrong = (d, tokens) => !tokens.length || tokens.some((t) => [...d.name].some((w) => wordMatches(w, t)) || kindWords(d.kind).some((w) => wordMatches(w, t)));
+const isStrong = (d, tokens) =>
+  !tokens.length ||
+  tokens.some((t) => {
+    const options = [t, ...(SYNONYMS[t] ?? []).map(stem)];
+    return options.some((o) => [...d.name].some((w) => wordMatches(w, o)) || kindWords(d.kind).some((w) => wordMatches(w, o)));
+  });
 
 function dominantKinds(all, search) {
   if (search.kind) return [KIND_BY_ID[search.kind]];
@@ -706,17 +720,154 @@ function relatedSearches(rows, search) {
   return out.slice(0, 6);
 }
 
-function rank(products, tokens) {
+// ---- what the shopper meant -----------------------------------------------------------------------------------------
+// The words the catalogue itself uses (with how many listings use each), the towns it covers and the numbers that are part of product
+// names. Built once per product list; spelling fixes, place names and "is this number a price?" are all decided against it.
+const lexicons = new WeakMap();
+function lexiconOf(products) {
+  let lex = lexicons.get(products);
+  if (lex) return lex;
+  lex = { words: new Map(), raw: new Map(), rawFirst: new Map(), byFirst: new Map(), places: new Set(), numbers: new Set() };
+  for (const p of products) {
+    const d = describe(p);
+    for (const w of d.hay) {
+      if (w.length < 2) continue;
+      lex.words.set(w, (lex.words.get(w) ?? 0) + 1);
+      if (/^\d+$/.test(w)) lex.numbers.add(w);
+    }
+    for (const w of d.name) lex.words.set(w, (lex.words.get(w) ?? 0) + 2);
+    // The words as they are written (not cut back to a stem): spelling is fixed against these, since a shopper types "ladies".
+    const own = new Set(normalizeText(`${p.name} ${p.brand ?? ""} ${p.section ?? ""} ${p.shortDescription ?? ""} ${p.business?.name ?? ""}`).split(" "));
+    for (const w of own) if (w.length >= 3 && /^[a-z]+$/.test(w)) lex.raw.set(w, (lex.raw.get(w) ?? 0) + (d.name.has(stem(w)) ? 3 : 1));
+    for (const raw of [p.business?.town, p.business?.county]) if (raw) lex.places.add(raw);
+  }
+  for (const w of lex.words.keys()) {
+    const k = w[0];
+    if (!lex.byFirst.has(k)) lex.byFirst.set(k, []);
+    lex.byFirst.get(k).push(w);
+  }
+  for (const w of lex.raw.keys()) {
+    if (!lex.rawFirst.has(w[0])) lex.rawFirst.set(w[0], []);
+    lex.rawFirst.get(w[0]).push(w);
+  }
+  lexicons.set(products, lex);
+  return lex;
+}
+// Would this word find anything as typed? Itself, an ending on it, or one of its synonyms.
+const isKnown = (lex, t) => (lex.byFirst.get(t[0]) ?? []).some((w) => wordMatches(w, t)) || (SYNONYMS[t] ?? []).some((o) => lex.words.has(stem(o)));
+
+/**
+ * Fixes what was mistyped: "iphon" -> "iphone" (an unfinished last word), "harcut" -> "haircut" (a slip). Works on the words as typed,
+ * against the words as the catalogue writes them. Returns the fixed words, what changed, and for each change the other candidates
+ * (for "dary": dairy, dry) so a guess that finds nothing can be swapped for the next.
+ */
+function mend(rawWords, lex, products) {
+  const pairs = vocabOf(products).pairs;
+  const changes = [];
+  const alternatives = [];
+  const words = rawWords.map((w, i) => {
+    const t = stem(w);
+    if (w.length < 3 || /[^a-z]/.test(w) || SYNONYMS[t] || isKnown(lex, t) || pairs.has(t)) return w;   // a word we know as a real thing is never "fixed" into another
+    let options = [];
+    if (i === rawWords.length - 1) {
+      options = (lex.rawFirst.get(w[0]) ?? []).filter((c) => c.length > w.length && c.startsWith(w)).sort((a, b) => (lex.raw.get(b) ?? 0) - (lex.raw.get(a) ?? 0) || a.length - b.length).slice(0, 4);
+    }
+    if (!options.length) options = closestWords(w, lex.raw, 4);
+    if (!options.length) return w;
+    changes.push({ from: w, to: options[0] });
+    alternatives.push({ index: i, options });
+    return options[0];
+  });
+  return { words, changes, alternatives };
+}
+
+const placeKey = (p) => `${normalizeText(p.business?.town ?? "")} ${normalizeText(p.business?.county ?? "")} ${normalizeText(p.business?.address ?? "")}`;
+const inPlace = (p, place) => ` ${placeKey(p)} `.includes(` ${place} `);
+
+/**
+ * Reads the query (see understand.js) and turns it into what the ranking needs: groups of words (alternatives), exact words, words to
+ * leave out and the extra filters the shopper typed in plain words. Typed filters never override one the shopper set by hand.
+ */
+function interpret(products, s) {
+  const lex = lexiconOf(products);
+  const u = understandQuery(s.q, { places: placePhrases([...lex.places]), modelNumbers: lex.numbers });
+  const search = { ...s };
+  if (search.min === null && u.min !== null) search.min = u.min;
+  if (search.max === null && u.max !== null) search.max = u.max;
+  if (search.sort === "featured" && u.sort) search.sort = u.sort;
+  search.conditions = s.conditions.length ? s.conditions : u.conditions;   // a condition chosen by hand wins over the one in the words
+  search.deals = [...new Set([...s.deals, ...u.deals])];
+  search.store = [...new Set([...s.store, ...u.store])];
+  search.delivery = s.delivery || u.delivery;
+  search.freeDelivery = s.freeDelivery || u.freeDelivery;
+  const changes = [];
+  // Sizes and amounts ("250 ml", "0.25l", "half a kilo") are matched as measures, the way the products spell them; the joining
+  // words between names ("and", "na") say nothing.
+  const split = u.groups.map((g) => {
+    const { rest, measures } = splitMeasures(g);
+    const all = normalizeText(rest).split(" ").filter(Boolean);
+    const real = all.filter((w) => !JOINERS.has(w));
+    return { raw: real.length || measures.length ? real : all, measures };
+  });
+  const mended = split.map(({ raw }) => mend(raw, lex, products));
+  for (const m of mended) changes.push(...m.changes);
+  const tokensFor = (gi, words) => [...refineTokens(words.map(stem), products), ...split[gi].measures];
+  const groups = mended.map((m, gi) => tokensFor(gi, m.words));
+  // Every other way of reading the slips, one change at a time, for when the first reading finds nothing.
+  const variants = [];
+  mended.forEach((m, gi) => {
+    for (const alt of m.alternatives) for (const option of alt.options.slice(1)) {
+      const words = [...m.words];
+      words[alt.index] = option;
+      variants.push(groups.map((g, i) => (i === gi ? tokensFor(gi, words) : g)));
+    }
+  });
+  return {
+    search,
+    groups: groups.length ? groups : [[]],
+    exact: u.exact.map(stem),
+    exclude: u.exclude.map(stem),
+    places: u.places,
+    chips: u.chips,
+    changes,
+    variants,
+    plain: u.groups.join(" "),
+    // Nothing but filler ("best", "can") or a place: the literal words are the fallback, so a brand named like a town still searches.
+    literal: refineTokens(parseQuery(s.q).tokens, products),
+    fillerOnly: !u.groups.length && !u.chips.length && !u.exact.length,
+    onlyPlaces: !u.groups.length && u.places.length > 0 && u.chips.every((c) => c.id === "place")
+  };
+}
+
+// partial: a product may miss some of the words, as long as it has at least half of them and one that is not a number.
+function rank(products, tokens, { partial = false, exact = [], exclude = [] } = {}) {
   const matched = [];
   for (const p of products) {
     const d = describe(p);
-    const text = textScore(d, tokens);
-    const score = text > 0 ? text + (tokens.length && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0) : 0;
+    if (exclude.length && exclude.some((w) => [...d.hay].some((h) => wordMatches(h, w)))) continue;
+    if (exact.length && !exact.every((w) => d.hay.has(w))) continue;
+    let score = textScore(d, tokens);
+    let missed = 0;
+    if (!score && partial && tokens.length > 2) {
+      const hits = tokens.filter((t) => textScore(d, [t]) > 0);
+      missed = tokens.length - hits.length;
+      // A size or amount asked for ("1000ml", "128gb", "4pc") is never forgiven: a drink that has no 1 L is not the 1 L drink.
+      if (hits.length >= 2 && hits.length * 2 >= tokens.length && hits.some((t) => !/^\d/.test(t)) && tokens.every((t) => !/^\d[\d.]*[a-z]+$/.test(t) || hits.includes(t))) score = hits.reduce((n, t) => n + textScore(d, [t]), 0) / tokens.length;
+    }
+    score += score && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0;
     // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
     const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
-    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens) });
+    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens), missed });
   }
   return matched;
+}
+
+// Alternatives ("samsung or tecno phone"): a listing counts once, at its best group.
+function rankGroups(products, groups, options) {
+  if (groups.length === 1) return rank(products, groups[0], options);
+  const best = new Map();
+  for (const g of groups) for (const r of rank(products, g, options)) if (!best.has(r.p) || best.get(r.p).score < r.score) best.set(r.p, r);
+  return [...best.values()];
 }
 
 /**
@@ -726,21 +877,108 @@ function rank(products, tokens) {
  * `itemsOnly` skips the filters: the next page of a list already on screen needs only its cards.
  */
 export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
-  const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
-  const parsed = parseQuery(s.q);
-  if (parsed.conditions.length && !s.conditions.length) s.conditions = parsed.conditions;
-  const tokens = refineTokens(parsed.tokens, products);
-  const matched = rank(products, tokens);
-  if (parsed.intent) for (const r of matched) if (r.d.listing === parsed.intent) r.score += 6;
-  // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
-  const [first, second] = dominantKinds(matched, { ...s, kind: "" });
-  for (const r of matched) r.score += r.d.kind && r.d.kind === first ? 1.5 : r.d.kind && r.d.kind === second ? 0.75 : 0;
-  const kept = matched.filter((r) => passes(r.p, r.d, s));
-  kept.sort(SORTERS[s.sort] ?? SORTERS.featured);
+  const given = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
+  const read = interpret(products, given);
+  let s = read.search;
+  const options = { exact: read.exact, exclude: read.exclude };
+  // The places named that the catalogue has shops in; one it does not cover is dropped (and said) instead of emptying the page.
+  const placeHits = read.places.filter((pl) => products.some((p) => inPlace(p, pl)));
+  const relaxed = read.places.filter((pl) => !placeHits.includes(pl)).map((pl) => ({ id: "missing-place", label: `no shops in ${pl} yet` }));
+  const inPlaces = (r) => !placeHits.length || placeHits.some((pl) => inPlace(r.p, pl));
+
+  let matched = rankGroups(products, read.groups, options);
+  let partial = false;
+  const intent = intentOf(read.groups.flat());
+  if (read.onlyPlaces && !placeHits.length) {
+    // "mumias" with no shop in Mumias: it is a word (a sugar brand), not a place.
+    relaxed.length = 0;
+    read.places.length = 0;
+    matched = rank(products, read.literal, options);
+  } else if (read.fillerOnly && read.literal.length) {
+    matched = rank(products, read.literal, options);
+    if (!matched.length) matched = rank(products, [], options);   // "best": no listing says it, so show everything, best first
+  }
+  const run = (search) => {
+    const [first, second] = dominantKinds(matched, { ...search, kind: "" });
+    for (const r of matched) {
+      r.boosted ??= (r.score += r.d.kind && r.d.kind === first ? 1.5 : r.d.kind && r.d.kind === second ? 0.75 : 0);
+      // What the words ask for ranks before everything: the repair for "broken screen", the thing for "screen protector"; otherwise the
+      // kind most results belong to ("phone" puts phones before the cases).
+      r.primary = intent ? r.d.listing === intent : Boolean(read.groups[0]?.length && r.d.kind && r.d.kind === first);
+      if (intent && r.d.listing === intent) r.score += 6;
+    }
+    return matched.filter((r) => passes(r.p, r.d, search) && (!search.__places || inPlaces(r)));
+  };
+  let search1 = { ...s, __places: true };
+  let kept = run(search1);
+  // Nothing: loosen what the shopper typed in plain words, one thing at a time, and say which. Their own filter choices stay.
+  const ladder = [
+    ["place", (x) => ({ ...x, __places: false }), () => placeHits.length > 0, `the place (${placeHits.join(", ")})`],
+    ["price", (x) => ({ ...x, min: given.min, max: given.max }), () => s.min !== given.min || s.max !== given.max, "the price limit"],
+    ["condition", (x) => ({ ...x, conditions: given.conditions }), () => s.conditions.length !== given.conditions.length, "the condition"],
+    ["deals", (x) => ({ ...x, deals: given.deals, store: given.store, delivery: given.delivery, freeDelivery: given.freeDelivery }), () => s.deals.length !== given.deals.length || s.store.length !== given.store.length || s.delivery !== given.delivery || s.freeDelivery !== given.freeDelivery, "the offer, shop or delivery filter"]
+  ];
+  if (!kept.length) {
+    for (const [id, loosen, applies, label] of ladder) {
+      if (!applies()) continue;
+      search1 = loosen(search1);
+      relaxed.push({ id, label });
+      kept = run(search1);
+      if (kept.length) break;
+    }
+  }
+  // Still nothing: the next reading of a slip ("dary meal" as dairy, not dry).
+  if (!kept.length) {
+    for (const groups of read.variants) {
+      const again = rankGroups(products, groups, options);
+      if (!again.length) continue;
+      matched = again;
+      read.groups = groups;
+      kept = run(search1);
+      if (kept.length) break;
+    }
+  }
+  // Still nothing: a listing with most of the words is better than an empty page.
+  if (!kept.length && read.groups.some((g) => g.length > 2)) {
+    matched = rankGroups(products, read.groups, { ...options, partial: true });
+    kept = run(search1);
+    partial = kept.length > 0;
+  }
+  s = search1;
+  if (s.__places) matched = matched.filter(inPlaces);   // the filters beside the results count what the results show
+  // Whatever the order asked for, listings that are about the words come before listings that only mention them (a shop called
+  // "Phones" selling a sack of sugar): "cheapest phone" must not start with the cheapest thing in that shop.
+  const sorter = SORTERS[s.sort] ?? SORTERS.featured;
+  kept.sort((a, b) => Number(b.strong) - Number(a.strong) || Number(b.primary) - Number(a.primary) || sorter(a, b));
   const pages = Math.max(1, Math.ceil(kept.length / pageSize));
   const page = Math.min(s.page, pages);
   const items = kept.slice((page - 1) * pageSize, page * pageSize).map(({ p, d }) => ({ ...p, search: rowFacts(p, d) }));
-  const base = { total: kept.length, matched: matched.length, page, pageSize, pages, items };
+  // Nothing even so: the single words that do find something, so the page can say "Try: tv".
+  const alternatives = [];
+  if (!kept.length) {
+    const seen = new Set();
+    for (const t of read.groups.flat()) {
+      if (seen.has(t) || t.length < 3 || /^\d/.test(t)) continue;
+      seen.add(t);
+      const n = rank(products, [t], {}).filter((r) => passes(r.p, r.d, { ...s, min: null, max: null, price: "" })).length;
+      if (n) alternatives.push({ q: t, total: n });
+    }
+    alternatives.sort((a, b) => b.total - a.total);
+  }
+  const understood = {
+    alternatives: alternatives.slice(0, 4),
+    sort: s.sort !== given.sort ? s.sort : null,
+    // A chip for a part that had to be loosened stays (it is what was typed) but says it is not applied.
+    chips: read.chips
+      .filter((c) => c.id !== "nearMe")
+      .filter((c) => c.id !== "place" || placeHits.some((pl) => normalizeText(c.label).endsWith(pl)))
+      .map((c) => ({ ...c, applied: !relaxed.some((r) => r.id === c.id || (r.id === "deals" && ["deals", "delivery", "store"].includes(c.id))) })),
+    changes: read.changes,
+    relaxed,
+    partial,
+    nearMe: false
+  };
+  const base = { total: kept.length, matched: matched.length, page, pageSize, pages, items, understood, ...(read.changes.length ? { corrected: read.groups.map((g) => g.join(" ")).join(" or ") } : {}) };
   if (itemsOnly) return base;
   // The filters follow the listing type picked: services show service filters, products product ones.
   const typed = s.type ? matched.filter((r) => r.d.listing === s.type) : matched;
