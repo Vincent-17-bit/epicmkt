@@ -1,7 +1,7 @@
 .info {
   display: grid;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-5);
 }
 
 .badges {
@@ -48,12 +48,17 @@
 .priceBlock {
   display: grid;
   gap: var(--space-1);
+  margin-top: calc(var(--space-1) * -1);
 }
 
 .price,
 .salePrice {
-  font-size: var(--text-lg);
-  font-weight: 700;
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .unit {

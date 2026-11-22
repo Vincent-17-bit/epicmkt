@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { OptionCard, OptionSelect } from "@epicmkt/ui";
 import { axisCards, colourOf, formatCapacityLabel, isColourNamedAxis, photoForRow, photosByLabel, valueForRow } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
@@ -42,6 +42,14 @@ function Group({ item, option, axis, withChart, system, onSystem, guide }) {
   const shoe = isShoeAxis(item, axis);
   const headId = useId();
   const refs = useRef(new Map());
+  // On a swipeable row the chosen tile is kept in view when the choice comes from elsewhere (a link, the keyboard, "closest match").
+  const picked = option.choice[axis.key];
+  useEffect(() => {
+    const node = refs.current.get(picked);
+    const row = node?.parentElement;
+    if (!node || !row || row.dataset.rail === undefined || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo?.({ left: Math.max(0, node.offsetLeft - (row.clientWidth - node.offsetWidth) / 2), behavior: "smooth" });
+  }, [picked]);
   const { values, showPrice } = axisCards(option.axes, option.variants, option.choice, axis.key);
   if (values.length === 0) return null;
 
@@ -55,6 +63,7 @@ function Group({ item, option, axis, withChart, system, onSystem, guide }) {
   const swatchOf = (value) => (axis.display === "swatch" || (colourish && !photoOf(item, value)) ? value.color || colourOf(value.label) : "");
   const asSelect = !withPhotos && !colourish && (axis.display === "dropdown" || (!["swatch", "image-card"].includes(axis.display) && values.length > DROPDOWN_OVER));
   const money = (n) => kesText(n);
+  const rail = withPhotos || axis.display === "image-card";
 
   // "Color: Grey". Polite and atomic: when the choice changes a screen reader says the whole line once, and not on first load.
   const header = (
@@ -114,7 +123,7 @@ function Group({ item, option, axis, withChart, system, onSystem, guide }) {
         {chartLink && <span className={styles.chartSlot}>{chartLink}</span>}
       </div>
       {systemSwitch}
-      <div role="radiogroup" aria-labelledby={headId} className={styles.cards}>
+      <div role="radiogroup" aria-labelledby={headId} className={rail ? `${styles.cards} ${styles.rail}` : styles.cards} data-rail={rail ? "" : undefined}>
         {values.map((card, index) => {
           const value = card.value;
           const selected = value.id === current;

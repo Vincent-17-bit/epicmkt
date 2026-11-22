@@ -1,38 +1,74 @@
+/* The option groups of an item. Rhythm: 20px between groups, 10px between a group's heading and its choices, 8px between choices. */
+
 .picker {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-5);
+  padding-block: var(--space-1);
 }
 
 .group {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  min-width: 0;
 }
 
+/* "Flavour: Original" on the left, the size chart link on the right. */
 .headLine {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
+  gap: 0 var(--space-3);
+  min-height: 1.75rem;
   margin: 0;
   color: var(--text-muted);
   font-size: var(--text-sm);
+  line-height: 1.3;
 }
 
 .header {
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .value {
   color: var(--text);
+  font-weight: 700;
 }
 
 .cards {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* A group of photo tiles is one swipeable row instead of three wrapped ones: the tiles stay small, the sheet stays short, and the
+   row runs to the sheet's edges (the negative margin cancels the sheet's side padding) so the next tile peeks in and says "more". */
+.rail {
+  flex-wrap: nowrap;
+  margin-inline: calc(var(--space-4) * -1);
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--space-4);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* Wide screens have room: the tiles wrap instead of scrolling. */
+@media (min-width: 64rem) {
+  .rail {
+    flex-wrap: wrap;
+    margin-inline: 0;
+    padding-inline: 0;
+    overflow: visible;
+  }
 }
 
 /* The dropdown shows its label itself; this line only exists so a change is spoken. */
@@ -49,9 +85,19 @@
 
 .note {
   margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
   color: var(--text-muted);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.chartSlot { margin-inline-start: auto; }
+.chartSlot {
+  margin-inline-start: auto;
+}
+
+/* The chart link keeps its 44px tap height but sits tight against the heading line. */
+.chartSlot > * {
+  margin-block: calc((44px - 1.75rem) / -2);
+}

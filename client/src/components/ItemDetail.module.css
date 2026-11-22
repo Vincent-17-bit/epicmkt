@@ -414,8 +414,61 @@
   padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
+  box-shadow: 0 -6px 16px rgb(17 17 17 / 0.06);
 }
 
+/* With an order: chat and store are square icon buttons, "Order now" takes the rest of the row. */
+.footer[data-order] {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text);
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.iconBtn:active {
+  transform: scale(0.95);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .iconBtn:hover {
+    border-color: var(--primary);
+    background: var(--primary-tint);
+  }
+}
+
+/* "Order now" and, pushed to the right edge, the total it will send. */
+.order {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+
+.orderTotal {
+  margin-inline-start: auto;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid rgb(17 17 17 / 0.25);
+  font-variant-numeric: tabular-nums;
+}
 
 @media (min-width: 48rem) {
   .root {
@@ -428,7 +481,7 @@
     border-radius: var(--radius-card);
   }
 
-  .footer {
+  .footer:not([data-order]) {
     display: none;
   }
 }
