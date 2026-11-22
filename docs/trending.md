@@ -53,6 +53,14 @@ shopper searches ──> log_search(term, county)  ──> search_events        
 * **Switch it off:** `select cron.unschedule('trending');`. The menu then falls back to the live count and nothing else breaks.
 * **Retention:** `search_term_daily` keeps `keep_days` (120) days.
 
+## Hidden shops (migration 0147)
+
+A shop that is suspended, deleted, unlisted, not yet approved, or whose subscription ended with no grace left (`business_is_visible`) is
+never shown. The stored lists are rebuilt hourly, so `trending_lists` re-checks every store, product and flash row against the shop and
+item **as they are at read time**: a shop that lapses disappears from Popular and Rising at once, not at the next rebuild. The same
+re-check protects the type-ahead products and stores (`search_suggest`) and the older hourly list. Only the plain completion words of
+the type-ahead and the cached endpoint response (about an hour) can lag.
+
 ## Limits
 
 * The word grouping is by search words, not meaning: "tomato" and "tomatoes" may count separately until a synonym joins them.
