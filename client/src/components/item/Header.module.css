@@ -2,3 +2,6 @@
 .state { padding: 0.25rem var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface-2); color: var(--text); font-size: var(--text-sm); }
 
 .unitPrice { margin: calc(var(--space-1) * -1) 0 var(--space-3); color: var(--text-muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+
+/* "for 3": a quiet label under a price that has grown with the quantity, so it never reads as a price rise. */
+.priceFor { margin: 0; color: var(--text-muted); font-size: 0.875rem; font-variant-numeric: tabular-nums; }

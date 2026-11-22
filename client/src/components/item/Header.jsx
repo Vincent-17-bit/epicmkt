@@ -1,6 +1,9 @@
 import { ItemHeader } from "@epicmkt/ui";
 import { sizeInItemName, unitPricePolicy, unitPrices } from "@epicmkt/shared";
+import { amountText } from "@epicmkt/shared";
 import { stateLabels, variantOverrides } from "../../lib/itemView.js";
+import { shownForQty } from "../../lib/lineFor.js";
+import { t } from "../../i18n/index.js";
 import styles from "./Header.module.css";
 
 // Header slot: brand, title, short description and price. The title is the page's heading (h1 on a page, h2 in the sheet) and takes
@@ -33,6 +36,12 @@ export default function Header({ ctx, slot }) {
   if (!slot?.item) return null;
   const labels = stateLabels(slot.item, variantOverrides(ctx?.option?.variant));
   const per = unitPricesFor(ctx?.option, slot.item, slot.shown);
+  // The price is the total for the chosen quantity, never the calculation. "for 3" / "for 1.5 kg" says what it is for.
+  const line = ctx?.line;
+  const many = Boolean(line?.order && line.priced && line.qty !== 1);
+  const shown = many ? shownForQty(slot.shown, line) : slot.shown;
+  const header = many && slot.item.pricing?.unit ? { ...slot, shown, item: { ...slot.item, pricing: { ...slot.item.pricing, unit: null } } } : { ...slot, shown };
+  const forText = many ? t("qty.priceFor").replace("{amount}", line.info?.mode === "measure" ? amountText(line.qty, line.info.unit) : String(line.qty)) : "";
   return (
     <>
       {labels.length > 0 && (
@@ -44,7 +53,8 @@ export default function Header({ ctx, slot }) {
           ))}
         </ul>
       )}
-      <ItemHeader {...slot} />
+      <ItemHeader {...header} />
+      {many && <p className={styles.priceFor} data-testid="price-for">{forText}</p>}
       {per.length > 0 && <p className={styles.unitPrice} data-testid="unit-price">{per.map((x) => x.text).join(" · ")}</p>}
     </>
   );

@@ -1,4 +1,5 @@
-import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityModeOf, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { isServiceItem } from "./listing.js";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -49,11 +50,15 @@ const isBlank = (value) => value === undefined || value === null || value === ""
  * and the page has no stepper (an item without a type, or a type with no quantity, is exactly as before).
  */
 export function quantityInfo(item, variant = null) {
-  const mode = item?.quantityMode;
+  // A service, or a type that counts nothing, is always one. Every other priced item counts whole units unless its type says it is
+  // measured (an item without a type used to get no stepper; it now gets whole units, from 1 up to the stock left).
+  const explicit = item?.quantityMode === "units" || item?.quantityMode === "measure";
+  if (!explicit && isServiceItem(item)) return null;
+  const mode = quantityModeOf(item);
   if (mode !== "units" && mode !== "measure") return null;
   const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
   const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
-  return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
+  return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null, implicit: !explicit };
 }
 
 /**

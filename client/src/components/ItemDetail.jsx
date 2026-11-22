@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { choiceToParam, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, choiceLines, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
-import { tiersFor } from "./item/Tiers.jsx";
+import { chatMessage, choiceLines, defaultVariantId, orderMessage } from "../lib/itemView.js";
+import { lineFor, optionShown } from "../lib/lineFor.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
@@ -23,18 +23,6 @@ import StickyNav from "./item/StickyNav.jsx";
 import SectionNav from "./item/SectionNav.jsx";
 import TopBar from "./item/TopBar.jsx";
 import styles from "./ItemDetail.module.css";
-
-// What the header and the message to the seller use for a chosen combination: its price in the shape of pricing (regular, sale,
-// savings), and its name. A combination the seller does not sell has a name and no price. During a flash sale the item's own
-// flash pricing stays in charge of the header (price rules for options come later), but the chat still names the choice.
-function optionShown(option, current) {
-  const v = option.variant;
-  const base = { id: v?.id ?? null, label: option.label };
-  if (!v || !Number.isFinite(v.price)) return { ...base, regularPrice: NaN, salePrice: NaN, savings: 0, discountPercent: 0, unit: current?.pricing?.unit ?? null };
-  const sale = Number.isFinite(v.salePrice) && v.salePrice < v.price ? v.salePrice : v.price;
-  const savings = v.price - sale;
-  return { ...base, regularPrice: v.price, salePrice: sale, savings, discountPercent: savings > 0 ? Math.round((savings / v.price) * 100) : 0, unit: current?.pricing?.unit ?? null, plainSale: true };
-}
 
 const MAX_TIMEOUT = 2147483647;
 const HOLD_MS = 6000;
@@ -203,16 +191,18 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const option = useOptionSelection(current, itemId);
   const optionPrice = option ? optionShown(option, current) : null;
   const variant = option ? optionPrice : legacyVariant;
-  const shown = option ? (current?.flash ? current.pricing : option.variant ? optionPrice : null) : (legacyVariant ?? current?.pricing ?? null);
   const seller = useLiveStatus(current?.business ?? null);
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   // One quantity for the page (units, a measure, or a quantity-tier order). It resets with the item and falls back to the least that can be bought.
-  const tiers = current ? tiersFor(current, option?.variant ?? null) : null;
-  const qtyInfo = current ? quantityInfo(current, option?.variant ?? null) : null;
-  const qtyDefault = qtyInfo?.rules.min ?? 1;
-  const qty = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : qtyDefault;
+  // The page, the Saved drawer and the message to a shop all take the price from lineFor (lib/lineFor.js), so they always agree.
+  const picked = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : null;
+  const line = current ? lineFor({ item: current, option, legacyVariant, qty: picked }) : null;
+  const shown = line ? line.shown : option ? null : (legacyVariant ?? null);
+  const tiers = line?.tiers ?? null;
+  const qtyInfo = line?.info ?? null;
+  const qty = line?.qty ?? 1;
   const setQty = (value) => setQtyChoice({ itemId, value });
-  const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
+  const order = line?.order ?? null;
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const variantParam = option ? choiceToParam(option.axes, option.choice) : "";
@@ -220,7 +210,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
   const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
   const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
-  const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
+  // The WhatsApp order button stays for typed items and tier-priced ones, as before; an item with no type gets the quantity control only.
+  const orderReady = Boolean(current && order && !(qtyInfo?.implicit && !tiers) && !option?.unmatched && (!made.on || madeToMeasure));
   const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, shop: seller?.name ?? business.name, choices: choiceLines(option, variant), order: tiers ? { ...order, unit: null } : order }));
   const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
 
@@ -257,6 +248,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     isPage,
     vanished,
     shown,
+    line,
     variant,
     option,
     activeId,

@@ -7,7 +7,7 @@ import { configureAxe } from "vitest-axe";
 import { phone } from "@epicmkt/shared/options/fixtures";
 import ItemDetail from "./ItemDetail.jsx";
 
-// 11.3 / C11 / C12: one quantity on the item page. Units and measured items get a stepper and a total, and the message to the seller says so.
+// 11.3 / C11 / C12: one quantity on the item page. Every priced product (not a service) gets a stepper; the price shows the total, and the message to the seller says so.
 const mocks = vi.hoisted(() => ({ getDetail: vi.fn(), getStoreSelective: vi.fn() }));
 vi.mock("../api/index.js", () => ({ logContactEvent: vi.fn(), logEvent: vi.fn(), items: mocks }));
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
@@ -34,14 +34,23 @@ const mount = (detail) => {
 const chat = () => decodeURIComponent(screen.getAllByRole("link", { name: /Chat Seller/ })[0].getAttribute("href"));
 const order = () => decodeURIComponent(screen.getByTestId("order-whatsapp").getAttribute("href"));
 const box = () => screen.getByRole("textbox", { name: /How (many|much)/ });
+// Screen readers hear the total in a status line; sighted buyers read it in the price at the top. Neither shows the sum behind it.
 const total = () => screen.getByTestId("quantity-total").textContent;
+const priceFor = () => screen.queryByTestId("price-for")?.textContent ?? null;
 
 describe("quantity on the item page: units", () => {
-  it("shows nothing for an item whose type has no quantity (no type, or none): the page is as before", async () => {
+  it("gives an item with no type whole units from 1, with no Order button and the same chat message as before", async () => {
     mount(phoneDetail());
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(screen.queryByTestId("quantity")).toBeNull();
+    expect(screen.getByTestId("quantity")).toBeInTheDocument();
+    expect(box()).toHaveValue("1");
     expect(chat()).toContain("(Grey / 128 GB) (KES 21,000)");
+    expect(screen.queryByTestId("order-whatsapp")).toBeNull();
+  });
+
+  it("shows no stepper for a service with no type", async () => {
+    mount(phoneDetail({ kind: "service" }));
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(screen.queryByTestId("quantity")).toBeNull();
   });
 
@@ -54,13 +63,16 @@ describe("quantity on the item page: units", () => {
   it("totals 1, 2 and 3 of the chosen combination; the price is not the same for 2 as for 1", async () => {
     mount(phoneDetail({ quantityMode: "units" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(total()).toBe("KES 21,000 for 1");
+    expect(total()).toBe("Total KES 21,000");
+    expect(priceFor()).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(total()).toBe("KES 42,000 for 2");
+    expect(total()).toBe("Total KES 42,000");
+    expect(priceFor()).toBe("for 2");
+    expect(screen.getByText("KES 42,000")).toBeInTheDocument();   // the price at the top is the total for 2
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(total()).toBe("KES 63,000 for 3");
+    expect(total()).toBe("Total KES 63,000");
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));
-    expect(total()).toBe("KES 72,000 for 3");   // Grey 256 GB is KES 24,000
+    expect(total()).toBe("Total KES 72,000");   // Grey 256 GB is KES 24,000
   });
 
   it("puts the quantity, the choice and the total in the message to the seller", async () => {
@@ -84,7 +96,7 @@ describe("quantity on the item page: units", () => {
     await userEvent.type(box(), "-2");
     await userEvent.tab();
     expect(box()).toHaveValue("1");
-    expect(total()).toBe("KES 21,000 for 1");
+    expect(total()).toBe("Total KES 21,000");
   });
 
   it("stops at the stock that is left and says so", async () => {
@@ -98,14 +110,14 @@ describe("quantity on the item page: units", () => {
     expect(box()).toHaveValue("3");
     expect(screen.getByText("Only 3 available")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "One more" })).toBeDisabled();
-    expect(total()).toBe("KES 63,000 for 3");
+    expect(total()).toBe("Total KES 63,000");
   });
 
   it("follows a flash sale: the total uses the price the page shows", async () => {
     mount(phoneDetail({ quantityMode: "units", pricing: pricing(21000, 18000), flash: { sale: { id: "s", endsAt: new Date(Date.now() + 3_600_000).toISOString(), startsAt: new Date().toISOString() }, pricing: pricing(21000, 18000), remainingMs: 3_600_000 } }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
-    expect(total()).toBe("KES 36,000 for 2");
+    expect(total()).toBe("Total KES 36,000");
   });
 
   it("has no serious accessibility violations", async () => {
@@ -121,13 +133,16 @@ describe("quantity on the item page: measured (kg)", () => {
     mount(beef());
     await screen.findByRole("heading", { name: "Fresh beef" });
     expect(box()).toHaveValue("0.5");
-    expect(total()).toBe("KES 800 per kg x 0.5 kg = KES 400");
+    expect(total()).toBe("Total KES 400");
+    expect(priceFor()).toBe("for 0.5 kg");
     expect(screen.getByRole("button", { name: "One less" })).toBeDisabled();
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     expect(box()).toHaveValue("1.25");
-    expect(total()).toBe("KES 800 per kg x 1.25 kg = KES 1,000");
+    expect(total()).toBe("Total KES 1,000");
+    expect(priceFor()).toBe("for 1.25 kg");
+    expect(document.body.textContent).not.toMatch(/per kg x|x 1\.25 kg =/);   // never the calculation
   });
 
   it("rounds a typed amount to the nearest step: 1.6 kg becomes 1.5 kg, KES 1,200", async () => {
@@ -137,7 +152,7 @@ describe("quantity on the item page: measured (kg)", () => {
     await userEvent.type(box(), "1.6");
     await userEvent.tab();
     expect(box()).toHaveValue("1.5");
-    expect(total()).toBe("KES 800 per kg x 1.5 kg = KES 1,200");
+    expect(total()).toBe("Total KES 1,200");
   });
 
   it('says it in the message: "Fresh beef, 1.5 kg, KES 1,200"', async () => {
