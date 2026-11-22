@@ -118,8 +118,7 @@ export default function PlaceSearch({ label, placeholder, onPick, near = null, s
           </li>
         ))}
       </ul>
-      {none && open && <p className={styles.empty}>{status}</p>}
-      <p className={styles.sr} role="status" aria-live="polite">{status}</p>
+      {none && open ? <p className={styles.empty} role="status">{status}</p> : <p className={styles.sr} role="status" aria-live="polite">{status}</p>}
     </div>
   );
 }
