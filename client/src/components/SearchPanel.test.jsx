@@ -153,4 +153,25 @@ describe("opening search", () => {
     expect(document.getElementById("site-menu")).toHaveAttribute("data-open", "false");
     await waitFor(() => expect(hero).toHaveFocus());
   });
+
+  it("the cross in the header closes the search", async () => {
+    render(
+      <QueryClientProvider client={client()}>
+        <MemoryRouter>
+          <Header />
+          <Routes>
+            <Route path="/" element={<HeroSearch />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Hero search" }));
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true"));
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button", { name: "Dismiss search" }));
+    });
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "false"));
+    expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument();
+  });
 });
+

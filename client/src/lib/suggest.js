@@ -10,6 +10,9 @@ const STOP = new Set([
   "and", "the", "for", "with", "from", "pcs", "pack", "set", "new", "per", "pieces", "piece", "size", "free",
   "min", "mins", "hrs", "hour", "hours", "ltr", "litre", "litres", "liter", "liters", "inch", "inches", "kgs", "gms", "gram", "grams"
 ]);
+import { canonicalMeasureKey } from "../../../shared/src/search/measure.js";
+
+const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n"]);
 const EMPTY = Object.freeze({ terms: [], products: [], stores: [], categories: [], corrected: null });
 
 /** The JS twin of search_key(): lower case, accents dropped, anything else one space. */
@@ -42,6 +45,13 @@ export function buildSuggestIndex(products) {
   };
   for (const p of products) {
     const words = suggestKey(p.name).split(" ").filter(Boolean);
+    const lead = words.slice(0, 2).join(" ");
+    for (const label of p.optionValues ?? []) {
+      const key = suggestKey(label);
+      if (!key || key.length > 40) continue;
+      add(key, 0.5, p);
+      if (lead && /[a-z]{3}/.test(key) && !STOP.has(key)) add(`${lead} ${key}`, 0.25, p);
+    }
     const keys = new Set();
     for (let h = 1; h <= Math.min(3, words.length); h += 1) keys.add(words.slice(0, h).join(" "));
     for (const w of words) if (w.length >= 3 && /[a-z]/.test(w) && !STOP.has(w)) keys.add(w);
@@ -51,7 +61,9 @@ export function buildSuggestIndex(products) {
     const shop = p.business;
     if (shop?.slug && shop?.name && !stores.has(shop.slug)) stores.set(shop.slug, { key: suggestKey(shop.name), label: shop.name, slug: shop.slug, featured: shop.featured === true });
   }
-  return { terms: [...terms.values()], stores: [...stores.values()] };
+  const all = [...terms.values()];
+  for (const t of all) t.canon = canonicalMeasureKey(t.key);
+  return { terms: all, stores: [...stores.values()] };
 }
 
 /** Edit distance, for spelling: "mlik" is 2 edits from "milk". */
@@ -84,19 +96,28 @@ export function correctWord(index, word) {
 
 export function suggestFrom(index, prefix, { limit = 8 } = {}) {
   let q = suggestKey(String(prefix ?? "").slice(0, 60));
+  const words = q.split(" ").filter((w) => !JOINERS.has(w));
+  if (words.length && words.length < q.split(" ").length) q = words.join(" ");
   if (q.length < 2 || !index) return { ...EMPTY };
-  const tierOf = (key) => (key.startsWith(q) ? 3 : q.length >= 3 && ` ${key}`.includes(` ${q}`) ? 2 : 0);
+  const plain = (key) => {
+    const kept = key.split(" ").filter((w) => !JOINERS.has(w));
+    return (kept.length ? kept : key.split(" ")).join(" ");
+  };
+  let qc = plain(suggestKey(canonicalMeasureKey(String(prefix ?? "").slice(0, 60)))) || canonicalMeasureKey(q);
+  const tierIn = (key, want) => (key.startsWith(want) ? 3 : want.length >= 3 && ` ${key}`.includes(` ${want}`) ? 2 : 0);
+  const tierOf = (key, canon = key) => Math.max(tierIn(key, q), canon !== key || qc !== q ? tierIn(canon, qc) : 0);
   let corrected = null;
-  let hits = index.terms.filter((t) => tierOf(t.key) > 0);
+  let hits = index.terms.filter((t) => tierOf(t.key, t.canon) > 0);
   if (!hits.length && q.length >= 3) {
     const fixed = q.split(" ").map((w) => correctWord(index, w) ?? w).join(" ");
     if (fixed !== q) {
       corrected = fixed;
       q = fixed;
-      hits = index.terms.filter((t) => tierOf(t.key) > 0);
+      qc = canonicalMeasureKey(q);
+      hits = index.terms.filter((t) => tierOf(t.key, t.canon) > 0);
     }
   }
-  const ranked = hits.map((t) => ({ t, tier: tierOf(t.key) })).sort((a, b) => b.tier - a.tier || b.t.weight - a.t.weight || a.t.key.length - b.t.key.length || (a.t.key < b.t.key ? -1 : 1));
+  const ranked = hits.map((t) => ({ t, tier: tierOf(t.key, t.canon) })).sort((a, b) => b.tier - a.tier || b.t.weight - a.t.weight || a.t.key.length - b.t.key.length || (a.t.key < b.t.key ? -1 : 1));
   const products = [];
   const seen = new Set();
   for (const { t } of [...ranked].sort((a, b) => b.tier - a.tier || hasPicture(b.t.example ?? {}) - hasPicture(a.t.example ?? {}) || b.t.weight - a.t.weight)) {

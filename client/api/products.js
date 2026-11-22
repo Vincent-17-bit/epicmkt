@@ -405,6 +405,30 @@ async function candidatesFor(q) {
 const suggestMemo = new Map();
 const SUGGEST_MS = 5 * 60_000;
 
+const merged = (a, b, keyOf, limit) => {
+  const seen = new Set();
+  const out = [];
+  for (const row of [...(a ?? []), ...(b ?? [])]) {
+    const k = keyOf(row);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(row);
+    if (out.length === limit) break;
+  }
+  return out;
+};
+
+// The database dictionary knows names; the snapshot also knows variants (flavours, sizes). Its extra words and products are added
+// after the database's own, so nothing the dictionary found is displaced.
+function mergeSuggest(db, local) {
+  return {
+    ...db,
+    terms: merged(db.terms, local.terms, (t) => suggestKey(t.label), 8),
+    products: merged(db.products, local.products, (p) => p.id, 4),
+    corrected: db.corrected ?? (db.terms?.length || db.products?.length ? null : local.corrected)
+  };
+}
+
 async function suggestions(q) {
   const key = suggestKey(q);
   const hit = suggestMemo.get(key);
@@ -420,6 +444,10 @@ async function suggestions(q) {
     const snap = await snapshot();
     snap.suggest ??= buildSuggestIndex(snap.products);
     value = { ...suggestFrom(snap.suggest, q), source: "snapshot" };
+  } else if (state.snap) {
+    const snap = state.snap;
+    snap.suggest ??= buildSuggestIndex(snap.products);
+    value = mergeSuggest(value, suggestFrom(snap.suggest, q));
   }
   return memo(suggestMemo, key, { at: Date.now(), value }).value;
 }

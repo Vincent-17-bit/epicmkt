@@ -426,7 +426,9 @@ describe("/api/products", () => {
     it("falls back to the live count for trending when the hourly list is missing", async () => {
       answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
       const body = await (await call("op=trending")).json();
-      expect(body).toMatchObject({ live: true, items: [{ term: "bread", count: 4, hot: false }], popular: [{ term: "bread" }], rising: [] });
+      expect(body).toMatchObject({ live: true, rising: [] });
+      expect(body.items[0]).toMatchObject({ term: "bread", count: 4, hot: false, itemId: "item-1", image: "b1/one.webp" });
+      expect(body.popular[0]).toMatchObject({ term: "bread", image: "b1/one.webp" });
     });
 
     it("builds the unfiltered feed from the hour's pool once the catalogue is bigger than the snapshot, and keeps its order", async () => {

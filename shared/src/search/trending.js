@@ -3,7 +3,8 @@ import { describe, searchProducts, stem } from "./search.js";
 import { normalizeText } from "../utils.js";
 
 const keyOf = (term) => normalizeText(term).split(" ").filter(Boolean).map(stem).sort().join(" ");
-const pictured = (p) => p.image ?? p.images?.[0] ?? null;
+const pathOf = (value) => (typeof value === "string" && value ? value : typeof value?.url === "string" && value.url ? value.url : typeof value?.path === "string" && value.path ? value.path : null);
+const pictured = (p) => pathOf(p.image) ?? pathOf(p.imagePath) ?? pathOf(p.imageUrl) ?? pathOf(p.images?.[0]) ?? null;
 
 function entry(term, products, extra = {}) {
   const found = searchProducts(products, { q: term }, { pageSize: 8, itemsOnly: true });

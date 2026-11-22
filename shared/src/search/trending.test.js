@@ -20,7 +20,7 @@ test("a product word that finds something is kept, with its example item and pic
   const out = tidyTrending([{ term: "bread", count: 9, hot: true }], CATALOGUE, 1);
   assert.equal(out.length, 1);
   assert.deepEqual([out[0].term, out[0].count, out[0].hot, out[0].itemId], ["bread", 9, true, "bread"]);
-  assert.deepEqual(out[0].image, { url: "bread.png" });
+  assert.equal(out[0].image, "bread.png");
 });
 
 test("a product word that finds nothing is dropped, so the menu never shows a dead word", () => {
@@ -74,4 +74,10 @@ test("it never returns more than the limit, and real words come before filler", 
   assert.deepEqual(tidyTrending(items, CATALOGUE, 2).map((x) => x.term), ["bread", "speaker"]);
   assert.deepEqual(tidyTrending([], [], 5), []);
   assert.deepEqual(tidyTrending(undefined, CATALOGUE, 0), []);
+});
+
+test("a product from the server snapshot (picture stored as imagePath) still gets its picture", () => {
+  const snap = [{ ...p("bull", "Red Bull Energy Drink"), images: undefined, imagePath: "shop/bull.jpg", imageUrl: "shop/bull.jpg" }];
+  const out = tidyTrending([{ term: "red bull", count: 5 }], snap, 1);
+  assert.equal(out[0].image, "shop/bull.jpg");
 });

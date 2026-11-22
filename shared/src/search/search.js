@@ -2,6 +2,7 @@
 // filter option (each one counted as if the shopper ticked it, the way Amazon counts), filter, rank, sort and page.
 // Pure functions over a product list, so the demo, the browser fallback and the /api/products endpoint all agree.
 import { normalizeText } from "../utils.js";
+import { measureTokens, splitMeasures } from "./measure.js";
 import { LOCAL_SYNONYMS } from "./localWords.js";
 import { normalizeValueKey } from "../openValues.js";
 import { deliveryInfo } from "../delivery.js";
@@ -90,6 +91,15 @@ function refineTokens(tokens, products) {
 }
 
 const tokensOf = (text) => normalizeText(text).split(" ").filter(Boolean).map(stem);
+
+const JOINERS = new Set(["and", "or", "with", "the", "an", "for", "of", "in", "on", "to", "by", "at", "n"]);
+
+function queryTokens(q) {
+  const { rest, measures } = splitMeasures(q);
+  const words = tokensOf(rest);
+  const real = words.filter((w) => !JOINERS.has(w));
+  return [...(real.length || measures.length ? real : words), ...measures];
+}
 
 // ---- reading one product ------------------------------------------------------------------------------------------
 const cache = new WeakMap();
@@ -197,8 +207,8 @@ export function describe(p) {
   const d = {
     kind: k,
     text,
-    name: new Set(tokensOf(p.name)),
-    hay: new Set(tokensOf(`${p.name} ${brand ?? ""} ${p.section ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ")} ${p.business?.name ?? ""} ${p.business?.town ?? ""} ${k ? `${k.label} ${k.noun}` : ""}`)),
+    name: new Set([...tokensOf(p.name), ...measureTokens(p.name)]),
+    hay: new Set([...tokensOf(`${p.name} ${brand ?? ""} ${p.section ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ")} ${p.business?.name ?? ""} ${p.business?.town ?? ""} ${k ? `${k.label} ${k.noun}` : ""}`), ...measureTokens(`${p.name} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ; ")}`)]),
     brandKey: normalizeValueKey(brand) || null,
     brand,
     price: priceOf(p),
@@ -696,7 +706,7 @@ function rank(products, tokens) {
  */
 export function searchProducts(products, search = EMPTY_SEARCH, { pageSize = SEARCH_PAGE_SIZE, itemsOnly = false } = {}) {
   const s = { ...EMPTY_SEARCH, ...search, facets: { ...(search.facets ?? {}) }, ranges: { ...(search.ranges ?? {}) } };
-  const tokens = refineTokens(tokensOf(s.q), products);
+  const tokens = refineTokens(queryTokens(s.q), products);
   const matched = rank(products, tokens);
   // What the search is mostly about ranks first among equal matches: "sugar" puts the sugar before the sugar test.
   const [first, second] = dominantKinds(matched, { ...s, kind: "" });

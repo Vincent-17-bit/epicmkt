@@ -6,7 +6,7 @@ import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../hooks/useFocusTrap.js";
 import { Logo, Container, IconButton } from "@epicmkt/ui";
 import LocationButton from "./LocationButton.jsx";
 import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";
-import SearchPanel from "./SearchPanel.jsx";
+import SearchPanel, { SEARCH_ID } from "./SearchPanel.jsx";
 import styles from "./Header.module.css";
 
 export default function Header() {
@@ -121,33 +121,37 @@ export default function Header() {
 
   return (
     <>
-      <div ref={rootRef} className={styles.root} inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
+      <div ref={rootRef} className={styles.root}>
         <header className={styles.header}>
           <Container className={styles.bar}>
-            <Link to="/" className={styles.brand} aria-label="EpicMKT home">
+            <Link to="/" className={styles.brand} aria-label="EpicMKT home" inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
               <Logo />
             </Link>
             <div className={styles.tools}>
-              <LocationButton />
+              <div className={styles.locate} inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
+                <LocationButton />
+              </div>
               <IconButton
                 ref={toggleRef}
-                icon={menuOpen ? faXmark : faBars}
-                label={menuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={menuOpen}
-                aria-controls={MENU_ID}
-                onClick={menuOpen ? closeMenu : openMenu}
+                icon={menuOpen || searchOpen ? faXmark : faBars}
+                label={searchOpen ? "Dismiss search" : menuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={searchOpen ? true : menuOpen}
+                aria-controls={searchOpen ? SEARCH_ID : MENU_ID}
+                onClick={searchOpen ? closeSearch : menuOpen ? closeMenu : openMenu}
               />
             </div>
           </Container>
         </header>
-        <MenuPanel
-          open={menuOpen}
-          onClose={closeMenu}
-          panelRef={panelRef}
-          onOpenSearch={openSearch}
-          searchRef={menuSearchRef}
-          quietRef={quiet}
-        />
+        <div className={styles.root} inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
+          <MenuPanel
+            open={menuOpen}
+            onClose={closeMenu}
+            panelRef={panelRef}
+            onOpenSearch={openSearch}
+            searchRef={menuSearchRef}
+            quietRef={quiet}
+          />
+        </div>
       </div>
       <SearchPanel open={searchOpen} onClose={closeSearch} onSelect={select} panelRef={searchPanelRef} inputRef={searchInputRef} />
     </>
