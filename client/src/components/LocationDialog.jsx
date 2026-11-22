@@ -14,7 +14,8 @@ export default function LocationDialog() {
   const town = useGeoStore((s) => s.town);
   const deviceBlocked = useGeoStore((s) => s.deviceBlocked);
   const allow = useGeoStore((s) => s.allow);
-  const place = useGeoStore((s) => s.place);
+  const placeFull = useGeoStore((s) => s.placeFull);
+  const near = useGeoStore((s) => s.coords);
   const choosePlace = useGeoStore((s) => s.choosePlace);
   const close = useGeoStore((s) => s.close);
   const reset = useGeoStore((s) => s.reset);
@@ -32,7 +33,7 @@ export default function LocationDialog() {
     showToast("Location reset");
   };
 
-  const current = !isSet ? null : source === "town" && town ? town : place ?? "Your approximate location";
+  const current = !isSet ? null : source === "town" && town ? town : placeFull ?? "Your approximate location";
 
   return (
     <dialog
@@ -66,6 +67,7 @@ export default function LocationDialog() {
         <PlaceSearch
           label={canLocate ? "Or search for your area" : "Search for your area"}
           placeholder="Type an area or town, e.g. Kilimani"
+          near={near}
           onPick={choosePlace}
         />
 

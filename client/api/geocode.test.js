@@ -8,9 +8,10 @@ afterEach(() => vi.unstubAllGlobals());
 describe("/api/geocode", () => {
   it("finds areas for a search, cached for a day", async () => {
     upstream({ features: [{ geometry: { coordinates: [36.78, -1.29] }, properties: { name: "Kilimani", city: "Nairobi", countrycode: "KE", osm_key: "place", osm_value: "suburb" } }] });
-    const res = await call("q=kilimani");
+    const res = await call("q=kilimani&lat=-1.29&lng=36.78");
     expect(res.status).toBe(200);
     expect((await res.json()).results[0].label).toBe("Kilimani, Nairobi");
+    expect(fetch.mock.calls[0][0]).toContain("lat=-1.3");
     expect(res.headers.get("Cache-Control")).toContain("s-maxage=86400");
     const [url, init] = fetch.mock.calls[0];
     expect(url).toContain("photon.komoot.io");
@@ -19,13 +20,13 @@ describe("/api/geocode", () => {
   });
 
   it("names the area of a position and sends only the rounded position", async () => {
-    upstream({ address: { country_code: "ke", suburb: "Kilimani", city: "Nairobi" } });
-    const res = await call("lat=-1.29123&lng=36.78456");
-    expect((await res.json()).results).toEqual([{ name: "Kilimani", label: "Kilimani, Nairobi", lat: -1.291, lng: 36.785 }]);
+    upstream({ name: "Yaya Centre", address: { country_code: "ke", suburb: "Kilimani", city: "Nairobi" } });
+    const res = await call("lat=-1.291234&lng=36.784567");
+    expect((await res.json()).results).toEqual([{ name: "Yaya Centre", label: "Yaya Centre, Kilimani, Nairobi", area: "Kilimani, Nairobi", lat: -1.2912, lng: 36.7846 }]);
     const url = fetch.mock.calls[0][0];
     expect(url).toContain("nominatim.openstreetmap.org");
-    expect(url).toContain("lat=-1.291");
-    expect(url).not.toContain("-1.29123");
+    expect(url).toContain("lat=-1.2912");
+    expect(url).not.toContain("-1.291234");
   });
 
   it("answers an empty list for an unknown spot, with a short cache", async () => {

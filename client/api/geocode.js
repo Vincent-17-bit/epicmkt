@@ -1,5 +1,5 @@
 // /api/geocode: area names for the location sheet. ?q=kilimani finds Kenyan areas; ?lat=..&lng=.. names the area a position is in.
-// Only a text or a position rounded to about 100 m goes upstream (OpenStreetMap's Photon and Nominatim, or your own: GEOCODE_SEARCH_URL,
+// Only a text or a position rounded to about 11 m goes upstream (OpenStreetMap's Photon and Nominatim, or your own: GEOCODE_SEARCH_URL,
 // GEOCODE_REVERSE_URL), with our own User-Agent and nothing from the visitor. Answers are cached by the CDN for a day, so a busy area costs
 // one lookup. No key is needed.
 
@@ -23,7 +23,7 @@ export default async function handler(req) {
   const ask = parseRequest(new URL(req.url).searchParams);
   if (ask.error) return json({ results: [], error: ask.error }, 400, NONE);
   try {
-    const url = ask.op === "search" ? searchUrl(SEARCH_BASE(), ask.q) : reverseUrl(REVERSE_BASE(), ask.lat, ask.lng);
+    const url = ask.op === "search" ? searchUrl(SEARCH_BASE(), ask.q, ask.near) : reverseUrl(REVERSE_BASE(), ask.lat, ask.lng);
     const res = await fetch(url, { headers: { "User-Agent": agent(), Accept: "application/json", "Accept-Language": "en" }, signal: AbortSignal.timeout(3500) });
     if (!res.ok) return json({ results: [], error: "upstream" }, 502, NONE);
     const body = await res.json();

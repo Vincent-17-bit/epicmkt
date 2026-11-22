@@ -43,6 +43,11 @@ describe("searchPlaces", () => {
     expect(fetchFn).toHaveBeenCalledTimes(1);
     expect(fetchFn.mock.calls[0][0]).toBe("/api/geocode?q=Kilimani");
   });
+  it("sends where the shopper is, rounded, only to rank nearer places first", async () => {
+    const fetchFn = ok([{ name: "Co-op Bank", label: "Co-op Bank, Nairobi", lat: -1.3, lng: 36.8 }]);
+    await searchPlaces("co-op bank", { fetchFn, near: { lat: -1.2912, lng: 36.7846 } });
+    expect(fetchFn.mock.calls[0][0]).toBe("/api/geocode?q=co-op%20bank&lat=-1.3&lng=36.8");
+  });
   it("gives [] when the service fails, is offline or answers badly", async () => {
     expect(await searchPlaces("kilimani", { fetchFn: vi.fn().mockResolvedValue({ ok: false }) })).toEqual([]);
     expect(await searchPlaces("kilimani", { fetchFn: vi.fn().mockRejectedValue(new Error("offline")) })).toEqual([]);
@@ -52,11 +57,11 @@ describe("searchPlaces", () => {
 
 describe("reversePlace", () => {
   it("names the area for a position and remembers it", async () => {
-    const fetchFn = ok([{ name: "Kilimani", label: "Kilimani, Nairobi" }]);
-    expect(await reversePlace({ lat: -1.29, lng: 36.78 }, { fetchFn })).toBe("Kilimani, Nairobi");
-    expect(await reversePlace({ lat: -1.29, lng: 36.78 }, { fetchFn })).toBe("Kilimani, Nairobi");
+    const fetchFn = ok([{ name: "Yaya Centre", label: "Yaya Centre, Kilimani, Nairobi", area: "Kilimani, Nairobi" }]);
+    expect(await reversePlace({ lat: -1.2912, lng: 36.7846 }, { fetchFn })).toEqual({ label: "Yaya Centre, Kilimani, Nairobi", area: "Kilimani, Nairobi" });
+    await reversePlace({ lat: -1.2912, lng: 36.7846 }, { fetchFn });
     expect(fetchFn).toHaveBeenCalledTimes(1);
-    expect(fetchFn.mock.calls[0][0]).toBe("/api/geocode?lat=-1.29&lng=36.78");
+    expect(fetchFn.mock.calls[0][0]).toBe("/api/geocode?lat=-1.2912&lng=36.7846");
   });
   it("gives null for no answer or a bad position", async () => {
     expect(await reversePlace({ lat: -1.29, lng: 36.78 }, { fetchFn: ok([]) })).toBeNull();

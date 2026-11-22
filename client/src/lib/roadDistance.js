@@ -1,6 +1,6 @@
 // Distance by road between the shop and the buyer, from an OSRM-compatible routing service when one is configured (VITE_ROUTING_URL, for example
 // https://router.example.com). With none configured nothing is sent anywhere and the page uses the straight line times 1.3 (shared deliveryReach).
-// Only the two points go to the service (the buyer's is already rounded to about 1 km by the location store), with no cookies and no identifiers.
+// Only the two points go to the service (the buyer's is rounded to about 10 m by the location store), with no cookies and no identifiers.
 
 const cache = new Map();
 const key = (a, b) => [a.lat, a.lng, b.lat, b.lng].map((n) => Number(n).toFixed(3)).join(",");

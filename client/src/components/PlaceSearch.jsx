@@ -5,7 +5,7 @@ import styles from "./PlaceSearch.module.css";
 const DELAY_MS = 250;
 
 /** A search box for any Kenyan area or town: type, pick from the list (arrow keys and Enter work). `onPick({ name, lat, lng })` gets the choice. */
-export default function PlaceSearch({ label, placeholder, onPick, search = searchPlaces, delay = DELAY_MS }) {
+export default function PlaceSearch({ label, placeholder, onPick, near = null, search = searchPlaces, delay = DELAY_MS }) {
   const id = useId();
   const [text, setText] = useState("");
   const [remote, setRemote] = useState([]);
@@ -27,7 +27,7 @@ export default function PlaceSearch({ label, placeholder, onPick, search = searc
     setBusy(true);
     const ctl = new AbortController();
     const timer = setTimeout(async () => {
-      const found = await search(query, { signal: ctl.signal });
+      const found = await search(query, { signal: ctl.signal, near });
       if (mine !== run.current) return;
       setRemote(found);
       setBusy(false);
@@ -36,7 +36,7 @@ export default function PlaceSearch({ label, placeholder, onPick, search = searc
       clearTimeout(timer);
       ctl.abort();
     };
-  }, [query, search, delay]);
+  }, [query, search, delay, near?.lat, near?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => setActive(-1), [query, remote]);
 
@@ -100,6 +100,7 @@ export default function PlaceSearch({ label, placeholder, onPick, search = searc
             onMouseDown={(e) => e.preventDefault()} onClick={() => pick(p)}>
             <span className={styles.name}>{p.name}</span>
             {p.label !== p.name && <span className={styles.context}>{p.label.slice(p.name.length + 2)}</span>}
+            {p.kind && p.kind !== "town" && <span className={styles.kind}>{p.kind}</span>}
           </li>
         ))}
       </ul>

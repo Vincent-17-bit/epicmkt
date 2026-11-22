@@ -46,25 +46,29 @@ export function mergePlaces(local, remote) {
 }
 
 /** Kenyan areas for what was typed: [{ name, label, lat, lng, kind }]. Never throws; an offline or failed lookup gives []. */
-export async function searchPlaces(text, options) {
+export async function searchPlaces(text, options = {}) {
   const q = String(text ?? "").trim();
   if (q.length < 2) return [];
-  const key = normalizeText(q);
+  const { near = null, ...rest } = options;
+  // Where the shopper is only ranks nearer places first (rounded to about 11 km on the server); it is never needed to get an answer.
+  const bias = near && Number.isFinite(near.lat) && Number.isFinite(near.lng) ? `&lat=${near.lat.toFixed(1)}&lng=${near.lng.toFixed(1)}` : "";
+  const key = `${normalizeText(q)}|${bias}`;
   if (cache.has(key)) return cache.get(key);
-  const found = await get(`q=${encodeURIComponent(q)}`, options);
+  const found = await get(`q=${encodeURIComponent(q)}${bias}`, rest);
   if (found.length) cache.set(key, found);
   return found;
 }
 
-/** The area name for a position ("Kilimani, Nairobi"), or null when it cannot be told. Never throws. */
+/** The place a position is at: { label, area } ("Yaya Centre, Kilimani, Nairobi" and "Kilimani, Nairobi"), or null when it cannot be told. Never throws. */
 export async function reversePlace({ lat, lng }, options) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)}`;
   if (cache.has(key)) return cache.get(key);
-  const found = (await get(`lat=${lat}&lng=${lng}`, options))[0] ?? null;
+  const found = (await get(`lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}`, options))[0] ?? null;
   const label = found?.label ? String(found.label) : null;
-  if (label) cache.set(key, label);
-  return label;
+  const out = label ? { label, area: found.area ? String(found.area) : label } : null;
+  if (out) cache.set(key, out);
+  return out;
 }
 
 export const clearPlaceCache = () => cache.clear();

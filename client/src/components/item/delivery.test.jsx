@@ -8,12 +8,26 @@ import { useGeoStore } from "../../stores/geo.js";
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false } } });
 const shop = { name: "Aqua Fresh", area: "Milimani", lat: -0.1021, lng: 34.7523 };
 const north = (km) => ({ lat: shop.lat + km / 111.19, lng: shop.lng });
-const at = (coords, extra = {}) => useGeoStore.setState({ status: coords ? "granted" : "idle", source: coords ? "device" : null, town: null, coords, ...extra });
+const at = (coords, extra = {}) => useGeoStore.setState({ status: coords ? "granted" : "idle", source: coords ? "device" : null, town: null, coords, exact: null, ...extra });
 const mount = (seller) => render(<Delivery ctx={{ seller }} />);
 const delivers = (over = {}) => ({ ...shop, delivery: { offers: true, fee: 100, radiusKm: 6, area: "Milimani and CBD", minOrder: 200, notes: "Before noon", ...over } });
 
 beforeEach(() => at(null));
 afterEach(cleanup);
+
+describe("Delivery uses the exact position", () => {
+  it("judges the radius from the position kept on this device, not the rounded one", () => {
+    at(north(7), { exact: north(4) });
+    mount(delivers());
+    expect(screen.getByText(/Delivers to you/)).toBeInTheDocument();
+  });
+
+  it("falls back to the rounded position when there is no exact one", () => {
+    at(north(30));
+    mount(delivers());
+    expect(screen.queryByText(/Delivers to you/)).toBeNull();
+  });
+});
 
 describe("Delivery states", () => {
   it("renders nothing without a seller", () => {

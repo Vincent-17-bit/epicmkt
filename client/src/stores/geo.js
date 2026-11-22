@@ -56,12 +56,19 @@ const writeOptOut = (on) => {
   }
 };
 
+const round4 = (n) => Math.round(n * 10000) / 10000;
+const isTown = (p) => TOWNS.some((t) => t.name === p.name && t.lat === p.lat && t.lng === p.lng);
+
+// `coords` is the approximate position (about 1 km) that is sent with searches and used for sorting. `exact` (about 10 m) stays on this
+// device and is used only to work out how far the shop is and to name the place; it is never sent in a search or stored for a device fix.
 const fromTown = (town) => ({
   status: "granted",
   source: "town",
   town: town.name,
   place: null,
-  coords: { lat: town.lat, lng: town.lng }
+  placeFull: null,
+  coords: isTown(town) ? { lat: town.lat, lng: town.lng } : coarsenCoords({ lat: town.lat, lng: town.lng }),
+  exact: { lat: round4(town.lat), lng: round4(town.lng) }
 });
 
 const saved = readTown();
@@ -88,26 +95,27 @@ export const useGeoStore = create((set, get) => {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         if (mine !== ticket) return;
-        // Only an approximate fix (about 1 km) is kept: enough for "how far", too coarse to locate a person.
+        // Searches and sorting only ever get the approximate fix (about 1 km). The exact one (about 10 m) is kept in memory for this visit.
         const coords = coarsenCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        const exact = { lat: round4(pos.coords.latitude), lng: round4(pos.coords.longitude) };
         if (!coords) {
           failDevice("denied");
           return;
         }
         writeTown(null);
         writeOptOut(false);
-        set({ status: "granted", source: "device", town: null, place: null, coords, deviceBlocked: false, explaining: false });
+        set({ status: "granted", source: "device", town: null, place: null, placeFull: null, coords, exact, deviceBlocked: false, explaining: false });
         // The area name is looked up after the fix is kept, so a slow or failed lookup never delays or blocks the location itself.
-        reversePlace(coords).then((label) => {
+        reversePlace(exact).then((found) => {
           const now = get();
-          if (mine === ticket && label && now.source === "device" && now.coords?.lat === coords.lat && now.coords?.lng === coords.lng) set({ place: label });
+          if (mine === ticket && found && now.source === "device" && now.exact?.lat === exact.lat && now.exact?.lng === exact.lng) set({ place: found.area, placeFull: found.label });
         });
       },
       () => {
         if (mine !== ticket) return;
         failDevice("denied");
       },
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   };
 
@@ -116,7 +124,9 @@ export const useGeoStore = create((set, get) => {
     source: saved ? "town" : null,
     town: saved?.name ?? null,
     place: null,
-    coords: saved ? { lat: saved.lat, lng: saved.lng } : null,
+    placeFull: null,
+    coords: saved ? fromTown(saved).coords : null,
+    exact: saved ? fromTown(saved).exact : null,
     deviceBlocked: false,
     explaining: false,
     // Opens the location sheet. It never changes the current location by itself.
@@ -158,7 +168,7 @@ export const useGeoStore = create((set, get) => {
       writeTown(null);
       writeOptOut(true);
       queryClient.removeQueries({ predicate: (q) => POSITIONAL_QUERIES.has(q.queryKey?.[0]) });
-      set({ status: "idle", source: null, town: null, place: null, coords: null, deviceBlocked: false, explaining: false });
+      set({ status: "idle", source: null, town: null, place: null, placeFull: null, coords: null, exact: null, deviceBlocked: false, explaining: false });
     },
     close: () => set({ explaining: false })
   };

@@ -138,14 +138,14 @@ describe("geo store area names", () => {
 
   it("names the area of a device fix after the fix is kept", async () => {
     const calls = stubGeolocation();
-    reverse.mockResolvedValue("Kilimani, Nairobi");
+    reverse.mockResolvedValue({ area: "Kilimani, Nairobi", label: "Yaya Centre, Kilimani, Nairobi" });
     const store = await loadStore();
     store.getState().allow();
-    calls[0].ok(fix(-1.2912, 36.7834));
-    expect(store.getState()).toMatchObject({ source: "device", place: null, coords: { lat: -1.29, lng: 36.78 } });
+    calls[0].ok(fix(-1.29123, 36.78345));
+    expect(store.getState()).toMatchObject({ source: "device", place: null, coords: { lat: -1.29, lng: 36.78 }, exact: { lat: -1.2912, lng: 36.7835 } });
     await flush();
-    expect(store.getState().place).toBe("Kilimani, Nairobi");
-    expect(reverse).toHaveBeenCalledWith({ lat: -1.29, lng: 36.78 });
+    expect(store.getState()).toMatchObject({ place: "Kilimani, Nairobi", placeFull: "Yaya Centre, Kilimani, Nairobi" });
+    expect(reverse).toHaveBeenCalledWith({ lat: -1.2912, lng: 36.7835 });
   });
 
   it("keeps the location when the name cannot be found", async () => {
@@ -165,17 +165,17 @@ describe("geo store area names", () => {
     store.getState().allow();
     calls[0].ok(fix(-1.29, 36.78));
     store.getState().chooseTown("Maseno");
-    answer("Kilimani, Nairobi");
+    answer({ area: "Kilimani, Nairobi", label: "Kilimani, Nairobi" });
     await flush();
     expect(store.getState()).toMatchObject({ source: "town", town: "Maseno", place: null });
   });
 
   it("keeps a searched area, with its name and position, across a reload", async () => {
     const store = await loadStore();
-    store.getState().choosePlace({ name: "Kilimani, Nairobi", lat: -1.2905, lng: 36.7872 });
-    expect(store.getState()).toMatchObject({ status: "granted", source: "town", town: "Kilimani, Nairobi", coords: { lat: -1.2905, lng: 36.7872 } });
+    store.getState().choosePlace({ name: "Yaya Centre, Kilimani, Nairobi", lat: -1.29052, lng: 36.78721 });
+    expect(store.getState()).toMatchObject({ status: "granted", source: "town", town: "Yaya Centre, Kilimani, Nairobi", coords: { lat: -1.29, lng: 36.79 }, exact: { lat: -1.2905, lng: 36.7872 } });
     const again = await loadStore();
-    expect(again.getState()).toMatchObject({ source: "town", town: "Kilimani, Nairobi", coords: { lat: -1.2905, lng: 36.7872 } });
+    expect(again.getState()).toMatchObject({ source: "town", town: "Yaya Centre, Kilimani, Nairobi", coords: { lat: -1.29, lng: 36.79 }, exact: { lat: -1.2905, lng: 36.7872 } });
   });
 
   it("still reads a town name saved by an older version, and ignores a damaged value", async () => {
@@ -185,6 +185,14 @@ describe("geo store area names", () => {
     expect((await loadStore()).getState().town).toBeNull();
     localStorage.setItem("epicmkt.town", JSON.stringify({ name: "X", lat: 999, lng: 0 }));
     expect((await loadStore()).getState().town).toBeNull();
+  });
+
+  it("asks the device for its best fix", async () => {
+    const seen = [];
+    Object.defineProperty(navigator, "geolocation", { configurable: true, value: { getCurrentPosition: (ok, fail, opts) => seen.push(opts) } });
+    const store = await loadStore();
+    store.getState().allow();
+    expect(seen[0]).toMatchObject({ enableHighAccuracy: true });
   });
 
   it("refuses a place with no usable position", async () => {

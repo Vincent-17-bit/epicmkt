@@ -5,7 +5,7 @@ import { useGeoStore } from "../stores/geo.js";
 import { useToastStore } from "../stores/toast.js";
 import LocationDialog from "./LocationDialog.jsx";
 
-const idle = { status: "idle", source: null, town: null, place: null, coords: null, deviceBlocked: false, explaining: false };
+const idle = { status: "idle", source: null, town: null, place: null, placeFull: null, coords: null, exact: null, deviceBlocked: false, explaining: false };
 
 beforeEach(() => {
   localStorage.clear();
@@ -40,9 +40,9 @@ describe("LocationDialog", () => {
   });
 
   it("shows the area name found for the device location instead of a generic label", () => {
-    useGeoStore.setState({ status: "granted", source: "device", coords: { lat: -1.29, lng: 36.78 }, place: "Kilimani, Nairobi", explaining: true });
+    useGeoStore.setState({ status: "granted", source: "device", coords: { lat: -1.29, lng: 36.78 }, place: "Kilimani, Nairobi", placeFull: "Yaya Centre, Kilimani, Nairobi", explaining: true });
     render(<LocationDialog />);
-    expect(screen.getByText("Kilimani, Nairobi")).toBeInTheDocument();
+    expect(screen.getByText("Yaya Centre, Kilimani, Nairobi")).toBeInTheDocument();
   });
 
   it("resets the location, says so, and returns to unset", async () => {

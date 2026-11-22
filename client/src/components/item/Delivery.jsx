@@ -32,13 +32,13 @@ export default function Delivery({ ctx }) {
   const [roadKm, setRoadKm] = useState(null);
   useEffect(() => {
     setRoadKm(null);
-    if (!seller || !geo.coords || !Number.isFinite(Number(seller.lat)) || !Number.isFinite(Number(seller.lng))) return undefined;
+    if (!seller || !(geo.exact ?? geo.coords) || !Number.isFinite(Number(seller.lat)) || !Number.isFinite(Number(seller.lng))) return undefined;
     let alive = true;
-    fetchRoadKm({ lat: Number(seller.lat), lng: Number(seller.lng) }, geo.coords).then((km) => { if (alive && km !== null) setRoadKm(km); });
+    fetchRoadKm({ lat: Number(seller.lat), lng: Number(seller.lng) }, geo.exact ?? geo.coords).then((km) => { if (alive && km !== null) setRoadKm(km); });
     return () => { alive = false; };
-  }, [seller?.lat, seller?.lng, geo.coords?.lat, geo.coords?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [seller?.lat, seller?.lng, geo.exact?.lat ?? geo.coords?.lat, geo.exact?.lng ?? geo.coords?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
   // The distance check uses the shop's radius; an item that is pickup only has nothing to check.
-  const reach = seller && info?.offers ? deliveryReach(seller, geo.coords, { roadKm }) : { status: "none" };
+  const reach = seller && info?.offers ? deliveryReach(seller, geo.exact ?? geo.coords, { roadKm }) : { status: "none" };
   const status = reach?.status ?? "none";
 
   // Tell a screen reader when the answer changes after the buyer shares or changes a location (not on first render).
