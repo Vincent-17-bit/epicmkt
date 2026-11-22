@@ -6,6 +6,10 @@
 // Pure: runs in the edge function and in the browser.
 
 // Words that say nothing about what a product is (joining words and units): never offered on their own.
+import { distance } from "../../../shared/src/search/fuzzy.js";
+import { understandQuery } from "../../../shared/src/search/understand.js";
+import { LOCAL_SYNONYMS } from "../../../shared/src/search/localWords.js";
+
 const STOP = new Set([
   "and", "the", "for", "with", "from", "pcs", "pack", "set", "new", "per", "pieces", "piece", "size", "free",
   "min", "mins", "hrs", "hour", "hours", "ltr", "litre", "litres", "liter", "liters", "inch", "inches", "kgs", "gms", "gram", "grams"
@@ -55,24 +59,13 @@ export function buildSuggestIndex(products) {
 }
 
 /** Edit distance, for spelling: "mlik" is 2 edits from "milk". */
-export function editDistance(a, b) {
-  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i += 1) {
-    let prev = row[0];
-    row[0] = i;
-    for (let j = 1; j <= b.length; j += 1) {
-      const keep = row[j];
-      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
-      prev = keep;
-    }
-  }
-  return row[b.length];
-}
+export const editDistance = distance;
 
 /** The closest known single word for a word nothing starts with (same first letter, a few edits away), else null. */
 export function correctWord(index, word) {
-  if (word.length < 3 || /^\d+$/.test(word) || index.terms.some((t) => t.key.startsWith(word))) return null;
-  const allowed = word.length <= 7 ? 2 : 3;
+  // A word we know as a real thing ("sofa", "fix") is never "corrected" into a different one ("soda", "fit"): it is just not stocked.
+  if (word.length < 3 || /^\d+$/.test(word) || LOCAL_SYNONYMS[word] || index.terms.some((t) => t.key.startsWith(word))) return null;
+  const allowed = word.length <= 6 ? 1 : word.length <= 9 ? 2 : 3;
   let best = null;
   for (const t of index.terms) {
     if (t.key.includes(" ") || t.key[0] !== word[0] || Math.abs(t.key.length - word.length) > 2) continue;
@@ -85,6 +78,10 @@ export function correctWord(index, word) {
 export function suggestFrom(index, prefix, { limit = 8 } = {}) {
   let q = suggestKey(String(prefix ?? "").slice(0, 60));
   if (q.length < 2 || !index) return { ...EMPTY };
+  // "cheap iphone under 20k", "where can i find a plumber": suggest for the words, not for the request around them.
+  const read = understandQuery(prefix);
+  const said = read.groups[0] ? suggestKey(read.groups[0]) : "";
+  if (said.length >= 2 && said !== q && (read.chips.length || read.groups[0].split(" ").length < q.split(" ").length)) q = said;
   const tierOf = (key) => (key.startsWith(q) ? 3 : q.length >= 3 && ` ${key}`.includes(` ${q}`) ? 2 : 0);
   let corrected = null;
   let hits = index.terms.filter((t) => tierOf(t.key) > 0);
@@ -95,6 +92,11 @@ export function suggestFrom(index, prefix, { limit = 8 } = {}) {
       q = fixed;
       hits = index.terms.filter((t) => tierOf(t.key) > 0);
     }
+  }
+  // Nothing starts with it, but a word it means does ("kinyozi" -> haircut, barber): offer those.
+  if (!hits.length && q.length >= 3) {
+    const mates = new Set(q.split(" ").flatMap((w) => LOCAL_SYNONYMS[w] ?? []).map(suggestKey));
+    hits = index.terms.filter((t) => mates.has(t.key) || [...mates].some((m) => t.key.startsWith(`${m} `)));
   }
   const ranked = hits.map((t) => ({ t, tier: tierOf(t.key) })).sort((a, b) => b.tier - a.tier || b.t.weight - a.t.weight || a.t.key.length - b.t.key.length || (a.t.key < b.t.key ? -1 : 1));
   const products = [];
