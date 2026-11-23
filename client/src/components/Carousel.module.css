@@ -193,9 +193,6 @@
     display: inline-block;
   }
 
-  .title {
-    font-size: var(--text-xl);
-  }
 }
 
 .track {

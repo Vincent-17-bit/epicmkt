@@ -104,6 +104,8 @@ export default {
   "item.hasVideo": "Has video",
   "item.visitStore": "Visit Store",
   "item.chatSeller": "Chat Seller",
+  "item.chatShort": "Chat",
+  "item.visitShort": "Store",
   "item.orderWhatsapp": "Order now",
   "item.call": "Call",
   "item.share": "Share",
