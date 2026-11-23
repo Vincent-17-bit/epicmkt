@@ -136,7 +136,11 @@ const cache = new WeakMap();
 // The name plus the values of spec rows that say what the product is: "Type", "Item", or a row named like the filter.
 const TYPE_ROW = /^(?:type|item|kind|product|style|treatment|service|what is made|main|flowers|wood|pen type|drink|clothing|table|bed|carpet|appliance|arrangement|stationery|board)$/i;
 const ownText = (p, label) => `${p.name ?? ""} · ${(p.specs ?? []).filter((s) => TYPE_ROW.test(String(s.label ?? "").trim()) || String(s.label ?? "").trim().toLowerCase() === String(label).toLowerCase()).map((s) => s.value).join(" · ")}`;
-const specText = (p) => (p.specs ?? []).map((s) => `${s.label ?? ""}: ${s.value ?? ""}`).join(" · ");
+// What a food is made of ("Ingredients: water, sugar") says little about what it is: a loaf is not "water". Those lines are kept
+// apart, so they can find a product only when nothing is truly called what was asked for.
+const MADE_OF = /^\s*(?:ingredients?|contains|allergens?|made (?:from|with|of)|composition)\b/i;
+const specText = (p) => (p.specs ?? []).filter((s) => !MADE_OF.test(s.label ?? "")).map((s) => `${s.label ?? ""}: ${s.value ?? ""}`).join(" · ");
+const madeOfText = (p) => (p.specs ?? []).filter((s) => MADE_OF.test(s.label ?? "")).map((s) => String(s.value ?? "")).join(" · ");
 const priceOf = (p) => {
   if (p.priceRange && Number.isFinite(p.priceRange.min)) return p.priceRange.min;
   const sale = p.pricing?.salePrice;
@@ -237,6 +241,7 @@ export function describe(p) {
     kind: k,
     text,
     name: new Set([...tokensOf(p.name), ...measureTokens(p.name)]),
+    ing: new Set(tokensOf(madeOfText(p))),
     hay: new Set([...tokensOf(`${p.name} ${brand ?? ""} ${p.section ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ")} ${p.business?.name ?? ""} ${p.business?.town ?? ""} ${k ? `${k.label} ${k.noun}` : ""}`), ...measureTokens(`${p.name} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ; ")}`)]),
     brandKey: normalizeValueKey(brand) || null,
     brand,
@@ -349,12 +354,17 @@ function textScore(d, tokens) {
     const exactName = [...d.name].some((w) => wordMatches(w, t));
     const inName = exactName || options.some((o) => [...d.name].some((w) => wordMatches(w, o)));
     const inHay = inName || options.some((o) => [...d.hay].some((w) => wordMatches(w, o)));
-    if (!inHay) return 0;
+    if (!inHay) {
+      if (d.ing?.size && options.some((o) => [...d.ing].some((w) => wordMatches(w, o)))) { score += 0.3; continue; }
+      return 0;
+    }
     score += exactName ? 3 : inName ? 2 : 1;
     if (d.brandKey && options.some((o) => d.brandKey.startsWith(o))) score += 2;
   }
   return score;
 }
+
+const textHasWord = (d, t) => [t, ...(SYNONYMS[t] ?? []).map(stem)].some((o) => [...d.name, ...d.hay].some((w) => wordMatches(w, o)));
 
 const priceWindow = (search) => {
   const preset = PRICE_PRESETS.find((p) => p.id === search.price);
@@ -857,9 +867,11 @@ function rank(products, tokens, { partial = false, exact = [], exclude = [] } = 
     score += score && d.kind && tokens.some((t) => stem(d.kind.noun.split(" ").pop()) === t) ? 2 : 0;
     // Among equal matches, a fuller listing ranks first: more photos, a video, colour choices, a price.
     const quality = Math.min((p.images ?? []).length, 6) * 0.08 + ((p.videos ?? []).length ? 0.4 : 0) + Math.min((p.swatches ?? []).length, 5) * 0.05 + (d.price !== null ? 0.2 : 0);
-    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens), missed });
+    const viaMadeOf = score > 0 && tokens.some((t) => !textHasWord(d, t));
+    if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens), missed, viaMadeOf });
   }
-  return matched;
+  // A product found only through its ingredient list is shown only when no product is really about the word.
+  return matched.some((r) => !r.viaMadeOf) ? matched.filter((r) => !r.viaMadeOf) : matched;
 }
 
 // Alternatives ("samsung or tecno phone"): a listing counts once, at its best group.
