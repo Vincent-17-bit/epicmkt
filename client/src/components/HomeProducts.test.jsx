@@ -77,8 +77,10 @@ describe("HomeProducts", () => {
       product(2)
     ]);
     view();
-    const card = (await screen.findByText("Product 1")).closest("a");
-    expect(card).toHaveAttribute("href", "/b/shop-1/i/item-1");
+    // The product's name is the link (it stretches over the whole card); the price and store sit in the card around it.
+    const link = (await screen.findByText("Product 1")).closest("a");
+    expect(link).toHaveAttribute("href", "/b/shop-1/i/item-1");
+    const card = link.closest("div");
     expect(within(card).getByText("Shop 1")).toBeInTheDocument();
     expect(within(card).getByText("Verified store")).toBeInTheDocument();
     expect(within(card).getByText(/Featured store/)).toBeInTheDocument();

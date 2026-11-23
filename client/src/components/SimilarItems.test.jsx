@@ -46,7 +46,7 @@ describe("SimilarItems", () => {
     expect(await screen.findByText("Other 0")).toBeInTheDocument();
     expect(screen.getByText("Shop 2")).toBeInTheDocument();
     // The card prints a small "KES" before the amount, so the price is read from the card's text.
-    expect(screen.getByRole("link", { name: /Other 0/ })).toHaveTextContent(/KES\s?800/);
+    expect(screen.getByRole("link", { name: /Other 0/ }).closest("div")).toHaveTextContent(/KES\s?800/);
     expect(mocks.getSimilar).toHaveBeenCalledWith("cur", expect.objectContaining({ limit: 24, seed: expect.any(String) }));
   });
 

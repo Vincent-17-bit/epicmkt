@@ -487,3 +487,45 @@
 .logoFrame {
   height: 100%;
 }
+
+/* Save heart: the card is a div, the name is the link and stretches over it; the heart sits above that in the price row. */
+.cardSave {
+  position: relative;
+}
+
+.nameLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nameLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.nameLink:focus-visible {
+  outline: none;
+}
+
+.cardSave:focus-within {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+.priceRow .heart {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  margin-block: -8px;
+  margin-right: -6px;
+}

@@ -124,5 +124,7 @@ export async function getSavedLive(ids) {
       offer: chips.get(row.id) ?? null
     }, x.tiers);
   }
+  // An id that came back unlisted (or whose shop is not live) is null: the drawer says "No longer available" and keeps the line.
+  for (const id of wanted) if (!(id in items) && !redirects[id]) items[id] = null;
   return { items, redirects, shops: cards, now: live.now, fetchedAt: Date.now() };
 }

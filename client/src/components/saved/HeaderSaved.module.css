@@ -1,0 +1,94 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: none;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--primary-tint);
+  }
+}
+
+.iconWrap {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+}
+
+.icon {
+  display: block;
+}
+
+/* The count sits on the icon's top-right corner. The 2 px ring in the header colour keeps it crisp on both themes. */
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  box-shadow: 0 0 0 2px var(--header-bg);
+  background: var(--saved);
+  color: var(--on-saved);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge[data-bump="true"] {
+  animation: bump 180ms ease-out;
+}
+
+@keyframes bump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge[data-bump="true"] {
+    animation: none;
+  }
+}
+
+/* Below 1024 px it is the icon alone; from 1024 px the word sits beside it, in the same pill style as the location button. */
+.word {
+  display: none;
+}
+
+@media (min-width: 64rem) {
+  .btn {
+    padding: 0 var(--space-3) 0 var(--space-3);
+    border: 2px solid var(--border-strong);
+  }
+
+  .word {
+    display: inline;
+  }
+}

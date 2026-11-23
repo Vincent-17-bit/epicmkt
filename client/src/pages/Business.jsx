@@ -19,6 +19,7 @@ import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import ItemDetail from "../components/ItemDetail.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import QrCode from "../components/QrCode.jsx";
+import SaveForService from "../components/saved/SaveForService.jsx";
 import ReportDialog from "../components/ReportDialog.jsx";
 import NotFound from "./NotFound.jsx";
 
@@ -170,6 +171,7 @@ export default function Business() {
       onContact={(business, type) => logContactEvent({ businessId: business.id, type })}
       onShare={share}
       onOpenItem={openItem}
+      renderSave={(svc) => <SaveForService svc={svc} business={data} />}
       onReport={() => setReporting(true)}
     >
       {itemId && (

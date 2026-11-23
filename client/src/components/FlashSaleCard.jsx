@@ -3,13 +3,14 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt, faCircleCheck, faQuoteLeft } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance } from "@epicmkt/shared";
-import { LazyImage } from "@epicmkt/ui";
+import { LazyImage, SaveButton } from "@epicmkt/ui";
 import { useCardLife } from "../hooks/useCardLife.js";
 import { useLiveStatus } from "../hooks/useLiveStatus.js";
 import { useCountdownLabel, useUrgency } from "../hooks/useCountdown.js";
 import { URGENCY, discountBadge, saleHref, urgencyLabel } from "../lib/flash.js";
 import { motionAllowed } from "../lib/motion.js";
 import { t } from "../i18n/index.js";
+import { useSaveAction } from "./saved/useSave.js";
 import CountdownTiles from "./CountdownTiles.jsx";
 import FuseBar from "./FuseBar.jsx";
 import Starburst from "./Starburst.jsx";
@@ -60,6 +61,9 @@ function FlashSaleCard({ entry, size = "standard" }) {
   const compact = size === "compact";
   const aria = `${t("flash.cardLabel")}: ${item.name}, ${t("flash.currency")} ${kes(pricing.salePrice)}, ${remaining}`;
 
+  // What the Saved list needs of a flash deal: the item, the shop's id and the price the deal gives.
+  const action = useSaveAction({ ...item, business, businessId: business?.id, businessSlug: business?.slug, pricing });
+
   const price = (
     <span className={styles.prices}>
       <span className={styles.sale}>
@@ -75,19 +79,8 @@ function FlashSaleCard({ entry, size = "standard" }) {
     </span>
   );
 
-  return (
-    <Link
-      ref={ref}
-      to={saleHref(entry)}
-      className={styles.card}
-      data-card=""
-      data-size={size}
-      data-urgency={urgency}
-      data-animate={animate ? "true" : "false"}
-      data-revealed={revealed ? "true" : "false"}
-      aria-label={aria}
-      draggable="false"
-    >
+  const children = (
+    <>
       <span className={styles.media}>
         <LazyImage fill src={item.imageUrl} className={styles.img} />
         <span className={styles.vignette} aria-hidden="true" />
@@ -125,7 +118,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       )}
 
       <span className={styles.body}>
-        <span className={styles.name}>{item.name}</span>
+        <span className={styles.name}>{action ? <Link to={saleHref(entry)} className={styles.nameLink} aria-label={aria} draggable="false">{item.name}</Link> : item.name}</span>
         {!compact && sale.headline && (
           <span className={styles.headline}>
             <FontAwesomeIcon icon={faQuoteLeft} aria-hidden="true" />
@@ -133,7 +126,14 @@ function FlashSaleCard({ entry, size = "standard" }) {
           </span>
         )}
         {!compact && <StoreRow business={business} />}
-        {price}
+        {action ? (
+          <span className={styles.priceRow}>
+            {price}
+            <SaveButton className={styles.heart} saved={action.saved} onToggle={action.onToggle} label={action.label} size={20} />
+          </span>
+        ) : (
+          price
+        )}
         {!compact && (pricing.savings > 0 || sale.quantityNote) && (
           <span className={styles.tags}>
             {pricing.savings > 0 && (
@@ -152,6 +152,33 @@ function FlashSaleCard({ entry, size = "standard" }) {
           <FontAwesomeIcon icon={faArrowRight} className={styles.arrow} aria-hidden="true" />
         </span>
       )}
+    </>
+  );
+
+  // With a Save heart the card is a div and the item's name is the link, stretched over the card (a button inside a link is invalid, and a tap
+  // on the heart must never open the deal). Without one it is the one link it always was.
+  if (action) {
+    return (
+      <div ref={ref} className={`${styles.card} ${styles.cardSave}`} data-card="" data-size={size} data-urgency={urgency} data-animate={animate ? "true" : "false"} data-revealed={revealed ? "true" : "false"}>
+        {children}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      ref={ref}
+      to={saleHref(entry)}
+      className={styles.card}
+      data-card=""
+      data-size={size}
+      data-urgency={urgency}
+      data-animate={animate ? "true" : "false"}
+      data-revealed={revealed ? "true" : "false"}
+      aria-label={aria}
+      draggable="false"
+    >
+      {children}
     </Link>
   );
 }

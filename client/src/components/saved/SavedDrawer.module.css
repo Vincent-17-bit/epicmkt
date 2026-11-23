@@ -1,0 +1,290 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-saved);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--scrim);
+}
+
+/* Phones: the whole screen. Safe areas keep the top bar and the footer clear of the notch and the home bar. */
+.panel {
+  position: absolute;
+  inset: 0 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+  touch-action: pan-y;
+  animation: slideIn 240ms ease-out;
+  outline: none;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (min-width: 48rem) {
+  .panel {
+    width: clamp(24rem, 32vw, 28rem);
+    border-left: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 47.9375rem) {
+  .backdrop {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel {
+    animation: none;
+  }
+}
+
+.top {
+  position: relative;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: calc(8px + var(--safe-top)) calc(8px + var(--safe-right)) 8px calc(16px + var(--safe-left));
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.heading {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.heading:focus {
+  outline: none;
+}
+
+.counts {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.close,
+.more {
+  display: inline-grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+
+/* Tab order is Close, then More (the brief's order); on screen More sits beside Close, to its left. */
+.close { order: 3; }
+.moreWrap { order: 2; position: relative; }
+
+@media (hover: hover) {
+  .close:hover,
+  .more:hover {
+    background: var(--surface-2);
+  }
+}
+
+.close:focus-visible,
+.more:focus-visible,
+.menuItem:focus-visible,
+.browse:focus-visible,
+.keep:focus-visible,
+.danger:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 2;
+  min-width: 10rem;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-2);
+}
+
+.menuItem {
+  display: block;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notices {
+  flex: none;
+  display: grid;
+  gap: 1px;
+}
+
+.notice {
+  margin: 0;
+  padding: 8px calc(16px + var(--safe-left));
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px calc(12px + var(--safe-right)) 16px calc(12px + var(--safe-left));
+}
+
+.groups {
+  display: grid;
+  gap: 12px;
+}
+
+.foot {
+  flex: none;
+  display: grid;
+  gap: 2px;
+  padding: 10px calc(16px + var(--safe-right)) calc(10px + var(--safe-bottom)) calc(16px + var(--safe-left));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+
+.total {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.emptyIcon {
+  color: var(--text-muted);
+}
+
+.emptyTitle {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.emptyBody {
+  margin: 0;
+  max-width: 18rem;
+  color: var(--text-muted);
+}
+
+.browse,
+.keep,
+.danger {
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-pill);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.browse {
+  margin-top: 8px;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.confirmWrap {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--scrim);
+}
+
+.confirm {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  max-width: 22rem;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-2);
+}
+
+.confirmTitle {
+  margin: 0;
+  font-size: 1.0625rem;
+}
+
+.confirmBody {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.confirmActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.keep {
+  flex: 1;
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.danger {
+  flex: 1;
+  background: var(--surface);
+  color: var(--text);
+}
