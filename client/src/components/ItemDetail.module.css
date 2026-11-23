@@ -508,11 +508,38 @@
   white-space: nowrap;
 }
 
+.orderLabel {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .orderTotal {
+  flex-shrink: 0;
+  white-space: nowrap;
   margin-inline-start: auto;
   padding-inline-start: var(--space-3);
   border-inline-start: 1px solid rgb(17 17 17 / 0.25);
   font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 30rem) {
+  .footer[data-order]:has([data-long]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer[data-order]:has([data-long]) .order {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .footer[data-order]:has([data-long]) .iconBtn {
+    flex-direction: row;
+    gap: var(--space-2);
+  }
+
+  .footer[data-order]:has([data-long]) .iconLabel {
+    font-size: var(--text-sm);
+  }
 }
 
 @media (max-width: 22.5rem) {
@@ -647,10 +674,24 @@
 
 @media (min-width: 64rem) {
   .root[data-variant="page"] .footer {
-    max-width: none;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto 0;
     border-radius: var(--radius-card);
     border-bottom: 2px solid var(--border-strong);
     margin-bottom: var(--space-4);
+  }
+
+  .root[data-variant="page"] .footer[data-order] {
+    grid-template-columns: auto auto auto;
+  }
+
+  .root[data-variant="page"] .footer[data-order] .order {
+    padding-inline: var(--space-5);
+  }
+
+  .root[data-variant="page"] .footer[data-order] .orderTotal {
+    margin-inline-start: var(--space-2);
   }
 }
 

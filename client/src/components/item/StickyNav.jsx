@@ -28,8 +28,8 @@ export default function StickyNav({ ctx }) {
         </Link>
         <a href={orderHref} {...external} className={`${styles.chat} ${styles.order}`} data-testid="order-whatsapp" onClick={onChat("order")}>
           <FontAwesomeIcon icon={faWhatsapp} className={styles.icon} aria-hidden="true" />
-          <span>{t("item.orderWhatsapp")}</span>
-          {total && <span className={styles.orderTotal}>{total}</span>}
+          <span className={styles.orderLabel}>{t("item.orderWhatsapp")}</span>
+          {total && <span className={styles.orderTotal} data-long={total.length > 12 ? "" : undefined}>{total}</span>}
         </a>
       </footer>
     );
