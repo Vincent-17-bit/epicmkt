@@ -1,5 +1,6 @@
+import { whatsappLink } from "@epicmkt/shared";
 import { describe, expect, it } from "vitest";
-import { buildItemJsonLd, buildSpecGroups, chatMessage, choiceLines, countdown, countRows, defaultVariantId, normalizeHighlights, offerExpiry, offerTarget, offerValueLabel, orderMessage } from "./itemView.js";
+import { buildItemJsonLd, buildSpecGroups, chatMessage, choiceLines, countdown, countRows, defaultVariantId, normalizeHighlights, offerExpiry, offerTarget, offerValueLabel, orderMessage, listMessage } from "./itemView.js";
 
 const item = { name: "Fade and beard" };
 
@@ -230,5 +231,60 @@ describe("choiceLines and orderMessage", () => {
   it("writes a whole message with no shop and no choices", () => {
     const text = orderMessage({ item, order: { qty: 3, unit: 300, total: 900, measure: false } });
     expect(text).toBe("Hi, I'd like to order:\n\n*Fade and beard*\nQuantity: 3\nPrice: KES 300 each\nTotal: KES 900\n\nPlease confirm it is available and how I can pay and receive it.\nSent from EpicMKT");
+  });
+});
+
+describe("listMessage", () => {
+  const shop = { name: "Nyumbani Home Store" };
+  const line = (over = {}) => ({ name: "Wooden coffee table", optionLabel: "Walnut", qty: 1, measure: false, unitLabel: null, total: 8500, service: false, status: "ok", ...over });
+
+  it("writes a products list the way buyers already message shops", () => {
+    const text = listMessage({ business: shop, lines: [line(), line({ name: "Cushion covers", optionLabel: "Grey", qty: 2, total: 1600 })] });
+    expect(text).toBe(
+      [
+        "Hi Nyumbani Home Store, I'd like these from EpicMKT:",
+        "1. Wooden coffee table, Walnut, x1, KES 8,500",
+        "2. Cushion covers, Grey, x2, KES 1,600",
+        "Total: KES 10,100",
+        "Are they available?"
+      ].join("\n")
+    );
+  });
+
+  it("services only: to book, no quantity, no total, and a question about time", () => {
+    const text = listMessage({ business: { name: "Glow Salon Kilimani" }, lines: [line({ name: "Braids", optionLabel: "", total: 3000, service: true }), line({ name: "Wash", optionLabel: "", total: 500, service: true })] });
+    expect(text).toBe(["Hi Glow Salon Kilimani, I'd like to book these from EpicMKT:", "1. Braids, KES 3,000", "2. Wash, KES 500", "When can you fit me in?"].join("\n"));
+  });
+
+  it("products and services together: products first, then To book:, one total", () => {
+    const text = listMessage({ business: shop, lines: [line({ name: "Haircut", optionLabel: "", total: 500, service: true }), line()] });
+    expect(text.split("\n")).toEqual(["Hi Nyumbani Home Store, I'd like these from EpicMKT:", "1. Wooden coffee table, Walnut, x1, KES 8,500", "To book:", "2. Haircut, KES 500", "Total: KES 9,000", "Are they available? When can you fit me in?"]);
+  });
+
+  it("asks about a missing price and about options not chosen; the total covers only what has a price", () => {
+    const text = listMessage({ business: shop, lines: [line({ total: null, status: "no_price", optionLabel: "" }), line({ name: "Sofa", total: null, status: "choose_options", optionLabel: "" }), line({ name: "Lamp", optionLabel: "", total: 900 })] });
+    expect(text).toContain("1. Wooden coffee table, x1 (what's the price?)");
+    expect(text).toContain("2. Sofa, x1 (which options do you have?)");
+    expect(text).toContain("Total: KES 900");
+  });
+
+  it("a measured line says the amount, not x", () => {
+    const text = listMessage({ business: shop, lines: [line({ name: "Beef", optionLabel: "", qty: 1.5, measure: true, unitLabel: "kg", total: 1200 })] });
+    expect(text).toContain("1. Beef, 1.5 kg, KES 1,200");
+  });
+
+  it("a very long list ends with +N more items and stays under the limit when encoded", () => {
+    const lines = Array.from({ length: 120 }, (_, i) => line({ name: `Product number ${i + 1} with a rather long name`, total: 100 }));
+    const text = listMessage({ business: shop, lines });
+    expect(encodeURIComponent(text).length).toBeLessThanOrEqual(3000);
+    expect(text).toMatch(/\n\+\d+ more items\n/);
+    expect(text).toContain("Total: KES 12,000"); // the total still covers every line
+  });
+
+  it("builds a working link with the shared whatsappLink, encoded", () => {
+    const text = listMessage({ business: shop, lines: [line({ name: "Café & table" })] });
+    const href = whatsappLink("0712345678", text);
+    expect(href.startsWith("https://wa.me/254712345678?text=")).toBe(true);
+    expect(decodeURIComponent(href.split("text=")[1])).toBe(text);
   });
 });

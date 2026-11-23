@@ -120,3 +120,31 @@ describe("Services: browse the shop by department", () => {
     expect(within(group).getByRole("button", { name: /Nyingine/ })).toBeInTheDocument();
   });
 });
+
+describe("Services with a Save heart", () => {
+  const heart = (svc) => <button type="button" aria-label={`Save ${svc.name}`}>♥</button>;
+
+  it("puts the heart beside each item's button, never inside it", () => {
+    render(<Services services={[svc("a", "Fade cut"), svc("b", "Beard trim")]} renderSave={heart} />);
+    const hearts = screen.getAllByRole("button", { name: /^Save / });
+    expect(hearts).toHaveLength(2);
+    for (const h of hearts) {
+      const row = h.closest("li");
+      const itemButton = row.querySelector("button[aria-haspopup='dialog']");
+      expect(itemButton).not.toBeNull();
+      expect(itemButton.contains(h)).toBe(false);
+      expect(itemButton.parentElement).toBe(h.closest("li"));
+    }
+  });
+
+  it("is hidden in the seller's preview", () => {
+    render(<Services services={[svc("a", "Fade cut")]} renderSave={heart} mode="preview" />);
+    expect(screen.queryByRole("button", { name: /^Save / })).toBeNull();
+  });
+
+  it("renders exactly as before when no heart is passed", () => {
+    const { container } = render(<Services services={[svc("a", "Fade cut")]} />);
+    expect(container.querySelector("[data-save]")).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Save / })).toBeNull();
+  });
+});

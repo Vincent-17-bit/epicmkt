@@ -8,7 +8,7 @@ import { quantityInfo } from "../../lib/itemView.js";
 import { isServiceItem } from "../../lib/listing.js";
 import { t } from "../../i18n/index.js";
 import { fill } from "./model.js";
-import { useSavedDrawer } from "./useSavedDrawer.js";
+import { requestSavedOpen } from "../../stores/savedUi.js";
 
 const unitNow = (item, override) => {
   if (Number.isFinite(override)) return override;
@@ -38,7 +38,7 @@ const say = (list) => announce(list.count() === 1 ? t("saved.liveSavedOne") : fi
 
 /** save / remove with the toasts, undo and announcements the Saved list promises. `open` shows the drawer (the toast's "View list"). */
 export function useSaveActions() {
-  const { open } = useSavedDrawer();
+  const open = requestSavedOpen;
   const save = useCallback(
     (args, { toast = true, chooseLater = false } = {}) => {
       const list = savedList();

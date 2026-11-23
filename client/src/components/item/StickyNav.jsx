@@ -3,14 +3,16 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCommentDots, faStore } from "@fortawesome/free-solid-svg-icons";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
+import { FooterSave } from "./SaveItem.jsx";
 import styles from "../ItemDetail.module.css";
 
-// The footer that stays at the bottom: chat with the seller, visit the store.
+// The footer that stays at the bottom: save, chat with the seller, visit the store. Chat stays the primary, widest button.
 export default function StickyNav({ ctx }) {
   const { item, seller, chatHref, onChat, onVisit } = ctx;
   if (!item || !seller) return null;
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-save={ctx.preview ? undefined : ""}>
+      <FooterSave ctx={ctx} />
       <a href={chatHref} {...external} className={styles.chat} onClick={onChat("footer")}>
         <FontAwesomeIcon icon={faCommentDots} className={styles.icon} aria-hidden="true" />
         <span>{t("item.chatSeller")}</span>

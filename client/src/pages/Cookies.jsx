@@ -12,6 +12,7 @@ const stored = [
   { item: "Theme", purpose: "Remembers light, dark or system appearance.", kind: "Preference", life: "Until you clear it" },
   { item: "Town and location choice", purpose: "Remembers the town you pick, or that you declined location sharing.", kind: "Preference", life: "Until you clear it" },
   { item: "Recent searches", purpose: "Lets you repeat a search quickly. Kept on your device only.", kind: "Preference", life: "Until you clear it" },
+  { item: "Saved list", purpose: "The products and services you saved, with the option and amount you chose. Kept on this device only.", kind: "Preference", life: "Until you remove it" },
   { item: "Cached pages and images", purpose: "Speeds up loading and lets pages open offline.", kind: "Performance", life: "Until replaced or cleared" }
 ];
 

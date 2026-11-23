@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { savedScroll, saveScroll } from "../lib/resultsMemory.js";
 import { useUiStore } from "../stores/ui.js";
+import { onSavedOpenRequest } from "../stores/savedUi.js";
 import { useGeoStore } from "../stores/geo.js";
 import { useRouteSeo } from "../hooks/useRouteSeo.js";
 import LocationDialog from "./LocationDialog.jsx";
@@ -26,7 +27,8 @@ export default function Layout() {
   current.current = { key, pathname };
   const menuOpen = useUiStore((s) => s.menuOpen);
   const searchOpen = useUiStore((s) => s.searchOpen);
-  const { isOpen: savedOpen } = useSavedDrawer();
+  const { isOpen: savedOpen, open: openSaved } = useSavedDrawer();
+  useEffect(() => onSavedOpenRequest(openSaved), [openSaved]);
   const layered = menuOpen || searchOpen || savedOpen;
   const behind = layered ? { inert: "", "aria-hidden": true } : {};
 

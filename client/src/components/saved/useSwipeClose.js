@@ -31,7 +31,7 @@ export function useSwipeClose({ panelRef, backdropRef, onClose, active = true })
     const down = (e) => {
       if (e.pointerType === "mouse") return;
       if (e.target?.closest?.("input, textarea, select, [data-no-swipe]")) return;
-      g = { id: e.pointerId, x: e.clientX, y: e.clientY, at: e.timeStamp || performance.now(), mode: null, dx: 0 };
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, at: performance.now(), mode: null, dx: 0 };
     };
     const move = (e) => {
       if (!g || e.pointerId !== g.id) return;
@@ -57,7 +57,7 @@ export function useSwipeClose({ panelRef, backdropRef, onClose, active = true })
       g = null;
       if (done.mode !== "drag") return;
       const width = panel.offsetWidth || 1;
-      const elapsed = Math.max(1, (e.timeStamp || performance.now()) - done.at);
+      const elapsed = Math.max(1, performance.now() - done.at);
       const dx = Math.max(done.dx, e.clientX - done.x);
       if (dx > width * FAR || dx / elapsed > FAST) onClose();
       else reset(true);

@@ -114,7 +114,7 @@ export default function SavedDrawer() {
   return (
     <div className={styles.root}>
       <div ref={backdropRef} className={styles.backdrop} onClick={close} aria-hidden="true" data-testid="saved-backdrop" />
-      <aside ref={panelRef} id={SAVED_ID} role="dialog" aria-modal="true" aria-labelledby="saved-heading" className={styles.panel} tabIndex={-1}>
+      <div ref={panelRef} id={SAVED_ID} role="dialog" aria-modal="true" aria-labelledby="saved-heading" className={styles.panel} tabIndex={-1}>
         <header className={styles.top}>
           <div className={styles.titles}>
             <h2 id="saved-heading" ref={headingRef} tabIndex={-1} className={styles.heading}>
@@ -192,7 +192,7 @@ export default function SavedDrawer() {
             </div>
           </div>
         )}
-      </aside>
+      </div>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { choiceToParam, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
 import { chatMessage, choiceLines, defaultVariantId, orderMessage } from "../lib/itemView.js";
 import { lineFor, optionShown } from "../lib/lineFor.js";
+import { savedList, lineKey } from "../lib/savedList.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
@@ -195,7 +196,10 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   // One quantity for the page (units, a measure, or a quantity-tier order). It resets with the item and falls back to the least that can be bought.
   // The page, the Saved drawer and the message to a shop all take the price from lineFor (lib/lineFor.js), so they always agree.
-  const picked = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : null;
+  // When this item and option are saved, the page starts at the saved quantity.
+  const savedParam = option ? choiceToParam(option.axes, option.choice) : "";
+  const savedQty = preview ? null : (savedList().get(lineKey(itemId, savedParam))?.qty ?? null);
+  const picked = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : savedQty;
   const line = current ? lineFor({ item: current, option, legacyVariant, qty: picked }) : null;
   const shown = line ? line.shown : option ? null : (legacyVariant ?? null);
   const tiers = line?.tiers ?? null;
@@ -203,6 +207,16 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const qty = line?.qty ?? 1;
   const setQty = (value) => setQtyChoice({ itemId, value });
   const order = line?.order ?? null;
+  // Changing the quantity updates the saved line (after 300 ms, without a toast). Starting at the saved quantity writes nothing.
+  useEffect(() => {
+    if (preview || !current || qtyChoice.itemId !== itemId || !Number.isFinite(qtyChoice.value)) return undefined;
+    const key = lineKey(itemId, savedParam);
+    const timer = window.setTimeout(() => {
+      const have = savedList().get(key);
+      if (have && have.qty !== qty) savedList().setQty(key, qty);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [preview, current, itemId, savedParam, qty, qtyChoice]);
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const variantParam = option ? choiceToParam(option.axes, option.choice) : "";
@@ -249,6 +263,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     vanished,
     shown,
     line,
+    preview: Boolean(preview),
     variant,
     option,
     activeId,
