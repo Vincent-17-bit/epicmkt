@@ -60,7 +60,7 @@ function Row({ item, rank, top, href, onPick }) {
       )}
     </>
   );
-  const props = { className: styles.row, "data-top": top || undefined };
+  const props = { className: styles.row, "data-top": top || undefined, "data-fastest": (!top && item.rising === 1) || undefined };
   return href ? (
     <Link to={href} replace {...props} onClick={() => onPick(item)}>
       {body}

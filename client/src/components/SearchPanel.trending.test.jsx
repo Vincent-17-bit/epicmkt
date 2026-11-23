@@ -103,6 +103,7 @@ describe("trending in the search panel", () => {
     expect(within(rows[0]).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Rising")).toBeInTheDocument();
     expect(within(rows[1]).getByText("Fastest rising")).toBeInTheDocument();
+    expect(within(rows[1]).getByRole("button")).toHaveAttribute("data-fastest", "true");
     expect(within(rows[2]).queryByText(/rising/i)).toBeNull();
     // A riser outside the top ten is not lost: it sits under "Also rising fast".
     expect(within(s).getByRole("heading", { name: "Also rising fast" })).toBeInTheDocument();

@@ -566,6 +566,6 @@
 }
 
 .legendRise {
-  color: var(--status-ok-fg);
+  color: var(--flash-price-sale);
   font-weight: 700;
 }
