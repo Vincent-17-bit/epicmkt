@@ -12,7 +12,7 @@ What shoppers search for, shown in the menu and the empty search panel. Migratio
 * **Global.** One list for everyone, wherever they are. Nothing is split by county or town.
 * **Never dead words.** A word shows only if something live matches it right now: a visible store, a category, an item on a running
   flash sale, or a visible, available item (the same rules as the search page). Sold-out and hidden things drop out on the next rebuild.
-* **Never empty.** On a young site with nothing searched enough yet, the busiest categories stand in.
+* **Never empty.** On a young site with nothing searched enough yet, the categories with the most live shops stand in (a real count, in that order).
 
 ## How it is built
 
