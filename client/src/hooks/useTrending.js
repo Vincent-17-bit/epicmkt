@@ -32,8 +32,7 @@ export function useTrending({ enabled = true, refetch = true } = {}) {
   });
   const { list, alsoRising } = topSearches(query.data);
   const real = list.filter((item) => !item.filler);
-  const filler = list.filter((item) => item.filler);
-  return { query, list, real, filler, alsoRising };
+  return { query, list, real, alsoRising };
 }
 
 const isProduct = (item) => !item.kind || item.kind === "product";

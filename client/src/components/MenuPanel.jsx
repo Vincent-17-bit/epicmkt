@@ -32,7 +32,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   });
 
   // What shoppers search for, every kind in one ranking: popular this week and rising now, rebuilt every hour (migration 0146).
-  const { query: trending, list: trend, real, filler, alsoRising } = useTrending({ enabled: open });
+  const { query: trending, real, alsoRising } = useTrending({ enabled: open });
 
   const submit = (event) => {
     event.preventDefault();
@@ -77,7 +77,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             <IconButton type="submit" icon={faMagnifyingGlass} label={t("menu.searchButton")} className={styles.submit} />
           </form>
 
-          {(trending.isPending || trend.length > 0) && (
+          {(trending.isPending || real.length > 0) && (
             <section aria-labelledby="menu-trending" className={`${styles.trending} ${styles.areaTrend}`}>
               <div className={styles.trendHead}>
                 <h2 id="menu-trending" className={styles.label}>
@@ -99,12 +99,6 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                 <>
                   <h3 className={styles.moreLabel}>Also rising fast</h3>
                   <TrendingList items={alsoRising} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
-                </>
-              )}
-              {!trending.isPending && filler.length > 0 && (
-                <>
-                  <h3 className={styles.moreLabel}>Popular products</h3>
-                  <TrendingList items={filler} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
                 </>
               )}
             </section>

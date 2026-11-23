@@ -145,25 +145,6 @@ describe("trending in the search panel", () => {
     expect(logSearch).not.toHaveBeenCalled();
   });
 
-  it("filler products sit under their own heading, with no rank and no flame", async () => {
-    vi.mocked(items.getTrending).mockResolvedValue(
-      lists({
-        rising: [],
-        popular: [
-          { rank: 1, term: "gas cylinder", count: 9, hot: true, kind: "product", label: "Gas Cylinder 6kg" },
-          { term: "bread", count: 0, hot: false, kind: "product", filler: true, label: "White Bread 400g", itemId: "i1", slug: "mama" }
-        ]
-      })
-    );
-    panel();
-    const s = await section();
-    expect(await within(s).findByRole("heading", { name: "Popular products" })).toBeInTheDocument();
-    const rows = within(s).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === null);
-    expect(within(rows[0]).getByText("1")).toBeInTheDocument();
-    expect(rows[1]).toHaveTextContent("White Bread 400g");
-    expect(within(rows[1]).queryByText("2")).toBeNull();
-  });
-
   it("a trending store opens its own page", async () => {
     const { onSelect } = panel();
     const s = await section();
