@@ -15,12 +15,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
-import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
+import TrendTabs, { TrendNote } from "./TrendTabs.jsx";
 import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
-import Flame from "./Flame.jsx";
+import TrendingList from "./TrendingList.jsx";
 import styles from "./SearchPanel.module.css";
 
 export const SEARCH_ID = "site-search";
@@ -429,46 +429,18 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                   <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
                   {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
                   {(trending.isPending || real.length > 0) && (
-                    <ol className={styles.ranked}>
-                      {trending.isPending ? (
+                    trending.isPending ? (
+                      <ol className={styles.ranked}>
                         <Rows count={6} />
-                      ) : (
-                        real.map((item, index) => (
-                          <li key={item.term}>
-                            <button
-                              type="button"
-                              className={styles.rankRow}
-                              onClick={() => {
-                                const to = trendPath(item, null);
-                                commit(item.term, { fromTrending: true, to });
-                              }}
-                            >
-                              <span className={styles.rank} data-top={index < 3 || undefined}>
-                                {index + 1}
-                              </span>
-                              <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
-                              <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
-                              <TrendKind kind={item.kind} />
-                              {item.hot && <Flame className={styles.fire} />}
-                            </button>
-                          </li>
-                        ))
-                      )}
-                    </ol>
+                      </ol>
+                    ) : (
+                      <TrendingList items={real} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
+                    )
                   )}
                   {!trending.isPending && filler.length > 0 && (
                     <>
                       <h3 className={styles.moreLabel}>Popular products</h3>
-                      <ol className={styles.ranked}>
-                        {filler.map((item) => (
-                          <li key={item.term}>
-                            <button type="button" className={styles.rankRow} onClick={() => commit(item.term, { fromTrending: true, to: trendPath(item, null) })}>
-                              <Thumb src={thumb(item.image)} icon={faMagnifyingGlass} />
-                              <span className={`${styles.rowLabel} ${styles.clamp}`}>{trendLabel(item)}</span>
-                            </button>
-                          </li>
-                        ))}
-                      </ol>
+                      <TrendingList items={filler} ranked={false} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
                     </>
                   )}
                 </section>

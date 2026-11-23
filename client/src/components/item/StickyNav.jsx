@@ -16,18 +16,20 @@ export default function StickyNav({ ctx }) {
   if (orderHref) {
     return (
       <footer className={styles.footer} data-order="">
-        <a href={chatHref} {...external} className={styles.iconBtn} onClick={onChat("footer")}>
+        <a href={chatHref} {...external} className={styles.iconBtn} data-tip={t("item.chatSeller")} onClick={onChat("footer")}>
           <FontAwesomeIcon icon={faCommentDots} aria-hidden="true" />
+          <span className={styles.iconLabel} aria-hidden="true">{t("item.chatShort")}</span>
           <span className="sr-only">{t("item.chatSeller")}</span>
         </a>
-        <Link to={`/b/${seller.slug}`} className={styles.iconBtn} onClick={onVisit("footer")}>
+        <Link to={`/b/${seller.slug}`} className={styles.iconBtn} data-tip={t("item.visitStore")} onClick={onVisit("footer")}>
           <FontAwesomeIcon icon={faStore} aria-hidden="true" />
+          <span className={styles.iconLabel} aria-hidden="true">{t("item.visitShort")}</span>
           <span className="sr-only">{t("item.visitStore")}</span>
         </Link>
         <a href={orderHref} {...external} className={`${styles.chat} ${styles.order}`} data-testid="order-whatsapp" onClick={onChat("order")}>
           <FontAwesomeIcon icon={faWhatsapp} className={styles.icon} aria-hidden="true" />
-          <span>{t("item.orderWhatsapp")}</span>
-          {total && <span className={styles.orderTotal}>{total}</span>}
+          <span className={styles.orderLabel}>{t("item.orderWhatsapp")}</span>
+          {total && <span className={styles.orderTotal} data-long={total.length > 12 ? "" : undefined}>{total}</span>}
         </a>
       </footer>
     );

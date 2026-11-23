@@ -15,6 +15,16 @@ function entry(term, products, extra = {}, taken = new Set()) {
   return { term, ...extra, itemId: top.id, label: top.name, slug: top.slug, image: pictured(top), price: top.price ?? null };
 }
 
+function fallbackImage(item, products) {
+  if (item.kind === "store" && item.slug) {
+    const own = products.find((p) => p.slug === item.slug && pictured(p));
+    if (own) return pictured(own);
+  }
+  const found = searchProducts(products, { q: item.term }, { pageSize: 8, itemsOnly: true });
+  const withPicture = found.items.find((p) => pictured(p));
+  return withPicture ? pictured(withPicture) : null;
+}
+
 export function tidyTrending(items, products, limit = 10) {
   const out = [];
   const seen = new Set();
@@ -34,7 +44,7 @@ export function tidyTrending(items, products, limit = 10) {
     // A store, a flash sale or a category was already checked live by the database (trending_lists). A store's name rarely matches a
     // product, so it is not looked up in the catalogue again; only a product word (or one of unknown kind) must still find something.
     if (item.kind && item.kind !== "product") {
-      take({ ...item });
+      take({ ...item, image: pathOf(item.image) ?? fallbackImage(item, products) });
       continue;
     }
     const found = entry(item.term, products, { count: item.count, hot: item.hot }, pictures);

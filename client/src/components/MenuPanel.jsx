@@ -2,11 +2,10 @@ import { Link, useMatch } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
-import { resizeImageUrl } from "@epicmkt/shared";
 import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
-import Flame from "./Flame.jsx";
-import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
+import TrendTabs, { TrendNote } from "./TrendTabs.jsx";
+import TrendingList from "./TrendingList.jsx";
 import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
@@ -88,45 +87,21 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
               </div>
               <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
               {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
-              <ol className={styles.trendList}>
-                {trending.isPending
-                  ? Array.from({ length: 6 }, (_, i) => (
-                      <li key={i} aria-hidden="true">
-                        <Skeleton width={`${5 + (i % 3) * 1.5}rem`} height="34px" radius="999px" />
-                      </li>
-                    ))
-                  : real.map((item, index) => (
-                      <li key={item.term}>
-                        <Link
-                          to={trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)}
-                          replace
-                          className={styles.trend}
-                          onClick={() => addRecent(item.term)}
-                        >
-                          <span className={styles.trendRank} data-top={index < 3 || undefined}>{index + 1}</span>
-                          {item.image ? (
-                            <img className={styles.trendImg} src={resizeImageUrl(item.image, 64)} alt="" width="22" height="22" loading="lazy" decoding="async" />
-                          ) : null}
-                          <span className={styles.trendTerm}>{trendLabel(item)}</span>
-                          <TrendKind kind={item.kind} />
-                          {item.hot && <Flame className={styles.trendFire} />}
-                        </Link>
-                      </li>
-                    ))}
-              </ol>
+              {trending.isPending ? (
+                <ol className={styles.trendList}>
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <li key={i} aria-hidden="true">
+                      <Skeleton height="52px" radius="12px" />
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <TrendingList items={real} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
+              )}
               {!trending.isPending && filler.length > 0 && (
                 <>
                   <h3 className={styles.moreLabel}>Popular products</h3>
-                  <ol className={styles.trendList}>
-                    {filler.map((item) => (
-                      <li key={item.term}>
-                        <Link to={trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} replace className={styles.trend} onClick={() => addRecent(item.term)}>
-                          {item.image ? <img className={styles.trendImg} src={resizeImageUrl(item.image, 64)} alt="" width="22" height="22" loading="lazy" decoding="async" /> : null}
-                          <span className={styles.trendTerm}>{trendLabel(item)}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ol>
+                  <TrendingList items={filler} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
                 </>
               )}
             </section>
