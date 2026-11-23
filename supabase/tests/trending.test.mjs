@@ -72,7 +72,7 @@ after(async () => {
 beforeEach(async () => {
   await sql(
     c,
-    `delete from search_events; delete from search_term_daily; delete from search_trending; delete from search_trending_pins;
+    `delete from search_events; delete from search_term_daily; delete from search_trending;
      delete from search_blocklist; update trending_settings set min_people = 3, min_people_pct = 0.005, min_people_cap = 50, rising_min_ratio = 1.5,
        popular_days = 7, county_min_terms = 5, stale_hours = 3`
   );
@@ -182,29 +182,16 @@ test("the rebuild can run again and again, and a count never goes down when old 
   assert.deepEqual(await popular(), ["solar lamp"]);
 });
 
-test("an admin can pin up to 3 terms to the top for some days; they still need a live result", async () => {
-  await people("gas cylinder", 9);
+test("nobody can place a term by hand: there is no pin, and the order is only by people searching", async () => {
+  assert.equal((await sql(c, `select to_regclass('public.search_trending_pins') as t`))[0].t, null, "the pins table is gone");
+  assert.equal((await sql(c, `select count(*)::int as n from pg_proc where proname in ('admin_trending_pin', 'admin_trending_unpin')`))[0].n, 0, "no pin functions");
   await people("solar lamp", 5);
-  const pin = (term, days = 7) => run(asAdmin, `select admin_trending_pin($1, $2, 'campaign')`, [term, days]);
-  await pin("barber"); // fewer than the 3 people needed, but it is a live category
-  await pin("unicorn saddle"); // nothing live
+  await people("gas cylinder", 9);
+  await people("barber", 1); // a live category, but too few people to be listed: it cannot jump the queue
   await refresh();
   const out = await lists();
-  assert.deepEqual(out.popular.map((x) => x.term), ["barber", "gas cylinder", "solar lamp"]);
-  assert.equal(out.popular[0].pinned, true);
-  assert.equal(out.popular[1].pinned, false);
-
-  await sql(c, `update search_trending_pins set expires_at = now() - interval '1 minute' where term = 'barber'`);
-  await refresh();
-  assert.deepEqual(await popular(), ["gas cylinder", "solar lamp"], "an expired pin is gone");
-
-  await run(asAdmin, `select admin_trending_unpin('unicorn saddle')`);
-  await pin("a1 term");
-  await pin("b2 term");
-  await pin("c3 term");
-  await assert.rejects(pin("d4 term"), /at most 3 pinned/);
-  await run(asAdmin, `select admin_trending_unpin('a1 term')`);
-  await pin("d4 term");
+  assert.deepEqual(out.popular.map((x) => x.term), ["gas cylinder", "solar lamp"], "most people first, nothing else added");
+  assert.ok(out.popular.every((x) => x.pinned === false));
 });
 
 test("hiding a term takes it out at once and keeps it out after the next rebuild; showing it again brings it back", async () => {
@@ -298,7 +285,7 @@ test("who may do what", async () => {
   await assert.rejects(tx(c, anon, (k) => sql(k, `select * from search_term_daily`)), /permission denied/);
   await assert.rejects(tx(c, { sub: ids.userA }, (k) => sql(k, `select admin_trending_hide('x1')`)), /forbidden/);
   const overview = (await tx(c, asAdmin, (k) => sql(k, `select admin_trending_overview() as o`)))[0].o;
-  assert.deepEqual(Object.keys(overview).sort(), ["counties", "hidden", "pins", "popular", "rising", "status", "synonyms"]);
+  assert.deepEqual(Object.keys(overview).sort(), ["counties", "hidden", "popular", "rising", "status", "synonyms"]);
   await run(asAdmin, `select admin_synonym_set('mkokoteni', 'wheelbarrow')`);
   assert.equal((await sql(c, `select canonical from search_synonyms where variant = 'mkokoteni'`))[0].canonical, "wheelbarrow");
   await run(asAdmin, `select admin_synonym_remove('mkokoteni')`);

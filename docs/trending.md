@@ -33,8 +33,9 @@ shopper searches ──> log_search(term)  ──> search_events        (raw, ke
   one word. `search_synonyms` merges other spellings and Swahili or Sheng words ("gesi" → "gas"). The shown spelling is the most common one.
 * **The bar.** A word needs `trending_settings.min_people` different people (3), growing with traffic to `min_people_pct` (0.5 %) of the
   last 48 hours' searchers, capped at `min_people_cap` (50). *Rising* also needs `rising_min_ratio` (1.5×).
-* **Hiding.** A word containing anything in `search_blocklist` is never shown. **Pinning** puts a word at the top of *Popular* for 1 to 30
-  days (3 at a time); it still has to be live.
+* **No hand-placed ranking.** The order comes only from how many different people searched (ties: more people in the last 24 hours, then
+  name). Nobody can pin a word to the top; pinning was removed in migration `0153_trending_no_pins.sql`.
+* **Hiding.** A word containing anything in `search_blocklist` is never shown. This is moderation: it removes a word, it does not move any other.
 * **If it breaks.** A list older than `stale_hours` (3) is not served: shoppers get the live count of the last 24 hours (migration 0039),
   and if that is empty too, the busiest categories. `/api/products` falls back the same way (`trending_lists` → `top_searches_hourly` →
   `top_searches`), so deploying the site before the migration does not break the menu.
@@ -45,7 +46,7 @@ shopper searches ──> log_search(term)  ──> search_events        (raw, ke
   The edge cache holds the list until 5 minutes past the next hour.
 * **Check:** `select public.trending_status();` returns `{ ok, computedAt, ageMinutes, staleAfterHours }`. `ok: false` means the job has not
   run in `stale_hours`. The admin **Catalogue → Trending** page shows this as a red alert, and `supabase/cron/verify.sql` (5b) prints it.
-* **Admin → Catalogue → Trending:** the lists, **Pin**, **Hide**, hidden words and synonyms (reviewers and support admins).
+* **Admin → Catalogue → Trending:** the lists (read-only ranking), **Hide**, hidden words and synonyms (reviewers and support admins).
 * **Settings:** one row in `trending_settings`; change it in SQL and it applies at the next rebuild.
 * **Run it now:** `select public.refresh_trending();`
 * **Switch it off:** `select cron.unschedule('trending');`. The menu then falls back to the live count and nothing else breaks.
