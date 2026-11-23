@@ -96,3 +96,10 @@ test("a category or store with no picture of its own gets one from a product it 
   assert.equal(out[0].kind, "category");
   assert.ok(out[1].image === null || typeof out[1].image === "string");
 });
+
+test("risers are checked against the catalogue and given a picture, but never padded with filler", () => {
+  const out = tidyTrending([{ term: "bread", count: 3 }, { term: "unicorn saddle", count: 9 }], CATALOGUE, 10, { topUp: false });
+  assert.deepEqual(out.map((x) => x.term), ["bread"]);
+  assert.equal(out[0].image, "bread.png");
+  assert.equal(out.some((x) => x.filler), false);
+});

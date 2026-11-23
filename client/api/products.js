@@ -483,7 +483,9 @@ async function trending() {
   try {
     const snap = await snapshot();
     const popular = tidyTrending(base.popular ?? base.items, snap.products, 10);
-    return { ...base, popular, items: popular };
+    // Risers get the same picture and name check, but are never padded: a word either is rising or it is not.
+    const rising = tidyTrending(base.rising, snap.products, 10, { topUp: false });
+    return { ...base, popular, items: popular, rising };
   } catch (error) {
     console.warn(`[products] trending top-up skipped (${error?.message ?? error})`);
     return base;
