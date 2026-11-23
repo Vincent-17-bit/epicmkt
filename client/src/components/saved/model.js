@@ -79,7 +79,7 @@ export function lineView(entry, data, { shopGone = false } = {}) {
   const out = { ...base, name, image, href, service: sl.service, redirected, status: sl.status, qty: sl.qty, total: sl.status === "ok" ? sl.total : null, unit: sl.unit ?? null, mode: sl.info?.mode ?? "units", rules: sl.service ? null : (sl.info?.rules ?? null), optionLabel: sl.option?.state === "ok" ? sl.option.label : entry.optionLabel || "", itemId };
 
   if (sl.status === "choose_options") {
-    return { ...out, optionLabel: "", chip: chip("info", t("saved.chooseOptions")), note: finite(sl.from) ? fill("saved.fromChoose", { price: formatKes(sl.from) }) : t("saved.chooseOptions"), rules: null };
+    return { ...out, optionLabel: "", chip: null, note: finite(sl.from) ? fill("saved.fromChoose", { price: formatKes(sl.from) }) : t("saved.chooseOptions"), rules: null };
   }
   if (sl.status === "option_gone") return { ...out, chip: chip("bad", t("saved.optionGone")), rules: null };
   if (sl.status === "no_price") return { ...out, note: t("saved.askPrice") };
