@@ -13,7 +13,7 @@ const items = [
 describe("TrendingList", () => {
   it("marks only the first row as top trending with the fire icon", () => {
     render(<TrendingList items={items} onPick={() => {}} />);
-    expect(screen.getAllByText("Top trending")).toHaveLength(1);
+    expect(screen.getAllByText("Top search")).toHaveLength(1);
     expect(screen.getAllByRole("img", { name: "Trending now" })).toHaveLength(1);
     expect(screen.getAllByRole("button")[0]).toHaveTextContent("Gas 6kg");
   });
@@ -36,6 +36,6 @@ describe("TrendingList", () => {
 
   it("does not rank or flag the popular-products filler", () => {
     render(<TrendingList items={items} ranked={false} onPick={() => {}} />);
-    expect(screen.queryByText("Top trending")).toBeNull();
+    expect(screen.queryByText("Top search")).toBeNull();
   });
 });

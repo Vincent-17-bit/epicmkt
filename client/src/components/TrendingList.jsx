@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { trendLabel } from "../hooks/useTrending.js";
 import Flame from "./Flame.jsx";
@@ -21,6 +21,18 @@ function Pic({ src, size }) {
   );
 }
 
+// "Rising" mark: this word is climbing fast this week. 1 is the fastest riser of all; the rest just say "Rising".
+export function Rise({ place }) {
+  if (!place) return null;
+  const fastest = place === 1;
+  return (
+    <span className={styles.rise} data-fastest={fastest || undefined}>
+      <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
+      {fastest ? "Fastest rising" : "Rising"}
+    </span>
+  );
+}
+
 function Row({ item, rank, top, href, onPick }) {
   const body = (
     <>
@@ -29,17 +41,23 @@ function Row({ item, rank, top, href, onPick }) {
       <span className={styles.text}>
         {top && (
           <span className={styles.badge}>
-            <Flame className={styles.badgeFlame} /> Top trending
+            <Flame className={styles.badgeFlame} /> Top search
           </span>
         )}
         <span className={styles.name}>{trendLabel(item)}</span>
         {top && (
           <span className={styles.meta}>
             <TrendKind kind={item.kind} />
+            <Rise place={item.rising} />
           </span>
         )}
       </span>
-      {!top && <TrendKind kind={item.kind} />}
+      {!top && (
+        <span className={styles.tags}>
+          <Rise place={item.rising} />
+          <TrendKind kind={item.kind} />
+        </span>
+      )}
     </>
   );
   const props = { className: styles.row, "data-top": top || undefined };
