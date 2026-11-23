@@ -110,11 +110,11 @@ describe("trending in the search panel", () => {
     expect(within(s).getByText("Solar Lamp")).toBeInTheDocument();
   });
 
-  it("with nothing rising there is no rising mark and no legend for it", async () => {
+  it("with nothing rising there is no rising mark", async () => {
     vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
-    expect(await within(s).findByText(/Most searched this week/)).toBeInTheDocument();
+    expect(await within(s).findByText("Gas Cylinder 6kg")).toBeInTheDocument();
     expect(within(s).queryByText(/rising/i)).toBeNull();
   });
 

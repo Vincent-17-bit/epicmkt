@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faBolt, faMagnifyingGlass, faStore, faTags } from "@fortawesome/free-solid-svg-icons";
+import { faAnglesUp, faArrowUp, faBolt, faMagnifyingGlass, faStore, faTags } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { trendLabel } from "../hooks/useTrending.js";
 import Flame from "./Flame.jsx";
@@ -31,7 +31,7 @@ export function Rise({ place }) {
   const fastest = place === 1;
   return (
     <span className={styles.rise} data-fastest={fastest || undefined}>
-      <FontAwesomeIcon icon={faArrowUp} aria-hidden="true" />
+      <FontAwesomeIcon icon={fastest ? faAnglesUp : faArrowUp} aria-hidden="true" />
       {fastest ? "Fastest rising" : "Rising"}
     </span>
   );

@@ -84,7 +84,6 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                   <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Top searches
                 </h2>
               </div>
-              <p className={styles.legend}>Most searched this week{real.some((item) => item.rising) || alsoRising.length > 0 ? <> · <span className={styles.legendRise}>↑ rising fast</span></> : null}</p>
               {trending.isPending ? (
                 <ol className={styles.trendList}>
                   {Array.from({ length: 6 }, (_, i) => (
