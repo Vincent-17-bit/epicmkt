@@ -139,6 +139,9 @@ const ownText = (p, label) => `${p.name ?? ""} · ${(p.specs ?? []).filter((s) =
 // What a food is made of ("Ingredients: water, sugar") says little about what it is: a loaf is not "water". Those lines are kept
 // apart, so they can find a product only when nothing is truly called what was asked for.
 const MADE_OF = /^\s*(?:ingredients?|contains|allergens?|made (?:from|with|of)|composition)\b/i;
+// "No added water", "without preservatives": the word is named to say it is NOT there, so it is not a match.
+const NEGATED = /\b(?:no|non|without|zero|free from|free of|never any)\s+(?:added\s+|any\s+)?[a-z]+|\b[a-z]+[- ]free\b/gi;
+export const withoutNegations = (text) => String(text ?? "").replace(NEGATED, " ");
 const specText = (p) => (p.specs ?? []).filter((s) => !MADE_OF.test(s.label ?? "")).map((s) => `${s.label ?? ""}: ${s.value ?? ""}`).join(" · ");
 const madeOfText = (p) => (p.specs ?? []).filter((s) => MADE_OF.test(s.label ?? "")).map((s) => String(s.value ?? "")).join(" · ");
 const priceOf = (p) => {
@@ -242,7 +245,7 @@ export function describe(p) {
     text,
     name: new Set([...tokensOf(p.name), ...measureTokens(p.name)]),
     ing: new Set(tokensOf(madeOfText(p))),
-    hay: new Set([...tokensOf(`${p.name} ${brand ?? ""} ${p.section ?? ""} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ")} ${p.business?.name ?? ""} ${p.business?.town ?? ""} ${k ? `${k.label} ${k.noun}` : ""}`), ...measureTokens(`${p.name} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ; ")}`)]),
+    hay: new Set([...tokensOf(`${p.name} ${brand ?? ""} ${p.section ?? ""} ${withoutNegations(`${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)}`)} ${(p.optionValues ?? []).join(" ")} ${p.business?.name ?? ""} ${p.business?.town ?? ""} ${k ? `${k.label} ${k.noun}` : ""}`), ...measureTokens(`${p.name} ${p.shortDescription ?? ""} ${p.description ?? ""} ${specText(p)} ${(p.optionValues ?? []).join(" ; ")}`)]),
     brandKey: normalizeValueKey(brand) || null,
     brand,
     price: priceOf(p),
@@ -871,7 +874,17 @@ function rank(products, tokens, { partial = false, exact = [], exclude = [] } = 
     if (score > 0) matched.push({ p, d, score: score + quality + valueBonus(d, tokens), strong: isStrong(d, tokens), missed, viaMadeOf });
   }
   // A product found only through its ingredient list is shown only when no product is really about the word.
-  return matched.some((r) => !r.viaMadeOf) ? matched.filter((r) => !r.viaMadeOf) : matched;
+  const real = matched.some((r) => !r.viaMadeOf) ? matched.filter((r) => !r.viaMadeOf) : matched;
+  // One word, and some products are truly called that: a product that only mentions it, from a different kind of shop ("water" in
+  // a bread's description), is not what was asked for.
+  if (tokens.length === 1 && tokens[0].length >= 3 && !exact.length && !/^\d/.test(tokens[0])) {
+    // Judged within products and within services separately: a car wash being called "wash" does not make a face wash a stranger.
+    const kindsOf = (listing) => new Set(real.filter((r) => r.strong && r.d.listing === listing).map((r) => r.d.kind?.id).filter(Boolean));
+    const strongKinds = { product: kindsOf("product"), service: kindsOf("service") };
+    const hasStrong = (listing) => real.some((r) => r.strong && r.d.listing === listing);
+    return real.filter((r) => r.strong || !hasStrong(r.d.listing) || (r.d.kind && strongKinds[r.d.listing].has(r.d.kind.id)));
+  }
+  return real;
 }
 
 // Alternatives ("samsung or tecno phone"): a listing counts once, at its best group.
