@@ -1,21 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowUp, faMagnifyingGlass } from "@fortawesome/free-solid-svg-icons";
+import { faArrowUp, faBolt, faMagnifyingGlass, faStore, faTags } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { trendLabel } from "../hooks/useTrending.js";
 import Flame from "./Flame.jsx";
-import { TrendKind } from "./TrendTabs.jsx";
+import { TrendKind } from "./TrendKind.jsx";
 import styles from "./TrendingList.module.css";
 
-function Pic({ src, size }) {
-  const [broken, setBroken] = useState(false);
+// With no picture (or one that fails to load) the tile shows what the word is: a shop, a category, a flash sale, or a plain search.
+const KIND_ICON = { store: faStore, category: faTags, flash: faBolt };
+
+function Pic({ src, size, kind }) {
+  const [failed, setFailed] = useState(null);
+  const ok = src && failed !== src;
   return (
     <span className={styles.pic} aria-hidden="true">
-      {src && !broken ? (
-        <img src={resizeImageUrl(src, size * 2)} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setBroken(true)} />
+      {ok ? (
+        <img src={resizeImageUrl(src, size * 2)} alt="" width={size} height={size} loading="lazy" decoding="async" onError={() => setFailed(src)} />
       ) : (
-        <FontAwesomeIcon icon={faMagnifyingGlass} />
+        <FontAwesomeIcon icon={KIND_ICON[kind] ?? faMagnifyingGlass} />
       )}
     </span>
   );
@@ -37,7 +41,7 @@ function Row({ item, rank, top, href, onPick }) {
   const body = (
     <>
       {rank ? <span className={styles.rank}>{rank}</span> : null}
-      <Pic src={item.image} size={top ? 64 : 44} />
+      <Pic src={item.image} size={top ? 64 : 44} kind={item.kind} />
       <span className={styles.text}>
         {top && (
           <span className={styles.badge}>

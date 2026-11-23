@@ -5,7 +5,7 @@ import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } fro
 import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
 import TrendingList from "./TrendingList.jsx";
-import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { routes } from "../config/routes.js";

@@ -15,7 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
-import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";

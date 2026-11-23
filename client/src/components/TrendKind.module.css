@@ -14,9 +14,3 @@
   background: var(--primary-tint);
   color: var(--text);
 }
-
-.note {
-  margin: var(--space-2) 0 0;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-}
