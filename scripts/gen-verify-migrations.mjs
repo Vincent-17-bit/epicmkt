@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const dir = "supabase/migrations";
-const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort();
+const files = readdirSync(dir).filter((f) => /^\d{4,6}_.*\.sql$/.test(f)).sort();
 const strip = (sql) => sql.replace(/\/\*[\s\S]*?\*\//g, "").replace(/--[^\n]*/g, "");
 const unq = (s) => s.replace(/"/g, "").replace(/^public\./, "").toLowerCase();
 const id = String.raw`((?:public\.)?"?[a-zA-Z_][\w$]*"?)`;
@@ -12,7 +12,7 @@ const add = (kind, name, extra, mig) => found.set(`${kind}|${name}|${extra}`, { 
 const drop = (kind, name, extra = "") => found.delete(`${kind}|${name}|${extra}`);
 
 for (const file of files) {
-  const mig = file.slice(0, 4);
+  const mig = file.split("_")[0];
   const sql = strip(readFileSync(join(dir, file), "utf8"));
   const dollar = [];
   const body = sql.replace(/\$([a-zA-Z_]*)\$[\s\S]*?\$\1\$/g, (m) => (dollar.push(m), "$$BODY$$"));
