@@ -4,7 +4,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
-import TrendTabs, { TrendNote } from "./TrendTabs.jsx";
+import TrendTabs from "./TrendTabs.jsx";
 import TrendingList from "./TrendingList.jsx";
 import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
@@ -33,7 +33,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   });
 
   // What shoppers search for, every kind in one ranking: popular this week and rising now, rebuilt every hour (migration 0146).
-  const { query: trending, tab, setTab, list: trend, real, filler, hasRising, scopeNote } = useTrending({ enabled: open });
+  const { query: trending, tab, setTab, list: trend, real, filler, hasRising } = useTrending({ enabled: open });
 
   const submit = (event) => {
     event.preventDefault();
@@ -86,7 +86,6 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
                 </h2>
               </div>
               <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
-              {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
               {trending.isPending ? (
                 <ol className={styles.trendList}>
                   {Array.from({ length: 6 }, (_, i) => (

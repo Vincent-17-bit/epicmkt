@@ -18,7 +18,7 @@ export const getNearbyBusinesses = (params) => browse.getNearbyBusinesses(params
 export const getSimilarBusinesses = (ref, limit) => browse.getSimilarBusinesses(ref, limit);
 export const getTopSearches = (limit) => browse.getTopSearches(limit);
 // Search terms and event payloads are the only things the app logs. Neither may carry a position, whichever adapter is live.
-export const logSearch = (term, county) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : quiet(() => browse.logSearch(term, county)));
+export const logSearch = (term) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : quiet(() => browse.logSearch(term)));
 // Analytics must never surface an error to the visitor, so these swallow failures (sync throws and rejected promises alike).
 const quiet = (fn) => {
   try {
@@ -53,7 +53,7 @@ export const items = {
   // Type-ahead while typing: { terms, products, stores, categories, corrected } (lib/suggest.js has the shape).
   suggest: (prefix) => products.getSuggest(prefix),
   // Trending searches for the menu, worked out on the hour: { computedAt, live, items: [{ term, count, hot, image, ... }] }.
-  getTrending: (county) => products.getTrending(county),
+  getTrending: () => products.getTrending(),
   getCounts: (filters) => products.getCounts(filters),
   getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts),
   // The shoe conversion chart for the size chart modal; the built-in chart when the call fails.

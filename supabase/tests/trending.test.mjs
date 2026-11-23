@@ -221,25 +221,19 @@ test("hiding a term takes it out at once and keeps it out after the next rebuild
   assert.deepEqual(await popular(), ["gas cylinder", "solar lamp"]);
 });
 
-test("a county gets its own list when it has enough local terms, otherwise the national list", async () => {
-  const kisumu = ["gas cylinder", "solar lamp", "water dispenser", "shop a", "barber"];
-  for (const t of kisumu) await people(t, 3, { county: "kisumu" });
-  await people("flash sneakers", 4); // national only
+test("the list is global: a county is never stored and never changes what is shown", async () => {
+  for (const t of ["gas cylinder", "solar lamp", "water dispenser"]) await people(t, 3, { county: "kisumu" });
+  await people("flash sneakers", 4);
   await people("solar lamp", 4, { county: "nairobi" });
   await refresh();
 
-  const k = await lists("Kisumu");
-  assert.equal(k.scope, "kisumu");
-  assert.equal(k.fallback, "none");
-  assert.deepEqual(k.popular.map((x) => x.term).sort(), [...kisumu].sort());
-
-  const n = await lists("Nairobi");
-  assert.equal(n.scope, "*", "one local term is not a list");
-  assert.equal(n.fallback, "national");
-  assert.ok(n.popular.map((x) => x.term).includes("flash sneakers"));
-
-  assert.equal((await lists("Narnia")).fallback, "national");
-  assert.equal((await lists()).fallback, "none");
+  const all = await lists();
+  assert.equal(all.scope, "*");
+  assert.equal(all.fallback, "none");
+  assert.ok(["gas cylinder", "solar lamp", "water dispenser", "flash sneakers"].every((t) => all.popular.map((x) => x.term).includes(t)));
+  assert.deepEqual((await lists("Kisumu")).popular, all.popular);
+  assert.deepEqual((await lists("Narnia")).popular, all.popular);
+  assert.equal((await sql(c, `select count(*)::int as n from search_trending where scope <> '*'`))[0].n, 0);
 });
 
 test("a list older than stale_hours is not served: the live count of the last 24 hours is, and the status says so", async () => {
@@ -277,7 +271,7 @@ test("a young site is never empty: the busiest categories stand in", async () =>
   assert.equal((await run(service, `select trending_status() as s`))[0].s.ok, true, "the rebuild ran, there was just nothing to rank");
 });
 
-test("log_search keeps the shopper's county next to the anonymous hash, and the one-argument call still works", async () => {
+test("log_search stores no county, and both the one and two-argument calls still work", async () => {
   const log = async (ip, ...args) => {
     await c.query("begin");
     try {
@@ -292,7 +286,7 @@ test("log_search keeps the shopper's county next to the anonymous hash, and the 
   await log("10.0.0.2", "water dispenser", "Kisumu");
   await log("10.0.0.3", "water dispenser", "kisumu; drop table x");
   const rows = await sql(c, `select county from search_events order by id`);
-  assert.deepEqual(rows.map((r) => r.county), [null, "kisumu", null]);
+  assert.deepEqual(rows.map((r) => r.county), [null, null, null]);
 });
 
 test("who may do what", async () => {

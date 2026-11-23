@@ -15,7 +15,6 @@ const overview = (extra = {}) => ({
     { rank: 4, term: "barber", kind: "category", name: "Barber", people: 19, hot: false, pinned: true }
   ],
   rising: [{ rank: 1, term: "solar lamp", kind: "product", name: "Solar Lamp", people: 14, ratio: 7 }],
-  counties: ["kisumu"],
   pins: [{ term: "barber", note: null, expiresAt: "2026-11-23T09:00:00Z" }],
   hidden: ["xxx"],
   synonyms: [{ variant: "gesi", canonical: "gas" }],
@@ -69,7 +68,6 @@ describe("Trending page", () => {
     const rising = screen.getByRole("table", { name: "Rising now" });
     expect(within(rising).getByText("solar lamp")).toBeInTheDocument();
     expect(within(rising).getByText(/7\.0×, 14 people/)).toBeInTheDocument();
-    expect(screen.getByText(/Counties with their own list: kisumu/)).toBeInTheDocument();
   });
 
   it("warns, loudly, when the lists are out of date", async () => {

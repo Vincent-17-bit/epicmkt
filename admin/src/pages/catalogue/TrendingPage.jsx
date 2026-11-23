@@ -116,12 +116,6 @@ export default function TrendingPage() {
           <h2 className="heading-sm heading-flow">Rising now</h2>
           {data.rising.length === 0 ? <p className="muted">Nothing is rising against its own average right now.</p> : table(data.rising, { rising: true })}
 
-          <p className="muted">
-            {data.counties.length > 0
-              ? `Counties with their own list: ${data.counties.join(", ")}. Other counties see the national list.`
-              : "No county has enough searches of its own yet, so everyone sees the national list."}
-          </p>
-
           <h2 className="heading-sm heading-flow">Pinned</h2>
           <div className="kit-row">
             <label className="field">Pin for

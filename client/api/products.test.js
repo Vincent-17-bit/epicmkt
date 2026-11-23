@@ -403,16 +403,12 @@ describe("/api/products", () => {
       expect(await maxage("2026-03-01T12:05:00Z")).toBe(60);
     });
 
-    it("passes a known county to the database and ignores anything else", async () => {
+    it("asks the database for one list for everyone, and ignores any county in the request", async () => {
       const seen = [];
       answer({ trending_lists: (body) => { seen.push(body); return new Response(JSON.stringify(lists), { status: 200 }); } });
       await call("op=trending&county=kisumu");
-      await call("op=trending&county=Uasin%20Gishu");
-      await call("op=trending&county=Narnia");
-      await call("op=trending&county=%27%3B%20drop%20table");
       await call("op=trending");
-      expect(seen.map((b) => b.p_county)).toEqual(["Kisumu", "Uasin Gishu", null, null, null]);
-      expect(seen.every((b) => b.p_limit === 10)).toBe(true);
+      expect(seen.every((b) => b.p_limit === 10 && !("p_county" in b))).toBe(true);
     });
 
     it("uses the older hourly list when trending_lists is not in the database yet", async () => {

@@ -25,7 +25,7 @@ const POPULAR = [
   { rank: 4, term: "barber", count: 4, hot: false, kind: "category", label: "Barber" }
 ];
 const RISING = [{ rank: 1, term: "solar lamp", count: 9, ratio: 9, hot: true, kind: "product", label: "Solar Lamp" }];
-const lists = (extra = {}) => ({ computedAt: "2026-11-16T09:12:00Z", live: false, scope: "*", county: null, fallback: "none", popular: POPULAR, rising: RISING, items: POPULAR, ...extra });
+const lists = (extra = {}) => ({ computedAt: "2026-11-16T09:12:00Z", live: false, scope: "*", fallback: "none", popular: POPULAR, rising: RISING, items: POPULAR, ...extra });
 
 const kisumuTown = TOWNS.find((t) => t.county === "Kisumu").name;
 
@@ -154,34 +154,19 @@ describe("trending in the search panel", () => {
     expect(logSearch).not.toHaveBeenCalled();
   });
 
-  it("a search the shopper types is counted, with the county of the town they chose", async () => {
-    useGeoStore.setState({ town: kisumuTown });
+  it("a search the shopper types is counted, with no location attached", async () => {
     const { input } = panel();
     await userEvent.type(input, "milk{Enter}");
-    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk", "Kisumu"));
+    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk"));
   });
 
-  it("without a chosen town, no county is sent", async () => {
-    const { input } = panel();
-    await userEvent.type(input, "milk{Enter}");
-    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk", null));
-  });
-
-  it("asks for the shopper's county, and says when the list is local or national", async () => {
+  it("asks for one list for everyone, whatever town was chosen", async () => {
     useGeoStore.setState({ town: kisumuTown });
-    vi.mocked(items.getTrending).mockResolvedValue(lists({ scope: "kisumu", county: "kisumu" }));
     panel();
     const s = await section();
-    expect(await within(s).findByText("Trending in Kisumu")).toBeInTheDocument();
-    expect(items.getTrending).toHaveBeenCalledWith("Kisumu");
-  });
-
-  it("when the county has too few searches, it says it is showing the national list", async () => {
-    useGeoStore.setState({ town: kisumuTown });
-    vi.mocked(items.getTrending).mockResolvedValue(lists({ fallback: "national" }));
-    panel();
-    const s = await section();
-    expect(await within(s).findByText(/Not many searches in Kisumu yet, showing all of Kenya/)).toBeInTheDocument();
+    await within(s).findByText("Gas Cylinder 6kg");
+    expect(items.getTrending).toHaveBeenCalledWith();
+    expect(within(s).queryByText(/Trending in|Not many searches/)).toBeNull();
   });
 });
 

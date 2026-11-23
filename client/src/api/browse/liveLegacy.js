@@ -230,16 +230,8 @@ export async function getTopSearches(limit = 10) {
   return rows.map((row) => ({ term: row.term, count: row.count, hot: Boolean(row.hot) }));
 }
 
-// The county (only when the shopper chose a town themselves) is stored next to the anonymous visitor hash, so "trending in Kisumu" is
-// possible. If the database has not got the two-argument log_search yet (code deployed before migration 0146), the search is still
-// counted, without the county.
-export async function logSearch(term, county = null) {
+export async function logSearch(term) {
   try {
-    // supabase-js does not throw on a failed call, it hands back { error }.
-    if (county) {
-      const withCounty = await supabase.rpc("log_search", { p_term: term, p_county: county });
-      if (!withCounty?.error) return { ok: true };
-    }
     const plain = await supabase.rpc("log_search", { p_term: term });
     return { ok: !plain?.error };
   } catch {

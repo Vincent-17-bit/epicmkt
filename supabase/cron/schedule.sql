@@ -146,7 +146,7 @@ select cron.schedule(
 );
 
 -- trending: every hour at :02, migration 0146. Rebuilds the stored trending lists ("Popular this week", "Rising
--- now", nationally and per county) from the daily search summary. It runs after search-rollups on purpose (which runs at :57, so the dictionary is finished well before): it reads the type-ahead
+-- now", the same for everyone) from the daily search summary. It runs after search-rollups on purpose (which runs at :57, so the dictionary is finished well before): it reads the type-ahead
 -- dictionary to tell a store from a product from a category. Plain SQL inside the database.
 -- /api/products caches the list until 5 minutes past the next hour, so visitors see the new list within minutes.
 -- A list older than trending_settings.stale_hours (3) is not served: the live count of the last 24 hours is shown instead, and
