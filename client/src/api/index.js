@@ -32,7 +32,7 @@ const quiet = (fn) => {
 export const logContactEvent = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logBusinessEvent(event)) : backend.logContactEvent(event)));
 export const logUnmetDemand = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logUnmetDemand(event)) : backend.logUnmetDemand(event)));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
-export const reportBusiness = (report) => backend.reportBusiness(report);
+export const reportBusiness = async (report) => (isLive() ? (await import("./reports.js")).submitReport(report) : backend.reportBusiness(report));
 export const getTowns = () => browse.getTowns();
 export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, scrubPayload(payload)));
 export const getServerTime = () => flashApi.getServerTime();

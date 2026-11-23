@@ -7,7 +7,7 @@ import { items } from "../api/index.js";
 // nothing that was growing is lost. Used by the menu and the search panel. An older response with only `items` is read as the popular list.
 const TOP = 10;
 const ALSO = 3;
-export const byCount = (a, b) => Number(Boolean(a.filler)) - Number(Boolean(b.filler)) || (b.count ?? 0) - (a.count ?? 0) || String(a.term).localeCompare(String(b.term));
+export const byCount = (a, b) => Number(Boolean(a.filler)) - Number(Boolean(b.filler)) || (b.count ?? 0) - (a.count ?? 0) || (a.rank ?? 1e9) - (b.rank ?? 1e9) || String(a.term).localeCompare(String(b.term));
 const keyOf = (item) => `${item.kind ?? "product"}:${String(item.term).toLowerCase()}`;
 
 /** Pure: the server's two lists in, the one ranked list out. */
