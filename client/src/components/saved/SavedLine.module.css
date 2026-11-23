@@ -120,6 +120,12 @@
   font-size: 12px;
 }
 
+.hint {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .action {
   min-height: 24px;
   color: var(--text);

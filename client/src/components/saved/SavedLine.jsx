@@ -16,7 +16,7 @@ export default function SavedLine({ line, loading, goTo }) {
   const { removeLines } = useSaveActions();
   const setQty = useCallback((qty) => savedList().setQty(line.key, qty), [line.key]);
   const gone = line.status === "unavailable";
-  const tag = line.status === "choose_options" ? { tone: "info", text: line.note } : line.chip;
+  const tag = line.chip;
   const go = (e, to) => {
     e.preventDefault();
     goTo(to);
@@ -59,7 +59,7 @@ export default function SavedLine({ line, loading, goTo }) {
             {tag.text}
           </span>
         ) : line.note ? (
-          <span className={styles.muted}>{line.note}</span>
+          <span className={line.status === "choose_options" ? styles.hint : styles.muted}>{line.note}</span>
         ) : line.optionLabel ? (
           <span className={styles.muted}>{line.optionLabel}</span>
         ) : null}
@@ -68,9 +68,9 @@ export default function SavedLine({ line, loading, goTo }) {
             {t("saved.findSimilar")}
           </a>
         )}
-        {(line.status === "option_gone" || line.status === "choose_options") && line.href && (
+        {line.status === "option_gone" && line.href && (
           <a href={line.href} className={styles.action} onClick={(e) => go(e, line.href)}>
-            {t(line.status === "option_gone" ? "saved.chooseAnother" : "saved.chooseOptions")}
+            {t("saved.chooseAnother")}
           </a>
         )}
       </span>

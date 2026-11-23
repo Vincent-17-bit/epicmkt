@@ -509,9 +509,10 @@
   outline: none;
 }
 
-.cardSave:focus-within {
+.nameLink:focus-visible::after {
   outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -3px;
+  border-radius: inherit;
 }
 
 .priceRow {

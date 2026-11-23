@@ -442,9 +442,12 @@
   outline: none;
 }
 
-.tileSave:focus-within {
+/* Keyboard focus shows on the whole card, drawn by the name link's stretched ::after (inside the card, which clips anything outside it).
+ * Not :focus-within: that also lit up after a mouse tap on the heart. No :has(), which older phones lack. */
+.nameLink:focus-visible::after {
   outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: -3px;
+  border-radius: var(--radius-card);
 }
 
 .priceRow {

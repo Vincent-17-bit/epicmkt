@@ -10,14 +10,13 @@ export const facets = () => backend.getFlashFacets();
 export async function getSavedItems(ids) {
   const items = {};
   const shops = {};
-  for (const id of [...new Set(ids)].slice(0, 200)) {
-    try {
-      const detail = await backend.getItemDetail(id);
-      items[id] = detail;
-      if (detail?.business?.id) shops[detail.business.id] = detail.business;
-    } catch {
-      items[id] = null;
-    }
-  }
+  // All at once: the demo backend waits a moment per item, and a long list must not wait for each in turn.
+  const list = [...new Set(ids)].slice(0, 200);
+  const found = await Promise.all(list.map((id) => backend.getItemDetail(id).catch(() => null)));
+  list.forEach((id, i) => {
+    const detail = found[i];
+    items[id] = detail;
+    if (detail?.business?.id) shops[detail.business.id] = detail.business;
+  });
   return { items, redirects: {}, shops, now: Date.now(), fetchedAt: Date.now() };
 }
