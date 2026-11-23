@@ -149,3 +149,48 @@
     grid-column: 1 / -1;
   }
 }
+
+/* The kind and the rising mark sit together at the row's end; on a phone the mark drops under the name so a long name keeps its room. */
+.tags {
+  display: inline-flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  max-width: 45%;
+}
+
+.rise {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 0.45rem;
+  border-radius: var(--radius-pill);
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.rise svg {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.rise[data-fastest] {
+  background: var(--status-ok);
+  color: #fff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .rise[data-fastest] {
+    color: #052e16;
+  }
+}
+
+:root[data-theme="dark"] .rise[data-fastest] {
+  color: #052e16;
+}

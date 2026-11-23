@@ -40,7 +40,7 @@ function panel(onSelect = vi.fn()) {
   );
   return { onSelect, input: screen.getByRole("combobox") };
 }
-const section = async () => (await screen.findByRole("heading", { name: /Trending searches/ })).closest("section");
+const section = async () => (await screen.findByRole("heading", { name: /Top searches/ })).closest("section");
 
 beforeEach(() => {
   localStorage.clear();
@@ -65,6 +65,7 @@ describe("trending in the search panel", () => {
   });
 
   it("ranks every kind of search in one list and says what each one is", async () => {
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
     await within(s).findByText("Gas Cylinder 6kg");
@@ -81,24 +82,39 @@ describe("trending in the search panel", () => {
     expect(within(rows[3]).getByText("Category")).toBeInTheDocument();
   });
 
-  it("has two views, popular this week and rising now, and switches between them", async () => {
+  it("is one list of top searches: no tabs, and a word that is both most searched and rising is marked inside it", async () => {
+    const popular = [
+      { term: "gas cylinder", count: 9, kind: "product", label: "Gas Cylinder 6kg" },
+      { term: "mama njeri bakery", count: 7, kind: "store", slug: "mama-njeri" },
+      { term: "barber", count: 4, kind: "category", label: "Barber" }
+    ];
+    const rising = [
+      { term: "mama njeri bakery", count: 7, kind: "store", slug: "mama-njeri" },
+      { term: "gas cylinder", count: 9, kind: "product", label: "Gas Cylinder 6kg" },
+      { term: "solar lamp", count: 3, kind: "product", label: "Solar Lamp" }
+    ];
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ popular, items: popular, rising }));
     panel();
     const s = await section();
-    expect(await within(s).findByRole("button", { name: "Popular this week" })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(within(s).getByRole("button", { name: "Rising now" }));
-    expect(within(s).getByRole("button", { name: "Rising now" })).toHaveAttribute("aria-pressed", "true");
+    await within(s).findByText("Gas Cylinder 6kg");
+    expect(within(s).queryByRole("button", { name: "Rising now" })).toBeNull();
+    const rows = within(s).getAllByRole("listitem");
+    // Ranked by searches: the gas cylinder is first even though the bakery is the fastest riser.
+    expect(within(rows[0]).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("Rising")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Fastest rising")).toBeInTheDocument();
+    expect(within(rows[2]).queryByText(/rising/i)).toBeNull();
+    // A riser outside the top ten is not lost: it sits under "Also rising fast".
+    expect(within(s).getByRole("heading", { name: "Also rising fast" })).toBeInTheDocument();
     expect(within(s).getByText("Solar Lamp")).toBeInTheDocument();
-    expect(within(s).queryByText("Gas Cylinder 6kg")).toBeNull();
-    await userEvent.click(within(s).getByRole("button", { name: "Popular this week" }));
-    expect(within(s).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
   });
 
-  it("with nothing rising there is nothing to switch to: just a caption", async () => {
+  it("with nothing rising there is no rising mark and no legend for it", async () => {
     vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
-    expect(await within(s).findByText("Popular this week")).toBeInTheDocument();
-    expect(within(s).queryByRole("button", { name: "Rising now" })).toBeNull();
+    expect(await within(s).findByText(/Most searched this week/)).toBeInTheDocument();
+    expect(within(s).queryByText(/rising/i)).toBeNull();
   });
 
   it("still reads an older response that only has `items`", async () => {
@@ -131,6 +147,7 @@ describe("trending in the search panel", () => {
   it("filler products sit under their own heading, with no rank and no flame", async () => {
     vi.mocked(items.getTrending).mockResolvedValue(
       lists({
+        rising: [],
         popular: [
           { rank: 1, term: "gas cylinder", count: 9, hot: true, kind: "product", label: "Gas Cylinder 6kg" },
           { term: "bread", count: 0, hot: false, kind: "product", filler: true, label: "White Bread 400g", itemId: "i1", slug: "mama" }
