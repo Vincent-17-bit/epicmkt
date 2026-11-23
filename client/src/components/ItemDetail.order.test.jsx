@@ -36,10 +36,24 @@ const tail = (v = "") => `\nPlease confirm it is available and how I can pay and
 const wa = "https://wa.me/254712555101?text=";
 
 describe("order now", () => {
-  it("is absent for an item with no quantity control, so those pages are unchanged", async () => {
+  it("is present for an item with no quantity type: it is a whole-unit item, ordered one at a time", async () => {
     mount(phoneDetail());
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(order()).toBeNull();
+    expect(order()).not.toBeNull();
+    expect(orderText()).toContain("Quantity: 1\nPrice: KES 21,000 each\nTotal: KES 21,000");
+  });
+
+  it("is also on the page itself (the Sold by card), not only in the footer bar", async () => {
+    mount(phoneDetail());
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    expect(screen.getByTestId("order-whatsapp-inline")).toHaveAttribute("href", order().getAttribute("href"));
+  });
+
+  it("books a service once, with no quantity stepper", async () => {
+    mount(phoneDetail({ kind: "service", name: "Home braiding", options: undefined, optionVariants: undefined, defaultVariantId: undefined }));
+    await screen.findByRole("heading", { name: "Home braiding" });
+    expect(screen.queryByTestId("quantity")).toBeNull();
+    expect(orderText()).toContain("I'd like to book:");
   });
 
   it("names the shop, every chosen option, quantity, price and total, even at quantity 1", async () => {
@@ -93,8 +107,14 @@ describe("order now", () => {
     expect(orderText()).toContain("I'd like to order:");
   });
 
-  it("is hidden when the seller has no WhatsApp number", async () => {
+  it("goes to the shop's phone number when it has no WhatsApp number", async () => {
     mount(phoneDetail({ quantityMode: "units", business: { ...seller, whatsapp: "" } }));
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    expect(order().getAttribute("href")).toContain("https://wa.me/254712555101?text=");
+  });
+
+  it("is hidden when the seller has neither a WhatsApp nor a phone number", async () => {
+    mount(phoneDetail({ quantityMode: "units", business: { ...seller, whatsapp: "", phone: "" } }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(order()).toBeNull();
   });

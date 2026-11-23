@@ -163,3 +163,12 @@
     transform: none;
   }
 }
+
+/* Phones: smaller choices, so a long list of sizes or colours takes two rows, not four. */
+@media (max-width: 47.99rem) {
+  .card { min-width: 2.5rem; min-height: 2.5rem; padding: 6px var(--space-3); font-size: var(--text-xs); }
+  .card[data-kind="button"], .card[data-kind="text"] { min-width: 3.5rem; padding: 6px var(--space-3); }
+  .card[data-kind="photo"] { width: 4.25rem; padding: 2px 2px var(--space-1); }
+  .card[data-kind="swatch"] { padding: 6px var(--space-2); }
+  .swatch { width: 1rem; height: 1rem; }
+}

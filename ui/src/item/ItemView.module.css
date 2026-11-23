@@ -369,3 +369,10 @@
 }
 
 .leadSep { font-weight: 400; }
+
+@media (max-width: 47.99rem) {
+  .info { gap: var(--space-3); padding: var(--space-3) var(--space-3) var(--space-4); }
+  .variants { gap: 6px; }
+  .variant { min-height: 2.5rem; padding: 0 var(--space-3); font-size: var(--text-sm); }
+  .price, .salePrice { font-size: var(--text-lg); }
+}
