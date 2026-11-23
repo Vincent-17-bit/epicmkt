@@ -51,6 +51,19 @@ beforeEach(() => {
 });
 
 describe("trending in the search panel", () => {
+  it("lists the ten most searched, by search count whatever order they arrive in, with the flame on the first only", async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ term: `word ${i}`, count: i + 1, hot: true, kind: "product", label: `Word ${i}` }));
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ popular: many, items: many, rising: [] }));
+    panel();
+    const s = await section();
+    await within(s).findByText("Word 11");
+    const rows = within(s).getAllByRole("listitem");
+    expect(rows).toHaveLength(10);
+    expect(rows.map((r) => r.textContent.replace(/^\d+/, "").replace("Product", ""))).toEqual(Array.from({ length: 10 }, (_, i) => `Word ${11 - i}`));
+    expect(within(s).getAllByRole("img", { name: "Trending now" })).toHaveLength(1);
+    expect(within(rows[0]).getByRole("img", { name: "Trending now" })).toBeInTheDocument();
+  });
+
   it("ranks every kind of search in one list and says what each one is", async () => {
     panel();
     const s = await section();

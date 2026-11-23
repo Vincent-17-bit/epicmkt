@@ -7,6 +7,8 @@ import { useGeoStore } from "../stores/geo.js";
 // What shoppers search for, every kind ranked together (store, product, flash sale, category), as "popular this week" and "rising now".
 // Used by the menu and the search panel. It follows the town the shopper chose: their county's list when it has enough searches of
 // its own, otherwise the national one (the server says which). An older response with only `items` is read as the popular list.
+const TOP = 10;
+
 export function useTrending({ enabled = true, refetch = true } = {}) {
   const county = countyOfTown(useGeoStore((s) => s.town));
   const query = useQuery({
@@ -22,7 +24,10 @@ export function useTrending({ enabled = true, refetch = true } = {}) {
   const popular = data?.popular ?? data?.items ?? [];
   const rising = data?.rising ?? [];
   const tab = chosen === "rising" && rising.length > 0 ? "rising" : "popular";
-  const list = (tab === "rising" ? rising : popular).slice(0, 10);
+  // Most searched first, whatever order the server sent: the top ten are the ten with the highest search counts (ties alphabetical),
+  // and the flame goes to the one at the top. Rising keeps the server's own order (it ranks by how fast a word is growing).
+  const ranked = tab === "rising" ? rising : [...popular].sort((a, b) => Number(Boolean(a.filler)) - Number(Boolean(b.filler)) || (b.count ?? 0) - (a.count ?? 0) || String(a.term).localeCompare(String(b.term)));
+  const list = ranked.slice(0, TOP).map((item, index) => ({ ...item, top: index === 0 && !item.filler }));
   let scopeNote = null;
   if (county && data && !data.live) {
     if (data.fallback === "national") scopeNote = `Not many searches in ${county} yet, showing all of Kenya`;
