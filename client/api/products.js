@@ -21,7 +21,7 @@
 //     cannot hold, so an old product is still found; ranking, filters and facets are unchanged.
 //   * op=suggest: type-ahead from the search_suggest dictionary (a few ms whatever the catalogue size); the snapshot otherwise.
 //   * op=trending: what shoppers search for, every kind ranked together (store, product, flash sale, category), as "popular this week"
-//     and "rising now", rebuilt every hour. Optional &county=Kisumu (a known county, otherwise ignored). Cached until 20 minutes
+//     and "rising now", rebuilt every hour. Optional &county=Kisumu (a known county, otherwise ignored). Cached until 5 minutes
 //     past the next hour.
 //
 // Only data the anon key can already read leaves here. No service-role key is used.
@@ -494,9 +494,9 @@ async function trending(county) {
   }
 }
 
-// The lists are rebuilt every hour (pg_cron at :12 past each hour): cache until 20 minutes past the next hour.
+// The lists are rebuilt every hour (pg_cron at :02 past each hour): cache until 5 minutes past the next hour.
 const TRENDING_PERIOD_MS = 3_600_000;
-const TRENDING_OFFSET_MS = 1_200_000;
+const TRENDING_OFFSET_MS = 300_000;
 const untilNextRefresh = (now) => {
   const next = Math.ceil((now - TRENDING_OFFSET_MS) / TRENDING_PERIOD_MS) * TRENDING_PERIOD_MS + TRENDING_OFFSET_MS;
   return Math.max(60, Math.ceil((next - now) / 1000));

@@ -19,7 +19,7 @@ What shoppers search for, shown in the menu and the empty search panel. Migratio
 
 ```
 shopper searches ──> log_search(term, county)  ──> search_events        (raw, kept 2 days, anonymous daily hash)
-                                                        │  every hour (job `trending`, at :12)
+                                                        │  every hour (job `trending`, at :02)
                                                         ▼
                                        search_term_daily   (permanent: day × word × everywhere-or-county → people)
                                                         │
@@ -43,8 +43,8 @@ shopper searches ──> log_search(term, county)  ──> search_events        
 
 ## Running it
 
-* **Schedule:** `supabase/cron/schedule.sql` (job `trending`, `12 * * * *`). Runs after `search-rollups` because it reads the dictionary.
-  The edge cache holds the list until 20 minutes past the next hour.
+* **Schedule:** `supabase/cron/schedule.sql` (job `trending`, `2 * * * *`). Runs after `search-rollups` (at :57) because it reads the dictionary.
+  The edge cache holds the list until 5 minutes past the next hour.
 * **Check:** `select public.trending_status();` returns `{ ok, computedAt, ageMinutes, staleAfterHours }`. `ok: false` means the job has not
   run in `stale_hours`. The admin **Catalogue → Trending** page shows this as a red alert, and `supabase/cron/verify.sql` (5b) prints it.
 * **Admin → Catalogue → Trending:** the lists, **Pin**, **Hide**, hidden words and synonyms (reviewers and support admins).

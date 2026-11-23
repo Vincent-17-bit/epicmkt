@@ -141,19 +141,19 @@ select cron.schedule(
 -- hours ('7 */6 * * *') and keep refresh_top_searches() hourly.
 select cron.schedule(
   'search-rollups',
-  '2 * * * *',
+  '57 * * * *',
   $$ select public.refresh_search_rollups(); $$
 );
 
--- trending: every hour at :12, migration 0146. Rebuilds the stored trending lists ("Popular this week", "Rising
--- now", nationally and per county) from the daily search summary. It runs after search-rollups on purpose: it reads the type-ahead
+-- trending: every hour at :02, migration 0146. Rebuilds the stored trending lists ("Popular this week", "Rising
+-- now", nationally and per county) from the daily search summary. It runs after search-rollups on purpose (which runs at :57, so the dictionary is finished well before): it reads the type-ahead
 -- dictionary to tell a store from a product from a category. Plain SQL inside the database.
--- /api/products caches the list until 20 minutes past the next hour, so visitors see the new list within minutes.
+-- /api/products caches the list until 5 minutes past the next hour, so visitors see the new list within minutes.
 -- A list older than trending_settings.stale_hours (3) is not served: the live count of the last 24 hours is shown instead, and
 -- trending_status() says "ok: false" (check 5b in verify.sql). Without this job nothing breaks, it just falls back to the live count.
 select cron.schedule(
   'trending',
-  '12 * * * *',
+  '2 * * * *',
   $$ select public.refresh_trending(); $$
 );
 

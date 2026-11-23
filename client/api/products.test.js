@@ -389,18 +389,18 @@ describe("/api/products", () => {
       expect(rpcs()).toContain("trending_lists");
     });
 
-    it("is cached until 20 minutes past the next hour (the list is rebuilt every hour)", async () => {
+    it("is cached until 5 minutes past the next hour (the list is rebuilt at :02)", async () => {
       answer({ trending_lists: () => new Response(JSON.stringify(lists), { status: 200 }) });
       vi.useFakeTimers({ toFake: ["Date"] });
       const maxage = async (iso) => {
         vi.setSystemTime(new Date(iso));
         return Number((await call("op=trending")).headers.get("Cache-Control").match(/s-maxage=(\d+)/)[1]);
       };
-      expect(await maxage("2026-03-01T10:50:00Z")).toBe(30 * 60); // 10:50 -> 11:20
-      expect(await maxage("2026-03-01T11:59:00Z")).toBe(21 * 60); // 11:59 -> 12:20
-      expect(await maxage("2026-03-01T12:10:00Z")).toBe(10 * 60); // the new list is not cached before 12:20
-      expect(await maxage("2026-03-01T12:30:00Z")).toBe(50 * 60); // 12:30 -> 13:20
-      expect(await maxage("2026-03-01T12:20:00Z")).toBe(60); // never less than a minute
+      expect(await maxage("2026-03-01T10:50:00Z")).toBe(15 * 60);
+      expect(await maxage("2026-03-01T11:59:00Z")).toBe(6 * 60);
+      expect(await maxage("2026-03-01T12:03:00Z")).toBe(2 * 60);
+      expect(await maxage("2026-03-01T12:30:00Z")).toBe(35 * 60);
+      expect(await maxage("2026-03-01T12:05:00Z")).toBe(60);
     });
 
     it("passes a known county to the database and ignores anything else", async () => {
