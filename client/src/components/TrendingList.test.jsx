@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import TrendingList, { searchesText } from "./TrendingList.jsx";
+import TrendingList from "./TrendingList.jsx";
 
 const items = [
   { term: "gas", label: "Gas 6kg", kind: "product", count: 1200 },
@@ -18,10 +18,9 @@ describe("TrendingList", () => {
     expect(screen.getAllByRole("button")[0]).toHaveTextContent("Gas 6kg");
   });
 
-  it("shows real search counts only when there are some", () => {
-    expect(searchesText(1200)).toBe("1.2K searches");
-    expect(searchesText(1)).toBe("1 search");
-    expect(searchesText(0)).toBe("");
+  it("does not show how many searches were done", () => {
+    render(<TrendingList items={items} onPick={() => {}} />);
+    expect(screen.queryByText(/searches?$/)).toBeNull();
   });
 
   it("calls onPick with the row, and renders links when hrefFor is given", async () => {

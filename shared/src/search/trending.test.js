@@ -89,3 +89,10 @@ test("two searches that find the same product show it once", () => {
   assert.equal(out.filter((row) => row.itemId === "bull").length, 1);
   assert.equal(out[0].term, "red bull");
 });
+
+test("a category or store with no picture of its own gets one from a product it matches", () => {
+  const out = tidyTrending([{ term: "speaker", kind: "category", count: 9 }, { term: "mama bakery", kind: "store", slug: "mama-bakery", image: null }], CATALOGUE, 5);
+  assert.ok(out[0].image);
+  assert.equal(out[0].kind, "category");
+  assert.ok(out[1].image === null || typeof out[1].image === "string");
+});

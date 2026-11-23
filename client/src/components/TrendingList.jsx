@@ -8,10 +8,6 @@ import Flame from "./Flame.jsx";
 import { TrendKind } from "./TrendTabs.jsx";
 import styles from "./TrendingList.module.css";
 
-const compact = new Intl.NumberFormat("en-KE", { notation: "compact", maximumFractionDigits: 1 });
-
-export const searchesText = (count) => (Number(count) > 0 ? `${compact.format(count)} ${count === 1 ? "search" : "searches"}` : "");
-
 function Pic({ src, size }) {
   const [broken, setBroken] = useState(false);
   return (
@@ -26,7 +22,6 @@ function Pic({ src, size }) {
 }
 
 function Row({ item, rank, top, href, onPick }) {
-  const searches = searchesText(item.count);
   const body = (
     <>
       {rank ? <span className={styles.rank}>{rank}</span> : null}
@@ -38,10 +33,9 @@ function Row({ item, rank, top, href, onPick }) {
           </span>
         )}
         <span className={styles.name}>{trendLabel(item)}</span>
-        {(top || searches) && (
+        {top && (
           <span className={styles.meta}>
-            {top && <TrendKind kind={item.kind} />}
-            {searches && <span>{searches}</span>}
+            <TrendKind kind={item.kind} />
           </span>
         )}
       </span>
