@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0147). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
+-- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0148). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. A part run before the one before it stops without changing anything.
@@ -1022,7 +1022,29 @@ revoke all on function public.trending_lists(text, integer) from public;
 grant execute on function public.trending_lists(text, integer) to anon, authenticated, service_role;
 
 
-$m_0147_visibility_everywhere$)
+$m_0147_visibility_everywhere$),
+    ('0148_trending_schedule', $m_0148_trending_schedule$
+-- The trending lists are rebuilt at :02 past each hour (was :12). search-rollups, which the trending job reads after, moves to :57 so
+-- the dictionary is always finished before. supabase/cron/schedule.sql carries the same times for a fresh project.
+do $$
+declare v_id bigint;
+begin
+  if to_regnamespace('cron') is null then
+    return;
+  end if;
+  select jobid into v_id from cron.job where jobname = 'search-rollups';
+  if v_id is not null then
+    perform cron.alter_job(v_id, schedule := '57 * * * *');
+  end if;
+  select jobid into v_id from cron.job where jobname = 'trending';
+  if v_id is not null then
+    perform cron.alter_job(v_id, schedule := '2 * * * *');
+  end if;
+exception when others then
+  raise notice 'trending schedule not changed here (%); run supabase/cron/schedule.sql instead', sqlerrm;
+end $$;
+
+$m_0148_trending_schedule$)
     ) as t(f, body) order by t.f loop
       -- A part run again skips what this catch-up already applied: running a migration twice can fail (a view cannot lose columns).
       if m.f >= v_first and not exists (select 1 from catch_up.log l where l.migration = m.f and l.result = 'applied') then
