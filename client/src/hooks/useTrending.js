@@ -25,9 +25,9 @@ export function useTrending({ enabled = true, refetch = true } = {}) {
   const rising = data?.rising ?? [];
   const tab = chosen === "rising" && rising.length > 0 ? "rising" : "popular";
   // Most searched first, whatever order the server sent: the top ten are the ten with the highest search counts (ties alphabetical),
-  // and the flame goes to the one at the top. Rising keeps the server's own order (it ranks by how fast a word is growing).
+  // and the one at the top is the one shown with the flame. Rising keeps the server's own order (it ranks by how fast a word is growing).
   const ranked = tab === "rising" ? rising : [...popular].sort((a, b) => Number(Boolean(a.filler)) - Number(Boolean(b.filler)) || (b.count ?? 0) - (a.count ?? 0) || String(a.term).localeCompare(String(b.term)));
-  const list = ranked.slice(0, TOP).map((item, index) => ({ ...item, top: index === 0 && !item.filler }));
+  const list = ranked.slice(0, TOP);
   let scopeNote = null;
   if (county && data && !data.live) {
     if (data.fallback === "national") scopeNote = `Not many searches in ${county} yet, showing all of Kenya`;

@@ -40,7 +40,6 @@ function Row({ item, rank, top, href, onPick }) {
         )}
       </span>
       {!top && <TrendKind kind={item.kind} />}
-      {!top && item.hot && <Flame className={styles.hot} />}
     </>
   );
   const props = { className: styles.row, "data-top": top || undefined };

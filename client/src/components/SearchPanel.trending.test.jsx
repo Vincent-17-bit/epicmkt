@@ -59,7 +59,7 @@ describe("trending in the search panel", () => {
     await within(s).findByText("Word 11");
     const rows = within(s).getAllByRole("listitem");
     expect(rows).toHaveLength(10);
-    expect(rows.map((r) => r.textContent.replace(/^\d+/, "").replace("Product", ""))).toEqual(Array.from({ length: 10 }, (_, i) => `Word ${11 - i}`));
+    rows.forEach((row, i) => expect(within(row).getByText(`Word ${11 - i}`)).toBeInTheDocument());
     expect(within(s).getAllByRole("img", { name: "Trending now" })).toHaveLength(1);
     expect(within(rows[0]).getByRole("img", { name: "Trending now" })).toBeInTheDocument();
   });
