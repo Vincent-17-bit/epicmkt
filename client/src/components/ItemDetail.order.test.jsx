@@ -36,8 +36,8 @@ const tail = (v = "") => `\nPlease confirm it is available and how I can pay and
 const wa = "https://wa.me/254712555101?text=";
 
 describe("order now", () => {
-  it("is absent for an item with no quantity control, so those pages are unchanged", async () => {
-    mount(phoneDetail());
+  it("is absent for an item whose price is not per quantity", async () => {
+    mount(phoneDetail({ quantityMode: "none" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(order()).toBeNull();
   });

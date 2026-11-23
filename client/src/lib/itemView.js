@@ -1,4 +1,4 @@
-import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityModeOf, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -49,8 +49,10 @@ const isBlank = (value) => value === undefined || value === null || value === ""
  * and the page has no stepper (an item without a type, or a type with no quantity, is exactly as before).
  */
 export function quantityInfo(item, variant = null) {
-  const mode = item?.quantityMode;
-  if (mode !== "units" && mode !== "measure") return null;
+  // An item with no quantity mode is a whole-unit item (the rule in shared/quantity.js), so every product can be bought in a number.
+  // Only a "none" item (the price is not per quantity) and a service with no mode of its own (booked, not counted) have none.
+  const mode = quantityModeOf(item);
+  if ((mode !== "units" && mode !== "measure") || (item?.kind === "service" && !item?.quantityMode)) return null;
   const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
   const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
   return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
