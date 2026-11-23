@@ -13,6 +13,7 @@ import { DEFAULT_IDLE, useIdle } from "../state/useIdle.js";
 import { useRealtime } from "../lib/useRealtime.js";
 import { useEffect, useState } from "react";
 import { mediaUrl } from "../api/shape.js";
+import { adminBusinessesUrl, clearAdminAccess, getAdminAccess } from "../lib/adminAccess.js";
 import { initialsOf } from "../lib/initials.js";
 import ui from "../styles/ui.module.css";
 import styles from "./Layout.module.css";
@@ -146,10 +147,33 @@ export default function Layout() {
     useSettings.getState().reset();
     navigate("/login");
   };
+  // An EpicMKT admin is here, managing this business: they see a bar that says so, with a button that closes the seller site.
+  const [adminAccess, setAdminState] = useState(getAdminAccess);
+  const closeSellerSite = async () => {
+    const back = adminBusinessesUrl(adminAccess?.admin);
+    try { await api.logout(); } catch { /* the session is dropped below either way */ }
+    clearAdminAccess();
+    setAdminState(null);
+    qc.clear();
+    useSettings.getState().reset();
+    // A tab the admin app opened can close itself. If this one cannot, go back to the admin app, or to the sign-in page.
+    window.close();
+    setTimeout(() => { if (back) window.location.assign(back); else navigate("/login"); }, 250);
+  };
   const idle = useIdle({ minutes: DEFAULT_IDLE, active: Boolean(business), onTimeout: signOut });
 
   return (
     <div className={styles.shell}>
+      {adminAccess && (
+        <div className={styles.adminBar} role="region" aria-label="Admin access" data-testid="admin-bar">
+          <p>
+            <strong>Admin mode.</strong>{" "}
+            <span className={styles.adminLong}>You are managing <strong>{adminAccess.business || business?.name || "this business"}</strong> as EpicMKT staff. What you change here is saved on their site.</span>
+            <span className={styles.adminShort}>{adminAccess.business || business?.name || "This business"}</span>
+          </p>
+          <button type="button" onClick={closeSellerSite}>Close seller site</button>
+        </div>
+      )}
       <header className={styles.header}>
         {/* The shop mark and name open My listings (a suspended seller cannot open it, so they go to Notifications). */}
         <Link to={suspended ? "/business/notifications" : "/business/catalog"} className={styles.brand}>
@@ -214,7 +238,7 @@ export default function Layout() {
           </div>
         )}
         {renew && <RenewReminder notice={renew} />}
-        {!suspended && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
+        {!suspended && !adminAccess && business?.mustChangePassword && !pathname.startsWith("/business/account") && <SetupNotice />}
         {allowed ? <Outlet /> : <p className={ui.muted} data-testid="locked">This page is not available while your account is suspended.</p>}
       </main>
       {/* Only mounted while there is a message, so it never adds a second status region to a page. */}

@@ -4,6 +4,7 @@ import * as api from "./api/index.js";
 import Layout from "./components/Layout.jsx";
 import RequireSeller from "./components/RequireSeller.jsx";
 import Login from "./pages/Login.jsx";
+import AdminAccess from "./pages/AdminAccess.jsx";
 import Subscription from "./pages/business/Subscription.jsx";
 import Receipt from "./pages/business/Receipt.jsx";
 import Notifications from "./pages/business/Notifications.jsx";
@@ -38,6 +39,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/admin-access" element={<AdminAccess />} />
       <Route element={<RequireSeller />}>
         {/* The item editor is a page of its own, without the app's bottom navigation, so it can have its own bars. */}
         <Route path="/business/catalog/add" element={<AddItem />} />

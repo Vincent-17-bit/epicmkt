@@ -612,6 +612,8 @@ export async function getLoginDelivery(businessId) {
   );
   return data ?? [];
 }
+// A one-time sign-in token for this business's own seller login: { businessName, sellerId, tokenHash }. The seller site exchanges it for a session.
+export const openSellerSite = ({ businessId, reason }) => callFunction("admin-open-seller", { businessId, reason });
 export const resendLogin = ({ businessId, reason }) => callFunction("admin-reset-seller-password", { businessId, reason });
 export const getBusinessPayments = (id) => detailRpc("admin_business_payments", { p_id: id });
 export const getBusinessActivity = (id) => detailRpc("admin_business_activity", { p_id: id, p_limit: 50 });

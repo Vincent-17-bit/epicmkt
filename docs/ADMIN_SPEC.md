@@ -13,6 +13,7 @@ Validation errors return 400, a missing role 403, a rate limit 429.
 | `admin-decide-application` | owner, reviewer | 60 per minute |
 | `admin-confirm-payment` | owner, finance | 30 per minute |
 | `admin-reset-seller-password` | owner | 5 per hour |
+| `admin-open-seller` | owner | 20 per hour |
 
 ### admin-decide-application
 
@@ -50,6 +51,10 @@ A duplicate M-Pesa code is a hard block (409 `duplicate_mpesa_code`), not an ack
 ### admin-reset-seller-password
 
 `{ businessId, reason }`: new temporary password, `must_change_password = true`, sent by SMS and email, audited. The reason is required.
+
+### admin-open-seller
+
+`{ businessId, reason? }`: returns a one-time sign-in token hash for that business's own seller login (Supabase `magiclink`, sent nowhere). The seller site exchanges it for a normal seller session for that one business, so the admin sees and edits exactly what the seller sees. The password is not read or changed, and the call is audited (`business.admin_open_seller`). 404 for an unknown or deleted business, 409 when it has no login.
 
 ## 7C. Businesses
 
