@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faLocationArrow, faPhone } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { directionsLink, formatDistance, formatKes, distanceKm, telLink, whatsappLink } from "@epicmkt/shared";
+import { directionsLink, formatDate, formatDistance, formatKes, formatTime, distanceKm, telLink, whatsappLink } from "@epicmkt/shared";
 import { resizedUrl } from "@epicmkt/ui";
 import { logContactEvent, logEvent } from "../../api/index.js";
 import { listMessage } from "../../lib/itemView.js";
@@ -18,11 +18,10 @@ import styles from "./ShopGroup.module.css";
 
 const FIRST = 4;
 
+// "Sent today, 7:51 pm" or "Sent 25 Oct": in the viewer's zone, through the shared formatters (never toLocale...String with no zone).
 const sentText = (at) => {
-  const d = new Date(at);
-  const today = new Date().toDateString() === d.toDateString();
-  const time = d.toLocaleTimeString("en-KE", { hour: "numeric", minute: "2-digit", hour12: false });
-  return today ? fill("saved.sentAt", { time }) : fill("saved.sentOn", { date: d.toLocaleDateString("en-KE", { day: "numeric", month: "short" }) });
+  const same = formatDate(at) === formatDate(Date.now());
+  return same ? fill("saved.sentAt", { time: formatTime(at) }) : fill("saved.sentOn", { date: formatDate(at, { year: undefined }) });
 };
 
 // One shop's box: its head, its lines (the first four, then "Show N more"), its subtotal and the one button that sends the whole list.
