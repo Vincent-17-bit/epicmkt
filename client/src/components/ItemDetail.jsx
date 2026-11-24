@@ -213,9 +213,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const qtyDefault = qtyInfo?.rules.min ?? 1;
   const qty = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : qtyDefault;
   const setQty = (value) => setQtyChoice({ itemId, value });
-  // Every item can be ordered: one with a quantity control orders that quantity, anything else (a service, an item with no price yet)
-  // orders one. Without a price there is no total, and the message to the seller leaves the total out.
-  const order = current ? (orderLine({ shown, tiers, info: qtyInfo, qty }) ?? { qty, unit: null, total: NaN, measure: false, unitLabel: null }) : null;
+  const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const variantParam = option ? choiceToParam(option.axes, option.choice) : "";

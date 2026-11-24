@@ -23,7 +23,7 @@ export async function getTrendingOverview() {
   await wait();
   return {
     status: { ok: !state.stale, computedAt: new Date(Date.now() - (state.stale ? 7 : 1) * 3600_000).toISOString(), ageMinutes: state.stale ? 420 : 60, staleAfterHours: 5, minPeople: 3 },
-    popular: state.popular, rising: state.rising, counties: ["kisumu", "nairobi"], pins: state.pins, hidden: state.hidden, synonyms: state.synonyms
+    popular: state.popular, rising: state.rising, pins: state.pins, hidden: state.hidden, synonyms: state.synonyms
   };
 }
 

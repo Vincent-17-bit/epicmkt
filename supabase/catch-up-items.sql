@@ -18857,7 +18857,463 @@ exception when others then
   raise notice 'trending schedule not changed here (%); run supabase/cron/schedule.sql instead', sqlerrm;
 end $$;
 
-$m_0148_trending_schedule$)
+$m_0148_trending_schedule$),
+    ('0149_trending_global', $m_0149_trending_global$
+-- Trending is global: one list for everyone, not per county.
+--   log_search        still accepts a county (old callers keep working) but stores none
+--   refresh_trending  builds only the everywhere ('*') lists
+--   trending_lists    ignores any county it is given
+-- Rows left over from the county lists are removed below.
+
+create or replace function public.log_search(p_term text, p_county text default null) returns void
+-- timezone is pinned to UTC as 0048 did for the one-argument version: current_date below is part of the anonymous hash, so it must not move with
+-- the connection's zone (supabase/tests/timezone.test.mjs).
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '2s' set timezone = 'UTC' as
+$$
+declare
+  v_term text := lower(regexp_replace(btrim(coalesce(p_term, '')), '\s+', ' ', 'g'));
+  v_county text := lower(regexp_replace(btrim(coalesce(p_county, '')), '\s+', ' ', 'g'));
+  v_headers jsonb;
+  v_ip text;
+  v_client text;
+begin
+  if char_length(v_term) < 2 or char_length(v_term) > 60
+    or cardinality(string_to_array(v_term, ' ')) > 6
+    or v_term !~ '^[[:alnum:] ''&-]+$'
+    or v_term !~ '[[:alpha:]]' then
+    return;
+  end if;
+  v_county := null;
+
+  v_headers := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb;
+  v_ip := coalesce(nullif(btrim(v_headers ->> 'cf-connecting-ip'), ''), nullif(btrim(v_headers ->> 'x-real-ip'), ''));
+  if v_ip is null then
+    return;
+  end if;
+
+  v_client := encode(digest((select salt from public.search_salt limit 1) || ':' || current_date::text || ':' || v_ip, 'sha256'), 'hex');
+
+  if (select count(*) from public.search_events where client_hash = v_client and at > now() - interval '1 minute') >= 12 then
+    return;
+  end if;
+  if (select count(*) from public.search_events where at > now() - interval '1 minute') >= 300 then
+    return;
+  end if;
+
+  insert into public.search_events (term, client_hash, bucket, county)
+  values (v_term, v_client, floor(extract(epoch from now()) / 3600)::bigint, v_county)
+  on conflict do nothing;
+
+  if random() < 0.01 then
+    delete from public.search_events
+    where id in (select id from public.search_events where at < now() - interval '2 days' order by at limit 5000);
+  end if;
+exception when others then
+  return;
+end $$;
+
+create or replace function public.refresh_trending() returns void
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '90s' as
+$$
+declare
+  s public.trending_settings;
+  v_today date := (now() at time zone 'Africa/Nairobi')::date;
+  v_from timestamptz := (((now() at time zone 'Africa/Nairobi')::date - 1)::timestamp at time zone 'Africa/Nairobi');
+  v_traffic integer;
+  v_min integer;
+begin
+  select * into s from public.trending_settings limit 1;
+  select count(distinct client_hash) into v_traffic from public.search_events where at > now() - interval '48 hours';
+  v_min := least(s.min_people_cap, greatest(s.min_people, ceil(coalesce(v_traffic, 0) * s.min_people_pct)::integer));
+
+  drop table if exists t_ev, t_cand, t_res;
+
+  -- a) the daily summary: today and yesterday are always complete in search_events (kept 2 days); a count never goes down.
+  create temp table t_ev on commit drop as
+    select (e.at at time zone 'Africa/Nairobi')::date as day, e.client_hash,
+           public.search_group_key(l.label) as key, l.label
+    from public.search_events e
+    cross join lateral (select public.search_canon_label(e.term) as label) l
+    where e.at >= v_from;
+  delete from t_ev where key = '';
+
+  insert into public.search_term_daily (day, term, scope, label, people)
+  select day, key, '*', mode() within group (order by label), count(distinct client_hash) from t_ev group by day, key
+  on conflict (day, scope, term) do update
+    set people = greatest(public.search_term_daily.people, excluded.people), label = excluded.label;
+
+  delete from public.search_term_daily where day < v_today - s.keep_days;
+
+  -- b) candidates: popular (the window's people) and rising (last 24 h against the term's own average of the 7 days before today).
+  create temp table t_cand on commit drop as
+  with pop as (
+    select d.scope, d.term as key, sum(d.people)::integer as people,
+           (array_agg(d.label order by d.people desc, d.day desc))[1] as label
+    from public.search_term_daily d
+    where d.scope = '*' and d.day between v_today - (s.popular_days - 1) and v_today
+    group by d.scope, d.term
+  ), r24 as (
+    select scope, key, count(distinct client_hash)::integer as people, mode() within group (order by label) as label
+    from (
+      select '*' as scope, public.search_group_key(l.label) as key, e.client_hash, l.label
+      from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+      where e.at > now() - interval '24 hours'
+    ) x where key <> '' group by scope, key
+  ), base as (
+    select scope, term as key, sum(people)::numeric / 7.0 as per_day
+    from public.search_term_daily where scope = '*' and day between v_today - 7 and v_today - 1 group by scope, term
+  )
+  select 'popular'::text as list, p.scope, p.key, p.label, p.people, null::numeric as ratio
+  from pop p where p.people >= v_min
+  union all
+  select 'rising', r.scope, r.key, r.label, r.people, round(r.people / greatest(coalesce(b.per_day, 0), 1.0), 2)
+  from r24 r left join base b on b.scope = r.scope and b.key = r.key
+  where r.people >= v_min and r.people / greatest(coalesce(b.per_day, 0), 1.0) >= s.rising_min_ratio;
+
+  -- hidden words never show; pins are added to the popular list.
+  delete from t_cand c where exists (select 1 from public.search_blocklist b where position(b.term in c.label) > 0 or position(b.term in c.key) > 0);
+
+  insert into t_cand (list, scope, key, label, people, ratio)
+  select 'popular', sc.scope, public.search_group_key(public.search_canon_label(p.term)), public.search_canon_label(p.term), 0, null
+  from public.search_trending_pins p
+  cross join (select '*' as scope) sc
+  where p.expires_at > now()
+    and not exists (select 1 from public.search_blocklist b where position(b.term in p.term) > 0);
+  delete from t_cand where key = '';
+
+  -- c) resolve each distinct term once: only what a shopper can reach right now survives.
+  create temp table t_res on commit drop as
+  select k.key, k.label, r.*
+  from (select distinct on (key) key, label from t_cand order by key, people desc) k
+  cross join lateral public.search_trending_resolve(k.label) r;
+
+  -- d) store the lists.
+  delete from public.search_trending;
+
+  insert into public.search_trending (list, scope, rank, term, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price)
+  select list, scope, row_number() over (partition by list, scope order by pinned desc, sortv desc, label) as rank,
+         key, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price
+  from (
+    select c.list, c.scope, c.key, c.label, c.people, c.ratio, r.kind, r.name, r.item_id, r.slug, r.image, r.price,
+           (c.list = 'popular' and exists (select 1 from t_cand x where x.list = 'rising' and x.scope = c.scope and x.key = c.key)) as hot,
+           (c.list = 'popular' and exists (select 1 from public.search_trending_pins p
+                                           where p.expires_at > now() and public.search_group_key(public.search_canon_label(p.term)) = c.key)) as pinned,
+           case when c.list = 'rising' then coalesce(c.ratio, 0) * 1000 + c.people else c.people end as sortv
+    from (select distinct on (list, scope, key) * from t_cand order by list, scope, key, people desc) c
+    join t_res r on r.key = c.key
+  ) q;
+
+  delete from public.search_trending where rank > 20;
+  update public.trending_settings set last_run_at = now();
+end $$;
+
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+begin
+  if v_fresh then
+    select last_run_at into v_at from public.trending_settings limit 1;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending where list = 'popular' and scope = v_scope order by rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending where list = 'rising' and scope = v_rscope order by rank limit v_limit) t;
+  else
+    -- the stored list is missing or older than stale_hours: the live count (0039) of the last 24 hours, kind unknown
+    v_live := true;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    -- a young site: nothing has been searched enough yet, so show the busiest categories
+    v_fallback := 'categories';
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by weight desc, label) as rn, label, ref as slug
+                       from public.search_terms where kind = 'category' order by weight desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'fallback', v_fallback,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+revoke all on function public.refresh_trending() from public, anon, authenticated;
+grant execute on function public.refresh_trending() to service_role;
+revoke all on function public.trending_lists(text, integer) from public;
+grant execute on function public.trending_lists(text, integer) to anon, authenticated, service_role;
+revoke all on function public.log_search(text, text) from public;
+grant execute on function public.log_search(text, text) to anon, authenticated, service_role;
+
+update public.search_events set county = null where county is not null;
+delete from public.search_term_daily where scope <> '*';
+delete from public.search_trending where scope <> '*';
+
+select public.refresh_trending();
+
+$m_0149_trending_global$),
+    ('0150_trending_read_live', $m_0150_trending_read_live$
+-- Trending read, global. Restores the read-time live check that 0147 added (trending_row_is_live), which 0149 left out, and ranks the
+-- "nothing searched yet" categories by how many live shops each has instead of a fixed weight.
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+begin
+  if v_fresh then
+    select last_run_at into v_at from public.trending_settings limit 1;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending s where s.list = 'popular' and s.scope = v_scope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending s where s.list = 'rising' and s.scope = v_rscope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+  else
+    -- the stored list is missing or older than stale_hours: the live count (0039) of the last 24 hours, kind unknown
+    v_live := true;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    -- a young site: nothing has been searched enough yet, so show the categories with the most live shops (a real count, no fixed order)
+    v_fallback := 'categories';
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by n desc, label) as rn, label, slug
+                       from (select t.label, t.ref as slug,
+                                    (select count(*) from public.businesses b where b.category_id = t.ref and public.business_is_visible(b)) as n
+                             from public.search_terms t where t.kind = 'category') c
+                       order by n desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'fallback', v_fallback,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+revoke all on function public.trending_lists(text, integer) from public;
+grant execute on function public.trending_lists(text, integer) to anon, authenticated, service_role;
+
+$m_0150_trending_read_live$),
+    ('0151_trending_ties', $m_0151_trending_ties$
+-- Trending ties: two terms with the same number of searchers are ordered by who was searched by more people in the last 24 hours, then by name.
+
+create or replace function public.refresh_trending() returns void
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '90s' as
+$$
+declare
+  s public.trending_settings;
+  v_today date := (now() at time zone 'Africa/Nairobi')::date;
+  v_from timestamptz := (((now() at time zone 'Africa/Nairobi')::date - 1)::timestamp at time zone 'Africa/Nairobi');
+  v_traffic integer;
+  v_min integer;
+begin
+  select * into s from public.trending_settings limit 1;
+  select count(distinct client_hash) into v_traffic from public.search_events where at > now() - interval '48 hours';
+  v_min := least(s.min_people_cap, greatest(s.min_people, ceil(coalesce(v_traffic, 0) * s.min_people_pct)::integer));
+
+  drop table if exists t_ev, t_cand, t_res;
+
+  -- a) the daily summary: today and yesterday are always complete in search_events (kept 2 days); a count never goes down.
+  create temp table t_ev on commit drop as
+    select (e.at at time zone 'Africa/Nairobi')::date as day, e.client_hash,
+           public.search_group_key(l.label) as key, l.label
+    from public.search_events e
+    cross join lateral (select public.search_canon_label(e.term) as label) l
+    where e.at >= v_from;
+  delete from t_ev where key = '';
+
+  insert into public.search_term_daily (day, term, scope, label, people)
+  select day, key, '*', mode() within group (order by label), count(distinct client_hash) from t_ev group by day, key
+  on conflict (day, scope, term) do update
+    set people = greatest(public.search_term_daily.people, excluded.people), label = excluded.label;
+
+  delete from public.search_term_daily where day < v_today - s.keep_days;
+
+  -- b) candidates: popular (the window's people) and rising (last 24 h against the term's own average of the 7 days before today).
+  create temp table t_cand on commit drop as
+  with pop as (
+    select d.scope, d.term as key, sum(d.people)::integer as people,
+           (array_agg(d.label order by d.people desc, d.day desc))[1] as label
+    from public.search_term_daily d
+    where d.scope = '*' and d.day between v_today - (s.popular_days - 1) and v_today
+    group by d.scope, d.term
+  ), r24 as (
+    select scope, key, count(distinct client_hash)::integer as people, mode() within group (order by label) as label
+    from (
+      select '*' as scope, public.search_group_key(l.label) as key, e.client_hash, l.label
+      from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+      where e.at > now() - interval '24 hours'
+    ) x where key <> '' group by scope, key
+  ), base as (
+    select scope, term as key, sum(people)::numeric / 7.0 as per_day
+    from public.search_term_daily where scope = '*' and day between v_today - 7 and v_today - 1 group by scope, term
+  )
+  select 'popular'::text as list, p.scope, p.key, p.label, p.people, null::numeric as ratio
+  from pop p where p.people >= v_min
+  union all
+  select 'rising', r.scope, r.key, r.label, r.people, round(r.people / greatest(coalesce(b.per_day, 0), 1.0), 2)
+  from r24 r left join base b on b.scope = r.scope and b.key = r.key
+  where r.people >= v_min and r.people / greatest(coalesce(b.per_day, 0), 1.0) >= s.rising_min_ratio;
+
+  -- hidden words never show; pins are added to the popular list.
+  delete from t_cand c where exists (select 1 from public.search_blocklist b where position(b.term in c.label) > 0 or position(b.term in c.key) > 0);
+
+  insert into t_cand (list, scope, key, label, people, ratio)
+  select 'popular', sc.scope, public.search_group_key(public.search_canon_label(p.term)), public.search_canon_label(p.term), 0, null
+  from public.search_trending_pins p
+  cross join (select '*' as scope) sc
+  where p.expires_at > now()
+    and not exists (select 1 from public.search_blocklist b where position(b.term in p.term) > 0);
+  delete from t_cand where key = '';
+
+  -- c) resolve each distinct term once: only what a shopper can reach right now survives.
+  create temp table t_res on commit drop as
+  select k.key, k.label, r.*
+  from (select distinct on (key) key, label from t_cand order by key, people desc) k
+  cross join lateral public.search_trending_resolve(k.label) r;
+
+  -- d) store the lists. A tie in people is settled by who was searched by more people in the last 24 hours, then by name.
+  create temp table t_r24 on commit drop as
+  select public.search_group_key(l.label) as key, count(distinct e.client_hash)::integer as people
+  from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+  where e.at > now() - interval '24 hours'
+  group by 1;
+
+  delete from public.search_trending;
+
+  insert into public.search_trending (list, scope, rank, term, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price)
+  select list, scope, row_number() over (partition by list, scope order by pinned desc, sortv desc, recent desc, label) as rank,
+         key, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price
+  from (
+    select c.list, c.scope, c.key, c.label, c.people, c.ratio, r.kind, r.name, r.item_id, r.slug, r.image, r.price,
+           (c.list = 'popular' and exists (select 1 from t_cand x where x.list = 'rising' and x.scope = c.scope and x.key = c.key)) as hot,
+           (c.list = 'popular' and exists (select 1 from public.search_trending_pins p
+                                           where p.expires_at > now() and public.search_group_key(public.search_canon_label(p.term)) = c.key)) as pinned,
+           case when c.list = 'rising' then coalesce(c.ratio, 0) * 1000 + c.people else c.people end as sortv,
+           coalesce((select x.people from t_r24 x where x.key = c.key), 0) as recent
+    from (select distinct on (list, scope, key) * from t_cand order by list, scope, key, people desc) c
+    join t_res r on r.key = c.key
+  ) q;
+
+  delete from public.search_trending where rank > 20;
+  update public.trending_settings set last_run_at = now();
+end $$;
+
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+begin
+  if v_fresh then
+    select last_run_at into v_at from public.trending_settings limit 1;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending where list = 'popular' and scope = v_scope order by rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending where list = 'rising' and scope = v_rscope order by rank limit v_limit) t;
+  else
+    -- the stored list is missing or older than stale_hours: the live count (0039) of the last 24 hours, kind unknown
+    v_live := true;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    -- a young site: nothing has been searched enough yet, so show the busiest categories
+    v_fallback := 'categories';
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by weight desc, label) as rn, label, ref as slug
+                       from public.search_terms where kind = 'category' order by weight desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'fallback', v_fallback,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+revoke all on function public.refresh_trending() from public, anon, authenticated;
+grant execute on function public.refresh_trending() to service_role;
+
+select public.refresh_trending();
+
+$m_0151_trending_ties$),
+    ('0152_submit_report', $m_0152_submit_report$
+-- A shopper's "Report this business": saved to public.reports (it was only kept by the demo backend before).
+-- The caller is recognised by a daily-salted hash of the request address, never stored raw; the same shopper reporting the same shop
+-- again the same day is accepted but not stored twice, and one address can send at most 5 reports an hour.
+
+create or replace function public.submit_report(p_business uuid, p_reason text, p_message text default '', p_contact text default '') returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as $$
+declare
+  v_message text := btrim(coalesce(p_message, ''));
+  v_contact text := btrim(coalesce(p_contact, ''));
+  v_fields jsonb := '{}'::jsonb;
+  v_headers jsonb;
+  v_ip text;
+  v_hash text;
+  v_details text;
+begin
+  if p_business is null or not exists (select 1 from public.businesses b where b.id = p_business and public.business_is_visible(b)) then
+    return jsonb_build_object('ok', false, 'error', 'not_found');
+  end if;
+  if p_reason is null or p_reason not in ('wrong-info', 'closed', 'wrong-contact', 'scam', 'inappropriate', 'other') then v_fields := v_fields || '{"reason":"Choose a reason"}'; end if;
+  if char_length(v_message) > 500 then v_fields := v_fields || '{"message":"Keep it under 500 characters"}';
+  elsif p_reason = 'other' and char_length(v_message) < 5 then v_fields := v_fields || '{"message":"Tell us what is wrong"}'; end if;
+  if char_length(v_contact) > 80 then v_fields := v_fields || '{"contact":"Keep it under 80 characters"}'; end if;
+  if v_fields <> '{}'::jsonb then return jsonb_build_object('ok', false, 'error', 'invalid', 'fields', v_fields); end if;
+
+  v_headers := coalesce(nullif(current_setting('request.headers', true), ''), '{}')::jsonb;
+  v_ip := coalesce(nullif(btrim(v_headers ->> 'cf-connecting-ip'), ''), nullif(btrim(v_headers ->> 'x-real-ip'), ''));
+  if v_ip is null then return jsonb_build_object('ok', false, 'error', 'unavailable'); end if;
+  v_hash := encode(digest((select salt from public.search_salt limit 1) || ':report:' || current_date::text || ':' || v_ip, 'sha256'), 'hex');
+
+  if not public.hit_rate_limit('report:' || v_hash, 5, 3600) then return jsonb_build_object('ok', false, 'error', 'rate_limited'); end if;
+  if exists (select 1 from public.reports r where r.business_id = p_business and r.reporter_hash = v_hash and r.created_at > now() - interval '1 day') then
+    return jsonb_build_object('ok', true);
+  end if;
+
+  v_details := nullif(btrim(v_message || case when v_contact <> '' then E'\nContact: ' || v_contact else '' end), '');
+  insert into public.reports (business_id, reason, details, reporter_hash) values (p_business, p_reason, v_details, v_hash);
+  return jsonb_build_object('ok', true);
+end $$;
+revoke all on function public.submit_report(uuid, text, text, text) from public;
+grant execute on function public.submit_report(uuid, text, text, text) to anon, authenticated, service_role;
+
+$m_0152_submit_report$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;

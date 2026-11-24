@@ -7,7 +7,13 @@
 html {
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
+  /* The page never scrolls sideways: whatever is too wide is cut at the viewport, not turned into a scrollbar (clip, unlike hidden,
+     leaves position: sticky working). Pinch zoom stays; only the double-tap zoom and the sideways rubber band are off. */
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  touch-action: manipulation;
   scrollbar-gutter: stable;
   scroll-padding-top: calc(var(--header-h) + var(--space-3));
 }
@@ -21,6 +27,7 @@ body {
   font-size: var(--text-md);
   line-height: 1.55;
   overflow-wrap: break-word;
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -32,7 +39,10 @@ p {
 }
 
 img,
-svg {
+svg,
+video,
+canvas,
+iframe {
   display: block;
   max-width: 100%;
 }
@@ -51,6 +61,16 @@ textarea {
 
 button {
   cursor: pointer;
+}
+
+/* iOS zooms the page in when a field under 16 px gets focus, and leaves it zoomed. Fields are 16 px on touch screens instead of
+   blocking zoom for everyone. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+  select,
+  textarea {
+    font-size: max(1rem, 16px);
+  }
 }
 
 a {

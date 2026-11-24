@@ -36,24 +36,10 @@ const tail = (v = "") => `\nPlease confirm it is available and how I can pay and
 const wa = "https://wa.me/254712555101?text=";
 
 describe("order now", () => {
-  it("is present for an item with no quantity type: it is a whole-unit item, ordered one at a time", async () => {
-    mount(phoneDetail());
+  it("is absent for an item whose price is not per quantity", async () => {
+    mount(phoneDetail({ quantityMode: "none" }));
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(order()).not.toBeNull();
-    expect(orderText()).toContain("Quantity: 1\nPrice: KES 21,000 each\nTotal: KES 21,000");
-  });
-
-  it("is also on the page itself (the Sold by card), not only in the footer bar", async () => {
-    mount(phoneDetail());
-    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(screen.getByTestId("order-whatsapp-inline")).toHaveAttribute("href", order().getAttribute("href"));
-  });
-
-  it("books a service once, with no quantity stepper", async () => {
-    mount(phoneDetail({ kind: "service", name: "Home braiding", options: undefined, optionVariants: undefined, defaultVariantId: undefined }));
-    await screen.findByRole("heading", { name: "Home braiding" });
-    expect(screen.queryByTestId("quantity")).toBeNull();
-    expect(orderText()).toContain("I'd like to book:");
+    expect(order()).toBeNull();
   });
 
   it("names the shop, every chosen option, quantity, price and total, even at quantity 1", async () => {
@@ -118,6 +104,13 @@ describe("order now", () => {
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(order()).toBeNull();
   });
+
+  it("is also on the page itself (the Sold by card), not only in the footer bar", async () => {
+    mount(phoneDetail({ quantityMode: "units" }));
+    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
+    expect(screen.getByTestId("order-whatsapp-inline")).toHaveAttribute("href", order().getAttribute("href"));
+  });
+
 
   it("counts the tap as a WhatsApp contact from the order placement", async () => {
     mount(phoneDetail({ quantityMode: "units" }));

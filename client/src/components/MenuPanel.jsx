@@ -4,9 +4,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
 import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
-import TrendTabs, { TrendNote } from "./TrendTabs.jsx";
 import TrendingList from "./TrendingList.jsx";
-import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
 import { routes } from "../config/routes.js";
@@ -33,7 +32,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   });
 
   // What shoppers search for, every kind in one ranking: popular this week and rising now, rebuilt every hour (migration 0146).
-  const { query: trending, tab, setTab, list: trend, real, filler, hasRising, scopeNote } = useTrending({ enabled: open });
+  const { query: trending, real, alsoRising } = useTrending({ enabled: open });
 
   const submit = (event) => {
     event.preventDefault();
@@ -78,15 +77,13 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             <IconButton type="submit" icon={faMagnifyingGlass} label={t("menu.searchButton")} className={styles.submit} />
           </form>
 
-          {(trending.isPending || trend.length > 0) && (
+          {(trending.isPending || real.length > 0) && (
             <section aria-labelledby="menu-trending" className={`${styles.trending} ${styles.areaTrend}`}>
               <div className={styles.trendHead}>
                 <h2 id="menu-trending" className={styles.label}>
-                  <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
+                  <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Top searches
                 </h2>
               </div>
-              <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
-              {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
               {trending.isPending ? (
                 <ol className={styles.trendList}>
                   {Array.from({ length: 6 }, (_, i) => (
@@ -98,10 +95,10 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
               ) : (
                 <TrendingList items={real} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
               )}
-              {!trending.isPending && filler.length > 0 && (
+              {!trending.isPending && alsoRising.length > 0 && (
                 <>
-                  <h3 className={styles.moreLabel}>Popular products</h3>
-                  <TrendingList items={filler} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
+                  <h3 className={styles.moreLabel}>Also rising fast</h3>
+                  <TrendingList items={alsoRising} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
                 </>
               )}
             </section>

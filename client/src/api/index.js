@@ -18,7 +18,7 @@ export const getNearbyBusinesses = (params) => browse.getNearbyBusinesses(params
 export const getSimilarBusinesses = (ref, limit) => browse.getSimilarBusinesses(ref, limit);
 export const getTopSearches = (limit) => browse.getTopSearches(limit);
 // Search terms and event payloads are the only things the app logs. Neither may carry a position, whichever adapter is live.
-export const logSearch = (term, county) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : quiet(() => browse.logSearch(term, county)));
+export const logSearch = (term) => (looksLikeCoordinates(term) ? Promise.resolve({ ok: false }) : quiet(() => browse.logSearch(term)));
 // Analytics must never surface an error to the visitor, so these swallow failures (sync throws and rejected promises alike).
 const quiet = (fn) => {
   try {
@@ -32,7 +32,7 @@ const quiet = (fn) => {
 export const logContactEvent = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logBusinessEvent(event)) : backend.logContactEvent(event)));
 export const logUnmetDemand = (event) => quiet(() => (isLive() ? import("./events.js").then((m) => m.logUnmetDemand(event)) : backend.logUnmetDemand(event)));
 export const resolveShortcode = (code) => flashApi.resolveShortcode(code);
-export const reportBusiness = (report) => backend.reportBusiness(report);
+export const reportBusiness = async (report) => (isLive() ? (await import("./reports.js")).submitReport(report) : backend.reportBusiness(report));
 export const getTowns = () => browse.getTowns();
 export const logEvent = (name, payload) => quiet(() => backend.logEvent(name, scrubPayload(payload)));
 export const getServerTime = () => flashApi.getServerTime();
@@ -53,7 +53,7 @@ export const items = {
   // Type-ahead while typing: { terms, products, stores, categories, corrected } (lib/suggest.js has the shape).
   suggest: (prefix) => products.getSuggest(prefix),
   // Trending searches for the menu, worked out on the hour: { computedAt, live, items: [{ term, count, hot, image, ... }] }.
-  getTrending: (county) => products.getTrending(county),
+  getTrending: () => products.getTrending(),
   getCounts: (filters) => products.getCounts(filters),
   getShowcase: (businessIds, opts) => flashApi.getShowcaseProducts(businessIds, opts),
   // The shoe conversion chart for the size chart modal; the built-in chart when the call fails.

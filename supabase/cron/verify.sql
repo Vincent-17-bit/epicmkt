@@ -32,5 +32,4 @@ select (select max(refreshed_at) from public.search_terms) as dictionary_refresh
 select public.trending_status() as trending_status,
        (select count(*) from public.search_trending where scope = '*' and list = 'popular') as popular_rows,
        (select count(*) from public.search_trending where scope = '*' and list = 'rising') as rising_rows,
-       (select count(distinct scope) - 1 from public.search_trending) as county_lists,
        (select count(*) from public.search_term_daily) as daily_summary_rows;

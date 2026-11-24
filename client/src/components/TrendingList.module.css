@@ -139,12 +139,6 @@
   font-weight: 600;
 }
 
-.hot {
-  flex: none;
-  width: 1rem;
-  height: 1rem;
-}
-
 @container (min-width: 34rem) {
   .list[data-ranked] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -154,4 +148,52 @@
   .first {
     grid-column: 1 / -1;
   }
+}
+
+/* The kind and the rising mark sit together at the row's end; on a phone the mark drops under the name so a long name keeps its room. */
+.tags {
+  display: inline-flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  max-width: 45%;
+}
+
+.rise {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 0.5rem;
+  border-radius: var(--radius-pill);
+  background: var(--flash-save-bg);
+  color: var(--flash-save-text);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.rise svg {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+/* The quickest riser is the one place the flash-sale red-orange fills a mark in full. */
+.rise[data-fastest] {
+  background: var(--flash-gradient);
+  color: var(--flash-band-text);
+}
+
+/* A word that is both in the top ten and the fastest riser: its whole row is tinted and carries a red-orange edge, so it is seen from a scroll away. */
+.row[data-fastest] {
+  background: var(--flash-save-bg);
+  box-shadow: inset 3px 0 0 var(--flash-price-sale);
+}
+
+.row[data-fastest] .tags {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
 }
