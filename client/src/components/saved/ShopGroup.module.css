@@ -125,6 +125,7 @@
 }
 
 .actions {
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -173,4 +174,21 @@
   margin: 0;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+/* A grid cell will not shrink below its content: the foot's children may, so the Send pill gives way instead of pushing Directions out of the box. */
+.foot > * {
+  min-width: 0;
+}
+
+/* On the narrowest phones the glyph goes and the label tightens, so Send, Call and Directions all fit in the box. */
+@media (max-width: 22.4375rem) {
+  .send {
+    padding: 0 8px;
+    font-size: 12.5px;
+  }
+
+  .send svg {
+    display: none;
+  }
 }
