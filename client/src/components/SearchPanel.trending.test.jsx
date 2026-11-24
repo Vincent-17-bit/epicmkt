@@ -110,11 +110,11 @@ describe("trending in the search panel", () => {
     expect(within(s).getByText("Solar Lamp")).toBeInTheDocument();
   });
 
-  it("with nothing rising there is no rising mark and no legend for it", async () => {
+  it("with nothing rising there is no rising mark", async () => {
     vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
-    expect(await within(s).findByText(/Most searched this week/)).toBeInTheDocument();
+    expect(await within(s).findByText("Gas Cylinder 6kg")).toBeInTheDocument();
     expect(within(s).queryByText(/rising/i)).toBeNull();
   });
 
@@ -143,25 +143,6 @@ describe("trending in the search panel", () => {
     await userEvent.click(await within(s).findByText("Red Bull Energy Drink - Assorted Flavors"));
     expect(onSelect).toHaveBeenCalledWith("/b/mama-njeri/i/item-9");
     expect(logSearch).not.toHaveBeenCalled();
-  });
-
-  it("filler products sit under their own heading, with no rank and no flame", async () => {
-    vi.mocked(items.getTrending).mockResolvedValue(
-      lists({
-        rising: [],
-        popular: [
-          { rank: 1, term: "gas cylinder", count: 9, hot: true, kind: "product", label: "Gas Cylinder 6kg" },
-          { term: "bread", count: 0, hot: false, kind: "product", filler: true, label: "White Bread 400g", itemId: "i1", slug: "mama" }
-        ]
-      })
-    );
-    panel();
-    const s = await section();
-    expect(await within(s).findByRole("heading", { name: "Popular products" })).toBeInTheDocument();
-    const rows = within(s).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === null);
-    expect(within(rows[0]).getByText("1")).toBeInTheDocument();
-    expect(rows[1]).toHaveTextContent("White Bread 400g");
-    expect(within(rows[1]).queryByText("2")).toBeNull();
   });
 
   it("a trending store opens its own page", async () => {

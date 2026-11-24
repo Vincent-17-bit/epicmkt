@@ -122,7 +122,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   }, [open]);
 
   // Popular this week and rising now, every kind of search in one ranking (migration 0146). Paused while the shopper is typing.
-  const { query: trending, list: trend, real, filler, alsoRising } = useTrending({ enabled: open, refetch: !typing });
+  const { query: trending, real, alsoRising } = useTrending({ enabled: open, refetch: !typing });
 
   const suggestions = useQuery({
     queryKey: ["suggest", debounced],
@@ -418,14 +418,13 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                 </section>
               )}
 
-              {(trending.isPending || trend.length > 0) && (
+              {(trending.isPending || real.length > 0) && (
                 <section aria-labelledby="search-top">
                   <div className={styles.head}>
                     <h2 id="search-top" className={styles.label}>
                       <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Top searches
                     </h2>
                   </div>
-                  <p className={styles.legend}>Most searched this week{real.some((item) => item.rising) || alsoRising.length > 0 ? <> · <span className={styles.legendRise}>↑ rising fast</span></> : null}</p>
                   {(trending.isPending || real.length > 0) && (
                     trending.isPending ? (
                       <ol className={styles.ranked}>
@@ -441,12 +440,6 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                   <TrendingList items={alsoRising} ranked={false} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
                 </>
               )}
-              {!trending.isPending && filler.length > 0 && (
-                    <>
-                      <h3 className={styles.moreLabel}>Popular products</h3>
-                      <TrendingList items={filler} ranked={false} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
-                    </>
-                  )}
                 </section>
               )}
             </div>
