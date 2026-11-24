@@ -1,5 +1,6 @@
 .frame {
   display: grid;
+  block-size: 20.5rem;
   border: 2px solid var(--border-strong);
   border-radius: 14px;
   background: var(--surface);

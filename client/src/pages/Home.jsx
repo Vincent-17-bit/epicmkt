@@ -1,3 +1,4 @@
+import { lazy } from "react";
 import { Link, useLocation, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,14 +14,16 @@ import PageBreadcrumbs from "../components/PageBreadcrumbs.jsx";
 import FlashStrip from "../components/FlashStrip.jsx";
 import PageBanner from "../components/PageBanner.jsx";
 import BrowseResults from "../components/BrowseResults.jsx";
-import FeaturedStores from "../components/FeaturedStores.jsx";
-import RecentlyAdded from "../components/RecentlyAdded.jsx";
+import Deferred from "../components/Deferred.jsx";
 import NearYou from "../components/NearYou.jsx";
-import HomeProducts from "../components/HomeProducts.jsx";
-import ListBusinessBanner from "../components/ListBusinessBanner.jsx";
 import StatusPage from "../components/StatusPage.jsx";
 import NotFound from "./NotFound.jsx";
 import styles from "./Home.module.css";
+
+const FeaturedStores = lazy(() => import("../components/FeaturedStores.jsx"));
+const RecentlyAdded = lazy(() => import("../components/RecentlyAdded.jsx"));
+const HomeProducts = lazy(() => import("../components/HomeProducts.jsx"));
+const ListBusinessBanner = lazy(() => import("../components/ListBusinessBanner.jsx"));
 
 function CategorySkeleton() {
   return (
@@ -152,9 +155,13 @@ export default function Home() {
         </Container>
       </section>
 
-      <FeaturedStores />
+      <Deferred height="24rem">
+        <FeaturedStores />
+      </Deferred>
 
-      <HomeProducts />
+      <Deferred height="60rem">
+        <HomeProducts />
+      </Deferred>
 
       <section id="categories" className={styles.section} aria-labelledby="categories-title">
         <Container>
@@ -198,11 +205,15 @@ export default function Home() {
         </Container>
       </section>
 
-      <RecentlyAdded />
+      <Deferred height="30rem">
+        <RecentlyAdded />
+      </Deferred>
 
       <section className={`${styles.section} ${styles.ctaSection}`} aria-labelledby="cta-title">
         <Container>
-          <ListBusinessBanner titleId="cta-title" />
+          <Deferred height="14rem">
+            <ListBusinessBanner titleId="cta-title" />
+          </Deferred>
         </Container>
       </section>
     </>

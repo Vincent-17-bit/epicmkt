@@ -20,9 +20,9 @@ import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
 import TrendingList from "./TrendingList.jsx";
+import { SEARCH_ID } from "./panelIds.js";
 import styles from "./SearchPanel.module.css";
 
-export const SEARCH_ID = "site-search";
 
 // Type-ahead, the way shoppers expect it (Baymard's autocomplete findings, Amazon, Jumia):
 //   * suggestions start at 2 letters and come from the database dictionary (search_suggest, a few ms) or, failing that, the

@@ -143,7 +143,7 @@ describe("opening search", () => {
     const hero = screen.getByRole("button", { name: "Hero search" });
     await userEvent.click(hero);
     await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent('{"search":true}'));
-    expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true");
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true"));
     expect(document.getElementById("site-menu")).toHaveAttribute("data-open", "false");
     await waitFor(() => expect(screen.getByRole("combobox")).toHaveFocus());
     await act(async () => {

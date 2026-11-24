@@ -1,13 +1,16 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { faBars, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useUiStore } from "../stores/ui.js";
 import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../hooks/useFocusTrap.js";
 import { Logo, Container, IconButton } from "@epicmkt/ui";
 import LocationButton from "./LocationButton.jsx";
-import MenuPanel, { MENU_ID } from "./MenuPanel.jsx";
-import SearchPanel, { SEARCH_ID } from "./SearchPanel.jsx";
+import { MENU_ID, SEARCH_ID } from "./panelIds.js";
 import styles from "./Header.module.css";
+
+const loadPanels = () => Promise.all([import("./MenuPanel.jsx"), import("./SearchPanel.jsx")]).then(([menu, search]) => ({ Menu: menu.default, Search: search.default }));
+const whenIdle = (fn) => (typeof requestIdleCallback === "function" ? requestIdleCallback(fn, { timeout: 3000 }) : setTimeout(fn, 1500));
+const cancelIdle = (id) => (typeof cancelIdleCallback === "function" ? cancelIdleCallback(id) : clearTimeout(id));
 
 export default function Header() {
   const location = useLocation();
@@ -28,6 +31,7 @@ export default function Header() {
   const returnTo = useRef(null);
   const opening = useRef(false);
   const quiet = useRef(false);
+  const [panels, setPanels] = useState(null);
   const pending = useRef(null);
   const inMenu = Boolean(location.state?.menu);
   const inSearch = Boolean(location.state?.search);
@@ -83,6 +87,17 @@ export default function Header() {
   }, [location.key, inSearch, navigate]);
 
   useEffect(() => {
+    if (panels) return;
+    const load = () => loadPanels().then(setPanels);
+    if (menuOpen || searchOpen) {
+      load();
+      return;
+    }
+    const id = whenIdle(load);
+    return () => cancelIdle(id);
+  }, [panels, menuOpen, searchOpen]);
+
+  useEffect(() => {
     if (menuOpen) {
       wasMenu.current = true;
       if (!searchOpen) panelRef.current?.focus({ preventScroll: true });
@@ -90,7 +105,7 @@ export default function Header() {
       wasMenu.current = false;
       toggleRef.current?.focus({ preventScroll: true });
     }
-  }, [menuOpen]);
+  }, [menuOpen, panels]);
 
   useEffect(() => {
     if (searchOpen) {
@@ -109,7 +124,7 @@ export default function Header() {
       }
       returnTo.current = null;
     }
-  }, [searchOpen]);
+  }, [searchOpen, panels]);
 
   useFocusTrap({
     active: menuOpen || searchOpen,
@@ -143,17 +158,12 @@ export default function Header() {
           </Container>
         </header>
         <div className={styles.root} inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
-          <MenuPanel
-            open={menuOpen}
-            onClose={closeMenu}
-            panelRef={panelRef}
-            onOpenSearch={openSearch}
-            searchRef={menuSearchRef}
-            quietRef={quiet}
-          />
+          {panels && (
+            <panels.Menu open={menuOpen} onClose={closeMenu} panelRef={panelRef} onOpenSearch={openSearch} searchRef={menuSearchRef} quietRef={quiet} />
+          )}
         </div>
       </div>
-      <SearchPanel open={searchOpen} onClose={closeSearch} onSelect={select} panelRef={searchPanelRef} inputRef={searchInputRef} />
+      {panels && <panels.Search open={searchOpen} onClose={closeSearch} onSelect={select} panelRef={searchPanelRef} inputRef={searchInputRef} />}
     </>
   );
 }

@@ -12,9 +12,9 @@ import { routes } from "../config/routes.js";
 import { infoLinks } from "../config/nav.js";
 import { Container, Button, IconButton, Skeleton } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
+import { MENU_ID } from "./panelIds.js";
 import styles from "./MenuPanel.module.css";
 
-export const MENU_ID = "site-menu";
 
 export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searchRef, quietRef }) {
   const activeSlug = useMatch("/c/:slug")?.params.slug;
