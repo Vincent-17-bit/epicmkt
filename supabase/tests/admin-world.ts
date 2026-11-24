@@ -13,6 +13,7 @@ export type World = {
   failOn: { table: string; mode: "insert" | "update" }[];
   uniqueIf: Record<string, { cols: string[]; when: (r: any) => boolean }[]>;
   authUsers: any[];
+  links?: { email: string; type: string }[];
   counters: Map<string, number>;
   receiptSeq: number;
   sms: { to: string; message: string }[];
@@ -157,6 +158,16 @@ export function deps(w: World): AdminDeps {
           const user = { id: `auth-${w.authUsers.length}`, email: a.email, password: a.password, user_metadata: a.user_metadata };
           w.authUsers.push(user);
           return Promise.resolve({ data: { user: { id: user.id } }, error: null });
+        },
+        getUserById: (id: string) => {
+          const u = w.authUsers.find((x) => x.id === id);
+          return Promise.resolve(u ? { data: { user: { id: u.id, email: u.email } }, error: null } : { data: { user: null }, error: { message: "nf" } });
+        },
+        generateLink: (a: any) => {
+          const u = w.authUsers.find((x) => x.email === a.email);
+          if (!u) return Promise.resolve({ data: null, error: { message: "nf" } });
+          w.links = [...(w.links ?? []), { email: a.email, type: a.type }];
+          return Promise.resolve({ data: { properties: { hashed_token: `hash-${u.id}-${w.links.length}` } }, error: null });
         },
         deleteUser: (id: string) => (w.authUsers = w.authUsers.filter((u) => u.id !== id), Promise.resolve({ error: null })),
         updateUserById: (id: string, a: any) => {

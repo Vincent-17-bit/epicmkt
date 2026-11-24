@@ -2,6 +2,7 @@ import nodeAssert from "node:assert/strict";
 import { adminDecideApplication } from "../functions/admin-decide-application/handler.ts";
 import { adminConfirmPayment } from "../functions/admin-confirm-payment/handler.ts";
 import { adminResetSellerPassword } from "../functions/admin-reset-seller-password/handler.ts";
+import { adminOpenSeller } from "../functions/admin-open-seller/handler.ts";
 import { queueMessages } from "../functions/_shared/adminKit.ts";
 import { nairobiMidnight } from "../functions/_shared/dates.ts";
 import { APP2_ID, APP_ID, BIZ_ID, TOKENS, deps, post, read, world } from "./admin-world.ts";
@@ -404,4 +405,49 @@ Deno.test("all three: no token 401, bad token 401, GET 405, OPTIONS 200", async 
     assertEquals((await h(new Request("http://x/", { method: "GET" }))).status, 405);
     assertEquals((await h(new Request("http://x/", { method: "OPTIONS" }))).status, 200);
   }
+});
+
+const open = (w = world()) => ({ w, run: (body: unknown, token: string = TOKENS.owner) => adminOpenSeller(deps(w))(post(body, token)).then(read) });
+
+Deno.test("open seller: an owner gets a one-time sign-in token for that business only, and it is audited", async () => {
+  const { w, run } = open();
+  const r = await run({ businessId: BIZ_ID, reason: "add products for the seller" });
+  assertEquals(r.status, 200);
+  assertEquals(r.cache, "no-store");
+  assertEquals(r.body.ok, true);
+  assertEquals(r.body.sellerId, "SLR-AAAAAA");
+  assert(String(r.body.tokenHash).startsWith("hash-auth-0"));
+  assertEquals(w.links, [{ email: "slr-aaaaaa@sellers.epicmkt.app", type: "magiclink" }]);
+  assertEquals(JSON.stringify(r.body).includes("password"), false);
+  const row = w.tables.audit_log.at(-1);
+  assertEquals([row.action, row.target_id, row.actor_role, row.reason], ["business.admin_open_seller", BIZ_ID, "admin", "add products for the seller"]);
+});
+
+Deno.test("open seller: the password is left alone", async () => {
+  const { w, run } = open();
+  const before = JSON.stringify(w.authUsers);
+  await run({ businessId: BIZ_ID });
+  assertEquals(JSON.stringify(w.authUsers), before);
+  assertEquals(w.sms.length + w.mail.length, 0);
+});
+
+Deno.test("open seller: only the owner; an unknown or deleted business is 404; a business with no login is 409", async () => {
+  const { w, run } = open();
+  for (const t of [TOKENS.support, TOKENS.reviewer, TOKENS.finance]) assertEquals((await run({ businessId: BIZ_ID }, t)).status, 403);
+  assertEquals(w.tables.audit_log.length, 0);
+  assertEquals((await run({ businessId: "44444444-4444-4444-8444-444444444444" })).status, 404);
+  assertEquals((await run({ businessId: "not-a-uuid" })).status, 400);
+  w.tables.businesses[0].user_id = null;
+  assertEquals((await run({ businessId: BIZ_ID })).body.error, "no_login");
+  w.tables.businesses[0].user_id = "auth-0";
+  w.tables.businesses[0].status = "deleted";
+  assertEquals((await run({ businessId: BIZ_ID })).status, 404);
+  assertEquals(w.links ?? [], []);
+});
+
+Deno.test("open seller: no token 401, GET 405, OPTIONS 200", async () => {
+  const h = adminOpenSeller(deps(world()));
+  assertEquals((await h(post({}))).status, 401);
+  assertEquals((await h(new Request("http://x/", { method: "GET" }))).status, 405);
+  assertEquals((await h(new Request("http://x/", { method: "OPTIONS" }))).status, 200);
 });
