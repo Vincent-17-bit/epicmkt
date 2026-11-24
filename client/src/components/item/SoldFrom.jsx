@@ -4,7 +4,7 @@ import { faCircleCheck, faCommentDots, faFlag, faPhone, faShareNodes, faStore } 
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 import { formatDistance, telLink } from "@epicmkt/shared";
-import { ShopMap } from "@epicmkt/ui";
+import { ShopMap, resizedUrl } from "@epicmkt/ui";
 import { directionsHref } from "./Delivery.jsx";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
@@ -27,7 +27,7 @@ export default function SoldFrom({ ctx }) {
     <section className={styles.sold} aria-label={t("item.soldBy")} id="item-store">
       <div className={styles.seller}>
         <span className={styles.logo}>
-          {seller.logo ? <img src={seller.logo} alt="" className={styles.logoImg} decoding="async" /> : seller.name.slice(0, 1)}
+          {seller.logo ? <img src={resizedUrl(seller.logo, 160)} alt="" className={styles.logoImg} decoding="async" /> : seller.name.slice(0, 1)}
         </span>
         <div className={styles.sellerText}>
           <p className={styles.soldBy}>{t("item.soldBy")}</p>

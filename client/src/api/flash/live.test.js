@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setLatency } from "@epicmkt/backend";
 import { saleRow } from "../../test/fakeSupabase.js";
 import * as mock from "./mock.js";
+import "../applications/supabaseClient"; // builds the fake now; the app code loads the client lazily
 import * as live from "./live.js";
 import { invalidateSnapshot } from "./snapshot.js";
 import { resetClock, syncServerTime } from "../../lib/clock.js";

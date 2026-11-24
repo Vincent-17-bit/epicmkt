@@ -71,6 +71,43 @@ const preconnectOrigins = () => {
   };
 };
 
+// Starts the flash-sales request while index.html is still being parsed. Without this the request is made by the app, which first has
+// to download, parse and run a few hundred KB of script, so the first picture (the largest paint on the page) waited behind all of it.
+// The pending answer is left on window.__epicFlash; client/src/api/flash/early.js uses it once, if fresh, and otherwise the app asks
+// itself exactly as before. It is the same public read the app makes (same URL, same public key), so it exposes nothing new.
+const earlyFlashFetch = () => {
+  let url = "";
+  let key = "";
+  return {
+    name: "early-flash-fetch",
+    apply: "build",
+    configResolved(config) {
+      url = String(config.env.VITE_SUPABASE_URL ?? "").replace(/\/+$/, "");
+      key = String(config.env.VITE_SUPABASE_ANON_KEY ?? "");
+    },
+    transformIndexHtml: (html) => {
+      if (!url || !key) return html;
+      const target = `${url}/rest/v1/public_flash_sales?select=*&order=ends_at.asc&limit=500`;
+      const script = `<script>(function(){try{var s=Date.now();window.__epicFlash={sent:s,promise:fetch(${JSON.stringify(target)},{headers:{apikey:${JSON.stringify(key)},Authorization:"Bearer "+${JSON.stringify(key)}}}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(rows){return{rows:rows,receivedAt:Date.now()}}).catch(function(){return null})}}catch(e){}})();</script>`;
+      return html.replace("</title>", `</title>\n    ${script}`);
+    }
+  };
+};
+
+// The text font is named inside the stylesheet, so the browser only learns about it after the CSS has downloaded and parsed. Preloading
+// it here lets it download alongside the CSS instead of after it. Only the Latin subset is preloaded (the one every page uses).
+const preloadFont = () => ({
+  name: "preload-inter",
+  apply: "build",
+  transformIndexHtml: {
+    order: "post",
+    handler(html, ctx) {
+      const file = Object.keys(ctx.bundle ?? {}).find((name) => /inter-latin-wght-normal-[\w-]+\.woff2$/.test(name));
+      return file ? html.replace("</title>", `</title>\n    <link rel="preload" href="/${file}" as="font" type="font/woff2" crossorigin />`) : html;
+    }
+  }
+});
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   const site = resolveSiteUrl(env, process.env);
@@ -99,6 +136,8 @@ export default defineConfig(({ mode }) => {
       siteUrlInHtml(site),
       seoHead(site, env),
       preconnectOrigins(),
+      earlyFlashFetch(),
+      preloadFont(),
       react(),
       VitePWA({
         registerType: "prompt",

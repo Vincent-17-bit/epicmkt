@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faCircleCheck } from "@fortawesome/free-solid-svg-icons";
 import { formatDistance, offerHeadline, offerLabel } from "@epicmkt/shared";
+import { resizedUrl } from "@epicmkt/ui";
 import { offerExpiry } from "../lib/itemView.js";
 import { offerHref } from "../lib/offers.js";
 import { t } from "../i18n/index.js";
@@ -19,7 +20,7 @@ function OfferCard({ view }) {
       <span className={styles.body}>
         <span className={styles.store}>
           <span className={styles.logo}>
-            {business.logo ? <img src={business.logo} alt="" loading="lazy" decoding="async" className={styles.logoImg} /> : business.name.slice(0, 1)}
+            {business.logo ? <img src={resizedUrl(business.logo, 96)} alt="" width="32" height="32" loading="lazy" decoding="async" className={styles.logoImg} /> : business.name.slice(0, 1)}
           </span>
           <span className={styles.storeName}>{business.name}</span>
           {business.verified && <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("flash.verified")} aria-label={t("flash.verified")} />}
