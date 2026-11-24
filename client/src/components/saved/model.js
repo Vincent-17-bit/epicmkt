@@ -5,8 +5,10 @@ import { formatKes, lineTotal, quantityRules } from "@epicmkt/shared";
 import { coverUrl } from "@epicmkt/ui";
 import { savedLine } from "../../lib/lineFor.js";
 import { t } from "../../i18n/index.js";
+import "../../i18n/savedDrawer.en.js";
 
-export const fill = (key, vars = {}) => Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, v), t(key));
+import { fill } from "./text.js";
+export { fill };
 
 const finite = Number.isFinite;
 

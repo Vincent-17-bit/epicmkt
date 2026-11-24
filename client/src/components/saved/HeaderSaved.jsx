@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { useSavedCount } from "../../stores/saved.js";
 import { useAnnounce } from "../../stores/savedAnnounce.js";
 import { t } from "../../i18n/index.js";
-import { fill } from "./model.js";
+import { fill } from "./text.js";
 import { loadSavedDrawer } from "./lazy.js";
 import { SAVED_ID, useSavedDrawer } from "./useSavedDrawer.js";
 import styles from "./HeaderSaved.module.css";

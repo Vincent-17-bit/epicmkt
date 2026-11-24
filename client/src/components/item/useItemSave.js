@@ -4,8 +4,9 @@ import { useIsSaved } from "../../stores/saved.js";
 import { showToast } from "../../stores/toast.js";
 import { announce } from "../../stores/savedAnnounce.js";
 import { t } from "../../i18n/index.js";
-import { entryFor, useSaveActions } from "../saved/useSave.js";
-import { fill } from "../saved/model.js";
+import { entryFor } from "../saved/entry.js";
+import { useSaveActions } from "../saved/useSave.js";
+import { fill } from "../saved/text.js";
 import { requestSavedOpen } from "../../stores/savedUi.js";
 
 /**
@@ -43,7 +44,7 @@ export function useItemSave(ctx) {
         return;
       }
     }
-    save(args, { chooseLater: hasOptions && !finished });
+    save(args, { chooseLater: hasOptions && !finished, entry: entryFor(args) });
   };
   return { saved, toggle, label: fill(saved ? "saved.removeItem" : "saved.saveItem", { name: item.name }) };
 }
