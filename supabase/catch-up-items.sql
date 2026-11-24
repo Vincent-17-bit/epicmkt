@@ -19341,7 +19341,7 @@ begin
   select count(distinct client_hash) into v_traffic from public.search_events where at > now() - interval '48 hours';
   v_min := least(s.min_people_cap, greatest(s.min_people, ceil(coalesce(v_traffic, 0) * s.min_people_pct)::integer));
 
-  drop table if exists t_ev, t_cand, t_res;
+  drop table if exists t_ev, t_cand, t_res, t_r24;
 
   -- a) the daily summary: today and yesterday are always complete in search_events (kept 2 days); a count never goes down.
   create temp table t_ev on commit drop as
@@ -19450,7 +19450,58 @@ begin
   delete from public.search_trending where position(v_term in lower(label)) > 0 or position(v_term in term) > 0;
 end $$;
 
--- 3. remove the pins -----------------------------------------------------------------------------------------------------------------
+-- 3. put back the read-time checks that 0151 dropped -----------------------------------------------------------------------------------
+-- 0151 rewrote trending_lists() from an older copy and lost two things 0150 had added: (a) a stored row is shown only while something a shopper
+-- can reach still backs it (trending_row_is_live), so a shop that lapses leaves the list at once rather than at the next rebuild, and (b) a
+-- young site's fallback lists categories by their real count of live shops, not by a stored weight. This is 0150's function again.
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+begin
+  if v_fresh then
+    select last_run_at into v_at from public.trending_settings limit 1;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending s where s.list = 'popular' and s.scope = v_scope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending s where s.list = 'rising' and s.scope = v_rscope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+  else
+    -- the stored list is missing or older than stale_hours: the live count (0039) of the last 24 hours, kind unknown
+    v_live := true;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    -- a young site: nothing has been searched enough yet, so show the categories with the most live shops (a real count, no fixed order)
+    v_fallback := 'categories';
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by n desc, label) as rn, label, slug
+                       from (select t.label, t.ref as slug,
+                                    (select count(*) from public.businesses b where b.category_id = t.ref and public.business_is_visible(b)) as n
+                             from public.search_terms t where t.kind = 'category') c
+                       order by n desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'fallback', v_fallback,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+
+-- 4. remove the pins -----------------------------------------------------------------------------------------------------------------
 
 drop function if exists public.admin_trending_pin(text, integer, text);
 drop function if exists public.admin_trending_unpin(text);
