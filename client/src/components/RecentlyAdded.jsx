@@ -44,7 +44,7 @@ export default function RecentlyAdded() {
       title={t("home.recent")}
       subtitle={t("home.recentSub")}
       seeMoreTo={SEE_ALL_PATH}
-      seeMoreLabel={t("home.seeMore")}
+      seeMoreLabel={t("home.seeMoreRecent")}
       prevLabel={t("home.recentPrev")}
       nextLabel={t("home.recentNext")}
       busy={isPending}

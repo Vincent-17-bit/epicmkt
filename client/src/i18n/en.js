@@ -276,6 +276,8 @@ export default {
   "home.recentNext": "Show next businesses",
   "home.recentFailed": "We could not load recently added businesses.",
   "home.seeMore": "See more",
+  "home.seeMoreFeatured": "See more featured businesses",
+  "home.seeMoreRecent": "See more recently added businesses",
   "home.retry": "Try again",
   "featured.title": "Featured businesses",
   "featured.subtitle": "Every featured store on EpicMKT. Open a store from its name, a product from its picture, or contact it straight from the card.",

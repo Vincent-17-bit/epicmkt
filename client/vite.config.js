@@ -137,7 +137,7 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
-          globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+          globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
           // The share picture is only for link previews and search results; phones never need it offline.
           globIgnores: ["og-image.png"],
           navigateFallback: "/index.html",

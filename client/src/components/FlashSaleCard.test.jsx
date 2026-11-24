@@ -30,7 +30,7 @@ describe("FlashSaleCard", () => {
     view({ entry: entry() });
     const link = screen.getByRole("link");
     expect(link).toHaveAttribute("href", "/b/fade-kings/i/fade-and-beard");
-    expect(link.getAttribute("aria-label")).toBe("Flash sale: Fade and beard, KES 300, Ends in 2 hours 5 minutes");
+    expect(link).toHaveAccessibleName(/Fade and beard.*KES\s*300.*Ends in 2 hours 5 minutes/);
   });
 
   it("shows the badge, savings, headline, note and CTA", () => {

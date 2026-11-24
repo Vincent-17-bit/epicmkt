@@ -58,8 +58,6 @@ function FlashSaleCard({ entry, size = "standard" }) {
   const badge = discountBadge(sale.discount);
   const hero = size === "hero";
   const compact = size === "compact";
-  const aria = `${t("flash.cardLabel")}: ${item.name}, ${t("flash.currency")} ${kes(pricing.salePrice)}, ${remaining}`;
-
   const price = (
     <span className={styles.prices}>
       <span className={styles.sale}>
@@ -85,7 +83,6 @@ function FlashSaleCard({ entry, size = "standard" }) {
       data-urgency={urgency}
       data-animate={animate ? "true" : "false"}
       data-revealed={revealed ? "true" : "false"}
-      aria-label={aria}
       draggable="false"
     >
       <span className={styles.media}>
@@ -113,7 +110,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       {!compact && <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} animate={animate} className={styles.fuse} />}
 
       {!compact && (
-        <span className={styles.band}>
+        <span className={styles.band} aria-hidden="true">
           {urgency !== URGENCY.URGENT && (
             <span className={styles.bandLabel}>
               <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
@@ -134,6 +131,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
         )}
         {!compact && <StoreRow business={business} />}
         {price}
+        <span className="sr-only">{remaining}</span>
         {!compact && (pricing.savings > 0 || sale.quantityNote) && (
           <span className={styles.tags}>
             {pricing.savings > 0 && (

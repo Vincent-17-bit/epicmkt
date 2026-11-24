@@ -31,7 +31,7 @@ export default function FeaturedStores() {
       title={t("home.featured")}
       subtitle={t("home.featuredSub")}
       seeMoreTo={FEATURED_PATH}
-      seeMoreLabel={t("home.seeMore")}
+      seeMoreLabel={t("home.seeMoreFeatured")}
       prevLabel={t("home.featuredPrev")}
       nextLabel={t("home.featuredNext")}
       busy={isPending}
