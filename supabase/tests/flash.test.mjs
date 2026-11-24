@@ -138,10 +138,11 @@ test("a sale needs a real discount on a priced, listed, in-stock item of the sam
   await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value) values ($1, $2, now() + interval '1 hour', 'sale_price', 1000)`, [ids.bizA, own], /sale_price_not_lower/);
   await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value) values ($1, $2, now() + interval '1 hour', 'sale_price', 1500)`, [ids.bizA, own], /sale_price_not_lower/);
   await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value) values ($1, $2, now() - interval '1 hour', 'percent', 10)`, [ids.bizA, own], /ends_in_past|invalid_window/);
-  await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value) values ($1, $2, now() + interval '7 days 1 minute', 'percent', 10)`, [ids.bizA, own], /duration_too_long/);
+  await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value) values ($1, $2, now() + interval '14 days 1 minute', 'percent', 10)`, [ids.bizA, own], /duration_too_long/);
   await rejects(c, asA, `insert into flash_sales (business_id, item_id, ends_at, discount_type, discount_value, headline) values ($1, $2, now() + interval '1 hour', 'percent', 10, 'x')`, [ids.bizA, own], /flash_sales_headline_check/);
-  const week = await make(asA, ids.bizA, own, { end: "7 days" });
+  const week = await make(asA, ids.bizA, own, { end: "14 days" });
   assert.equal(week.status, "live");
+  assert.equal(new Date(week.ends_at) - new Date(week.starts_at) <= 14 * 86400000, true, "two weeks is allowed since migration 0154");
 
   const contact = await item(ids.bizA, "Contact", null, { price_type: "contact" });
   const range = await item(ids.bizA, "Range", 100, { price_type: "range" });
@@ -242,7 +243,7 @@ test("after the start only the headline and note can change; the window moves on
   assert.equal(logs[0].data.reason, "Busy day");
   assert.equal(logs[0].business_id, ids.bizA);
   await rejects(c, asA, `select extend_flash_sale($1, $2::timestamptz)`, [s.id, new Date(new Date(before).getTime()).toISOString()], /invalid_window/);
-  await rejects(c, asA, `select extend_flash_sale($1, now() + interval '8 days')`, [s.id], /duration_too_long/);
+  await rejects(c, asA, `select extend_flash_sale($1, now() + interval '15 days')`, [s.id], /duration_too_long/);
   assert.equal((await audits("flash_sale.updated")).length, 1, "the headline edit is audited, the window change is logged as an extension");
 });
 
@@ -252,7 +253,7 @@ test("before the start a seller can still reshape the sale", async () => {
   const r = await row(s.id);
   assert.deepEqual([Number(r.discount_value), r.after_end], [30, "unlist"]);
   await rejects(c, asA, `update flash_sales set discount_value = 1000, discount_type = 'amount_off' where id = $1`, [s.id], /discount_too_large/);
-  await rejects(c, asA, `update flash_sales set ends_at = starts_at + interval '8 days' where id = $1`, [s.id], /duration_too_long/);
+  await rejects(c, asA, `update flash_sales set ends_at = starts_at + interval '15 days' where id = $1`, [s.id], /duration_too_long/);
   await tx(c, asA, (k) => k.query(`update flash_sales set starts_at = now() - interval '1 hour' where id = $1`, [s.id]), { commit: true });
   const now = await row(s.id);
   assert.equal(now.status, "live");

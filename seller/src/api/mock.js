@@ -1,5 +1,5 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
-import { validateCustomSize } from "@epicmkt/shared";
+import { normalizeSocials, validateCustomSize } from "@epicmkt/shared";
 import { MEDIA3D, checkOptionIds, checkTicketRequest, hasView3d, inspectGlb, view3dIssues } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
@@ -1737,11 +1737,11 @@ export const saveStaff = async (id, draft) => {
     if (bill.business.planKey !== "premium") throw new ApiError("premium_only", "premium_only:services");
     if (serviceIds.some((s) => !bill.items.some((i) => i.id === s))) throw new ApiError("item_not_owned");
   }
-  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photoPath: draft.photoPath ?? null, serviceIds };
+  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photoPath: draft.photoPath ?? null, socials: normalizeSocials(draft.socials).value, serviceIds };
   const found = id ? bill.staff.find((m) => m.id === id) : null;
   if (id && !found) throw new ApiError("not_found");
   if (found) Object.assign(found, fields);
-  else bill.staff.push({ id: `stf${++bill.seq}`, sort: bill.staff.length, adminState: "ok", adminReason: null, ...fields });
+  else bill.staff.push({ id: `stf${++bill.seq}`, sort: bill.staff.length, adminState: "ok", adminReason: null, socials: {}, ...fields });
   return { id: found?.id ?? bill.staff.at(-1).id };
 };
 export const deleteStaff = async (id) => {

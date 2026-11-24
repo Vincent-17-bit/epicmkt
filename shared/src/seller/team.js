@@ -1,3 +1,5 @@
+import { normalizeSocials } from "./socials.js";
+
 export const WEEKDAYS = [
   { value: 1, label: "Monday", short: "Mon" },
   { value: 2, label: "Tuesday", short: "Tue" },
@@ -48,6 +50,8 @@ export const validateStaffDraft = (draft) => {
   const list = draft.specialties ?? [];
   if (list.length > 10) errors.specialties = "Add up to 10 specialties";
   else if (list.some((s) => String(s).length > 40)) errors.specialties = "Keep each specialty under 40 characters";
+  // Social links: one sentence per network that could not be read, keyed social_x, social_instagram, and so on.
+  for (const [key, message] of Object.entries(normalizeSocials(draft.socials).errors)) errors[`social_${key}`] = message;
   return errors;
 };
 

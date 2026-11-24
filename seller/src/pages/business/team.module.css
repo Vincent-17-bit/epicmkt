@@ -146,3 +146,10 @@ button.slot {
   font-weight: 600;
   font-size: var(--text-sm);
 }
+
+/* Social links editor */
+.socialsEditor { display: grid; gap: var(--space-3); min-inline-size: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-card); }
+.socialRow { display: grid; gap: var(--space-1); }
+.socialLabel { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; font-size: var(--text-sm); }
+.socialIcon { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-pill); background: var(--primary-tint); color: var(--on-primary-tint); font-size: 0.85rem; }
+.socialNote { margin: 0; color: var(--text-muted); font-size: var(--text-sm); overflow-wrap: anywhere; }

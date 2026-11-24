@@ -31,6 +31,8 @@ export { default as MediaGallery, GALLERY_LABELS } from "./components/MediaGalle
 export { normalizeMedia, coverUrl, cardBlurb, firstSentence, metaDescription, dedupeDescription, paragraphs, formatDuration } from "./lib/media.js";
 export { canHoverPreview, safePlay, safePause, safeRewind, useExclusivePlayback } from "./lib/videoRules.js";
 export { default as ShopCard } from "./components/ShopCard.jsx";
+export { SocialLinks } from "./business/Team.jsx";
+export { SOCIAL_ICONS } from "./business/socialIcons.js";
 export { default as BusinessPage } from "./business/BusinessPage.jsx";
 export { default as BusinessHero } from "./business/BusinessHero.jsx";
 export { default as BusinessSection } from "./business/BusinessSection.jsx";

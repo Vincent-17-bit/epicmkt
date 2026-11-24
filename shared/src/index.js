@@ -14,6 +14,7 @@ export * from "./seller/proofs.js";
 export * from "./seller/exceptions.js";
 export * from "./seller/hours.js";
 export * from "./seller/flash.js";
+export * from "./seller/socials.js";
 export * from "./seller/flashOptions.js";   // B15
 export * from "./seller/specLibrary.js";
 export * from "./offers.js";
