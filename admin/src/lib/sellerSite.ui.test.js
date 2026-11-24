@@ -11,6 +11,7 @@ describe("sellerSiteBase", () => {
   });
   it("falls back to the local seller app", () => {
     expect(sellerSiteBase({}, { hostname: "localhost", protocol: "http:", port: "5173" })).toBe("http://localhost:5174");
+    expect(sellerSiteBase({}, { hostname: "epicmkt.vercel.app", protocol: "https:", port: "" })).toBe("");
   });
 });
 

@@ -9,6 +9,7 @@ import App from "./App.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
 import { AuthProvider } from "./auth/AuthContext.jsx";
 import { applySavedTheme } from "./lib/theme.js";
+import { recoverFromStaleBuild } from "@epicmkt/ui";
 import { ThemeProvider } from "./theme/ThemeProvider.jsx";
 
 applySavedTheme();
@@ -22,6 +23,8 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+recoverFromStaleBuild();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

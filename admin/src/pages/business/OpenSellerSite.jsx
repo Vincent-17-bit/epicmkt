@@ -15,12 +15,17 @@ export default function OpenSellerSite({ id, name }) {
   const [busy, setBusy] = useState(false);
 
   const open = async () => {
+    const base = sellerSiteBase();
+    if (!base) {
+      toast.push({ message: "The seller site address is not set. Add VITE_SELLER_URL (the seller site's web address) to the admin app's settings and redeploy it." });
+      return;
+    }
     const tab = window.open("", "_blank");
     if (tab) tab.opener = null;
     setBusy(true);
     try {
       const r = await api.openSellerSite({ businessId: id, reason: "Opened the seller site from the admin" });
-      const link = sellerSiteLink({ base: sellerSiteBase(), tokenHash: r.tokenHash, businessName: r.businessName ?? name, sellerId: r.sellerId ?? "", adminUrl: window.location.origin });
+      const link = sellerSiteLink({ base, tokenHash: r.tokenHash, businessName: r.businessName ?? name, sellerId: r.sellerId ?? "", adminUrl: window.location.origin });
       if (tab) tab.location.href = link;
       else window.location.href = link;
     } catch (failure) {

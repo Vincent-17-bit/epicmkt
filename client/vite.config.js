@@ -176,6 +176,9 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
+          // A fixed build takes over installed apps at once, so a device stuck on an old or broken copy heals on its next visit.
+          skipWaiting: true,
+          clientsClaim: true,
           globPatterns: ["**/*.{js,css,html,svg,png,webp,woff2}"],
           // The share picture is only for link previews and search results; phones never need it offline.
           globIgnores: ["og-image.png"],
