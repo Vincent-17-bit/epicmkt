@@ -1,4 +1,4 @@
--- 0148_public_saved_items.sql
+-- 0154_public_saved_items.sql
 -- One read for the buyer's Saved drawer: public_saved_items(ids) returns, for each id asked (in the order asked, at most 200):
 --   { id, item, options, tiers, redirect }
 --   item      the public_items row, or null when the item is not listed any more (hidden, sold out, deleted)

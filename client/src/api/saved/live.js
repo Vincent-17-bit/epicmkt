@@ -1,5 +1,5 @@
 // The Saved drawer's data: today's name, picture, price, stock and opening hours for every saved line, in two or three requests however long
-// the list. Live: the read-only function public_saved_items (migration 0148); a database without it gets the same answer from public_items
+// the list. Live: the read-only function public_saved_items (migration 0154); a database without it gets the same answer from public_items
 // in chunks of 100. The shape matches items.getDetail (the shape the item page prices from), so lineFor gives the same number everywhere.
 import { flashPrice, variantPricing } from "@epicmkt/shared";
 import { supabase } from "../applications/supabaseClient";
