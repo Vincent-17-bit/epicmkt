@@ -6,10 +6,10 @@ import Layout from "./Layout.jsx";
 
 // Layout really draws the drawer's slot (this is the path that a typo once broke without any test noticing).
 describe("Layout with the Saved drawer", () => {
-  it("shows the scrim at once and the drawer once its chunk arrives, when history state says saved", async () => {
+  it("shows the scrim at once and the drawer once its chunk arrives, on the /saved route", async () => {
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <MemoryRouter initialEntries={[{ pathname: "/", state: { saved: true } }]}>
+        <MemoryRouter initialEntries={["/saved"]}>
           <Layout />
         </MemoryRouter>
       </QueryClientProvider>
