@@ -25,7 +25,7 @@ const POPULAR = [
   { rank: 4, term: "barber", count: 4, hot: false, kind: "category", label: "Barber" }
 ];
 const RISING = [{ rank: 1, term: "solar lamp", count: 9, ratio: 9, hot: true, kind: "product", label: "Solar Lamp" }];
-const lists = (extra = {}) => ({ computedAt: "2026-11-16T09:12:00Z", live: false, scope: "*", county: null, fallback: "none", popular: POPULAR, rising: RISING, items: POPULAR, ...extra });
+const lists = (extra = {}) => ({ computedAt: "2026-11-16T09:12:00Z", live: false, scope: "*", fallback: "none", popular: POPULAR, rising: RISING, items: POPULAR, ...extra });
 
 const kisumuTown = TOWNS.find((t) => t.county === "Kisumu").name;
 
@@ -40,7 +40,7 @@ function panel(onSelect = vi.fn()) {
   );
   return { onSelect, input: screen.getByRole("combobox") };
 }
-const section = async () => (await screen.findByRole("heading", { name: /Trending searches/ })).closest("section");
+const section = async () => (await screen.findByRole("heading", { name: /Top searches/ })).closest("section");
 
 beforeEach(() => {
   localStorage.clear();
@@ -51,7 +51,21 @@ beforeEach(() => {
 });
 
 describe("trending in the search panel", () => {
+  it("lists the ten most searched, by search count whatever order they arrive in, with the flame on the first only", async () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ term: `word ${i}`, count: i + 1, hot: true, kind: "product", label: `Word ${i}` }));
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ popular: many, items: many, rising: [] }));
+    panel();
+    const s = await section();
+    await within(s).findByText("Word 11");
+    const rows = within(s).getAllByRole("listitem");
+    expect(rows).toHaveLength(10);
+    rows.forEach((row, i) => expect(within(row).getByText(`Word ${11 - i}`)).toBeInTheDocument());
+    expect(within(s).getAllByRole("img", { name: "Trending now" })).toHaveLength(1);
+    expect(within(rows[0]).getByRole("img", { name: "Trending now" })).toBeInTheDocument();
+  });
+
   it("ranks every kind of search in one list and says what each one is", async () => {
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
     await within(s).findByText("Gas Cylinder 6kg");
@@ -68,24 +82,40 @@ describe("trending in the search panel", () => {
     expect(within(rows[3]).getByText("Category")).toBeInTheDocument();
   });
 
-  it("has two views, popular this week and rising now, and switches between them", async () => {
+  it("is one list of top searches: no tabs, and a word that is both most searched and rising is marked inside it", async () => {
+    const popular = [
+      { term: "gas cylinder", count: 9, kind: "product", label: "Gas Cylinder 6kg" },
+      { term: "mama njeri bakery", count: 7, kind: "store", slug: "mama-njeri" },
+      { term: "barber", count: 4, kind: "category", label: "Barber" }
+    ];
+    const rising = [
+      { term: "mama njeri bakery", count: 7, kind: "store", slug: "mama-njeri" },
+      { term: "gas cylinder", count: 9, kind: "product", label: "Gas Cylinder 6kg" },
+      { term: "solar lamp", count: 3, kind: "product", label: "Solar Lamp" }
+    ];
+    vi.mocked(items.getTrending).mockResolvedValue(lists({ popular, items: popular, rising }));
     panel();
     const s = await section();
-    expect(await within(s).findByRole("button", { name: "Popular this week" })).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(within(s).getByRole("button", { name: "Rising now" }));
-    expect(within(s).getByRole("button", { name: "Rising now" })).toHaveAttribute("aria-pressed", "true");
+    await within(s).findByText("Gas Cylinder 6kg");
+    expect(within(s).queryByRole("button", { name: "Rising now" })).toBeNull();
+    const rows = within(s).getAllByRole("listitem");
+    // Ranked by searches: the gas cylinder is first even though the bakery is the fastest riser.
+    expect(within(rows[0]).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
+    expect(within(rows[0]).getByText("Rising")).toBeInTheDocument();
+    expect(within(rows[1]).getByText("Fastest rising")).toBeInTheDocument();
+    expect(within(rows[1]).getByRole("button")).toHaveAttribute("data-fastest", "true");
+    expect(within(rows[2]).queryByText(/rising/i)).toBeNull();
+    // A riser outside the top ten is not lost: it sits under "Also rising fast".
+    expect(within(s).getByRole("heading", { name: "Also rising fast" })).toBeInTheDocument();
     expect(within(s).getByText("Solar Lamp")).toBeInTheDocument();
-    expect(within(s).queryByText("Gas Cylinder 6kg")).toBeNull();
-    await userEvent.click(within(s).getByRole("button", { name: "Popular this week" }));
-    expect(within(s).getByText("Gas Cylinder 6kg")).toBeInTheDocument();
   });
 
-  it("with nothing rising there is nothing to switch to: just a caption", async () => {
+  it("with nothing rising there is no rising mark", async () => {
     vi.mocked(items.getTrending).mockResolvedValue(lists({ rising: [] }));
     panel();
     const s = await section();
-    expect(await within(s).findByText("Popular this week")).toBeInTheDocument();
-    expect(within(s).queryByRole("button", { name: "Rising now" })).toBeNull();
+    expect(await within(s).findByText("Gas Cylinder 6kg")).toBeInTheDocument();
+    expect(within(s).queryByText(/rising/i)).toBeNull();
   });
 
   it("still reads an older response that only has `items`", async () => {
@@ -115,24 +145,6 @@ describe("trending in the search panel", () => {
     expect(logSearch).not.toHaveBeenCalled();
   });
 
-  it("filler products sit under their own heading, with no rank and no flame", async () => {
-    vi.mocked(items.getTrending).mockResolvedValue(
-      lists({
-        popular: [
-          { rank: 1, term: "gas cylinder", count: 9, hot: true, kind: "product", label: "Gas Cylinder 6kg" },
-          { term: "bread", count: 0, hot: false, kind: "product", filler: true, label: "White Bread 400g", itemId: "i1", slug: "mama" }
-        ]
-      })
-    );
-    panel();
-    const s = await section();
-    expect(await within(s).findByRole("heading", { name: "Popular products" })).toBeInTheDocument();
-    const rows = within(s).getAllByRole("button").filter((b) => b.getAttribute("aria-pressed") === null);
-    expect(within(rows[0]).getByText("1")).toBeInTheDocument();
-    expect(rows[1]).toHaveTextContent("White Bread 400g");
-    expect(within(rows[1]).queryByText("2")).toBeNull();
-  });
-
   it("a trending store opens its own page", async () => {
     const { onSelect } = panel();
     const s = await section();
@@ -141,34 +153,19 @@ describe("trending in the search panel", () => {
     expect(logSearch).not.toHaveBeenCalled();
   });
 
-  it("a search the shopper types is counted, with the county of the town they chose", async () => {
-    useGeoStore.setState({ town: kisumuTown });
+  it("a search the shopper types is counted, with no location attached", async () => {
     const { input } = panel();
     await userEvent.type(input, "milk{Enter}");
-    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk", "Kisumu"));
+    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk"));
   });
 
-  it("without a chosen town, no county is sent", async () => {
-    const { input } = panel();
-    await userEvent.type(input, "milk{Enter}");
-    await waitFor(() => expect(logSearch).toHaveBeenCalledWith("milk", null));
-  });
-
-  it("asks for the shopper's county, and says when the list is local or national", async () => {
+  it("asks for one list for everyone, whatever town was chosen", async () => {
     useGeoStore.setState({ town: kisumuTown });
-    vi.mocked(items.getTrending).mockResolvedValue(lists({ scope: "kisumu", county: "kisumu" }));
     panel();
     const s = await section();
-    expect(await within(s).findByText("Trending in Kisumu")).toBeInTheDocument();
-    expect(items.getTrending).toHaveBeenCalledWith("Kisumu");
-  });
-
-  it("when the county has too few searches, it says it is showing the national list", async () => {
-    useGeoStore.setState({ town: kisumuTown });
-    vi.mocked(items.getTrending).mockResolvedValue(lists({ fallback: "national" }));
-    panel();
-    const s = await section();
-    expect(await within(s).findByText(/Not many searches in Kisumu yet, showing all of Kenya/)).toBeInTheDocument();
+    await within(s).findByText("Gas Cylinder 6kg");
+    expect(items.getTrending).toHaveBeenCalledWith();
+    expect(within(s).queryByText(/Trending in|Not many searches/)).toBeNull();
   });
 });
 

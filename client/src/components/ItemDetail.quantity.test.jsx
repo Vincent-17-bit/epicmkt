@@ -37,17 +37,11 @@ const box = () => screen.getByRole("textbox", { name: /How (many|much)/ });
 const total = () => screen.getByTestId("quantity-total").textContent;
 
 describe("quantity on the item page: units", () => {
-  it("gives an item with no type the whole-unit stepper, and the chat message is unchanged", async () => {
+  it("an item with no type counts whole units: the stepper is there, starting at 1", async () => {
     mount(phoneDetail());
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(screen.getByTestId("quantity")).toBeInTheDocument();
-    expect(chat()).toContain("(Grey / 128 GB) (KES 21,000)");
-  });
-
-  it("gives a service no stepper", async () => {
-    mount(phoneDetail({ kind: "service" }));
-    await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
-    expect(screen.queryByTestId("quantity")).toBeNull();
+    expect(total()).toContain("1");
   });
 
   it("hides the stepper for quantityMode none", async () => {

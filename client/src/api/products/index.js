@@ -34,8 +34,8 @@ export const getSuggest = async (prefix) => {
 // knows products, so a store or category is recognised from the demo backend's own shops and categories; "rising" is the terms that are
 // hot right now. The database does the real ranking.
 const demoNorm = (v) => String(v ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().replace(/s$/, "");
-export const getTrending = async (county = null) => {
-  if (isLive()) return (await live()).getTrending(county);
+export const getTrending = async () => {
+  if (isLive()) return (await live()).getTrending();
   const rows = await backend.getTopSearches(10).catch(() => []);
   const [products, cats, found] = await Promise.all([
     backend.getAllProducts(),
@@ -49,5 +49,5 @@ export const getTrending = async (county = null) => {
   // tidyTrending checks product words against the catalogue, keeps a store or category as it is, and tops the list up to 10
   const popular = tidyTrending(rows.map((r) => ({ term: r.term, count: r.count, hot: r.hot, kind: kindOf(r.term) })), products, 10).map((x, i) => ({ ...x, rank: i + 1 }));
   const rising = popular.filter((x) => x.hot).map((x, i) => ({ ...x, rank: i + 1, ratio: null }));
-  return { computedAt: new Date().toISOString(), live: true, scope: "*", county, fallback: "none", popular, rising, items: popular };
+  return { computedAt: new Date().toISOString(), live: true, scope: "*", fallback: "none", popular, rising, items: popular };
 };

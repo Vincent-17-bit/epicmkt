@@ -1,4 +1,4 @@
-import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityModeOf, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -45,26 +45,14 @@ const isBlank = (value) => value === undefined || value === null || value === ""
 
 
 /**
- * The quantity control an item gets: { mode, rules }, else null (no stepper).
- *   - a type that counts units or a measure says so (quantityMode "units" / "measure");
- *   - an item that carries a quantity { min, step, unit } is a measured item;
- *   - an older item with no mode at all is a whole-unit item (the same rule as shared/quantity.js), so every product that is sold by
- *     the piece can be ordered with a quantity;
- *   - a service, and a type whose price is not per quantity (quantityMode "none"), has no stepper: it is ordered or booked once.
+ * The quantity control an item gets: { mode, rules } for a typed item whose type counts units or measures (the type says so), else null
+ * and the page has no stepper (an item without a type, or a type with no quantity, is exactly as before).
  */
 export function quantityInfo(item, variant = null) {
-  const declared = item?.quantityMode;
-  const mode =
-    declared === "units" || declared === "measure"
-      ? declared
-      : declared === "none" || item?.kind === "service"
-        ? null
-        : item?.quantity && typeof item.quantity === "object"
-          ? "measure"
-          : item
-            ? "units"
-            : null;
-  if (!mode) return null;
+  // An item with no quantity mode is a whole-unit item (the rule in shared/quantity.js), so every product can be bought in a number.
+  // Only a "none" item (the price is not per quantity) and a service with no mode of its own (booked, not counted) have none.
+  const mode = quantityModeOf(item);
+  if ((mode !== "units" && mode !== "measure") || (item?.kind === "service" && !item?.quantityMode)) return null;
   const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
   const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
   return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
@@ -101,8 +89,7 @@ export function orderMessage({ item, shop = "", choices = [], order }) {
   for (const c of choices) lines.push(`${plain(c.label)}: ${plain(c.value)}`);
   lines.push(order.measure ? `Amount: ${amountText(order.qty, order.unitLabel)}` : `Quantity: ${order.qty}`);
   if (Number.isFinite(order.unit)) lines.push(`Price: ${order.measure ? perUnitText(order.unit, order.unitLabel) : `${formatKes(order.unit)} each`}`);
-  if (Number.isFinite(order.total)) lines.push(`Total: ${formatKes(order.total)}`);
-  lines.push("", "Please confirm it is available and how I can pay and receive it.", "Sent from EpicMKT");
+  lines.push(`Total: ${formatKes(order.total)}`, "", "Please confirm it is available and how I can pay and receive it.", "Sent from EpicMKT");
   return lines.join("\n");
 }
 

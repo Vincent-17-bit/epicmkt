@@ -25,7 +25,7 @@ function fallbackImage(item, products) {
   return withPicture ? pictured(withPicture) : null;
 }
 
-export function tidyTrending(items, products, limit = 10) {
+export function tidyTrending(items, products, limit = 10, { topUp = true } = {}) {
   const out = [];
   const seen = new Set();
   const pictures = new Set();
@@ -50,7 +50,7 @@ export function tidyTrending(items, products, limit = 10) {
     const found = entry(item.term, products, { count: item.count, hot: item.hot }, pictures);
     if (found) take({ ...item, ...found, image: found.image ?? item.image ?? null });
   }
-  if (out.length >= limit) return out;
+  if (!topUp || out.length >= limit) return out;
   const tally = new Map();
   for (const p of products) {
     const kind = describe(p).kind;

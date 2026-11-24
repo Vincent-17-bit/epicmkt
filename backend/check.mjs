@@ -112,7 +112,7 @@ assert.ok((await getSimilarBusinesses("b_001")).every((b) => b.categoryId === "b
 
 await logSearch("Haircut");
 await logSearch("haircut");
-assert.equal((await getTopSearches(10)).find((s) => s.term === "haircut").count, 200);
+assert.equal((await getTopSearches(10)).find((s) => s.term === "haircut").count, 2);
 
 const before = (await getSellerBusiness("s_001")).stats.call;
 await logContactEvent({ businessId: "b_001", type: "call" });

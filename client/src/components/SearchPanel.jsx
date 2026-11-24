@@ -15,8 +15,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { resizeImageUrl } from "@epicmkt/shared";
 import { getCategories, items, logSearch } from "../api/index.js";
-import TrendTabs, { TrendNote } from "./TrendTabs.jsx";
-import { trendLabel, trendPath, useTrending } from "../hooks/useTrending.js";
+import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { addRecent, clearRecent, getRecent, normalizeTerm, removeRecent } from "../lib/recentSearches.js";
 import { matchCategories, suggestKey } from "../lib/suggest.js";
 import { Container, IconButton, Skeleton } from "@epicmkt/ui";
@@ -123,7 +122,7 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   }, [open]);
 
   // Popular this week and rising now, every kind of search in one ranking (migration 0146). Paused while the shopper is typing.
-  const { query: trending, county, tab, setTab, list: trend, real, filler, hasRising, scopeNote } = useTrending({ enabled: open, refetch: !typing });
+  const { query: trending, real, alsoRising } = useTrending({ enabled: open, refetch: !typing });
 
   const suggestions = useQuery({
     queryKey: ["suggest", debounced],
@@ -135,13 +134,13 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
   });
   const categories = useQuery({ queryKey: ["categories"], queryFn: getCategories, staleTime: 60_000, enabled: open });
 
-  // A word the shopper typed or picked from suggestions is a search and is counted (with their county, if they chose a town). A tap on a
+  // A word the shopper typed or picked from suggestions is a search and is counted. A tap on a
   // trending row is not: counting it would make the list vote for itself. `to` sends a trending store straight to its page.
   const commit = (value, { fromTrending = false, to = null } = {}) => {
     const clean = normalizeTerm(value);
     if (!clean) return;
     addRecent(clean);
-    if (!fromTrending) logSearch(clean, county);
+    if (!fromTrending) logSearch(clean);
     onSelect(to ?? (scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`));
   };
 
@@ -419,15 +418,13 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                 </section>
               )}
 
-              {(trending.isPending || trend.length > 0) && (
+              {(trending.isPending || real.length > 0) && (
                 <section aria-labelledby="search-top">
                   <div className={styles.head}>
                     <h2 id="search-top" className={styles.label}>
-                      <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
+                      <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Top searches
                     </h2>
                   </div>
-                  <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
-                  {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
                   {(trending.isPending || real.length > 0) && (
                     trending.isPending ? (
                       <ol className={styles.ranked}>
@@ -437,12 +434,12 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
                       <TrendingList items={real} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
                     )
                   )}
-                  {!trending.isPending && filler.length > 0 && (
-                    <>
-                      <h3 className={styles.moreLabel}>Popular products</h3>
-                      <TrendingList items={filler} ranked={false} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
-                    </>
-                  )}
+                  {!trending.isPending && alsoRising.length > 0 && (
+                <>
+                  <h3 className={styles.moreLabel}>Also rising fast</h3>
+                  <TrendingList items={alsoRising} ranked={false} onPick={(item) => commit(item.term, { fromTrending: true, to: trendPath(item, null) })} />
+                </>
+              )}
                 </section>
               )}
             </div>
