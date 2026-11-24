@@ -42,10 +42,10 @@ export const ACTIONS = {
   "analytics.view": { label: "see analytics", roles: ANY },
   "flash.view": { label: "see flash sales", roles: ["reviewer", "support"] },
   "flash.end": { label: "end a flash sale", roles: ["reviewer", "support"] },
-  // Trending (migration 0146). Mirrors has_role(array['reviewer', 'support']) in admin_trending_overview(), admin_trending_pin/unpin/hide/unhide() and
-  // admin_synonym_set/remove(); the owner is implied.
+  // Trending (migration 0146). Mirrors has_role(array['reviewer', 'support']) in admin_trending_overview(), admin_trending_hide/unhide() and
+  // admin_synonym_set/remove(); the owner is implied. (Pinning was removed in 0153: the ranking is the system's alone.)
   "trending.view": { label: "see what is trending", roles: ["reviewer", "support"] },
-  "trending.manage": { label: "pin or hide a trending word and edit synonyms", roles: ["reviewer", "support"] },
+  "trending.manage": { label: "hide a trending word and edit synonyms", roles: ["reviewer", "support"] },
   "activity.view": { label: "see the live activity feed", roles: ["reviewer"] },
   // Mirrors has_role(array['reviewer']) in admin_delete_activity() (migration 0059); the owner is implied.
   "activity.manage": { label: "delete or clear items in the live activity feed", roles: ["reviewer"] },

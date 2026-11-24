@@ -27,28 +27,25 @@ function useAction(fn, done) {
 const when = (iso) => (iso ? new Date(iso).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short", timeZone: BUSINESS_TIME_ZONE }) : "never");
 
 /**
- * What shoppers search for, every kind ranked in one list: popular this week and rising now. Rebuilt every hour. An admin can pin a
- * word to the top for a few days (it still needs something live to show), hide a word at once, and say which words mean the same thing.
+ * What shoppers search for, every kind ranked in one list: popular this week and rising now. Rebuilt every hour. The order is worked out
+ * by the system from how many different people searched; nobody places a word by hand. An admin can hide a word at once and say which
+ * words mean the same thing (so their counts join), and neither changes the order of what remains.
  */
 export default function TrendingPage() {
   const uid = useId();
   const { can, why } = usePermissions();
   const manage = can("trending.manage");
   const [synonym, setSynonym] = useState({ variant: "", canonical: "" });
-  const [pinDays, setPinDays] = useState(7);
 
   const q = useQuery({ queryKey: [KEY], queryFn: () => api.getTrendingOverview(), refetchInterval: 5 * 60_000 });
   const data = q.data;
 
-  const pin = useAction(({ term }) => api.pinTrending(term, pinDays, null), "Pinned to the top");
-  const unpin = useAction((term) => api.unpinTrending(term), "Unpinned");
   const hide = useAction((term) => api.hideTrending(term), "Hidden. It is out of the lists now");
   const unhide = useAction((term) => api.unhideTrending(term), "Shown again from the next rebuild");
   const addSynonym = useAction(({ variant, canonical }) => api.setSynonym(variant, canonical), "Saved. It counts from the next rebuild");
   const dropSynonym = useAction((variant) => api.removeSynonym(variant), "Removed");
 
   const status = data?.status;
-  const pinned = new Set((data?.pins ?? []).map((p) => p.term));
 
   const table = (rows, { rising = false } = {}) => (
     <div className="table-shell">
@@ -69,15 +66,11 @@ export default function TrendingPage() {
               <td>{r.rank}</td>
               <td>
                 {r.term}
-                {r.pinned || pinned.has(r.term) ? <> <span className="muted">(pinned)</span></> : null}
                 {!rising && r.hot ? <> <span className="muted">(rising)</span></> : null}
               </td>
               <td>{KINDS[r.kind] ?? r.kind}{r.name && r.name.toLowerCase() !== r.term ? <span className="muted"> · {r.name}</span> : null}</td>
               <td>{rising ? `${Number(r.ratio).toFixed(1)}×, ${r.people} people` : r.people}</td>
               <td>
-                {!rising && !(r.pinned || pinned.has(r.term)) ? (
-                  <Button size="sm" disabled={!manage} title={why("trending.manage")} onClick={() => pin.mutate({ term: r.term })} aria-label={`Pin ${r.term} to the top`}>Pin</Button>
-                ) : null}{" "}
                 <Button size="sm" disabled={!manage} title={why("trending.manage")} onClick={() => hide.mutate(r.term)} aria-label={`Hide ${r.term}`}>Hide</Button>
               </td>
             </tr>
@@ -115,25 +108,6 @@ export default function TrendingPage() {
 
           <h2 className="heading-sm heading-flow">Rising now</h2>
           {data.rising.length === 0 ? <p className="muted">Nothing is rising against its own average right now.</p> : table(data.rising, { rising: true })}
-
-          <h2 className="heading-sm heading-flow">Pinned</h2>
-          <div className="kit-row">
-            <label className="field">Pin for
-              <select value={pinDays} onChange={(e) => setPinDays(Number(e.target.value))}>
-                {[1, 3, 7, 14, 30].map((d) => <option key={d} value={d}>{d} {d === 1 ? "day" : "days"}</option>)}
-              </select>
-            </label>
-          </div>
-          {data.pins.length === 0 ? <p className="muted">Nothing is pinned. Use Pin on a word above. At most 3 at a time.</p> : (
-            <ul>
-              {data.pins.map((p) => (
-                <li key={p.term}>
-                  {p.term} <span className="muted">until {when(p.expiresAt)}</span>{" "}
-                  <Button size="sm" disabled={!manage} title={why("trending.manage")} onClick={() => unpin.mutate(p.term)} aria-label={`Unpin ${p.term}`}>Unpin</Button>
-                </li>
-              ))}
-            </ul>
-          )}
 
           <h2 className="heading-sm heading-flow">Hidden words</h2>
           <p className="muted">A word containing one of these is never shown, in any list.</p>
