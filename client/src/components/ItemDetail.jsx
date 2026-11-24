@@ -220,10 +220,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}${variantParam ? `?v=${encodeURIComponent(variantParam)}` : ""}` : "";
   const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
   const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
-  const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
+  // A shop with no WhatsApp number is still reachable on the phone number it gave: chat and order go to that number.
+  const reach = seller?.whatsapp || seller?.phone || "";
+  const chatHref = seller && reach ? whatsappLink(reach, message) : undefined;
   const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
   const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, shop: seller?.name ?? business.name, choices: choiceLines(option, variant), order: tiers ? { ...order, unit: null } : order }));
-  const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
+  const orderHref = orderReady && reach ? whatsappLink(reach, orderText) : undefined;
 
   const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };
   const onChat = (placement) => () => {

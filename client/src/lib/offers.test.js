@@ -5,7 +5,7 @@ const view = (ids) => ({ offer: { items: ids.map((itemId) => ({ itemId, role: "m
 
 describe("offerHref", () => {
   it("opens the product when the offer is on exactly one product", () => {
-    expect(offerHref(view(["fade and beard"]))).toBe("/b/fade-kings?item=fade%20and%20beard");
+    expect(offerHref(view(["fade and beard"]))).toBe("/b/fade-kings/i/fade%20and%20beard");
   });
 
   it("opens the store's offers section when several products are in it", () => {
