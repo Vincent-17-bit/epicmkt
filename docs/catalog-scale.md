@@ -109,7 +109,7 @@ past the next hour. If the job has not run for 3 hours, the live count is used.
 1. Apply `0128_search_index.sql`, then `0129_items_search_trgm_idx.sql` and `0130_items_search_doc_idx.sql` (each one statement,
    `CREATE INDEX CONCURRENTLY`, no write lock; on millions of rows each takes a few minutes).
    A database that stopped part-way can run `supabase/catch-up-items.sql` (regenerated).
-2. Run `supabase/cron/schedule.sql` again (adds `search-rollups`, hourly at :02) or `select public.refresh_search_rollups();` once.
+2. Run `supabase/cron/schedule.sql` again (adds `search-rollups`, hourly at :57) or `select public.refresh_search_rollups();` once.
 3. Deploy the client. No new environment variables.
 4. Check: `supabase/cron/verify.sql` section 5; `/api/products?op=suggest&q=mi` answers with `"source":"index"`.
 

@@ -21,6 +21,7 @@ const api = {
   getBusinessDetail: vi.fn(),
   getLoginDelivery: vi.fn(async () => []),
   resendLogin: vi.fn(async () => ({ ok: true })),
+  openSellerSite: vi.fn(async () => ({ ok: true, businessName: "Lakeside Provisions", sellerId: "ES100210", tokenHash: "tok-1" })),
   getBusinessPayments: vi.fn(async () => [{ id: "p1", created_at: "2026-02-01T00:00:00Z", amount_kes: 1300, status: "confirmed", kind: "renewal", mpesa_code: "SGH4K9L2QW", receipt_no: "R-1", period_end: "2026-03-01", months: 1 }]),
   getBusinessItems: vi.fn(async () => [
     { id: "i1", name: "Chocolate cake", section: "Cakes", price: 1800, price_type: "fixed", visible: true, draft: false, hidden_by_admin: false },
@@ -215,5 +216,46 @@ describe("business detail page", () => {
     await screen.findByRole("heading", { name: "Lakeside Provisions" });
     expect(screen.queryByRole("button", { name: "Resend login" })).not.toBeInTheDocument();
     expect(api.getLoginDelivery).not.toHaveBeenCalled();
+  });
+
+  describe("open seller site", () => {
+    const fakeTab = () => ({ opener: {}, location: { href: "" }, close: vi.fn() });
+
+    it("opens the business's seller site in a new tab, signed in as that business, with the token after the #", async () => {
+      const tab = fakeTab();
+      const open = vi.spyOn(window, "open").mockReturnValue(tab);
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Open seller site" }));
+      await waitFor(() => expect(api.openSellerSite).toHaveBeenCalledWith({ businessId: "b1", reason: expect.any(String) }));
+      await waitFor(() => expect(tab.location.href).toContain("/admin-access#"));
+      expect(tab.location.href).toContain("token_hash=tok-1");
+      expect(tab.location.href.includes("?")).toBe(false);
+      expect(tab.opener).toBeNull();
+      open.mockRestore();
+    });
+
+    it("closes the empty tab and says so when the seller site cannot be opened", async () => {
+      const tab = fakeTab();
+      const open = vi.spyOn(window, "open").mockReturnValue(tab);
+      api.openSellerSite.mockRejectedValueOnce(Object.assign(new Error("no_login"), { code: "no_login" }));
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Open seller site" }));
+      await waitFor(() => expect(tab.close).toHaveBeenCalled());
+      expect(await screen.findByText(/Could not open the seller site/)).toBeInTheDocument();
+      open.mockRestore();
+    });
+
+    it("is for the owner only", async () => {
+      mockRole = "reviewer";
+      renderPage();
+      expect(await screen.findByRole("button", { name: "Open seller site" })).toBeDisabled();
+    });
+
+    it("is not offered for a deleted business", async () => {
+      api.getBusinessDetail.mockImplementation(async () => business({ deleted_at: "2026-03-01T00:00:00Z", status: "deleted" }));
+      renderPage();
+      await screen.findByRole("heading", { name: "Lakeside Provisions" });
+      expect(screen.queryByRole("button", { name: "Open seller site" })).not.toBeInTheDocument();
+    });
   });
 });

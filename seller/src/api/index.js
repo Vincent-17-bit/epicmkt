@@ -8,6 +8,7 @@ const impl = mode === "mock" ? mock : mode === "live" || import.meta.env?.PROD ?
 
 export const login = (...a) => impl.login(...a);
 export const logout = (...a) => impl.logout(...a);
+export const adminAccess = (...a) => impl.adminAccess(...a);
 export const forgotRequest = (...a) => impl.forgotRequest(...a);
 export const forgotVerify = (...a) => impl.forgotVerify(...a);
 export const requestOtp = (...a) => impl.requestOtp(...a);

@@ -3,21 +3,39 @@ import { describe, searchProducts, stem } from "./search.js";
 import { normalizeText } from "../utils.js";
 
 const keyOf = (term) => normalizeText(term).split(" ").filter(Boolean).map(stem).sort().join(" ");
-const pictured = (p) => p.image ?? p.images?.[0] ?? null;
+const pathOf = (value) => (typeof value === "string" && value ? value : typeof value?.url === "string" && value.url ? value.url : typeof value?.path === "string" && value.path ? value.path : null);
+const pictured = (p) => pathOf(p.image) ?? pathOf(p.imagePath) ?? pathOf(p.imageUrl) ?? pathOf(p.images?.[0]) ?? null;
 
-function entry(term, products, extra = {}) {
+function entry(term, products, extra = {}, taken = new Set()) {
   const found = searchProducts(products, { q: term }, { pageSize: 8, itemsOnly: true });
   if (!found.total) return null;
-  const top = found.items.find((p) => pictured(p)) ?? found.items[0];
+  const free = found.items.filter((p) => !taken.has(p.id));
+  const top = free.find((p) => pictured(p)) ?? free[0];
+  if (!top) return null;
   return { term, ...extra, itemId: top.id, label: top.name, slug: top.slug, image: pictured(top), price: top.price ?? null };
 }
 
-export function tidyTrending(items, products, limit = 10) {
+function fallbackImage(item, products) {
+  if (item.kind === "store" && item.slug) {
+    const own = products.find((p) => p.slug === item.slug && pictured(p));
+    if (own) return pictured(own);
+  }
+  const found = searchProducts(products, { q: item.term }, { pageSize: 8, itemsOnly: true });
+  const withPicture = found.items.find((p) => pictured(p));
+  return withPicture ? pictured(withPicture) : null;
+}
+
+export function tidyTrending(items, products, limit = 10, { topUp = true } = {}) {
   const out = [];
   const seen = new Set();
+  const pictures = new Set();
   const take = (candidate) => {
     const key = keyOf(candidate.term);
     if (!key || seen.has(key)) return;
+    if (candidate.itemId && (!candidate.kind || candidate.kind === "product")) {
+      if (pictures.has(candidate.itemId)) return;
+      pictures.add(candidate.itemId);
+    }
     seen.add(key);
     out.push(candidate);
   };
@@ -26,13 +44,13 @@ export function tidyTrending(items, products, limit = 10) {
     // A store, a flash sale or a category was already checked live by the database (trending_lists). A store's name rarely matches a
     // product, so it is not looked up in the catalogue again; only a product word (or one of unknown kind) must still find something.
     if (item.kind && item.kind !== "product") {
-      take({ ...item });
+      take({ ...item, image: pathOf(item.image) ?? fallbackImage(item, products) });
       continue;
     }
-    const found = entry(item.term, products, { count: item.count, hot: item.hot });
+    const found = entry(item.term, products, { count: item.count, hot: item.hot }, pictures);
     if (found) take({ ...item, ...found, image: found.image ?? item.image ?? null });
   }
-  if (out.length >= limit) return out;
+  if (!topUp || out.length >= limit) return out;
   const tally = new Map();
   for (const p of products) {
     const kind = describe(p).kind;
@@ -42,7 +60,7 @@ export function tidyTrending(items, products, limit = 10) {
   const ranked = [...tally].sort((a, b) => b[1] - a[1]).map(([id]) => noun.get(id)).filter(Boolean);
   for (const term of ranked) {
     if (out.length >= limit) break;
-    const found = entry(term, products, { count: 0, hot: false, kind: "product" });
+    const found = entry(term, products, { count: 0, hot: false, kind: "product", filler: true }, pictures);
     if (found && found.image) take(found);
   }
   return out;

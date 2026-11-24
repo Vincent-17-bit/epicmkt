@@ -103,7 +103,7 @@
 }
 .stage {
   position: relative;
-  aspect-ratio: 1;
+  aspect-ratio: 5 / 4;
   border-radius: var(--radius-card);
   background: #fff;
   overflow: hidden;
@@ -482,4 +482,12 @@
   .zoomBox img {
     transition: none;
   }
+}
+
+/* Phones: a 5:4 stage, not a square, so a wide photo is not framed by blank bands and the price is seen sooner. */
+@media (max-width: 47.99rem) {
+  .stage { aspect-ratio: 5 / 4; border: 1px solid var(--border); }
+  .counter { font-size: 0.6875rem; bottom: 0.375rem; right: 0.375rem; }
+  .fullView { padding: 0 0.5rem; font-size: var(--text-xs); color: var(--text-muted); }
+  .wrap { gap: 0.5rem; }
 }

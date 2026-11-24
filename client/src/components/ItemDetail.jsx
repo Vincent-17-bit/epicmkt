@@ -6,9 +6,9 @@ import { chatMessage, choiceLines, defaultVariantId, orderMessage } from "../lib
 import { lineFor, optionShown } from "../lib/lineFor.js";
 import { savedList, lineKey } from "../lib/savedList.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
-import { showToast } from "../stores/toast.js";
 import { t } from "../i18n/index.js";
-import { coverUrl, metaDescription } from "@epicmkt/ui";
+import { ShareSheet, coverUrl, metaDescription } from "@epicmkt/ui";
+import { shareLabels } from "../lib/shareLabels.js";
 
 import { useOptionSelection } from "../hooks/useOptionSelection.js";
 import { useUrgency } from "../hooks/useCountdown.js";
@@ -66,6 +66,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const failed = isError && !gone && !fresh;
   const vanished = gone && detail?.id === itemId;
   const [hold, setHold] = useState(null);
+  const [sharing, setSharing] = useState(false);
   const lastLive = useRef(null);
   const current = hold && fresh && hold.id === fresh.id ? { ...fresh, flash: hold.flash, pricing: hold.pricing } : fresh;
 
@@ -223,11 +224,12 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const itemLink = current && !preview ? `${window.location.origin}/b/${business.slug}/i/${encodeURIComponent(current.id)}${variantParam ? `?v=${encodeURIComponent(variantParam)}` : ""}` : "";
   const withLink = (text) => [text, itemLink].filter(Boolean).join("\n");
   const message = !current ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : chatMessage({ item: current, variant, pricing: current.pricing, greeting: business.shopSettings?.whatsappGreeting }));
-  const chatHref = seller ? whatsappLink(seller.whatsapp, message) : undefined;
-  // The WhatsApp order button stays for typed items and tier-priced ones, as before; an item with no type gets the quantity control only.
-  const orderReady = Boolean(current && order && !(qtyInfo?.implicit && !tiers) && !option?.unmatched && (!made.on || madeToMeasure));
+  // A shop with no WhatsApp number is still reachable on the phone number it gave: chat and order go to that number.
+  const reach = seller?.whatsapp || seller?.phone || "";
+  const chatHref = seller && reach ? whatsappLink(reach, message) : undefined;
+  const orderReady = Boolean(current && order && !option?.unmatched && (!made.on || madeToMeasure));
   const orderText = !orderReady ? "" : withLink(madeToMeasure ? `Hi, I'd like ${madeToMeasure.message} on EpicMKT` : orderMessage({ item: current, shop: seller?.name ?? business.name, choices: choiceLines(option, variant), order: tiers ? { ...order, unit: null } : order }));
-  const orderHref = orderReady && seller?.whatsapp ? whatsappLink(seller.whatsapp, orderText) : undefined;
+  const orderHref = orderReady && reach ? whatsappLink(reach, orderText) : undefined;
 
   const track = (name, extra) => { if (!preview) logEvent(name, { businessId: business.id, itemId, ...extra }); };
   const onChat = (placement) => () => {
@@ -238,20 +240,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const onVisit = (placement) => () => track("visit_store_click", { placement });
   const onCall = () => { if (!preview) logContactEvent({ businessId: business.id, itemId, type: "call" }); };
 
-  const onShare = async () => {
-    const path = isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`;
-    const url = `${window.location.origin}${path}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: current?.name, text: `${current?.name} on EpicMKT`, url });
-        return;
-      }
-      await navigator.clipboard.writeText(url);
-      showToast(t("item.linkCopied"));
-    } catch (err) {
-      if (err?.name !== "AbortError") showToast(t("item.shareFailed"));
-    }
-  };
+  const shareUrl = `${typeof window === "undefined" ? "" : window.location.origin}${isPage ? `/b/${business.slug}/i/${encodeURIComponent(itemId)}` : `/b/${business.slug}?item=${encodeURIComponent(itemId)}`}`;
+  const onShare = () => setSharing(true);
 
   // Everything a slot may read. Slots take this one object and pick what they need, so adding a field here does not touch the others.
   const ctx = {
@@ -317,6 +307,7 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
 
         <StickyNav ctx={ctx} />
       </section>
+      <ShareSheet open={sharing} onClose={() => setSharing(false)} url={shareUrl} title={current?.name ?? business.name} text={`${current?.name ?? business.name} on EpicMKT`} labels={shareLabels()} />
     </div>
   );
 }

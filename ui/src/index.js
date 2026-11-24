@@ -59,3 +59,4 @@ export { default as ShopMap } from "./business/ShopMap.jsx";
 export { default as PayByPhone } from "./payments/PayByPhone.jsx";
 export { default as ErrorBoundary } from "./components/ErrorBoundary.jsx";
 export { useMediaQuery } from "./hooks/useMediaQuery.js";
+export { default as ShareSheet, SHARE_LABELS } from "./components/ShareSheet.jsx";

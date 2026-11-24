@@ -1,16 +1,127 @@
-.root { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
-.heading { margin: 0; font-size: 1rem; }
-.picker { display: grid; gap: var(--space-1); }
-.label { font-weight: 600; }
-.stepper { display: inline-flex; align-items: stretch; gap: var(--space-1); }
-.step, .input { min-height: 2.75rem; min-width: 2.75rem; border: 1.5px solid var(--border-strong); border-radius: var(--radius-md); background: var(--surface); color: inherit; font: inherit; }
-.step { cursor: pointer; font-size: 1.25rem; }
-.step:disabled { opacity: 0.5; cursor: not-allowed; }
-.input { width: 6.5rem; text-align: center; font-variant-numeric: tabular-nums; }
-.step:focus-visible, .input:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-.total { margin: 0; font-variant-numeric: tabular-nums; }
-.hint { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+/* Quantity: the heading and the running total on the left, a segmented stepper on the right. One row, no nested padding (the info block
+   around it already pads the sides). */
+
+.root {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "heading picker"
+    "total   picker"
+    "hint    hint";
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  margin-top: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.heading {
+  grid-area: heading;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.picker {
+  grid-area: picker;
+  display: grid;
+}
+
+/* The label stays for screen readers; the heading already says what the control is for sighted buyers. */
+.label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+}
+
+.step,
+.input {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.step {
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: background-color var(--dur) ease;
+}
+
+.step:active:not(:disabled) {
+  background: var(--primary-tint);
+}
+
+@media (hover: hover) {
+  .step:hover:not(:disabled) {
+    background: var(--primary-tint);
+  }
+}
+
+.step:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.input {
+  width: 3.5rem;
+  border-inline: 1px solid var(--border);
+  font-size: var(--text-md);
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.stepper:focus-within {
+  border-color: var(--text);
+}
+
+.step:focus-visible,
+.input:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: -3px;
+}
+
+.total {
+  grid-area: total;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.total strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.hint {
+  grid-area: hint;
+  margin: var(--space-1) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .step, .input { transition: none; }
+  .step {
+    transition: none;
+  }
 }

@@ -21,6 +21,7 @@ export default function LazyImage({
   fill = false,
   priority = false,
   width = 480,
+  widths,
   sizes,
   onLoad,
   onError,
@@ -46,7 +47,7 @@ export default function LazyImage({
   }, [onError]);
 
   const frameStyle = !fill && ratio ? { aspectRatio: ratio } : undefined;
-  const set = src ? srcSetFor(src) : undefined;
+  const set = src ? srcSetFor(src, widths) : undefined;
 
   return (
     <span className={`${styles.frame} ${fill ? styles.fill : ""} ${frameClassName}`} style={frameStyle} data-state={src ? state : "error"}>

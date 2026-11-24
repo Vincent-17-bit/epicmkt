@@ -1,5 +1,5 @@
 import { chipOf, dealOf, liveOffers, offerAvailableNow, offerProductCount, offersByItem } from "@epicmkt/shared";
-import { supabase } from "../applications/supabaseClient";
+import { supabase } from "../applications/lazySupabase.js";
 import { cardOfBusiness, mediaUrl } from "../flash/shape.js";
 import { isSynced, serverNow } from "../../lib/clock.js";
 

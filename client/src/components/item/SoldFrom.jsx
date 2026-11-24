@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCommentDots, faFlag, faPhone, faShareNodes, faStore } from "@fortawesome/free-solid-svg-icons";
+import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
+import { formatKes } from "@epicmkt/shared";
 import { formatDistance, telLink } from "@epicmkt/shared";
-import { ShopMap } from "@epicmkt/ui";
+import { ShopMap, resizedUrl } from "@epicmkt/ui";
 import { directionsHref } from "./Delivery.jsx";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
@@ -11,7 +13,8 @@ import styles from "../ItemDetail.module.css";
 
 // The "Sold by" card: who sells it, whether they are open, and the visit / chat / call / share / report actions.
 export default function SoldFrom({ ctx }) {
-  const { seller, sellerCount, distanceKm, chatHref, onVisit, onChat, onCall, onShare, onReport, business } = ctx;
+  const { seller, sellerCount, distanceKm, chatHref, orderHref, order, onVisit, onChat, onCall, onShare, onReport, business } = ctx;
+  const total = order && Number.isFinite(order.total) ? formatKes(order.total) : "";
   if (!seller) return null;
   // Where the shop is: the same map as the shop page, as a still picture with words for screen readers and two links out.
   const lat = Number(seller.lat);
@@ -25,7 +28,7 @@ export default function SoldFrom({ ctx }) {
     <section className={styles.sold} aria-label={t("item.soldBy")} id="item-store">
       <div className={styles.seller}>
         <span className={styles.logo}>
-          {seller.logo ? <img src={seller.logo} alt="" className={styles.logoImg} decoding="async" /> : seller.name.slice(0, 1)}
+          {seller.logo ? <img src={resizedUrl(seller.logo, 160)} alt="" className={styles.logoImg} decoding="async" /> : seller.name.slice(0, 1)}
         </span>
         <div className={styles.sellerText}>
           <p className={styles.soldBy}>{t("item.soldBy")}</p>
@@ -70,6 +73,15 @@ export default function SoldFrom({ ctx }) {
           )}
         </p>
       </div>
+
+      {/* The main action sits first and full width, so it is on the page itself and not only in the footer bar. */}
+      {orderHref && (
+        <a href={orderHref} {...external} className={styles.orderInline} data-testid="order-whatsapp-inline" onClick={onChat("order")}>
+          <FontAwesomeIcon icon={faWhatsapp} className={styles.icon} aria-hidden="true" />
+          <span>{t("item.orderWhatsapp")}</span>
+          {total && <span className={styles.orderTotal}>{total}</span>}
+        </a>
+      )}
 
       <div className={styles.actions}>
         <Link to={`/b/${seller.slug}`} className={styles.outline} onClick={onVisit("card")}>

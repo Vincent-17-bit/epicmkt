@@ -40,10 +40,11 @@ describe("with Supabase configured, seller data wins over the demo backend", () 
     expect(demo.getBusiness).not.toHaveBeenCalled();
   });
 
-  it("falls back to the demo shop only when the shop does not exist live", async () => {
+  it("never shows a demo shop for a shop that does not exist live", async () => {
     live.getBusiness.mockRejectedValue(notFound());
     demo.getBusiness.mockResolvedValue({ slug: "demo" });
-    expect(await getBusiness("demo")).toEqual({ slug: "demo" });
+    await expect(getBusiness("demo")).rejects.toThrow();
+    expect(demo.getBusiness).not.toHaveBeenCalled();
   });
 
   it("does not hide real errors behind the demo backend", async () => {
@@ -92,11 +93,12 @@ describe("getSimilarItems", () => {
       expect(demo.getSimilarItems).not.toHaveBeenCalled();
     });
 
-    it("asks the demo backend for a demo id", async () => {
+    it("is an empty row for an id live does not know, and never asks the demo backend", async () => {
       live.isLiveId.mockReturnValue(false);
       demo.getSimilarItems.mockResolvedValue([{ id: "d1" }]);
-      expect(await getSimilarItems("demo-item")).toEqual([{ id: "d1" }]);
+      expect(await getSimilarItems("demo-item")).toEqual([]);
       expect(live.getSimilarItems).not.toHaveBeenCalled();
+      expect(demo.getSimilarItems).not.toHaveBeenCalled();
     });
 
     it("is an empty row on any failure or odd answer, never an error", async () => {

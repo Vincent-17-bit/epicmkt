@@ -197,6 +197,7 @@ supabase functions deploy admin-proof-url --no-verify-jwt   # the function check
 supabase functions deploy admin-decide-application --no-verify-jwt
 supabase functions deploy admin-confirm-payment --no-verify-jwt
 supabase functions deploy admin-reset-seller-password --no-verify-jwt
+supabase functions deploy admin-open-seller --no-verify-jwt
 supabase functions deploy admin-message --no-verify-jwt
 supabase functions deploy admin-export --no-verify-jwt
 supabase functions deploy dispatch-messages --no-verify-jwt

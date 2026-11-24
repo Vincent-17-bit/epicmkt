@@ -7,6 +7,7 @@ import { invalidateFlash } from "../lib/flashSync.js";
 const CHANNEL = "epicmkt-flash";
 const FALLBACK_POLL_MS = 30_000;
 const SAFETY_POLL_MS = 120_000;
+const FIRST_LOAD_MS = 15_000;
 const DEBOUNCE_MS = 250;
 const WAKE = ["focus", "online", "pageshow"];
 
@@ -20,6 +21,7 @@ export function useFlashRealtime() {
     let poll = null;
     let connected = false;
     let closed = false;
+    const mountedAt = Date.now();
 
     const refresh = () => {
       invalidateSnapshot();
@@ -64,7 +66,7 @@ export function useFlashRealtime() {
               if (next === connected) return;
               connected = next;
               startPolling();
-              if (next) refreshSoon(false);
+              if (next && Date.now() - mountedAt > FIRST_LOAD_MS) refreshSoon(false);
             }
           );
         })

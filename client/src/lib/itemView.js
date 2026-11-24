@@ -50,15 +50,14 @@ const isBlank = (value) => value === undefined || value === null || value === ""
  * and the page has no stepper (an item without a type, or a type with no quantity, is exactly as before).
  */
 export function quantityInfo(item, variant = null) {
-  // A service, or a type that counts nothing, is always one. Every other priced item counts whole units unless its type says it is
-  // measured (an item without a type used to get no stepper; it now gets whole units, from 1 up to the stock left).
-  const explicit = item?.quantityMode === "units" || item?.quantityMode === "measure";
-  if (!explicit && isServiceItem(item)) return null;
+  // An item with no quantity mode is a whole-unit item (the rule in shared/quantity.js), so every product can be bought in a number.
+  // Only a "none" item (the price is not per quantity) and a service with no mode of its own (booked, not counted; the product/service
+  // rule is the one search uses) have none.
   const mode = quantityModeOf(item);
-  if (mode !== "units" && mode !== "measure") return null;
+  if ((mode !== "units" && mode !== "measure") || (!item?.quantityMode && isServiceItem(item))) return null;
   const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
   const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
-  return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null, implicit: !explicit };
+  return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
 }
 
 /**

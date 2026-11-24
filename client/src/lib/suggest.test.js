@@ -33,7 +33,7 @@ describe("type-ahead fallback (the same rules as search_suggest)", () => {
   });
 
   it("corrects a misspelling to the closest known word", () => {
-    expect(editDistance("mlik", "milk")).toBe(2);
+    expect(editDistance("mlik", "milk")).toBe(1);   // a swap of two neighbours is one slip
     expect(correctWord(index, "mlik")).toBe("milk");
     expect(correctWord(index, "milk")).toBeNull();
     const out = suggestFrom(index, "mlik");
@@ -51,5 +51,51 @@ describe("type-ahead fallback (the same rules as search_suggest)", () => {
     expect(matchCategories(categories, "ref")).toEqual([{ label: "Water Refill", id: "water" }]);
     expect(matchCategories(categories, "ch").map((c) => c.id)).toEqual(["chemists"]);
     expect(matchCategories(categories, "x")).toEqual([]);
+  });
+});
+
+describe("type-ahead reads variants", () => {
+  const drink = { id: "d", name: "Red Bull Energy Drink", imagePath: "d/1.webp", createdAt: "2026-02-01", regularPrice: 250, business: shopA, optionValues: ["Watermelon", "Fuji Apple & Ginger", "250 ml", "1 L"] };
+  const withDrink = buildSuggestIndex([...products, drink]);
+
+  it("a flavour that only exists as a variant offers its product, with the picture", () => {
+    for (const typed of ["water", "ginger", "fuji"]) {
+      const out = suggestFrom(withDrink, typed);
+      expect(out.products.map((p) => p.id), typed).toContain("d");
+      expect(out.products.find((p) => p.id === "d").image).toBe("d/1.webp");
+    }
+  });
+
+  it("the product name followed by the flavour is a phrase", () => {
+    expect(suggestFrom(withDrink, "red bull water").terms.map((t) => t.label)).toContain("red bull watermelon");
+  });
+
+  it("'and' between flavours is ignored", () => {
+    expect(suggestFrom(withDrink, "apple and ginger").terms.map((t) => t.label)).toContain("fuji apple ginger");
+  });
+
+  it("a size matches however it is typed", () => {
+    for (const typed of ["250ml", "250 ml", "0.25l"]) expect(suggestFrom(withDrink, typed).products.map((p) => p.id), typed).toContain("d");
+    for (const typed of ["1l", "1 l", "1000ml"]) expect(suggestFrom(withDrink, typed).products.map((p) => p.id), typed).toContain("d");
+  });
+});
+
+describe("what shoppers type into the search box", () => {
+  const idx = buildSuggestIndex([
+    { id: "1", name: "Refurbished iPhone 11 64GB", business: { slug: "a", name: "A" } },
+    { id: "2", name: "Haircut", business: { slug: "b", name: "B" } },
+    { id: "3", name: "Soda crate 24", business: { slug: "c", name: "C" } }
+  ]);
+
+  it("suggests for the words, not the request around them", () => {
+    expect(suggestFrom(idx, "cheap iphone under 20k").terms[0].label).toBe("iphone");
+  });
+
+  it("offers what a word means when nothing starts with it", () => {
+    expect(suggestFrom(idx, "kinyozi").terms.map((t) => t.label)).toContain("haircut");
+  });
+
+  it("never turns a real word into a different one", () => {
+    expect(suggestFrom(idx, "sofa").corrected).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
 import { withTiers } from "./tiers.js";
 import { CUSTOM_SIZE_STORED, PLAN_FEATURES, emptyOptions, validateCustomSize, flashPrice, isListed, complementGroupOf, complementSearchWords, orderStoreItems, rankRelated, rankSimilar, resolveMedia3d, similarTerms, variantPricing } from "@epicmkt/shared";
 import { NotFoundError, getCategories } from "@epicmkt/backend";
-import { supabase } from "../applications/supabaseClient";
+import { supabase, loadSupabase } from "../applications/lazySupabase.js";
+import { takeEarlyFlashRows } from "./early.js";
 import { isSynced, serverNow } from "../../lib/clock.js";
 import { loadSnapshot } from "./snapshot.js";
 import { mediaUrl, businessOf, galleryOf, teamOf, timetableOf, cardOfBusiness, cardBusinessOf, statusCard, entryOf, flashParts, itemOf, pricingOf, cardPricing, rangeOfRow, serviceOf } from "./shape.js";
@@ -23,6 +24,12 @@ const unwrap = ({ data, error }) => {
 
 const loadRows = () =>
   loadSnapshot(async () => {
+    // index.html already asked for the flash sales while the app was still downloading; use that answer once, if it arrived.
+    const early = await takeEarlyFlashRows();
+    if (early) {
+      const serverAt = early.rows.length ? Date.parse(early.rows[0].server_now) : null;
+      return { rows: early.rows, fetchedAt: early.receivedAt, serverAt: Number.isFinite(serverAt) ? serverAt : null };
+    }
     const rows = unwrap(await supabase.from("public_flash_sales").select("*").order("ends_at", { ascending: true }).limit(MAX_ROWS)) ?? [];
     const serverAt = rows.length ? Date.parse(rows[0].server_now) : null;
     return { rows, fetchedAt: Date.now(), serverAt: Number.isFinite(serverAt) ? serverAt : null };
@@ -656,10 +663,21 @@ export async function resolveShortcode(code) {
 }
 
 export function subscribe(onEvent, onStatus) {
-  const channel = supabase.channel("flash-sales", { config: { broadcast: { self: false } } });
-  channel.on("broadcast", { event: "*" }, onEvent).subscribe((status) => onStatus?.(status));
+  // The real client is fetched on demand (see lazySupabase.js), so the channel opens a moment after this is called.
+  let stopped = false;
+  let real = null;
+  let channel = null;
+  loadSupabase()
+    .then((client) => {
+      if (stopped) return;
+      real = client;
+      channel = client.channel("flash-sales", { config: { broadcast: { self: false } } });
+      channel.on("broadcast", { event: "*" }, onEvent).subscribe((status) => onStatus?.(status));
+    })
+    .catch(() => onStatus?.("CHANNEL_ERROR"));
   return () => {
-    supabase.removeChannel(channel);
+    stopped = true;
+    if (real && channel) real.removeChannel(channel);
   };
 }
 

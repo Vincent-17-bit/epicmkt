@@ -414,8 +414,149 @@
   padding: var(--space-3) var(--space-4) calc(var(--space-3) + var(--safe-bottom));
   border-top: 1px solid var(--border);
   background: var(--surface);
+  box-shadow: 0 -6px 16px rgb(17 17 17 / 0.06);
 }
 
+/* With an order: chat and store are square icon buttons, "Order now" takes the rest of the row. */
+.footer[data-order] {
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.iconBtn {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 3.5rem;
+  height: 48px;
+  padding-inline: var(--space-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--text);
+  font-size: 1.1rem;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
+}
+
+.iconLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.iconBtn:active {
+  transform: scale(0.95);
+}
+
+.iconBtn:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  .iconBtn {
+    min-width: 48px;
+  }
+
+  .iconLabel {
+    display: none;
+  }
+
+  .iconBtn:hover {
+    border-color: var(--primary);
+    background: var(--primary-tint);
+  }
+
+  .iconBtn::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    padding: 6px 10px;
+    border-radius: 8px;
+    background: var(--text);
+    color: var(--surface);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(4px);
+    pointer-events: none;
+    transition: opacity var(--dur) ease, transform var(--dur) ease;
+    z-index: 2;
+  }
+
+  .iconBtn:hover::after,
+  .iconBtn:focus-visible::after {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* "Order now" and, pushed to the right edge, the total it will send. */
+.order {
+  justify-content: flex-start;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  font-size: var(--text-md);
+  white-space: nowrap;
+}
+
+.orderLabel {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.orderTotal {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-inline-start: auto;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 1px solid rgb(17 17 17 / 0.25);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 30rem) {
+  .footer[data-order]:has([data-long]) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer[data-order]:has([data-long]) .order {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .footer[data-order]:has([data-long]) .iconBtn {
+    flex-direction: row;
+    gap: var(--space-2);
+  }
+
+  .footer[data-order]:has([data-long]) .iconLabel {
+    font-size: var(--text-sm);
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .footer[data-order] .order {
+    gap: var(--space-1);
+    padding-inline: var(--space-3);
+    font-size: var(--text-sm);
+  }
+
+  .footer[data-order] .order > svg {
+    display: none;
+  }
+
+  .orderTotal {
+    padding-inline-start: var(--space-2);
+  }
+}
 
 /* With a Save button the footer is three: Save (square, then with its word), Chat (the widest) and Visit. */
 .footer[data-save] {
@@ -447,7 +588,7 @@
     border-radius: var(--radius-card);
   }
 
-  .footer {
+  .footer:not([data-order]) {
     display: none;
   }
 }
@@ -552,10 +693,24 @@
 
 @media (min-width: 64rem) {
   .root[data-variant="page"] .footer {
-    max-width: none;
+    width: fit-content;
+    max-width: 100%;
+    margin-inline: auto 0;
     border-radius: var(--radius-card);
     border-bottom: 2px solid var(--border-strong);
     margin-bottom: var(--space-4);
+  }
+
+  .root[data-variant="page"] .footer[data-order] {
+    grid-template-columns: auto auto auto;
+  }
+
+  .root[data-variant="page"] .footer[data-order] .order {
+    padding-inline: var(--space-5);
+  }
+
+  .root[data-variant="page"] .footer[data-order] .orderTotal {
+    margin-inline-start: var(--space-2);
   }
 }
 
@@ -639,4 +794,70 @@
 .soldLink {
   color: var(--link);
   font-weight: 600;
+}
+
+/* Order now inside the "Sold by" card: the one filled, full-width button of the card. */
+.orderInline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--text);
+  border-radius: var(--radius-card);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur) ease, transform var(--dur) ease;
+}
+.orderInline:active { transform: scale(0.98); }
+.orderInline:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (hover: hover) { .orderInline:hover { background: var(--primary-hover); } }
+.orderInline .orderTotal { margin-inline-start: var(--space-2); }
+
+/* ---- Phones: tighter, so more of the product shows and nothing is oversized ---- */
+@media (max-width: 47.99rem) {
+  .header { min-height: 48px; }
+  .sold { padding: var(--space-3); gap: var(--space-3); }
+  .logo { width: 40px; height: 40px; }
+  .actions > * { flex-basis: 6.5rem; }
+  .soldMap { aspect-ratio: 16 / 6; }
+  .outline, .chat, .orderInline { height: 44px; font-size: var(--text-sm); }
+  .iconBtn { width: 44px; height: 44px; font-size: 1rem; }
+  .footer { padding: var(--space-2) var(--space-3) calc(var(--space-2) + var(--safe-bottom)); }
+  .order { font-size: var(--text-sm); padding: 0 var(--space-3); }
+  .root[data-variant="page"] .header,
+  .root[data-variant="page"] .body { padding-inline: var(--space-3); }
+  .root[data-variant="page"] .body > section[id^="item-"]:not(.similar) { border-width: 1px; margin-block: var(--space-2) var(--space-3); }
+  .root[data-variant="page"] .footer { border-width: 1px; }
+}
+@media (max-width: 22.5rem) {
+  .orderTotal { display: none; }
+}
+@media (max-width: 20rem) {
+  .actions > * { flex-basis: 100%; }
+}
+
+/* The order footer with Save: Save, Chat and Visit are icon buttons, "Order now" takes the rest. When the total is long the three icons share a row under it. */
+.footer[data-order][data-save] {
+  grid-template-columns: auto auto auto minmax(0, 1fr);
+}
+
+@media (max-width: 30rem) {
+  .footer[data-order][data-save]:has([data-long]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footer[data-order][data-save]:has([data-long]) .order {
+    grid-column: 1 / -1;
+  }
+}
+
+.footer[data-order][data-save] .iconBtn[aria-pressed="true"] {
+  border-color: var(--saved);
 }

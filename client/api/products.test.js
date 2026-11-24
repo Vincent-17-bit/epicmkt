@@ -389,30 +389,26 @@ describe("/api/products", () => {
       expect(rpcs()).toContain("trending_lists");
     });
 
-    it("is cached until 20 minutes past the next hour (the list is rebuilt every hour)", async () => {
+    it("is cached until 5 minutes past the next hour (the list is rebuilt at :02)", async () => {
       answer({ trending_lists: () => new Response(JSON.stringify(lists), { status: 200 }) });
       vi.useFakeTimers({ toFake: ["Date"] });
       const maxage = async (iso) => {
         vi.setSystemTime(new Date(iso));
         return Number((await call("op=trending")).headers.get("Cache-Control").match(/s-maxage=(\d+)/)[1]);
       };
-      expect(await maxage("2026-03-01T10:50:00Z")).toBe(30 * 60); // 10:50 -> 11:20
-      expect(await maxage("2026-03-01T11:59:00Z")).toBe(21 * 60); // 11:59 -> 12:20
-      expect(await maxage("2026-03-01T12:10:00Z")).toBe(10 * 60); // the new list is not cached before 12:20
-      expect(await maxage("2026-03-01T12:30:00Z")).toBe(50 * 60); // 12:30 -> 13:20
-      expect(await maxage("2026-03-01T12:20:00Z")).toBe(60); // never less than a minute
+      expect(await maxage("2026-03-01T10:50:00Z")).toBe(15 * 60);
+      expect(await maxage("2026-03-01T11:59:00Z")).toBe(6 * 60);
+      expect(await maxage("2026-03-01T12:03:00Z")).toBe(2 * 60);
+      expect(await maxage("2026-03-01T12:30:00Z")).toBe(35 * 60);
+      expect(await maxage("2026-03-01T12:05:00Z")).toBe(60);
     });
 
-    it("passes a known county to the database and ignores anything else", async () => {
+    it("asks the database for one list for everyone, and ignores any county in the request", async () => {
       const seen = [];
       answer({ trending_lists: (body) => { seen.push(body); return new Response(JSON.stringify(lists), { status: 200 }); } });
       await call("op=trending&county=kisumu");
-      await call("op=trending&county=Uasin%20Gishu");
-      await call("op=trending&county=Narnia");
-      await call("op=trending&county=%27%3B%20drop%20table");
       await call("op=trending");
-      expect(seen.map((b) => b.p_county)).toEqual(["Kisumu", "Uasin Gishu", null, null, null]);
-      expect(seen.every((b) => b.p_limit === 10)).toBe(true);
+      expect(seen.every((b) => b.p_limit === 10 && !("p_county" in b))).toBe(true);
     });
 
     it("uses the older hourly list when trending_lists is not in the database yet", async () => {
@@ -426,7 +422,16 @@ describe("/api/products", () => {
     it("falls back to the live count for trending when the hourly list is missing", async () => {
       answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
       const body = await (await call("op=trending")).json();
-      expect(body).toMatchObject({ live: true, items: [{ term: "bread", count: 4, hot: false }], popular: [{ term: "bread" }], rising: [] });
+      expect(body).toMatchObject({ live: true, rising: [] });
+      expect(body.items[0]).toMatchObject({ term: "bread", count: 4, hot: false, itemId: "item-1", image: "b1/one.webp" });
+      expect(body.popular[0]).toMatchObject({ term: "bread", image: "b1/one.webp" });
+    });
+
+    it("a fallback list is cached for minutes, not an hour, so a brief database hiccup heals itself", async () => {
+      answer({ top_searches: () => new Response(JSON.stringify([{ term: "bread", count: 4, hot: false }]), { status: 200 }) });
+      const res = await call("op=trending");
+      expect(res.headers.get("Cache-Control")).toMatch(/s-maxage=120/);
+      expect((await res.json()).degraded).toBe(true);
     });
 
     it("builds the unfiltered feed from the hour's pool once the catalogue is bigger than the snapshot, and keeps its order", async () => {

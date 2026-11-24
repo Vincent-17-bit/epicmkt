@@ -1,4 +1,4 @@
-import mark from "../assets/logo-mark.png";
+import mark from "../assets/logo-mark.webp";
 import styles from "./Logo.module.css";
 
 export function LogoMark({ size = 36 }) {

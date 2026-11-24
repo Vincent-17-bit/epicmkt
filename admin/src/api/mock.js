@@ -15,7 +15,7 @@ export { deleteSizeChart, getShoeConversion, listItemsForSizeChart, listProductT
 export { listSpecTypes, saveSpecRows } from "./mockSpecRules.js";   // Spec rules 5.11
 export { listTypeSettings, saveTypeSettings, saveTypeDraft, discardTypeDraft, publishTypeVersion } from "./mockProductTypes.js";
 export { getUnmetDemand } from "./mockDemand.js";   // A22
-export { getTrendingOverview, pinTrending, unpinTrending, hideTrending, unhideTrending, setSynonym, removeSynonym } from "./mockTrending.js";   // 0146
+export { getTrendingOverview, hideTrending, unhideTrending, setSynonym, removeSynonym } from "./mockTrending.js";   // 0146
 export { deleteRelation, listRelations, saveRelation } from "./mockRelations.js";   // C26
 export { listDepartments, listRequestTypes, listTypeRequests, resolveTypeRequest, saveDepartment } from "./mockDepartments.js";   // B28
 export { approveOptionValue, importOptionValue, listOptionValues, mergeOptionValue, renameOptionValue, updateOptionValue } from "./mockValues.js";   // A18
@@ -284,6 +284,11 @@ export async function getLoginDelivery() {
     { channel: "sms", status: "sent", error: null, created_at: new Date().toISOString() },
     { channel: "email", status: "failed", error: "mailbox_unavailable", created_at: new Date().toISOString() },
   ];
+}
+export async function openSellerSite({ businessId }) {
+  await latency();
+  const row = demoRow(businessId);
+  return { ok: true, businessId, businessName: row?.name ?? "Demo business", sellerId: row?.seller_id ?? "SLR-DEMO", tokenHash: "demo" };
 }
 export async function resendLogin() {
   await latency();

@@ -100,7 +100,7 @@ describe("search type-ahead", () => {
 
   it("before typing, shows the hourly trending searches", async () => {
     panel();
-    const section = (await screen.findByRole("heading", { name: /Trending searches/ })).closest("section");
+    const section = (await screen.findByRole("heading", { name: /Top searches/ })).closest("section");
     expect((await within(section).findAllByRole("button")).length).toBe(2);
     expect(within(section).queryByText(/Updated/)).toBeNull();
     expect(within(section).getAllByRole("button").map((b) => b.textContent)).toEqual([expect.stringContaining("milk"), expect.stringContaining("panadol")]);
@@ -143,7 +143,7 @@ describe("opening search", () => {
     const hero = screen.getByRole("button", { name: "Hero search" });
     await userEvent.click(hero);
     await waitFor(() => expect(screen.getByTestId("state")).toHaveTextContent('{"search":true}'));
-    expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true");
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true"));
     expect(document.getElementById("site-menu")).toHaveAttribute("data-open", "false");
     await waitFor(() => expect(screen.getByRole("combobox")).toHaveFocus());
     await act(async () => {
@@ -153,4 +153,25 @@ describe("opening search", () => {
     expect(document.getElementById("site-menu")).toHaveAttribute("data-open", "false");
     await waitFor(() => expect(hero).toHaveFocus());
   });
+
+  it("the cross in the header closes the search", async () => {
+    render(
+      <QueryClientProvider client={client()}>
+        <MemoryRouter>
+          <Header />
+          <Routes>
+            <Route path="/" element={<HeroSearch />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Hero search" }));
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "true"));
+    await act(async () => {
+      await userEvent.click(screen.getByRole("button", { name: "Dismiss search" }));
+    });
+    await waitFor(() => expect(document.getElementById("site-search")).toHaveAttribute("data-open", "false"));
+    expect(screen.getByRole("button", { name: "Open menu" })).toBeInTheDocument();
+  });
 });
+

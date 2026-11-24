@@ -24,8 +24,8 @@ const handler = (fn) => {
   return { roles: [...m[1].matchAll(/"(\w+)"/g)].map((r) => r[1]), max: Number(m[2]), seconds: Number(m[3]) };
 };
 
-test("the spec table lists the three decision and payment functions", () => {
-  assert.deepEqual([...spec.keys()].sort(), ["admin-confirm-payment", "admin-decide-application", "admin-reset-seller-password"]);
+test("the spec table lists the decision, payment, password and open-seller functions", () => {
+  assert.deepEqual([...spec.keys()].sort(), ["admin-confirm-payment", "admin-decide-application", "admin-open-seller", "admin-reset-seller-password"]);
 });
 
 test("each function's roles and rate limit match the spec table", () => {
@@ -42,6 +42,10 @@ test("support cannot decide applications, confirm payments or reset passwords", 
 
 test("only the owner can reset a seller password", () => {
   assert.deepEqual(handler("admin-reset-seller-password").roles, ["owner"]);
+});
+
+test("only the owner can open the seller site as a business", () => {
+  assert.deepEqual(handler("admin-open-seller").roles, ["owner"]);
 });
 
 test("the shared role list matches the admins.role check constraint in the migration", () => {

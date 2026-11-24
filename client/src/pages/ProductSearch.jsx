@@ -12,6 +12,7 @@ import { useNoindex } from "../hooks/useRouteSeo.js";
 import { useOpenSearch } from "../hooks/useOpenSearch.js";
 import FilterSidebar, { FacetBody } from "../components/search/FilterSidebar.jsx";
 import FilterSheet from "../components/FilterSheet.jsx";
+import UnderstoodBar from "../components/search/UnderstoodBar.jsx";
 import ResultRow from "../components/search/ResultRow.jsx";
 import Pagination from "../components/Pagination.jsx";
 import styles from "../components/search/ProductSearch.module.css";
@@ -216,7 +217,7 @@ export default function ProductSearch() {
             </button>
             <label className={styles.sort}>
               <span>Sort by:</span>
-              <select value={search.sort} onChange={(e) => go({ sort: e.target.value })}>
+              <select value={data?.understood?.sort ?? search.sort} onChange={(e) => go({ sort: e.target.value })}>
                 {SEARCH_SORTS.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
               </select>
             </label>
@@ -290,6 +291,7 @@ export default function ProductSearch() {
             </ul>
           )}
 
+          {!isPending && !isError && <UnderstoodBar understood={data?.understood} onQuery={(q) => go({ q })} />}
           {data?.corrected && data.corrected !== search.q && (
             <p className={styles.resultsNote} role="status">
               Showing results for <strong>{data.corrected}</strong>. No products matched “{search.q}”.
@@ -307,6 +309,17 @@ export default function ProductSearch() {
             <div className={styles.empty}>
               <h2>No {search.type === "service" ? "services" : "products"} match {count ? "these filters" : `“${search.q}”`}</h2>
               <p>{count ? "Remove a filter or two to see more." : "Check the spelling, try a shorter word, or look for a shop that sells it."}</p>
+              {!count && data.understood?.alternatives?.length > 0 && (
+                <p>
+                  Try:{" "}
+                  {data.understood.alternatives.map((a, i) => (
+                    <span key={a.q}>
+                      {i > 0 && " · "}
+                      <button type="button" className={styles.clearLink} onClick={() => go({ q: a.q })}>{a.q} ({a.total})</button>
+                    </span>
+                  ))}
+                </p>
+              )}
               <div className={styles.emptyActions}>
                 {count > 0 && <button type="button" className={styles.cta} onClick={clear}>Clear all filters</button>}
                 <Link className={styles.ctaGhost} to={`/search?q=${encodeURIComponent(search.q)}`}>Search businesses instead</Link>

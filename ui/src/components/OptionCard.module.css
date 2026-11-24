@@ -1,44 +1,141 @@
+/* One choice in an option group. Three shapes share one set of rules:
+     photo  - a small tile: picture on top, name and price under it (flavours, colours with photos)
+     swatch - a colour dot beside the name
+     text / button - name over price, for sizes and packs
+   The selected state never changes the box size (a 1px border plus a 1px ring instead of a 2px border), so choosing a card does not
+   nudge its neighbours. */
+
 .card {
+  --card-ring: var(--border-strong);
+  position: relative;
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1);
+  gap: 2px;
   min-width: var(--tap);
   min-height: var(--tap);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md, 10px);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--card-ring);
+  border-radius: var(--radius-card);
   background: var(--surface);
   color: var(--text);
   font: inherit;
   font-size: var(--text-sm);
+  line-height: 1.25;
   text-align: center;
   cursor: pointer;
-  transition: border-color var(--dur) ease, background-color var(--dur) ease;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color var(--dur) ease, background-color var(--dur) ease, box-shadow var(--dur) ease, transform var(--dur) ease;
 }
 
-.card[data-kind="photo"] {
-  width: 6.5rem;
-  padding: var(--space-1) var(--space-1) var(--space-2);
-  gap: var(--space-2);
-  border-radius: var(--radius-lg, 14px);
+.card:active {
+  transform: scale(0.97);
 }
 
-.card:hover:not([data-selected]) {
-  border-color: var(--text-muted);
-}
-
-.card[data-kind="button"] {
-  border-radius: var(--radius-pill);
-  padding: 0 var(--space-4);
-  font-weight: 600;
+@media (hover: hover) {
+  .card:hover:not([data-selected]) {
+    --card-ring: var(--text-muted);
+  }
 }
 
 .card[data-selected] {
-  border: 2px solid var(--text);
+  --card-ring: var(--text);
   background: var(--primary-tint);
-  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  box-shadow: 0 0 0 1px var(--text);
+}
+
+/* ---- photo tile: small, a fixed width so a row of them lines up ---- */
+
+.card[data-kind="photo"] {
+  flex: none;
+  width: 5.25rem;
+  min-height: 0;
+  padding: var(--space-1) var(--space-1) var(--space-2);
+  gap: var(--space-1);
+  scroll-snap-align: start;
+}
+
+.photo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  object-fit: cover;
+}
+
+.card[data-kind="photo"] .label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  min-height: 2.5em;
+  padding-inline: var(--space-1);
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.card[data-kind="photo"] .price {
+  font-size: var(--text-xs);
+}
+
+/* ---- swatch ---- */
+
+.card[data-kind="swatch"] {
+  flex-direction: row;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.swatch {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+}
+
+/* ---- text and button: name above price ---- */
+
+.card[data-kind="button"],
+.card[data-kind="text"] {
+  min-width: 4.5rem;
+  padding: var(--space-2) var(--space-4);
+}
+
+.card[data-kind="button"] .label {
+  font-weight: 700;
+}
+
+/* ---- parts ---- */
+
+.label {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.card:not([data-selected]) .price {
+  color: var(--text-muted);
+}
+
+.was {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
 }
 
 /* Dashed, not hidden: the choice is still there, and still pickable, but cannot be bought in this combination. */
@@ -49,7 +146,7 @@
 
 .card[data-unavailable] .photo,
 .card[data-unavailable] .swatch {
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .card:focus-visible {
@@ -57,40 +154,21 @@
   outline-offset: 2px;
 }
 
-.photo {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: var(--radius-sm, 6px);
-  object-fit: cover;
-}
-
-.swatch {
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 50%;
-  border: 1px solid var(--border-strong);
-}
-
-.label {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-
-.price {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-weight: 700;
-}
-
-.was {
-  color: var(--text-muted);
-  font-weight: 400;
-  font-size: var(--text-xs, 0.75rem);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .card {
     transition: none;
   }
+
+  .card:active {
+    transform: none;
+  }
+}
+
+/* Phones: smaller choices, so a long list of sizes or colours takes two rows, not four. */
+@media (max-width: 47.99rem) {
+  .card { min-width: 2.5rem; min-height: 2.5rem; padding: 6px var(--space-3); font-size: var(--text-xs); }
+  .card[data-kind="button"], .card[data-kind="text"] { min-width: 3.5rem; padding: 6px var(--space-3); }
+  .card[data-kind="photo"] { width: 4.25rem; padding: 2px 2px var(--space-1); }
+  .card[data-kind="swatch"] { padding: 6px var(--space-2); }
+  .swatch { width: 1rem; height: 1rem; }
 }

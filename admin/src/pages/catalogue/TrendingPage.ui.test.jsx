@@ -9,14 +9,12 @@ let canManage = true;
 const overview = (extra = {}) => ({
   status: { ok: true, computedAt: "2026-11-16T09:12:00Z", ageMinutes: 30, staleAfterHours: 5, minPeople: 3 },
   popular: [
-    { rank: 1, term: "gas cylinder", kind: "product", name: "Gas Cylinder 6kg", people: 41, hot: true, pinned: false },
-    { rank: 2, term: "mama njeri bakery", kind: "store", name: "Mama Njeri Bakery", people: 33, hot: false, pinned: false },
-    { rank: 3, term: "flash sneakers", kind: "flash", name: "Flash Sneakers", people: 27, hot: false, pinned: false },
-    { rank: 4, term: "barber", kind: "category", name: "Barber", people: 19, hot: false, pinned: true }
+    { rank: 1, term: "gas cylinder", kind: "product", name: "Gas Cylinder 6kg", people: 41, hot: true },
+    { rank: 2, term: "mama njeri bakery", kind: "store", name: "Mama Njeri Bakery", people: 33, hot: false },
+    { rank: 3, term: "flash sneakers", kind: "flash", name: "Flash Sneakers", people: 27, hot: false },
+    { rank: 4, term: "barber", kind: "category", name: "Barber", people: 19, hot: false }
   ],
   rising: [{ rank: 1, term: "solar lamp", kind: "product", name: "Solar Lamp", people: 14, ratio: 7 }],
-  counties: ["kisumu"],
-  pins: [{ term: "barber", note: null, expiresAt: "2026-11-23T09:00:00Z" }],
   hidden: ["xxx"],
   synonyms: [{ variant: "gesi", canonical: "gas" }],
   ...extra
@@ -24,8 +22,6 @@ const overview = (extra = {}) => ({
 
 const api = {
   getTrendingOverview: vi.fn(),
-  pinTrending: vi.fn(async () => undefined),
-  unpinTrending: vi.fn(async () => undefined),
   hideTrending: vi.fn(async () => undefined),
   unhideTrending: vi.fn(async () => undefined),
   setSynonym: vi.fn(async () => undefined),
@@ -60,7 +56,7 @@ describe("Trending page", () => {
     const popular = await screen.findByRole("table", { name: "Popular this week" });
     const rows = within(popular).getAllByRole("row").slice(1);
     expect(rows.map((r) => within(r).getAllByRole("cell")[1].textContent)).toEqual([
-      "gas cylinder (rising)", "mama njeri bakery", "flash sneakers", "barber (pinned)"
+      "gas cylinder (rising)", "mama njeri bakery", "flash sneakers", "barber"
     ]);
     expect(within(rows[0]).getByText(/Product/)).toBeInTheDocument();
     expect(within(rows[1]).getByText(/Store/)).toBeInTheDocument();
@@ -69,7 +65,6 @@ describe("Trending page", () => {
     const rising = screen.getByRole("table", { name: "Rising now" });
     expect(within(rising).getByText("solar lamp")).toBeInTheDocument();
     expect(within(rising).getByText(/7\.0×, 14 people/)).toBeInTheDocument();
-    expect(screen.getByText(/Counties with their own list: kisumu/)).toBeInTheDocument();
   });
 
   it("warns, loudly, when the lists are out of date", async () => {
@@ -82,7 +77,7 @@ describe("Trending page", () => {
   });
 
   it("says so when the lists were never built", async () => {
-    api.getTrendingOverview.mockResolvedValue(overview({ status: { ok: false, computedAt: null, ageMinutes: null, staleAfterHours: 5, minPeople: 3 }, popular: [], rising: [], pins: [] }));
+    api.getTrendingOverview.mockResolvedValue(overview({ status: { ok: false, computedAt: null, ageMinutes: null, staleAfterHours: 5, minPeople: 3 }, popular: [], rising: [] }));
     show();
     expect(await screen.findByRole("alert")).toHaveTextContent("never been built");
     expect(screen.getByText(/Shoppers see the busiest categories instead/)).toBeInTheDocument();
@@ -95,14 +90,13 @@ describe("Trending page", () => {
     expect(screen.getByText(/Last rebuilt/)).toBeInTheDocument();
   });
 
-  it("pins a word for the chosen number of days; a pinned word has no Pin button", async () => {
+  it("has no way to place a word by hand: no Pin buttons and no Pinned section", async () => {
     show();
     await screen.findByRole("table", { name: "Popular this week" });
-    expect(screen.queryByRole("button", { name: "Pin barber to the top" })).toBeNull();
-    fireEvent.change(screen.getByLabelText("Pin for"), { target: { value: "14" } });
-    fireEvent.click(screen.getByRole("button", { name: "Pin gas cylinder to the top" }));
-    await waitFor(() => expect(api.pinTrending).toHaveBeenCalledWith("gas cylinder", 14, null));
-    await waitFor(() => expect(push).toHaveBeenCalledWith({ message: "Pinned to the top" }));
+    expect(screen.queryByRole("button", { name: /Pin .* to the top/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Unpin/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Pinned" })).toBeNull();
+    expect(screen.queryByLabelText("Pin for")).toBeNull();
   });
 
   it("hides a word, and shows it again", async () => {
@@ -112,12 +106,6 @@ describe("Trending page", () => {
     await waitFor(() => expect(api.hideTrending).toHaveBeenCalledWith("mama njeri bakery"));
     fireEvent.click(screen.getByRole("button", { name: "Show xxx again" }));
     await waitFor(() => expect(api.unhideTrending).toHaveBeenCalledWith("xxx"));
-  });
-
-  it("unpins", async () => {
-    show();
-    fireEvent.click(await screen.findByRole("button", { name: "Unpin barber" }));
-    await waitFor(() => expect(api.unpinTrending).toHaveBeenCalledWith("barber"));
   });
 
   it("adds and removes a synonym", async () => {
@@ -133,11 +121,11 @@ describe("Trending page", () => {
     await waitFor(() => expect(api.removeSynonym).toHaveBeenCalledWith("gesi"));
   });
 
-  it("tells the admin when the database refuses (for example a fourth pin)", async () => {
-    api.pinTrending.mockRejectedValueOnce(new Error("at most 3 pinned terms at a time"));
+  it("tells the admin when the database refuses a change", async () => {
+    api.hideTrending.mockRejectedValueOnce(new Error("term must be at least 2 characters"));
     show();
-    fireEvent.click(await screen.findByRole("button", { name: "Pin gas cylinder to the top" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith({ message: "at most 3 pinned terms at a time", tone: "error" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Hide gas cylinder" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith({ message: "term must be at least 2 characters", tone: "error" }));
   });
 
   it("a role that can look but not change sees the buttons disabled, with the reason", async () => {

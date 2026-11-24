@@ -612,6 +612,8 @@ export async function getLoginDelivery(businessId) {
   );
   return data ?? [];
 }
+// A one-time sign-in token for this business's own seller login: { businessName, sellerId, tokenHash }. The seller site exchanges it for a session.
+export const openSellerSite = ({ businessId, reason }) => callFunction("admin-open-seller", { businessId, reason });
 export const resendLogin = ({ businessId, reason }) => callFunction("admin-reset-seller-password", { businessId, reason });
 export const getBusinessPayments = (id) => detailRpc("admin_business_payments", { p_id: id });
 export const getBusinessActivity = (id) => detailRpc("admin_business_activity", { p_id: id, p_limit: 50 });
@@ -748,10 +750,8 @@ export const getUnmetDemand = (period = 7, category = null) => detailRpc("admin_
 
 // Trending (migration 0146): one ranking of what shoppers search for (stores, products, flash sales, categories together), popular this week
 // and rising now, rebuilt every hour. The overview is { status: { ok, computedAt, ageMinutes, staleAfterHours, minPeople }, popular, rising,
-// counties, pins, hidden, synonyms }. Hiding takes the word out at once; a pin lasts `days` and still needs something live to show.
+// counties, hidden, synonyms }. The order is the system's alone (migration 0153 removed pinning). Hiding takes the word out at once.
 export const getTrendingOverview = () => detailRpc("admin_trending_overview");
-export const pinTrending = (term, days = 7, note = null) => detailRpc("admin_trending_pin", { p_term: term, p_days: days, p_note: note });
-export const unpinTrending = (term) => detailRpc("admin_trending_unpin", { p_term: term });
 export const hideTrending = (term) => detailRpc("admin_trending_hide", { p_term: term });
 export const unhideTrending = (term) => detailRpc("admin_trending_unhide", { p_term: term });
 export const setSynonym = (variant, canonical) => detailRpc("admin_synonym_set", { p_variant: variant, p_canonical: canonical });

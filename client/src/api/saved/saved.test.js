@@ -16,3 +16,18 @@ describe("items.getSaved in demo mode", () => {
     expect(out.redirects).toEqual({});
   });
 });
+
+describe("items.getSaved on a live site", () => {
+  it("never reaches for demo data: an id that is not a database id is simply not listed", async () => {
+    vi.resetModules();
+    vi.doMock("../flash/mode.js", () => ({ isLive: () => true }));
+    vi.doMock("./live.js", () => ({ isLiveId: (id) => /^[0-9a-f-]{36}$/.test(id), getSavedLive: async (ids) => ({ items: Object.fromEntries(ids.map((i) => [i, { id: i }])), redirects: {}, shops: {}, now: 1, fetchedAt: 1 }) }));
+    const { getSaved } = await import("./index.js");
+    const uuid = "11111111-1111-4111-8111-111111111111";
+    const out = await getSaved([uuid, "b_041-demo-item"]);
+    expect(out.items[uuid]).toEqual({ id: uuid });
+    expect(out.items["b_041-demo-item"]).toBeNull();
+    vi.doUnmock("./live.js");
+    vi.doUnmock("../flash/mode.js");
+  });
+});

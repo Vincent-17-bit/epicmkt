@@ -10,7 +10,6 @@ import Gallery from "./Gallery.jsx";
 import Header from "./Header.jsx";
 import { BrandStory, CompareTable, ItemImages, ItemIncluded, ItemVideos } from "./ItemSections.jsx";
 import Offers from "./Offers.jsx";
-import OrderButton from "./OrderButton.jsx";
 import Options from "./Options.jsx";
 import ProductInformation, { ProductInfoLink, openProductInfo } from "./ProductInformation.jsx";
 import Quantity from "./Quantity.jsx";
@@ -51,7 +50,6 @@ export default function ItemLayout({ ctx }) {
           <>
             <Offers key={item.id} ctx={ctx} />
             <Quantity ctx={ctx} slot={{ item }} />
-            <OrderButton ctx={ctx} />
             <div id="item-delivery"><Delivery ctx={ctx} /></div>
           </>
         }

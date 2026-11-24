@@ -4,21 +4,10 @@ import { isLive } from "./mode.js";
 const adapter = () => (isLive() ? import("./live.js") : import("./mock.js"));
 const liveAdapter = () => import("./live.js");
 
-const isNotFound = (error) => error?.name === "NotFoundError";
 
-// With Supabase configured, real (seller-published) data is authoritative: it is asked first, and the bundled demo
-// backend is only a fallback for demo ids/slugs that do not exist live. The demo backend must never answer first, or a
-// real shop whose slug matches a demo shop (slugs come from the name) would show the demo page, not the seller's items.
-// Without Supabase (local dev, tests) only the demo backend is used.
-const withFallback = async (live, demo) => {
-  if (!isLive()) return demo();
-  try {
-    return await live();
-  } catch (error) {
-    if (!isNotFound(error)) throw error;
-    return demo();
-  }
-};
+// With Supabase configured, only real (seller-published) data is shown: a shop or item that does not exist live is "not found",
+// never a demo one. Without Supabase (local dev, tests) only the demo backend is used.
+const withFallback = async (live, demo) => (isLive() ? live() : demo());
 
 export const getServerTime = async () => (await adapter()).getServerTime();
 
@@ -60,18 +49,16 @@ export const getItemRedirect = async (itemId) => {
 
 export const getStoreSelective = async (businessId, opts) => {
   if (!isLive()) return backend.getStoreSelective(businessId, opts);
-  const rows = await (await liveAdapter()).getStoreSelective(businessId, opts);
-  if (rows.length) return rows;
-  return backend.getStoreSelective(businessId, opts);
+  return (await liveAdapter()).getStoreSelective(businessId, opts);
 };
 
 // Similar items are a nicety: any failure, or an item that is not known, is simply an empty row. A real (live) item is
-// only ever matched against live data; the demo backend answers for demo ids, which live never knows.
+// only ever matched against live data.
 export const getSimilarItems = async (itemId, opts) => {
   try {
     if (!isLive()) return await backend.getSimilarItems(itemId, opts);
     const live = await liveAdapter();
-    const rows = live.isLiveId(itemId) ? await live.getSimilarItems(itemId, opts) : await backend.getSimilarItems(itemId, opts);
+    const rows = live.isLiveId(itemId) ? await live.getSimilarItems(itemId, opts) : [];
     return Array.isArray(rows) ? rows : [];
   } catch (error) {
     // A cancelled read (the visitor moved on) is expected. Any other failure is still an empty row for the visitor, but visible in
@@ -83,13 +70,13 @@ export const getSimilarItems = async (itemId, opts) => {
 };
 
 // "Recommended" items (C19): a page of items from any shop that go with this one. Like Similar items, any failure is an empty
-// page, so the section simply does not show. Demo ids are answered by the demo backend.
+// page, so the section simply does not show.
 export const getRelatedPage = async (itemId, opts = {}) => {
   const empty = { items: [], page: opts.page ?? 1, pageSize: opts.pageSize ?? 10, hasMore: false, total: 0 };
   try {
     if (!isLive()) return await backend.getRelatedPage(itemId, opts);
     const live = await liveAdapter();
-    return live.isLiveId(itemId) ? await live.getRelatedPage(itemId, opts) : await backend.getRelatedPage(itemId, opts);
+    return live.isLiveId(itemId) ? await live.getRelatedPage(itemId, opts) : empty;
   } catch (error) {
     if (error?.name === "AbortError" || /abort/i.test(String(error?.message))) return empty;
     console.warn("[related-items] could not load:", error?.message ?? error);

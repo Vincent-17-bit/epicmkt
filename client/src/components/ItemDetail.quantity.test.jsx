@@ -39,13 +39,13 @@ const total = () => screen.getByTestId("quantity-total").textContent;
 const priceFor = () => screen.queryByTestId("price-for")?.textContent ?? null;
 
 describe("quantity on the item page: units", () => {
-  it("gives an item with no type whole units from 1, with no Order button and the same chat message as before", async () => {
+  it("gives an item with no type whole units from 1, with the same chat message as before", async () => {
     mount(phoneDetail());
     await screen.findByRole("heading", { name: "Samsung Galaxy S26" });
     expect(screen.getByTestId("quantity")).toBeInTheDocument();
     expect(box()).toHaveValue("1");
+    expect(total()).toBe("Total KES 21,000");
     expect(chat()).toContain("(Grey / 128 GB) (KES 21,000)");
-    expect(screen.queryByTestId("order-whatsapp")).toBeNull();
   });
 
   it("shows no stepper for a service with no type", async () => {

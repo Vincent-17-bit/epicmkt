@@ -18,6 +18,8 @@ import styles from "./FlashSaleCard.module.css";
 
 const kes = (n) => Number(n).toLocaleString("en-KE");
 const EMBERS = [8, 22, 38, 54, 70, 86];
+// A store logo is a 32 px circle: 96 px covers 3x screens, 160 px anything beyond. The default 240-1600 px list would send a 480 px file.
+const LOGO_WIDTHS = [96, 160];
 
 function Embers() {
   return (
@@ -37,7 +39,7 @@ function StoreRow({ business: source }) {
   return (
     <span className={styles.store}>
       <span className={styles.logo}>
-        {business.logo ? <LazyImage src={business.logo} className={styles.logoImg} frameClassName={styles.logoFrame} width={240} /> : business.name.slice(0, 1)}
+        {business.logo ? <LazyImage src={business.logo} className={styles.logoImg} frameClassName={styles.logoFrame} width={96} widths={LOGO_WIDTHS} sizes="32px" /> : business.name.slice(0, 1)}
       </span>
       <span className={styles.storeName}>{business.name}</span>
       {business.verified && <FontAwesomeIcon icon={faCircleCheck} className={styles.verified} title={t("flash.verified")} aria-label={t("flash.verified")} />}
@@ -50,7 +52,7 @@ function StoreRow({ business: source }) {
   );
 }
 
-function FlashSaleCard({ entry, size = "standard" }) {
+function FlashSaleCard({ entry, size = "standard", priority = false }) {
   const ref = useRef(null);
   const { revealed, animate } = useCardLife(ref);
   const { sale, item, pricing, business } = entry;
@@ -59,8 +61,6 @@ function FlashSaleCard({ entry, size = "standard" }) {
   const badge = discountBadge(sale.discount);
   const hero = size === "hero";
   const compact = size === "compact";
-  const aria = `${t("flash.cardLabel")}: ${item.name}, ${t("flash.currency")} ${kes(pricing.salePrice)}, ${remaining}`;
-
   // What the Saved list needs of a flash deal: the item, the shop's id and the price the deal gives.
   const action = useSaveAction({ ...item, business, businessId: business?.id, businessSlug: business?.slug, pricing });
 
@@ -82,7 +82,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
   const children = (
     <>
       <span className={styles.media}>
-        <LazyImage fill src={item.imageUrl} className={styles.img} />
+        <LazyImage fill src={item.imageUrl} className={styles.img} priority={priority} />
         <span className={styles.vignette} aria-hidden="true" />
         <span className={styles.sweep} aria-hidden="true" />
         {compact ? (
@@ -106,7 +106,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       {!compact && <FuseBar startsAt={sale.startsAt} endsAt={sale.endsAt} animate={animate} className={styles.fuse} />}
 
       {!compact && (
-        <span className={styles.band}>
+        <span className={styles.band} aria-hidden="true">
           {urgency !== URGENCY.URGENT && (
             <span className={styles.bandLabel}>
               <FontAwesomeIcon icon={faBolt} aria-hidden="true" />
@@ -118,7 +118,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       )}
 
       <span className={styles.body}>
-        <span className={styles.name}>{action ? <Link to={saleHref(entry)} className={styles.nameLink} aria-label={aria} draggable="false">{item.name}</Link> : item.name}</span>
+        <span className={styles.name}>{action ? <Link to={saleHref(entry)} className={styles.nameLink} draggable="false">{item.name}</Link> : item.name}</span>
         {!compact && sale.headline && (
           <span className={styles.headline}>
             <FontAwesomeIcon icon={faQuoteLeft} aria-hidden="true" />
@@ -134,6 +134,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
         ) : (
           price
         )}
+        <span className="sr-only">{remaining}</span>
         {!compact && (pricing.savings > 0 || sale.quantityNote) && (
           <span className={styles.tags}>
             {pricing.savings > 0 && (
@@ -175,7 +176,7 @@ function FlashSaleCard({ entry, size = "standard" }) {
       data-urgency={urgency}
       data-animate={animate ? "true" : "false"}
       data-revealed={revealed ? "true" : "false"}
-      aria-label={aria}
+     
       draggable="false"
     >
       {children}

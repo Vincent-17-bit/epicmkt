@@ -59,3 +59,7 @@
     transform: translateY(-2px);
   }
 }
+
+.locate {
+  display: contents;
+}

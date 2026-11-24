@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheck, faCopy, faFilePdf } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faCopy, faFilePdf, faShareNodes } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
-import { PDF_MAX_ITEMS, catalogueFileName, catalogueMessage, catalogueWhatsappUrl, isValidSlug, sectionCounts, shareableItems } from "@epicmkt/shared";
+import { PDF_MAX_ITEMS, catalogueFileName, catalogueMessage, catalogueWhatsappUrl, isValidSlug, sectionCounts, shareableItems, shopUrl } from "@epicmkt/shared";
+import { ShareSheet } from "@epicmkt/ui";
 import * as api from "../../../api/index.js";
 import { mediaUrl } from "../../../api/shape.js";
 import { copyText } from "../../../lib/copy.js";
@@ -18,7 +19,15 @@ const SUPABASE = import.meta.env?.VITE_SUPABASE_URL;
 
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
-export default function ShareDialog({ open, onClose, items, shop, makePdf }) {
+const canSharePdf = () => {
+  try {
+    return typeof navigator !== "undefined" && typeof navigator.canShare === "function" && navigator.canShare({ files: [new File([""], "a.pdf", { type: "application/pdf" })] });
+  } catch {
+    return false;
+  }
+};
+
+export default function ShareDialog({ open, onClose, items, shop, makePdf, buildPdf }) {
   const preview = useQuery({ queryKey: ["shop-preview"], queryFn: api.getShopPreview, retry: false });
   const [picked, setPicked] = useState(() => new Set());
   const [soldOut, setSoldOut] = useState(false);
@@ -26,6 +35,7 @@ export default function ShareDialog({ open, onClose, items, shop, makePdf }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState("");
+  const [linkOpen, setLinkOpen] = useState(false);
 
   const everyone = useMemo(() => shareableItems(items, { includeSoldOut: soldOut }), [items, soldOut]);
   const sections = useMemo(() => sectionCounts(everyone), [everyone]);
@@ -48,23 +58,35 @@ export default function ShareDialog({ open, onClose, items, shop, makePdf }) {
     setNote((await copyText(message)) ? "Message copied. Paste it into any chat." : "Could not copy. Select the text and copy it.");
   };
 
-  const download = async () => {
+  const pdfOptions = () => {
+    const shopInfo = preview.data?.shop;
+    return { shop: { name: shopInfo?.name ?? name, slug, planKey: shopInfo?.planKey ?? shop.planKey, logoUrl: shopInfo ? mediaUrl(shopInfo.logoPath) : null }, items: chosen, prices, site: SITE, cloudName: CLOUD, supabaseUrl: SUPABASE, onProgress: (done, total) => setBusy({ done, total }) };
+  };
+
+  const run = async (task, done) => {
     setError("");
     setNote("");
-    setBusy({ done: 0, total: 0 });
+    setBusy({ done: 0, total: 0, kind: done.kind });
     try {
-      const shopInfo = preview.data?.shop;
-      await makePdf(
-        { shop: { name: shopInfo?.name ?? name, slug, planKey: shopInfo?.planKey ?? shop.planKey, logoUrl: shopInfo ? mediaUrl(shopInfo.logoPath) : null }, items: chosen, prices, site: SITE, cloudName: CLOUD, supabaseUrl: SUPABASE, onProgress: (done, total) => setBusy({ done, total }) },
-        catalogueFileName(slug)
-      );
-      setNote("Your catalogue was downloaded.");
+      await task();
+      setNote(done.note);
     } catch (e) {
-      setError(errorText(e));
+      if (e?.name !== "AbortError") setError(errorText(e));
     } finally {
       setBusy(null);
     }
   };
+
+  const download = () => run(() => makePdf(pdfOptions(), catalogueFileName(slug)), { kind: "download", note: "Your catalogue was downloaded." });
+
+  const sharePdf = () => run(async () => {
+    const blob = await buildPdf(pdfOptions());
+    const file = new File([blob], catalogueFileName(slug), { type: "application/pdf" });
+    await navigator.share({ files: [file], title: name || "Catalogue", text: slugOk ? shopUrl(slug, SITE) : "" });
+  }, { kind: "share", note: "Your catalogue was shared." });
+
+  const sharePdfReady = Boolean(buildPdf) && canSharePdf();
+  const progress = busy ? (busy.total ? `Loading photos ${busy.done} of ${busy.total}` : "Preparing") : null;
 
   return (
     <Modal open={open} onClose={onClose} title="Share your catalogue" labelId="share-title" wide>
@@ -105,6 +127,9 @@ export default function ShareDialog({ open, onClose, items, shop, makePdf }) {
             <button type="button" className={`${styles.ghost} ${share.btn}`} onClick={copy} disabled={!message}>
               <FontAwesomeIcon icon={faCopy} aria-hidden="true" /> Copy message
             </button>
+            <button type="button" className={`${styles.ghost} ${share.btn}`} onClick={() => setLinkOpen(true)} disabled={!slugOk}>
+              <FontAwesomeIcon icon={faShareNodes} aria-hidden="true" /> Share shop link
+            </button>
           </div>
         </section>
 
@@ -114,14 +139,20 @@ export default function ShareDialog({ open, onClose, items, shop, makePdf }) {
           {chosen.length > PDF_MAX_ITEMS && <p className={share.warn} role="note">The PDF holds the first {PDF_MAX_ITEMS} items. Tick a section to share the rest.</p>}
           <div className={share.actions}>
             <button type="button" className={`${styles.primary} ${share.btn}`} onClick={download} disabled={none || !slugOk || busy !== null || preview.isLoading}>
-              <FontAwesomeIcon icon={faFilePdf} aria-hidden="true" /> {busy ? (busy.total ? `Loading photos ${busy.done} of ${busy.total}` : "Preparing") : "Download PDF"}
+              <FontAwesomeIcon icon={faFilePdf} aria-hidden="true" /> {busy?.kind === "download" ? progress : "Download PDF"}
             </button>
+            {sharePdfReady && (
+              <button type="button" className={`${styles.ghost} ${share.btn}`} onClick={sharePdf} disabled={none || !slugOk || busy !== null || preview.isLoading}>
+                <FontAwesomeIcon icon={faShareNodes} aria-hidden="true" /> {busy?.kind === "share" ? progress : "Share PDF"}
+              </button>
+            )}
           </div>
         </section>
 
         <p className={share.status} role="status" aria-live="polite">{note && <><FontAwesomeIcon icon={faCheck} aria-hidden="true" /> {note}</>}</p>
         {error && <p className={share.warn} role="alert">{error}</p>}
       </div>
+      {slugOk && <ShareSheet open={linkOpen} onClose={() => setLinkOpen(false)} url={shopUrl(slug, SITE)} title={name} text={name ? `${name} on EpicMKT` : "Our shop on EpicMKT"} />}
     </Modal>
   );
 }

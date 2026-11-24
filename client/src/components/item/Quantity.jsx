@@ -12,7 +12,7 @@ const fill = (key, v) => Object.entries(v).reduce((s, [k, x]) => s.replace(`{${k
  * Slot for quantity, right after Offers. Three shapes, all driven by the one quantity the page keeps (ctx.qty):
  *   - an item with quantity-tier prices: the tier table (its own quantity box follows the page's),
  *   - a priced item that counts units (any item without a type) or a measure (kg, m): the stepper; the total shows in the price at the top,
- *   - a service, or a type with no quantity: nothing at all, and the page is unchanged.
+ *   - a "none" item or a service: nothing at all, and the page is unchanged.
  */
 export default function Quantity({ ctx, slot }) {
   const item = slot?.item;

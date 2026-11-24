@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { setLatency, getSimilarItems as demoSimilar } from "@epicmkt/backend";
 import { store } from "../../../../backend/src/store.js";
+import "../applications/supabaseClient"; // builds the fake now; the app code loads the client lazily
 import * as live from "./live.js";
 import { invalidateSnapshot } from "./snapshot.js";
 

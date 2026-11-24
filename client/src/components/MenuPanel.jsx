@@ -2,11 +2,9 @@ import { Link, useMatch } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowTrendUp, faBolt, faMagnifyingGlass, faStore, faRotateRight } from "@fortawesome/free-solid-svg-icons";
-import { resizeImageUrl } from "@epicmkt/shared";
 import { flash, getCategories } from "../api/index.js";
 import { addRecent } from "../lib/recentSearches.js";
-import Flame from "./Flame.jsx";
-import TrendTabs, { TrendKind, TrendNote } from "./TrendTabs.jsx";
+import TrendingList from "./TrendingList.jsx";
 import { trendPath, useTrending } from "../hooks/useTrending.js";
 import { t } from "../i18n/index.js";
 import { categoryIcon } from "../lib/categoryIcons.js";
@@ -16,9 +14,9 @@ import { Container, Button, IconButton, Skeleton } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
 import { useSavedCount } from "../stores/saved.js";
 import { useSavedDrawer } from "./saved/useSavedDrawer.js";
+import { MENU_ID } from "./panelIds.js";
 import styles from "./MenuPanel.module.css";
 
-export const MENU_ID = "site-menu";
 
 export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searchRef, quietRef }) {
   const savedCount = useSavedCount();
@@ -38,7 +36,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
   });
 
   // What shoppers search for, every kind in one ranking: popular this week and rising now, rebuilt every hour (migration 0146).
-  const { query: trending, tab, setTab, list: trend, hasRising, scopeNote } = useTrending({ enabled: open });
+  const { query: trending, real, alsoRising } = useTrending({ enabled: open });
 
   const submit = (event) => {
     event.preventDefault();
@@ -89,41 +87,30 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
           </form>
           </div>
 
-          {(trending.isPending || trend.length > 0) && (
+          {(trending.isPending || real.length > 0) && (
             <section aria-labelledby="menu-trending" className={`${styles.trending} ${styles.areaTrend}`}>
               <div className={styles.trendHead}>
                 <h2 id="menu-trending" className={styles.label}>
-                  <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Trending searches
+                  <FontAwesomeIcon icon={faArrowTrendUp} aria-hidden="true" /> Top searches
                 </h2>
               </div>
-              <TrendTabs tab={tab} onChange={setTab} hasRising={hasRising} />
-              {scopeNote && <TrendNote>{scopeNote}</TrendNote>}
-              <ol className={styles.trendList}>
-                {trending.isPending
-                  ? Array.from({ length: 6 }, (_, i) => (
-                      <li key={i} aria-hidden="true">
-                        <Skeleton width={`${5 + (i % 3) * 1.5}rem`} height="34px" radius="999px" />
-                      </li>
-                    ))
-                  : trend.map((item, index) => (
-                      <li key={item.term}>
-                        <Link
-                          to={trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)}
-                          replace
-                          className={styles.trend}
-                          onClick={() => addRecent(item.term)}
-                        >
-                          <span className={styles.trendRank} data-top={index < 3 || undefined}>{index + 1}</span>
-                          {item.image ? (
-                            <img className={styles.trendImg} src={resizeImageUrl(item.image, 64)} alt="" width="22" height="22" loading="lazy" decoding="async" />
-                          ) : null}
-                          <span className={styles.trendTerm}>{item.term}</span>
-                          <TrendKind kind={item.kind} />
-                          {item.hot && <Flame className={styles.trendFire} />}
-                        </Link>
-                      </li>
-                    ))}
-              </ol>
+              {trending.isPending ? (
+                <ol className={styles.trendList}>
+                  {Array.from({ length: 6 }, (_, i) => (
+                    <li key={i} aria-hidden="true">
+                      <Skeleton height="52px" radius="12px" />
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <TrendingList items={real} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
+              )}
+              {!trending.isPending && alsoRising.length > 0 && (
+                <>
+                  <h3 className={styles.moreLabel}>Also rising fast</h3>
+                  <TrendingList items={alsoRising} ranked={false} hrefFor={(item) => trendPath(item, `/products?q=${encodeURIComponent(item.term)}`)} onPick={(item) => addRecent(item.term)} />
+                </>
+              )}
             </section>
           )}
 

@@ -14,6 +14,7 @@ import { formatBusinessDate, formatDate } from "../../lib/time.js";
 import BulkDialog from "../businesses/BulkDialog.jsx";
 import { BULK, summarize } from "../businesses/bulk.js";
 import LoginDelivery from "./LoginDelivery.jsx";
+import OpenSellerSite from "./OpenSellerSite.jsx";
 import { ActivityTab, FlagsTab, ItemsTab, NotesTab, OverviewTab, PaymentsTab } from "./BusinessTabs.jsx";
 
 export default function BusinessDetailPage() {
@@ -124,6 +125,7 @@ export default function BusinessDetailPage() {
           {b.deleted_at ? null : <LoginDelivery id={id} name={b.name} />}
         </div>
         <div className="biz-actions">
+          {b.deleted_at ? null : <OpenSellerSite id={id} name={b.name} />}
           {can("messages.view") ? <Link className="secondary-button admin-button" to={`/admin/messages?business=${id}`}>Open conversation</Link> : null}
           {toggle ? (
             <Button disabled={!can("businesses.visibility")} title={why("businesses.visibility")} onClick={() => { setError(""); setDialog("visibility"); }}>
