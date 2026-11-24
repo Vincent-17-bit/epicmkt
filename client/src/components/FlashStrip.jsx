@@ -52,7 +52,7 @@ function FlashStrip({ id = "flash-strip", businessId = null, categoryId = null, 
         ? Array.from({ length: 4 }, (_, index) => <FlashSkeleton key={index} />)
         : [
             ...entries.map((entry, index) => (
-              <FlashSaleCard key={entry.sale.id} entry={entry} size={desktop && index === 0 && heat ? "hero" : "standard"} data-wide={desktop && index === 0 && heat ? "true" : undefined} />
+              <FlashSaleCard key={entry.sale.id} entry={entry} size={desktop && index === 0 && heat ? "hero" : "standard"} priority={heat && index === 0} data-wide={desktop && index === 0 && heat ? "true" : undefined} />
             )),
             <SeeAllTile key="all" to={seeAll} />
           ]}

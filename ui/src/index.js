@@ -3,7 +3,7 @@ export { default as IconButton } from "./components/IconButton.jsx";
 export { default as Container } from "./components/Container.jsx";
 export { default as Img } from "./components/Img.jsx";
 export { default as LazyImage } from "./components/LazyImage.jsx";
-export { setImageTransform } from "./lib/imageUrl.js";
+export { setImageTransform, resizedUrl } from "./lib/imageUrl.js";
 export { default as Skeleton } from "./components/Skeleton.jsx";
 export { default as StateCard } from "./components/StateCard.jsx";
 export { default as Field } from "./components/Field.jsx";

@@ -7,6 +7,7 @@ vi.mock("../applications/supabaseClient", async () => {
   return { supabase: fake.current.client };
 });
 
+import "../applications/supabaseClient"; // builds the fake now; the app code loads the client lazily
 import * as live from "./live.js";
 
 const db = () => fake.current.state;
