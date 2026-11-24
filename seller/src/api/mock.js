@@ -71,6 +71,13 @@ const logLogin = (success) => {
   if (state.logins.length > 200) state.logins.shift();
 };
 
+// Demo: the admin app's demo token is "demo". Anything else is an expired or used link.
+export const adminAccess = async (tokenHash) => {
+  await wait();
+  if (tokenHash !== "demo") throw new ApiError("link_invalid", "This link has expired or was already used.");
+  state.signedIn = true;
+  return { ok: true };
+};
 export const login = async (identifier, password) => {
   await wait();
   const typed = String(identifier).trim().toLowerCase();

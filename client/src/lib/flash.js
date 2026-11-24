@@ -69,7 +69,9 @@ export function discountBadge(discount) {
   return { kind: "deal", text: t("flash.deal") };
 }
 
-export const saleHref = (entry) => `/b/${entry.business.slug}?item=${encodeURIComponent(entry.item.id)}`;
+// A flash card opens the product's own page (/b/<store>/i/<item>): the same page every other product opens, with the quantity,
+// the Order now button, Chat seller and Visit store. It used to open the pop-up over the store page, which a flash card does not need.
+export const saleHref = (entry) => `/b/${entry.business.slug}/i/${encodeURIComponent(entry.item.id)}`;
 
 export function fuseShare(startsAt, endsAt, now) {
   const start = Date.parse(startsAt);

@@ -42,6 +42,12 @@ export const login = async (identifier, password) => {
   if (error) throw new ApiError("session_failed");
   return { expiresAt: session.expires_at };
 };
+// An admin opening this site as one business: the admin app's one-time token for that seller's own login becomes a normal session.
+export const adminAccess = async (tokenHash) => {
+  const { error } = await need().auth.verifyOtp({ token_hash: tokenHash, type: "magiclink" });
+  if (error) throw new ApiError("link_invalid", error.message);
+  return { ok: true };
+};
 export const logout = async () => { await need().auth.signOut(); };
 // `channel` is where the code goes: "sms" (Africa's Talking, to the phone on the listing) or "email" (the verified sign-in email).
 export const forgotRequest = ({ identifier, channel = "sms" }) => fn("seller-forgot-request", { identifier, sellerId: identifier, channel });

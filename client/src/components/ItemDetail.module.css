@@ -776,3 +776,50 @@
   color: var(--link);
   font-weight: 600;
 }
+
+/* Order now inside the "Sold by" card: the one filled, full-width button of the card. */
+.orderInline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 48px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--text);
+  border-radius: var(--radius-card);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color var(--dur) ease, transform var(--dur) ease;
+}
+.orderInline:active { transform: scale(0.98); }
+.orderInline:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+@media (hover: hover) { .orderInline:hover { background: var(--primary-hover); } }
+.orderInline .orderTotal { margin-inline-start: var(--space-2); }
+
+/* ---- Phones: tighter, so more of the product shows and nothing is oversized ---- */
+@media (max-width: 47.99rem) {
+  .header { min-height: 48px; }
+  .sold { padding: var(--space-3); gap: var(--space-3); }
+  .logo { width: 40px; height: 40px; }
+  .actions > * { flex-basis: 6.5rem; }
+  .soldMap { aspect-ratio: 16 / 6; }
+  .outline, .chat, .orderInline { height: 44px; font-size: var(--text-sm); }
+  .iconBtn { width: 44px; height: 44px; font-size: 1rem; }
+  .footer { padding: var(--space-2) var(--space-3) calc(var(--space-2) + var(--safe-bottom)); }
+  .order { font-size: var(--text-sm); padding: 0 var(--space-3); }
+  .root[data-variant="page"] .header,
+  .root[data-variant="page"] .body { padding-inline: var(--space-3); }
+  .root[data-variant="page"] .body > section[id^="item-"]:not(.similar) { border-width: 1px; margin-block: var(--space-2) var(--space-3); }
+  .root[data-variant="page"] .footer { border-width: 1px; }
+}
+@media (max-width: 22.5rem) {
+  .orderTotal { display: none; }
+}
+@media (max-width: 20rem) {
+  .actions > * { flex-basis: 100%; }
+}

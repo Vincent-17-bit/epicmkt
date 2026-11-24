@@ -285,6 +285,11 @@ export async function getLoginDelivery() {
     { channel: "email", status: "failed", error: "mailbox_unavailable", created_at: new Date().toISOString() },
   ];
 }
+export async function openSellerSite({ businessId }) {
+  await latency();
+  const row = demoRow(businessId);
+  return { ok: true, businessId, businessName: row?.name ?? "Demo business", sellerId: row?.seller_id ?? "SLR-DEMO", tokenHash: "demo" };
+}
 export async function resendLogin() {
   await latency();
   return { ok: true };
