@@ -82,8 +82,9 @@ export default function Layout() {
       </div>
       <BackToTop onTop={scrollToTop} hidden={layered} lifted={/^\/b\/[^/]+\/i\//.test(pathname)} />
       <UpdatePrompt />
+      {/* While the drawer's chunk loads (first open, slow network) the screen already answers the tap: the scrim appears at once. */}
       {savedOpen && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div aria-hidden="true" data-testid="saved-loading" style={{ position: "fixed", inset: 0, zIndex: "var(--z-saved)", background: "var(--scrim)" }} />}>
           <SavedDrawer />
         </Suspense>
       )}

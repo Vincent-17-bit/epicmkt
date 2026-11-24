@@ -33,6 +33,7 @@ export default function HeaderSaved() {
         aria-label={label}
         onClick={isOpen ? close : open}
         onPointerEnter={warm}
+        onPointerDown={warm}
         onFocus={warm}
         data-testid="header-saved"
       >
