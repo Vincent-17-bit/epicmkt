@@ -157,6 +157,19 @@ describe("flash cards stay in step with the server", () => {
     expect(calls() - connected).toBeLessThanOrEqual(1);
   });
 
+  it("does not download the list again when realtime connects just after the first load, but does when it reconnects later", async () => {
+    answer(entry("a", "Fade", 3600000));
+    mount();
+    await settle(1000);
+    expect(calls()).toBe(1);
+    act(() => api.status("CHANNEL_ERROR"));
+    await settle(20_000);
+    const before = calls();
+    act(() => api.status("SUBSCRIBED"));
+    await settle(1000);
+    expect(calls()).toBe(before + 1);
+  });
+
   it("polls when realtime is unavailable altogether (mock mode)", async () => {
     api.live = false;
     answer(entry("a", "Fade", 3600000));

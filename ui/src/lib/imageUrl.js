@@ -29,8 +29,9 @@ export function resizedUrl(url, width) {
   return `${url.replace(OBJECT, RENDER)}${url.includes("?") ? "&" : "?"}width=${w}&quality=70&resize=cover`;
 }
 
-export function srcSetFor(url) {
-  if (isCloudinaryDelivery(url)) return imageSrcSet(url);
+// `widths` limits the candidates for a small slot (a 32 px store logo should never be offered a 480 px file).
+export function srcSetFor(url, widths) {
+  if (isCloudinaryDelivery(url)) return widths?.length ? imageSrcSet(url, widths) : imageSrcSet(url);
   if (!canResize(url)) return undefined;
-  return WIDTHS.map((w) => `${resizedUrl(url, w)} ${w}w`).join(", ");
+  return (widths?.length ? widths : WIDTHS).map((w) => `${resizedUrl(url, w)} ${w}w`).join(", ");
 }

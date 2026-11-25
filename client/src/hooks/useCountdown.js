@@ -75,7 +75,9 @@ export function useLiveSales(entries) {
 
 export function useServerClockSync() {
   useEffect(() => {
-    syncServerTime();
+    // The flash-sales answer carries the server's time, so the first screen is right without this call. It was the last link in the
+    // chain of requests that the first paint waited on; it now runs once the page has gone quiet.
+    const first = typeof requestIdleCallback === "function" ? requestIdleCallback(() => syncServerTime(), { timeout: 2500 }) : window.setTimeout(syncServerTime, 1500);
     const sync = () => {
       if (document.visibilityState === "visible") syncServerTime();
     };
@@ -84,6 +86,8 @@ export function useServerClockSync() {
     window.addEventListener("pageshow", sync);
     window.addEventListener("online", syncServerTime);
     return () => {
+      if (typeof cancelIdleCallback === "function") cancelIdleCallback(first);
+      window.clearTimeout(first);
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", sync);
       window.removeEventListener("pageshow", sync);

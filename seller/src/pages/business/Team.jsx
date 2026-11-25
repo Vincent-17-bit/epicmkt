@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { WEEKDAYS, parseSpecialties, teamCapabilities, timetableByDay, validateSlotDraft, validateStaffDraft } from "@epicmkt/shared";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { SOCIAL_PLATFORMS, WEEKDAYS, parseSocial, parseSpecialties, socialInputOf, teamCapabilities, timetableByDay, validateSlotDraft, validateStaffDraft } from "@epicmkt/shared";
+import { SOCIAL_ICONS, SocialLinks } from "@epicmkt/ui";
 import * as api from "../../api/index.js";
 import { mediaUrl } from "../../api/shape.js";
 import Dialog from "../../components/Dialog.jsx";
@@ -22,12 +24,39 @@ function Field({ id, label, error, children }) {
   );
 }
 
+// One network: an icon, the box, and (as soon as something is typed) either the exact address it will open or why it cannot be read.
+// "Test link" opens it in a new tab so the seller can see it is the right person before saving.
+function SocialField({ platform, value, error, onChange }) {
+  const id = `staff-social-${platform.key}`;
+  const found = parseSocial(platform.key, value);
+  const shown = found.ok && !found.empty ? found : null;
+  const bad = (!found.ok && value.trim() ? found.error : null) ?? error;
+  return (
+    <div className={styles.socialRow} data-network={platform.key}>
+      <label className={styles.socialLabel} htmlFor={id}>
+        <span className={styles.socialIcon} aria-hidden="true"><FontAwesomeIcon icon={SOCIAL_ICONS[platform.key]} fixedWidth /></span>
+        <span>{platform.label}</span>
+      </label>
+      <input id={id} className={ui.input} value={value} inputMode="url" autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={platform.placeholder} aria-invalid={bad ? "true" : undefined} aria-describedby={`${id}-note`} onChange={(e) => onChange(e.target.value)} />
+      <p id={`${id}-note`} className={bad ? ui.error : styles.socialNote} role={bad ? "alert" : undefined}>
+        {bad ? bad : shown ? (
+          <>
+            Opens {shown.url.replace(/^https:\/\//, "")}{" "}
+            <a href={shown.url} target="_blank" rel="noopener noreferrer" aria-label={`Test ${platform.label} link`}>Test link</a>
+          </>
+        ) : platform.hint}
+      </p>
+    </div>
+  );
+}
+
 function StaffDialog({ open, member, items, premium, onClose, onSaved }) {
   const [name, setName] = useState(member?.name ?? "");
   const [role, setRole] = useState(member?.role ?? "");
   const [specialties, setSpecialties] = useState((member?.specialties ?? []).join(", "));
   const [photoPath, setPhotoPath] = useState(member?.photoPath ?? null);
   const [serviceIds, setServiceIds] = useState(member?.serviceIds ?? []);
+  const [socials, setSocials] = useState(() => Object.fromEntries(SOCIAL_PLATFORMS.map((p) => [p.key, socialInputOf(p.key, member?.socials?.[p.key])])));
   const [errors, setErrors] = useState({});
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -45,7 +74,7 @@ function StaffDialog({ open, member, items, premium, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    const draft = { name, role, specialties: parseSpecialties(specialties) };
+    const draft = { name, role, specialties: parseSpecialties(specialties), socials };
     const found = validateStaffDraft(draft);
     setErrors(found);
     if (Object.keys(found).length) return;
@@ -78,6 +107,13 @@ function StaffDialog({ open, member, items, premium, onClose, onSaved }) {
         <Field id="staff-spec" label="Specialties, separated by commas (optional)" error={errors.specialties}>
           <input id="staff-spec" className={ui.input} value={specialties} onChange={(e) => setSpecialties(e.target.value)} />
         </Field>
+        <fieldset className={styles.socialsEditor}>
+          <legend className={ui.label}>Social links (optional)</legend>
+          <p className={ui.muted}>Add the profiles customers can follow. Type a handle or paste the link. Each icon opens that profile on your shop page.</p>
+          {SOCIAL_PLATFORMS.map((p) => (
+            <SocialField key={p.key} platform={p} value={socials[p.key]} error={errors[`social_${p.key}`]} onChange={(v) => setSocials((s) => ({ ...s, [p.key]: v }))} />
+          ))}
+        </fieldset>
         {premium ? (
           items.length > 0 && (
             <fieldset className={styles.services}>
@@ -243,6 +279,7 @@ export default function Team() {
                     </div>
                     {m.adminState !== "ok" && <p className={ui.error}>{m.adminState === "removed" ? "Removed by EpicMKT" : "Hidden by EpicMKT"}{m.adminReason ? `: ${m.adminReason}` : ""}.</p>}
                     {m.specialties.length > 0 && <div className={ui.chips}>{m.specialties.map((s) => <span key={s} className={ui.pill}>{s}</span>)}</div>}
+                    <SocialLinks name={m.name} socials={m.socials} />
                     {caps.services && services.length > 0 && <p className={ui.muted}>Services: {services.join(", ")}</p>}
                     {!readOnly && (
                       <div className={styles.row}>
@@ -301,8 +338,8 @@ export default function Team() {
         </section>
       )}
 
-      <StaffDialog key={`${staffDialog.member?.id ?? "new"}-${staffDialog.open}`} open={staffDialog.open} member={staffDialog.member} items={itemList} premium={caps.services} onSaved={refresh} onClose={() => setStaffDialog({ open: false, member: null })} />
-      <SlotDialog key={`${slotDialog.slot?.id ?? "new"}-${slotDialog.open}`} open={slotDialog.open} slot={slotDialog.slot} day={slotDialog.day} slots={slotList} staff={staffList} onSaved={refresh} onClose={() => setSlotDialog({ open: false, slot: null, day: 1 })} />
+      <StaffDialog key={`staff-${staffDialog.member?.id ?? "new"}-${staffDialog.open}`} open={staffDialog.open} member={staffDialog.member} items={itemList} premium={caps.services} onSaved={refresh} onClose={() => setStaffDialog({ open: false, member: null })} />
+      <SlotDialog key={`slot-${slotDialog.slot?.id ?? "new"}-${slotDialog.open}`} open={slotDialog.open} slot={slotDialog.slot} day={slotDialog.day} slots={slotList} staff={staffList} onSaved={refresh} onClose={() => setSlotDialog({ open: false, slot: null, day: 1 })} />
     </div>
   );
 }

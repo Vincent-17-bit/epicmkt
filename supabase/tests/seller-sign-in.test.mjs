@@ -95,7 +95,7 @@ test("the public listing never shows a sign-in email", async () => {
   await rejects(c, { role: "anon" }, `select login_email from businesses`, [], /permission denied/);
 });
 
-// ---- 0154: changing the phone number with a code --------------------------------------------------------------------------------------
+// ---- 0156: changing the phone number with a code --------------------------------------------------------------------------------------
 
 const setPhone = (phone, business = ids.bizA) =>
   tx(c, asService, (k) => sql(k, `select seller_set_verified_phone($1, $2) as r`, [business, phone]).then((r) => r[0].r), { commit: true });

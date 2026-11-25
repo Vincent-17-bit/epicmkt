@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMeta, buildSitemap, clip, esc, headTags, injectHead, isUuid, kes, notFoundMeta, priceLine, robotsTxt, variantImagePath } from "./meta.js";
+import { buildMeta, buildSitemap, clip, esc, headTags, injectHead, isUuid, kes, notFoundMeta, priceLine, robotsTxt, variantImagePath, llmsTxt, ardManifest } from "./meta.js";
 
 const origin = "https://epicmkt.example";
 const supabaseUrl = "https://x.supabase.co";
@@ -199,6 +199,21 @@ describe("robotsTxt", () => {
     expect(txt).toContain(`Sitemap: ${origin}/sitemap.xml`);
     expect(txt).toContain("Disallow: /seller/");
     expect(txt).toContain("Disallow: /admin/");
+  });
+});
+
+describe("llmsTxt", () => {
+  it("opens with an H1, links back to this deployment and lists the sitemap", () => {
+    const txt = llmsTxt(origin);
+    expect(txt.startsWith("# EpicMKT\n")).toBe(true);
+    expect(txt).toContain(`](${origin}/flash)`);
+    expect(txt).toContain(`[Sitemap](${origin}/sitemap.xml)`);
+  });
+});
+
+describe("ardManifest", () => {
+  it("is an entries array every agent catalogue reader accepts", () => {
+    expect(ardManifest()).toEqual({ specVersion: "0.91", entries: [] });
   });
 });
 

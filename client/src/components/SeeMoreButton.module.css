@@ -1,0 +1,73 @@
+/* A solid pill with an arrow disc: the one clear action in a section header, readable on a phone and a wide screen,
+   in light and dark. Colours come from the theme tokens, so dark mode inverts with no extra rules. */
+.button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 5px 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--text);
+  color: var(--text-inverse);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: var(--shadow-1);
+  transition: transform var(--dur) ease, box-shadow var(--dur) ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.disc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #111111;
+  font-size: 0.8rem;
+  transition: transform var(--dur) ease, background-color var(--dur) ease;
+}
+
+.button:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.button:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .button:hover {
+    box-shadow: var(--shadow-2);
+  }
+
+  .button:hover .disc {
+    background: var(--primary-hover);
+    transform: translateX(2px);
+  }
+}
+
+@media (min-width: 40rem) {
+  .button {
+    padding: 0 6px 0 var(--space-5);
+  }
+
+  .disc {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .disc {
+    transition: none;
+  }
+}

@@ -18,6 +18,8 @@
     { "source": "/b/:slug", "destination": "/api/preview?slug=:slug" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/robots.txt", "destination": "/api/robots" },
+    { "source": "/llms.txt", "destination": "/api/llms" },
+    { "source": "/.well-known/ard.json", "destination": "/api/ard" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

@@ -110,6 +110,65 @@ describe("seller team and schedule", () => {
     expect(await screen.findByText("No team members yet")).toBeInTheDocument();
   });
 
+  it("saves social links from handles and pasted links, shows what each will open, and shows icons on the card", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/team");
+    await user.click(await screen.findByRole("button", { name: "Add team member" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Name"), "Amina Otieno");
+    await user.type(within(dialog).getByLabelText("X"), "@amina_cuts");
+    expect(await within(dialog).findByText(/Opens x\.com\/amina_cuts/)).toBeInTheDocument();
+    expect(within(dialog).getByRole("link", { name: "Test X link" })).toHaveAttribute("href", "https://x.com/amina_cuts");
+    await user.type(within(dialog).getByLabelText("Instagram"), "https://www.instagram.com/amina.cuts/?igsh=abc123");
+    expect(within(dialog).getByRole("link", { name: "Test Instagram link" })).toHaveAttribute("href", "https://www.instagram.com/amina.cuts/");
+    await user.type(within(dialog).getByLabelText("LinkedIn"), "amina-otieno");
+    await user.type(within(dialog).getByLabelText("Reddit"), "u/amina_cuts");
+    await user.type(within(dialog).getByLabelText("Facebook"), "facebook.com/amina.barber");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("heading", { name: "Amina Otieno" })).toBeInTheDocument();
+    expect((await api.listStaff())[0].socials).toEqual({
+      x: "https://x.com/amina_cuts",
+      instagram: "https://www.instagram.com/amina.cuts/",
+      linkedin: "https://www.linkedin.com/in/amina-otieno",
+      reddit: "https://www.reddit.com/user/amina_cuts",
+      facebook: "https://www.facebook.com/amina.barber"
+    });
+    const links = within(screen.getByRole("list", { name: "Amina Otieno on social media" })).getAllByRole("link");
+    expect(links).toHaveLength(5);
+    // Editing starts from the saved links, and clearing one removes it.
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    const again = await screen.findByRole("dialog");
+    expect(within(again).getByLabelText("X")).toHaveValue("x.com/amina_cuts");
+    await user.clear(within(again).getByLabelText("X"));
+    await user.click(within(again).getByRole("button", { name: "Save" }));
+    await waitFor(async () => expect(Object.keys((await api.listStaff())[0].socials)).not.toContain("x"));
+  });
+
+  it("explains a link that is not on the right network and does not save until it is fixed", async () => {
+    const user = userEvent.setup();
+    await signedInApp("/business/team");
+    await user.click(await screen.findByRole("button", { name: "Add team member" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Name"), "Amina Otieno");
+    await user.type(within(dialog).getByLabelText("Instagram"), "https://twitter.com/amina_cuts");
+    expect(await within(dialog).findByText(/not on instagram\.com/)).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText("Facebook"), "javascript:alert(1)");
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect((await within(dialog).findAllByRole("alert")).length).toBeGreaterThanOrEqual(2);
+    expect(await api.listStaff()).toHaveLength(0);
+    await user.clear(within(dialog).getByLabelText("Instagram"));
+    await user.clear(within(dialog).getByLabelText("Facebook"));
+    await user.click(within(dialog).getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("heading", { name: "Amina Otieno" })).toBeInTheDocument();
+  });
+
+  it("the API refuses links that are not clean and keeps only canonical ones", async () => {
+    await signedInApp("/business/team");
+    await expect(api.saveStaff(null, { name: "Amina", socials: { x: "https://evil.example/amina" } })).rejects.toMatchObject({ code: "invalid_staff" });
+    await api.saveStaff(null, { name: "Amina", socials: { x: "https://twitter.com/amina_cuts?s=20", reddit: "" } });
+    expect((await api.listStaff())[0].socials).toEqual({ x: "https://x.com/amina_cuts" });
+  });
+
   it("links services only on Premium", async () => {
     await signedInApp("/business/team");
     await expect(api.saveStaff(null, { name: "Amina", serviceIds: ["it-fade"] })).rejects.toMatchObject({ code: "premium_only" });

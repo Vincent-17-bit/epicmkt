@@ -1,11 +1,16 @@
 import { dayOf } from "../billing.js";
 
-export const FLASH_MAX_MS = 7 * 86_400_000;
+// A flash sale may run for 14 days from its start. The same number is in the database (migration 0154: the flash_sales_duration
+// constraint, flash_check_rules and extend_flash_sale), so change them together.
+export const FLASH_MAX_DAYS = 14;
+export const FLASH_MAX_MS = FLASH_MAX_DAYS * 86_400_000;
 export const FLASH_QUICK = [
   { key: "1h", label: "1 hour", ms: 3_600_000 },
   { key: "6h", label: "6 hours", ms: 6 * 3_600_000 },
   { key: "24h", label: "24 hours", ms: 24 * 3_600_000 },
-  { key: "48h", label: "48 hours", ms: 48 * 3_600_000 }
+  { key: "48h", label: "48 hours", ms: 48 * 3_600_000 },
+  { key: "7d", label: "7 days", ms: 7 * 86_400_000 },
+  { key: "14d", label: "14 days", ms: FLASH_MAX_MS }
 ];
 export const FLASH_DISCOUNTS = ["percent", "amount_off", "sale_price"];
 export const FLASH_HEADLINE = [3, 80];
@@ -89,3 +94,50 @@ export const flashPhase = (sale, nowMs) => {
   if (sale.status === "ended" || Date.parse(sale.endsAt) <= nowMs) return "ended";
   return Date.parse(sale.startsAt) > nowMs ? "scheduled" : "live";
 };
+
+// ---- Renewing and extending ----------------------------------------------------------------------------------------------------
+// A sale that ended by itself or by the seller can be run again with the same item, discount, per-option prices, headline and note,
+// for as long as the seller wants (up to FLASH_MAX_MS). A sale that EpicMKT stopped, or whose item was removed or whose listing was not
+// active, is not offered again: the reason is still true, and the database would refuse it anyway.
+const RENEWABLE_REASONS = new Set(["time", "seller"]);
+
+export const flashRenewable = (sale, nowMs) => flashPhase(sale, nowMs) === "ended" && RENEWABLE_REASONS.has(sale.endedReason ?? "time");
+
+// What createFlashSale needs to run `sale` again: starting now (or at startsAt when given) and ending at endsAt.
+export const renewInput = (sale, { endsAt, startsAt = null }) => ({
+  itemId: sale.itemId,
+  discountType: sale.discountType,
+  discountValue: Number(sale.discountValue),
+  startsAt,
+  endsAt,
+  headline: sale.headline ?? null,
+  quantityNote: sale.quantityNote ?? null,
+  afterEnd: sale.afterEnd === "unlist" ? "unlist" : "keep",
+  ...(sale.variantTarget === "chosen" && sale.variantOverrides?.length ? { variantTarget: "chosen", variantOverrides: sale.variantOverrides } : {})
+});
+
+// The longest a sale that started at startMs may run (its start plus FLASH_MAX_MS).
+export const flashLatestEnd = (startMs) => startMs + FLASH_MAX_MS;
+
+// Ways to push a running sale's end later: each is "add this much", kept only while the new end is inside the 14 day limit, plus one
+// that goes all the way to the limit when there is any room left.
+export function extendChoices(sale, nowMs) {
+  const end = Date.parse(sale.endsAt);
+  const cap = flashLatestEnd(Date.parse(sale.startsAt));
+  const choices = FLASH_QUICK.filter((q) => end + q.ms <= cap).map((q) => ({ key: q.key, label: q.label, endsAt: new Date(end + q.ms).toISOString() }));
+  const last = choices.at(-1);
+  if (cap > end && (!last || Date.parse(last.endsAt) < cap)) choices.push({ key: "max", label: "Run to the 14 day limit", endsAt: new Date(cap).toISOString(), max: true });
+  return { choices, cap, room: Math.max(0, cap - Math.max(end, nowMs ?? end)) };
+}
+
+// "13 days 4 hours", "6 hours 30 minutes", "45 minutes": how long a sale will run, in words a seller reads at a glance.
+export function spanText(ms) {
+  const minutes = Math.max(0, Math.round(ms / 60_000));
+  const d = Math.floor(minutes / 1440);
+  const h = Math.floor((minutes % 1440) / 60);
+  const m = minutes % 60;
+  const part = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+  if (d > 0) return h > 0 ? `${part(d, "day", "days")} ${part(h, "hour", "hours")}` : part(d, "day", "days");
+  if (h > 0) return m > 0 ? `${part(h, "hour", "hours")} ${part(m, "minute", "minutes")}` : part(h, "hour", "hours");
+  return part(m, "minute", "minutes");
+}

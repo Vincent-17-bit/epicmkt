@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "sideEffects": [
+    "./src/scales/index.js"
+  ],
   "exports": {
     ".": "./src/index.js",
     "./billing": "./src/billing.js",
@@ -15,6 +18,7 @@
     "./options": "./src/options/index.js",
     "./options/fixtures": "./src/options/fixtures.js",
     "./conformance": "./src/conformance/index.js",
+    "./search": "./src/search/index.js",
     "./phone": "./src/phone/index.js"
   },
   "dependencies": {

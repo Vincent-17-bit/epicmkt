@@ -7,12 +7,14 @@ import "@epicmkt/ui/tokens.css";
 import "@epicmkt/ui/reset.css";
 import "./styles/seller.css";
 import App from "./App.jsx";
-import { ErrorBoundary } from "@epicmkt/ui";
+import { ErrorBoundary, recoverFromStaleBuild } from "@epicmkt/ui";
 
 // A data router, because the item editor blocks navigation while there are unsaved changes (useBlocker needs one).
 const router = createBrowserRouter([{ path: "*", element: <App /> }]);
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 10_000, refetchOnWindowFocus: true } } });
+
+recoverFromStaleBuild();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

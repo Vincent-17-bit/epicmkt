@@ -18,7 +18,7 @@ It can be **from any country**: a seller picks the country (flag and dial code) 
 
 1. On **Account → Phone number** (or **Settings → Account and security → Change**) they enter the new number and their current password.
 2. A code is texted to the **new** number, proving they hold it. Nothing is sent if the password is wrong.
-3. They enter the code and the number is saved (`seller_set_verified_phone`, migration `0154`). The old number is texted and the verified email is told.
+3. They enter the code and the number is saved (`seller_set_verified_phone`, migration `0156`). The old number is texted and the verified email is told.
 
 A seller who cannot do this (lost password, the new number is not with them) can still **ask an admin**: the older request flow (`seller_request_change`) stays as the way out.
 Saving a verified number cancels any such request that was still pending, so it can never be approved later and overwrite the new number.
@@ -59,7 +59,7 @@ a code for one address can never confirm another; the old address is told when t
 
 ## Deploying
 
-1. Apply `supabase/migrations/0044_seller_sign_in.sql`, then `0154_seller_verified_phone.sql` (or the regenerated catch-up files).
+1. Apply `supabase/migrations/0044_seller_sign_in.sql`, then `0156_seller_verified_phone.sql` (or the regenerated catch-up files).
 2. Deploy the new functions: `supabase functions deploy seller-set-email --no-verify-jwt` and `supabase functions deploy seller-set-phone --no-verify-jwt`, and redeploy `seller-otp-request`.
 3. Make sure these secrets exist in production: `AT_API_KEY`, `AT_USERNAME`, `AT_SENDER` (SMS) and **`RESEND_API_KEY`, `MAIL_FROM`** (email codes). Without the Resend ones, email codes fail with `send_failed` and the SMS option keeps working.
 4. Existing sellers: nothing to migrate. They are prompted to add an email; sellers who already chose their own password only see the soft "Add email" prompt on Account.

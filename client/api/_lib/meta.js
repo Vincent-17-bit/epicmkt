@@ -203,5 +203,34 @@ export function buildSitemap({ origin, businesses, items, categoryIds = [] }) {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }
 
+export const llmsTxt = (origin) =>
+  `# EpicMKT
+
+> Find local businesses in Kenya: barbershops, water refill points, chemists, agrovets, gyms and more near you. Shoppers call, WhatsApp or get directions straight from a business page.
+
+## Browse
+
+- [Home](${origin}/): categories, flash sales and featured businesses
+- [Flash sales](${origin}/flash): time-limited deals from local businesses
+- [Offers](${origin}/offers): current offers
+- [Featured businesses](${origin}/featured): hand-picked local businesses
+
+## About EpicMKT
+
+- [About](${origin}/about)
+- [How it works](${origin}/how-it-works)
+- [FAQ](${origin}/faq)
+- [Contact](${origin}/contact)
+- [Pricing for sellers](${origin}/pricing)
+
+## Optional
+
+- [Sitemap](${origin}/sitemap.xml)
+- [Privacy](${origin}/privacy)
+- [Terms](${origin}/terms)
+`;
+
+export const ardManifest = () => ({ specVersion: "0.91", entries: [] });
+
 export const robotsTxt = (origin) =>
   `User-agent: *\nAllow: /\nDisallow: /seller/\nDisallow: /admin/\nDisallow: /search\nDisallow: /s/\nDisallow: /offline\nDisallow: /become-a-seller/status\nDisallow: /preview/\n\nSitemap: ${origin}/sitemap.xml\n`;

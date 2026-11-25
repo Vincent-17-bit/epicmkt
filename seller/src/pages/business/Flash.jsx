@@ -3,7 +3,7 @@ import FlashOptions from "./FlashOptions.jsx";
 import { flashOptionTable } from "@epicmkt/shared";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, formatDateTime, formatKes, getUserTimeZone, localInputToUtcIso, utcToLocalInput, validateFlashSale, zoneLabel } from "@epicmkt/shared";
+import { FLASH_QUICK, FLASH_MAX_MS, flashPhase, flashPrice, flashRenewable, formatKes, validateFlashSale, zoneLabel } from "@epicmkt/shared";
 import * as api from "../../api/index.js";
 import { serverNow } from "../../lib/clock.js";
 import { errorText } from "../../lib/errors.js";
@@ -12,12 +12,9 @@ import { useServerClock, useServerNow } from "../../lib/useServerNow.js";
 import Intro from "../../components/Intro.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./flash.module.css";
+import { ExtendPanel, RenewPanel } from "./FlashRenew.jsx";
+import { fromLocalInput, stamp, toLocalInput } from "./flashTime.js";
 
-// Times are stored and sent as UTC. A seller types and reads them in their own time zone, so a sale set for 09:00 starts
-// at 09:00 wherever they are, and daylight saving is handled by the zone rules, not by us.
-const stamp = (iso) => `${formatDateTime(iso)} ${zoneLabel(iso)}`;
-const toLocalInput = (ms) => utcToLocalInput(ms, getUserTimeZone());
-const fromLocalInput = (value) => localInputToUtcIso(value, getUserTimeZone());
 const pad = (n) => String(n).padStart(2, "0");
 
 export function remainingText(ms) {
@@ -154,12 +151,13 @@ function SaleForm({ items, quota, onDone, onCancel }) {
   );
 }
 
-function SaleRow({ sale, now, onChanged }) {
+function SaleRow({ sale, now, onChanged, quota, canRenew = false }) {
   const phase = flashPhase(sale, now);
   const open = phase === "live" || phase === "scheduled";
   const [editing, setEditing] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [extending, setExtending] = useState(false);
+  const [renewing, setRenewing] = useState(false);
   const [headline, setHeadline] = useState(sale.headline ?? "");
   const [note, setNote] = useState(sale.quantityNote ?? "");
   const [error, setError] = useState("");
@@ -225,19 +223,16 @@ function SaleRow({ sale, now, onChanged }) {
         </div>
       )}
 
-      {extending && (
-        <div className={styles.confirm} role="group" aria-label={`Extend ${sale.itemName} flash sale`}>
-          <p>Add time to this sale. It currently {phase === "scheduled" ? "runs until" : "ends"} {stamp(sale.endsAt)}. A sale can run for 7 days at most.</p>
-          <div className={styles.actions}>
-            {FLASH_QUICK.slice(0, 3).map((q) => (
-              <button key={q.key} type="button" className={ui.btn} disabled={busy} onClick={() => run(() => api.extendFlashSale(sale.id, new Date(Date.parse(sale.endsAt) + q.ms).toISOString()))}>Add {q.label}</button>
-            ))}
-            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setExtending(false)}>Cancel</button>
-          </div>
-        </div>
-      )}
+      {extending && <ExtendPanel sale={sale} phase={phase} now={now} busy={busy} onExtend={(endsAt) => run(() => api.extendFlashSale(sale.id, endsAt))} onCancel={() => setExtending(false)} />}
+
+      {renewing && <RenewPanel sale={sale} quota={quota} onDone={async () => { await onChanged(); setRenewing(false); }} onCancel={() => setRenewing(false)} />}
 
       {error && <p className={ui.error} role="alert">{error}</p>}
+      {canRenew && !renewing && (
+        <div className={styles.actions}>
+          <button type="button" className={ui.btn} onClick={() => setRenewing(true)} aria-label={`Renew ${sale.itemName} flash sale`}>Renew</button>
+        </div>
+      )}
       {open && !editing && !confirming && !extending && (
         <div className={styles.actions}>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setEditing(true)} aria-label={`Edit ${sale.itemName} headline and note`}>Edit text</button>
@@ -268,6 +263,12 @@ export default function Flash() {
   const current = list.filter((s) => ["live", "scheduled"].includes(flashPhase(s, now))).sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt));
   const past = list.filter((s) => !["live", "scheduled"].includes(flashPhase(s, now)));
   const q = quota.data;
+  // Renew is offered on the newest ended sale of each item, and only while that item has nothing running or scheduled.
+  const busyItems = new Set(everySale.filter((s) => ["live", "scheduled"].includes(flashPhase(s, now))).map((s) => s.itemId));
+  const newestEnded = new Map();
+  for (const s of past) if (!newestEnded.has(s.itemId)) newestEnded.set(s.itemId, s.id);
+  const renewable = (s) => newestEnded.get(s.itemId) === s.id && !busyItems.has(s.itemId) && flashRenewable(s, now);
+  const renewableCount = past.filter(renewable).length;
 
   const stale = everySale.some((s) => ["live", "scheduled"].includes(s.status) && Date.parse(s.endsAt) <= now);
   useEffect(() => {
@@ -306,14 +307,14 @@ export default function Flash() {
           {onlyItem && <p className={ui.muted} data-testid="flash-item-filter">Showing sales for {list[0]?.itemName ?? "one item"}. <Link className={ui.link} to="/business/flash">Show all</Link></p>}
           <section aria-labelledby="fs-current">
             <h2 id="fs-current">Running and scheduled</h2>
-            {current.length === 0 ? <p className={ui.muted} data-testid="empty">No flash sales running.</p> : (
-              <ul className={styles.list}>{current.map((s) => <SaleRow key={s.id} sale={s} now={now} onChanged={refresh} />)}</ul>
+            {current.length === 0 ? <p className={ui.muted} data-testid="empty">No flash sales running.{renewableCount > 0 && " Renew one from History below to run it again."}</p> : (
+              <ul className={styles.list}>{current.map((s) => <SaleRow key={s.id} sale={s} now={now} onChanged={refresh} quota={q} />)}</ul>
             )}
           </section>
           <section aria-labelledby="fs-past">
             <h2 id="fs-past">History</h2>
             {past.length === 0 ? <p className={ui.muted}>Past sales will show here.</p> : (
-              <ul className={styles.list}>{past.map((s) => <SaleRow key={s.id} sale={s} now={now} onChanged={refresh} />)}</ul>
+              <ul className={styles.list}>{past.map((s) => <SaleRow key={s.id} sale={s} now={now} onChanged={refresh} quota={q} canRenew={renewable(s)} />)}</ul>
             )}
           </section>
         </>

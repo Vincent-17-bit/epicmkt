@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance } from "@epicmkt/shared";
+import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance, normalizeSocials } from "@epicmkt/shared";
 import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
@@ -770,7 +770,7 @@ export const purgeGalleryPhotos = async (ids) => {
 export const reorderGallery = (ids) => rpc("seller_reorder_gallery", { p_ids: ids });
 
 const staffMember = (r) => ({
-  id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoPath: r.photo_path ?? null, sort: r.sort ?? 0,
+  id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoPath: r.photo_path ?? null, sort: r.sort ?? 0, socials: r.socials ?? {},
   serviceIds: (r.staff_services ?? []).map((x) => x.item_id), adminState: adminState(r), adminReason: r.admin_hide_reason ?? r.admin_reason ?? null,
 });
 export const listStaff = async () => (await rows(need().from("staff_members").select("*, staff_services(item_id)").order("sort").order("created_at"))).map(staffMember);
@@ -785,7 +785,10 @@ export const saveStaff = async (id, draft) => {
   const db = need();
   const businessId = (await rows(db.from("businesses").select("id").maybeSingle()))?.id;
   if (!businessId) throw new ApiError("not_a_seller");
-  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photo_path: draft.photoPath ?? null };
+  // Only the cleaned canonical links are stored (the database refuses anything else), so a bad one is explained here and nothing is sent.
+  const socials = normalizeSocials(draft.socials);
+  if (!socials.ok) throw new ApiError("invalid_staff");
+  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photo_path: draft.photoPath ?? null, socials: socials.value };
   const row = id
     ? await rows(db.from("staff_members").update(fields).eq("id", id).select().single())
     : await rows(db.from("staff_members").insert({ ...fields, business_id: businessId }).select().single());

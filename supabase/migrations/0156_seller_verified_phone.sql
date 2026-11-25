@@ -1,4 +1,4 @@
--- 0154: a seller can change the phone number on their listing by proving they hold the new number.
+-- 0156: a seller can change the phone number on their listing by proving they hold the new number.
 --
 -- Until now a phone change was only a request an admin had to confirm (seller_request_change). That stays as the way out for a
 -- seller who cannot sign in or cannot receive an SMS. This adds the direct way:

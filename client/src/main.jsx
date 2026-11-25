@@ -8,7 +8,7 @@ import { setImageTransform } from "@epicmkt/ui";
 import { RouterProvider } from "react-router-dom";
 import { queryClient } from "./lib/queryClient.js";
 import { router } from "./router.jsx";
-import { ErrorBoundary } from "@epicmkt/ui";
+import { ErrorBoundary, recoverFromStaleBuild } from "@epicmkt/ui";
 import CountdownProvider from "./components/CountdownProvider.jsx";
 import { useUiStore } from "./stores/ui.js";
 import { watchSystem } from "./lib/theme.js";
@@ -17,6 +17,8 @@ import { watchSystem } from "./lib/theme.js";
 setImageTransform(import.meta.env.VITE_IMAGE_TRANSFORMS === "true");
 
 watchSystem(() => useUiStore.getState().theme);
+
+recoverFromStaleBuild();
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
