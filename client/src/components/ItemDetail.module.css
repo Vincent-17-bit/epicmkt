@@ -848,14 +848,45 @@
   grid-template-columns: auto auto auto minmax(0, 1fr);
 }
 
+/* On a phone four buttons in a row squeeze "Order now" down to its label and hide the total. So up to 480 px "Order now" has the row to itself
+ * (the total stays readable) and Save, Chat and Store share the row under it. */
 @media (max-width: 30rem) {
-  .footer[data-order][data-save]:has([data-long]) {
+  .footer[data-order][data-save] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .footer[data-order][data-save]:has([data-long]) .order {
+  .footer[data-order][data-save] .order {
     grid-column: 1 / -1;
+    grid-row: 1;
   }
+
+  .footer[data-order][data-save] .iconBtn {
+    flex-direction: row;
+    gap: var(--space-2);
+    width: 100%;
+    min-width: 0;
+  }
+
+  .footer[data-order][data-save] .iconLabel {
+    font-size: var(--text-sm);
+  }
+
+  /* The full-width Order button has room for its total, even on the narrowest phones where the single-row footer has to drop it. */
+  .footer[data-order][data-save] .orderTotal {
+    display: inline;
+  }
+}
+
+/* The wide-screen page footer is fixed at three columns for Chat, Store and Order: Save makes it four. */
+@media (min-width: 64rem) {
+  .root[data-variant="page"] .footer[data-order][data-save] {
+    grid-template-columns: auto auto auto auto;
+  }
+}
+
+/* A flex row would squeeze the heart to nothing beside its word. */
+.footer[data-save] .iconBtn svg {
+  flex: none;
 }
 
 .footer[data-order][data-save] .iconBtn[aria-pressed="true"] {
