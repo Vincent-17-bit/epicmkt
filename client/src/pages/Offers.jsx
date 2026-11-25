@@ -7,8 +7,8 @@ import { useOnlineStatus } from "../hooks/useOnlineStatus.js";
 import { usePageTitle } from "../hooks/usePageTitle.js";
 import { useGeoStore } from "../stores/geo.js";
 import { t } from "../i18n/index.js";
-import { Skeleton } from "@epicmkt/ui";
-import OfferCard from "../components/OfferCard.jsx";
+import { OfferTickets, Skeleton } from "@epicmkt/ui";
+import { dealOf, offerLabels } from "../lib/offerDeal.js";
 import ListingPage from "../components/ListingPage.jsx";
 import styles from "./Offers.module.css";
 
@@ -44,6 +44,7 @@ export default function Offers() {
   });
 
   const entries = useMemo(() => query.data?.pages.flatMap((page) => page.items) ?? [], [query.data]);
+  const deals = useMemo(() => entries.map((view) => dealOf(view, { store: true, headingLevel: "h2" })), [entries]);
   const total = query.data?.pages[0]?.total ?? 0;
   const categoryName = (id) => categories?.find((c) => c.id === id)?.name ?? id;
 
@@ -74,15 +75,7 @@ export default function Offers() {
           ))}
         </ul>
       }
-      list={
-        <ul className={styles.grid}>
-          {entries.map((view) => (
-            <li key={view.offer.id}>
-              <OfferCard view={view} />
-            </li>
-          ))}
-        </ul>
-      }
+      list={<OfferTickets offers={deals} labels={offerLabels()} />}
       online={online}
       offlineText={t("flash.offline")}
       failedText={t("offers.loadFailed")}

@@ -15,6 +15,8 @@ const view = (id, over = {}, viewOver = {}) => ({
   availableNow: true,
   ...viewOver
 });
+// Every offer is one ticket (an <li data-kind>) drawn by the shared OfferDeal, on every page.
+const cards = () => [...document.querySelectorAll("li[data-kind]")];
 const bar = () => screen.getByRole("button", { name: /Claim now/ });
 
 describe("the compact promotions row", () => {
@@ -27,7 +29,7 @@ describe("the compact promotions row", () => {
     expect(screen.getByText("Tag a")).toBeInTheDocument();
     expect(screen.getByText("Tag b")).toBeInTheDocument();
     expect(bar()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(cards()).toHaveLength(0);
   });
 
   it("shows three tags and the count of the rest", () => {
@@ -42,9 +44,9 @@ describe("the compact promotions row", () => {
     render(<PromotionsRow offers={["a", "b", "c", "d"].map((id) => view(id))} item={item} price={400} />);
     await user.click(bar());
     expect(bar()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getAllByRole("article")).toHaveLength(4);
+    expect(cards()).toHaveLength(4);
     await user.click(bar());
-    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(cards()).toHaveLength(0);
   });
 
   it("closes with Escape and puts focus back on the row", async () => {
@@ -53,7 +55,7 @@ describe("the compact promotions row", () => {
     await user.click(bar());
     await user.click(screen.getByRole("button", { name: /Copy code/ }));
     await user.keyboard("{Escape}");
-    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(cards()).toHaveLength(0);
     expect(bar()).toHaveFocus();
   });
 
@@ -62,7 +64,7 @@ describe("the compact promotions row", () => {
     const offer = { code: "WATER10", terms: "One per customer.", startsAt: "2026-10-30T06:00:00.000Z", endsAt: "2026-11-30T20:00:00.000Z" };
     render(<PromotionsRow offers={[view("a", offer)]} item={item} price={400} />);
     await user.click(bar());
-    const card = screen.getByRole("article");
+    const card = cards()[0];
     expect(within(card).getByText("One per customer.")).toBeInTheDocument();
     expect(within(card).getByText("WATER10")).toBeInTheDocument();
     expect(within(card).getByText("Valid: 30 Oct - 30 Nov 2026")).toBeInTheDocument();
