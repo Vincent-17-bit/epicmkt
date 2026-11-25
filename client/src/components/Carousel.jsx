@@ -1,15 +1,15 @@
 import { Children, useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import { faChevronLeft, faChevronRight } from "@fortawesome/free-solid-svg-icons";
 import { scrollBehavior } from "../lib/motion.js";
+import SeeMoreButton from "./SeeMoreButton.jsx";
 import styles from "./Carousel.module.css";
 
 const EDGE_SLACK = 2;
 const DRAG_THRESHOLD = 5;
 
 /**
- * The one horizontal section used on the home page: a title, a "See more" link and left and right arrows above a
+ * The one horizontal section used on the home page: a title, a "See more" button and left and right arrows above a
  * row that scrolls by swipe, mouse drag, keyboard or the arrows. `variant` picks how many cards fit across
  * ("tile" for small store tiles, "showcase" for the larger featured cards); the card width comes from that, so the
  * row looks the same on a phone, a tablet and a wide screen, with a peek of the next card to show there is more.
@@ -20,6 +20,7 @@ export default function Carousel({
   subtitle,
   seeMoreTo,
   seeMoreLabel = "See more",
+  seeMoreText = "See more",
   prevLabel = "Show previous",
   nextLabel = "Show next",
   variant = "tile",
@@ -101,10 +102,9 @@ export default function Carousel({
         </div>
         <div className={styles.controls}>
           {seeMoreTo && (
-            <Link to={seeMoreTo} className={styles.seeMore}>
-              {seeMoreLabel}
-              <FontAwesomeIcon icon={faArrowRight} aria-hidden="true" />
-            </Link>
+            <SeeMoreButton to={seeMoreTo} label={seeMoreLabel}>
+              {seeMoreText}
+            </SeeMoreButton>
           )}
           <div className={styles.arrows}>
             <button type="button" className={styles.arrow} onClick={page(-1)} disabled={edge.start} aria-label={prevLabel}>
