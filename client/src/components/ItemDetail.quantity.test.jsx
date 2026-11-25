@@ -68,7 +68,7 @@ describe("quantity on the item page: units", () => {
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     expect(total()).toBe("Total KES 42,000");
     expect(priceFor()).toBe("for 2");
-    expect(screen.getByText("KES 42,000")).toBeInTheDocument();   // the price at the top is the total for 2
+    expect(screen.getByTestId("price-for").parentElement).toHaveTextContent("KES 42,000");   // the price at the top is the total for 2 (the Order button repeats it)
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     expect(total()).toBe("Total KES 63,000");
     await userEvent.click(within(screen.getByRole("radiogroup", { name: /^Storage:/ })).getByRole("radio", { name: /256 GB/ }));

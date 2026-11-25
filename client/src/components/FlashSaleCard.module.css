@@ -530,3 +530,4 @@
   margin-block: -8px;
   margin-right: -6px;
 }
+.pricePart { min-width: 0; }

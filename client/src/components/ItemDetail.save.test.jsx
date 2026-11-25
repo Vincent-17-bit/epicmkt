@@ -108,7 +108,7 @@ describe("Save on the item page", () => {
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     expect(screen.getByTestId("price-for")).toHaveTextContent("for 3");
-    expect(screen.getByText("KES 2,700")).toBeInTheDocument();
+    expect(screen.getByTestId("price-for").parentElement).toHaveTextContent("KES 2,700"); // the price at the top (the Order button repeats it)
     expect(document.body.textContent).not.toMatch(/\bx \d|=\s*KES/);
   });
 

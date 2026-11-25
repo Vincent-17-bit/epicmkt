@@ -1,4 +1,4 @@
-import { memo, useRef } from "react";
+import { memo, useId, useRef } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowRight, faBolt, faCircleCheck, faQuoteLeft } from "@fortawesome/free-solid-svg-icons";
@@ -62,6 +62,7 @@ function FlashSaleCard({ entry, size = "standard", priority = false }) {
   const hero = size === "hero";
   const compact = size === "compact";
   // What the Saved list needs of a flash deal: the item, the shop's id and the price the deal gives.
+  const uid = useId();
   const action = useSaveAction({ ...item, business, businessId: business?.id, businessSlug: business?.slug, pricing });
 
   const price = (
@@ -118,7 +119,7 @@ function FlashSaleCard({ entry, size = "standard", priority = false }) {
       )}
 
       <span className={styles.body}>
-        <span className={styles.name}>{action ? <Link to={saleHref(entry)} className={styles.nameLink} draggable="false">{item.name}</Link> : item.name}</span>
+        <span className={styles.name}>{action ? <Link to={saleHref(entry)} className={styles.nameLink} draggable="false" id={`${uid}-n`} aria-labelledby={`${uid}-n ${uid}-p ${uid}-r`}>{item.name}</Link> : item.name}</span>
         {!compact && sale.headline && (
           <span className={styles.headline}>
             <FontAwesomeIcon icon={faQuoteLeft} aria-hidden="true" />
@@ -128,13 +129,13 @@ function FlashSaleCard({ entry, size = "standard", priority = false }) {
         {!compact && <StoreRow business={business} />}
         {action ? (
           <span className={styles.priceRow}>
-            {price}
+            <span id={`${uid}-p`} className={styles.pricePart}>{price}</span>
             <SaveButton className={styles.heart} saved={action.saved} onToggle={action.onToggle} label={action.label} size={20} />
           </span>
         ) : (
           price
         )}
-        <span className="sr-only">{remaining}</span>
+        <span className="sr-only" id={`${uid}-r`}>{remaining}</span>
         {!compact && (pricing.savings > 0 || sale.quantityNote) && (
           <span className={styles.tags}>
             {pricing.savings > 0 && (
