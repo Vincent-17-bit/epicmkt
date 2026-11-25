@@ -5,6 +5,9 @@ import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ItemDetail from "./ItemDetail.jsx";
 
+// Every offer is one ticket (an <li data-kind>) drawn by the shared OfferDeal, on every page.
+const cards = () => [...document.querySelectorAll("li[data-kind]")];
+
 const pricing = (regular, sale) => ({
   regularPrice: regular,
   salePrice: sale,
@@ -299,9 +302,9 @@ describe("ItemDetail", () => {
     mount();
     expect(await screen.findByText("Weekend deal")).toBeInTheDocument();
     expect(screen.getByText("While stock lasts")).toBeInTheDocument();
-    expect(screen.queryAllByRole("article")).toHaveLength(0);
+    expect(cards()).toHaveLength(0);
     await userEvent.setup().click(screen.getByRole("button", { name: /Claim now/ }));
-    expect(screen.getAllByRole("article")).toHaveLength(3);
+    expect(cards()).toHaveLength(3);
     const ld = JSON.parse(document.getElementById("item-jsonld").textContent);
     expect(ld["@type"]).toBe("Service");
     expect(ld.offers.priceValidUntil).toBe("2026-10-04T10:00:00.000Z");
