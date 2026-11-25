@@ -124,6 +124,9 @@ export default defineConfig(({ mode }) => {
       alias: env.VITE_SUPABASE_URL && mode === "production" ? [{ find: /^@epicmkt\/backend(\/store)?$/, replacement: fileURLToPath(new URL("./src/api/liveBackend.js", import.meta.url)) }] : []
     },
     build: {
+      // Ships .map files next to the bundles so production errors and Lighthouse can see the original source. The service worker
+      // precache pattern below does not include .map, so installed apps never download them.
+      sourcemap: true,
       rollupOptions: {
         onwarn(warning, warn) {
           if (warning.code === "MISSING_EXPORT" && String(warning.exporter).endsWith("liveBackend.js")) return;
