@@ -7,6 +7,7 @@ import { errorText } from "../../lib/errors.js";
 import { PASSWORD_HINT, isEmail, signInSetup } from "../../lib/signIn.js";
 import { STRIKE_LEAD, STRIKE_RISKS } from "../../lib/strikes.js";
 import ShopPhotos from "../../components/shopPhotos/ShopPhotos.jsx";
+import PhoneChange from "../../components/PhoneChange.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./account.module.css";
 
@@ -70,7 +71,7 @@ function EmailCard({ business }) {
     if (!currentPassword) return setError("Enter your current password.");
     setBusy(true);
     try {
-      const r = await api.requestOtp({ purpose: "verify_email", email: email.trim() });
+      const r = await api.requestOtp({ purpose: "verify_email", email: email.trim(), currentPassword });
       setSentTo(r?.sentTo ?? email.trim());
       setStep("code");
     } catch (err) {
@@ -348,6 +349,10 @@ export default function Account() {
         <ul className={styles.risks}>{STRIKE_RISKS.map((t) => <li key={t}>{t}</li>)}</ul>
       </section>
 
+      <section className={ui.card} aria-labelledby="phone-title">
+        <h2 id="phone-title">Phone number</h2>
+        <PhoneChange currentPhone={b.phone} />
+      </section>
       <EmailCard business={b} />
       <PasswordCard business={b} />
     </div>

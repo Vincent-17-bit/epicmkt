@@ -91,3 +91,8 @@
     white-space: normal;
   }
 }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .reply button, .file button { min-height: var(--tap); }
+}

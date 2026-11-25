@@ -6,6 +6,8 @@ export const business = (b) => b && ({
   paidUntil: b.paid_until ?? null, verificationLevel: b.verification_level, announcement: b.announcement ?? null,
   creditKes: Number(b.credit_kes ?? 0), strikes: b.strikes ?? 0, statusReason: b.status_reason ?? null,
   // Sign-in details. loginEmail is only ever set after the seller entered a code sent to it.
+  // The number on the listing, for sign-in codes and for customers. Changed only with a code texted to the new number.
+  phone: b.phone ?? null,
   loginEmail: b.login_email ?? null, loginEmailVerified: !!b.login_email && !!b.login_email_verified_at,
   mustChangePassword: !!b.must_change_password, passwordChangedAt: b.password_changed_at ?? null,
   logoPath: b.logo_path ?? null, coverPath: b.cover_path ?? null,

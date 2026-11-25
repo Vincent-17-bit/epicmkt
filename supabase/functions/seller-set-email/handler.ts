@@ -1,4 +1,4 @@
-import { auditInsert, authenticate, codeSchema, GENERIC_AUTH, GENERIC_CODE, json, maskEmail, passwordSchema, rateLimited, rateOk, readJson, sellerEmail, wrap, z, type Deps } from "../_shared/seller.ts";
+import { auditInsert, authenticate, codeSchema, confirmCurrentPassword, GENERIC_CODE, json, maskEmail, passwordSchema, rateLimited, rateOk, readJson, wrap, z, type Deps } from "../_shared/seller.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { signInEmailChanged } from "../_shared/messages.ts";
 
@@ -18,15 +18,8 @@ export const sellerSetEmail = (d: Deps) => wrap(async (req) => {
   if (!(await rateOk(d.db, `sse:${b.id}`, 20, 3600))) return rateLimited();
 
   // The current password counts against the same lockout as signing in, so this cannot be used to guess it.
-  const lockKey = `sid:${b.seller_id.toLowerCase()}`;
-  const locked = (await d.db.rpc("auth_lock_remaining", { p_key: lockKey })).data as number;
-  if (locked > 0) return json({ error: "locked", message: GENERIC_AUTH, retryAfter: locked }, 429);
-  const { data: signedIn, error: pwError } = await d.anon.auth.signInWithPassword({ email: sellerEmail(b.seller_id), password: parsed.data.currentPassword });
-  if (pwError || !signedIn?.session) {
-    await d.db.rpc("auth_record_failure", { p_key: lockKey, p_max: 5, p_lock_seconds: 900 });
-    return json({ error: "invalid_password", message: "That is not your current password." }, 401);
-  }
-  await d.db.rpc("auth_clear", { p_key: lockKey });
+  const wrongPassword = await confirmCurrentPassword(d, b, parsed.data.currentPassword);
+  if (wrongPassword) return wrongPassword;
 
   const verified = (await d.db.rpc("seller_otp_verify", { p_business: b.id, p_purpose: "verify_email", p_code: parsed.data.code })).data;
   if (!verified?.ok || !verified.target) return json({ error: "invalid_code", message: GENERIC_CODE }, 400);

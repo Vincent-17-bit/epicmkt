@@ -8,6 +8,7 @@ export { default as Skeleton } from "./components/Skeleton.jsx";
 export { default as StateCard } from "./components/StateCard.jsx";
 export { default as Field } from "./components/Field.jsx";
 export { default as Select } from "./components/Select.jsx";
+export { default as PhoneInput } from "./components/PhoneInput.jsx";
 export { default as Accordion } from "./components/Accordion.jsx";
 export { default as Toaster } from "./components/Toaster.jsx";
 export { default as Modal } from "./components/Modal.jsx";

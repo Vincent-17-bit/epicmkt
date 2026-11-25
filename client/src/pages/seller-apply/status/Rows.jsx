@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare, faCircleCheck, faFilePdf, faFlag, faRotate } from "@fortawesome/free-solid-svg-icons";
+import { PhoneInput } from "@epicmkt/ui";
 import { prepareFile } from "../../../shared/fileSecurity.js";
 import { ErrorLine } from "../Field.jsx";
 import { show, sizeText } from "./statusMeta.js";
@@ -54,6 +55,34 @@ function parse(path, raw, current) {
   return raw;
 }
 
+const PHONE_STYLE = { "--phone-h": "var(--ap-input-h)", "--phone-radius": "var(--ap-r)" };
+const SINGLE_PHONES = ["phone", "altPhone", "contacts.whatsapp"];
+
+/** The business phones: one picker per number, a blank one to add another, and a way to remove one. */
+function PhoneList({ id, values, onChange, error }) {
+  const [adding, setAdding] = useState(values.length === 0);
+  const set = (i, v) => onChange(values.map((x, j) => (j === i ? v : x)));
+  return (
+    <div className={styles.phoneList}>
+      {values.map((v, i) => (
+        <div key={i} className={styles.phoneItem}>
+          <PhoneInput id={i === 0 ? id : `${id}-${i}`} value={v} onChange={(n) => set(i, n)} inputClassName={form.input} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-err` : undefined} style={PHONE_STYLE} />
+          {values.length > 1 && (
+            <button type="button" className={styles.phoneRemove} onClick={() => onChange(values.filter((_, j) => j !== i))} aria-label={`Remove phone ${i + 1}`}>Remove</button>
+          )}
+        </div>
+      ))}
+      {adding ? (
+        <div className={styles.phoneItem}>
+          <PhoneInput id={values.length === 0 ? id : `${id}-new`} value="" onChange={(n) => { if (n) { onChange([...values, n]); setAdding(false); } }} inputClassName={form.input} placeholder="Add a phone number" style={PHONE_STYLE} />
+        </div>
+      ) : (
+        <button type="button" className={styles.phoneAdd} onClick={() => setAdding(true)}>Add another phone number</button>
+      )}
+    </div>
+  );
+}
+
 export function Row({ path, label, value, flag, editable, draft, onDraft, error }) {
   const state = flagState(flag);
   const canEdit = editable && state === "open" && (typeof value !== "object" || value === null || Array.isArray(value));
@@ -71,6 +100,10 @@ export function Row({ path, label, value, flag, editable, draft, onDraft, error 
               <option value="true">Yes</option>
               <option value="false">No</option>
             </select>
+          ) : SINGLE_PHONES.includes(path) ? (
+            <PhoneInput id={id} value={toText(current)} onChange={(n) => onDraft(path, n)} inputClassName={form.input} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-err` : undefined} style={PHONE_STYLE} />
+          ) : path === "contacts.businessPhones" ? (
+            <PhoneList id={id} values={Array.isArray(current) ? current : []} onChange={(v) => onDraft(path, v)} error={error} />
           ) : (
             <input
               id={id}

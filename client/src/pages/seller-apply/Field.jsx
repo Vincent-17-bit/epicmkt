@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation } from "@fortawesome/free-solid-svg-icons";
 import { Controller, get, useFormContext, useWatch } from "react-hook-form";
+import { PhoneInput } from "@epicmkt/ui";
 import styles from "./form.module.css";
 
 export const fieldId = (name) => `f-${name.replace(/\./g, "-")}`;
@@ -102,6 +103,34 @@ export function MaskedField({ name, label, hint, optional, className, mask, tidy
                 if (tidy) field.onChange(tidy(field.value));
                 field.onBlur();
               }}
+            />
+          )}
+        />
+      )}
+    </Field>
+  );
+}
+
+/** A phone number from anywhere: a country picker (flag and prefix) and the number. The form holds it as +CCNUMBER. */
+export function PhoneField({ name, label, hint, optional, className, ...input }) {
+  const { control } = useFormContext();
+  return (
+    <Field name={name} label={label} hint={hint} optional={optional} className={className}>
+      {(aria) => (
+        <Controller
+          control={control}
+          name={name}
+          render={({ field }) => (
+            <PhoneInput
+              {...aria}
+              {...input}
+              inputRef={field.ref}
+              name={field.name}
+              value={field.value ?? ""}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              inputClassName={styles.input}
+              style={{ "--phone-h": "var(--ap-input-h)", "--phone-radius": "var(--ap-r)" }}
             />
           )}
         />

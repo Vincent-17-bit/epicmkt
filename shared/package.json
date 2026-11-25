@@ -14,6 +14,10 @@
     "./template": "./src/template.js",
     "./options": "./src/options/index.js",
     "./options/fixtures": "./src/options/fixtures.js",
-    "./conformance": "./src/conformance/index.js"
+    "./conformance": "./src/conformance/index.js",
+    "./phone": "./src/phone/index.js"
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.13.17"
   }
 }

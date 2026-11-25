@@ -392,7 +392,7 @@ export default function Catalog() {
                   type="search"
                   value={qText}
                   onChange={(e) => setQText(e.target.value)}
-                  placeholder="Search name, tags, section. Press / to focus"
+                  placeholder={window.matchMedia?.("(pointer: coarse)").matches ? "Search name, tags, section" : "Search name, tags, section. Press / to focus"}
                   aria-label="Search listings"
                   maxLength={100}
                 />

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
-import { Button, Field, Select } from "@epicmkt/ui";
+import { Button, Field, PhoneInput, Select } from "@epicmkt/ui";
 import InfoPage from "../components/InfoPage.jsx";
 import { ContactCard, SiblingLinks } from "../components/LegalPage.jsx";
 import dialog from "../components/ReportDialog.module.css";
@@ -87,8 +87,8 @@ export default function SuggestBusiness() {
           <input className={dialog.input} value={form.town} maxLength={SUGGEST_MAX} autoComplete="off" onChange={set("town")} />
         </Field>
 
-        <Field label="Phone or WhatsApp (optional)">
-          <input className={dialog.input} type="tel" inputMode="tel" value={form.phone} maxLength={20} autoComplete="off" onChange={set("phone")} />
+        <Field as="div" htmlFor="suggest-phone" label="Phone or WhatsApp (optional)">
+          <PhoneInput id="suggest-phone" inputClassName={dialog.input} value={form.phone} autoComplete="off" onChange={(phone) => setForm((f) => ({ ...f, phone }))} />
         </Field>
 
         <p className={styles.hint}>Only share a number the business uses for customers.</p>

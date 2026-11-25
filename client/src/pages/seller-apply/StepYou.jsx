@@ -2,9 +2,8 @@ import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleCheck, faCircleInfo, faPlus } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
-import { MaskedField, TextField } from "./Field.jsx";
+import { MaskedField, PhoneField, TextField } from "./Field.jsx";
 import { ID_ORDER, ID_TYPES, cleanIdNumber, idTypeOf } from "./idTypes.js";
-import { phoneDisplay, phoneMask } from "./masks.js";
 import form from "./form.module.css";
 import styles from "./steps.module.css";
 
@@ -80,17 +79,7 @@ export default function YouStep() {
         style={{ fontVariantNumeric: "tabular-nums", letterSpacing: "0.04em" }}
       />
 
-      <MaskedField
-        name="phone"
-        label="Your phone number"
-        type="tel"
-        inputMode="tel"
-        autoComplete="tel"
-        placeholder="0712 345 678"
-        hint="We may call or message this number while we review."
-        mask={phoneMask}
-        tidy={phoneDisplay}
-      />
+      <PhoneField name="phone" label="Your phone number" hint="We may call or message this number while we review. Choose your country, then type the number." />
       <TextField
         name="email"
         label="Email address"
@@ -104,17 +93,7 @@ export default function YouStep() {
       />
 
       {showAlt || alt ? (
-        <MaskedField
-          name="altPhone"
-          label="Another phone number"
-          optional
-          type="tel"
-          inputMode="tel"
-          autoComplete="tel"
-          placeholder="0722 000 000"
-          mask={phoneMask}
-          tidy={phoneDisplay}
-        />
+        <PhoneField name="altPhone" label="Another phone number" optional />
       ) : (
         <button type="button" className={`${styles.addBtn} ${form.span2}`} onClick={() => setShowAlt(true)}>
           <FontAwesomeIcon icon={faPlus} /> Add another phone number

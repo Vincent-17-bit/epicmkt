@@ -79,3 +79,8 @@
     width: 100%;
   }
 }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .head > button, .meta button { min-height: var(--tap); }
+}

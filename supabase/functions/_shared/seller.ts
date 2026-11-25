@@ -3,6 +3,7 @@ import { z } from "npm:zod@3";
 import { clientIp, corsHeaders, isDbDown, isProduction, json, sendSms, serverError, sha256Hex } from "./http.ts";
 import { HttpError } from "./errors.ts";
 import { emailHtml } from "./emailTemplate.ts";
+import { normalizePhone } from "./validate.ts";
 import { otpMail, otpSms } from "./messages.ts";
 import { deliverEmail } from "./providers.ts";
 import { cloudinaryConfigFromEnv, makeCloudinary, type CloudinaryClient } from "./cloudinary.ts";
@@ -36,6 +37,17 @@ export const channelSchema = z.enum(["sms", "email"]);
 export const identifierSchema = z.string().trim().min(3).max(254).refine(
   (v) => (v.includes("@") ? emailSchema.safeParse(v).success : sellerIdSchema.safeParse(v).success),
 );
+// A phone number in any common form: Kenyan numbers (0712 345 678, 254712345678) become +254XXXXXXXXX, any other country must be
+// written +CC... or 00CC.... Same rule as the database (normalize_phone_ke), so the number a code was sent to is exactly the number
+// that gets saved.
+export const phoneSchema = z.string().max(24).transform((v, ctx) => {
+  const n = normalizePhone(v);
+  if (!n) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "invalid_phone" });
+    return z.NEVER;
+  }
+  return n;
+});
 export const codeSchema = z.string().trim().regex(/^[0-9]{6}$/);
 export const passwordSchema = z.string().min(1).max(200);
 
@@ -115,7 +127,28 @@ export async function authenticate(req: Request, db: Db): Promise<SellerCtx | Re
   return { userId: data.user.id, sessionId: sessionIdOf(jwt), business };
 }
 
-export const maskPhone = (phone: string) => phone.replace(/^(\+254\d)\d{5}(\d{3})$/, "$1*****$2");
+// Checks the seller's current password. It counts against the same lockout as signing in, so a change screen can never be used to
+// guess it. Returns the Response to send back when the check fails (locked, or wrong), or null when the password is right.
+export async function confirmCurrentPassword(d: Deps, b: { seller_id: string }, password: string): Promise<Response | null> {
+  const lockKey = `sid:${b.seller_id.toLowerCase()}`;
+  const locked = (await d.db.rpc("auth_lock_remaining", { p_key: lockKey })).data as number;
+  if (locked > 0) return json({ error: "locked", message: GENERIC_AUTH, retryAfter: locked }, 429);
+  const { data: signedIn, error: pwError } = await d.anon.auth.signInWithPassword({ email: sellerEmail(b.seller_id), password });
+  if (pwError || !signedIn?.session) {
+    await d.db.rpc("auth_record_failure", { p_key: lockKey, p_max: 5, p_lock_seconds: 900 });
+    return json({ error: "invalid_password", message: "That is not your current password." }, 401);
+  }
+  await d.db.rpc("auth_clear", { p_key: lockKey });
+  return null;
+}
+
+// "+254712345678" -> "+2547*****678". Any country: the first four digits and the last three stay, the rest is hidden.
+export const maskPhone = (phone: string) => {
+  const m = String(phone ?? "").match(/^\+(\d{8,15})$/);
+  if (!m) return String(phone ?? "");
+  const d = m[1];
+  return d.length >= 9 ? `+${d.slice(0, 4)}*****${d.slice(-3)}` : `+${"*".repeat(d.length - 3)}${d.slice(-3)}`;
+};
 
 // "jane.doe@example.com" -> "j*******@example.com"
 export const maskEmail = (email: string) => email.replace(/^([^@])[^@]*(@.+)$/, (_m, a: string, rest: string) => `${a}*******${rest}`);

@@ -47,7 +47,9 @@ describe("settings page", () => {
     }
     await user.click(within(menu).getByRole("link", { name: "Account and security" }));
     expect(await screen.findByText("ES100001")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Go to Account" })).toHaveAttribute("href", "/business/account");
+    // the sign-in email and the password are changed on the Account page, and the email is shown here, masked
+    expect(screen.getByRole("link", { name: "Add" })).toHaveAttribute("href", "/business/account");
+    expect(screen.getByRole("link", { name: "Change on Account" })).toHaveAttribute("href", "/business/account");
   });
 
   it("keeps unsaved changes when you move between sections", async () => {
@@ -158,20 +160,61 @@ describe("settings page", () => {
     await waitFor(() => expect(screen.queryByRole("button", { name: "Remove crate" })).toBeNull());
   });
 
-  it("requests a phone change, shows it waiting, and can cancel it", async () => {
+  it("asks an admin to change the phone when the code way is not possible, shows it waiting, and can cancel it", async () => {
     const user = userEvent.setup();
     await open("/business/settings#account");
-    await user.click(screen.getByRole("button", { name: "Request change" }));
-    const dialog = await screen.findByRole("dialog");
+    await user.click(screen.getByRole("button", { name: "Change" , exact: true }));
+    const first = await screen.findByRole("dialog", { name: /change phone number/i });
+    await user.click(within(first).getByRole("button", { name: /ask an admin to change it/i }));
+    const dialog = await screen.findByRole("dialog", { name: /ask an admin/i });
     await user.type(within(dialog).getByLabelText("New phone number"), "12345");
     await user.click(within(dialog).getByRole("button", { name: "Send request" }));
-    expect(await within(dialog).findByText(/Enter a Kenyan number/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/Enter a valid phone number/)).toBeInTheDocument();
     await user.clear(within(dialog).getByLabelText("New phone number"));
     await user.type(within(dialog).getByLabelText("New phone number"), "0722 345 678");
     await user.click(within(dialog).getByRole("button", { name: "Send request" }));
     expect(await screen.findByText(/waiting for admin confirmation/i)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Cancel request" }));
     await waitFor(() => expect(screen.queryByText(/waiting for admin confirmation/i)).toBeNull());
+  });
+
+  it("changes the phone with a code texted to the new number, from any country", async () => {
+    const user = userEvent.setup();
+    await open("/business/settings#account");
+    expect(screen.getByLabelText("Registered phone, masked")).toHaveTextContent("+2547*****678");
+    await user.click(screen.getByRole("button", { name: "Change", exact: true }));
+    const dialog = await screen.findByRole("dialog", { name: /change phone number/i });
+
+    // a wrong password stops it before any text is sent
+    await user.type(within(dialog).getByLabelText("New phone number"), "0772 123 456");
+    await user.click(within(dialog).getByRole("button", { name: /country code/i }));
+    await user.type(screen.getByRole("combobox"), "uganda");
+    await user.click(screen.getByRole("option"));
+    await user.type(within(dialog).getByLabelText("Current password"), "not-the-password");
+    await user.click(within(dialog).getByRole("button", { name: "Send code to this number" }));
+    expect(await within(dialog).findByText("That is not your current password.")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Code from the text message")).toBeNull();
+
+    await user.clear(within(dialog).getByLabelText("Current password"));
+    await user.type(within(dialog).getByLabelText("Current password"), "Demo-Passw0rd");
+    await user.click(within(dialog).getByRole("button", { name: "Send code to this number" }));
+    expect(await within(dialog).findByText(/Code sent by SMS to/)).toHaveTextContent("+2567*****456");
+    expect(within(dialog).getByText(/\(Uganda\)/)).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText("Code from the text message"), "000000");
+    await user.click(within(dialog).getByRole("button", { name: "Save phone number" }));
+    expect(await within(dialog).findByText("That code is not valid or has expired.")).toBeInTheDocument();
+
+    await user.clear(within(dialog).getByLabelText("Code from the text message"));
+    await user.type(within(dialog).getByLabelText("Code from the text message"), "123456");
+    await user.click(within(dialog).getByRole("button", { name: "Save phone number" }));
+    await waitFor(() => expect(useToasts.getState().toasts.some((t) => t.message === "Phone number changed")).toBe(true));
+    await waitFor(() => expect(screen.getByLabelText("Registered phone, masked")).toHaveTextContent("+2567*****456"));
+  });
+
+  it("shows the sign-in email masked, or that there is none", async () => {
+    await open("/business/settings#account");
+    expect(await screen.findByLabelText("Sign-in email, masked")).toHaveTextContent("Not added");
   });
 
   it("signs out other devices and says how many", async () => {

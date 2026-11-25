@@ -1,6 +1,6 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asService } from "./db.mjs";
+import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA, asAdmin, asService } from "./db.mjs";
 
 let c;
 
@@ -93,4 +93,74 @@ test("the public listing never shows a sign-in email", async () => {
   assert.ok(cols.length > 0);
   assert.ok(!cols.some((x) => /login_email|password/.test(x.column_name)));
   await rejects(c, { role: "anon" }, `select login_email from businesses`, [], /permission denied/);
+});
+
+// ---- 0154: changing the phone number with a code --------------------------------------------------------------------------------------
+
+const setPhone = (phone, business = ids.bizA) =>
+  tx(c, asService, (k) => sql(k, `select seller_set_verified_phone($1, $2) as r`, [business, phone]).then((r) => r[0].r), { commit: true });
+
+test("a verify_phone code remembers the number it was sent to, and only an sms to a real number is accepted", async () => {
+  await sql(c, `delete from seller_otps`);
+  assert.deepEqual(await issue("123456", "verify_phone", "sms", "0722 000 111"), { ok: true });
+  const [row] = await sql(c, `select purpose, channel, target from seller_otps`);
+  assert.deepEqual(row, { purpose: "verify_phone", channel: "sms", target: "0722 000 111" });
+  assert.equal((await verify("123456", "change_password")).ok, false); // a code is only good for its own purpose
+  assert.deepEqual(await verify("123456", "verify_phone"), { ok: true, channel: "sms", target: "0722 000 111" });
+  assert.equal((await verify("123456", "verify_phone")).ok, false); // one use
+
+  await rejects(c, asService, `select seller_otp_issue('${ids.bizA}', 'verify_phone', '123456', 'email', '0722000111')`, [], /invalid_otp_request/);
+  await rejects(c, asService, `select seller_otp_issue('${ids.bizA}', 'verify_phone', '123456', 'sms', null)`, [], /invalid_otp_request/);
+  await rejects(c, asService, `select seller_otp_issue('${ids.bizA}', 'verify_phone', '123456', 'sms', 'not a number')`, [], /invalid_otp_request/);
+  await rejects(c, asService, `select seller_otp_issue('${ids.bizA}', 'verify_phone', '123456', 'sms', '12345')`, [], /invalid_otp_request/);
+});
+
+test("verify_phone has its own resend wait and hourly limit, apart from the other purposes", async () => {
+  await sql(c, `delete from seller_otps`);
+  assert.equal((await issue("100000", "verify_phone", "sms", "0722000111")).ok, true);
+  assert.equal((await issue("100001", "verify_phone", "sms", "0722000111")).reason, "resend_wait");
+  assert.equal((await issue("100002", "verify_email", "email", "a@b.co")).ok, true); // another purpose is not held up by it
+});
+
+test("seller_set_verified_phone saves the normalised number, refuses the same one, and returns the old number", async () => {
+  const [{ phone: before }] = await sql(c, `select phone from businesses where id = '${ids.bizA}'`);
+  const first = await setPhone("0722 000 111");
+  assert.deepEqual(first, { ok: true, phone: "+254722000111", previous: before, cancelledRequests: 0 });
+  assert.equal((await sql(c, `select phone from businesses where id = '${ids.bizA}'`))[0].phone, "+254722000111");
+
+  assert.deepEqual(await setPhone("+254 722 000 111"), { ok: false, reason: "no_change" }); // already theirs, in another form
+  assert.deepEqual(await setPhone("not a number"), { ok: false, reason: "invalid_phone" });
+  assert.deepEqual(await setPhone("12345"), { ok: false, reason: "invalid_phone" });
+  assert.deepEqual(await setPhone("0722 000 11"), { ok: false, reason: "invalid_phone" });
+  assert.deepEqual(await setPhone("0722000111", "10000000-0000-0000-0000-0000000000ff"), { ok: false, reason: "not_found" });
+  assert.equal((await sql(c, `select phone from businesses where id = '${ids.bizA}'`))[0].phone, "+254722000111");
+  // a number from another country is saved in +CC form, like the rest of the app (migration 0011)
+  assert.equal((await setPhone("00 256 772 123 456")).phone, "+256772123456");
+  await sql(c, `update businesses set phone = '${before}' where id = '${ids.bizA}'`);
+});
+
+test("saving a verified number cancels a phone request that was still waiting for an admin, so it cannot overwrite it later", async () => {
+  const [{ phone: before }] = await sql(c, `select phone from businesses where id = '${ids.bizA}'`);
+  await sql(c, `delete from change_requests`);
+  await sql(c, `insert into change_requests (business_id, field, old_value, new_value) values ($1, 'phone', $2, '+254799000999'), ($1, 'town', 'Old', 'New')`, [ids.bizA, before]);
+
+  const r = await setPhone("0722000111");
+  assert.equal(r.ok, true);
+  assert.equal(r.cancelledRequests, 1);
+  const rows = await sql(c, `select field, status from change_requests order by field`);
+  assert.deepEqual(rows, [{ field: "phone", status: "cancelled" }, { field: "town", status: "pending" }]); // only the phone request, and only the pending one
+
+  // an admin can no longer approve it: it is already decided, so it cannot overwrite the number that was just verified
+  await rejects(c, asAdmin, `select admin_decide_change_request((select id from change_requests where field = 'phone'), true, null)`, [], /already_decided/);
+  assert.equal((await sql(c, `select phone from businesses where id = '${ids.bizA}'`))[0].phone, "+254722000111");
+  await sql(c, `delete from change_requests`);
+  await sql(c, `update businesses set phone = '${before}' where id = '${ids.bizA}'`);
+});
+
+test("only the service can save a verified phone number, and a seller still cannot write their phone directly", async () => {
+  await rejects(c, asA, `select seller_set_verified_phone('${ids.bizA}', '0722000111')`, [], /permission denied/);
+  await rejects(c, { role: "anon" }, `select seller_set_verified_phone('${ids.bizA}', '0722000111')`, [], /permission denied/);
+  const r = await tx(c, asA, (k) => k.query(`update businesses set phone = '+254700123123'`));
+  assert.equal(r.rowCount, 0);
+  await rejects(c, asA, `select seller_update_profile($1::jsonb)`, [JSON.stringify({ phone: "0700123123" })], /field_not_allowed/);
 });

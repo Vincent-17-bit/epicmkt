@@ -1,6 +1,8 @@
 import { nairobiNow, safeShopZone, validateWeeklyHours, GALLERY_CAPTION_MAX, PAIR_CATEGORIES, TIMETABLE_CATEGORIES, limitsFor, validateSlotDraft, validateStaffDraft, CRITICAL_EVENTS, mergeSettings, resolveSettings, summarizeLogins, passwordProblems, enrichItems, computeStats, previewPriceChange, applyPricePreview, validateSavedViews, MAX_SAVED_VIEWS, statusFromCount, storedItemDetails, storedVariants, normalizePerformance, isPerformanceRange, normalizeValueKey, validateOpenValue, matchOpenValues } from "@epicmkt/shared";
 import { validateCustomSize } from "@epicmkt/shared";
 import { MEDIA3D, checkOptionIds, checkTicketRequest, hasView3d, inspectGlb, view3dIssues } from "@epicmkt/shared";
+import { isValidPhone, toE164 } from "@epicmkt/shared/phone";
+import { maskPhone } from "@epicmkt/shared";
 import { ApiError } from "./errors.js";
 import { checkDeliverySetting, deliveryInfo, flashOptionTable, similarGroups, validateTiers } from "@epicmkt/shared";
 import { PAGE_LIMITS, checkItemDelivery, checkNotices, isMediaId } from "@epicmkt/shared";
@@ -118,11 +120,22 @@ export const forgotVerify = async ({ identifier, code, newPassword }) => {
   bill.business.passwordChangedAt = new Date().toISOString();
   return { ok: true };
 };
-export const requestOtp = async ({ purpose = "change_password", channel = "sms", email } = {}) => {
+export const requestOtp = async ({ purpose = "change_password", channel = "sms", email, phone, currentPassword } = {}) => {
   signedIn();
   await wait();
   const b = bill.business;
+  if (purpose === "verify_phone") {
+    // Same order as the server: the password first (nothing is sent on a wrong one), then the number.
+    if (!currentPassword) throw new ApiError("bad_request");
+    if (currentPassword !== state.password) throw new ApiError("invalid_password");
+    if (!isValidPhone(String(phone ?? ""))) throw new ApiError("bad_request");
+    const target = toE164(String(phone));
+    if (target === (b.phone ?? DEMO.phone)) throw new ApiError("no_change");
+    state.otp = { purpose, channel: "sms", target };
+    return { ok: true, channel: "sms", sentTo: maskPhone(target) };
+  }
   if (purpose === "verify_email") {
+    if (currentPassword && currentPassword !== state.password) throw new ApiError("invalid_password"); // optional here, like the server
     const address = String(email ?? "").trim().toLowerCase();
     if (!EMAIL.test(address)) throw new ApiError("bad_request");
     if (address === "taken@example.com") throw new ApiError("email_in_use");
@@ -157,6 +170,15 @@ export const setLoginEmail = async ({ code, currentPassword }) => {
   bill.business.loginEmailVerified = true;
   state.otp = null;
   return { ok: true, loginEmail: bill.business.loginEmail };
+};
+export const setLoginPhone = async ({ code, currentPassword }) => {
+  signedIn();
+  await wait();
+  if (currentPassword !== state.password) throw new ApiError("invalid_password");
+  if (code !== OTP || state.otp?.purpose !== "verify_phone") throw new ApiError("invalid_code", "That code is not valid or has expired.");
+  bill.business.phone = state.otp.target;
+  state.otp = null;
+  return { ok: true, phone: bill.business.phone };
 };
 export const updateProfile = async (patch) => {
   writer();
@@ -566,7 +588,7 @@ export const getBusinessFacts = async () => {
   signedIn();
   await wait();
   const b = bill.business;
-  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng, delivers: b.delivers ?? null, delivery_fee: b.deliveryFee ?? null, delivery_radius_km: b.deliveryRadiusKm ?? null, delivery_area: b.deliveryArea ?? null, delivery_min_order: b.deliveryMinOrder ?? null, delivery_notes: b.deliveryNotes ?? null ?? null };
+  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: b.phone ?? DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng, delivers: b.delivers ?? null, delivery_fee: b.deliveryFee ?? null, delivery_radius_km: b.deliveryRadiusKm ?? null, delivery_area: b.deliveryArea ?? null, delivery_min_order: b.deliveryMinOrder ?? null, delivery_notes: b.deliveryNotes ?? null ?? null };
 };
 export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
 
@@ -617,7 +639,7 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null, lat: -0.09, lng: 34.6, address: "Main Street" };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, phone: DEMO.phone, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null, lat: -0.09, lng: 34.6, address: "Main Street" };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];
@@ -700,7 +722,7 @@ export const getPaymentInstructions = async ({ purpose = null, targetPlan = null
   const credit = bill.business.creditKes ?? 0;
   const cat = CATEGORIES[bill.business.categoryId];
   return { ...r, creditKes: credit, amountDue: Math.max(r.amount + (r.switchKes ?? 0) - credit, 0), maxPrepayMonths: 12, hasOpenSubmission: bill.payments.some((p) => p.status === "submitted"),
-    stk: !!r.configured && bill.paybill?.stk !== false, phone: DEMO.phone,
+    stk: !!r.configured && bill.paybill?.stk !== false, phone: bill.business?.phone ?? DEMO.phone,
     planChoices: bill.noPlanChoice ? null : Object.fromEntries(Object.entries(cat.prices).filter(([, v]) => v > 0)), currentPlan: bill.business.planKey };
 };
 // Spend credit on an upgrade or category change: a confirmed payment funded from credit (the server does the same).

@@ -6,6 +6,7 @@ export const SELLER_API = [
   "requestOtp",
   "changePassword",
   "setLoginEmail",
+  "setLoginPhone",
   "updateProfile",
   "setTimezone",
   "saveWeeklyHours",

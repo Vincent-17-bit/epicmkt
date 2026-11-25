@@ -234,3 +234,9 @@ textarea.input {
     display: none !important;
   }
 }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .chip { min-height: var(--tap); }
+  .introMore { min-height: var(--tap); padding-inline: var(--space-2); }
+}

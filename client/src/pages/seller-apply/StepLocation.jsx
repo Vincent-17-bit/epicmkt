@@ -12,8 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Button, Skeleton } from "@epicmkt/ui";
-import { ErrorLine, fieldId, MaskedField, SelectField, TextField } from "./Field.jsx";
-import { phoneDisplay, phoneMask } from "./masks.js";
+import { ErrorLine, fieldId, PhoneField, SelectField, TextField } from "./Field.jsx";
 import form from "./form.module.css";
 import styles from "./steps.module.css";
 
@@ -131,17 +130,11 @@ export default function LocationStep() {
         <div className={styles.phones}>
           {phones.map((_, i) => (
             <div key={i} className={styles.listRow}>
-              <MaskedField
+              <PhoneField
                 name={`contacts.businessPhones.${i}`}
                 label={i === 0 ? "Business phone" : `Business phone ${i + 1}`}
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                placeholder="0712 345 678"
                 className={styles.grow}
                 hint={i === 0 ? "The number customers call. Filled in from your own number, change it if needed." : undefined}
-                mask={phoneMask}
-                tidy={phoneDisplay}
               />
               {i > 0 && (
                 <button
@@ -173,16 +166,7 @@ export default function LocationStep() {
             <span>Customers can also WhatsApp me on my first business phone</span>
           </label>
           {!same && (
-            <MaskedField
-              name="contacts.whatsapp"
-              label="WhatsApp number"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              placeholder="0712 345 678"
-              mask={phoneMask}
-              tidy={phoneDisplay}
-            />
+            <PhoneField name="contacts.whatsapp" label="WhatsApp number" />
           )}
         </div>
 

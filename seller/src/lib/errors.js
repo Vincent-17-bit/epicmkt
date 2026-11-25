@@ -21,6 +21,7 @@ const MESSAGES = {
   email_in_use: "That email is already used by another EpicMKT account. Use a different one.",
   email_not_verified: "Add and verify your email first. Then you can get codes there.",
   invalid_password: "That is not your current password.",
+  no_change: "That is already your number.",
   send_failed: "We could not send the code. Try again in a moment, or choose the other option.",
   invalid_date: "Choose a valid date.",
   invalid_timezone: "Choose a time zone from the list.",
