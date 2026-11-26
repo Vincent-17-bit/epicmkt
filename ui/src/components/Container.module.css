@@ -2,21 +2,7 @@
   width: 100%;
   max-width: var(--content-width);
   margin-inline: auto;
-  /* 16 px on a phone, a little less on the smallest phones (12.8 px at 320 px wide), where every pixel goes to the content. */
-  padding-left: max(clamp(0.75rem, 4vw, var(--space-4)), var(--safe-left));
-  padding-right: max(clamp(0.75rem, 4vw, var(--space-4)), var(--safe-right));
-}
-
-@media (min-width: 48rem) {
-  .container {
-    padding-left: max(var(--space-5), var(--safe-left));
-    padding-right: max(var(--space-5), var(--safe-right));
-  }
-}
-
-@media (min-width: 80rem) {
-  .container {
-    padding-left: max(var(--space-6), var(--safe-left));
-    padding-right: max(var(--space-6), var(--safe-right));
-  }
+  /* One gutter (--gutter in tokens.css): 8 px on a phone, 12 px from 768 px, 16 px from 1280 px. Notch insets still win. */
+  padding-left: max(var(--gutter), var(--safe-left));
+  padding-right: max(var(--gutter), var(--safe-right));
 }

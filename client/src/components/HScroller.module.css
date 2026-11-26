@@ -7,12 +7,14 @@
 .row {
   display: flex;
   gap: 12px;
-  margin: 0;
-  padding: var(--space-4) var(--space-4) var(--space-5);
+  /* Whoever places the scroller sets two things: --strip-pad, the space before the first card (line it up with the title above),
+     and --strip-bleed, how far the row runs past the frame so the scroll reaches the screen edge. */
+  margin: 0 calc(-1 * var(--strip-bleed, 0px));
+  padding: var(--space-2) var(--strip-pad, var(--space-2)) var(--space-3);
   overflow-x: auto;
   overscroll-behavior-x: contain;
   list-style: none;
-  scroll-padding-inline: var(--space-4);
+  scroll-padding-inline: var(--strip-pad, var(--space-2));
   scroll-snap-type: x proximity;
   scrollbar-width: none;
 }
@@ -113,7 +115,7 @@
   display: flex;
   align-items: center;
   min-height: var(--tap);
-  padding: 0 calc(var(--space-4) + 44px * 2 + var(--space-2)) 0 var(--space-4);
+  padding: 0 calc(var(--strip-pad, 0px) + 44px * 2 + var(--space-2)) 0 var(--strip-pad, 0px);
 }
 
 .frame .navTop {
@@ -126,12 +128,12 @@
 }
 
 .frame .navTop.prev {
-  right: calc(var(--space-4) + 44px + var(--space-2));
+  right: calc(var(--strip-pad, 0px) + 44px + var(--space-2));
   left: auto;
 }
 
 .frame .navTop.next {
-  right: var(--space-4);
+  right: var(--strip-pad, 0px);
 }
 
 .frame .navTop:disabled {
@@ -144,11 +146,11 @@
 }
 
 .frame[data-header="true"][data-scrollable="false"] .header {
-  padding-right: var(--space-4);
+  padding-right: var(--strip-pad, 0px);
 }
 
 .frame[data-header="true"] .row {
-  padding-top: var(--space-1);
+  padding-top: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

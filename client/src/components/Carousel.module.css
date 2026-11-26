@@ -4,7 +4,7 @@
   --gaps: 2;
   --gap: 10px;
   /* The page container's side padding, so the row can run to the screen edge on phones and still line up. */
-  --bleed: clamp(0.75rem, 4vw, var(--space-4));
+  --bleed: var(--gutter);
   min-width: 0;
 }
 
@@ -25,12 +25,6 @@
     --cols: 2.2;
     --gaps: 2;
     --gap: 14px;
-  }
-}
-
-@media (min-width: 48rem) {
-  .wrap {
-    --bleed: var(--space-5);
   }
 }
 

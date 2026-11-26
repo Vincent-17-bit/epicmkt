@@ -1,5 +1,6 @@
 .page {
-  padding-block: clamp(var(--space-6), 6vw, var(--space-8));
+  --page-pad-y: clamp(var(--space-4), 3vw, var(--space-6));
+  padding-block: var(--page-pad-y);
 }
 
 .column {
@@ -25,6 +26,6 @@
 }
 
 .page > :first-child {
-  margin-top: calc(clamp(var(--space-6), 6vw, var(--space-8)) * -1);
-  margin-bottom: clamp(var(--space-4), 3vw, var(--space-6));
+  margin-top: calc(var(--page-pad-y) * -1);
+  margin-bottom: clamp(var(--space-3), 2vw, var(--space-4));
 }

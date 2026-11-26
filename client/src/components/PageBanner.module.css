@@ -1,5 +1,5 @@
 .banner {
-  padding-block: clamp(var(--space-3), 2vw, var(--space-5));
+  padding-block: clamp(var(--space-2), 1.4vw, var(--space-4));
   background: var(--primary);
   color: var(--on-primary);
 }
