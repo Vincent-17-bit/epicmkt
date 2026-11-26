@@ -946,7 +946,12 @@ values
   ('0147', 'view', 'public_timetable', ''),
   ('0149', 'function', 'log_search', ''),
   ('0149', 'function', 'refresh_trending', ''),
-  ('0149', 'function', 'trending_lists', '')
+  ('0149', 'function', 'trending_lists', ''),
+  ('0157', 'column', 'popular_half_life', 'trending_settings'),
+  ('0157', 'column', 'popular_max_days', 'trending_settings'),
+  ('0157', 'column', 'popular_mid_days', 'trending_settings'),
+  ('0157', 'column', 'popular_target', 'trending_settings'),
+  ('0157', 'column', 'window_days', 'search_trending')
 ), present as (
   select 'table' as kind, c.relname::text as name, '' as extra from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p')
   union all select 'view', c.relname, '' from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('v','m')
