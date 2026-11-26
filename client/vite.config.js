@@ -108,6 +108,47 @@ const preloadFont = () => ({
   }
 });
 
+// The main stylesheet is small, and the page can paint nothing until script has run anyway, so a separate request for it only adds a round
+// trip in front of the first paint. Inlining it removes that request; the picture, spacing and fonts still arrive styled, so nothing flashes.
+const inlineMainCss = () => ({
+  name: "inline-main-css",
+  apply: "build",
+  transformIndexHtml: {
+    order: "post",
+    handler(html, ctx) {
+      return html.replace(/<link rel="stylesheet"[^>]*href="\/(assets\/[^"]+\.css)"[^>]*>/, (tag, file) => {
+        const css = ctx.bundle?.[file]?.source;
+        return typeof css === "string" ? `<style>${css.replace(/<\/style/gi, "<\\/style")}</style>` : tag;
+      });
+    }
+  }
+});
+
+// The first screen needs the flash-sales code, which the app only asks for after the main script has run, and that code pulls in a few
+// more files one step at a time. Naming them up front lets the browser fetch them alongside the main script instead of after it.
+const preloadFlashChunks = () => ({
+  name: "preload-flash-chunks",
+  apply: "build",
+  transformIndexHtml: {
+    order: "post",
+    handler(html, ctx) {
+      const chunks = Object.values(ctx.bundle ?? {}).filter((item) => item.type === "chunk");
+      const byName = new Map(chunks.map((chunk) => [chunk.fileName, chunk]));
+      const start = chunks.find((chunk) => String(chunk.facadeModuleId ?? "").replace(/\\/g, "/").endsWith("/src/api/flash/live.js"));
+      if (!start) return html;
+      const wanted = new Set();
+      const walk = (chunk) => {
+        if (wanted.has(chunk.fileName) || chunk.isEntry) return;
+        wanted.add(chunk.fileName);
+        chunk.imports.forEach((name) => byName.has(name) && walk(byName.get(name)));
+      };
+      walk(start);
+      const links = [...wanted].map((file) => `<link rel="modulepreload" crossorigin href="/${file}" />`).join("\n    ");
+      return links ? html.replace("</title>", `</title>\n    ${links}`) : html;
+    }
+  }
+});
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "VITE_");
   const site = resolveSiteUrl(env, process.env);
@@ -141,6 +182,8 @@ export default defineConfig(({ mode }) => {
       preconnectOrigins(),
       earlyFlashFetch(),
       preloadFont(),
+      preloadFlashChunks(),
+      inlineMainCss(),
       react(),
       VitePWA({
         registerType: "prompt",
