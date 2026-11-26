@@ -9,9 +9,18 @@
 }
 
 .wrap[data-variant="showcase"] {
-  --cols: 1.12;
+  --cols: 1.5;
   --gaps: 1;
-  --gap: 12px;
+  --gap: 8px;
+}
+
+/* Featured stores: the title sits closer to the left edge. */
+.wrap[data-variant="showcase"] .titles {
+  padding-left: var(--space-2);
+}
+
+.wrap[data-variant="showcase"] .titles::before {
+  width: 3px;
 }
 
 @media (min-width: 40rem) {
@@ -22,9 +31,9 @@
   }
 
   .wrap[data-variant="showcase"] {
-    --cols: 2.2;
+    --cols: 2.8;
     --gaps: 2;
-    --gap: 14px;
+    --gap: 10px;
   }
 }
 
@@ -36,9 +45,9 @@
   }
 
   .wrap[data-variant="showcase"] {
-    --cols: 3;
-    --gaps: 2;
-    --gap: 16px;
+    --cols: 3.8;
+    --gaps: 3;
+    --gap: 12px;
   }
 }
 
@@ -50,9 +59,9 @@
   }
 
   .wrap[data-variant="showcase"] {
-    --cols: 4;
-    --gaps: 3;
-    --gap: 16px;
+    --cols: 4.8;
+    --gaps: 4;
+    --gap: 12px;
   }
 }
 
