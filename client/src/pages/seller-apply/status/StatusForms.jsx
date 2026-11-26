@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@epicmkt/ui";
+import { Button, PhoneInput } from "@epicmkt/ui";
 import { findReference, requestStatusOtp, verifyStatusOtp, devTools } from "../../../api/applications/index.js";
 import { normalizePhone } from "../../../shared/validators.js";
 import { ErrorLine } from "../Field.jsx";
@@ -50,7 +50,7 @@ export function RequestForm({ initial, onSent }) {
     const cleanRef = ref.trim().toUpperCase();
     const norm = normalizePhone(phone);
     if (!REF.test(cleanRef)) next.ref = `Enter your reference number, for example ${EXAMPLE}`;
-    if (!norm) next.phone = "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
+    if (!norm) next.phone = "Enter the phone number you applied with. Choose its country, then type the number.";
     setErrors(next);
     setFormError("");
     if (Object.keys(next).length) return document.querySelector('form [aria-invalid="true"]')?.focus();
@@ -92,7 +92,7 @@ export function RequestForm({ initial, onSent }) {
       </div>
       <div className={form.field}>
         <label htmlFor="status-phone" className={form.label}>Phone number</label>
-        <input id="status-phone" className={form.input} type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={errors.phone ? true : undefined} aria-describedby={errors.phone ? "status-phone-err" : undefined} />
+        <PhoneInput id="status-phone" inputClassName={form.input} value={phone} onChange={setPhone} aria-invalid={errors.phone ? true : undefined} aria-describedby={errors.phone ? "status-phone-err" : undefined} style={{ "--phone-h": "var(--ap-input-h)", "--phone-radius": "var(--ap-r)" }} />
         <ErrorLine id="status-phone-err" message={errors.phone} />
       </div>
       <ErrorLine message={formError} />

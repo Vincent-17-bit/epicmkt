@@ -119,3 +119,8 @@
     justify-self: stretch !important;
   }
 }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .q form > div > button, .q form > button, .file button { min-height: var(--tap); }
+}

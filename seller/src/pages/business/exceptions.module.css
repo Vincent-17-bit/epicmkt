@@ -456,3 +456,8 @@
     grid-column: 1 / -1;
   }
 }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .chip { min-height: var(--tap); }
+}

@@ -81,10 +81,15 @@ describe("sign-in email", () => {
     await user.clear(screen.getByLabelText("Current password"));
     await user.type(screen.getByLabelText("Current password"), "wrong-password");
     await user.click(screen.getByRole("button", { name: "Send code to this email" }));
-    await user.type(await screen.findByLabelText("Code from email"), "123456");
-    await user.click(screen.getByRole("button", { name: "Save email" }));
+    // a wrong password is caught here, before a code is sent and spent
     expect(await screen.findByRole("alert")).toHaveTextContent("That is not your current password.");
+    expect(screen.queryByLabelText("Code from email")).toBeNull();
     expect(M.state.business.loginEmailVerified).toBe(false);
+
+    await user.clear(screen.getByLabelText("Current password"));
+    await user.type(screen.getByLabelText("Current password"), "Demo-Passw0rd");
+    await user.click(screen.getByRole("button", { name: "Send code to this email" }));
+    expect(await screen.findByLabelText("Code from email")).toBeInTheDocument();
   });
 
   it("rejects a wrong code and an address another seller already uses", async () => {

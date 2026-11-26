@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { businessDay } from '@epicmkt/shared';
+import { isValidPhone } from '@epicmkt/shared/phone';
 
 export const MAX_FILES = 14;
 export const SLOT_LIMITS = { image: 10 * 1024 * 1024, pdf: 8 * 1024 * 1024 };
@@ -28,12 +29,18 @@ export function normalizePhone(raw) {
   return m ? `+${m[1]}` : null;
 }
 
+/** A real number in its own country, not just digits of the right length: "+254712345678" yes, "+25471234" no. */
+export const isRealPhone = (raw) => {
+  const n = normalizePhone(raw);
+  return !!n && isValidPhone(n);
+};
+
 const text = (min, max) => z.string().transform(clean).pipe(z.string().min(min).max(max));
 
 const phone = z.string().max(24).transform((v, ctx) => {
   const n = normalizePhone(v);
-  if (!n) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid phone number, with country code for numbers outside Kenya' });
+  if (!n || !isValidPhone(n)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Enter a valid phone number. Choose the country, then type the number.' });
     return z.NEVER;
   }
   return n;

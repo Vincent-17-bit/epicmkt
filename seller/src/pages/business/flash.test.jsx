@@ -68,9 +68,9 @@ describe("seller flash sales", () => {
     fill("20");
     await user.click(screen.getByRole("button", { name: "Start flash sale" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Choose an end time");
-    fireEvent.change(screen.getByLabelText(/Ends/), { target: { value: "2026-10-30T12:00" } });
+    fireEvent.change(screen.getByLabelText(/Ends/), { target: { value: "2026-11-05T12:00" } });
     await user.click(screen.getByRole("button", { name: "Start flash sale" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("7 days at most");
+    expect(screen.getByRole("alert")).toHaveTextContent("14 days at most");
     expect(M.state.flash).toHaveLength(0);
   });
 
@@ -150,32 +150,115 @@ describe("seller flash sales", () => {
     const user = userEvent.setup();
     await open(() => sale("it-fade"));
     await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
-    expect(screen.getByRole("group", { name: "Extend Fade cut flash sale" })).toHaveTextContent("7 days at most");
+    expect(screen.getByRole("group", { name: "Extend Fade cut flash sale" })).toHaveTextContent("14 days from its start");
     await user.click(screen.getByRole("button", { name: "Add 1 hour" }));
     await waitFor(() => expect(M.state.flash[0].endsAt).toBe("2026-10-17T16:00:00.000Z"));
     await waitFor(() => expect(screen.getByTestId("flash-timer")).toHaveTextContent("07:00:0"));
     expect(screen.queryByRole("group", { name: "Extend Fade cut flash sale" })).toBeNull();
   });
 
-  it("refuses an extension past 7 days with the plan message and keeps the old end time", async () => {
+  it("offers 7 days and a run-to-the-limit button, and the limit is 14 days from the start", async () => {
     const user = userEvent.setup();
-    await open(() => sale("it-fade", { endsAt: "2026-10-24T08:30:00Z" }));
+    await open(() => sale("it-fade"));
     await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
-    await user.click(screen.getByRole("button", { name: "Add 1 hour" }));
-    expect(await screen.findByText("A flash sale can run for 7 days at most.")).toBeInTheDocument();
-    expect(M.state.flash[0].endsAt).toBe("2026-10-24T08:30:00.000Z");
+    await user.click(screen.getByRole("button", { name: "Run to the 14 day limit" }));
+    await waitFor(() => expect(M.state.flash[0].endsAt).toBe("2026-10-31T09:00:00.000Z"));
+    await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
+    expect(screen.getByRole("group", { name: "Extend Fade cut flash sale" })).toHaveTextContent("reached the 14 day limit");
+    expect(screen.queryByRole("button", { name: /^Add / })).toBeNull();
   });
 
-  it("the mock only pushes an open sale later, within 7 days of its start", async () => {
+  it("extends to an exact end the seller picks, inside the limit only", async () => {
+    const user = userEvent.setup();
+    setUserTimeZone("UTC");
+    await open(() => sale("it-fade"));
+    await user.click(await screen.findByRole("button", { name: "Extend Fade cut flash sale" }));
+    const picker = screen.getByLabelText(/Or pick the exact end/);
+    fireEvent.change(picker, { target: { value: "2026-10-30T12:00" } });
+    await user.click(screen.getByRole("button", { name: "Set end time" }));
+    await waitFor(() => expect(M.state.flash[0].endsAt).toBe("2026-10-30T12:00:00.000Z"));
+  });
+
+  it("the mock only pushes an open sale later, within 14 days of its start", async () => {
     await open(() => sale("it-fade"));
     const id = M.state.flash[0].id;
     await expect(api.extendFlashSale(id, "2026-10-17T15:00:00Z")).rejects.toMatchObject({ code: "invalid_window" });
     await expect(api.extendFlashSale(id, "2026-10-17T10:00:00Z")).rejects.toMatchObject({ code: "invalid_window" });
     await expect(api.extendFlashSale(id, "not a date")).rejects.toMatchObject({ code: "invalid_window" });
-    await expect(api.extendFlashSale(id, "2026-10-25T09:00:00Z")).rejects.toMatchObject({ code: "duration_too_long" });
+    await expect(api.extendFlashSale(id, "2026-10-31T09:01:00Z")).rejects.toMatchObject({ code: "duration_too_long" });
     await expect(api.extendFlashSale("nope", "2026-10-17T16:00:00Z")).rejects.toMatchObject({ code: "not_found" });
+    await expect(api.extendFlashSale(id, "2026-10-31T09:00:00Z")).resolves.toBe(true);
     await api.endFlashSale(id);
     await expect(api.extendFlashSale(id, "2026-10-17T16:00:00Z")).rejects.toMatchObject({ code: "flash_closed" });
+  });
+
+  it("creates a sale that runs for two weeks, and refuses one minute more", async () => {
+    await open();
+    await expect(sale("it-fade", { endsAt: "2026-10-31T09:01:00Z" })).rejects.toMatchObject({ code: "duration_too_long" });
+    await expect(sale("it-fade", { endsAt: "2026-10-31T09:00:00Z" })).resolves.toMatchObject({ status: "live" });
+  });
+
+  describe("renewing an ended sale", () => {
+    const endIt = async () => { await api.endFlashSale(M.state.flash.at(-1).id); };
+
+    it("offers Renew on an ended sale, runs it again with the same terms for the chosen time, and it goes live", async () => {
+      const user = userEvent.setup();
+      await open(async () => { await sale("it-fade", { headline: "Weekend fade deal", quantityNote: "While stock lasts" }); await endIt(); });
+      await user.click(await screen.findByRole("button", { name: "Renew Fade cut flash sale" }));
+      const panel = await screen.findByTestId("renew-panel");
+      expect(panel).toHaveTextContent("20% off");
+      await user.click(within(panel).getByRole("button", { name: "14 days" }));
+      expect(within(panel).getByTestId("renew-summary")).toHaveTextContent("14 days in all");
+      await user.click(within(panel).getByRole("button", { name: "Renew sale" }));
+      await waitFor(() => expect(M.state.flash).toHaveLength(2));
+      const renewed = M.state.flash[1];
+      expect(renewed).toMatchObject({ itemId: "it-fade", discountType: "percent", discountValue: 20, headline: "Weekend fade deal", quantityNote: "While stock lasts", status: "live" });
+      expect(renewed.endsAt).toBe("2026-10-31T09:00:00.000Z");
+      await waitFor(() => expect(screen.getByRole("heading", { name: /Running and scheduled/ })).toBeInTheDocument());
+      await waitFor(() => expect(rows().some((r) => r.dataset.phase === "live")).toBe(true));
+      expect(screen.queryByRole("button", { name: "Renew Fade cut flash sale" })).toBeNull();
+    });
+
+    it("lets the seller pick any end up to 14 days and explains one that is too far", async () => {
+      const user = userEvent.setup();
+      setUserTimeZone("UTC");
+      await open(async () => { await sale("it-fade"); await endIt(); });
+      await user.click(await screen.findByRole("button", { name: "Renew Fade cut flash sale" }));
+      const panel = await screen.findByTestId("renew-panel");
+      fireEvent.change(within(panel).getByLabelText(/Or pick the exact end/), { target: { value: "2026-10-30T18:00" } });
+      expect(within(panel).getByTestId("renew-summary")).toHaveTextContent("13 days 9 hours in all");
+      fireEvent.change(within(panel).getByLabelText(/Or pick the exact end/), { target: { value: "2026-11-20T18:00" } });
+      expect(within(panel).getByTestId("renew-summary")).toHaveTextContent("A flash sale can run for 14 days at most.");
+      await user.click(within(panel).getByRole("button", { name: "Renew sale" }));
+      expect(await within(panel).findByRole("alert")).toHaveTextContent("14 days at most");
+      expect(M.state.flash).toHaveLength(1);
+    });
+
+    it("does not offer Renew while the item has a sale running, or after EpicMKT stopped the sale", async () => {
+      await open(async () => { await sale("it-fade"); await endIt(); await sale("it-fade"); });
+      await screen.findAllByTestId("flash-sale");
+      expect(screen.queryByRole("button", { name: /^Renew / })).toBeNull();
+    });
+
+    it("only the newest ended sale of an item shows Renew", async () => {
+      await open(async () => { await sale("it-fade"); await endIt(); await sale("it-fade"); await endIt(); });
+      await waitFor(() => expect(rows()).toHaveLength(2));
+      expect(screen.getAllByRole("button", { name: "Renew Fade cut flash sale" })).toHaveLength(1);
+    });
+
+    it("renews by schedule and shows it as scheduled", async () => {
+      const user = userEvent.setup();
+      setUserTimeZone("UTC");
+      await open(async () => { await sale("it-fade"); await endIt(); });
+      await user.click(await screen.findByRole("button", { name: "Renew Fade cut flash sale" }));
+      const panel = await screen.findByTestId("renew-panel");
+      await user.click(within(panel).getByRole("radio", { name: "Schedule" }));
+      fireEvent.change(within(panel).getByLabelText(/^Starts/), { target: { value: "2026-10-20T08:00" } });
+      fireEvent.change(within(panel).getByLabelText(/Or pick the exact end/), { target: { value: "2026-11-03T08:00" } });
+      await user.click(within(panel).getByRole("button", { name: "Schedule renewal" }));
+      await waitFor(() => expect(M.state.flash).toHaveLength(2));
+      expect(M.state.flash[1]).toMatchObject({ status: "scheduled", startsAt: "2026-10-20T08:00:00.000Z", endsAt: "2026-11-03T08:00:00.000Z" });
+    });
   });
 
   it("the mock enforces one live sale per item and blocks hidden or out of stock items", async () => {

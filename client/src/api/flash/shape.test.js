@@ -202,7 +202,9 @@ describe("customer gallery, team, timetable and shop settings", () => {
   it("links team members to service names and timetable slots to trainers", async () => {
     const { teamOf, timetableOf } = await import("./shape.js");
     const team = teamOf([{ id: "t1", name: "Ken", role: "Coach", specialties: ["spin"], photo_path: null, item_ids: ["s1", "gone"] }], [{ id: "s1", name: "Spin class" }]);
-    expect(team).toEqual([{ id: "t1", name: "Ken", role: "Coach", specialties: ["spin"], photoUrl: null, services: ["Spin class"] }]);
+    expect(team).toEqual([{ id: "t1", name: "Ken", role: "Coach", specialties: ["spin"], photoUrl: null, socials: {}, services: ["Spin class"] }]);
+    const linked = teamOf([{ id: "t2", name: "Amina", photo_path: null, socials: { x: "https://x.com/amina_cuts" } }]);
+    expect(linked[0].socials).toEqual({ x: "https://x.com/amina_cuts" });
     expect(timetableOf([{ id: "x", day_of_week: 2, start_time: "07:00:00", end_time: "08:00:00", class_name: "Spin", staff_id: "t1" }, { id: "y", day_of_week: 3, start_time: "09:00", end_time: "10:00", class_name: "Yoga", staff_id: null }], team))
       .toEqual([{ id: "x", day: 2, start: "07:00", end: "08:00", name: "Spin", trainer: "Ken" }, { id: "y", day: 3, start: "09:00", end: "10:00", name: "Yoga", trainer: null }]);
   });

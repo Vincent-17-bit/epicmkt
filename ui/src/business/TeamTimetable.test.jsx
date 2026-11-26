@@ -21,6 +21,48 @@ describe("Team", () => {
   });
 });
 
+describe("Team social links", () => {
+  const amina = (socials) => ({ id: "1", name: "Amina Otieno", role: "Barber", specialties: [], photoUrl: null, services: [], socials });
+
+  it("draws one icon link per network that opens that profile in a new tab, in a fixed order", () => {
+    render(<Team team={[amina({ facebook: "https://www.facebook.com/amina.barber", x: "https://x.com/amina_cuts", instagram: "https://www.instagram.com/amina.cuts/", linkedin: "https://www.linkedin.com/in/amina-otieno", reddit: "https://www.reddit.com/user/amina_cuts" })]} />);
+    const group = screen.getByRole("list", { name: "Amina Otieno on social media" });
+    const links = within(group).getAllByRole("link");
+    expect(links.map((a) => a.getAttribute("aria-label"))).toEqual(["Amina Otieno on X", "Amina Otieno on Instagram", "Amina Otieno on LinkedIn", "Amina Otieno on Reddit", "Amina Otieno on Facebook"]);
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["https://x.com/amina_cuts", "https://www.instagram.com/amina.cuts/", "https://www.linkedin.com/in/amina-otieno", "https://www.reddit.com/user/amina_cuts", "https://www.facebook.com/amina.barber"]);
+    for (const a of links) {
+      expect(a).toHaveAttribute("target", "_blank");
+      expect(a.getAttribute("rel")).toContain("noopener");
+      expect(a.getAttribute("rel")).toContain("noreferrer");
+    }
+    expect(links[1]).toHaveAttribute("title", "Instagram: @amina.cuts");
+  });
+
+  it("shows only the networks that are set, and nothing at all when none are", () => {
+    const { rerender } = render(<Team team={[amina({ x: "https://x.com/amina_cuts" })]} />);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+    rerender(<Team team={[amina({})]} />);
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.queryByRole("list", { name: /social media/ })).toBeNull();
+    rerender(<Team team={[{ ...amina(), socials: undefined }]} />);
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("never draws a stored value that is not a clean address on its own network", () => {
+    render(<Team team={[amina({ x: "javascript:alert(1)", instagram: "https://evil.example/amina/", linkedin: "https://www.linkedin.com/in/amina-otieno?trk=x", reddit: "https://www.reddit.com/user/amina_cuts", tiktok: "https://tiktok.com/@a" })]} />);
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute("href", "https://www.reddit.com/user/amina_cuts");
+  });
+
+  it("in a seller's preview the icons are shown but do not go anywhere", () => {
+    render(<Team mode="preview" team={[amina({ x: "https://x.com/amina_cuts" })]} />);
+    const link = screen.getByLabelText("Amina Otieno on X");
+    expect(link).not.toHaveAttribute("href");
+    expect(link).toHaveAttribute("aria-disabled", "true");
+  });
+});
+
 describe("Timetable", () => {
   it("renders nothing without classes", () => {
     const { container } = render(<Timetable slots={[]} />);

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidPhone } from "@epicmkt/shared/phone";
 import {
   AVAILABILITY_DEFAULTS,
   CARD_VIEWS,
@@ -61,7 +62,8 @@ export const closureReasonsSchema = z.array(closureReasonSchema).min(1, "Keep at
 
 export const unitsSchema = z.array(z.string().trim().min(1).max(UNIT_MAX, `Up to ${UNIT_MAX} characters.`)).max(UNITS_PER_CATEGORY, `Up to ${UNITS_PER_CATEGORY} units.`);
 export const emailSchema = z.string().trim().max(120).regex(/^[^@\s]+@[^@\s]+\.[^@\s]+$/, "Enter a valid email address.");
-export const phoneSchema = z.string().transform((v) => v.replace(/[\s().-]/g, "")).pipe(z.string().regex(/^(?:\+?254|0)[71][0-9]{8}$/, "Enter a Kenyan number such as 0712 345 678."));
+// A real phone number from any country, as +CCNUMBER. The picker makes this; a number typed or pasted in full is read the same way.
+export const phoneSchema = z.string().refine((v) => isValidPhone(v), "Enter a valid phone number. Choose the country, then type the number.");
 
 const channels = z.object({ in_app: z.boolean(), sms: z.boolean(), email: z.boolean() }).partial();
 

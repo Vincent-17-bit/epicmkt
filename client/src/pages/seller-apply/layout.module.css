@@ -36,7 +36,8 @@
   max-width: var(--content-width);
   min-height: var(--bar-h);
   margin: 0 auto;
-  padding: 0 max(var(--space-3), var(--safe-left)) 0 max(var(--space-3), var(--safe-right));
+  /* top right bottom left: each side takes its own notch inset. */
+  padding: 0 max(var(--gutter), var(--safe-right)) 0 max(var(--gutter), var(--safe-left));
 }
 
 .brand {

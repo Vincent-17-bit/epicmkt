@@ -327,4 +327,10 @@ export function summarizeLogins(events, limit = 20) {
   return { rows: rows.reverse().slice(0, limit), failedSinceLastSuccess: failed };
 }
 
-export const maskPhone = (phone) => String(phone ?? "").replace(/^(\+254\d)\d{5}(\d{3})$/, "$1*****$2");
+// "+254712345678" -> "+2547*****678". Any country: the first four digits and the last three stay, the rest is hidden.
+export const maskPhone = (phone) => {
+  const m = String(phone ?? "").match(/^\+(\d{8,15})$/);
+  if (!m) return String(phone ?? "");
+  const d = m[1];
+  return d.length >= 9 ? `+${d.slice(0, 4)}*****${d.slice(-3)}` : `+${"*".repeat(d.length - 3)}${d.slice(-3)}`;
+};

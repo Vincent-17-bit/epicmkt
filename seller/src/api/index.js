@@ -14,6 +14,7 @@ export const forgotVerify = (...a) => impl.forgotVerify(...a);
 export const requestOtp = (...a) => impl.requestOtp(...a);
 export const changePassword = (...a) => impl.changePassword(...a);
 export const setLoginEmail = (...a) => impl.setLoginEmail(...a);
+export const setLoginPhone = (...a) => impl.setLoginPhone(...a);
 export const updateProfile = (...a) => impl.updateProfile(...a);
 export const setTimezone = (...a) => impl.setTimezone(...a);
 export const saveWeeklyHours = (...a) => impl.saveWeeklyHours(...a);

@@ -539,3 +539,9 @@
   .adminBar ~ .header { top: calc(2.75rem + var(--safe-top)); }
 }
 @media print { .adminBar { display: none; } }
+
+/* touch targets */
+@media (pointer: coarse) {
+  .brand { min-height: var(--tap); }
+  .adminBar button { min-height: var(--tap); }
+}

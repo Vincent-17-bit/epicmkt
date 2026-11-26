@@ -1035,3 +1035,14 @@
   }
 }
 .insightsBody { display: grid; gap: var(--space-3); min-width: 0; }
+
+/* touch targets: a finger needs 44px, a mouse is fine with less. The action row wraps so every action is on screen. */
+@media (pointer: coarse) {
+  .primary, .ghost, .mini, .modeBtn, .chipBtn, .tile { min-height: var(--tap); }
+  .menuBtn, .mini { min-width: var(--tap); }
+  .pick { min-height: var(--tap); }
+}
+@media (max-width: 47.99rem) {
+  .head > .headActions { flex-wrap: wrap; overflow-x: visible; }
+  .head > .headActions > * { flex: 0 1 auto; white-space: normal; }
+}

@@ -107,3 +107,10 @@ export const signInEmailChanged = (masked: string) => ({
   subject: "Your EpicMKT sign-in email was changed",
   text: `Hello,\n\nThe sign-in email on your EpicMKT account was changed to ${masked}.\n\nIf this was not you, contact EpicMKT support immediately.`,
 });
+
+// Sent to the OLD number and the verified email when a seller changes the phone on their listing, so a takeover cannot go unnoticed.
+export const phoneChanged = (maskedNew: string) => ({
+  sms: `EpicMKT: The phone number on your account was changed to ${maskedNew}. If this was not you, contact EpicMKT support now.`,
+  subject: "The phone number on your EpicMKT account was changed",
+  text: `Hello,\n\nThe phone number on your EpicMKT account was changed to ${maskedNew}.\n\nIf this was not you, contact EpicMKT support immediately.`,
+});

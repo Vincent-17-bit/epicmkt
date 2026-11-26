@@ -49,3 +49,46 @@
   color: var(--text-muted);
   font-size: var(--text-sm);
 }
+
+/* Social links: round, at least 44px so they are easy to tap. Brand colour appears on hover and keyboard focus. */
+.socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.social {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.05rem;
+  text-decoration: none;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.social:hover,
+.social:focus-visible {
+  color: #fff;
+  border-color: transparent;
+}
+
+.social[data-network="x"]:hover,
+.social[data-network="x"]:focus-visible { background: #0f1419; }
+.social[data-network="instagram"]:hover,
+.social[data-network="instagram"]:focus-visible { background: #c13584; }
+.social[data-network="linkedin"]:hover,
+.social[data-network="linkedin"]:focus-visible { background: #0a66c2; }
+.social[data-network="reddit"]:hover,
+.social[data-network="reddit"]:focus-visible { background: #d93a00; }
+.social[data-network="facebook"]:hover,
+.social[data-network="facebook"]:focus-visible { background: #1877f2; }
+
+.social[aria-disabled="true"] { cursor: default; }

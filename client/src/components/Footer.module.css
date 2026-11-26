@@ -1,6 +1,6 @@
 .footer {
   --footer-accent: #0a6aa8;
-  margin-top: clamp(var(--space-6), 6vw, var(--space-8));
+  margin-top: clamp(var(--space-4), 3vw, var(--space-6));
   padding-block: 0 calc(var(--space-4) + var(--safe-bottom));
   background: var(--footer-bg);
   color: var(--text);

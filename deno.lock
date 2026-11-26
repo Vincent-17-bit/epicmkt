@@ -249,6 +249,13 @@
           ]
         }
       },
+      "shared": {
+        "packageJson": {
+          "dependencies": [
+            "npm:libphonenumber-js@^1.13.17"
+          ]
+        }
+      },
       "ui": {
         "packageJson": {
           "dependencies": [

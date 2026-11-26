@@ -309,7 +309,7 @@ export const galleryOf = (rows) =>
   }).filter((p) => p.url);
 export const teamOf = (rows, services = []) =>
   (rows ?? []).map((r) => ({
-    id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoUrl: mediaUrl(r.photo_path),
+    id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoUrl: mediaUrl(r.photo_path), socials: r.socials ?? {},
     services: (r.item_ids ?? []).map((id) => services.find((svc) => svc.id === id)?.name).filter(Boolean)
   }));
 export const timetableOf = (rows, team = []) =>

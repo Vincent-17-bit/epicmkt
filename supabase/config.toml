@@ -45,6 +45,9 @@ verify_jwt = false
 [functions.seller-set-email]
 verify_jwt = false
 
+[functions.seller-set-phone]
+verify_jwt = false
+
 [functions.seller-media-finalize]
 verify_jwt = false
 

@@ -1,7 +1,7 @@
 import { supabase } from "./client.js";
 import { ApiError } from "./errors.js";
 import * as shape from "./shape.js";
-import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance } from "@epicmkt/shared";
+import { resolveSettings, summarizeLogins, checkProofBatch, checkReply, flashQuota, flashTextProblem, isCloudinaryId, offerQuota, normalizePerformance, normalizeSocials } from "@epicmkt/shared";
 import { shrinkIfHuge } from "../lib/prepareUpload.js";
 
 const BUCKET = "message-files";
@@ -52,12 +52,19 @@ export const logout = async () => { await need().auth.signOut(); };
 // `channel` is where the code goes: "sms" (Africa's Talking, to the phone on the listing) or "email" (the verified sign-in email).
 export const forgotRequest = ({ identifier, channel = "sms" }) => fn("seller-forgot-request", { identifier, sellerId: identifier, channel });
 export const forgotVerify = ({ identifier, code, newPassword }) => fn("seller-forgot-verify", { identifier, sellerId: identifier, code, newPassword });
-// A code to confirm a password change ("change_password", by `channel`), or to prove a new email is theirs ("verify_email", sent to `email`).
-export const requestOtp = ({ purpose = "change_password", channel = "sms", email } = {}) =>
-  fn("seller-otp-request", purpose === "verify_email" ? { purpose, email } : { purpose, channel });
+// A code to confirm a password change ("change_password", by `channel`), to prove a new email is theirs ("verify_email", sent to `email`),
+// or to prove a new phone number is theirs ("verify_phone", texted to `phone`, in any country). The current password is needed for the
+// phone, and is checked before anything is sent; for the email it is optional and catches a typo before the code is spent.
+export const requestOtp = ({ purpose = "change_password", channel = "sms", email, phone, currentPassword } = {}) => {
+  if (purpose === "verify_email") return fn("seller-otp-request", currentPassword ? { purpose, email, currentPassword } : { purpose, email });
+  if (purpose === "verify_phone") return fn("seller-otp-request", { purpose, phone, currentPassword });
+  return fn("seller-otp-request", { purpose, channel });
+};
 export const changePassword = ({ code, newPassword }) => fn("seller-change-password", { code, newPassword });
 // Saves the email the last "verify_email" code was sent to. Needs that code and the seller's current password.
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
+// Saves the phone number the last "verify_phone" code was texted to. Needs that code and the seller's current password. -> { ok, phone }
+export const setLoginPhone = ({ code, currentPassword }) => fn("seller-set-phone", { code, currentPassword });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
 export const saveWeeklyHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
@@ -763,7 +770,7 @@ export const purgeGalleryPhotos = async (ids) => {
 export const reorderGallery = (ids) => rpc("seller_reorder_gallery", { p_ids: ids });
 
 const staffMember = (r) => ({
-  id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoPath: r.photo_path ?? null, sort: r.sort ?? 0,
+  id: r.id, name: r.name, role: r.role ?? null, specialties: r.specialties ?? [], photoPath: r.photo_path ?? null, sort: r.sort ?? 0, socials: r.socials ?? {},
   serviceIds: (r.staff_services ?? []).map((x) => x.item_id), adminState: adminState(r), adminReason: r.admin_hide_reason ?? r.admin_reason ?? null,
 });
 export const listStaff = async () => (await rows(need().from("staff_members").select("*, staff_services(item_id)").order("sort").order("created_at"))).map(staffMember);
@@ -778,7 +785,10 @@ export const saveStaff = async (id, draft) => {
   const db = need();
   const businessId = (await rows(db.from("businesses").select("id").maybeSingle()))?.id;
   if (!businessId) throw new ApiError("not_a_seller");
-  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photo_path: draft.photoPath ?? null };
+  // Only the cleaned canonical links are stored (the database refuses anything else), so a bad one is explained here and nothing is sent.
+  const socials = normalizeSocials(draft.socials);
+  if (!socials.ok) throw new ApiError("invalid_staff");
+  const fields = { name: draft.name.trim(), role: draft.role?.trim() || null, specialties: draft.specialties ?? [], photo_path: draft.photoPath ?? null, socials: socials.value };
   const row = id
     ? await rows(db.from("staff_members").update(fields).eq("id", id).select().single())
     : await rows(db.from("staff_members").insert({ ...fields, business_id: businessId }).select().single());

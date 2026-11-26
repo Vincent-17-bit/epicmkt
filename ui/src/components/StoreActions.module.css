@@ -6,39 +6,41 @@
 .row {
   display: grid;
   grid-template-columns: repeat(var(--count, 3), minmax(0, 1fr));
-  gap: var(--space-2);
+  gap: 6px;
 }
 
+/* Call, WhatsApp and Directions: small, soft, even buttons. Call is the one filled button; the others stay quiet. */
 .action {
   display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
-  min-height: 40px;
-  padding: 0 var(--space-2);
-  border: 2px solid var(--text);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xs);
+  min-height: 34px;
+  padding: 0 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-size: 0.6875rem;
   font-weight: 700;
   line-height: 1.1;
   text-decoration: none;
-  transition: background-color var(--dur) ease, transform var(--dur) ease, box-shadow var(--dur) ease;
+  transition: background-color var(--dur) ease, border-color var(--dur) ease, transform var(--dur) ease;
 }
 
 .primary {
+  border-color: var(--primary-pressed);
   background: var(--primary);
   color: var(--on-primary);
 }
 
 .secondary {
-  background: var(--surface);
+  background: var(--surface-2);
   color: var(--text);
 }
 
 .icon {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
 .label {
@@ -49,11 +51,11 @@
   white-space: nowrap;
 }
 
-/* Room for words: icon over label, a little taller so the label never crowds the icon. */
-@container (min-width: 13.4375rem) {
+/* Room for words: icon over label, still compact. A narrower card shows the icons alone (each keeps its accessible name). */
+@container (min-width: 12.5rem) {
   .action {
-    min-height: 52px;
-    padding: var(--space-2) 2px;
+    min-height: 42px;
+    padding: 4px 2px;
   }
 
   .label {
@@ -62,23 +64,18 @@
 }
 
 @media (hover: hover) {
-  .action:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-  }
-
   .primary:hover {
     background: var(--primary-hover);
   }
 
   .secondary:hover {
+    border-color: var(--text);
     background: var(--primary-tint);
   }
 }
 
 .action:active {
   transform: scale(0.97);
-  box-shadow: none;
 }
 
 .primary:active {
@@ -100,7 +97,7 @@
     transition: none;
   }
 
-  .action:hover {
+  .action:active {
     transform: none;
   }
 }

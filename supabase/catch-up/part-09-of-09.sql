@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0153). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
+-- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0156). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. A part run before the one before it stops without changing anything.
@@ -1697,7 +1697,272 @@ drop table if exists public.search_trending_pins;
 -- Rebuild now so a word that was only on the list because it was pinned leaves it straight away.
 select public.refresh_trending();
 
-$m_0153_trending_no_pins$)
+$m_0153_trending_no_pins$),
+    ('0154_flash_14_days', $m_0154_flash_14_days$
+-- 0154_flash_14_days.sql
+-- A flash sale can now run for up to 14 days (it was 7). Sellers can renew a sale that has ended for as long as they like within that limit,
+-- and extend a running one right up to it. The limit is counted from the sale's start, as before.
+--
+-- The number lives in four places and all four move together:
+--   1. the table constraint flash_sales_duration (a last line of defence if a row is written any other way),
+--   2. flash_check_rules (the insert/update trigger every write goes through),
+--   3. extend_flash_sale (the seller and admin "run longer" action),
+--   4. FLASH_MAX_DAYS in shared/src/seller/flash.js (the same rule, so the forms refuse a bad end before the round trip).
+-- Nothing else changes: existing sales are all within 7 days, so they still satisfy the wider limit. Re-runnable.
+
+alter table public.flash_sales drop constraint if exists flash_sales_duration;
+alter table public.flash_sales add constraint flash_sales_duration check (ends_at - starts_at <= interval '14 days');
+
+create or replace function public.flash_check_rules() returns trigger
+language plpgsql set search_path = public as
+$$
+declare
+  v_item public.items%rowtype;
+  v_biz public.businesses%rowtype;
+  v_client boolean := current_user in ('authenticated', 'anon');
+  v_role text := public.actor_role();
+  v_limit integer;
+  v_count integer;
+  v_started boolean;
+begin
+  if tg_op = 'UPDATE' then
+    if new.id is distinct from old.id or new.business_id is distinct from old.business_id
+       or new.item_id is distinct from old.item_id or new.created_at is distinct from old.created_at then
+      raise exception 'flash_immutable' using errcode = '42501';
+    end if;
+    if v_client then
+      if old.status in ('ended','cancelled') or old.ends_at <= now() then raise exception 'flash_closed' using errcode = 'P0001'; end if;
+      if (new.status, new.ended_at, new.ended_reason) is distinct from (old.status, old.ended_at, old.ended_reason) then
+        raise exception 'flash_status_protected' using errcode = '42501';
+      end if;
+      v_started := old.starts_at <= now();
+      if v_started and (new.starts_at, new.ends_at, new.discount_type, new.discount_value, new.variant_overrides, new.after_end)
+         is distinct from (old.starts_at, old.ends_at, old.discount_type, old.discount_value, old.variant_overrides, old.after_end) then
+        raise exception 'flash_locked' using errcode = 'P0001';
+      end if;
+    end if;
+    if new.status in ('ended','cancelled') then return new; end if;
+    if (new.starts_at, new.ends_at, new.discount_type, new.discount_value, new.after_end)
+       is not distinct from (old.starts_at, old.ends_at, old.discount_type, old.discount_value, old.after_end) then
+      new.headline := nullif(btrim(new.headline), '');
+      new.quantity_note := nullif(btrim(new.quantity_note), '');
+      return new;
+    end if;
+  end if;
+
+  new.headline := nullif(btrim(new.headline), '');
+  new.quantity_note := nullif(btrim(new.quantity_note), '');
+  if tg_op = 'INSERT' then
+    new.starts_at := greatest(coalesce(new.starts_at, now()), now());
+    new.status := case when new.starts_at <= now() then 'live' else 'scheduled' end;
+    new.ended_at := null;
+    new.ended_reason := null;
+  elsif old.starts_at > now() then
+    new.starts_at := greatest(new.starts_at, now());
+    new.status := case when new.starts_at <= now() then 'live' else 'scheduled' end;
+  end if;
+
+  if new.ends_at <= new.starts_at then raise exception 'invalid_window' using errcode = 'P0001'; end if;
+  if new.ends_at <= now() then raise exception 'ends_in_past' using errcode = 'P0001'; end if;
+  if new.ends_at - new.starts_at > interval '14 days' then raise exception 'duration_too_long' using errcode = 'P0001'; end if;
+
+  select * into v_item from public.items where id = new.item_id;
+  if not found or v_item.business_id <> new.business_id then raise exception 'item_not_found' using errcode = 'P0001'; end if;
+  select * into v_biz from public.businesses where id = new.business_id;
+  if not found or not public.business_is_visible(v_biz) then raise exception 'business_not_active' using errcode = 'P0001'; end if;
+  if not v_item.visible or v_item.hidden_by_admin or v_item.removed_by_admin or v_item.availability in ('out_of_stock','unavailable') then
+    raise exception 'item_unavailable' using errcode = 'P0001';
+  end if;
+  if v_item.price is null or v_item.price_type not in ('fixed','from') then raise exception 'item_not_discountable' using errcode = 'P0001'; end if;
+  if public.flash_discounted_price(new.discount_type, new.discount_value, v_item.price) >= v_item.price then
+    raise exception 'sale_price_not_lower' using errcode = 'P0001';
+  end if;
+  if public.flash_discounted_price(new.discount_type, new.discount_value, v_item.price) <= 0 then
+    raise exception 'discount_too_large' using errcode = 'P0001';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtext('flash:' || new.business_id::text));
+  if exists (
+    select 1 from public.flash_sales s
+     where s.item_id = new.item_id and s.id <> new.id and s.status in ('scheduled','live') and s.ends_at > now()
+       and tstzrange(s.starts_at, s.ends_at) && tstzrange(new.starts_at, new.ends_at)
+  ) then
+    raise exception 'item_has_sale' using errcode = 'P0001';
+  end if;
+
+  if v_role = 'seller' then
+    select (case v_biz.plan_key when 'premium' then g.premium else g.standard end ->> 'flashSalesConcurrent')::integer into v_limit
+      from public.global_limits g where g.id = 1;
+    if v_limit is not null then
+      select count(*) into v_count from public.flash_sales s
+       where s.business_id = new.business_id and s.id <> new.id and s.status in ('scheduled','live') and s.ends_at > now()
+         and tstzrange(s.starts_at, s.ends_at) && tstzrange(new.starts_at, new.ends_at);
+      if v_count >= v_limit then raise exception 'limit_reached:flash_concurrent' using errcode = 'P0001'; end if;
+    end if;
+    select (case v_biz.plan_key when 'premium' then g.premium else g.standard end ->> 'flashSalesPerMonth')::integer into v_limit
+      from public.global_limits g where g.id = 1;
+    if v_limit is not null then
+      select count(*) into v_count from public.flash_sales s
+       where s.business_id = new.business_id and s.id <> new.id and s.status <> 'cancelled'
+         and date_trunc('month', public.nairobi_day(s.starts_at)) = date_trunc('month', public.nairobi_day(new.starts_at));
+      if v_count >= v_limit then raise exception 'limit_reached:flash_per_month' using errcode = 'P0001'; end if;
+    end if;
+  end if;
+  return new;
+end $$;
+-- the trigger already points at flash_check_rules; replacing the function body is enough.
+
+create or replace function public.extend_flash_sale(p_id uuid, p_ends_at timestamptz, p_reason text default null) returns public.flash_sales
+language plpgsql security definer set search_path = public as
+$$
+declare v public.flash_sales; v_out public.flash_sales;
+begin
+  select * into v from public.flash_sales where id = p_id for update;
+  if not found then raise exception 'not_found' using errcode = 'P0001'; end if;
+  if not public.has_role(array['owner','reviewer','support'])
+     and v.business_id is distinct from public.my_business_id() then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  if v.status not in ('scheduled','live') or v.ends_at <= now() then raise exception 'flash_closed' using errcode = 'P0001'; end if;
+  if p_ends_at is null or p_ends_at <= v.ends_at then raise exception 'invalid_window' using errcode = 'P0001'; end if;
+  if p_ends_at - v.starts_at > interval '14 days' then raise exception 'duration_too_long' using errcode = 'P0001'; end if;
+  perform set_config('epicmkt.flash_reason', left(coalesce(nullif(btrim(p_reason), ''), ''), 500), true);
+  update public.flash_sales set ends_at = p_ends_at where id = p_id returning * into v_out;
+  return v_out;
+end $$;
+revoke all on function public.extend_flash_sale(uuid, timestamptz, text) from public, anon;
+grant execute on function public.extend_flash_sale(uuid, timestamptz, text) to authenticated, service_role;
+
+$m_0154_flash_14_days$),
+    ('0155_staff_socials', $m_0155_staff_socials$
+-- 0155_staff_socials.sql
+-- Team members can link their social profiles: X, Instagram, LinkedIn, Reddit and Facebook. A customer taps an icon on the shop page and
+-- the person's own profile opens.
+--
+-- Stored as one jsonb object on the staff row: { "x": "https://x.com/jane", "instagram": "https://www.instagram.com/jane/", ... }.
+-- Only the five networks above are allowed, each value must be exactly the canonical address the app builds (the patterns below are the
+-- same ones as parseSocial in shared/src/seller/socials.js, so change them together). That keeps every stored link on the network it is
+-- labelled with, with no script, no tracking tail and no look-alike host, even if a row is written some way other than the seller app.
+-- (The app also refuses reserved paths such as facebook.com/sharer or x.com/home; the database guarantees the host and the shape, which is
+-- what matters for safety, and the app is the stricter of the two.)
+-- public_staff exposes the object; the customer page checks it again before drawing a link. Re-runnable.
+
+create or replace function public.staff_socials_ok(p jsonb) returns boolean
+language sql immutable as
+$$
+  select jsonb_typeof(p) = 'object'
+     and not exists (
+       select 1 from jsonb_each(p) e
+        where jsonb_typeof(e.value) <> 'string'
+           or not (case e.key
+             when 'x' then (e.value #>> '{}') ~ '^https://x\.com/[A-Za-z0-9_]{1,15}$'
+             when 'instagram' then (e.value #>> '{}') ~ '^https://www\.instagram\.com/[A-Za-z0-9._]{1,30}/$'
+             when 'linkedin' then (e.value #>> '{}') ~ '^https://www\.linkedin\.com/(in|company|school)/[A-Za-z0-9_%.-]{3,100}$'
+             when 'reddit' then (e.value #>> '{}') ~ '^https://www\.reddit\.com/(user/[A-Za-z0-9_-]{3,20}|r/[A-Za-z0-9_]{2,21})$'
+             when 'facebook' then (e.value #>> '{}') ~ '^https://www\.facebook\.com/([A-Za-z0-9.]{5,50}|profile\.php\?id=[0-9]{1,20})$'
+             else false end)
+     )
+$$;
+grant execute on function public.staff_socials_ok(jsonb) to anon, authenticated, service_role;
+
+alter table public.staff_members add column if not exists socials jsonb not null default '{}'::jsonb;
+alter table public.staff_members drop constraint if exists staff_members_socials_ok;
+alter table public.staff_members add constraint staff_members_socials_ok check (public.staff_socials_ok(socials));
+
+-- The public view as it was in 0147, with socials added at the end.
+create or replace view public.public_staff with (security_invoker = false) as
+select s.id, s.business_id, b.slug as business_slug, s.name, s.role, s.specialties, s.photo_path, s.sort,
+       case when b.plan_key = 'premium'
+            then coalesce((select array_agg(ss.item_id) from public.staff_services ss where ss.staff_id = s.id), '{}'::uuid[])
+            else '{}'::uuid[] end as item_ids,
+       s.socials
+from public.staff_members s
+join public.businesses b on b.id = s.business_id
+where public.business_is_visible(b) and not s.hidden_by_admin and not s.removed_by_admin and coalesce(s.admin_status, 'ok') = 'ok';
+
+revoke all on public.public_staff from public;
+grant select on public.public_staff to anon, authenticated, service_role;
+
+$m_0155_staff_socials$),
+    ('0156_seller_verified_phone', $m_0156_seller_verified_phone$
+-- 0156: a seller can change the phone number on their listing by proving they hold the new number.
+--
+-- Until now a phone change was only a request an admin had to confirm (seller_request_change). That stays as the way out for a
+-- seller who cannot sign in or cannot receive an SMS. This adds the direct way:
+--
+--   1. the seller asks for a code for the NEW number (purpose 'verify_phone'); an SMS goes to that number, not to the old one,
+--   2. they enter the code and their current password; the edge function seller-set-phone saves the number.
+--
+-- seller_otps already remembers the address a verify_email code was sent to (target). The same column now holds the phone number a
+-- verify_phone code was sent to, so a code for one number can never confirm another.
+--
+-- seller_set_verified_phone does the write in one transaction and is callable by the service role only (sellers cannot write
+-- businesses directly): it normalises the number, refuses the number they already have, saves it, and cancels any admin request for
+-- a phone change that was still waiting, so that request can never be approved later and overwrite the number just verified.
+
+alter table public.seller_otps drop constraint if exists seller_otps_purpose_check;
+alter table public.seller_otps add constraint seller_otps_purpose_check
+  check (purpose in ('forgot_password', 'change_password', 'verify_email', 'verify_phone'));
+
+create or replace function public.seller_otp_issue(p_business uuid, p_purpose text, p_code text, p_channel text default 'sms', p_target text default null)
+returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  v_last timestamptz;
+  v_hour integer;
+  v_id uuid := gen_random_uuid();
+begin
+  p_channel := coalesce(p_channel, 'sms'); -- an explicit null means the default, not "no channel"
+  if p_purpose not in ('forgot_password', 'change_password', 'verify_email', 'verify_phone') or p_code !~ '^[0-9]{6}$' or p_channel not in ('sms', 'email') then
+    raise exception 'invalid_otp_request';
+  end if;
+  if p_purpose = 'verify_email' and (p_channel <> 'email' or p_target is null) then raise exception 'invalid_otp_request'; end if;
+  if p_purpose = 'verify_phone' and (p_channel <> 'sms' or p_target is null or public.normalize_phone_ke(p_target) is null) then raise exception 'invalid_otp_request'; end if;
+  perform pg_advisory_xact_lock(hashtext(p_business::text || 'otp:' || p_purpose));
+  select max(o.created_at), count(*) filter (where o.created_at > now() - interval '1 hour')
+    into v_last, v_hour from public.seller_otps o where o.business_id = p_business and o.purpose = p_purpose;
+  if v_last is not null and v_last > now() - interval '60 seconds' then
+    return jsonb_build_object('ok', false, 'reason', 'resend_wait', 'retry_after', ceil(extract(epoch from (v_last + interval '60 seconds' - now())))::integer);
+  end if;
+  if v_hour >= 5 then
+    return jsonb_build_object('ok', false, 'reason', 'hour_limit', 'retry_after', 3600);
+  end if;
+  update public.seller_otps o set used = true where o.business_id = p_business and o.purpose = p_purpose and not o.used;
+  insert into public.seller_otps (id, business_id, purpose, channel, target, code_hash, expires_at)
+  values (v_id, p_business, p_purpose, p_channel, lower(p_target), encode(digest(v_id::text || ':' || p_code, 'sha256'), 'hex'), now() + interval '10 minutes');
+  return jsonb_build_object('ok', true);
+end $$;
+
+-- Saves a phone number the seller has just proved they hold. Returns { ok, phone, previous } or { ok: false, reason }.
+create or replace function public.seller_set_verified_phone(p_business uuid, p_phone text) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_new text := public.normalize_phone_ke(p_phone);
+  v_old text;
+  v_cancelled integer;
+begin
+  if v_new is null then return jsonb_build_object('ok', false, 'reason', 'invalid_phone'); end if;
+  select b.phone into v_old from public.businesses b where b.id = p_business and b.status <> 'deleted' for update;
+  if not found then return jsonb_build_object('ok', false, 'reason', 'not_found'); end if;
+  if v_old is not distinct from v_new then return jsonb_build_object('ok', false, 'reason', 'no_change'); end if;
+
+  update public.businesses set phone = v_new where id = p_business;
+  update public.change_requests c set status = 'cancelled', decided_at = now()
+   where c.business_id = p_business and c.field = 'phone' and c.status = 'pending';
+  get diagnostics v_cancelled = row_count;
+  return jsonb_build_object('ok', true, 'phone', v_new, 'previous', v_old, 'cancelledRequests', v_cancelled);
+end $$;
+
+do $$
+declare fn text;
+begin
+  foreach fn in array array['seller_otp_issue(uuid, text, text, text, text)', 'seller_set_verified_phone(uuid, text)'] loop
+    execute format('revoke all on function public.%s from public, anon, authenticated', fn);
+    execute format('grant execute on function public.%s to service_role', fn);
+  end loop;
+end $$;
+
+$m_0156_seller_verified_phone$)
     ) as t(f, body) order by t.f loop
       -- A part run again skips what this catch-up already applied: running a migration twice can fail (a view cannot lose columns).
       if m.f >= v_first and not exists (select 1 from catch_up.log l where l.migration = m.f and l.result = 'applied') then

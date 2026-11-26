@@ -1,0 +1,241 @@
+/* Windows draws flag emoji as two letters. This font is only fetched when a flag is actually on the page. */
+@font-face {
+  font-family: "Twemoji Country Flags";
+  unicode-range: U+1F1E6-1F1FF, U+1F3F4, U+E0062-E007F, U+E007F, U+200D;
+  src: url("../assets/fonts/TwemojiCountryFlags.woff2") format("woff2");
+  font-display: swap;
+}
+
+.wrap {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.row .number {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+.country {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--phone-h, var(--tap));
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--phone-radius, var(--ap-r, var(--radius-sm)));
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: max(16px, var(--text-md));
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color var(--dur) ease, box-shadow var(--dur) ease;
+}
+
+.country:hover:not(:disabled) {
+  border-color: var(--text);
+}
+
+.country:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.country[data-invalid="true"] {
+  border-color: var(--status-bad-fg, var(--danger-text, #b91c1c));
+}
+
+.country:disabled {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.flag {
+  font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.35em;
+  line-height: 1;
+}
+
+.dial {
+  white-space: nowrap;
+}
+
+.chev {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-left: 0.1rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  opacity: 0.7;
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The picker: a sheet from the bottom on a phone, a panel in the middle on a larger screen. */
+.sheet {
+  position: fixed;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  height: min(34rem, 88dvh);
+  margin: 0;
+  padding: 0;
+  border: 2px solid var(--text);
+  border-bottom: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background: var(--surface);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.sheet::backdrop {
+  background: var(--scrim, rgba(0, 0, 0, 0.5));
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: rise var(--dur) ease-out;
+  padding-bottom: var(--safe-bottom, 0px);
+}
+
+@keyframes rise {
+  from { transform: translateY(24px); }
+  to { transform: translateY(0); }
+}
+
+@media (min-width: 40rem) {
+  .sheet {
+    inset: 0;
+    margin: auto;
+    width: min(26rem, calc(100vw - 2rem));
+    height: min(32rem, 80dvh);
+    border: 2px solid var(--text);
+    border-radius: var(--radius-card);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet[open] { animation: none; }
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-3) var(--space-2) var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  width: var(--tap);
+  height: var(--tap);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: inherit;
+  font-size: 1.75rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close:hover { background: var(--surface-2); }
+.close:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }
+
+.search {
+  padding: 0 var(--space-4) var(--space-3);
+}
+
+.searchInput {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: max(16px, var(--text-md)); /* 16px or more stops iOS zooming the page */
+}
+
+.searchInput:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.list {
+  flex: 1 1 auto;
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--border);
+}
+
+.group {
+  position: sticky;
+  top: 0;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--tap);
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer;
+}
+
+.option[data-active="true"] { background: var(--primary-tint); color: var(--on-primary-tint, var(--text)); }
+.option[aria-selected="true"] .name { font-weight: 700; }
+
+.name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.code {
+  flex: none;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  padding: var(--space-5) var(--space-4);
+  color: var(--text-muted);
+  text-align: center;
+}

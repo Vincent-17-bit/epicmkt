@@ -1,5 +1,5 @@
 import { get, set } from "react-hook-form";
-import { applicationSchema, normalizePhone } from "../../shared/validators.js";
+import { applicationSchema, isRealPhone } from "../../shared/validators.js";
 import { idNumberError } from "./idTypes.js";
 import { todayISO } from "./masks.js";
 
@@ -207,7 +207,7 @@ export const requiredTemplateMissing = (cat, values = {}) =>
     return blank(v) || (Array.isArray(v) && v.length === 0);
   });
 
-export const PHONE_HELP = "Enter a valid phone number, for example 0712 345 678 or +44 7911 123456";
+export const PHONE_HELP = "Enter a valid phone number. Choose the country, then type the number as it is written there.";
 
 /** [path, message] pairs for the business phones and the WhatsApp number, one per offending input. */
 export function phoneErrors(contacts = {}) {
@@ -217,14 +217,14 @@ export function phoneErrors(contacts = {}) {
     const v = String(raw ?? "").trim();
     if (!v) {
       if (i === 0) out.push(["contacts.businessPhones.0", "Enter your business phone number"]);
-    } else if (!normalizePhone(v)) {
+    } else if (!isRealPhone(v)) {
       out.push([`contacts.businessPhones.${i}`, PHONE_HELP]);
     }
   });
   if (!contacts.whatsappSame) {
     const w = String(contacts.whatsapp ?? "").trim();
     if (!w) out.push(["contacts.whatsapp", "Enter your WhatsApp number, or tick \"Same as my first business phone\""]);
-    else if (!normalizePhone(w)) out.push(["contacts.whatsapp", PHONE_HELP]);
+    else if (!isRealPhone(w)) out.push(["contacts.whatsapp", PHONE_HELP]);
   }
   return out;
 }

@@ -7,7 +7,9 @@ export function sellerSiteBase(env = import.meta.env, here = globalThis.location
   if (set) return set;
   const host = here?.hostname ?? "";
   if (/admin/i.test(host)) return `${here.protocol}//${host.replace(/admin/i, "seller")}${here.port ? `:${here.port}` : ""}`;
-  return "http://localhost:5174";
+  // Only a local admin app may guess the local seller port. On a real host with no hint, a wrong guess would open a dead page.
+  if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host)) return "http://localhost:5174";
+  return "";
 }
 
 // The sign-in token travels in the part of the address after #, which a browser never sends to any server and the seller site removes at once.

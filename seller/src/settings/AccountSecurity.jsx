@@ -1,22 +1,30 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@epicmkt/ui";
+import { useQuery } from "@tanstack/react-query";
+import { Button, PhoneInput } from "@epicmkt/ui";
 import { formatDateTime, maskPhone } from "@epicmkt/shared";
 import * as api from "../api/index.js";
 import { useBusinessFacts } from "../lib/useBusinessFacts.js";
 import { showToast } from "../state/toast.js";
 import { phoneSchema, validateField } from "../lib/settingsSchema.js";
 import Dialog from "../components/Dialog.jsx";
+import PhoneChange from "../components/PhoneChange.jsx";
 import { Disclosure, Row, Section } from "./controls.jsx";
 import styles from "./settings.module.css";
 
 // A sign-in is an instant, so it is shown in the viewer's own time zone.
 
-// The sign-in email and password already have their own verified flows on the Account page, so this section links there
-// instead of repeating them. What lives here: the phone change request, other devices and the sign-in history.
+// The sign-in email and password have their own verified flows on the Account page, so this section links there instead of
+// repeating them. What lives here: changing the phone number (with a code texted to the new one, or a request an admin confirms
+// for a seller who cannot do that), other devices and the sign-in history.
+const maskEmail = (e) => String(e ?? "").replace(/^([^@])[^@]*(@.+)$/, "$1*******$2");
+
 export default function AccountSecurity() {
   const facts = useBusinessFacts().data;
-  const [phoneOpen, setPhoneOpen] = useState(false);
+  const sub = useQuery({ queryKey: ["subscription"], queryFn: api.getSubscription, retry: false });
+  const loginEmail = sub.data?.business?.loginEmailVerified ? sub.data.business.loginEmail : null;
+  const [changeOpen, setChangeOpen] = useState(false); // the way with a code
+  const [phoneOpen, setPhoneOpen] = useState(false); // the request an admin confirms
   const [signOutOpen, setSignOutOpen] = useState(false);
   const [pending, setPending] = useState(null);
   const [history, setHistory] = useState(null);
@@ -40,7 +48,7 @@ export default function AccountSecurity() {
       <Row label="Seller ID"><strong className={styles.value}>{facts?.seller_id ?? "…"}</strong></Row>
       <Row label="Registered phone">
         <strong className={styles.value} aria-label="Registered phone, masked">{facts?.phone ? maskPhone(facts.phone) : "…"}</strong>
-        <button type="button" className={styles.linkBtn} onClick={() => setPhoneOpen(true)} disabled={Boolean(pending)}>Request change</button>
+        <button type="button" className={styles.linkBtn} onClick={() => setChangeOpen(true)}>Change</button>
       </Row>
       {pending && (
         <p className={styles.note} role="status">
@@ -48,8 +56,12 @@ export default function AccountSecurity() {
           <button type="button" className={styles.linkBtn} onClick={cancelPending}>Cancel request</button>
         </p>
       )}
-      <Row label="Email and password">
-        <Link className={styles.linkBtn} to="/business/account">Go to Account</Link>
+      <Row label="Sign-in email">
+        <strong className={styles.value} aria-label="Sign-in email, masked">{sub.isLoading ? "…" : loginEmail ? maskEmail(loginEmail) : "Not added"}</strong>
+        <Link className={styles.linkBtn} to="/business/account">{loginEmail ? "Change" : "Add"}</Link>
+      </Row>
+      <Row label="Password">
+        <Link className={styles.linkBtn} to="/business/account">Change on Account</Link>
       </Row>
       <Row label="Other devices">
         <Button size="sm" variant="secondary" onClick={() => setSignOutOpen(true)}>Sign out other devices</Button>
@@ -69,6 +81,14 @@ export default function AccountSecurity() {
         )}
       </Disclosure>
 
+      <Dialog open={changeOpen} onClose={() => setChangeOpen(false)} title="Change phone number">
+        <PhoneChange
+          startOpen
+          currentPhone={facts?.phone}
+          onAskAdmin={() => { setChangeOpen(false); setPhoneOpen(true); }}
+          onChanged={() => { setChangeOpen(false); loadPending(); showToast("Phone number changed"); }}
+        />
+      </Dialog>
       <PhoneDialog open={phoneOpen} onClose={() => setPhoneOpen(false)} onSent={() => { setPhoneOpen(false); loadPending(); showToast("Request sent. An admin will confirm it."); }} />
       <SignOutDialog open={signOutOpen} onClose={() => setSignOutOpen(false)} />
     </Section>
@@ -90,18 +110,18 @@ function PhoneDialog({ open, onClose, onSent }) {
       setValue("");
       onSent();
     } catch (err) {
-      setError(err.code === "change_already_pending" ? "You already have a phone change waiting." : err.code === "no_change" ? "That is already your number." : err.code === "invalid_phone" ? "Enter a Kenyan number such as 0712 345 678." : "We could not send the request. Please try again.");
+      setError(err.code === "change_already_pending" ? "You already have a phone change waiting." : err.code === "no_change" ? "That is already your number." : err.code === "invalid_phone" ? "Enter a valid phone number. Choose the country, then type the number." : "We could not send the request. Please try again.");
     } finally {
       setBusy(false);
     }
   };
   return (
-    <Dialog open={open} onClose={onClose} title="Request a phone change">
+    <Dialog open={open} onClose={onClose} title="Ask an admin to change your phone">
       <form onSubmit={submit} noValidate className={styles.stack}>
-        <p className={styles.muted}>Your number only changes after an admin confirms it. Until then, codes go to your current number.</p>
+        <p className={styles.muted}>Use this if you cannot get a code, for example if you have lost your password or the new number is not with you. Your number only changes after an admin confirms it. Until then, codes go to your current number.</p>
         <div className={styles.field}>
           <label className={styles.fieldLabel} htmlFor="new-phone">New phone number</label>
-          <input id="new-phone" className={styles.input} value={value} onChange={(e) => setValue(e.target.value)} inputMode="tel" autoComplete="tel" aria-invalid={error ? "true" : undefined} aria-describedby={error ? "new-phone-e" : undefined} />
+          <PhoneInput id="new-phone" inputClassName={styles.input} value={value} onChange={setValue} aria-invalid={error ? "true" : undefined} aria-describedby={error ? "new-phone-e" : undefined} />
           {error && <p id="new-phone-e" className={styles.error} role="alert">{error}</p>}
         </div>
         <div className={styles.actions}>

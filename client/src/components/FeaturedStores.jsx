@@ -37,7 +37,7 @@ export default function FeaturedStores() {
       busy={isPending}
     >
       {isPending
-        ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height="30rem" radius="var(--radius-card)" />)
+        ? Array.from({ length: 4 }, (_, i) => <Skeleton key={i} height="21rem" radius="var(--radius-sm)" />)
         : cards.map(({ store, products }) => (
             <StoreShowcaseCard key={store.id} business={store} products={products} loading={productsPending} />
           ))}

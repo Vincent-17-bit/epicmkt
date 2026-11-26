@@ -5,6 +5,7 @@ import { sellerForgotVerify } from "../functions/seller-forgot-verify/handler.ts
 import { sellerOtpRequest } from "../functions/seller-otp-request/handler.ts";
 import { sellerChangePassword } from "../functions/seller-change-password/handler.ts";
 import { sellerSetEmail } from "../functions/seller-set-email/handler.ts";
+import { sellerSetPhone } from "../functions/seller-set-phone/handler.ts";
 import { sellerMediaFinalize } from "../functions/seller-media-finalize/handler.ts";
 import { sellerExportData } from "../functions/seller-export-data/handler.ts";
 import { realDeps, type Deps } from "../functions/_shared/seller.ts";
@@ -103,6 +104,15 @@ function deps(w: World): Deps {
         return Promise.resolve({ data: { ok: true }, error: null });
       case "seller_otp_verify":
         return Promise.resolve({ data: { ok: args.p_code === "123456", channel: w.lastIssue?.p_channel ?? "sms", target: w.lastIssue?.p_target ?? null }, error: null });
+      case "seller_set_verified_phone": {
+        // Mirrors the SQL: refuses the number they already have, otherwise saves it and reports the old one.
+        const row = w.tables.businesses.find((r) => r.id === args.p_business);
+        if (!row) return Promise.resolve({ data: { ok: false, reason: "not_found" }, error: null });
+        if (row.phone === args.p_phone) return Promise.resolve({ data: { ok: false, reason: "no_change" }, error: null });
+        const previous = row.phone;
+        row.phone = args.p_phone;
+        return Promise.resolve({ data: { ok: true, phone: args.p_phone, previous, cancelledRequests: 0 }, error: null });
+      }
       default:
         return Promise.resolve({ data: null, error: null });
     }
@@ -609,4 +619,137 @@ Deno.test("nothing is logged, and no code or password reaches the logs", async (
     }
   }
   assert(!/console\./.test(Deno.readTextFileSync(new URL("../functions/_shared/seller.ts", import.meta.url))));
+});
+
+Deno.test("otp-request: verify_email can check the password first, so a wrong one never sends the code", async () => {
+  const w = world();
+  const wrong = await read(await sellerOtpRequest(deps(w))(authed({ purpose: "verify_email", email: "new@example.com", currentPassword: "Wrong-Pass-1" })));
+  assertEquals(wrong.status, 401);
+  assertEquals(wrong.body.error, "invalid_password");
+  assertEquals(w.emails.length, 0);
+  assertEquals(w.issuedCodes.length, 0);
+  const right = await read(await sellerOtpRequest(deps(w))(authed({ purpose: "verify_email", email: "new@example.com", currentPassword: w.validPassword })));
+  assertEquals(right.status, 200);
+  assertEquals(w.emails.length, 1);
+});
+
+Deno.test("otp-request: verify_phone texts the NEW number, only after the password, and records which number", async () => {
+  const w = world();
+  const h = sellerOtpRequest(deps(w));
+  assertEquals((await h(post({ purpose: "verify_phone", phone: "0722 000 111", currentPassword: w.validPassword }))).status, 401); // no session
+  assertEquals((await h(authed({ purpose: "verify_phone", phone: "0722000111" }))).status, 400); // password is required
+
+  const wrong = await read(await h(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: "Wrong-Pass-1" })));
+  assertEquals(wrong.status, 401);
+  assertEquals(wrong.body.error, "invalid_password");
+  assertEquals(w.sms.length, 0); // nothing is texted on a wrong password
+  assertEquals(w.issuedCodes.length, 0);
+
+  const ok = await read(await h(authed({ purpose: "verify_phone", phone: "0722 000 111", currentPassword: w.validPassword })));
+  assertEquals(ok.status, 200);
+  assertEquals(ok.body, { ok: true, channel: "sms", sentTo: "+2547*****111" });
+  assertEquals(w.sms.map((m) => m.to), ["+254722000111"]); // the new number, in one form, never the old one
+  assert(w.sms[0].message.includes("123456"));
+  assertEquals(w.emails.length, 0);
+  assertEquals(w.lastIssue.p_purpose, "verify_phone");
+  assertEquals(w.lastIssue.p_channel, "sms");
+  assertEquals(w.lastIssue.p_target, "+254722000111");
+});
+
+Deno.test("otp-request: verify_phone refuses a number that is not a number, the one they already have, and a failed send", async () => {
+  const w = world();
+  const h = sellerOtpRequest(deps(w));
+  for (const phone of ["12345", "abc", "0722 000 11", "+0123456789", "+1234", "07123456789012", "0722000111 ext 4"]) {
+    assertEquals((await h(authed({ purpose: "verify_phone", phone, currentPassword: w.validPassword }))).status, 400, phone);
+  }
+  const same = await read(await h(authed({ purpose: "verify_phone", phone: "0712 345 678", currentPassword: w.validPassword })));
+  assertEquals(same.status, 409);
+  assertEquals(same.body.error, "no_change");
+  assertEquals(w.sms.length, 0);
+  assertEquals(w.issuedCodes.length, 0);
+
+  const failing = world();
+  const d = deps(failing);
+  d.sms = () => Promise.resolve(false);
+  assertEquals((await sellerOtpRequest(d)(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: failing.validPassword }))).status, 502);
+});
+
+Deno.test("otp-request: verify_phone accepts a number from another country, written with its code, and masks it", async () => {
+  const w = world();
+  const h = sellerOtpRequest(deps(w));
+  const ug = await read(await h(authed({ purpose: "verify_phone", phone: "+256 772 123 456", currentPassword: w.validPassword })));
+  assertEquals(ug.status, 200);
+  assertEquals(ug.body.sentTo, "+2567*****456"); // never the whole number
+  assertEquals(w.sms.map((m) => m.to), ["+256772123456"]);
+  const zeros = await read(await h(authed({ purpose: "verify_phone", phone: "00256772123457", currentPassword: w.validPassword }))); // 00 is the same as +
+  assertEquals(zeros.status, 200);
+  assertEquals(w.lastIssue.p_target, "+256772123457");
+});
+
+Deno.test("set-phone: needs the code AND the current password, and saves the number the code was sent to", async () => {
+  const w = world();
+  await sellerOtpRequest(deps(w))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: w.validPassword }));
+  w.sms.length = 0;
+  const h = sellerSetPhone(deps(w));
+
+  assertEquals((await h(post({ code: "123456", currentPassword: w.validPassword }))).status, 401); // no session
+  const wrongPw = await read(await h(authed({ code: "123456", currentPassword: "Wrong-Pass-1" })));
+  assertEquals(wrongPw.status, 401);
+  assertEquals(wrongPw.body.error, "invalid_password");
+  assertEquals(w.rpcCalls.filter((c) => c.name === "seller_otp_verify").length, 0); // the code is not spent on a bad password
+  assertEquals(w.tables.businesses[0].phone, "+254712345678");
+
+  const wrongCode = await read(await h(authed({ code: "000000", currentPassword: w.validPassword })));
+  assertEquals(wrongCode.status, 400);
+  assertEquals(wrongCode.body.error, "invalid_code");
+  assertEquals(w.tables.businesses[0].phone, "+254712345678");
+
+  const ok = await read(await h(authed({ code: "123456", currentPassword: w.validPassword })));
+  assertEquals(ok.status, 200);
+  assertEquals(ok.body, { ok: true, phone: "+254722000111" });
+  assertEquals(w.tables.businesses[0].phone, "+254722000111");
+  assertEquals(w.rpcCalls.filter((c) => c.name === "seller_otp_verify").every((c) => c.args.p_purpose === "verify_phone"), true);
+
+  assertEquals(w.tables.audit_log[0].action, "phone_changed");
+  const audit = JSON.stringify(w.tables.audit_log);
+  assert(!audit.includes("+254722000111") && !audit.includes("+254712345678")); // only masked forms are logged
+  assert(!audit.includes("123456") && !audit.includes(w.validPassword));
+});
+
+Deno.test("set-phone: the OLD number is texted, a verified email is told, and a request body cannot choose the number", async () => {
+  const w = verifiedWorld();
+  await sellerOtpRequest(deps(w))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: w.validPassword }));
+  w.sms.length = 0;
+  w.emails.length = 0;
+  // A number smuggled into the body is ignored: only the one the code was issued for is saved.
+  const ok = await read(await sellerSetPhone(deps(w))(authed({ code: "123456", currentPassword: w.validPassword, phone: "0799999999" })));
+  assertEquals(ok.status, 200);
+  assertEquals(w.tables.businesses[0].phone, "+254722000111");
+  assertEquals(w.sms.map((m) => m.to), ["+254712345678"]);
+  assert(!w.sms[0].message.includes("+254722000111")); // masked
+  assertEquals(w.emails.map((m) => m.to), ["jane@example.com"]);
+  assert(!w.emails[0].html.includes("+254722000111"));
+
+  const plain = world(); // no verified email: only the SMS notice, and nothing breaks
+  await sellerOtpRequest(deps(plain))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: plain.validPassword }));
+  plain.sms.length = 0;
+  assertEquals((await sellerSetPhone(deps(plain))(authed({ code: "123456", currentPassword: plain.validPassword }))).status, 200);
+  assertEquals(plain.emails.length, 0);
+  assertEquals(plain.sms.length, 1);
+});
+
+Deno.test("set-phone: repeated wrong passwords lock the account, and a number they already have is a 409", async () => {
+  const w = world();
+  const h = sellerSetPhone(deps(w));
+  for (let i = 0; i < 5; i++) await h(authed({ code: "123456", currentPassword: "Wrong-Pass-1" }));
+  assertEquals((await read(await h(authed({ code: "123456", currentPassword: w.validPassword })))).status, 429);
+  assertEquals(w.tables.businesses[0].phone, "+254712345678");
+
+  const same = world();
+  same.lastIssue = { p_channel: "sms", p_target: "+254712345678" }; // the number changed back to theirs between the code and the save
+  const r = await read(await sellerSetPhone(deps(same))(authed({ code: "123456", currentPassword: same.validPassword })));
+  assertEquals(r.status, 409);
+  assertEquals(r.body.error, "no_change");
+
+  assertEquals((await sellerSetPhone(deps(world()))(authed({ code: "12", currentPassword: "x" }))).status, 400);
 });

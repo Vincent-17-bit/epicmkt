@@ -50,6 +50,9 @@
   --dur: 180ms;
   --tap: 44px;
   --content-width: 80rem;
+  /* Side gutter of every page band. Container, the carousels and the seller pages all read this one value, so rows that run to the
+     screen edge always line up with the content above and below them. */
+  --gutter: 0.5rem;
   --bar-h: 64px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
@@ -238,4 +241,16 @@
   --space-6: 1.5rem;
   --space-7: 2rem;
   --space-8: 3rem;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --gutter: 0.75rem;
+  }
+}
+
+@media (min-width: 80rem) {
+  :root {
+    --gutter: 1rem;
+  }
 }

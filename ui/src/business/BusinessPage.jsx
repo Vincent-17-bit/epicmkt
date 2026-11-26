@@ -174,7 +174,7 @@ export default function BusinessPage({
               <Photos gallery={business.gallery} mode={mode} onOpen={setLightbox} />
             )}
 
-            <Team team={business.team} />
+            <Team team={business.team} mode={mode} />
             <Timetable slots={business.timetable} />
 
             {details && (
