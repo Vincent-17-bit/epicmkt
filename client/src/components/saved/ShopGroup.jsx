@@ -25,7 +25,7 @@ const sentText = (at) => {
 };
 
 // One shop's box: its head, its lines (the first four, then "Show N more"), its subtotal and the one button that sends the whole list.
-export default function ShopGroup({ group, loading, goTo }) {
+export default function ShopGroup({ group, index = 0, loading, goTo }) {
   const uid = useId();
   const [all, setAll] = useState(false);
   const exact = useGeoStore((s) => s.exact);
@@ -57,7 +57,7 @@ export default function ShopGroup({ group, loading, goTo }) {
   };
 
   return (
-    <section className={styles.box} aria-labelledby={`${uid}-h`} data-testid="saved-shop">
+    <section className={styles.box} aria-labelledby={`${uid}-h`} data-testid="saved-shop" style={{ "--i": Math.min(index, 6) }}>
       <header className={styles.head}>
         <span className={styles.logo} aria-hidden="true">
           {shop?.logo ? <img src={resizedUrl(shop.logo, 64)} width={32} height={32} alt="" loading="lazy" decoding="async" className={styles.logoImg} /> : group.name.slice(0, 1).toUpperCase()}
@@ -77,7 +77,7 @@ export default function ShopGroup({ group, loading, goTo }) {
             <p className={styles.meta}>{t("saved.shopGone")}</p>
           ) : (
             <p className={styles.meta}>
-              <span data-open={shop?.isOpen ? "true" : "false"}>{status}</span>
+              <span className={styles.status} data-open={shop?.isOpen ? "true" : "false"}>{status}</span>
               {Number.isFinite(km) && ` · ${formatDistance(km)}`}
             </p>
           )}

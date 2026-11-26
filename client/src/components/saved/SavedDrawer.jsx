@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEllipsis, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faEllipsis, faTrashCan, faXmark } from "@fortawesome/free-solid-svg-icons";
+import Heart from "./Heart.jsx";
 import { formatKes } from "@epicmkt/shared";
 import { items } from "../../api/index.js";
 import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../../hooks/useFocusTrap.js";
@@ -118,6 +119,9 @@ export default function SavedDrawer() {
         <header className={styles.top}>
           <div className={styles.titles}>
             <h2 id="saved-heading" ref={headingRef} tabIndex={-1} className={styles.heading}>
+              <span className={styles.headHeart}>
+                <Heart filled size={22} />
+              </span>
               {t("saved.heading")}
             </h2>
             {!empty && <p className={styles.counts}>{counts(view.count, view.shops)}</p>}
@@ -133,6 +137,7 @@ export default function SavedDrawer() {
               {menu && (
                 <div className={styles.menu}>
                   <button type="button" className={styles.menuItem} onClick={() => { setMenu(false); setConfirm(true); }}>
+                    <FontAwesomeIcon icon={faTrashCan} aria-hidden="true" />
                     {t("saved.removeAll")}
                   </button>
                 </div>
@@ -151,9 +156,9 @@ export default function SavedDrawer() {
         <div className={styles.body}>
           {empty ? (
             <div className={styles.empty}>
-              <svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={styles.emptyIcon}>
-                <path d="M12 20.5s-7.5-4.6-9.3-9.2C1.5 8.2 3.4 5 6.6 5c1.9 0 3.5 1 4.4 2.5h2C13.9 6 15.5 5 17.4 5c3.2 0 5.1 3.2 3.9 6.3-1.8 4.6-9.3 9.2-9.3 9.2z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round" />
-              </svg>
+              <span className={styles.halo}>
+                <Heart size={34} />
+              </span>
               <p className={styles.emptyTitle}>{t("saved.emptyTitle")}</p>
               <p className={styles.emptyBody}>{t("saved.emptyBody")}</p>
               <button type="button" className={styles.browse} onClick={() => goTo("/")}>
@@ -162,8 +167,8 @@ export default function SavedDrawer() {
             </div>
           ) : (
             <div className={styles.groups}>
-              {view.groups.map((group) => (
-                <ShopGroup key={group.businessId} group={group} loading={loading} goTo={goTo} />
+              {view.groups.map((group, i) => (
+                <ShopGroup key={group.businessId} group={group} index={i} loading={loading} goTo={goTo} />
               ))}
             </div>
           )}

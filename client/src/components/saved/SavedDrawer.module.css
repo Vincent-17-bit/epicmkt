@@ -68,9 +68,19 @@
 }
 
 .heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 0;
-  font-size: 1.25rem;
-  line-height: 1.2;
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.headHeart {
+  display: inline-flex;
+  flex: none;
 }
 
 .heading:focus {
@@ -78,21 +88,22 @@
 }
 
 .counts {
-  margin: 0;
+  margin: 2px 0 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
 
+/* Outlined circles, like the location pill in the header. */
 .close,
 .more {
   display: inline-grid;
   place-items: center;
   width: var(--tap);
   height: var(--tap);
-  border: 0;
+  border: 2px solid var(--border);
   border-radius: 50%;
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
   font-size: 1.125rem;
   cursor: pointer;
@@ -105,6 +116,7 @@
 @media (hover: hover) {
   .close:hover,
   .more:hover {
+    border-color: var(--text);
     background: var(--surface-2);
   }
 }
@@ -121,30 +133,45 @@
 
 .menu {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 6px);
   right: 0;
   z-index: 2;
-  min-width: 10rem;
-  padding: 4px;
+  min-width: 11rem;
+  padding: 6px;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-2);
+  border: 2px solid var(--text);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-lg);
+  animation: pop 140ms ease-out;
+  transform-origin: top right;
+}
+
+@keyframes pop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 .menuItem {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   min-height: var(--tap);
   padding: 0 12px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--text);
+  color: var(--status-bad);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
+}
+
+@media (hover: hover) {
+  .menuItem:hover {
+    background: var(--surface-2);
+  }
 }
 
 .notices {
@@ -172,7 +199,7 @@
 
 .groups {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .foot {
@@ -186,8 +213,9 @@
 
 .total {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 800;
+  line-height: 1.25;
   font-variant-numeric: tabular-nums;
 }
 
@@ -205,13 +233,21 @@
   text-align: center;
 }
 
-.emptyIcon {
-  color: var(--text-muted);
+/* A soft halo behind the heart, in the site's tint, so the empty drawer feels like part of the app and not a blank page. */
+.halo {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--primary-tint);
+  color: var(--text);
 }
 
 .emptyTitle {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1.375rem;
   font-weight: 800;
 }
 

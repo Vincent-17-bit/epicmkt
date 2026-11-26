@@ -1,15 +1,29 @@
+/* The site's card language: a 2 px outline and the card radius. Boxes rise in one after another when the drawer opens. */
 .box {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 2px solid var(--border);
   border-radius: var(--radius-card);
   overflow: hidden;
+  animation: rise 260ms ease-out both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .box {
+    animation: none;
+  }
 }
 
 .head {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 12px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -17,10 +31,11 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   overflow: hidden;
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--primary-tint);
   color: var(--on-primary-tint);
   font-size: 14px;
@@ -44,7 +59,7 @@
   align-items: center;
   gap: 6px;
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -71,20 +86,48 @@
 }
 
 .meta {
-  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin: 3px 0 0;
   color: var(--text-muted);
   font-size: 12px;
 }
 
-.meta [data-open="true"] {
-  color: var(--status-ok);
+/* Open / closed as a small pill with a dot, as on the shop cards. */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text-muted);
   font-weight: 700;
+}
+
+.status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status[data-open="true"] {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
 }
 
 .count {
   flex: none;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
   color: var(--text-muted);
   font-size: 12px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
@@ -112,14 +155,15 @@
 
 .foot {
   display: grid;
-  gap: 8px;
-  padding: 10px 12px 12px;
+  gap: 10px;
+  padding: 12px;
   border-top: 1px solid var(--border);
+  background: var(--surface-2);
 }
 
 .subtotal {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
