@@ -25,12 +25,12 @@ export function SummaryTiles({ options, itemPrice }) {
 }
 
 // One row per combination. This list is the single source of truth: prices, stock, "Not sold" and the default all live here.
-export default function Combinations({ options, set, errors = {}, announce, itemPrice, hidePrice = false, tiersAllowed = false }) {
+export default function Combinations({ options, set, errors = {}, announce, itemPrice, itemUnit = "", hidePrice = false, tiersAllowed = false }) {
   const uid = useId();
   const rows = liveRows(options);
   if (rows.length === 0) return null;
   const sum = summarize(options, itemPrice);
-  const warn = priceWarnings(options);
+  const warn = priceWarnings(options, itemUnit);
   return (
     <section className={s.stack} aria-labelledby={`${uid}-h`}>
       <div className={s.comboHead}>
@@ -47,8 +47,8 @@ export default function Combinations({ options, set, errors = {}, announce, item
           const key = rowKeyOf(options, r.choice);
           const name = labelOf(options, r.choice);
           const err = (f) => errors[`row:${key}:${f}`];
-          const cell = (f, label, props = {}) => (
-            <label className={s.cell}>
+          const cell = (f, label, props = {}, wide = false) => (
+            <label className={wide ? `${s.cell} ${s.cellWide}` : s.cell}>
               <span aria-hidden="true">{label}</span>
               <input data-focus={`opt-row:${key}:${f}`} aria-label={`${name} ${label.toLowerCase()}`} value={r[f]} disabled={!r.sold} autoComplete="off" aria-invalid={err(f) ? "true" : undefined} onChange={(e) => set(setRow(options, key, { [f]: e.target.value }))} {...props} />
               {err(f) && <span className={s.cellError} role="alert">{err(f)}</span>}
@@ -63,6 +63,7 @@ export default function Combinations({ options, set, errors = {}, announce, item
                 {!hidePrice && cell("price", "Price", { inputMode: "decimal", placeholder: itemPrice ? String(itemPrice) : "" })}
                 {cell("salePrice", "Sale price", { inputMode: "decimal" })}
                 {cell("stock", "Stock", { inputMode: "numeric", maxLength: 6 })}
+                {cell("unit", "Unit (optional)", { maxLength: 30, placeholder: itemUnit ? `${itemUnit} (the item's unit)` : "such as per pack of 40" }, true)}
                 {!hidePrice && warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}
                 {err("specs") && <span className={s.cellError} role="alert">{err("specs")}</span>}
               </div>
