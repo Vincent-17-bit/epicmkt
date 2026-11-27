@@ -210,9 +210,9 @@ test("storedItemDetails: accepts everything validateItemForm lets through", () =
 const rows = (...r) => r.map(([id, label, price, stock = ""]) => ({ id, label, price, stock }));
 
 test("variant rows from the form become stored variants, in order, with stock or null", () => {
-  const r = validateItemForm({ ...base, variants: rows(["a", " Small ", "500", "4"], ["b", "Large", "800.50", ""]) });
+  const r = validateItemForm({ ...base, variants: rows(["a", " Small ", "500", "4"], ["b", "Large", "800", ""]) });
   assert.equal(r.ok, true);
-  assert.deepEqual(r.value.variants, [{ id: "a", label: "Small", price: 500, stock: 4 }, { id: "b", label: "Large", price: 800.5, stock: null }]);
+  assert.deepEqual(r.value.variants, [{ id: "a", label: "Small", price: 500, stock: 4 }, { id: "b", label: "Large", price: 800, stock: null }]);
 });
 
 test("a form without variants leaves them out, so saving never wipes stored ones", () => {

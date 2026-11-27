@@ -60,8 +60,8 @@ export default function Combinations({ options, set, errors = {}, announce, item
                 <p className={s.comboName}>{name}{options.defaultKey === key && <span className={`${s.tag} ${s.tagDefault}`}>Shown first</span>}{!r.sold && <span className={s.tag}>Not sold</span>}</p>
               </div>
               <div className={s.cells}>
-                {!hidePrice && cell("price", "Price", { inputMode: "decimal", placeholder: itemPrice ? String(itemPrice) : "" })}
-                {cell("salePrice", "Sale price", { inputMode: "decimal" })}
+                {!hidePrice && cell("price", "Price", { inputMode: "numeric", placeholder: itemPrice ? String(itemPrice) : "" })}
+                {cell("salePrice", "Sale price", { inputMode: "numeric" })}
                 {cell("stock", "Stock", { inputMode: "numeric", maxLength: 6 })}
                 {cell("unit", "Unit (optional)", { maxLength: 30, placeholder: itemUnit ? `${itemUnit} (the item's unit)` : "such as per pack of 40" }, true)}
                 {!hidePrice && warn[key] && !err("price") && <span className={s.cellWarn} role="note">{warn[key]}</span>}

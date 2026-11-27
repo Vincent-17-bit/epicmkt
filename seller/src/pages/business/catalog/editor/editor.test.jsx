@@ -132,7 +132,7 @@ describe("sections", () => {
   it("uses a number keypad for money and counts", async () => {
     const user = userEvent.setup();
     await openNew();
-    expect(screen.getByLabelText("Price (KES)")).toHaveAttribute("inputmode", "decimal");
+    expect(screen.getByLabelText("Price (KES)")).toHaveAttribute("inputmode", "numeric");
     await user.click(screen.getByLabelText("Count my stock"));
     expect(screen.getByLabelText("How many do you have now?")).toHaveAttribute("inputmode", "numeric");
     expect(screen.getByLabelText(/Tell customers it is low/)).toHaveAttribute("inputmode", "numeric");

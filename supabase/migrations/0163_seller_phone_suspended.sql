@@ -1,4 +1,4 @@
--- 0162_seller_phone_suspended.sql
+-- 0163_seller_phone_suspended.sql
 -- A suspended seller cannot change the phone number on their listing.
 -- seller_set_verified_phone is called by an edge function as the service role, so there is no seller session for assert_seller_active()
 -- to read. assert_seller_active(p_business) checks the named business instead, and seller_set_verified_phone calls it first.

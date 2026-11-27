@@ -22,6 +22,7 @@ export const FIELD_LABEL = {
   includes: "What is included",
   highlights: "Highlights",
   specs: "Specifications",
+  status: "Stock status",
 };
 
 export const WHO = { seller: "You", admin: "EpicMKT", system: "System" };
@@ -55,16 +56,21 @@ const lineOf = (field, entry) => {
   return String(entry ?? "");
 };
 
+// A size or other option has its own price: the database writes these as "option_price:Beef / Whole Jar" (migration 0161).
+const OPTION_FIELD = /^option_(price|sale_price|status|unit):([\s\S]*)$/;
+
 const plain = (field, v) => {
   if (blank(v)) return null;
   if (FLAG[field]) return FLAG[field][v === "true" || v === true ? 0 : 1];
   if (MONEY.has(field) && Number.isFinite(Number(v))) return formatKes(Number(v));
-  if (field === "availability" || field === "price_type") return words(v);
+  if (field === "availability" || field === "price_type" || field === "status") return words(v);
   return String(v);
 };
 
-export function describeChange(e) {
-  const label = FIELD_LABEL[e.field] ?? words(e.field);
+export function describeChange(entry) {
+  const option = OPTION_FIELD.exec(entry.field ?? "");
+  const e = option ? { ...entry, field: option[1] } : entry;
+  const label = option ? `${FIELD_LABEL[option[1]] ?? words(option[1])} of ${option[2]}` : (FIELD_LABEL[e.field] ?? words(e.field));
   if (LIST_FIELDS.has(e.field)) {
     const before = parse(e.old_value).map((x) => lineOf(e.field, x)).filter(Boolean);
     const after = parse(e.new_value).map((x) => lineOf(e.field, x)).filter(Boolean);

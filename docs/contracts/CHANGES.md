@@ -719,3 +719,19 @@ Entry format:
   flagged as a typing mistake next to the jar.
 - Who must act: nobody. Apply migration 0159 before the editor release (an editor that sends `unit` needs it); older clients keep working.
 - Request files: none
+
+## 2026-11-27 U2: prices are whole shillings; size price changes are logged
+
+- Contract: v1 (stricter validation, additive history fields)
+- Lane / author: seller catalog, item history
+- What changed:
+  - Every price (`price`, `price_max`, `sale_price`, and an option combination's `price` / `salePrice`) must be a whole number of shillings. A save
+    with cents is refused with `invalid_price` (P0001, hint = the column) by a trigger, so any writer is covered. The editor, the importer and
+    `validateItemForm` / `validateOptions` refuse it earlier with a plain message. Existing prices are rounded half up once; a sale price is kept
+    below its price (dropped only if it would be below 1). Migration `0161_whole_prices_option_history.sql`.
+  - `item_history` gains rows with field `option_price:<size label>`, `option_sale_price:`, `option_status:` and `option_unit:` when a size's
+    value changes, or when a size is added to an item that already had sizes. The History view shows them as "Price of <size>".
+  - Listing cards show "price varies" next to the options text when the price depends on the choice, instead of "From KES x" alone.
+- Why: a stored 10.50 was charged as KES 11, so three cost KES 33 instead of KES 31.50; and a changed size price left no trace.
+- Who must act: apply migration 0161 (rounds existing prices, may drop a sale price that cannot stay below its price). Clients that send cents get `invalid_price`.
+- Request files: none

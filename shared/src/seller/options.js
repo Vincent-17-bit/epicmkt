@@ -69,7 +69,8 @@ const storedOk = (sv, axisScale) => {
   return true;
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
+// Whole shillings only (migration 0161): the buyer is charged whole shillings, so a price with cents is refused instead of rounded.
+const MONEY = /^\d{1,10}$/;
 
 const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) => typeof v === "string" && v.trim() !== "" && v.trim().length <= max;

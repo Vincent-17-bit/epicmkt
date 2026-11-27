@@ -33,7 +33,7 @@ export default function ProductTile({ item, href, save = true, ...extra }) {
       item={item}
       href={href ?? itemPagePath(item)}
       renderLink={renderLink}
-      labels={{ ...labels, was: t("item.was"), from: t("item.from"), options: t("item.options"), optionsOne: t("item.optionsOne"), optionsMany: t("item.optionsMany"), verified: t("home.verifiedStore"), featured: t("home.featuredStore"), closed: t("item.closed"), open: t("item.openNow"), colours: t("item.colours"), videos: t("item.hasVideo"), lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft"), offerChip: { offer: t("offer.chip"), more: t("offer.more") } }}
+      labels={{ ...labels, was: t("item.was"), from: t("item.from"), options: t("item.options"), optionsOne: t("item.optionsOne"), optionsMany: t("item.optionsMany"), priceVaries: t("item.priceVaries"), verified: t("home.verifiedStore"), featured: t("home.featuredStore"), closed: t("item.closed"), open: t("item.openNow"), colours: t("item.colours"), videos: t("item.hasVideo"), lowStock: t("item.lowStock"), onlyLeft: t("item.onlyLeft"), offerChip: { offer: t("offer.chip"), more: t("offer.more") } }}
       renderFlash={(chipClass) => <FlashChip endsAt={item.flash.sale.endsAt} className={chipClass} />}
     />
   );

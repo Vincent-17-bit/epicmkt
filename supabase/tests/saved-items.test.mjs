@@ -1,4 +1,4 @@
-// Migration 0161: public_saved_items. Listed rows only, in the order asked, at most 200 ids, and a redirect for an item that is not listed.
+// Migration 0162: public_saved_items. Listed rows only, in the order asked, at most 200 ids, and a redirect for an item that is not listed.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createDatabase, connect, seedFixtures, tx, sql, asA, withType } from "./db.mjs";
