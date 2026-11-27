@@ -68,7 +68,7 @@ describe("Business sheet history", () => {
   it("pushes from a page card with sheetFrom, swaps by replace, closes with back", async () => {
     const user = userEvent.setup();
     mount(["/", "/b/fade-kings"], 1);
-    await user.click(await screen.findByRole("button", { name: /Fade/ }));
+    await user.click(await screen.findByRole("button", { name: /^Fade/ }));
     expect(loc()).toBe('/b/fade-kings?item=fade|{"sheetFrom":"page"}');
 
     await user.click(screen.getByText("swap"));

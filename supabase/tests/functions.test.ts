@@ -718,6 +718,16 @@ Deno.test("set-phone: needs the code AND the current password, and saves the num
   assert(!audit.includes("123456") && !audit.includes(w.validPassword));
 });
 
+Deno.test("set-phone: a suspended seller is refused before the code is spent, and the number stays", async () => {
+  const w = world();
+  w.tables.businesses[0].status = "suspended";
+  const r = await read(await sellerSetPhone(deps(w))(authed({ code: "123456", currentPassword: w.validPassword })));
+  assertEquals(r.status, 403);
+  assertEquals(r.body.error, "account_suspended");
+  assertEquals(w.rpcCalls.filter((c) => c.name === "seller_otp_verify" || c.name === "seller_set_verified_phone").length, 0);
+  assertEquals(w.tables.businesses[0].phone, "+254712345678");
+});
+
 Deno.test("set-phone: the OLD number is texted, a verified email is told, and a request body cannot choose the number", async () => {
   const w = verifiedWorld();
   await sellerOtpRequest(deps(w))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: w.validPassword }));

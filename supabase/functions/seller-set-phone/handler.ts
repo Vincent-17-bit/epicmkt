@@ -15,6 +15,7 @@ export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
   const ctx = await authenticate(req, d.db);
   if (ctx instanceof Response) return ctx;
   const b = ctx.business;
+  if (b.status === "suspended") return json({ error: "account_suspended" }, 403);
   if (!(await rateOk(d.db, `ssp:${b.id}`, 20, 3600))) return rateLimited();
 
   // The current password counts against the same lockout as signing in, so this cannot be used to guess it.
@@ -26,6 +27,7 @@ export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
 
   const saved = await d.db.rpc("seller_set_verified_phone", { p_business: b.id, p_phone: String(verified.target), p_also_whatsapp: parsed.data.alsoWhatsapp === true });
   const result = saved?.data;
+  if (String(saved?.error?.message ?? "").includes("account_suspended")) return json({ error: "account_suspended" }, 403);
   if (saved?.error || !result) return json({ error: "server_error" }, 500);
   if (!result.ok) {
     if (result.reason === "no_change") return json({ error: "no_change", message: "That is already your number." }, 409);

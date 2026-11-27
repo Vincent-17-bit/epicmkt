@@ -1,0 +1,49 @@
+/* A 40 px hit area with the icon pushed to its right edge, so the heart sits close to the card's border. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn:hover {
+  color: var(--text);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.saved,
+.saved:hover {
+  color: var(--saved);
+}
+
+.icon {
+  display: block;
+}
+
+.saved .icon {
+  animation: pop 180ms ease-out;
+}
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saved .icon {
+    animation: none;
+  }
+}

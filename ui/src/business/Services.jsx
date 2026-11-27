@@ -12,7 +12,7 @@ import styles from "./Services.module.css";
 
 const DEPT_DEFAULTS = { all: "All", other: "Other", label: "Browse this shop by department" };
 
-export default function Services({ services: all, count, hitSection, focusSection, focusItem, mode = "live", onOpenItem, labels, departments = [], departmentLabels }) {
+export default function Services({ services: all, count, hitSection, focusSection, focusItem, mode = "live", onOpenItem, labels, departments = [], departmentLabels, renderSave }) {
   // Out of stock items are not listed to customers. The database already leaves them out; this keeps one from showing.
   const listed = useMemo(() => listedOnly(all), [all]);
   // A shop that sells in more than one department gets a row of chips; "other" is the items with no type (id null).
@@ -118,7 +118,7 @@ export default function Services({ services: all, count, hitSection, focusSectio
           {group.name && <h3 className={styles.h3}>{group.name}</h3>}
           <ul className={styles.services} data-preview={preview ? "" : undefined}>
             {group.items.map((svc) => (
-              <li key={svc.id} className={styles.service}>
+              <li key={svc.id} className={styles.service} data-save={renderSave && !preview ? "" : undefined}>
                 <button type="button" className={styles.serviceBtn} {...act.button(() => onOpenItem?.(svc.id))} aria-haspopup="dialog">
                   <span className={styles.serviceMedia}>
                     <LazyImage src={svc.imageUrl} ratio="1 / 1" className={styles.serviceImg} frameClassName={styles.serviceFrame} width={480} />
@@ -130,6 +130,8 @@ export default function Services({ services: all, count, hitSection, focusSectio
                     {Number.isFinite(svc.priceKes) && <span className={styles.price}>{formatKes(svc.priceKes)}</span>}
                   </span>
                 </button>
+                {/* The Save heart is the item button's sibling, never inside it, and never shown in the seller's preview. */}
+                {renderSave && !preview && <span className={styles.save}>{renderSave(svc)}</span>}
               </li>
             ))}
           </ul>

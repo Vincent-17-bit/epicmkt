@@ -6,6 +6,8 @@ import { FOCUSABLE_WITH_FIELDS, useFocusTrap } from "../hooks/useFocusTrap.js";
 import { Logo, Container, IconButton } from "@epicmkt/ui";
 import LocationButton from "./LocationButton.jsx";
 import { MENU_ID, SEARCH_ID } from "./panelIds.js";
+import HeaderSaved from "./saved/HeaderSaved.jsx";
+import { useSavedDrawer } from "./saved/useSavedDrawer.js";
 import styles from "./Header.module.css";
 
 const loadPanels = () => Promise.all([import("./MenuPanel.jsx"), import("./SearchPanel.jsx")]).then(([menu, search]) => ({ Menu: menu.default, Search: search.default }));
@@ -19,6 +21,7 @@ export default function Header() {
   const setMenuOpen = useUiStore((s) => s.setMenuOpen);
   const searchOpen = useUiStore((s) => s.searchOpen);
   const setSearchOpen = useUiStore((s) => s.setSearchOpen);
+  const { isOpen: savedOpen } = useSavedDrawer();
   const rootRef = useRef(null);
   const toggleRef = useRef(null);
   const panelRef = useRef(null);
@@ -37,7 +40,7 @@ export default function Header() {
   const inSearch = Boolean(location.state?.search);
 
   useEffect(() => {
-    if (location.state?.menu || location.state?.search) navigate(location, { replace: true, state: null });
+    if (location.state?.menu || location.state?.search || location.state?.saved) navigate(location, { replace: true, state: null });
   }, []);
 
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function Header() {
 
   return (
     <>
-      <div ref={rootRef} className={styles.root}>
+      <div ref={rootRef} className={styles.root} inert={savedOpen ? "" : undefined} aria-hidden={savedOpen ? true : undefined}>
         <header className={styles.header}>
           <Container className={styles.bar}>
             <Link to="/" className={styles.brand} aria-label="EpicMKT home" inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
@@ -146,6 +149,7 @@ export default function Header() {
               <div className={styles.locate} inert={searchOpen ? "" : undefined} aria-hidden={searchOpen ? true : undefined}>
                 <LocationButton />
               </div>
+              <HeaderSaved />
               <IconButton
                 ref={toggleRef}
                 icon={menuOpen || searchOpen ? faXmark : faBars}

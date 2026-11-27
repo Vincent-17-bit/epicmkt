@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { Suspense, lazy, useEffect, useRef } from "react";
 import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 import { savedScroll, saveScroll } from "../lib/resultsMemory.js";
 import { useUiStore } from "../stores/ui.js";
+import { onSavedOpenRequest } from "../stores/savedUi.js";
 import { useGeoStore } from "../stores/geo.js";
 import { useRouteSeo } from "../hooks/useRouteSeo.js";
 import LocationDialog from "./LocationDialog.jsx";
@@ -12,7 +13,11 @@ import { BackToTop } from "@epicmkt/ui";
 import { scrollToTop } from "../lib/scrollToTop.js";
 import OfflineBanner from "./OfflineBanner.jsx";
 import UpdatePrompt from "./UpdatePrompt.jsx";
+import { loadSavedDrawer } from "./saved/lazy.js";
+import { useSavedDrawer } from "./saved/useSavedDrawer.js";
 import styles from "./Layout.module.css";
+
+const SavedDrawer = lazy(loadSavedDrawer);
 
 export default function Layout() {
   const { pathname, hash, key } = useLocation();
@@ -22,7 +27,9 @@ export default function Layout() {
   current.current = { key, pathname };
   const menuOpen = useUiStore((s) => s.menuOpen);
   const searchOpen = useUiStore((s) => s.searchOpen);
-  const layered = menuOpen || searchOpen;
+  const { isOpen: savedOpen, open: openSaved } = useSavedDrawer();
+  useEffect(() => onSavedOpenRequest(openSaved), [openSaved]);
+  const layered = menuOpen || searchOpen || savedOpen;
   const behind = layered ? { inert: "", "aria-hidden": true } : {};
 
   useRouteSeo();
@@ -75,6 +82,12 @@ export default function Layout() {
       </div>
       <BackToTop onTop={scrollToTop} hidden={layered} lifted={/^\/b\/[^/]+\/i\//.test(pathname)} />
       <UpdatePrompt />
+      {/* While the drawer's chunk loads (first open, slow network) the screen already answers the tap: the scrim appears at once. */}
+      {savedOpen && (
+        <Suspense fallback={<div aria-hidden="true" data-testid="saved-loading" style={{ position: "fixed", inset: 0, zIndex: "var(--z-saved)", background: "var(--scrim)" }} />}>
+          <SavedDrawer />
+        </Suspense>
+      )}
       <LocationDialog />
       <Toaster />
     </div>

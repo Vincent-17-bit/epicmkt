@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { choiceToParam, whatsappLink } from "@epicmkt/shared";
 import { items, logContactEvent, logEvent } from "../api/index.js";
-import { chatMessage, choiceLines, defaultVariantId, orderLine, orderMessage, quantityInfo } from "../lib/itemView.js";
-import { tiersFor } from "./item/Tiers.jsx";
+import { chatMessage, choiceLines, defaultVariantId, orderMessage } from "../lib/itemView.js";
+import { lineFor, optionShown } from "../lib/lineFor.js";
+import { savedList, lineKey } from "../lib/savedList.js";
 import { useItemJsonLd } from "../hooks/useItemJsonLd.js";
 import { t } from "../i18n/index.js";
 import { ShareSheet, coverUrl, metaDescription } from "@epicmkt/ui";
@@ -23,20 +24,6 @@ import StickyNav from "./item/StickyNav.jsx";
 import SectionNav from "./item/SectionNav.jsx";
 import TopBar from "./item/TopBar.jsx";
 import styles from "./ItemDetail.module.css";
-
-// What the header and the message to the seller use for a chosen combination: its price in the shape of pricing (regular, sale,
-// savings), and its name. A combination the seller does not sell has a name and no price. During a flash sale the item's own
-// flash pricing stays in charge of the header (price rules for options come later), but the chat still names the choice.
-function optionShown(option, current) {
-  const v = option.variant;
-  // The combination's own unit ("per jar of 48") wins; without one, the item's unit applies as before.
-  const unit = (typeof v?.unit === "string" && v.unit.trim() !== "" ? v.unit.trim() : null) ?? current?.pricing?.unit ?? null;
-  const base = { id: v?.id ?? null, label: option.label };
-  if (!v || !Number.isFinite(v.price)) return { ...base, regularPrice: NaN, salePrice: NaN, savings: 0, discountPercent: 0, unit };
-  const sale = Number.isFinite(v.salePrice) && v.salePrice < v.price ? v.salePrice : v.price;
-  const savings = v.price - sale;
-  return { ...base, regularPrice: v.price, salePrice: sale, savings, discountPercent: savings > 0 ? Math.round((savings / v.price) * 100) : 0, unit, plainSale: true };
-}
 
 const MAX_TIMEOUT = 2147483647;
 const HOLD_MS = 6000;
@@ -206,16 +193,31 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
   const option = useOptionSelection(current, itemId);
   const optionPrice = option ? optionShown(option, current) : null;
   const variant = option ? optionPrice : legacyVariant;
-  const shown = option ? (current?.flash ? current.pricing : option.variant ? optionPrice : null) : (legacyVariant ?? current?.pricing ?? null);
   const seller = useLiveStatus(current?.business ?? null);
   const sellerCount = seller ? (seller.productCount ?? (seller.slug === business.slug ? business.productCount : null)) : null;
   // One quantity for the page (units, a measure, or a quantity-tier order). It resets with the item and falls back to the least that can be bought.
-  const tiers = current ? tiersFor(current, option?.variant ?? null) : null;
-  const qtyInfo = current ? quantityInfo(current, option?.variant ?? null) : null;
-  const qtyDefault = qtyInfo?.rules.min ?? 1;
-  const qty = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : qtyDefault;
+  // The page, the Saved drawer and the message to a shop all take the price from lineFor (lib/lineFor.js), so they always agree.
+  // When this item and option are saved, the page starts at the saved quantity.
+  const savedParam = option ? choiceToParam(option.axes, option.choice) : "";
+  const savedQty = preview ? null : (savedList().get(lineKey(itemId, savedParam))?.qty ?? null);
+  const picked = qtyChoice.itemId === itemId && Number.isFinite(qtyChoice.value) ? qtyChoice.value : savedQty;
+  const line = current ? lineFor({ item: current, option, legacyVariant, qty: picked }) : null;
+  const shown = line ? line.shown : option ? null : (legacyVariant ?? null);
+  const tiers = line?.tiers ?? null;
+  const qtyInfo = line?.info ?? null;
+  const qty = line?.qty ?? 1;
   const setQty = (value) => setQtyChoice({ itemId, value });
-  const order = current && (tiers || qtyInfo) ? orderLine({ shown, tiers, info: qtyInfo, qty }) : null;
+  const order = line?.order ?? null;
+  // Changing the quantity updates the saved line (after 300 ms, without a toast). Starting at the saved quantity writes nothing.
+  useEffect(() => {
+    if (preview || !current || qtyChoice.itemId !== itemId || !Number.isFinite(qtyChoice.value)) return undefined;
+    const key = lineKey(itemId, savedParam);
+    const timer = window.setTimeout(() => {
+      const have = savedList().get(key);
+      if (have && have.qty !== qty) savedList().setQty(key, qty);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [preview, current, itemId, savedParam, qty, qtyChoice]);
   const made = madeChoice.itemId === itemId && madeChoice.on ? madeChoice : { itemId, on: false, result: null };
   const madeToMeasure = current?.customSize && made.on && made.result?.ok ? made.result : null;
   const variantParam = option ? choiceToParam(option.axes, option.choice) : "";
@@ -250,6 +252,8 @@ export default function ItemDetail({ business, itemId, distanceKm, onClose, onSe
     isPage,
     vanished,
     shown,
+    line,
+    preview: Boolean(preview),
     variant,
     option,
     activeId,

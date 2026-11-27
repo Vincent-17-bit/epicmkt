@@ -53,6 +53,7 @@ export default function BusinessPage({
   onShare,
   onOpenItem,
   onReport,
+  renderSave,
   mode = "live",
   container,
   overlay,
@@ -164,6 +165,7 @@ export default function BusinessPage({
               focusItem={focusItem}
               mode={mode}
               onOpenItem={onOpenItem}
+              renderSave={renderSave}
               departments={departments}
               departmentLabels={departmentLabels}
             />

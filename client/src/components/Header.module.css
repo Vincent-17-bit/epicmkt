@@ -14,6 +14,7 @@
 
 .bar {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
@@ -27,7 +28,20 @@
   min-width: 0;
 }
 
+/* Only the town label gives way: every other tool keeps its full 44 px. */
+.tools > :not(:first-child) {
+  flex: none;
+}
+
+/* The very narrowest phones need every pixel: the three buttons sit 4 px apart. */
+@media (max-width: 22.4375rem) {
+  .tools {
+    gap: 4px;
+  }
+}
+
 .brand {
+  flex: none;
   display: inline-flex;
   align-items: center;
   min-height: var(--tap);

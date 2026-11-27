@@ -5,9 +5,10 @@ import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { formatKes } from "@epicmkt/shared";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
+import { FooterSave } from "./SaveItem.jsx";
 import styles from "../ItemDetail.module.css";
 
-// The footer that stays at the bottom of the sheet. With something to order (a chosen combination, a quantity) it is one row: chat and
+// The footer that stays at the bottom of the sheet: Save first, then chat and visit. With something to order (a chosen combination, a quantity) it is one row: chat and
 // visit-store as icon buttons, and "Order now" with the running total as the main button. Without one it is the two plain buttons.
 export default function StickyNav({ ctx }) {
   const { item, seller, chatHref, onChat, onVisit, orderHref, order } = ctx;
@@ -15,7 +16,8 @@ export default function StickyNav({ ctx }) {
   const total = order && Number.isFinite(order.total) ? formatKes(order.total) : "";
   if (orderHref) {
     return (
-      <footer className={styles.footer} data-order="">
+      <footer className={styles.footer} data-order="" data-save={ctx.preview ? undefined : ""}>
+        <FooterSave ctx={ctx} icon />
         <a href={chatHref} {...external} className={styles.iconBtn} data-tip={t("item.chatSeller")} onClick={onChat("footer")}>
           <FontAwesomeIcon icon={faCommentDots} aria-hidden="true" />
           <span className={styles.iconLabel} aria-hidden="true">{t("item.chatShort")}</span>
@@ -35,7 +37,8 @@ export default function StickyNav({ ctx }) {
     );
   }
   return (
-    <footer className={styles.footer}>
+    <footer className={styles.footer} data-save={ctx.preview ? undefined : ""}>
+      <FooterSave ctx={ctx} />
       <a href={chatHref} {...external} className={styles.chat} onClick={onChat("footer")}>
         <FontAwesomeIcon icon={faCommentDots} className={styles.icon} aria-hidden="true" />
         <span>{t("item.chatSeller")}</span>

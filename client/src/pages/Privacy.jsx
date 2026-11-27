@@ -155,10 +155,16 @@ const sections = [
     id: "device",
     title: "Storage on your device",
     body: (
+      <>
       <p>
         We store your theme and town preferences and cached pages on your device so the Service loads faster and works offline. You can clear them
         at any time. See our <Link to="/cookies">Cookie notice</Link> for details.
       </p>
+      <p>
+        Your Saved list, the products and services you keep to message shops about, is kept on this device only, until you remove it. It is never sent to us
+        or to a shop unless you tap Send list on WhatsApp.
+      </p>
+      </>
     )
   },
   {

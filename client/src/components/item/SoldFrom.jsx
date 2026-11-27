@@ -8,6 +8,7 @@ import { ShopMap, resizedUrl } from "@epicmkt/ui";
 import { directionsHref } from "./Delivery.jsx";
 import { t } from "../../i18n/index.js";
 import { external } from "./links.js";
+import { CardSave } from "./SaveItem.jsx";
 import styles from "../ItemDetail.module.css";
 
 // The "Sold by" card: who sells it, whether they are open, and the visit / chat / call / share / report actions.
@@ -101,6 +102,7 @@ export default function SoldFrom({ ctx }) {
       </div>
 
       <div className={styles.secondary}>
+        <CardSave ctx={ctx} className={styles.ghost} />
         <button type="button" className={styles.ghost} onClick={onShare}>
           <FontAwesomeIcon icon={faShareNodes} aria-hidden="true" />
           <span>{t("item.share")}</span>

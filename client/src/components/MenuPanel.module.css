@@ -417,6 +417,39 @@
   }
 }
 
+/* "Saved" and its count, right under the menu's top: opens the drawer in place of the menu. */
+.searchStack {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.savedLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--tap);
+  padding: 0 var(--space-3);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.savedCount {
+  min-width: 1.5rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--saved);
+  color: var(--on-saved);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
 .moreLabel {
   margin: var(--space-3) 0 var(--space-1);
   color: var(--text-muted);
