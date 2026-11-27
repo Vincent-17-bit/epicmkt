@@ -2,10 +2,11 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { PhoneInput } from "@epicmkt/ui";
 import { maskPhone } from "@epicmkt/shared";
-import { isValidPhone, toE164 } from "@epicmkt/shared/phone";
+import { countryName, flagOf, isValidPhone, parsePhone, toE164 } from "@epicmkt/shared/phone";
 import * as api from "../api/index.js";
 import { errorText } from "../lib/errors.js";
 import { FACTS_KEY } from "../lib/useBusinessFacts.js";
+import Notice from "./Notice.jsx";
 import ui from "../styles/ui.module.css";
 import styles from "./phoneChange.module.css";
 
@@ -15,13 +16,15 @@ export default function WhatsappNumber({ whatsapp, phone }) {
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(null);
   const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
   const same = Boolean(whatsapp) && whatsapp === phone;
+  const shown = whatsapp || phone;
+  const parsed = shown ? parsePhone(shown) : null;
 
   const save = async (number, message) => {
-    setError("");
+    setError(null);
     setBusy(true);
     try {
       await api.updateProfile({ whatsapp: number });
@@ -30,7 +33,7 @@ export default function WhatsappNumber({ whatsapp, phone }) {
       setValue("");
       setSaved(message);
     } catch (err) {
-      setError(errorText(err, "We could not save the WhatsApp number. Please try again."));
+      setError({ text: errorText(err, "We could not save the WhatsApp number. Please try again.") });
     } finally {
       setBusy(false);
     }
@@ -38,42 +41,64 @@ export default function WhatsappNumber({ whatsapp, phone }) {
 
   const submit = (e) => {
     e.preventDefault();
-    if (!value || !isValidPhone(value)) return setError("Enter a valid WhatsApp number. Choose the country, then type the number.");
+    if (!value || !isValidPhone(value)) return setError({ text: "Enter a valid WhatsApp number.", more: "Choose the country, then type the number." });
     const number = toE164(value);
-    if (number === whatsapp) return setError("That is already your WhatsApp number.");
+    if (number === whatsapp) return setError({ text: "That is already your WhatsApp number." });
     save(number, "WhatsApp number saved.");
   };
 
+  const errorBox = error && (
+    <Notice tone="error">
+      <p><strong>{error.text}</strong></p>
+      {error.more && <p>{error.more}</p>}
+    </Notice>
+  );
+
   return (
     <>
-      {saved && <p className={`${styles.ok} ${ui.muted}`} role="status">{saved}</p>}
+      {saved && <Notice tone="ok" className={styles.cnSaved}><p>{saved}</p></Notice>}
       {!editing ? (
         <>
-          <p className={`${ui.muted} ${styles.current}`}>
-            Customers who tap WhatsApp on your shop page, or Chat or Order on an item, reach{" "}
-            <strong className={styles.number} aria-label="WhatsApp number, masked">{whatsapp ? maskPhone(whatsapp) : "your call number (no WhatsApp number set)"}</strong>
-            {same ? ", the same as your call number" : ""}. It can be a different number from the one customers call.
-          </p>
-          <div className={styles.actions}>
-            <button type="button" className={ui.btn} onClick={() => { setSaved(""); setEditing(true); }}>Change WhatsApp number</button>
-            {phone && !same && (
-              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => save(phone, "WhatsApp now uses your call number.")}>Use my call number</button>
-            )}
-          </div>
-          {error && <p className={ui.error} role="alert">{error}</p>}
+          <div className={styles.cnIdleHost}><div className={styles.cnIdle}>
+            <div className={styles.cnIdentity}>
+              <strong className={styles.cnValue} aria-label="WhatsApp number, masked">
+                {parsed?.country && <span className={styles.cnFlag} aria-hidden="true">{flagOf(parsed.country)}</span>}
+                {whatsapp ? maskPhone(whatsapp) : phone ? `${maskPhone(phone)} (your call number)` : "not set"}
+              </strong>
+              <p className={styles.cnMeta}>
+                {parsed?.country ? `${countryName(parsed.country)}. ` : ""}
+                {same ? "This is the same as your call number" : whatsapp ? "This is a different number from your call number" : "You have not set a WhatsApp number, so customers reach your call number"}
+              </p>
+              <ul className={styles.cnUses} aria-label="Used for">
+                <li>WhatsApp button on your shop page</li>
+                <li>Chat and Order on every item</li>
+              </ul>
+            </div>
+            <div className={styles.cnIdleActions}>
+              <button type="button" className={ui.btn} onClick={() => { setSaved(""); setError(null); setEditing(true); }}>Change WhatsApp number</button>
+              {phone && !same && (
+                <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={busy} onClick={() => save(phone, "WhatsApp now uses your call number.")}>Use my call number</button>
+              )}
+            </div>
+          </div></div>
+          {errorBox}
         </>
       ) : (
-        <form className={styles.form} onSubmit={submit} noValidate>
-          <div className={ui.field}>
-            <label className={ui.label} htmlFor="wa-number">New WhatsApp number</label>
-            <PhoneInput id="wa-number" value={value} onChange={setValue} inputClassName={ui.input} />
-          </div>
-          {error && <p className={ui.error} role="alert">{error}</p>}
-          <div className={styles.actions}>
-            <button type="submit" className={ui.btn} disabled={busy}>{busy ? "Saving" : "Save WhatsApp number"}</button>
-            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => { setEditing(false); setValue(""); setError(""); }}>Cancel</button>
-          </div>
-        </form>
+        <div className={styles.cnPanel}>
+          <form className={styles.cnForm} onSubmit={submit} noValidate>
+            <p className={styles.cnIntro}>Customers who tap WhatsApp will chat with this number. It can be different from the one they call, and it is saved straight away.</p>
+            <div className={ui.field}>
+              <label className={ui.label} htmlFor="wa-number">New WhatsApp number</label>
+              <PhoneInput id="wa-number" value={value} onChange={setValue} inputClassName={ui.input} />
+              <p className={styles.cnHint}>Use a number that has WhatsApp on it.</p>
+            </div>
+            {errorBox}
+            <div className={styles.cnActions}>
+              <button type="submit" className={ui.btn} disabled={busy}>{busy ? "Saving" : "Save WhatsApp number"}</button>
+              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => { setEditing(false); setValue(""); setError(null); }}>Cancel</button>
+            </div>
+          </form>
+        </div>
       )}
     </>
   );

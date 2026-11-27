@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as mock from "../../api/mock.js";
+import { ApiError } from "../../api/errors.js";
 import { M, signedInApp } from "../../test/utils.jsx";
 
 // The call number and the WhatsApp number on the Account page: changed together, or one at a time to two different numbers.
@@ -107,5 +108,79 @@ describe("phone number and WhatsApp number", () => {
     await user.type(within(card).getByLabelText("New WhatsApp number"), "0712345678");
     await user.click(within(card).getByRole("button", { name: "Save WhatsApp number" }));
     expect(await within(card).findByRole("alert")).toHaveTextContent("That is already your WhatsApp number.");
+  });
+});
+
+describe("sending the code goes wrong", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  async function openForm(user) {
+    await signedInApp("/business/account");
+    const card = (await screen.findByRole("heading", { name: "Phone number" })).closest("section");
+    await user.click(within(card).getByRole("button", { name: "Change phone number" }));
+    await user.type(within(card).getByLabelText("New phone number"), "0792 369 712");
+    await user.type(within(card).getByLabelText("Current password"), PW);
+    return card;
+  }
+  const send = (user, card) => user.click(within(card).getByRole("button", { name: /^Send code to this number/ }));
+
+  it("when the text cannot be sent, says so plainly, says nothing was used up, and lets them try again at once", async () => {
+    const user = userEvent.setup();
+    const spy = vi.spyOn(mock, "requestOtp").mockRejectedValueOnce(new ApiError("send_failed"));
+    const card = await openForm(user);
+    await send(user, card);
+    const alert = await within(card).findByRole("alert");
+    expect(alert).toHaveTextContent("We could not text that number, and no code was used up.");
+    expect(alert).toHaveTextContent(/ask an admin to change it instead/);
+    expect(within(card).queryByLabelText("Code from the text message")).toBeNull(); // still on the first step
+    expect(within(card).getByRole("button", { name: /^Send code to this number/ })).toBeEnabled(); // no waiting
+    await send(user, card);
+    expect(await within(card).findByLabelText("Code from the text message")).toBeInTheDocument();
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("when the server asks for a pause, says how long, and holds the button until then", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(mock, "requestOtp").mockRejectedValueOnce(new ApiError("rate_limited", undefined, { retryAfter: 45 }));
+    const card = await openForm(user);
+    await send(user, card);
+    expect(await within(card).findByRole("alert")).toHaveTextContent("Please wait 45 seconds before asking for another code.");
+    const button = within(card).getByRole("button", { name: /^Send code to this number/ });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleName(/available again in 45 seconds/);
+    expect(button).toHaveTextContent(/\(\d+s\)/);
+  });
+
+  it("when it is the hourly limit, says about how long and points to an admin", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(mock, "requestOtp").mockRejectedValueOnce(new ApiError("rate_limited", undefined, { retryAfter: 3600 }));
+    const card = await openForm(user);
+    await send(user, card);
+    const alert = await within(card).findByRole("alert");
+    expect(alert).toHaveTextContent("You have asked for too many codes. Please try again in about 1 hour.");
+    expect(alert).toHaveTextContent("ask an admin to change your number");
+  });
+
+  it("shows which step they are on, and a new code can only be asked for after a minute", async () => {
+    const user = userEvent.setup();
+    const card = await openForm(user);
+    expect(within(card).getByText("Step 1 of 2: New number").closest("li")).toHaveAttribute("aria-current", "step");
+    await send(user, card);
+    await within(card).findByLabelText("Code from the text message");
+    expect(within(card).getByText("Step 2 of 2: Enter code").closest("li")).toHaveAttribute("aria-current", "step");
+    expect(within(card).getByText("Step 1 of 2: New number").closest("li")).toHaveAttribute("data-done", "true");
+    const again = within(card).getByRole("button", { name: /^Send a new code in 1 minute/ });
+    expect(again).toBeDisabled();
+  });
+
+  it("the password can be shown while typing it, and hidden again", async () => {
+    const user = userEvent.setup();
+    const card = await openForm(user);
+    const box = within(card).getByLabelText("Current password");
+    expect(box).toHaveAttribute("type", "password");
+    await user.click(within(card).getByRole("button", { name: "Show password" }));
+    expect(box).toHaveAttribute("type", "text");
+    await user.click(within(card).getByRole("button", { name: "Hide password" }));
+    expect(box).toHaveAttribute("type", "password");
   });
 });

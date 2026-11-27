@@ -1,62 +1,319 @@
-.form {
-  display: grid;
-  gap: var(--space-4, 1rem);
-  max-width: 28rem;
+/* Phone and WhatsApp numbers: the card in its resting state, and the form that changes it.
+   Used on the Account page and inside the Settings dialog, so it follows the width of the box it is in (container query), not the screen. */
+
+.cnSr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.actions {
+/* ---- resting: the number, what it is for, and the way to change it ---- */
+
+/* the box whose width the layout follows; the grid inside it changes, because a container cannot restyle itself */
+.cnIdleHost {
+  container-type: inline-size;
+}
+
+.cnIdle {
+  display: grid;
+  gap: var(--space-3, 0.75rem);
+}
+
+.cnIdentity {
+  display: grid;
+  gap: var(--space-1, 0.25rem);
+  min-width: 0;
+}
+
+.cnLabel {
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: 600;
+}
+
+.cnValue {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-size: 1.375rem;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.cnFlag {
+  font-family: "Twemoji Country Flags", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-size: 1.25em;
+  line-height: 1;
+}
+
+.cnMeta {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+}
+
+.cnUses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  margin: var(--space-1, 0.25rem) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cnUses li {
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: var(--text-xs, 0.8125rem);
+}
+
+.cnIdleActions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2, 0.5rem);
 }
 
-.actions > * {
-  flex: 1 1 10rem;
+@container (min-width: 36rem) {
+  .cnIdle {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: var(--space-5, 1.5rem);
+  }
+
+  .cnIdleActions {
+    justify-content: flex-end;
+  }
 }
 
-.fit {
-  justify-self: start;
+/* ---- changing: a panel with steps ---- */
+
+.cnPanel {
+  display: grid;
+  gap: var(--space-4, 1rem);
+  margin-top: var(--space-3, 0.75rem);
+  padding: var(--space-4, 1rem);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card, 12px);
+  background: var(--surface-2);
+  container-type: inline-size;
 }
 
-.current {
-  margin: 0 0 var(--space-3, 0.75rem);
+.cnPanelOnly {
+  margin-top: 0;
 }
 
-.number {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.cnSteps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm, 0.875rem);
+  color: var(--text-muted);
 }
 
-.ok {
-  margin: 0 0 var(--space-3, 0.75rem);
+.cnSteps li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.cnDot {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 2px solid var(--border-strong, var(--border));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface);
+  font-weight: 700;
+  font-size: 0.8125rem;
+}
+
+.cnSteps li[aria-current="step"] { color: var(--text); font-weight: 700; }
+.cnSteps li[aria-current="step"] .cnDot { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+.cnSteps li[data-done="true"] .cnDot { border-color: var(--status-ok-fg); background: var(--status-ok-fg); color: var(--surface); }
+
+.cnForm {
+  display: grid;
+  gap: var(--space-4, 1rem);
+  margin: 0;
+}
+
+.cnIntro {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cnIntro strong { color: var(--text); }
+
+.cnGrid {
+  display: grid;
+  gap: var(--space-4, 1rem);
+  align-items: start;
+}
+
+@container (min-width: 34rem) {
+  .cnGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cnSpan { grid-column: 1 / -1; }
+}
+
+.cnHint {
+  margin: var(--space-1, 0.25rem) 0 0;
+  color: var(--text-muted);
+  font-size: var(--text-sm, 0.875rem);
+  line-height: 1.45;
+}
+
+/* password with a Show button */
+.cnSecret {
+  position: relative;
+  display: flex;
+}
+
+.cnSecret input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 4.75rem;
+}
+
+.cnReveal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  min-width: 4.5rem;
+  padding: 0 var(--space-3, 0.75rem);
+  border: 0;
+  border-radius: 0 var(--radius-sm, 8px) var(--radius-sm, 8px) 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm, 0.875rem);
   font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-.link {
-  justify-self: start;
-  min-height: 44px;
+.cnReveal:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: -3px; }
+
+/* "Use this number for WhatsApp too": a whole row you can tap, not a lone tick box */
+.cnOption {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3, 0.75rem);
+  min-height: var(--tap, 44px);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border: 1.5px solid var(--border-strong, var(--border));
+  border-radius: var(--radius-sm, 8px);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.cnOption:has(input:checked) {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.cnOption:has(input:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.cnOption input {
+  flex: none;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0.1rem 0 0;
+  accent-color: var(--primary, currentColor);
+}
+
+.cnOptionText {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.cnOptionText strong { font-weight: 700; }
+.cnOptionText span { color: var(--text-muted); font-size: var(--text-sm, 0.875rem); line-height: 1.4; }
+
+/* the code */
+.cnCodeField {
+  display: grid;
+  gap: var(--space-1, 0.25rem);
+  max-width: 16rem;
+}
+
+input.cnCodeBox {
+  min-height: 3.5rem;
+  text-align: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  padding-left: 0.5em; /* the spacing after the last digit would push the code off centre */
+  font-variant-numeric: tabular-nums;
+}
+
+.cnCodeBox::placeholder { letter-spacing: 0.3em; opacity: 0.4; }
+
+/* buttons: on a phone, full width and stacked with the main one first; in a wider box, side by side and never wrapping */
+.cnActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.cnActions > button { width: 100%; white-space: nowrap; }
+
+@container (min-width: 30rem) {
+  .cnActions { flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .cnActions > button { width: auto; min-width: 9rem; }
+}
+
+.cnLink {
+  min-height: var(--tap, 44px);
   padding: 0;
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   font-weight: 600;
+  text-align: left;
   text-decoration: underline;
   cursor: pointer;
 }
 
-.check {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3, 0.75rem);
-  min-height: 44px;
-  cursor: pointer;
+.cnLink:disabled {
+  color: var(--text-muted);
+  text-decoration: none;
+  cursor: default;
 }
 
-.check input {
-  flex: none;
-  width: 1.4rem;
-  height: 1.4rem;
-  margin-top: 0.1rem;
-  accent-color: var(--primary, currentColor);
+.cnLink:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.cnNumber {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cnSaved {
+  margin-bottom: var(--space-3, 0.75rem);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cnOption { transition: border-color var(--dur, 150ms) ease, background-color var(--dur, 150ms) ease; }
 }

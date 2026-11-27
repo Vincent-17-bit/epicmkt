@@ -23,6 +23,24 @@ It can be **from any country**: a seller picks the country (flag and dial code) 
 A seller who cannot do this (lost password, the new number is not with them) can still **ask an admin**: the older request flow (`seller_request_change`) stays as the way out.
 Saving a verified number cancels any such request that was still pending, so it can never be approved later and overwrite the new number.
 
+### When the code text does not arrive ("We could not text that number")
+
+The edge function answers `send_failed` (502) when the SMS provider refuses the message. A code whose text never left is **taken back at once**, so the seller can try again straight away
+and is not told "too many tries" for a failure that was not theirs. Only a genuine pause (a code was just sent, or 5 in an hour) shows a wait, with a live countdown.
+
+The reason is recorded in the function logs (Supabase → Edge Functions → `seller-otp-request` → Logs) as `sms_failed <reason>`, with no number and no message text:
+
+| Reason in the log | What it means | What to do |
+|---|---|---|
+| `sms_not_configured` | `AT_API_KEY` or `AT_USERNAME` is not set as a function secret | Set them (and `AT_SENDER` if you use a sender ID), then retry |
+| `provider_http_401` / `_403` | Africa's Talking rejected the key or username | Check the key belongs to that username; `AT_USERNAME=sandbox` uses the sandbox, which cannot reach real phones |
+| `at_InsufficientBalance` | The Africa's Talking account is out of credit | Top it up |
+| `at_UserInBlacklist`, `at_InvalidSenderId`, `at_RiskHold` | The number or sender ID is blocked | Fix the sender ID, or try another number |
+| `at_InvalidPhoneNumber` / destination not allowed | The account is not enabled for that country | Enable the country in Africa's Talking (international SMS is off by default) |
+| `provider_unreachable` | Africa's Talking did not answer within 10 seconds | Retry; check their status page |
+
+Also check `APP_ENV=production` (or `MESSAGING_MODE=live`): in any other mode no SMS is sent and the fixed code `123456` is used.
+
 ### Call number and WhatsApp number are separate
 
 A business has two public numbers. `businesses.phone` is the **Call** button on the shop page and is also where password and sign-in codes are texted.

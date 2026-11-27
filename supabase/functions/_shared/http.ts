@@ -70,7 +70,10 @@ export async function sendMail(to: string | undefined, subject: string, html: st
 }
 
 export async function sendSms(to: string, message: string): Promise<boolean> {
-  return (await deliverSms(to, message)).ok;
+  const r = await deliverSms(to, message);
+  // Only the provider's reason (sms_not_configured, provider_http_401, at_InsufficientBalance...) is logged, never the number or the text.
+  if (!r.ok) console.error("sms_failed", r.error);
+  return r.ok;
 }
 
 export { isProduction };

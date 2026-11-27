@@ -47,6 +47,11 @@ export const sellerOtpRequest = (d: Deps) => wrap(async (req) => {
   const code = d.code();
   const issued = (await d.db.rpc("seller_otp_issue", { p_business: b.id, p_purpose: parsed.data.purpose, p_code: code, p_channel: channel, p_target: target })).data;
   if (!issued?.ok) return rateLimited(issued?.retry_after ?? 60);
-  if (!(await sendOtp(d, channel, { phone, email }, code))) return json({ error: "send_failed" }, 502);
+  if (!(await sendOtp(d, channel, { phone, email }, code))) {
+    // The text or email never left, so nobody holds this code. Take it back: otherwise it would count against the resend wait and the
+    // hourly limit, and the seller would be told "too many tries" after a failure that was not theirs.
+    try { await d.db.from("seller_otps").delete().eq("business_id", b.id).eq("purpose", parsed.data.purpose).eq("used", false); } catch (_) { /* the code expires on its own in 10 minutes */ }
+    return json({ error: "send_failed" }, 502);
+  }
   return json({ ok: true, channel, sentTo: channel === "email" ? maskEmail(email!) : maskPhone(phone) });
 });

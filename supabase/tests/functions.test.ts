@@ -58,15 +58,22 @@ function deps(w: World): Deps {
     const eqs: [string, unknown][] = [];
     const nes: [string, unknown][] = [];
     let patch: Record<string, unknown> | null = null;
+    let deleting = false;
     const rows = () => (w.tables[t] ?? []).filter((r) => eqs.every(([c, v]) => r[c] === v) && nes.every(([c, v]) => r[c] !== v));
     const api: any = {
       select: () => api, limit: () => api,
       update: (p: Record<string, unknown>) => ((patch = p), api),
+      delete: () => ((deleting = true), api),
       eq: (c: string, v: unknown) => (eqs.push([c, v]), api),
       neq: (c: string, v: unknown) => (nes.push([c, v]), api),
       maybeSingle: () => Promise.resolve({ data: rows()[0] ?? null, error: null }),
       insert: (row: any) => ((w.tables[t] ??= []).push(row), Promise.resolve({ error: null })),
       then: (res: any, rej: any) => {
+        if (deleting) {
+          const gone = new Set(rows());
+          w.tables[t] = (w.tables[t] ?? []).filter((r) => !gone.has(r));
+          return Promise.resolve({ error: null }).then(res, rej);
+        }
         if (patch) {
           if (w.updateError) return Promise.resolve({ error: w.updateError }).then(res, rej);
           for (const r of rows()) Object.assign(r, patch);
@@ -99,6 +106,7 @@ function deps(w: World): Deps {
         w.failures.delete(args.p_key);
         return Promise.resolve({ data: null, error: null });
       case "seller_otp_issue":
+        (w.tables.seller_otps ??= []).push({ business_id: args.p_business, purpose: args.p_purpose, used: false });
         w.issuedCodes.push(args.p_code);
         w.lastIssue = args;
         return Promise.resolve({ data: { ok: true }, error: null });
@@ -775,4 +783,23 @@ Deno.test("set-phone: WhatsApp follows the new number only when the seller asks,
 
   const bad = world();
   assertEquals((await sellerSetPhone(deps(bad))(authed({ code: "123456", currentPassword: bad.validPassword, alsoWhatsapp: "yes" }))).status, 400);
+});
+
+Deno.test("otp-request: a code whose text or email never left is taken back, so the seller can try again at once", async () => {
+  for (const [purpose, body] of [
+    ["verify_phone", (w: World) => ({ purpose: "verify_phone", phone: "0722000111", currentPassword: w.validPassword })],
+    ["change_password", () => ({ purpose: "change_password", channel: "sms" })],
+  ] as const) {
+    const w = world();
+    const d = deps(w);
+    d.sms = () => Promise.resolve(false); // the provider is down, or not set up
+    const failed = await read(await sellerOtpRequest(d)(authed(body(w))));
+    assertEquals(failed.status, 502, purpose);
+    assertEquals(failed.body.error, "send_failed");
+    assertEquals((w.tables.seller_otps ?? []).length, 0, `${purpose}: the unsent code must not stay behind to block the next try`);
+    // and the next try, with the provider working again, goes straight through
+    const ok = await read(await sellerOtpRequest(deps(w))(authed(body(w))));
+    assertEquals(ok.status, 200, purpose);
+    assertEquals((w.tables.seller_otps ?? []).length, 1);
+  }
 });
