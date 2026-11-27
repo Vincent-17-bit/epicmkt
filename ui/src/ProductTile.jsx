@@ -46,7 +46,7 @@ const SWATCHES = 5;
 /**
  * The one product card of the site: home lists, search results, "Goes well with", similar items. Every card has the same
  * shape: a square picture, then the name (always the same number of lines, so prices line up across a row), an optional
- * line of facts, the colours, the price at the foot, and the shop. The whole card is one link; the shop name is text.
+ * line of facts, the colours, the price at the foot, and the shop. The whole card is one link (the Save heart, when there is one, is the only other control).
  *
  * Optional, for search results (all of it read from the product, nothing invented):
  *   facts      ["30 W", "12 h playtime"]  one muted line under the name
@@ -56,8 +56,9 @@ const SWATCHES = 5;
  *   titleLines 2 (default) or 3;  blurb false hides the short description after the name;  priority loads the picture first
  *   onClick    called when the card is opened (search logs the position)
  *   tag        a short label on the picture, top right ("From this shop")
- *   action     { saved, onToggle, label } adds a Save heart. The card is then a div, the NAME is the link (stretched over the card)
- *              and the heart is its own button above it, so a tap on the heart never opens the item. Without it, nothing changes.
+ *   action     { saved, onToggle, label } adds a Save heart, top right of the picture. The card is then a div with one link around
+ *              the picture and the text, and the heart as its own button beside it, so a tap on the heart never opens the item.
+ *              Without it, nothing changes.
  *
  * Availability: an available item shows nothing extra, one running low gets "Low stock" / "Only 3 left" on the picture, and a
  * sold-out item is not drawn at all (sold-out items are not listed to customers, so one reaching here is a bug elsewhere).
@@ -148,13 +149,7 @@ export default function ProductTile({
       <span className={styles.body}>
         <span className={styles.copy}>
           <span className={styles.name}>
-            {save ? (
-              <Link href={href} className={styles.nameLink} onClick={onClick}>
-                {item.name}
-              </Link>
-            ) : (
-              item.name
-            )}
+            {item.name}
           </span>
           {blurb && <span className={styles.blurb}>{blurb}</span>}
         </span>
@@ -174,14 +169,7 @@ export default function ProductTile({
         )}
 
         <span className={styles.foot}>
-          {save ? (
-            <span className={styles.priceRow}>
-              {priceBlock}
-              <SaveButton className={styles.save} saved={save.saved} onToggle={save.onToggle} label={save.label} size={20} />
-            </span>
-          ) : (
-            priceBlock
-          )}
+          {priceBlock}
           {delivery?.text && (
             <span className={styles.delivery} data-kind={delivery.kind}>
               <FontAwesomeIcon icon={delivery.kind === "delivery" ? faTruck : faLocationDot} aria-hidden="true" className={styles.lineIcon} />
@@ -205,10 +193,15 @@ export default function ProductTile({
   );
 
   if (save) {
+    // The card is a div holding two siblings: one link around the picture and everything under it (name, price, shop: all open
+    // the product), and the heart, top right of the picture. The heart is never inside the link, so a tap on it only saves.
     return (
       <div className={`${styles.tile} ${styles.tileSave} ${className}`} style={{ "--title-lines": titleLines }}>
-        {picture}
-        {body}
+        <Link href={href} className={styles.cardLink} onClick={onClick}>
+          {picture}
+          {body}
+        </Link>
+        <SaveButton className={styles.save} saved={save.saved} onToggle={save.onToggle} label={save.label} size={20} />
       </div>
     );
   }

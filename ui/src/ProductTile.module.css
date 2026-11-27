@@ -420,60 +420,53 @@
 }
 
 /* ---- Saved heart (only when the card is given an `action`) ----
- * The card root is a div, the name is the link, and its ::after stretches over the whole card, so tapping anywhere still opens
- * the item. The heart sits above that stretch (z-index 1) and is never inside the link, so a tap on it can only save. */
+ * The card root is a div with two children: .cardLink, one link around the picture and the text, and the heart, drawn over the
+ * picture's top right corner. The heart is never inside the link, so a tap on it can only save. */
 .tileSave {
+  --heart: 36px;
   cursor: pointer;
 }
 
-.nameLink {
+.cardLink {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
   color: inherit;
   text-decoration: none;
 }
 
-.nameLink::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.nameLink:focus-visible {
-  outline: none;
-}
-
-/* Keyboard focus shows on the whole card, drawn by the name link's stretched ::after (inside the card, which clips anything outside it).
- * Not :focus-within: that also lit up after a mouse tap on the heart. No :has(), which older phones lack. */
-.nameLink:focus-visible::after {
+.cardLink:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: -3px;
   border-radius: var(--radius-card);
 }
 
-.priceRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  min-width: 0;
+.tile .save {
+  position: absolute;
+  top: clamp(4px, 2.6cqw, 8px);
+  right: clamp(4px, 2.6cqw, 8px);
+  z-index: 3;
+  justify-content: center;
+  width: var(--heart);
+  height: var(--heart);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.18);
 }
 
-.priceRow > .prices,
-.priceRow > .ask {
-  flex: 1 1 auto;
-  min-width: 0;
+/* The offer tag and the "From this shop" label share that corner: they sit just under the heart on a card that has one. */
+.tileSave .tag,
+.tileSave .offer {
+  top: calc(clamp(4px, 2.6cqw, 8px) + var(--heart) + 4px);
 }
-
-.priceRow > .save {
-  position: relative;
-  z-index: 1;
-  flex: none;
-  margin-right: calc(6px - var(--pad));
-  margin-block: -8px;
+.tileSave .tag + .offer,
+.tileSave .offerLow {
+  top: calc(clamp(4px, 2.6cqw, 8px) + var(--heart) + 4px + 1.75em);
 }
 
 @media (hover: hover) {
-  .tileSave:hover .nameLink {
+  .tileSave:hover .name {
     text-decoration: underline;
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
