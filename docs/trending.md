@@ -11,6 +11,10 @@ What shoppers search for, shown in the menu and the empty search panel. Migratio
   looks at the last 7 days. On a quiet week, when fewer than `popular_target` (10) words qualify, it widens to 14 and then 30 days,
   only as far as it takes, so the list is not left short. A busy week stays on 7 days. The window in use is returned as `windowDays`
   (7, 14 or 30; 1 for the live count; none for the category stand-in).
+* **The day's leader.** Every hour the searches of the last 24 hours are summed per word (one per person per hour, spellings merged). The
+  word with the most, among words at least `min_people` different people searched, always leads *Rising* and carries "Fastest rising",
+  even an everyday word. It changes as the numbers change. Other words rise only when they beat their own 7-day average by
+  `rising_min_ratio`. When the hourly list is stale, the live top word still leads Rising. Migration `0160`.
 * **Global.** One list for everyone, wherever they are. Nothing is split by county or town.
 * **Never dead words.** A word shows only if something live matches it right now: a visible store, a category, an item on a running
   flash sale, or a visible, available item (the same rules as the search page). Sold-out and hidden things drop out on the next rebuild.

@@ -4,6 +4,7 @@ import { faChevronDown, faMagnifyingGlass, faXmark } from "@fortawesome/free-sol
 import { SORTS } from "../lib/productFilters.js";
 import { RANGE_SCALES } from "../lib/sizeFilters.js";
 import { sizeLabel } from "../lib/sizeFilterLabels.js";
+import { useTypedSearchLog } from "../hooks/useTypedSearchLog.js";
 import ShoeSystemSwitch from "./item/ShoeSystemSwitch.jsx";
 import styles from "./ProductFilters.module.css";
 
@@ -204,6 +205,7 @@ const STORE_ROWS = [
 // Every way to narrow or reorder the products. Each change applies at once and every option shows how many products
 // it would leave, so the shopper never ticks a box that empties the list without seeing it coming.
 export default function ProductFilters({ filters, facets, counts: liveCounts, categories = [], categoryName, onChange, shoeSystem = "eu", onShoeSystem = () => {} }) {
+  const { typed, flush } = useTypedSearchLog();
   const sizeGroups = useMemo(() => facets?.sizes ?? [], [facets]);
   const sizesPicked = (filters.sizes?.length ?? 0) + Object.keys(filters.ranges ?? {}).length;
   const bounds = facets?.price ?? null;
@@ -244,7 +246,14 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
   const priceSummary = filters.min || filters.max ? `KES ${filters.min || "0"} – ${filters.max || "any"}` : null;
 
   return (
-    <form className={styles.panel} aria-label="Product filters" onSubmit={(e) => e.preventDefault()}>
+    <form
+      className={styles.panel}
+      aria-label="Product filters"
+      onSubmit={(e) => {
+        e.preventDefault();
+        flush();
+      }}
+    >
       <div className={styles.top}>
         <div className={styles.search}>
           <FontAwesomeIcon icon={faMagnifyingGlass} className={styles.searchIcon} aria-hidden="true" />
@@ -256,7 +265,10 @@ export default function ProductFilters({ filters, facets, counts: liveCounts, ca
             maxLength={80}
             placeholder="Search name, store or town"
             value={filters.q}
-            onChange={(e) => onChange({ q: e.target.value })}
+            onChange={(e) => {
+              typed(e.target.value);
+              onChange({ q: e.target.value });
+            }}
           />
           {filters.q && (
             <button type="button" className={styles.clear} aria-label="Clear search" onClick={() => onChange({ q: "" })}>
