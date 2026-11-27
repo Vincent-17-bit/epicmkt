@@ -20486,75 +20486,15 @@ on conflict (day, scope, term) do update
 select public.refresh_trending();
 
 $m_0160_trending_day_leader$),
-    ('0161_whole_prices_option_history', $m_0161_whole_prices_option_history$
--- 0161: prices are whole shillings, and a change to a size's price is written to the item's History.
+    ('0161_option_price_history', $m_0161_option_price_history$
+-- 0161: a change to a size's price is written to the item's History.
 --
--- 1. Whole shillings. The editor took prices such as 10.50, but the buyer is charged whole shillings (the pricing code rounds half up
---    per unit), so a stored 10.50 was charged as KES 11 and three of them as KES 33 instead of KES 31.50. A price with cents is a
---    dispute waiting to happen, so:
---      - every stored price (items.price, price_max, sale_price; item_variants.price, sale_price) is rounded half up once, here;
---        a sale price is kept below its price (it never ends up equal to it), and dropped only when it would have to be below 1;
---      - from now on a save with cents is refused with invalid_price (P0001), whichever function wrote it.
---    Quantity tiers and flash sale discounts are not touched: tiers were already whole amounts.
--- 2. History. item_history logged item-level fields only (migrations 0005 and 0050), so changing the price of "Beef / Whole Jar" left no
---    trace. A change to a size's price, sale price, stock status or unit is now logged as field "option_price:Beef / Whole Jar" (and
---    option_sale_price:, option_status:, option_unit:), by the same actor as any other change. Adding a size to an existing item is logged
---    too; creating an item with its sizes is not (that would fill the History with one row per size).
---
--- Additive; safe to run again.
+-- item_history logged item-level fields only (migrations 0005 and 0050), so changing the price of "Beef / Whole Jar" left no trace.
+-- A change to a size's price, sale price, stock status or unit is now logged as field "option_price:Beef / Whole Jar" (and
+-- option_sale_price:, option_status:, option_unit:), by the same actor as any other change. Adding a size to an existing item is logged
+-- too; creating an item with its sizes is not (that would fill the History with one row per size).
+-- Prices keep their cents (migration 0162). Additive; safe to run again.
 
--- ---------------------------------------------------------------------------------------------------------------------
--- 1. Round what is stored now (before the guard exists, so the guard does not refuse the clean-up itself).
--- ---------------------------------------------------------------------------------------------------------------------
-update public.items set
-  price = round(price),
-  price_max = round(price_max),
-  sale_price = case
-    when sale_price is null then null
-    when round(sale_price) < round(price) then round(sale_price)
-    when round(price) - 1 >= 1 then round(price) - 1
-    else null end
-where price <> trunc(price) or price_max <> trunc(price_max) or sale_price <> trunc(sale_price);
-
-update public.item_variants set
-  price = round(price),
-  sale_price = case
-    when sale_price is null then null
-    when round(sale_price) < round(price) then round(sale_price)
-    when round(price) - 1 >= 1 then round(price) - 1
-    else null end
-where price <> trunc(price) or sale_price <> trunc(sale_price);
-
--- ---------------------------------------------------------------------------------------------------------------------
--- 2. Refuse cents from now on. A trigger, so every path that writes a price is covered, not only the functions that exist today.
--- ---------------------------------------------------------------------------------------------------------------------
-create or replace function public.require_whole_prices() returns trigger
-language plpgsql set search_path = public as $$
-declare
-  r jsonb := to_jsonb(new);
-  f text;
-  n numeric;
-begin
-  foreach f in array tg_argv loop
-    if r ->> f is not null then
-      n := (r ->> f)::numeric;
-      if n <> trunc(n) then raise exception 'invalid_price' using errcode = 'P0001', hint = f; end if;
-    end if;
-  end loop;
-  return new;
-end $$;
-
-drop trigger if exists t_items_whole_price on public.items;
-create trigger t_items_whole_price before insert or update of price, price_max, sale_price on public.items
-  for each row execute function public.require_whole_prices('price', 'price_max', 'sale_price');
-
-drop trigger if exists t_item_variants_whole_price on public.item_variants;
-create trigger t_item_variants_whole_price before insert or update of price, sale_price on public.item_variants
-  for each row execute function public.require_whole_prices('price', 'sale_price');
-
--- ---------------------------------------------------------------------------------------------------------------------
--- 3. History of option (size) changes.
--- ---------------------------------------------------------------------------------------------------------------------
 create or replace function public.log_variant_changes() returns trigger
 language plpgsql security definer set search_path = public as $$
 declare
@@ -20591,7 +20531,50 @@ drop trigger if exists t_item_variants_history on public.item_variants;
 create trigger t_item_variants_history after insert or update on public.item_variants
   for each row execute function public.log_variant_changes();
 
-$m_0161_whole_prices_option_history$)
+$m_0161_option_price_history$),
+    ('0162_prices_keep_cents', $m_0162_prices_keep_cents$
+-- 0162: prices keep their cents. KES 210.99 is KES 210.99, not KES 211.
+--
+-- Two places still rounded to whole shillings, and are changed to round to the cent (two decimals):
+--   1. flash_discounted_price: a flash sale price such as 99.99, or 10% off 210.99, was rounded to a whole shilling.
+--   2. item_denorm: price_min / price_high (the "From KES x" figure and the price filter and sort) rounded each price to whole shillings.
+-- It also removes the whole-shilling guard that an earlier version of 0161 added (require_whole_prices and its two triggers), if it was ever
+-- applied. Prices already rounded by that version cannot be recovered; re-enter those that had cents.
+-- Safe to run again.
+
+drop trigger if exists t_items_whole_price on public.items;
+drop trigger if exists t_item_variants_whole_price on public.item_variants;
+drop function if exists public.require_whole_prices();
+
+create or replace function public.flash_discounted_price(p_type text, p_value numeric, p_regular numeric) returns numeric
+language sql immutable as
+$$ select greatest(0, round(case p_type
+     when 'percent' then p_regular * (1 - p_value / 100)
+     when 'amount_off' then p_regular - p_value
+     else p_value end, 2)) $$;
+grant execute on function public.flash_discounted_price(text, numeric, numeric) to anon, authenticated, service_role;
+
+-- item_denorm is patched in place (as 0098 did), so the flash-target changes made to it since 0096 are kept.
+do $$
+declare
+  v_def text;
+begin
+  select pg_get_functiondef(p.oid) into strict v_def from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.proname = 'item_denorm';
+  v_def := replace(v_def, 'round(v.price)', 'round(v.price, 2)');
+  v_def := replace(v_def, 'round(v.sale_price)', 'round(v.sale_price, 2)');
+  v_def := replace(v_def, 'round(it.price)', 'round(it.price, 2)');
+  v_def := replace(v_def, 'round(it.sale_price)', 'round(it.sale_price, 2)');
+  v_def := replace(v_def, '(r.tiers -> 0 ->> ''unitPrice'')::numeric)', '(r.tiers -> 0 ->> ''unitPrice'')::numeric, 2)');
+  if v_def not like '%round(v.price, 2)%' or v_def not like '%round(it.sale_price, 2)%' or v_def not like '%unitPrice'')::numeric, 2)%' then raise exception '0162: item_denorm patch did not apply'; end if;
+  execute v_def;
+end $$;
+
+-- Recompute the stored lowest / highest price of every item that has a price with cents (the old figures were rounded).
+select public.items_refresh_denorm(array(select id from public.items where price <> trunc(price) or sale_price <> trunc(sale_price) or price_max <> trunc(price_max)
+  or id in (select item_id from public.item_variants where price <> trunc(price) or sale_price <> trunc(sale_price)))) ;
+
+$m_0162_prices_keep_cents$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;

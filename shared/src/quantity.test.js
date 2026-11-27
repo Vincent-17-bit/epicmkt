@@ -113,14 +113,14 @@ test("fabric per metre", () => {
   assert.equal(priceFor(FABRIC, null, 2.5, NOW).total, 1125);
 });
 
-test("rounding edge cases: half up to the whole shilling", () => {
-  assert.equal(measureTotal(750, 0.25), 188); // 187.5
-  assert.equal(measureTotal(749, 0.25), 187); // 187.25
-  assert.equal(measureTotal(751, 0.25), 188); // 187.75
-  assert.equal(measureTotal(450, 2.75), 1238); // 1237.5
-  assert.equal(measureTotal(333, 0.333), 111); // 110.889
-  assert.equal(measureTotal(1, 0.5), 1); // 0.5 -> 1, never 0
-  assert.equal(measureTotal(1, 0.25), 0); // 0.25 -> 0: a price this small cannot be sold by the quarter
+test("rounding edge cases: half up to the cent", () => {
+  assert.equal(measureTotal(750, 0.25), 187.5); // 187.5
+  assert.equal(measureTotal(749, 0.25), 187.25); // 187.25
+  assert.equal(measureTotal(751, 0.25), 187.75); // 187.75
+  assert.equal(measureTotal(450, 2.75), 1237.5); // 1237.5
+  assert.equal(measureTotal(333, 0.333), 110.89); // 110.889
+  assert.equal(measureTotal(1, 0.5), 0.5); // never 0
+  assert.equal(measureTotal(1, 0.25), 0.25);
   assert.equal(measureTotal(800, 0), 0);
   assert.equal(measureTotal("800", 1.5), 1200);
   assert.equal(measureTotal(null, 1.5), 0);

@@ -5,9 +5,9 @@ export const PRICED = ["fixed", "from", "range"];
 
 export const parseKes = (raw) => {
   const text = String(raw ?? "").replace(/,/g, "").trim();
-  if (!/^\d+$/.test(text)) return null;
+  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
   const n = Number(text);
-  return n > 9999999999 ? null : n;
+  return n > 9999999999.99 ? null : n;
 };
 
 export const filled = (s) => String(s ?? "").trim().length > 0;

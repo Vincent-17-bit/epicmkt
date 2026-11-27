@@ -15,7 +15,7 @@ import FuseBar from "./FuseBar.jsx";
 import Starburst from "./Starburst.jsx";
 import styles from "./FlashSaleCard.module.css";
 
-const kes = (n) => Number(n).toLocaleString("en-KE");
+const kes = (n) => Number(n).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
 const EMBERS = [8, 22, 38, 54, 70, 86];
 // A store logo is a 32 px circle: 96 px covers 3x screens, 160 px anything beyond. The default 240-1600 px list would send a 480 px file.
 const LOGO_WIDTHS = [96, 160];

@@ -7,7 +7,9 @@ const ok = { itemPrice: 1000, discountType: "percent", discountValue: 20, endsAt
 const bad = (patch) => validateFlashSale({ ...ok, ...patch }, NOW).error;
 
 test("prices match the database function", () => {
-  assert.equal(flashPrice("percent", 15, 999), 849);
+  assert.equal(flashPrice("percent", 15, 999), 849.15);
+  assert.equal(flashPrice("percent", 10, 210.99), 189.89);
+  assert.equal(flashPrice("sale_price", 99.99, 210.99), 99.99);
   assert.equal(flashPrice("amount_off", 120, 500), 380);
   assert.equal(flashPrice("sale_price", 199, 333), 199);
   assert.equal(flashPrice("amount_off", 900, 500), 0);

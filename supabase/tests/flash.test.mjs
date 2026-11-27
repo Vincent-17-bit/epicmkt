@@ -84,7 +84,7 @@ test("the public view returns live sales with server-computed prices and nothing
   const got = Object.fromEntries((await tx(c, anon, (k) => sql(k, `select id, sale_price from public_flash_sales`))).map((x) => [x.id, Number(x.sale_price)]));
   assert.equal(got[off.id], 380);
   assert.equal(got[fixed.id], 199);
-  assert.equal(got[odd.id], 849);
+  assert.equal(got[odd.id], 849.15);
 });
 
 test("the view hides future, ended, cancelled, hidden, out of stock and inactive-business sales", async () => {

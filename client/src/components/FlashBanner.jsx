@@ -39,7 +39,7 @@ export default function FlashBanner({ flash, pricing, unit, bannerRef, ended = f
         <div className={styles.panel}>
           <p className={styles.price}>
             <span className={styles.cur}>{t("flash.currency")}</span>
-            {Number(pricing.salePrice).toLocaleString("en-KE")}
+            {Number(pricing.salePrice).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(pricing.salePrice)) ? 0 : 2, maximumFractionDigits: 2 })}
             {unit && <span className={styles.unit}> / {unit}</span>}
           </p>
           {saving && (

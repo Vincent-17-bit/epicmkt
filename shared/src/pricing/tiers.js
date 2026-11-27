@@ -50,19 +50,19 @@ export function priceTiered({ tiers, mode = "whole", qty, adjust = (n) => n }) {
   const bands = [];
   if (mode === "whole") {
     const unit = adjust(tiers[last].unitPrice);
-    bands.push({ from: tiers[last].minQty, qty, unit, subtotal: unit * qty });
+    bands.push({ from: tiers[last].minQty, qty, unit, subtotal: Math.round(unit * qty * 100) / 100 });
   } else {
     for (let i = 0; i <= last; i += 1) {
       const t = tiers[i];
       const upTo = t.maxQty === null ? qty : Math.min(qty, t.maxQty);
       const count = upTo - t.minQty + 1;
       const unit = adjust(t.unitPrice);
-      bands.push({ from: t.minQty, qty: count, unit, subtotal: unit * count });
+      bands.push({ from: t.minQty, qty: count, unit, subtotal: Math.round(unit * count * 100) / 100 });
     }
   }
-  const total = bands.reduce((sum, b) => sum + b.subtotal, 0);
+  const total = Math.round(bands.reduce((sum, b) => sum + b.subtotal, 0) * 100) / 100;
   return {
-    unit: mode === "whole" ? bands[0].unit : Math.round(total / qty),
+    unit: mode === "whole" ? bands[0].unit : Math.round((total / qty) * 100) / 100,
     marginal: bands[bands.length - 1].unit,
     total,
     bands,
