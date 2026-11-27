@@ -26,7 +26,7 @@ test("graduated mode lists its bands, the average unit and the last band's price
   const r = priceTiered({ tiers: printing, mode: "graduated", qty: 101 });
   assert.deepEqual(r.bands.map((b) => [b.from, b.qty, b.unit]), [[1, 10, 10], [11, 90, 7], [101, 1, 5]]);
   assert.equal(r.marginal, 5);
-  assert.equal(r.unit, Math.round(735 / 101));
+  assert.equal(r.unit, 7.28);
 });
 
 test("the next tier hint says how many more and at what price", () => {
@@ -105,13 +105,13 @@ test("priceFor with graduated tiers at the boundaries", () => {
 
 test("a live percent flash discounts the tier price in whole mode", () => {
   const r = priceFor(item({ flash: flash() }), null, 11, NOW);
-  assert.deepEqual(pick(r), [6, 66, 77, "flash"]);
+  assert.deepEqual(pick(r), [5.6, 61.6, 77, "flash"]);
   assert.equal(r.next.unit, 4);
 });
 
 test("a live percent flash discounts every band in graduated mode", () => {
   const r = priceFor(item({ priceTierMode: "graduated", flash: flash() }), null, 11, NOW);
-  assert.equal(r.total, 10 * 8 + 6);
+  assert.equal(r.total, 85.6);
   assert.equal(r.was, 107);
   assert.equal(r.source, "flash");
 });

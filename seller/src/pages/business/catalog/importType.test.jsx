@@ -44,7 +44,7 @@ describe("import by type", () => {
     fireEvent.change(within(dialog).getByLabelText("Paste rows"), { target: { value: text } });
     await user.click(within(dialog).getByRole("button", { name: "Preview" }));
     expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("2 ready to import, 1 rejected, 3 rows in total.");
-    expect(within(dialog).getByTestId("import-rejected")).toHaveTextContent("whole number");
+    expect(within(dialog).getByTestId("import-rejected")).toHaveTextContent("must be a number");
     expect(within(dialog).getByTestId("import-unfinished")).toHaveTextContent(/1 row is missing details a bulb needs/);
     expect(within(dialog).getByTestId("import-unfinished")).toHaveTextContent("Row 3: Base");
     const results = await axe(dialog);

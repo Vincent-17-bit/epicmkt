@@ -10,7 +10,7 @@ import styles from "./ProductFilters.module.css";
 
 const toggle = (list, value) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 const digits = (value) => value.replace(/\D/g, "").slice(0, 9);
-const kes = (n) => Number(n).toLocaleString("en-KE");
+const kes = (n) => Number(n).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
 const PRESETS = [
   { label: "Under 500", min: "", max: "499" },
   { label: "500 – 1,000", min: "500", max: "1000" },

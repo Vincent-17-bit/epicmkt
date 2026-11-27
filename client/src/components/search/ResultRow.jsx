@@ -2,7 +2,7 @@ import { deliveryInfo } from "@epicmkt/shared";
 import ProductTile from "../ProductTile.jsx";
 import styles from "./ProductSearch.module.css";
 
-const kes = (n) => Math.round(n).toLocaleString("en-KE");
+const kes = (n) => Number(n).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
 export const itemHref = (item, valueId = null) => `/b/${item.business?.slug ?? item.businessSlug}/i/${encodeURIComponent(item.id)}${valueId ? `?v=${encodeURIComponent(valueId)}` : ""}`;
 
 /** The delivery line, from the shop's own setting (shared/src/delivery.js reads every shape it comes in). Nothing is guessed. */
