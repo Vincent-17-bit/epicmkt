@@ -30,6 +30,7 @@ export const OPTION_LIMITS = {
   valueId: 40,
   valueLabel: 40,
   sku: 40,
+  unit: 30, // a combination's own unit, such as "per jar of 48" (items.unit has the same limit)
   mediaPerVariant: 10,
   stock: 999999,
   specs: 20, // rows per combination (item_options_apply caps them at 20)
@@ -68,7 +69,8 @@ const storedOk = (sv, axisScale) => {
   return true;
 };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
+// Whole shillings only (migration 0161): the buyer is charged whole shillings, so a price with cents is refused instead of rounded.
+const MONEY = /^\d{1,10}$/;
 
 const isRecord = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v, max) => typeof v === "string" && v.trim() !== "" && v.trim().length <= max;
@@ -210,7 +212,7 @@ function check(options, { mediaIds } = {}) {
   rawVariants.forEach((row, i) => {
     const at = `variants.${i}`;
     const bad = (path, message) => add("invalid_variant", `${at}.${path}`, message);
-    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds", "specs", "priceTiers"].includes(k))) {
+    if (!isRecord(row) || Object.keys(row).some((k) => !["id", "choice", "price", "salePrice", "stock", "status", "sku", "mediaIds", "specs", "priceTiers", "unit"].includes(k))) {
       add("invalid_variant", at, "This variant is not valid.");
       return;
     }
@@ -234,6 +236,7 @@ function check(options, { mediaIds } = {}) {
     let sku = null;
     const media = [];
     let specs;
+    let unit;
     if (present(row, "price")) {
       price = money(row.price);
       if (Number.isNaN(price)) { bad("price", "Enter a number such as 1500."); price = null; }
@@ -274,6 +277,16 @@ function check(options, { mediaIds } = {}) {
         }
       }
     }
+    // The combination's own unit ("per jar of 48"): trimmed, blank or null clears it, absent leaves the stored one alone (migration 0159).
+    if (row.unit !== undefined) {
+      if (row.unit === null) unit = null;
+      else if (typeof row.unit !== "string") bad("unit", "Use text for the unit, such as per pack of 40.");
+      else {
+        const u = row.unit.trim();
+        if (u.length > OPTION_LIMITS.unit) bad("unit", `Use ${OPTION_LIMITS.unit} characters or fewer.`);
+        else unit = u === "" ? null : u;
+      }
+    }
     // Own quantity prices travel with the row but are saved by their own step in seller_save_item (migration 0094).
     if (row.priceTiers !== undefined && row.priceTiers !== null && !validateTiers(row.priceTiers, "whole").ok) bad("priceTiers", "Check this combination's quantity prices.");
     if (present(row, "specs")) {
@@ -281,7 +294,7 @@ function check(options, { mediaIds } = {}) {
       if (cleaned === null) bad("specs", `Use up to ${OPTION_LIMITS.specs} rows, each with a group from the list, a label and a value.`);
       else specs = cleaned;
     }
-    variants.push({ choice: Object.fromEntries(axes.map((a) => [a.key, row.choice[a.key]])), key, price, salePrice, stock, status, sku, mediaIds: media, ...(specs !== undefined && { specs }) });
+    variants.push({ choice: Object.fromEntries(axes.map((a) => [a.key, row.choice[a.key]])), key, price, salePrice, stock, status, sku, mediaIds: media, ...(specs !== undefined && { specs }), ...(unit !== undefined && { unit }) });
   });
   // The seller's default: a choice that matches one of the variants being saved. Absent keeps the stored default; null clears it.
   let defaultChoice;
@@ -431,6 +444,7 @@ export const publicOptions = ({ axes = [], variants = [], item = {}, chart = nul
     sku: v.sku ?? null,
     mediaIds: v.mediaIds ?? [],
     specs: v.specs ?? [],
+    unit: typeof v.unit === "string" && v.unit.trim() !== "" ? v.unit.trim() : null,
     stockLeft: item.showStockCount && v.status === "limited_stock" && Number.isInteger(v.stock) && v.stock > 0 ? v.stock : null,
   }));
   // `scale` (a scale id from shared/src/scales) and a value's `stored` (its stored scale value) are passed through when a seller's axis has them,

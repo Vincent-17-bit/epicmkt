@@ -6,9 +6,9 @@ export const ITEM_PRICE_TYPES = ["fixed", "from", "range", "free", "contact"];
 const money = (raw) => {
   const text = String(raw ?? "").replace(/,/g, "").trim();
   if (text === "") return { empty: true };
-  if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return { error: true };
+  if (!/^\d+$/.test(text)) return { error: true };
   const value = Number(text);
-  return value > 9999999999.99 ? { error: true } : { value };
+  return value > 9999999999 ? { error: true } : { value };
 };
 
 // Sellers can write as many facts as they need (migration 0137): the limits are only there to stop abuse, not to make anyone shorten.

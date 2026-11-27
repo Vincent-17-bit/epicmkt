@@ -218,19 +218,97 @@ test("the window in use is reported: 1 for the live count, none for the category
   assert.equal((await lists()).windowDays, 1);
 });
 
-test("rising is a jump against the term's own average; an everyday word does not rise", async () => {
+test("rising is a jump against the term's own average; an everyday word rises only while it is the most searched of the day", async () => {
   await history("water dispenser", 20, 1, 7); // steady every day
   await history("solar lamp", 1, 1, 7); // quiet
   await people("water dispenser", 20); // still 20 today
   await people("solar lamp", 9); // 9 today
   await refresh();
   const out = await lists();
-  assert.deepEqual(out.rising.map((x) => x.term), ["solar lamp"]);
-  assert.equal(Number(out.rising[0].ratio), 9);
-  assert.ok(out.popular.map((x) => x.term).includes("water dispenser"), "the everyday word is still popular");
+  assert.deepEqual(out.rising.map((x) => x.term), ["water dispenser", "solar lamp"], "20 people today make water dispenser the day's leader");
+  assert.equal(Number(out.rising[1].ratio), 9);
   assert.equal(out.popular.find((x) => x.term === "solar lamp").hot, true, "a rising term is flagged in popular too");
-  assert.equal(out.popular.find((x) => x.term === "water dispenser").hot, false);
+  assert.equal(out.popular.find((x) => x.term === "water dispenser").hot, true, "and so is the day's leader");
+  await people("solar lamp", 30);
+  await refresh();
+  const next = await lists();
+  assert.deepEqual(next.rising.map((x) => x.term), ["solar lamp"], "once another word overtakes, an everyday word stops rising");
+  assert.equal(next.popular.find((x) => x.term === "water dispenser").hot, false);
   assert.equal(out.rising[0].kind, "product");
+});
+
+const searches = (term, person, buckets) =>
+  sql(
+    c,
+    `insert into search_events (term, client_hash, bucket, at) select $1, 'hs' || $2::text, g, now() - interval '1 hour' from generate_series(1, $3::int) g`,
+    [term, person, buckets]
+  );
+
+test("the most searched word of the last 24 hours always leads Rising, even an everyday word, and it changes as the numbers change", async () => {
+  await history("water dispenser", 20, 1, 7);
+  await people("water dispenser", 6, { hoursAgo: 2 });
+  await people("solar lamp", 3, { hoursAgo: 3 });
+  await refresh();
+  let out = await lists();
+  assert.deepEqual(out.rising.map((x) => x.term), ["water dispenser", "solar lamp"]);
+  assert.equal(out.popular.find((x) => x.term === "water dispenser").hot, true);
+
+  await people("solar lamp", 10, { hoursAgo: 1 });
+  await refresh();
+  out = await lists();
+  assert.deepEqual(out.rising.map((x) => x.term), ["solar lamp"], "the leader changes with the numbers; the everyday word stops rising");
+});
+
+test("the leader is the word with the most searches summed over the 24 hours, not the one with the most people", async () => {
+  for (let p = 1; p <= 3; p++) await searches("solar lamp", `a${p}`, 4);
+  await people("gas cylinder", 5);
+  await refresh();
+  const out = await lists();
+  assert.equal(out.rising[0].term, "solar lamp");
+  assert.equal(out.rising[0].count, 3, "count stays the number of different people");
+});
+
+test("one person searching a word many times cannot make it the leader", async () => {
+  await searches("gas cylinder", "solo", 10);
+  await people("solar lamp", 3);
+  await refresh();
+  assert.deepEqual(await rising(), ["solar lamp"]);
+});
+
+test("log_search cleans punctuation and curly apostrophes, and still drops links and emails", async () => {
+  const log = async (ip, term) => {
+    await c.query("begin");
+    try {
+      await c.query(`set local role anon`);
+      await c.query(`select set_config('request.headers', $1, true)`, [JSON.stringify({ "cf-connecting-ip": ip })]);
+      await c.query(`select log_search($1)`, [term]);
+    } finally {
+      await c.query("commit");
+    }
+  };
+  await log("10.1.0.1", "Red   Bull!");
+  await log("10.1.0.2", "kid\u2019s shoes");
+  await log("10.1.0.3", "name@mail.com");
+  await log("10.1.0.4", "www.spam.com");
+  const rows = await sql(c, `select term from search_events order by id`);
+  assert.deepEqual(rows.map((r) => r.term), ["red bull", "kid's shoes"]);
+});
+
+test("the status shows when the last search arrived and how many came in the last 24 hours", async () => {
+  await people("solar lamp", 4, { hoursAgo: 2 });
+  await people("solar lamp", 1, { hoursAgo: 30 });
+  await refresh();
+  const out = (await run(service, `select trending_status() as out`))[0].out;
+  assert.equal(out.searches24h, 4);
+  assert.ok(out.lastSearchAt);
+});
+
+test("when the hourly list is stale, Rising still leads with the live top word", async () => {
+  await people("solar lamp", 3);
+  await sql(c, `update trending_settings set last_run_at = now() - interval '6 hours'`);
+  const out = await lists();
+  assert.equal(out.live, true);
+  assert.equal(out.rising[0].term, "solar lamp");
 });
 
 test("one enthusiastic searcher cannot make a term rise", async () => {

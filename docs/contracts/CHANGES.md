@@ -701,3 +701,37 @@ Entry format:
   - "What's included" lines are "Name: details"; the page shows the name in bold whatever was typed, and the editor refuses a picture without a name.
 - Who must act: apply 0138 (the update file, or the catch-up parts), and deploy the new versions of seller-media-ticket and seller-media3d-finalize.
 - Request files: none
+
+## 2026-11-27 U1: an option combination can have its own unit
+
+- Contract: v1 (additive, optional field)
+- Lane / author: seller options and item page
+- What changed:
+  - `OptionVariant` gains an optional `unit` (text of 1 to 30 characters, or `null`/absent). `checkOptionVariant` accepts it. `publicOptions` and
+    `public_item_options` return it on every `optionVariants` entry (`null` when the combination has none of its own).
+  - `seller_save_item` takes `options.variants[].unit` (absent = leave alone, `null` or blank = clear, text = set; more than 30 characters is
+    `invalid_variant`). `seller_item_options` returns it. `seller_duplicate_item` copies it. Migration `0159_variant_unit.sql`.
+  - The item page shows the chosen combination's unit after the price and uses the item's unit when the combination has none.
+  - Seller editor: a Unit field on every combination, a "set the unit for each size" panel, a prompt to show the price list or grid when the
+    typed prices already differ, a note on combinations that would silently cost the item price, and the "far from the others" check now
+    compares only combinations sold by the same unit.
+- Why: one item sold as 3 cubes, a pack of 40 and a jar of 48 showed "KES 160 per 3 cubes" for the jar, and a correct KES 10 sachet price was
+  flagged as a typing mistake next to the jar.
+- Who must act: nobody. Apply migration 0159 before the editor release (an editor that sends `unit` needs it); older clients keep working.
+- Request files: none
+
+## 2026-11-27 U2: prices are whole shillings; size price changes are logged
+
+- Contract: v1 (stricter validation, additive history fields)
+- Lane / author: seller catalog, item history
+- What changed:
+  - Every price (`price`, `price_max`, `sale_price`, and an option combination's `price` / `salePrice`) must be a whole number of shillings. A save
+    with cents is refused with `invalid_price` (P0001, hint = the column) by a trigger, so any writer is covered. The editor, the importer and
+    `validateItemForm` / `validateOptions` refuse it earlier with a plain message. Existing prices are rounded half up once; a sale price is kept
+    below its price (dropped only if it would be below 1). Migration `0161_whole_prices_option_history.sql`.
+  - `item_history` gains rows with field `option_price:<size label>`, `option_sale_price:`, `option_status:` and `option_unit:` when a size's
+    value changes, or when a size is added to an item that already had sizes. The History view shows them as "Price of <size>".
+  - Listing cards show "price varies" next to the options text when the price depends on the choice, instead of "From KES x" alone.
+- Why: a stored 10.50 was charged as KES 11, so three cost KES 33 instead of KES 31.50; and a changed size price left no trace.
+- Who must act: apply migration 0161 (rounds existing prices, may drop a sale price that cannot stay below its price). Clients that send cents get `invalid_price`.
+- Request files: none

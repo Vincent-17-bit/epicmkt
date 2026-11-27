@@ -106,6 +106,7 @@ export function checkOptionVariant(v, path = "variant", axes = null) {
   if (!VARIANT_STATUSES.includes(v.status)) out.push(`${path}.status: must be one of ${VARIANT_STATUSES.join(", ")}`);
   if (!(v.sku === null || typeof v.sku === "string")) out.push(`${path}.sku: must be a string or null`);
   if (!Array.isArray(v.mediaIds)) out.push(`${path}.mediaIds: must be a list`);
+  if (v.unit !== undefined && v.unit !== null && !(typeof v.unit === "string" && v.unit.trim() !== "" && v.unit.length <= 30)) out.push(`${path}.unit: must be text of 1 to 30 characters, or null`);
   if (v.dimensions !== undefined) out.push(...checkDimensions(v.dimensions, `${path}.dimensions`));
   if (v.weightGrams !== undefined && (!num(v.weightGrams) || v.weightGrams <= 0)) out.push(`${path}.weightGrams: must be a number above 0`);
   if (v.priceTiers !== undefined) out.push(...checkPriceTiers(v.priceTiers, `${path}.priceTiers`));

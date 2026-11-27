@@ -8,7 +8,7 @@ import HomeProducts from "./HomeProducts.jsx";
 import { itemPagePath } from "./ProductTile.jsx";
 import { GRID_PAGE_SIZES, countsSummary, facetsSummary, pageOf } from "../lib/productQuery.js";
 
-vi.mock("../api/index.js", () => ({ items: { getPage: vi.fn(), getFacets: vi.fn(), getCounts: vi.fn() }, getCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "hardware", name: "Hardware" }]), logContactEvent: vi.fn() }));
+vi.mock("../api/index.js", () => ({ items: { getPage: vi.fn(), getFacets: vi.fn(), getCounts: vi.fn() }, getCategories: vi.fn(async () => [{ id: "bakery", name: "Bakery" }, { id: "hardware", name: "Hardware" }]), logContactEvent: vi.fn(), logSearch: vi.fn() }));
 
 const product = (n, over = {}) => ({
   id: `item-${n}`,

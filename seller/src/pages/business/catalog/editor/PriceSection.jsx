@@ -38,11 +38,11 @@ export default function PriceSection({ form, patch, errors, focusOn, goTo = null
 
       {priced && (
         <div className={styles.pair}>
-          <Field name="price" label={range ? "Lowest price (KES)" : "Price (KES)"} area="price" inputMode="decimal" enterKeyHint="next" autoComplete="off" value={form.price} error={errors.price} onChange={on("price")} />
-          {range && <Field name="priceMax" label="Highest price (KES)" area="price" inputMode="decimal" enterKeyHint="next" autoComplete="off" value={form.priceMax} error={errors.priceMax} onChange={on("priceMax")} />}
+          <Field name="price" label={range ? "Lowest price (KES)" : "Price (KES)"} area="price" inputMode="numeric" enterKeyHint="next" autoComplete="off" value={form.price} error={errors.price} onChange={on("price")} />
+          {range && <Field name="priceMax" label="Highest price (KES)" area="price" inputMode="numeric" enterKeyHint="next" autoComplete="off" value={form.priceMax} error={errors.priceMax} onChange={on("priceMax")} />}
           {showSale && (
             <div className={styles.saleBox}>
-              <Field name="salePrice" label="Sale price (KES, optional)" area="price" inputMode="decimal" enterKeyHint="next" autoComplete="off" value={form.salePrice} error={errors.salePrice} onChange={on("salePrice")}
+              <Field name="salePrice" label="Sale price (KES, optional)" area="price" inputMode="numeric" enterKeyHint="next" autoComplete="off" value={form.salePrice} error={errors.salePrice} onChange={on("salePrice")}
                 hint="Must be below the regular price. Customers see the old price crossed out." />
               <button type="button" className={styles.linkBtn} onClick={() => { patch("salePrice", ""); setSaleOpen(false); }}>Remove sale price</button>
             </div>
@@ -72,7 +72,7 @@ export default function PriceSection({ form, patch, errors, focusOn, goTo = null
             renderRow={(v, i, edit) => (
               <>
                 <Field name={`var-${i}-label`} label={`Option ${i + 1} name`} area="variants" max={LIMITS.variants.label} value={v.label} error={errors.variants?.[i]?.label} onChange={(e) => edit((r) => ({ ...r, label: e.target.value }))} autoComplete="off" />
-                <Field name={`var-${i}-price`} label={`Option ${i + 1} price (KES)`} area="variants" inputMode="decimal" autoComplete="off" value={v.price} error={errors.variants?.[i]?.price} onChange={(e) => edit((r) => ({ ...r, price: e.target.value }))} />
+                <Field name={`var-${i}-price`} label={`Option ${i + 1} price (KES)`} area="variants" inputMode="numeric" autoComplete="off" value={v.price} error={errors.variants?.[i]?.price} onChange={(e) => edit((r) => ({ ...r, price: e.target.value }))} />
                 <Field name={`var-${i}-stock`} label={`Option ${i + 1} in stock (optional)`} area="variants" inputMode="numeric" pattern="[0-9]*" maxLength={6} autoComplete="off" value={v.stock} error={errors.variants?.[i]?.stock} onChange={(e) => edit((r) => ({ ...r, stock: e.target.value }))} />
               </>
             )}

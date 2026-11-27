@@ -96,8 +96,8 @@ export default function OptionsStep({ form, patch, errors, media }) {
               )}
             </div>
             <SummaryTiles options={options} itemPrice={itemPrice} />
-            <PriceModes options={options} set={set} announce={setSaid} itemPrice={itemPrice} priceAxes={known} setPriceAxes={setPriceAxes} errors={found} />
-            <Combinations options={options} set={set} errors={found} announce={setSaid} itemPrice={itemPrice} tiersAllowed={form.priceType === "from"} hidePrice={modeLayout === "single" || modeLayout === "list" || modeLayout === "grid"} />
+            <PriceModes options={options} set={set} announce={setSaid} itemPrice={itemPrice} itemUnit={form.unit ?? ""} priceAxes={known} setPriceAxes={setPriceAxes} errors={found} />
+            <Combinations options={options} set={set} errors={found} announce={setSaid} itemPrice={itemPrice} itemUnit={form.unit ?? ""} tiersAllowed={form.priceType === "from"} hidePrice={modeLayout === "single" || modeLayout === "list" || modeLayout === "grid"} />
             {CUSTOM_SIZE_STORED && <CustomSizeEditor options={options} config={form.customSize} set={(v) => patch("customSize", v)} errors={found} announce={setSaid} />}
           </>
         )}

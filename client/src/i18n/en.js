@@ -129,6 +129,7 @@ export default {
   "item.options": "Options",
   "item.optionsOne": "1 option",
   "item.optionsMany": "{n} options",
+  "item.priceVaries": "price varies",
   "item.goneHint": "It may have been sold out, removed or ended. More from this store:",
   "item.flash": "Flash sale",
   "flash.label": "Flash sale",

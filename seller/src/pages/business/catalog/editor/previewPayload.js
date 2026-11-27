@@ -25,7 +25,7 @@ function optionsOf(form, tiles, price, salePrice) {
   const variants = rows.map((r, i) => {
     const stock = int(r.stock);
     const status = stock === 0 ? "out_of_stock" : stock !== null && stock <= 3 ? "limited_stock" : r.status ?? "available";
-    return { id: r.id ?? `pv${i + 1}`, choice: r.choice, price: num(r.price) ?? null, salePrice: num(r.salePrice), stock, status, mediaIds: r.mediaIds ?? [], specs: r.specs ?? [] };
+    return { id: r.id ?? `pv${i + 1}`, choice: r.choice, price: num(r.price) ?? null, salePrice: num(r.salePrice), stock, status, mediaIds: r.mediaIds ?? [], specs: r.specs ?? [], unit: r.unit ?? null };
   });
   if (variants.length === 0) return null;
   const def = o.defaultKey ? variants.find((v) => comboKey(axes, v.choice) === o.defaultKey) : null;

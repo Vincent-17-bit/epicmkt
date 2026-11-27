@@ -743,7 +743,7 @@ describe("paste and CSV import", () => {
     expect(await within(dialog).findByTestId("import-summary")).toHaveTextContent("2 ready to import, 2 rejected, 4 rows in total.");
     const rejected = within(dialog).getByTestId("import-rejected");
     expect(rejected).toHaveTextContent("spreadsheet formula");
-    expect(rejected).toHaveTextContent("must be a number");
+    expect(rejected).toHaveTextContent("whole number");
     expect(within(dialog).getByLabelText("Price column")).toHaveValue("2");
     URL.createObjectURL = vi.fn(() => "blob:x");
     URL.revokeObjectURL = vi.fn();

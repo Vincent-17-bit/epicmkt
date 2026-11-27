@@ -230,11 +230,15 @@ export async function getTopSearches(limit = 10) {
   return rows.map((row) => ({ term: row.term, count: row.count, hot: Boolean(row.hot) }));
 }
 
+const RETRY_MS = 3000;
+
 export async function logSearch(term) {
-  try {
-    const plain = await supabase.rpc("log_search", { p_term: term });
-    return { ok: !plain?.error };
-  } catch {
-    return { ok: false };
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const plain = await supabase.rpc("log_search", { p_term: term });
+      if (!plain?.error) return { ok: true };
+    } catch {}
+    if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, RETRY_MS));
   }
+  return { ok: false };
 }

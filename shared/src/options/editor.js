@@ -3,7 +3,7 @@
 // The form holds ONE shape, and the combination rows are the single source of truth:
 //   options = {
 //     axes:   [{ key, label, display, dependsOn?, values: [{ id, label, color? }] }],
-//     rows:   [{ choice, price, salePrice, stock, sold, specs, id?, sku?, status?, mediaIds? }],   // one per generated combination
+//     rows:   [{ choice, price, salePrice, unit, stock, sold, specs, id?, sku?, status?, mediaIds? }],   // one per generated combination
 //     defaultKey: "colour=black|storage=64-gb" | null,
 //   }
 // Numbers are typed text while editing ("24,000"). A row with `sold: false` is a combination the seller does not sell: it is kept in
@@ -14,7 +14,8 @@ import { OPTION_LIMITS, VARIANT_STATUSES, comboKey, optionSlug, validateOptions 
 import { generateCombinations } from "./combinations.js";
 import { rowTiersProblem, rowTiersToStored } from "./rowTiers.js";
 
-const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
+// Whole shillings only: a price with cents (10.50) used to be charged rounded (KES 11), so it is not accepted at all.
+const MONEY = /^\d{1,10}$/;
 const clean = (v) => String(v ?? "").replace(/,/g, "").trim();
 export const isMoney = (v) => MONEY.test(clean(v));
 
@@ -63,7 +64,7 @@ const newRid = () => `a${Date.now().toString(36)}${(ridSeq += 1)}`;
 
 export const emptyOptionsForm = () => ({ axes: [], rows: [], defaultKey: null });
 
-const newRow = (choice) => ({ choice, price: "", salePrice: "", stock: "", sold: true, specs: [] });
+const newRow = (choice) => ({ choice, price: "", salePrice: "", unit: "", stock: "", sold: true, specs: [] });
 export const rowKeyOf = (options, choice) => comboKey(options.axes, choice);
 const rowFor = (options, key) => options.rows.find((r) => rowKeyOf(options, r.choice) === key);
 // The rows that are a full combination of the current axes. (While an axis has no values the old rows wait, unused.)
@@ -312,7 +313,7 @@ export const summaryText = (s, fmt = (n) => `KES ${n.toLocaleString("en-KE")}`) 
 export const optionsFromServer = (data) => {
   const axes = (data?.axes ?? []).map((a) => ({ key: a.key, label: a.label, display: a.display, ...(a.dependsOn && { dependsOn: a.dependsOn }), ...(a.scale && { scale: a.scale }), values: a.values.map((v) => ({ id: v.id, label: v.label, ...(v.color && { color: v.color }), ...(v.mediaId && { mediaId: v.mediaId }), ...(v.stored && { stored: v.stored }) })) }));
   const text = (n) => (n === null || n === undefined ? "" : String(n));
-  const sold = (data?.variants ?? []).map((v) => ({ choice: v.choice, price: text(v.price), salePrice: text(v.salePrice), stock: text(v.stock), sold: true, specs: v.specs ?? [], id: v.id, sku: v.sku ?? undefined, status: v.status, mediaIds: v.mediaIds ?? [] }));
+  const sold = (data?.variants ?? []).map((v) => ({ choice: v.choice, price: text(v.price), salePrice: text(v.salePrice), unit: text(v.unit), hadUnit: Boolean(v.unit), stock: text(v.stock), sold: true, specs: v.specs ?? [], id: v.id, sku: v.sku ?? undefined, status: v.status, mediaIds: v.mediaIds ?? [] }));
   const base = reconcileRows({ axes, rows: sold, defaultKey: null });
   // reconcileRows keeps exact matches; combinations the seller never sold come back as new rows, switched to not sold.
   const have = new Set(sold.map((r) => comboKey(axes, r.choice)));
@@ -336,6 +337,11 @@ const buildPayload = (options) => {
     const out = { choice: r.choice };
     if (clean(r.price) !== "") out.price = isMoney(r.price) ? Number(clean(r.price)) : clean(r.price);
     if (clean(r.salePrice) !== "") out.salePrice = isMoney(r.salePrice) ? Number(clean(r.salePrice)) : clean(r.salePrice);
+    // The combination's own unit. Sent when typed, and as null when the seller cleared one that was saved; otherwise left out so a
+    // database that has not got migration 0159 yet still accepts the save.
+    const unit = String(r.unit ?? "").trim();
+    if (unit !== "") out.unit = unit;
+    else if (r.hadUnit) out.unit = null;
     if (clean(r.stock) !== "") out.stock = clean(r.stock);
     if (VARIANT_STATUSES.includes(r.status) && clean(r.stock) === "") out.status = r.status;
     if (r.sku) out.sku = r.sku;
@@ -404,7 +410,7 @@ export const setBasePlusDifference = (options, { baseAxis, diffAxis, base = {}, 
   const b = amount(base[r.choice[baseAxis]]);
   if (b === null) return r;
   const raw = clean(diff[r.choice[diffAxis]]);
-  const d = raw === "" ? 0 : /^-?\d{1,10}(\.\d{1,2})?$/.test(raw) ? Number(raw) : null;
+  const d = raw === "" ? 0 : /^-?\d{1,10}$/.test(raw) ? Number(raw) : null;
   if (d === null || b + d <= 0) return r;
   return { ...r, price: priceText(b + d) };
 });
@@ -498,18 +504,35 @@ export const fillDownPrices = (options) => {
   return { options: { ...options, rows }, filled };
 };
 
-// A plain warning (never a block) for a price far from the rest: 2,400 typed instead of 24,000. Keyed by combination.
-export const priceWarnings = (options) => {
-  const rows = liveRows(options).filter((r) => r.sold && amount(r.price) !== null && amount(r.price) > 0);
-  if (rows.length < 3) return {};
-  const sorted = rows.map((r) => amount(r.price)).sort((a, b) => a - b);
-  const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
-  const out = {};
+// The unit a combination is sold by: its own, else the item's. Compared in lower case so "Per jar" and "per jar" are one unit.
+export const unitOf = (row, itemUnit = "") => (String(row?.unit ?? "").trim() || String(itemUnit ?? "").trim()).toLowerCase();
+
+// Split rows into the sets that can fairly be compared on price: those sold by the same unit. A 3-cube sachet and a 48-piece jar are
+// not "the others" of each other, so a KES 10 sachet next to a KES 160 jar is not a typing mistake.
+export const byUnit = (rows, itemUnit = "") => {
+  const groups = new Map();
   for (const r of rows) {
-    const n = amount(r.price);
-    const key = rowKeyOf(options, r.choice);
-    if (n * 5 <= mid) out[key] = `This is far below the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
-    else if (n >= mid * 5) out[key] = `This is far above the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
+    const u = unitOf(r, itemUnit);
+    if (!groups.has(u)) groups.set(u, []);
+    groups.get(u).push(r);
+  }
+  return [...groups.values()];
+};
+
+// A plain warning (never a block) for a price far from the rest: 2,400 typed instead of 24,000. Keyed by combination. Only
+// combinations sold by the same unit are compared with each other.
+export const priceWarnings = (options, itemUnit = "") => {
+  const out = {};
+  for (const group of byUnit(liveRows(options).filter((r) => r.sold && amount(r.price) !== null && amount(r.price) > 0), itemUnit)) {
+    if (group.length < 3) continue;
+    const sorted = group.map((r) => amount(r.price)).sort((a, b) => a - b);
+    const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+    for (const r of group) {
+      const n = amount(r.price);
+      const key = rowKeyOf(options, r.choice);
+      if (n * 5 <= mid) out[key] = `This is far below the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
+      else if (n >= mid * 5) out[key] = `This is far above the others (around ${Math.round(mid).toLocaleString("en-KE")}). Check the number.`;
+    }
   }
   return out;
 };

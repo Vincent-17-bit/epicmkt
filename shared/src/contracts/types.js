@@ -71,6 +71,7 @@ export const ITEM_FIELDS = ["dimensions", "priceTiers", "quantity"];
  * @property {string|null} sku
  * @property {string[]} mediaIds
  * @property {number|null} stockLeft
+ * @property {string|null} [unit]        this combination's own unit ("per jar of 48"); null or absent means the item's unit
  * @property {Dimensions} [dimensions]   v1: per-option size (table, sofa)
  * @property {number} [weightGrams]      v1: per-option weight (gold necklace)
  * @property {PriceTier[]} [priceTiers]  v1: this option's own tiers; absent means the item's tiers apply

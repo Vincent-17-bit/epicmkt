@@ -59,7 +59,7 @@ test("save stores axes and variants; seller and public reads show them; an absen
   await save(asA, id, withOptions([
     v("red", "s", { price: 1500, salePrice: 1200, stock: 4, status: "limited_stock", sku: "R-S", mediaIds: [m1] }),
     v("red", "m", { stock: 0 }),
-    v("blue", "m", { price: "1800.50" }),
+    v("blue", "m", { price: "1801" }),
   ]));
   const mine = await sellerRead(id);
   assert.equal(mine.axes.length, 2);
@@ -67,7 +67,7 @@ test("save stores axes and variants; seller and public reads show them; an absen
   assert.deepEqual(mine.variants.map((x) => [x.choice.color, x.choice.size, x.price, x.salePrice, x.stock, x.status, x.sku]), [
     ["red", "s", 1500, 1200, 4, "limited_stock", "R-S"],
     ["red", "m", null, null, 0, "out_of_stock", null],
-    ["blue", "m", 1800.5, null, null, "available", null],
+    ["blue", "m", 1801, null, null, "available", null],
   ]);
   assert.deepEqual(mine.variants[0].mediaIds, [m1]);
 

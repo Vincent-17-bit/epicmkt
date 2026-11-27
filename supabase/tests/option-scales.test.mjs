@@ -174,7 +174,7 @@ test("the payload the seller editor builds (storage sizes with scale data) is ac
   o = addAxis(o, { label: "Storage", display: "button", scale: "storage" });
   o = typed(o, "storage", "storage", "128gb");
   o = typed(o, "storage", "storage", "1024 GB");
-  o.rows[0].price = "20000.50";
+  o.rows[0].price = "20001";
   o.rows[0].stock = "4";
   const payload = optionsPayload(o, true);
   assert.equal(payload.axes[1].scale, "storage");
@@ -186,7 +186,7 @@ test("the payload the seller editor builds (storage sizes with scale data) is ac
   assert.deepEqual(mine.axes[1].values.map((v) => v.stored), [{ scale: "storage", value: 128, unit: "GB" }, { scale: "storage", value: 1024, unit: "GB" }]);
   assert.equal("scale" in mine.axes[0], false);
   assert.equal(mine.variants.length, 2);
-  assert.deepEqual([mine.variants[0].price, mine.variants[0].stock], [20000.5, 4]);
+  assert.deepEqual([mine.variants[0].price, mine.variants[0].stock], [20001, 4]);
 
   // the editor reads it back and a save without changes sends the same axes
   const again = optionsPayload(optionsFromServer(mine), true);

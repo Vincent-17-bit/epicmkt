@@ -105,3 +105,21 @@ describe("ItemView slot props", () => {
     expect(render(<ItemDetails item={bare} />).container).toBeEmptyDOMElement();
   });
 });
+
+describe("ItemHeader unit", () => {
+  const priced = (unit) => ({ id: "a", label: "Jar", regularPrice: 160, salePrice: 160, savings: 0, discountPercent: 0, ...(unit !== undefined && { unit }) });
+
+  it("shows the chosen combination's own unit instead of the item's", () => {
+    render(<ItemHeader item={item({ pricing: { ...item().pricing, unit: "per 3 cubes" } })} shown={priced("per jar of 48")} />);
+    expect(screen.getByText("/ per jar of 48")).toBeInTheDocument();
+    expect(screen.queryByText("/ per 3 cubes")).toBeNull();
+  });
+
+  it("falls back to the item's unit when the combination has none, and to nothing when neither has one", () => {
+    const { unmount } = render(<ItemHeader item={item({ pricing: { ...item().pricing, unit: "per 3 cubes" } })} shown={priced(null)} />);
+    expect(screen.getByText("/ per 3 cubes")).toBeInTheDocument();
+    unmount();
+    render(<ItemHeader item={item()} shown={priced()} />);
+    expect(document.querySelector("[class*=unit]")).toBeNull();
+  });
+});
