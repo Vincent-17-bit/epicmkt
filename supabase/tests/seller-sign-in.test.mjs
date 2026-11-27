@@ -122,6 +122,18 @@ test("verify_phone has its own resend wait and hourly limit, apart from the othe
   assert.equal((await issue("100002", "verify_email", "email", "a@b.co")).ok, true); // another purpose is not held up by it
 });
 
+test("seller_set_verified_phone refuses a suspended seller and leaves the number alone", async () => {
+  const [{ phone: before, status }] = await sql(c, `select phone, status from businesses where id = '${ids.bizA}'`);
+  await sql(c, `update businesses set status = 'suspended' where id = '${ids.bizA}'`);
+  try {
+    await rejects(c, asService, `select seller_set_verified_phone('${ids.bizA}', '0722000111')`, [], /account_suspended/);
+    assert.equal((await sql(c, `select phone from businesses where id = '${ids.bizA}'`))[0].phone, before);
+    await rejects(c, asA, `select assert_seller_active('${ids.bizA}'::uuid)`, [], /permission denied/);
+  } finally {
+    await sql(c, `update businesses set status = $1 where id = '${ids.bizA}'`, [status]);
+  }
+});
+
 test("seller_set_verified_phone saves the normalised number, refuses the same one, and returns the old number", async () => {
   const [{ phone: before }] = await sql(c, `select phone from businesses where id = '${ids.bizA}'`);
   const first = await setPhone("0722 000 111");

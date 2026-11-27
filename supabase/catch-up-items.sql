@@ -20485,7 +20485,74 @@ on conflict (day, scope, term) do update
 
 select public.refresh_trending();
 
-$m_0160_trending_day_leader$)
+$m_0160_trending_day_leader$),
+    ('0161_public_saved_items', $m_0161_public_saved_items$
+-- 0161_public_saved_items.sql
+-- One read for the buyer's Saved drawer: public_saved_items(ids) returns, for each id asked (in the order asked, at most 200):
+--   { id, item, options, tiers, redirect }
+--   item      the public_items row, or null when the item is not listed any more (hidden, sold out, deleted)
+--   options   public_item_options(id) for a listed item (options, optionVariants, ...), else null
+--   tiers     public_item_tiers(id) for a listed item, else null
+--   redirect  public_item_redirect(id) for an item that is not listed (the seller combined it into another), else null
+-- It only calls the existing public reads, so it can show nothing they do not. Read-only: nothing is changed anywhere.
+
+create or replace function public.public_saved_items(p_ids uuid[]) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'id', x.id,
+           'item', l.item,
+           'options', case when l.item is not null then public.public_item_options(x.id) end,
+           'tiers',   case when l.item is not null then public.public_item_tiers(x.id) end,
+           'redirect', case when l.item is null then public.public_item_redirect(x.id) end
+         ) order by x.n), '[]'::jsonb)
+  from unnest(coalesce(p_ids[1:200], '{}'::uuid[])) with ordinality as x(id, n)
+  left join lateral (select to_jsonb(pi) as item from public.public_items pi where pi.id = x.id) l on true
+$$;
+
+revoke all on function public.public_saved_items(uuid[]) from public;
+grant execute on function public.public_saved_items(uuid[]) to anon, authenticated, service_role;
+
+$m_0161_public_saved_items$),
+    ('0162_seller_phone_suspended', $m_0162_seller_phone_suspended$
+-- 0162_seller_phone_suspended.sql
+-- A suspended seller cannot change the phone number on their listing.
+-- seller_set_verified_phone is called by an edge function as the service role, so there is no seller session for assert_seller_active()
+-- to read. assert_seller_active(p_business) checks the named business instead, and seller_set_verified_phone calls it first.
+
+create or replace function public.assert_seller_active(p_business uuid) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from public.businesses b where b.id = p_business and b.status = 'suspended') then
+    raise exception 'account_suspended' using errcode = 'P0001';
+  end if;
+end $$;
+revoke all on function public.assert_seller_active(uuid) from public, anon, authenticated;
+grant execute on function public.assert_seller_active(uuid) to service_role;
+
+create or replace function public.seller_set_verified_phone(p_business uuid, p_phone text, p_also_whatsapp boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_new text := public.normalize_phone_ke(p_phone);
+  v_old text;
+  v_wa text;
+  v_cancelled integer;
+  v_wa_changed boolean := false;
+begin
+  perform public.assert_seller_active(p_business);
+  if v_new is null then return jsonb_build_object('ok', false, 'reason', 'invalid_phone'); end if;
+  select b.phone, b.whatsapp into v_old, v_wa from public.businesses b where b.id = p_business and b.status <> 'deleted' for update;
+  if not found then return jsonb_build_object('ok', false, 'reason', 'not_found'); end if;
+  if v_old is not distinct from v_new then return jsonb_build_object('ok', false, 'reason', 'no_change'); end if;
+
+  v_wa_changed := coalesce(p_also_whatsapp, false) and v_wa is distinct from v_new;
+  update public.businesses set phone = v_new, whatsapp = case when v_wa_changed then v_new else whatsapp end where id = p_business;
+  update public.change_requests c set status = 'cancelled', decided_at = now()
+   where c.business_id = p_business and c.field = 'phone' and c.status = 'pending';
+  get diagnostics v_cancelled = row_count;
+  return jsonb_build_object('ok', true, 'phone', v_new, 'previous', v_old, 'whatsappChanged', v_wa_changed, 'cancelledRequests', v_cancelled);
+end $$;
+
+$m_0162_seller_phone_suspended$)
   ) as t(f, body) order by t.f loop
     if m.f >= v_first then
       v_step := v_step + 1;

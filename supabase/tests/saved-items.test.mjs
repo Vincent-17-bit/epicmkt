@@ -1,4 +1,4 @@
-// Migration 0160: public_saved_items. Listed rows only, in the order asked, at most 200 ids, and a redirect for an item that is not listed.
+// Migration 0161: public_saved_items. Listed rows only, in the order asked, at most 200 ids, and a redirect for an item that is not listed.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createDatabase, connect, seedFixtures, tx, sql, asA, withType } from "./db.mjs";
@@ -11,7 +11,7 @@ before(async () => {
 });
 after(async () => { await c.end(); });
 beforeEach(async () => {
-  await sql(c, `delete from item_redirects; delete from item_history; delete from items`);
+  await sql(c, `delete from item_redirects; delete from item_merges; delete from item_history; delete from items`);
   await sql(c, `update businesses set status = 'live', paid_until = now() + interval '30 days'`);
 });
 
@@ -43,7 +43,12 @@ test("an unknown id is an entry with no item, never an error", async () => {
 test("an item the seller merged into another comes back with where it went", async () => {
   const keep = await make("Keep");
   const gone = await make("Gone", false);
-  await sql(c, `insert into item_redirects (old_item_id, new_item_id, choice) values ($1, $2, '{}'::jsonb)`, [gone, keep]);
+  const [{ id: merge }] = await sql(
+    c,
+    `insert into item_merges (business_id, target_id, source_ids, merged_axes, snapshot) select business_id, $1, array[$2::uuid], '{}'::jsonb, '{}'::jsonb from items where id = $1 returning id`,
+    [keep, gone]
+  );
+  await sql(c, `insert into item_redirects (old_item_id, new_item_id, merge_id, choice) values ($1, $2, $3, '{}'::jsonb)`, [gone, keep, merge]);
   const out = await read([gone]);
   assert.equal(out[0].item, null);
   assert.equal(out[0].redirect.itemId, keep);
