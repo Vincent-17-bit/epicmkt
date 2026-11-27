@@ -6,6 +6,8 @@ import styles from "./ItemView.module.css";
 // `marks` is the optional callback that tags parts for the design tool (data-hl); it is not used by the shop.
 export default function ItemHeader({ item, shown, t = itemT, Heading = "h2", headingRef, headingId = "item-title", marks }) {
   const mark = (part) => marks?.(part);
+  // The unit of what is shown: the chosen combination's own when it has one, else the item's.
+  const unit = shown?.unit ?? item.pricing?.unit ?? null;
   return (
     <>
       {item.brand && <p className={styles.brand} data-hl={mark("brand")}>{item.brand}</p>}
@@ -20,7 +22,7 @@ export default function ItemHeader({ item, shown, t = itemT, Heading = "h2", hea
             <>
               <p className={styles.salePrice}>
                 {formatKes(shown.salePrice)}
-                {item.pricing.unit && <span className={styles.unit}> / {item.pricing.unit}</span>}
+                {unit && <span className={styles.unit}> / {unit}</span>}
                 <span className={styles.saleChip}>
                   {t("item.sale")} -{shown.discountPercent}%
                 </span>
@@ -38,7 +40,7 @@ export default function ItemHeader({ item, shown, t = itemT, Heading = "h2", hea
           ) : (
             <p className={styles.price}>
               {formatKes(shown.regularPrice)}
-              {item.pricing.unit && <span className={styles.unit}> / {item.pricing.unit}</span>}
+              {unit && <span className={styles.unit}> / {unit}</span>}
             </p>
           )}
         </div>

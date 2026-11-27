@@ -18,6 +18,9 @@
 .biz-field { display: grid; gap: var(--space-1); }
 .biz-field dt { font-size: var(--fs-xs); line-height: var(--lh-xs); letter-spacing: var(--ls-xs); color: var(--text-muted); }
 .biz-field dd { margin: 0; overflow-wrap: anywhere; }
+.biz-history { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: var(--space-3); }
+.biz-history li { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid var(--border); }
+.biz-history li > div { min-width: 0; overflow-wrap: anywhere; }
 .biz-table-wrap { overflow-x: auto; }
 .biz-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); line-height: var(--lh-sm); }
 .biz-table th, .biz-table td { text-align: left; padding: var(--space-2) var(--space-2); border-bottom: 1px solid var(--border); vertical-align: top; }

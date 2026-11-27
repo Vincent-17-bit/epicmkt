@@ -5,7 +5,9 @@ import { phoneChanged } from "../_shared/messages.ts";
 // Changes the phone number on a seller's listing. Needs BOTH the code that was texted to the new number (proof they hold it) and
 // the current password (proof the person holding this session is the owner). The number saved is the one the code was issued
 // for, never one taken from this request.
-const Body = z.object({ code: codeSchema, currentPassword: passwordSchema });
+// alsoWhatsapp: use the same number for the shop's WhatsApp button too. Left off, the WhatsApp number is not touched, so a seller
+// can keep one number for calls and another for WhatsApp.
+const Body = z.object({ code: codeSchema, currentPassword: passwordSchema, alsoWhatsapp: z.boolean().optional() });
 
 export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
   const parsed = Body.safeParse(await readJson(req));
@@ -22,7 +24,7 @@ export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
   const verified = (await d.db.rpc("seller_otp_verify", { p_business: b.id, p_purpose: "verify_phone", p_code: parsed.data.code })).data;
   if (!verified?.ok || !verified.target) return json({ error: "invalid_code", message: GENERIC_CODE }, 400);
 
-  const saved = await d.db.rpc("seller_set_verified_phone", { p_business: b.id, p_phone: String(verified.target) });
+  const saved = await d.db.rpc("seller_set_verified_phone", { p_business: b.id, p_phone: String(verified.target), p_also_whatsapp: parsed.data.alsoWhatsapp === true });
   const result = saved?.data;
   if (saved?.error || !result) return json({ error: "server_error" }, 500);
   if (!result.ok) {
@@ -32,7 +34,7 @@ export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
   }
   const phone = String(result.phone);
   const previous = String(result.previous ?? b.phone);
-  await auditInsert(d.db, { business_id: b.id, actor_id: ctx.userId, action: "phone_changed", data: { phone: maskPhone(phone), previous: maskPhone(previous), cancelledRequests: result.cancelledRequests ?? 0 } });
+  await auditInsert(d.db, { business_id: b.id, actor_id: ctx.userId, action: "phone_changed", data: { phone: maskPhone(phone), previous: maskPhone(previous), whatsappChanged: result.whatsappChanged === true, cancelledRequests: result.cancelledRequests ?? 0 } });
 
   // Tell the OLD number, and the verified email if there is one, so a takeover cannot go unnoticed. Best effort.
   const n = phoneChanged(maskPhone(phone));
@@ -40,5 +42,5 @@ export const sellerSetPhone = (d: Deps) => wrap(async (req) => {
   if (b.login_email && b.login_email_verified_at) {
     try { await d.email(b.login_email, n.subject, emailHtml(n.text)); } catch (_) { /* notice only */ }
   }
-  return json({ ok: true, phone });
+  return json({ ok: true, phone, whatsappChanged: result.whatsappChanged === true });
 });

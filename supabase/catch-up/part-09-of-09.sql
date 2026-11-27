@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0156). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
+-- EpicMKT catch-up, PART 9 OF 9 (migrations 0145 to 0159). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. A part run before the one before it stops without changing anything.
@@ -1962,7 +1962,450 @@ begin
   end loop;
 end $$;
 
-$m_0156_seller_verified_phone$)
+$m_0156_seller_verified_phone$),
+    ('0157_trending_adaptive_window', $m_0157_trending_adaptive_window$
+-- Trending: Popular stays full on a quiet week.
+-- The window widens (7, then 14, then 30 days) until `popular_target` words qualify, and words are ordered by recency-weighted people.
+
+alter table public.trending_settings
+  add column if not exists popular_target integer not null default 10 check (popular_target between 1 and 20),
+  add column if not exists popular_mid_days integer not null default 14 check (popular_mid_days between 1 and 90),
+  add column if not exists popular_max_days integer not null default 30 check (popular_max_days between 1 and 90),
+  add column if not exists popular_half_life numeric not null default 7 check (popular_half_life >= 0);
+
+alter table public.search_trending add column if not exists window_days integer;
+
+create or replace function public.refresh_trending() returns void
+language plpgsql volatile security definer set search_path = public, extensions set statement_timeout = '90s' as
+$$
+declare
+  s public.trending_settings;
+  v_today date := (now() at time zone 'Africa/Nairobi')::date;
+  v_from timestamptz := (((now() at time zone 'Africa/Nairobi')::date - 1)::timestamp at time zone 'Africa/Nairobi');
+  v_traffic integer;
+  v_min integer;
+  w1 integer;
+  w2 integer;
+  w3 integer;
+  v_win integer;
+begin
+  select * into s from public.trending_settings limit 1;
+  select count(distinct client_hash) into v_traffic from public.search_events where at > now() - interval '48 hours';
+  v_min := least(s.min_people_cap, greatest(s.min_people, ceil(coalesce(v_traffic, 0) * s.min_people_pct)::integer));
+  w3 := least(greatest(s.popular_max_days, s.popular_mid_days, s.popular_days), s.keep_days);
+  w2 := least(greatest(s.popular_mid_days, s.popular_days), w3);
+  w1 := least(s.popular_days, w2);
+
+  drop table if exists t_ev, t_cand, t_res, t_r24;
+
+  create temp table t_ev on commit drop as
+    select (e.at at time zone 'Africa/Nairobi')::date as day, e.client_hash,
+           public.search_group_key(l.label) as key, l.label
+    from public.search_events e
+    cross join lateral (select public.search_canon_label(e.term) as label) l
+    where e.at >= v_from;
+  delete from t_ev where key = '';
+
+  insert into public.search_term_daily (day, term, scope, label, people)
+  select day, key, '*', mode() within group (order by label), count(distinct client_hash) from t_ev group by day, key
+  on conflict (day, scope, term) do update
+    set people = greatest(public.search_term_daily.people, excluded.people), label = excluded.label;
+
+  delete from public.search_term_daily where day < v_today - s.keep_days;
+
+  create temp table t_cand on commit drop as
+  with pop as (
+    select d.scope, d.term as key, (array_agg(d.label order by d.people desc, d.day desc))[1] as label,
+           coalesce(sum(d.people) filter (where d.day > v_today - w1), 0)::integer as p1,
+           coalesce(sum(d.people) filter (where d.day > v_today - w2), 0)::integer as p2,
+           sum(d.people)::integer as p3,
+           coalesce(sum(d.people * d.w) filter (where d.day > v_today - w1), 0) as s1,
+           coalesce(sum(d.people * d.w) filter (where d.day > v_today - w2), 0) as s2,
+           sum(d.people * d.w) as s3
+    from (
+      select t.*, case when s.popular_half_life > 0 then power(0.5::numeric, (v_today - t.day)::numeric / s.popular_half_life) else 1 end as w
+      from public.search_term_daily t
+      where t.scope = '*' and t.day > v_today - w3 and t.day <= v_today
+    ) d
+    group by d.scope, d.term
+  ), r24 as (
+    select scope, key, count(distinct client_hash)::integer as people, mode() within group (order by label) as label
+    from (
+      select '*' as scope, public.search_group_key(l.label) as key, e.client_hash, l.label
+      from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+      where e.at > now() - interval '24 hours'
+    ) x where key <> '' group by scope, key
+  ), base as (
+    select scope, term as key, sum(people)::numeric / 7.0 as per_day
+    from public.search_term_daily where scope = '*' and day between v_today - 7 and v_today - 1 group by scope, term
+  )
+  select 'popular'::text as list, p.scope, p.key, p.label, p.p3 as people, null::numeric as ratio,
+         p.p1, p.p2, p.p3, p.s1, p.s2, p.s3
+  from pop p where p.p3 >= v_min
+  union all
+  select 'rising', r.scope, r.key, r.label, r.people, round(r.people / greatest(coalesce(b.per_day, 0), 1.0), 2),
+         null::integer, null::integer, null::integer, null::numeric, null::numeric, null::numeric
+  from r24 r left join base b on b.scope = r.scope and b.key = r.key
+  where r.people >= v_min and r.people / greatest(coalesce(b.per_day, 0), 1.0) >= s.rising_min_ratio;
+
+  delete from t_cand c where exists (select 1 from public.search_blocklist b where position(b.term in c.label) > 0 or position(b.term in c.key) > 0);
+  delete from t_cand where key = '';
+
+  create temp table t_res on commit drop as
+  select k.key, k.label, r.*
+  from (select distinct on (key) key, label from t_cand order by key, people desc) k
+  cross join lateral public.search_trending_resolve(k.label) r;
+
+  select case when x.n1 >= s.popular_target then w1 when x.n2 >= s.popular_target then w2 else w3 end into v_win
+  from (
+    select count(*) filter (where c.p1 >= v_min) as n1, count(*) filter (where c.p2 >= v_min) as n2
+    from (select distinct on (key) * from t_cand where list = 'popular' order by key) c
+    join t_res r on r.key = c.key
+  ) x;
+
+  create temp table t_r24 on commit drop as
+  select public.search_group_key(l.label) as key, count(distinct e.client_hash)::integer as people
+  from public.search_events e cross join lateral (select public.search_canon_label(e.term) as label) l
+  where e.at > now() - interval '24 hours'
+  group by 1;
+
+  delete from public.search_trending;
+
+  insert into public.search_trending (list, scope, rank, term, label, kind, name, people, ratio, hot, pinned, item_id, slug, image, price, window_days)
+  select list, scope, row_number() over (partition by list, scope order by sortv desc, recent desc, label) as rank,
+         key, label, kind, name, people, ratio, hot, false, item_id, slug, image, price, case when list = 'popular' then v_win end
+  from (
+    select c.list, c.scope, c.key, c.label, r.kind, r.name, r.item_id, r.slug, r.image, r.price, c.ratio,
+           case when c.list = 'popular' then case v_win when w1 then c.p1 when w2 then c.p2 else c.p3 end else c.people end as people,
+           (c.list = 'popular' and exists (select 1 from t_cand x where x.list = 'rising' and x.scope = c.scope and x.key = c.key)) as hot,
+           round(case
+             when c.list = 'rising' then coalesce(c.ratio, 0) * 1000 + c.people
+             when s.popular_half_life > 0 then case v_win when w1 then c.s1 when w2 then c.s2 else c.s3 end
+             else (case v_win when w1 then c.p1 when w2 then c.p2 else c.p3 end)::numeric
+           end, 6) as sortv,
+           coalesce((select x.people from t_r24 x where x.key = c.key), 0) as recent
+    from (select distinct on (list, scope, key) * from t_cand order by list, scope, key, people desc) c
+    join t_res r on r.key = c.key
+    where c.list = 'rising' or (case v_win when w1 then c.p1 when w2 then c.p2 else c.p3 end) >= v_min
+  ) q;
+
+  delete from public.search_trending where rank > 20;
+  update public.trending_settings set last_run_at = now();
+end $$;
+revoke all on function public.refresh_trending() from public, anon, authenticated;
+grant execute on function public.refresh_trending() to service_role;
+
+create or replace function public.trending_lists(p_county text default null, p_limit integer default 10) returns jsonb
+language plpgsql stable security definer set search_path = public set statement_timeout = '3s' as
+$$
+declare
+  v_limit integer := least(greatest(coalesce(p_limit, 10), 1), 20);
+  v_fresh boolean := coalesce((select last_run_at > now() - make_interval(hours => stale_hours) from public.trending_settings limit 1), false);
+  v_scope text := '*';
+  v_rscope text := '*';
+  v_fallback text := 'none';
+  v_pop jsonb := '[]'::jsonb;
+  v_rise jsonb := '[]'::jsonb;
+  v_at timestamptz := now();
+  v_live boolean := false;
+  v_win integer;
+begin
+  if v_fresh then
+    select last_run_at into v_at from public.trending_settings limit 1;
+    select max(window_days) into v_win from public.search_trending where list = 'popular' and scope = v_scope;
+
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'hot', hot, 'pinned', pinned, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_pop from (select * from public.search_trending s where s.list = 'popular' and s.scope = v_scope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rank, 'term', label, 'count', people, 'ratio', ratio, 'hot', true, 'kind', kind,
+                                                 'label', name, 'itemId', item_id, 'slug', slug, 'image', image, 'price', price) order by rank), '[]'::jsonb)
+      into v_rise from (select * from public.search_trending s where s.list = 'rising' and s.scope = v_rscope and public.trending_row_is_live(s.kind, s.item_id, s.slug) order by s.rank limit v_limit) t;
+  else
+    v_live := true;
+    v_win := 1;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', term, 'count', count, 'hot', hot, 'pinned', false, 'kind', null) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over () as rn, * from public.top_searches(v_limit)) t;
+  end if;
+
+  if jsonb_array_length(v_pop) = 0 then
+    v_fallback := 'categories';
+    v_win := null;
+    select coalesce(jsonb_agg(jsonb_build_object('rank', rn, 'term', label, 'count', 0, 'hot', false, 'pinned', false, 'kind', 'category',
+                                                 'label', label, 'slug', slug) order by rn), '[]'::jsonb)
+      into v_pop from (select row_number() over (order by n desc, label) as rn, label, slug
+                       from (select t.label, t.ref as slug,
+                                    (select count(*) from public.businesses b where b.category_id = t.ref and public.business_is_visible(b)) as n
+                             from public.search_terms t where t.kind = 'category') c
+                       order by n desc, label limit v_limit) t;
+  end if;
+
+  return jsonb_build_object('computedAt', v_at, 'live', v_live, 'scope', v_scope, 'fallback', v_fallback, 'windowDays', v_win,
+                            'popular', v_pop, 'rising', v_rise, 'risingScope', v_rscope, 'items', v_pop);
+end $$;
+
+select public.refresh_trending();
+
+$m_0157_trending_adaptive_window$),
+    ('0158_contact_history', $m_0158_contact_history$
+-- 0158: old phone numbers, WhatsApp numbers and sign-in emails are kept, and a phone change can update WhatsApp too.
+--
+-- 1. business_contact_history keeps every number and sign-in email a business has had. A trigger on businesses writes a row
+--    whenever phone, whatsapp or login_email changes, whoever changes it (the seller through an edge function or their profile, an
+--    admin approving a request, or an admin editing). Nothing here is deleted by the app: only the owner can remove an entry,
+--    through admin_delete_contact_history, and that is itself written to the audit log.
+-- 2. seller_set_verified_phone takes an extra flag so the seller can use the new number for WhatsApp as well.
+-- 3. admin_contact_history lists the history of one business for the admin site.
+--
+-- The table has no policies and no grants: browsers cannot read or write it, only these functions can.
+
+create table if not exists public.business_contact_history (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete cascade,
+  field text not null check (field in ('phone', 'whatsapp', 'login_email')),
+  old_value text not null,
+  new_value text, -- null when the value was cleared
+  changed_at timestamptz not null default clock_timestamp(), -- not now(): one update can add several rows, and they should stay in order
+  changed_by uuid  -- auth.uid(): an admin's id when an admin did it; null when a server function did it for the seller
+);
+create index if not exists business_contact_history_business on public.business_contact_history (business_id, changed_at desc);
+alter table public.business_contact_history enable row level security;
+revoke all on public.business_contact_history from public, anon, authenticated;
+
+create or replace function public.business_contact_history_log() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if old.phone is not null and new.phone is distinct from old.phone then
+    insert into public.business_contact_history (business_id, field, old_value, new_value, changed_by) values (new.id, 'phone', old.phone, new.phone, auth.uid());
+  end if;
+  if old.whatsapp is not null and new.whatsapp is distinct from old.whatsapp then
+    insert into public.business_contact_history (business_id, field, old_value, new_value, changed_by) values (new.id, 'whatsapp', old.whatsapp, new.whatsapp, auth.uid());
+  end if;
+  if old.login_email is not null and new.login_email is distinct from old.login_email then
+    insert into public.business_contact_history (business_id, field, old_value, new_value, changed_by) values (new.id, 'login_email', old.login_email, new.login_email, auth.uid());
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists business_contact_history_trg on public.businesses;
+create trigger business_contact_history_trg after update of phone, whatsapp, login_email on public.businesses
+  for each row execute function public.business_contact_history_log();
+
+-- The verified phone change, now able to set the WhatsApp number to the same number in the same step.
+-- (The two-argument version is dropped so a call with two arguments cannot be ambiguous; the edge function already deployed
+-- calls it by name with two arguments and keeps working.)
+drop function if exists public.seller_set_verified_phone(uuid, text);
+create or replace function public.seller_set_verified_phone(p_business uuid, p_phone text, p_also_whatsapp boolean default false) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare
+  v_new text := public.normalize_phone_ke(p_phone);
+  v_old text;
+  v_wa text;
+  v_cancelled integer;
+  v_wa_changed boolean := false;
+begin
+  if v_new is null then return jsonb_build_object('ok', false, 'reason', 'invalid_phone'); end if;
+  select b.phone, b.whatsapp into v_old, v_wa from public.businesses b where b.id = p_business and b.status <> 'deleted' for update;
+  if not found then return jsonb_build_object('ok', false, 'reason', 'not_found'); end if;
+  if v_old is not distinct from v_new then return jsonb_build_object('ok', false, 'reason', 'no_change'); end if;
+
+  v_wa_changed := coalesce(p_also_whatsapp, false) and v_wa is distinct from v_new;
+  update public.businesses set phone = v_new, whatsapp = case when v_wa_changed then v_new else whatsapp end where id = p_business;
+  update public.change_requests c set status = 'cancelled', decided_at = now()
+   where c.business_id = p_business and c.field = 'phone' and c.status = 'pending';
+  get diagnostics v_cancelled = row_count;
+  return jsonb_build_object('ok', true, 'phone', v_new, 'previous', v_old, 'whatsappChanged', v_wa_changed, 'cancelledRequests', v_cancelled);
+end $$;
+
+-- The history of one business, newest first, for the admin site.
+create or replace function public.admin_contact_history(p_business uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.has_role(array['reviewer', 'finance', 'support']) then raise exception 'forbidden' using errcode = '42501'; end if;
+  return coalesce((
+    select jsonb_agg(jsonb_build_object(
+      'id', h.id, 'field', h.field, 'old', h.old_value, 'new', h.new_value, 'at', h.changed_at,
+      'byAdmin', a.user_id is not null, 'by', case when a.user_id is not null then coalesce(nullif(btrim(a.display_name), ''), a.email, 'an admin') end
+    ) order by h.changed_at desc, h.id)
+    from public.business_contact_history h
+    left join public.admins a on a.user_id = h.changed_by
+    where h.business_id = p_business
+  ), '[]'::jsonb);
+end $$;
+
+-- Only the owner can remove an entry, and the removal is written to the audit log (with what was removed).
+create or replace function public.admin_delete_contact_history(p_id uuid) returns boolean
+language plpgsql security definer set search_path = public as $$
+declare h public.business_contact_history;
+begin
+  if not public.has_role(array[]::text[]) then raise exception 'forbidden' using errcode = '42501'; end if; -- the owner only
+  delete from public.business_contact_history where id = p_id returning * into h;
+  if h.id is null then raise exception 'not_found'; end if;
+  perform public.write_audit(h.business_id, 'contact_history_deleted', 'business_contact_history', h.id::text,
+    jsonb_build_object('field', h.field, 'old', h.old_value, 'new', h.new_value, 'changedAt', h.changed_at));
+  return true;
+end $$;
+
+do $$
+declare fn text;
+begin
+  foreach fn in array array['seller_set_verified_phone(uuid, text, boolean)', 'business_contact_history_log()'] loop
+    execute format('revoke all on function public.%s from public, anon, authenticated', fn);
+    execute format('grant execute on function public.%s to service_role', fn);
+  end loop;
+  foreach fn in array array['admin_contact_history(uuid)', 'admin_delete_contact_history(uuid)'] loop
+    execute format('revoke all on function public.%s from public, anon', fn);
+    execute format('grant execute on function public.%s to authenticated', fn);
+  end loop;
+end $$;
+
+$m_0158_contact_history$),
+    ('0159_variant_unit', $m_0159_variant_unit$
+-- 0159: every option combination can carry its own unit ("per 3 cubes", "per pack of 40", "per jar of 48").
+--
+-- Until now the unit lived on the item only, so a buyer who picked the 48-piece jar read "KES 160 / per 3 cubes". A combination
+-- now has an optional `unit`. Empty (null) keeps the old behaviour: the item's unit is shown. Nothing else about prices changes.
+--
+--   item_variants.unit            text, at most 30 characters (same limit as items.unit), null = use the item's unit
+--   options.variants[].unit       accepted by seller_save_item (key absent = leave alone, null or blank = clear, text = set)
+--   seller_item_options           returns variants[].unit
+--   public_item_options           returns optionVariants[].unit (null when the combination has none of its own)
+--   seller_duplicate_item         copies the units
+--
+-- The existing functions are wrapped (renamed to *_pre_unit, called by the new version), the way 0094, 0095 and 0097 did, so
+-- nothing already tested has to be copied here. Errors (P0001): invalid_variant.
+
+alter table public.item_variants add column if not exists unit text;
+alter table public.item_variants drop constraint if exists item_variants_unit_ck;
+alter table public.item_variants add constraint item_variants_unit_ck check (unit is null or (btrim(unit) = unit and char_length(unit) between 1 and 30));
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- 1. Save: the unit is taken out of each variant before the existing checks (which refuse unknown keys), then written by combination.
+-- ---------------------------------------------------------------------------------------------------------------------
+do $$ begin
+  if to_regprocedure('public.item_options_apply_pre_unit(uuid, uuid, jsonb)') is null then
+    alter function public.item_options_apply(uuid, uuid, jsonb) rename to item_options_apply_pre_unit;
+  end if;
+end $$;
+revoke all on function public.item_options_apply_pre_unit(uuid, uuid, jsonb) from public, anon, authenticated;
+
+create or replace function public.item_options_apply(p_item uuid, p_business uuid, f jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare
+  e jsonb;
+  v_clean jsonb := '[]'::jsonb;
+  v_units jsonb := '[]'::jsonb;
+  v_unit text;
+  v_axes jsonb;
+  v_key text;
+begin
+  if jsonb_typeof(f -> 'options') = 'object' and jsonb_typeof(f -> 'options' -> 'variants') = 'array' then
+    for e in select jsonb_array_elements(f -> 'options' -> 'variants') loop
+      if jsonb_typeof(e) = 'object' and e ? 'unit' then
+        if jsonb_typeof(e -> 'unit') = 'null' then
+          v_unit := null;
+        elsif jsonb_typeof(e -> 'unit') <> 'string' then
+          raise exception 'invalid_variant' using errcode = 'P0001';
+        else
+          v_unit := nullif(btrim(e ->> 'unit'), '');
+          if char_length(coalesce(v_unit, '')) > 30 then raise exception 'invalid_variant' using errcode = 'P0001'; end if;
+        end if;
+        v_units := v_units || jsonb_build_array(jsonb_build_object('choice', e -> 'choice', 'unit', to_jsonb(v_unit)));
+        v_clean := v_clean || jsonb_build_array(e - 'unit');
+      else
+        v_clean := v_clean || jsonb_build_array(e);
+      end if;
+    end loop;
+    f := jsonb_set(f, '{options,variants}', v_clean);
+  end if;
+
+  perform public.item_options_apply_pre_unit(p_item, p_business, f);
+
+  if jsonb_array_length(v_units) > 0 then
+    select option_axes into v_axes from public.items where id = p_item;
+    for e in select jsonb_array_elements(v_units) loop
+      v_key := public.item_option_combo_key(v_axes, e -> 'choice');
+      update public.item_variants set unit = case when jsonb_typeof(e -> 'unit') = 'null' then null else e ->> 'unit' end, updated_at = now()
+        where item_id = p_item and combo_key = v_key
+          and unit is distinct from case when jsonb_typeof(e -> 'unit') = 'null' then null else e ->> 'unit' end;
+    end loop;
+  end if;
+end $$;
+revoke all on function public.item_options_apply(uuid, uuid, jsonb) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- 2. Reads: the seller's editor and the buyer's page get each combination's own unit.
+-- ---------------------------------------------------------------------------------------------------------------------
+do $$ begin
+  if to_regprocedure('public.seller_item_options_pre_unit(uuid)') is null then
+    alter function public.seller_item_options(uuid) rename to seller_item_options_pre_unit;
+  end if;
+  if to_regprocedure('public.public_item_options_pre_unit(uuid)') is null then
+    alter function public.public_item_options(uuid) rename to public_item_options_pre_unit;
+  end if;
+end $$;
+revoke all on function public.seller_item_options_pre_unit(uuid) from public, anon, authenticated;
+grant execute on function public.seller_item_options_pre_unit(uuid) to service_role;
+revoke all on function public.public_item_options_pre_unit(uuid) from public, anon, authenticated;
+grant execute on function public.public_item_options_pre_unit(uuid) to service_role;
+
+create or replace function public.seller_item_options(p_id uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  r jsonb;
+begin
+  perform public.assert_seller_active();   -- the guard every seller function carries (the wrapped read repeats it)
+  r := public.seller_item_options_pre_unit(p_id);
+  if r is null or jsonb_typeof(r -> 'variants') <> 'array' then return r; end if;
+  return jsonb_set(r, '{variants}', coalesce((
+    select jsonb_agg(x.e || jsonb_build_object('unit', to_jsonb(v.unit)) order by x.n)
+    from jsonb_array_elements(r -> 'variants') with ordinality as x(e, n)
+    left join public.item_variants v on v.item_id = p_id and v.id::text = x.e ->> 'id'
+  ), '[]'::jsonb));
+end $$;
+revoke all on function public.seller_item_options(uuid) from public, anon;
+grant execute on function public.seller_item_options(uuid) to authenticated, service_role;
+
+create or replace function public.public_item_options(p_item uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare
+  r jsonb := public.public_item_options_pre_unit(p_item);
+begin
+  if r is null or jsonb_typeof(r -> 'optionVariants') <> 'array' then return r; end if;
+  return jsonb_set(r, '{optionVariants}', coalesce((
+    select jsonb_agg(x.e || jsonb_build_object('unit', to_jsonb(v.unit)) order by x.n)
+    from jsonb_array_elements(r -> 'optionVariants') with ordinality as x(e, n)
+    left join public.item_variants v on v.item_id = p_item and v.id::text = x.e ->> 'id'
+  ), '[]'::jsonb));
+end $$;
+revoke all on function public.public_item_options(uuid) from public, anon;
+grant execute on function public.public_item_options(uuid) to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------------------------------------------------------
+-- 3. Duplicate: the copy keeps each combination's unit.
+-- ---------------------------------------------------------------------------------------------------------------------
+do $$ begin
+  if to_regprocedure('public.seller_duplicate_item_pre_unit(uuid)') is null then
+    alter function public.seller_duplicate_item(uuid) rename to seller_duplicate_item_pre_unit;
+  end if;
+end $$;
+revoke all on function public.seller_duplicate_item_pre_unit(uuid) from public, anon, authenticated;
+grant execute on function public.seller_duplicate_item_pre_unit(uuid) to service_role;
+
+create or replace function public.seller_duplicate_item(p_id uuid) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare
+  v_new uuid;
+begin
+  perform public.assert_seller_active();
+  v_new := public.seller_duplicate_item_pre_unit(p_id);
+  update public.item_variants n set unit = o.unit
+    from public.item_variants o where o.item_id = p_id and n.item_id = v_new and n.combo_key = o.combo_key;
+  return v_new;
+end $$;
+revoke all on function public.seller_duplicate_item(uuid) from public, anon;
+grant execute on function public.seller_duplicate_item(uuid) to authenticated, service_role;
+
+$m_0159_variant_unit$)
     ) as t(f, body) order by t.f loop
       -- A part run again skips what this catch-up already applied: running a migration twice can fail (a view cannot lose columns).
       if m.f >= v_first and not exists (select 1 from catch_up.log l where l.migration = m.f and l.result = 'applied') then

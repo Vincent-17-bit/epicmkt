@@ -2,7 +2,7 @@
 // Prices are always stored per combination (one absolute price per row). These helpers only decide which options the seller
 // types prices for, and write the typed price to every combination it covers. A warning is advice and never blocks a save.
 
-import { isMoney, liveRows, rowKeyOf, setSold } from "./editor.js";
+import { byUnit, isMoney, liveRows, rowKeyOf, setSold } from "./editor.js";
 
 const clean = (v) => String(v ?? "").replace(/,/g, "").trim();
 const amount = (v) => (isMoney(v) ? Number(clean(v)) : null);
@@ -53,6 +53,29 @@ export const setGroupPrice = (options, priceAxes, choice, value) => {
   return { ...options, rows: options.rows.map((r) => (rowKeyOf(options, r.choice) !== null && r.sold && group(options, keys, r) === want ? { ...r, price: text } : r)) };
 };
 
+// The unit typed for a list row or a grid cell ("per jar of 48"): the first sellable combination in the group that has one. Same
+// grouping as the price, so a seller who prices by Size also units by Size.
+export const groupUnit = (options, priceAxes, choice) => {
+  const keys = onlyKnown(options, priceAxes);
+  const want = keys.map((k) => choice[k]).join("|");
+  const hit = sellable(options).find((r) => group(options, keys, r) === want && clean(r.unit) !== "");
+  return hit ? String(hit.unit).trim() : "";
+};
+
+// Type one unit for a list row or a grid cell: every sellable combination in the group gets it (blank clears it).
+export const setGroupUnit = (options, priceAxes, choice, value) => {
+  const keys = onlyKnown(options, priceAxes);
+  const want = keys.map((k) => choice[k]).join("|");
+  const text = String(value ?? "");
+  return { ...options, rows: options.rows.map((r) => (rowKeyOf(options, r.choice) !== null && r.sold && group(options, keys, r) === want ? { ...r, unit: text } : r)) };
+};
+
+// "Size sets the unit": { "3-cubes": "per 3 cubes", "whole-jar": "per jar of 48" } sets the unit of every combination with that value.
+export const setUnitsByAxis = (options, axisKey, units = {}) => ({
+  ...options,
+  rows: options.rows.map((r) => (rowKeyOf(options, r.choice) !== null && r.sold && typeof units[r.choice[axisKey]] === "string" ? { ...r, unit: units[r.choice[axisKey]] } : r)),
+});
+
 const inGroup = (options, keys, choice) => {
   const want = keys.map((k) => choice[k]).join("|");
   return liveRows(options).filter((r) => group(options, keys, r) === want);
@@ -92,21 +115,30 @@ export const setRelativePrice = (options, axisKey, valueId, fromId, delta) => {
   }) };
 };
 
-// Plain-language problems with the prices. Never blocks. Each issue: { key, kind: "missing" | "far", text }.
-//   missing: a combination on sale has no price (and the item has no price of its own to fall back on)
-//   far:     a price is five times or more away from the typical price (2,400 typed instead of 24,000)
-export const priceIssues = (options, { itemPrice = null, name = (r) => rowKeyOf(options, r.choice) } = {}) => {
+// Plain-language problems with the prices. Never blocks. Each issue: { key, kind: "missing" | "inherited" | "far", text }.
+//   missing:   a combination on sale has no price (and the item has no price of its own to fall back on)
+//   inherited: some combinations have a price and this one has not, so buyers would pay the item price. Usually a forgotten cell
+//              (a KES 10 sachet price quietly showing on the 48-piece jar), so it is pointed out instead of being silent.
+//   far:       a price is five times or more away from the typical price (2,400 typed instead of 24,000), compared only with
+//              combinations sold by the same unit
+export const priceIssues = (options, { itemPrice = null, itemUnit = "", name = (r) => rowKeyOf(options, r.choice) } = {}) => {
   const rows = sellable(options);
   const issues = [];
   const fallback = amount(itemPrice) !== null && amount(itemPrice) > 0;
-  for (const r of rows) if (clean(r.price) === "" && !fallback) issues.push({ key: rowKeyOf(options, r.choice), kind: "missing", text: `${name(r)} has no price.` });
   const priced = rows.filter((r) => amount(r.price) !== null && amount(r.price) > 0);
-  if (priced.length >= 3) {
-    const sorted = priced.map((r) => amount(r.price)).sort((a, b) => a - b);
+  const mixed = priced.length > 0 && priced.length < rows.length;
+  for (const r of rows) {
+    if (clean(r.price) !== "") continue;
+    if (!fallback) issues.push({ key: rowKeyOf(options, r.choice), kind: "missing", text: `${name(r)} has no price.` });
+    else if (mixed) issues.push({ key: rowKeyOf(options, r.choice), kind: "inherited", text: `${name(r)} has no price of its own, so buyers pay the item price (KES ${Math.round(amount(itemPrice)).toLocaleString("en-KE")}). Type its price.` });
+  }
+  for (const set of byUnit(priced, itemUnit)) {
+    if (set.length < 3) continue;
+    const sorted = set.map((r) => amount(r.price)).sort((a, b) => a - b);
     const mid = sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
-    for (const r of priced) {
+    const near = Math.round(mid).toLocaleString("en-KE");
+    for (const r of set) {
       const n = amount(r.price);
-      const near = Math.round(mid).toLocaleString("en-KE");
       if (n * 5 <= mid) issues.push({ key: rowKeyOf(options, r.choice), kind: "far", text: `${name(r)} is far below the others (around ${near}). Check the number.` });
       else if (n >= mid * 5) issues.push({ key: rowKeyOf(options, r.choice), kind: "far", text: `${name(r)} is far above the others (around ${near}). Check the number.` });
     }

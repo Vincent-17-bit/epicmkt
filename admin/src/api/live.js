@@ -603,6 +603,11 @@ export async function markNotificationsRead(ids) {
 const detailRpc = async (fn, args) => check(await client().rpc(fn, args)).data;
 
 export const getBusinessDetail = (id) => detailRpc("admin_business_detail", { p_id: id });
+// Every phone number, WhatsApp number and sign-in email this business has had before, newest change first (migration 0158).
+// -> [{ id, field: "phone" | "whatsapp" | "login_email", old, new, at, byAdmin, by }]
+export const getContactHistory = (businessId) => detailRpc("admin_contact_history", { p_business: businessId });
+// Owner only. The removal is written to the audit log with what was removed.
+export const deleteContactHistory = (id) => detailRpc("admin_delete_contact_history", { p_id: id });
 // The live breakdown plus 30 days of daily snapshots (migration 0078_business_health.sql).
 export const getBusinessHealth = (id) => detailRpc("admin_business_health", { p_business: id });
 export async function getLoginDelivery(businessId) {

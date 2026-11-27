@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from "react";
-import { collapseToPriceAxes, formatKes as kes, groupPrice, groupSold, liveRows, priceIssues, priceLayout, rowKeyOf, setBasePlusDifference, setGroupPrice, setGroupSold, setRelativePrice, summarize } from "@epicmkt/shared";
+import { collapseToPriceAxes, formatKes as kes, groupPrice, inferPriceAxes, setUnitsByAxis, groupSold, liveRows, priceIssues, priceLayout, rowKeyOf, setBasePlusDifference, setGroupPrice, setGroupSold, setRelativePrice, summarize } from "@epicmkt/shared";
 import ed from "../../editor.module.css";
 import s from "./options.module.css";
 
@@ -10,19 +10,27 @@ const nameOf = (options) => (r) => options.axes.map((a) => valueLabel(a, r.choic
 // "What changes the price?": the seller ticks the options that change the price and types prices where they think about them.
 // One option -> a list; two -> a grid (or base + difference); three or more -> the full table of combinations below.
 // Everything is stored per combination as one absolute price, so nothing downstream (flash, totals, filters) changes.
-export default function PriceModes({ options, set, announce, itemPrice, priceAxes, setPriceAxes, errors = {} }) {
+export default function PriceModes({ options, set, announce, itemPrice, itemUnit = "", priceAxes, setPriceAxes, errors = {} }) {
   const uid = useId();
   const box = useRef(null);
   const [view, setView] = useState("grid");
   const [base, setBase] = useState({});
   const [diff, setDiff] = useState({});
   const [rel, setRel] = useState({ value: "", from: "", delta: "" });
+  const [unitAxis, setUnitAxis] = useState("");
   const axes = options.axes;
   if (axes.length === 0 || liveRows(options).length === 0) return null;
   const chosen = priceAxes ?? [];
   const layout = priceLayout(chosen);
   const axisOf = (k) => axes.find((a) => a.key === k);
-  const issues = priceIssues(options, { itemPrice, name: nameOf(options) });
+  const issues = priceIssues(options, { itemPrice, itemUnit, name: nameOf(options) });
+  // The seller has not said what changes the price, yet the prices typed so far already differ: offer the list or grid that fits.
+  const suggested = priceAxes === null ? inferPriceAxes(options) : [];
+  // Pack sizes differ in what they contain, so the unit usually follows one option (Size). Default to the option that sounds like one.
+  const packAxis = axes.find((a) => /size|pack|weight|volume|quantity|unit|count/i.test(a.label ?? "")) ?? axes[axes.length - 1];
+  const unitAxisObj = axes.find((a) => a.key === unitAxis) ?? packAxis;
+  const unitFor = (valueId) => liveRows(options).find((r) => r.sold && r.choice[unitAxisObj.key] === valueId && String(r.unit ?? "").trim() !== "")?.unit ?? "";
+  const anyUnit = liveRows(options).some((r) => String(r.unit ?? "").trim() !== "");
   const sum = summarize(options, itemPrice);
 
   const toggle = (key, on) => {
@@ -64,6 +72,13 @@ export default function PriceModes({ options, set, announce, itemPrice, priceAxe
           <label className={s.check}><input type="checkbox" checked={priceAxes !== null && chosen.length === 0} onChange={(e) => (e.target.checked ? nothing() : setPriceAxes(null))} />Nothing, one price</label>
         </div>
       </fieldset>
+
+      {suggested.length > 0 && (
+        <p className={s.suggest} role="status">
+          <span>Your prices already change with {suggested.map((k) => axisOf(k).label).join(" and ")}. Show them as a {suggested.length === 1 ? "list" : suggested.length === 2 ? "grid" : "table"} instead?</span>
+          <button type="button" className={`${s.pill} ${s.pillPrimary}`} onClick={() => { setPriceAxes(suggested); announce(`Price changes with ${suggested.map((k) => axisOf(k).label).join(" and ")}.`); }}>Yes, show it</button>
+        </p>
+      )}
 
       {priceAxes !== null && layout === "single" && (
         <label className={s.cell}><span>Price for every combination (KES)</span>{input({}, "Price for every combination (KES)")}</label>
@@ -122,6 +137,28 @@ export default function PriceModes({ options, set, announce, itemPrice, priceAxe
 
       {layout === "table" && <p className={s.hint}>Three or more options change the price, so each combination has its own price in the list below.</p>}
 
+      {priceAxes !== null && (
+        <details className={s.tools} open={anyUnit || undefined}>
+          <summary className={s.toolsSummary}>Different pack sizes? Set the unit for each</summary>
+          <div className={s.stack}>
+            <p className={s.hint}>Buyers see this unit after the price of the size they pick, such as KES 160 per jar of 48. Leave it empty to use the item's unit{itemUnit ? ` (${itemUnit})` : ""}.</p>
+            {axes.length > 1 && (
+              <label className={s.cell}><span>The unit depends on</span>
+                <select className={s.priceInput} value={unitAxisObj.key} onChange={(e) => setUnitAxis(e.target.value)}>{axes.map((a) => <option key={a.key} value={a.key}>{a.label || a.key}</option>)}</select>
+              </label>
+            )}
+            <div className={s.unitList}>
+              {unitAxisObj.values.map((v) => (
+                <label key={v.id} className={s.cell}><span>{v.label}</span>
+                  <input className={s.priceInput} autoComplete="off" maxLength={30} placeholder={itemUnit || "such as per pack of 40"} aria-label={`Unit for ${v.label}`} value={unitFor(v.id)}
+                    onChange={(e) => set(setUnitsByAxis(options, unitAxisObj.key, { [v.id]: e.target.value }))} />
+                </label>
+              ))}
+            </div>
+          </div>
+        </details>
+      )}
+
       {priceAxes !== null && layout !== "table" && Object.entries(errors).filter(([k]) => /^row:.*:price$/.test(k)).map(([k, msg]) => <p key={k} className={ed.error} role="alert">{msg}</p>)}
       {priceAxes !== null && issues.length > 0 && (
         <ul className={s.issues} aria-label="Things to check">
@@ -129,6 +166,9 @@ export default function PriceModes({ options, set, announce, itemPrice, priceAxe
             <li key={`${i.kind}:${i.key}`} className={s.issue} data-kind={i.kind}><span>{i.text}</span><button type="button" className={s.pill} onClick={() => fix(i.key)}>Fix<span className={ed.sr}>: {i.text}</span></button></li>
           ))}
         </ul>
+      )}
+      {priceAxes !== null && !anyUnit && issues.some((i) => i.kind === "far") && (
+        <p className={s.hint}>Selling packs of different sizes? Set the unit for each size above, such as per 3 cubes and per jar of 48, so a small pack is not compared with a big one.</p>
       )}
       {priceAxes !== null && <p className={s.hint} role="status">{sum.combos} {sum.combos === 1 ? "combination" : "combinations"}, {sum.inStock} in stock{sum.from !== null ? `, from ${formatKes(sum.from)}` : ""}</p>}
     </section>

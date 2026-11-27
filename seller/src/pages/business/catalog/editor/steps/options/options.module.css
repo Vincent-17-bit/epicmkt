@@ -115,6 +115,7 @@
 .cell input { inline-size: 100%; min-block-size: var(--tap); padding: 0 var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
 .cell input[aria-invalid="true"] { border-color: var(--danger-text); border-width: 2px; }
 .cell input:disabled { cursor: not-allowed; }
+.cellWide { grid-column: 1 / -1; }
 .cellError { grid-column: 1 / -1; margin: 0; color: var(--danger-text); font-size: var(--text-xs); font-weight: 600; }
 .comboFoot { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
 .check { display: inline-flex; align-items: center; gap: var(--space-2); min-block-size: var(--tap); font-size: var(--text-sm); font-weight: 600; cursor: pointer; }
@@ -209,3 +210,7 @@
 
 .swatchDot { display: inline-block; inline-size: 1.25rem; block-size: 1.25rem; border-radius: 50%; border: 1px solid var(--border-strong); flex: none; }
 .example { margin: 0; padding: var(--space-2) var(--space-3); font-size: var(--text-sm); color: var(--text); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: var(--radius-sm); }
+
+/* units that follow one option (pack sizes) and the "your prices already differ" suggestion */
+.unitList { display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); }
+.suggest { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: 1px solid var(--primary-pressed); border-radius: var(--radius-card); background: var(--primary-tint); color: var(--on-primary-tint); font-size: var(--text-sm); }

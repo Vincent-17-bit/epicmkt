@@ -22,6 +22,7 @@ export const ACTIONS = {
   "businesses.view": { label: "see businesses", roles: ANY },
   "businesses.visibility": { label: "hide or show a business", roles: ["reviewer", "support"] },
   "businesses.bulk": { label: "suspend, tag, feature, message or export businesses in bulk", roles: ["reviewer", "support"] },
+  "businesses.contact_history_delete": { label: "delete a business's old phone numbers and emails from its history", roles: [] },
   "sellers.resend_login": { label: "resend a seller's login with a new temporary password", roles: [] },
   "sellers.open_site": { label: "open a seller's site and manage it as that seller", roles: [] },
   "businesses.extend": { label: "extend subscriptions", roles: ["finance"] },

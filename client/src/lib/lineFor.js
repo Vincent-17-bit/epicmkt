@@ -11,11 +11,13 @@ import { isServiceItem } from "./listing.js";
 // charge of the header (price rules for options come later), but the chat still names the choice.
 export function optionShown(option, current) {
   const v = option.variant;
+  // The combination's own unit ("per jar of 48") wins; without one, the item's unit applies as before.
+  const unit = (typeof v?.unit === "string" && v.unit.trim() !== "" ? v.unit.trim() : null) ?? current?.pricing?.unit ?? null;
   const base = { id: v?.id ?? null, label: option.label };
-  if (!v || !Number.isFinite(v.price)) return { ...base, regularPrice: NaN, salePrice: NaN, savings: 0, discountPercent: 0, unit: current?.pricing?.unit ?? null };
+  if (!v || !Number.isFinite(v.price)) return { ...base, regularPrice: NaN, salePrice: NaN, savings: 0, discountPercent: 0, unit };
   const sale = Number.isFinite(v.salePrice) && v.salePrice < v.price ? v.salePrice : v.price;
   const savings = v.price - sale;
-  return { ...base, regularPrice: v.price, salePrice: sale, savings, discountPercent: savings > 0 ? Math.round((savings / v.price) * 100) : 0, unit: current?.pricing?.unit ?? null, plainSale: true };
+  return { ...base, regularPrice: v.price, salePrice: sale, savings, discountPercent: savings > 0 ? Math.round((savings / v.price) * 100) : 0, unit, plainSale: true };
 }
 
 const hasOptions = (item) => Array.isArray(item?.options) && item.options.length > 0 && Array.isArray(item?.optionVariants) && item.optionVariants.length > 0;

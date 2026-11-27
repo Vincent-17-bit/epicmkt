@@ -8,6 +8,7 @@ import { PASSWORD_HINT, isEmail, signInSetup } from "../../lib/signIn.js";
 import { STRIKE_LEAD, STRIKE_RISKS } from "../../lib/strikes.js";
 import ShopPhotos from "../../components/shopPhotos/ShopPhotos.jsx";
 import PhoneChange from "../../components/PhoneChange.jsx";
+import WhatsappNumber from "../../components/WhatsappNumber.jsx";
 import ui from "../../styles/ui.module.css";
 import styles from "./account.module.css";
 
@@ -351,7 +352,11 @@ export default function Account() {
 
       <section className={ui.card} aria-labelledby="phone-title">
         <h2 id="phone-title">Phone number</h2>
-        <PhoneChange currentPhone={b.phone} />
+        <PhoneChange currentPhone={b.phone} currentWhatsapp={b.whatsapp} />
+      </section>
+      <section className={ui.card} aria-labelledby="wa-title">
+        <h2 id="wa-title">WhatsApp number</h2>
+        <WhatsappNumber whatsapp={b.whatsapp} phone={b.phone} />
       </section>
       <EmailCard business={b} />
       <PasswordCard business={b} />

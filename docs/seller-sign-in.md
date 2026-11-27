@@ -23,6 +23,27 @@ It can be **from any country**: a seller picks the country (flag and dial code) 
 A seller who cannot do this (lost password, the new number is not with them) can still **ask an admin**: the older request flow (`seller_request_change`) stays as the way out.
 Saving a verified number cancels any such request that was still pending, so it can never be approved later and overwrite the new number.
 
+### Call number and WhatsApp number are separate
+
+A business has two public numbers. `businesses.phone` is the **Call** button on the shop page and is also where password and sign-in codes are texted.
+`businesses.whatsapp` is the **WhatsApp** button, and the Chat and Order buttons on every item (they use WhatsApp and fall back to the call number).
+They can be the same number or two different ones:
+
+- **Changing the call number** (the code flow above) has a checkbox, **Use this number for WhatsApp too**. It is ticked when WhatsApp is the same as the call number today or not set,
+  and unticked when the seller keeps a different WhatsApp number, so a separate WhatsApp number is never overwritten by accident (`seller_set_verified_phone(..., p_also_whatsapp)`).
+- **Changing only WhatsApp** is on Account → WhatsApp number: any country, saved straight away (it is not a sign-in channel, so no code), or **Use my call number** in one tap.
+
+Both read live from the `businesses` row, so the shop page, the item buttons and the admin site show a new number as soon as it is saved.
+The extra "business phones" typed on the apply form only stay on the application record; the shop page shows the first one (`activate.ts` copies it to `businesses.phone`).
+
+### Old numbers and emails are kept (migration `0158`)
+
+A trigger on `businesses` writes every previous **phone, WhatsApp number and sign-in email** to `business_contact_history` whenever one changes,
+whoever changes it (the seller, an admin approving a request, an admin editing). The application record is never touched, so the number they applied with stays there too.
+Nothing in the app erases a history row. Admins see them on the business page under **Previous numbers and emails** (`admin_contact_history`),
+with who changed it (the seller, or the admin's name). Only the **owner** can remove one (`admin_delete_contact_history`, permission `businesses.contact_history_delete`),
+after confirming, and the removal and what was removed are written to the audit log.
+
 ### Phone numbers in general
 
 Every phone number in the app is held as one international number, `+<country code><number>` (E.164), and read with `libphonenumber-js`.
@@ -59,7 +80,7 @@ a code for one address can never confirm another; the old address is told when t
 
 ## Deploying
 
-1. Apply `supabase/migrations/0044_seller_sign_in.sql`, then `0156_seller_verified_phone.sql` (or the regenerated catch-up files).
+1. Apply `supabase/migrations/0044_seller_sign_in.sql`, then `0156_seller_verified_phone.sql` and `0158_contact_history.sql` (or the regenerated catch-up files).
 2. Deploy the new functions: `supabase functions deploy seller-set-email --no-verify-jwt` and `supabase functions deploy seller-set-phone --no-verify-jwt`, and redeploy `seller-otp-request`.
 3. Make sure these secrets exist in production: `AT_API_KEY`, `AT_USERNAME`, `AT_SENDER` (SMS) and **`RESEND_API_KEY`, `MAIL_FROM`** (email codes). Without the Resend ones, email codes fail with `send_failed` and the SMS option keeps working.
 4. Existing sellers: nothing to migrate. They are prompted to add an email; sellers who already chose their own password only see the soft "Add email" prompt on Account.

@@ -10,6 +10,7 @@ import { auditLabel, friendlyError } from "../../lib/businessDetail.js";
 import { daysLeft, formatBusinessDate, formatDate, formatDateTime, timeAgo } from "../../lib/time.js";
 import HealthPanel from "./HealthPanel.jsx";
 import { formatKes } from "@epicmkt/shared";
+import ContactHistory from "./ContactHistory.jsx";
 
 const PAYMENT_STATUS = { confirmed: "Confirmed", submitted: "Submitted", awaiting_confirmation: "Awaiting confirmation", needs_assignment: "Needs assignment", rejected: "Rejected", ignored: "Ignored" };
 const label = (map, key) => map[key] ?? String(key ?? "").replace(/_/g, " ");
@@ -81,6 +82,7 @@ export function OverviewTab({ detail }) {
             <Field name="WhatsApp">{b.whatsapp}</Field>
             <Field name="Email">{b.email}</Field>
           </dl>
+          <ContactHistory id={b.id} />
         </section>
         <section>
           <h3 className="heading-flow">Location</h3>

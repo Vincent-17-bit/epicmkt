@@ -171,14 +171,18 @@ export const setLoginEmail = async ({ code, currentPassword }) => {
   state.otp = null;
   return { ok: true, loginEmail: bill.business.loginEmail };
 };
-export const setLoginPhone = async ({ code, currentPassword }) => {
+export const setLoginPhone = async ({ code, currentPassword, alsoWhatsapp = false }) => {
   signedIn();
   await wait();
   if (currentPassword !== state.password) throw new ApiError("invalid_password");
   if (code !== OTP || state.otp?.purpose !== "verify_phone") throw new ApiError("invalid_code", "That code is not valid or has expired.");
-  bill.business.phone = state.otp.target;
+  const target = state.otp.target;
+  const whatsappChanged = alsoWhatsapp === true && bill.business.whatsapp !== target;
+  bill.business.phone = target;
+  state.business.phone = target;
+  if (whatsappChanged) { bill.business.whatsapp = target; state.business.whatsapp = target; }
   state.otp = null;
-  return { ok: true, phone: bill.business.phone };
+  return { ok: true, phone: target, whatsappChanged };
 };
 export const updateProfile = async (patch) => {
   writer();
@@ -187,7 +191,10 @@ export const updateProfile = async (patch) => {
   const bad = Object.keys(patch).find((k) => !allowed.includes(k));
   if (bad) throw new ApiError("field_not_allowed", `field_not_allowed:${bad}`);
   if ("announcement" in patch && patch.announcement && state.business.plan_key !== "premium") throw new ApiError("premium_only");
+  if ("whatsapp" in patch && patch.whatsapp && !isValidPhone(String(patch.whatsapp))) throw new ApiError("invalid_whatsapp");
+  if ("whatsapp" in patch && patch.whatsapp) patch = { ...patch, whatsapp: toE164(String(patch.whatsapp)) };
   Object.assign(state.business, patch);
+  if ("whatsapp" in patch) bill.business.whatsapp = patch.whatsapp; // the same number the Account page shows
   return { ...state.business };
 };
 export const setTimezone = async (timezone) => {
@@ -588,7 +595,7 @@ export const getBusinessFacts = async () => {
   signedIn();
   await wait();
   const b = bill.business;
-  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: b.phone ?? DEMO.phone, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng, delivers: b.delivers ?? null, delivery_fee: b.deliveryFee ?? null, delivery_radius_km: b.deliveryRadiusKm ?? null, delivery_area: b.deliveryArea ?? null, delivery_min_order: b.deliveryMinOrder ?? null, delivery_notes: b.deliveryNotes ?? null ?? null };
+  return { id: b.id, seller_id: DEMO.sellerId, name: b.name, status: b.status, plan_key: b.planKey, category_id: b.categoryId, phone: b.phone ?? DEMO.phone, whatsapp: b.whatsapp ?? null, email: b.loginEmail ?? null, logo_path: b.logoPath ?? null, cover_path: b.coverPath ?? null, county: "Kisumu", town: "Maseno", address: b.address ?? "Main Street", lat: b.lat ?? null, lng: b.lng, delivers: b.delivers ?? null, delivery_fee: b.deliveryFee ?? null, delivery_radius_km: b.deliveryRadiusKm ?? null, delivery_area: b.deliveryArea ?? null, delivery_min_order: b.deliveryMinOrder ?? null, delivery_notes: b.deliveryNotes ?? null ?? null };
 };
 export const getSettings = async () => { signedIn(); await wait(); return resolveSettings(state.settings); };
 
@@ -639,7 +646,7 @@ function resetBilling() {
   bill.intent = null;
   bill.paybill = { type: "paybill", number: "247247", name: "EpicMKT Ltd" };
   bill.application = { referenceNo: "EPM-2026-ABC234", priceAtSubmission: 450 };
-  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, phone: DEMO.phone, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null, lat: -0.09, lng: 34.6, address: "Main Street" };
+  bill.business = { id: "biz-1", sellerId: DEMO.sellerId, name: DEMO.name, status: "live", planKey: "standard", categoryId: "barber", paidUntil: ISO(now + 20 * DAY), verificationLevel: "verified", announcement: null, creditKes: 0, strikes: 0, statusReason: null, phone: DEMO.phone, whatsapp: DEMO.phone, loginEmail: null, loginEmailVerified: false, mustChangePassword: false, passwordChangedAt: null, lat: -0.09, lng: 34.6, address: "Main Street" };
   bill.payments = [
     { id: "pay-1", businessId: "biz-1", amount: 500, kind: "renewal", status: "confirmed", mpesaCode: "QA11BB22CC", planKey: "standard", categoryId: "barber", accountRef: DEMO.sellerId, confirmedVia: "admin", declineReason: null, receiptNo: "EPM-R-2026-000001", periodStart: "2026-08-20", periodEnd: "2026-09-20", submittedAt: ISO(now - 50 * DAY), confirmedAt: ISO(now - 49 * DAY), createdAt: ISO(now - 50 * DAY) },
   ];

@@ -7,8 +7,10 @@ What shoppers search for, shown in the menu and the empty search panel. Migratio
 * **One ranking for every kind of search.** A store name, a product, an item on a running flash sale and a category are ranked
   together by how many different people searched for them. Each row says what it is (Store, Product, Flash sale, Category).
   Tapping a store opens its page; anything else opens the search for that word.
-* **Two views.** *Popular this week* (the last 7 days) and *Rising now* (the last 24 hours against the word's own daily average of
-  the 7 days before). With nothing rising there is only the caption "Popular this week".
+* **Two views.** *Popular* and *Rising now* (the last 24 hours against the word's own daily average of the 7 days before). Popular
+  looks at the last 7 days. On a quiet week, when fewer than `popular_target` (10) words qualify, it widens to 14 and then 30 days,
+  only as far as it takes, so the list is not left short. A busy week stays on 7 days. The window in use is returned as `windowDays`
+  (7, 14 or 30; 1 for the live count; none for the category stand-in).
 * **Global.** One list for everyone, wherever they are. Nothing is split by county or town.
 * **Never dead words.** A word shows only if something live matches it right now: a visible store, a category, an item on a running
   flash sale, or a visible, available item (the same rules as the search page). Sold-out and hidden things drop out on the next rebuild.
@@ -33,8 +35,10 @@ shopper searches ──> log_search(term)  ──> search_events        (raw, ke
   one word. `search_synonyms` merges other spellings and Swahili or Sheng words ("gesi" → "gas"). The shown spelling is the most common one.
 * **The bar.** A word needs `trending_settings.min_people` different people (3), growing with traffic to `min_people_pct` (0.5 %) of the
   last 48 hours' searchers, capped at `min_people_cap` (50). *Rising* also needs `rising_min_ratio` (1.5×).
-* **No hand-placed ranking.** The order comes only from how many different people searched (ties: more people in the last 24 hours, then
-  name). Nobody can pin a word to the top; pinning was removed in migration `0153_trending_no_pins.sql`.
+* **No hand-placed ranking.** The order comes only from how many different people searched, with recent days counting more: a person
+  searching `n` days ago counts `0.5^(n / popular_half_life)` (half-life 7 days; 0 turns the fade off). An old spike therefore fades
+  smoothly instead of dropping out at a cutoff, and does not outrank a word people are searching now. Ties: more people in the last
+  24 hours, then name. Nobody can pin a word to the top; pinning was removed in migration `0153_trending_no_pins.sql`.
 * **Hiding.** A word containing anything in `search_blocklist` is never shown. This is moderation: it removes a word, it does not move any other.
 * **If it breaks.** A list older than `stale_hours` (3) is not served: shoppers get the live count of the last 24 hours (migration 0039),
   and if that is empty too, the busiest categories. `/api/products` falls back the same way (`trending_lists` → `top_searches_hourly` →
@@ -47,7 +51,8 @@ shopper searches ──> log_search(term)  ──> search_events        (raw, ke
 * **Check:** `select public.trending_status();` returns `{ ok, computedAt, ageMinutes, staleAfterHours }`. `ok: false` means the job has not
   run in `stale_hours`. The admin **Catalogue → Trending** page shows this as a red alert, and `supabase/cron/verify.sql` (5b) prints it.
 * **Admin → Catalogue → Trending:** the lists (read-only ranking), **Hide**, hidden words and synonyms (reviewers and support admins).
-* **Settings:** one row in `trending_settings`; change it in SQL and it applies at the next rebuild.
+* **Settings:** one row in `trending_settings`; change it in SQL and it applies at the next rebuild. Window: `popular_days` (7),
+  `popular_mid_days` (14), `popular_max_days` (30), `popular_target` (10), `popular_half_life` (7). Migration `0157`.
 * **Run it now:** `select public.refresh_trending();`
 * **Switch it off:** `select cron.unschedule('trending');`. The menu then falls back to the live count and nothing else breaks.
 * **Retention:** `search_term_daily` keeps `keep_days` (120) days.

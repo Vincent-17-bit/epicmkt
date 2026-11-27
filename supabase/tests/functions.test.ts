@@ -111,7 +111,9 @@ function deps(w: World): Deps {
         if (row.phone === args.p_phone) return Promise.resolve({ data: { ok: false, reason: "no_change" }, error: null });
         const previous = row.phone;
         row.phone = args.p_phone;
-        return Promise.resolve({ data: { ok: true, phone: args.p_phone, previous, cancelledRequests: 0 }, error: null });
+        const whatsappChanged = args.p_also_whatsapp === true && row.whatsapp !== args.p_phone;
+        if (whatsappChanged) row.whatsapp = args.p_phone;
+        return Promise.resolve({ data: { ok: true, phone: args.p_phone, previous, whatsappChanged, cancelledRequests: 0 }, error: null });
       }
       default:
         return Promise.resolve({ data: null, error: null });
@@ -706,7 +708,7 @@ Deno.test("set-phone: needs the code AND the current password, and saves the num
 
   const ok = await read(await h(authed({ code: "123456", currentPassword: w.validPassword })));
   assertEquals(ok.status, 200);
-  assertEquals(ok.body, { ok: true, phone: "+254722000111" });
+  assertEquals(ok.body, { ok: true, phone: "+254722000111", whatsappChanged: false });
   assertEquals(w.tables.businesses[0].phone, "+254722000111");
   assertEquals(w.rpcCalls.filter((c) => c.name === "seller_otp_verify").every((c) => c.args.p_purpose === "verify_phone"), true);
 
@@ -752,4 +754,25 @@ Deno.test("set-phone: repeated wrong passwords lock the account, and a number th
   assertEquals(r.body.error, "no_change");
 
   assertEquals((await sellerSetPhone(deps(world()))(authed({ code: "12", currentPassword: "x" }))).status, 400);
+});
+
+Deno.test("set-phone: WhatsApp follows the new number only when the seller asks, and the old WhatsApp number is otherwise left alone", async () => {
+  const keep = world();
+  keep.tables.businesses[0].whatsapp = "+254799000111";
+  await sellerOtpRequest(deps(keep))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: keep.validPassword }));
+  const a = await read(await sellerSetPhone(deps(keep))(authed({ code: "123456", currentPassword: keep.validPassword })));
+  assertEquals(a.body, { ok: true, phone: "+254722000111", whatsappChanged: false });
+  assertEquals(keep.tables.businesses[0].whatsapp, "+254799000111");
+
+  const both = world();
+  both.tables.businesses[0].whatsapp = "+254799000111";
+  await sellerOtpRequest(deps(both))(authed({ purpose: "verify_phone", phone: "0722000111", currentPassword: both.validPassword }));
+  const b = await read(await sellerSetPhone(deps(both))(authed({ code: "123456", currentPassword: both.validPassword, alsoWhatsapp: true })));
+  assertEquals(b.body, { ok: true, phone: "+254722000111", whatsappChanged: true });
+  assertEquals(both.tables.businesses[0].whatsapp, "+254722000111");
+  assertEquals(both.rpcCalls.find((c) => c.name === "seller_set_verified_phone")?.args.p_also_whatsapp, true);
+  assertEquals(JSON.stringify(both.tables.audit_log).includes("+254722000111"), false); // still only masked numbers in the log
+
+  const bad = world();
+  assertEquals((await sellerSetPhone(deps(bad))(authed({ code: "123456", currentPassword: bad.validPassword, alsoWhatsapp: "yes" }))).status, 400);
 });

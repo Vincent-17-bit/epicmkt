@@ -85,6 +85,7 @@ export default function AccountSecurity() {
         <PhoneChange
           startOpen
           currentPhone={facts?.phone}
+          currentWhatsapp={facts?.whatsapp}
           onAskAdmin={() => { setChangeOpen(false); setPhoneOpen(true); }}
           onChanged={() => { setChangeOpen(false); loadPending(); showToast("Phone number changed"); }}
         />

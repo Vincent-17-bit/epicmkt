@@ -20,6 +20,8 @@ const business = (over = {}) => ({
 const api = {
   getBusinessDetail: vi.fn(),
   getLoginDelivery: vi.fn(async () => []),
+  getContactHistory: vi.fn(async () => []),
+  deleteContactHistory: vi.fn(async () => true),
   resendLogin: vi.fn(async () => ({ ok: true })),
   openSellerSite: vi.fn(async () => ({ ok: true, businessName: "Lakeside Provisions", sellerId: "ES100210", tokenHash: "tok-1" })),
   getBusinessPayments: vi.fn(async () => [{ id: "p1", created_at: "2026-02-01T00:00:00Z", amount_kes: 1300, status: "confirmed", kind: "renewal", mpesa_code: "SGH4K9L2QW", receipt_no: "R-1", period_end: "2026-03-01", months: 1 }]),
@@ -65,6 +67,7 @@ beforeEach(() => {
   Object.values(api).forEach((fn) => fn.mockClear?.());
   api.getBusinessDetail.mockImplementation(async () => business());
   api.getLoginDelivery.mockImplementation(async () => []);
+  api.getContactHistory.mockImplementation(async () => []);
 });
 afterEach(cleanup);
 
@@ -256,6 +259,55 @@ describe("business detail page", () => {
       renderPage();
       await screen.findByRole("heading", { name: "Lakeside Provisions" });
       expect(screen.queryByRole("button", { name: "Open seller site" })).not.toBeInTheDocument();
+    });
+  });
+
+  describe("previous numbers and emails", () => {
+    const entries = [
+      { id: "h2", field: "phone", old: "+254712345678", new: "+256772123456", at: "2026-11-20T09:30:00Z", byAdmin: false, by: null },
+      { id: "h1", field: "login_email", old: "first@shop.test", new: "a@shop.test", at: "2026-11-02T14:05:00Z", byAdmin: true, by: "Amina" },
+    ];
+
+    it("keeps the old numbers and emails in view, newest first, and says who changed them", async () => {
+      api.getContactHistory.mockImplementation(async () => entries);
+      renderPage();
+      const panel = (await screen.findByRole("heading", { name: "Previous numbers and emails" })).closest("section");
+      const rows = within(panel).getAllByRole("listitem");
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveTextContent("Phone: +254 712 345678");
+      expect(rows[0]).toHaveTextContent("+256 772 123456");
+      expect(rows[0]).toHaveTextContent("by the seller");
+      expect(rows[1]).toHaveTextContent("Sign-in email: first@shop.test");
+      expect(rows[1]).toHaveTextContent("by Amina");
+      expect(api.getContactHistory).toHaveBeenCalledWith("b1");
+    });
+
+    it("says so when nothing has changed yet", async () => {
+      renderPage();
+      expect(await screen.findByText("No changes yet.")).toBeInTheDocument();
+    });
+
+    it("the owner can remove an entry, after confirming, and it is gone from the list", async () => {
+      api.getContactHistory.mockImplementation(async () => entries);
+      renderPage();
+      await screen.findByRole("heading", { name: "Previous numbers and emails" });
+      fireEvent.click(screen.getByRole("button", { name: /remove the old phone \+254 712 345678/i }));
+      const dialog = await screen.findByRole("dialog");
+      expect(dialog).toHaveTextContent("erased for good");
+      expect(dialog).toHaveTextContent("audit log");
+      expect(api.deleteContactHistory).not.toHaveBeenCalled(); // nothing happens until they confirm
+      const reason = within(dialog).queryByRole("textbox");
+      if (reason) fireEvent.change(reason, { target: { value: "Seller asked for it to be removed" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Remove" }));
+      await waitFor(() => expect(api.deleteContactHistory).toHaveBeenCalledWith("h2"));
+    });
+
+    it("a reviewer can read the history but cannot remove anything", async () => {
+      mockRole = "reviewer";
+      api.getContactHistory.mockImplementation(async () => entries);
+      renderPage();
+      await screen.findByRole("heading", { name: "Previous numbers and emails" });
+      for (const button of screen.getAllByRole("button", { name: /remove the old/i })) expect(button).toBeDisabled();
     });
   });
 });

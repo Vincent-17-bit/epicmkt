@@ -10,7 +10,7 @@ export default function Flash({ ctx }) {
   return (
     <div className={styles.collapse} data-open={hold?.leaving ? "false" : "true"}>
       <div className={styles.collapseInner}>
-        <FlashBanner key={item.flash.sale.id} flash={item.flash} pricing={shown} unit={item.pricing?.unit} bannerRef={bannerRef} ended={Boolean(hold)} />
+        <FlashBanner key={item.flash.sale.id} flash={item.flash} pricing={shown} unit={ctx.option?.variant?.unit?.trim?.() || shown?.unit || item.pricing?.unit} bannerRef={bannerRef} ended={Boolean(hold)} />
         {hold && (
           <p className={styles.endedNotice} role="status">
             {t("flash.endedNotice")}

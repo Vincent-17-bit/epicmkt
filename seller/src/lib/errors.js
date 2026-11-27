@@ -22,6 +22,7 @@ const MESSAGES = {
   email_not_verified: "Add and verify your email first. Then you can get codes there.",
   invalid_password: "That is not your current password.",
   no_change: "That is already your number.",
+  invalid_whatsapp: "Enter a valid WhatsApp number. Choose the country, then type the number.",
   send_failed: "We could not send the code. Try again in a moment, or choose the other option.",
   invalid_date: "Choose a valid date.",
   invalid_timezone: "Choose a time zone from the list.",

@@ -22,12 +22,12 @@ const phone = () => build([["Color", "swatch", ["Black", "Grey", "Blue"]], ["Sto
 const colorOnly = () => build([["Color", "swatch", ["Black", "Grey"]]]);
 const priceOf = (o, k) => o.rows.find((r) => rowKeyOf(o, r.choice) === k).price;
 
-function Harness({ options, spy }) {
-  const [form, setForm] = useState({ productTypeId: null, price: "", options });
+function Harness({ options, spy, price = "" }) {
+  const [form, setForm] = useState({ productTypeId: null, price, options });
   spy.current = form;
   return <OptionsStep form={form} patch={(k, v) => setForm((f) => ({ ...f, [k]: v }))} errors={{}} />;
 }
-const setup = (options) => { const spy = { current: null }; const user = userEvent.setup(); const view = render(<Harness options={options} spy={spy} />); return { user, spy, ...view }; };
+const setup = (options, price = "") => { const spy = { current: null }; const user = userEvent.setup(); const view = render(<Harness options={options} spy={spy} price={price} />); return { user, spy, ...view }; };
 const tick = (user, name) => user.click(screen.getByRole("checkbox", { name }));
 
 describe("What changes the price?", () => {
@@ -116,5 +116,57 @@ describe("What changes the price?", () => {
     expect(spy.current.options.rows.find((r) => rowKeyOf(spy.current.options, r.choice) === "color=grey|storage=256-gb").sold).toBe(true);
     await user.type(screen.getByLabelText("256 GB Grey price"), "7000");
     expect(priceOf(spy.current.options, "color=grey|storage=256-gb")).toBe("7000");
+  });
+});
+
+describe("Pack sizes: units and the suggestion", () => {
+  const royco = () => build([["Flavour", "button", ["Beef", "Chicken", "Chilli"]], ["Size", "button", ["3 Cubes", "Whole Pack", "Whole Jar"]]]);
+  const key = (f, n) => `flavour=${f}|size=${["3-cubes", "whole-pack", "whole-jar"][n]}`;
+  const typed = () => {
+    let o = royco();
+    for (const [f, n, p] of [["beef", 0, "10"], ["beef", 1, "130"], ["chicken", 0, "10"], ["chicken", 1, "140"], ["chilli", 2, "160"]]) o = setRow(o, key(f, n), { price: p });
+    return o;
+  };
+
+  it("each combination has a Unit field that is saved with the row", async () => {
+    const { user, spy } = setup(royco());
+    await user.type(screen.getByLabelText("Chilli / Whole Jar unit (optional)"), "per jar of 48");
+    expect(spy.current.options.rows.find((r) => rowKeyOf(spy.current.options, r.choice) === key("chilli", 2)).unit).toBe("per jar of 48");
+    expect(optionsPayload(spy.current.options).variants.find((v) => v.choice.size === "whole-jar" && v.choice.flavour === "chilli").unit).toBe("per jar of 48");
+  });
+
+  it("when the seller has not answered but typed prices already differ, it offers the grid, and one tap shows it", async () => {
+    setup(typed());
+    // starts from what is saved, so the grid is already inferred for an item whose saved prices differ
+    expect(screen.queryByText(/Show them as a/)).toBeNull();
+    expect(screen.getByRole("checkbox", { name: "Flavour" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Size" })).toBeChecked();
+    expect(screen.getByLabelText("3 Cubes Beef price")).toBeInTheDocument();
+  });
+
+  it("an item opened with no prices, then priced row by row, gets the suggestion", async () => {
+    const { user } = setup(royco());
+    await user.type(screen.getByLabelText("Beef / 3 Cubes price"), "10");
+    await user.type(screen.getByLabelText("Beef / Whole Pack price"), "130");
+    await user.type(screen.getByLabelText("Chicken / 3 Cubes price"), "10");
+    await user.type(screen.getByLabelText("Chicken / Whole Pack price"), "140");
+    expect(screen.getByText(/Your prices already change with Flavour and Size/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Yes, show it" }));
+    expect(screen.getByRole("region", { name: "Prices by Size and Flavour" })).toBeInTheDocument();
+    expect(screen.queryByText(/Your prices already change/)).toBeNull();
+  });
+
+  it("the unit follows Size: one field per size sets it for every flavour", async () => {
+    const { user, spy } = setup(typed());
+    await user.click(screen.getByText("Different pack sizes? Set the unit for each"));
+    await user.type(screen.getByLabelText("Unit for Whole Jar"), "per jar");
+    const rows = spy.current.options.rows;
+    expect(rows.filter((r) => r.unit === "per jar").map((r) => rowKeyOf(spy.current.options, r.choice)).sort()).toEqual([key("beef", 2), key("chicken", 2), key("chilli", 2)]);
+    expect(rows.filter((r) => r.choice.size !== "whole-jar").every((r) => !r.unit)).toBe(true);
+  });
+
+  it("points out the forgotten jar prices that would quietly cost the item price", () => {
+    setup(typed(), "10");
+    expect(screen.getAllByText(/has no price of its own, so buyers pay the item price/).length).toBeGreaterThan(0);
   });
 });

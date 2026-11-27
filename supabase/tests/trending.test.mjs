@@ -74,7 +74,7 @@ beforeEach(async () => {
     c,
     `delete from search_events; delete from search_term_daily; delete from search_trending;
      delete from search_blocklist; update trending_settings set min_people = 3, min_people_pct = 0.005, min_people_cap = 50, rising_min_ratio = 1.5,
-       popular_days = 7, county_min_terms = 5, stale_hours = 3`
+       popular_days = 7, popular_mid_days = 14, popular_max_days = 30, popular_target = 10, popular_half_life = 7, county_min_terms = 5, stale_hours = 3`
   );
 });
 
@@ -141,12 +141,81 @@ test("the people needed grows with traffic, up to a cap", async () => {
   assert.deepEqual(await popular(), ["water dispenser", "solar lamp"], "the cap holds the bar at 4");
 });
 
-test("popular is the 7-day window: today and 6 earlier days count, the 7th earlier day does not", async () => {
+test("popular is the 7-day window once the target is met: today and 6 earlier days count, the 7th earlier day does not", async () => {
+  await sql(c, `update trending_settings set popular_target = 1`);
   await people("water dispenser", 20, { hoursAgo: 0 });
   await history("water dispenser", 20, 1, 7);
   await refresh();
   const out = await lists();
   assert.equal(out.popular.find((x) => x.term === "water dispenser").count, 20 + 6 * 20);
+  assert.equal(out.windowDays, 7);
+});
+
+test("a quiet week widens the window to 14 and then 30 days, only as far as it takes to meet the target", async () => {
+  await sql(c, `update trending_settings set popular_target = 1`);
+  await history("water dispenser", 5, 10, 10);
+  await refresh();
+  let out = await lists();
+  assert.deepEqual(out.popular.map((x) => x.term), ["water dispenser"]);
+  assert.equal(out.windowDays, 14);
+
+  await sql(c, `delete from search_term_daily`);
+  await history("water dispenser", 5, 20, 20);
+  await refresh();
+  out = await lists();
+  assert.deepEqual(out.popular.map((x) => x.term), ["water dispenser"]);
+  assert.equal(out.windowDays, 30);
+
+  await sql(c, `delete from search_term_daily`);
+  await history("water dispenser", 5, 31, 31);
+  await refresh();
+  out = await lists();
+  assert.equal(out.fallback, "categories", "older than the widest window: gone");
+  assert.equal(out.windowDays, null);
+});
+
+test("a busy week stays on 7 days: older words do not join a list that is already full", async () => {
+  await sql(c, `update trending_settings set popular_target = 2`);
+  await people("solar lamp", 5);
+  await people("gas cylinder", 4);
+  await history("water dispenser", 30, 12, 12);
+  await refresh();
+  const out = await lists();
+  assert.deepEqual(out.popular.map((x) => x.term), ["solar lamp", "gas cylinder"]);
+  assert.equal(out.windowDays, 7);
+});
+
+test("a quiet week keeps recent words first and fills the rest with older ones", async () => {
+  await sql(c, `update trending_settings set popular_target = 10`);
+  await people("solar lamp", 4);
+  await history("gas cylinder", 4, 9, 9);
+  await history("water dispenser", 4, 20, 20);
+  await refresh();
+  const out = await lists();
+  assert.equal(out.windowDays, 30);
+  assert.deepEqual(out.popular.map((x) => x.term), ["solar lamp", "gas cylinder", "water dispenser"]);
+});
+
+test("an old spike does not outrank a recent word: people count less as the days pass, and half_life 0 turns that off", async () => {
+  await people("solar lamp", 10, { hoursAgo: 0 });
+  await history("gas cylinder", 30, 20, 20);
+  await refresh();
+  assert.deepEqual(await popular(), ["solar lamp", "gas cylinder"], "10 people today outweigh 30 people 20 days ago");
+
+  await sql(c, `update trending_settings set popular_half_life = 0`);
+  await refresh();
+  assert.deepEqual(await popular(), ["gas cylinder", "solar lamp"], "without the fade it is plain people");
+});
+
+test("the window in use is reported: 1 for the live count, none for the category stand-in", async () => {
+  await sql(c, `update trending_settings set popular_target = 1`);
+  await refresh();
+  assert.equal((await lists()).windowDays, null);
+  await people("solar lamp", 5);
+  await refresh();
+  assert.equal((await lists()).windowDays, 7);
+  await sql(c, `update trending_settings set last_run_at = now() - interval '6 hours'`);
+  assert.equal((await lists()).windowDays, 1);
 });
 
 test("rising is a jump against the term's own average; an everyday word does not rise", async () => {
