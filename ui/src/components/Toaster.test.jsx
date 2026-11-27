@@ -17,4 +17,11 @@ describe("Toaster", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(onDismiss).toHaveBeenCalledWith(7);
   });
+
+  it("reads as success by default and as a problem when the tone says so", () => {
+    const { container, rerender } = render(<Toaster toasts={[{ id: 1, message: "Saved" }]} onDismiss={() => {}} />);
+    expect(container.querySelector("[data-tone=success]")).toBeTruthy();
+    rerender(<Toaster toasts={[{ id: 2, message: "We could not save", tone: "error" }]} onDismiss={() => {}} />);
+    expect(container.querySelector("[data-tone=error]")).toBeTruthy();
+  });
 });

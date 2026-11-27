@@ -13,32 +13,91 @@
 .toast {
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  max-width: 28rem;
-  padding: var(--space-3) var(--space-4);
-  border: 2px solid var(--text);
+  gap: var(--space-3);
+  width: fit-content;
+  max-width: min(28rem, 100%);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--status-ok-dot);
   border-radius: var(--radius-card);
-  background: var(--featured-bg);
-  color: var(--featured-text);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm, 0.9375rem);
   font-weight: 600;
+  line-height: 1.35;
   box-shadow: var(--shadow-2);
   pointer-events: auto;
+  animation: toast-in 180ms ease-out;
+}
+
+.error {
+  border-left-color: var(--status-bad);
+}
+
+.icon {
+  flex: none;
+  font-size: 1.25rem;
+  color: var(--status-ok-dot);
+}
+
+.error .icon {
+  color: var(--status-bad);
+}
+
+.message {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The action is a real button (Undo, View list): a quiet pill, 40 px tall for a thumb. */
+.action {
+  flex: none;
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.action:hover {
+  filter: brightness(0.95);
 }
 
 .close {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 0;
+  border-radius: 50%;
   background: none;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: var(--text-muted);
+  cursor: pointer;
 }
 
-/* A toast's action (Undo, View list) is a real button; keep a comfortable tap size without making the toast taller. */
-.toast .close {
-  min-height: 44px;
-  margin-block: calc(-1 * var(--space-3));
-  padding-inline: var(--space-2);
+.close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.action:focus-visible,
+.close:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast { animation: none; }
 }
