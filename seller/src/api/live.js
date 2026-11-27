@@ -63,8 +63,9 @@ export const requestOtp = ({ purpose = "change_password", channel = "sms", email
 export const changePassword = ({ code, newPassword }) => fn("seller-change-password", { code, newPassword });
 // Saves the email the last "verify_email" code was sent to. Needs that code and the seller's current password.
 export const setLoginEmail = ({ code, currentPassword }) => fn("seller-set-email", { code, currentPassword });
-// Saves the phone number the last "verify_phone" code was texted to. Needs that code and the seller's current password. -> { ok, phone }
-export const setLoginPhone = ({ code, currentPassword }) => fn("seller-set-phone", { code, currentPassword });
+// Saves the phone number the last "verify_phone" code was texted to. Needs that code and the seller's current password.
+// alsoWhatsapp: use the same number for the WhatsApp button too; left off, the WhatsApp number is not touched. -> { ok, phone, whatsappChanged }
+export const setLoginPhone = ({ code, currentPassword, alsoWhatsapp = false }) => fn("seller-set-phone", { code, currentPassword, alsoWhatsapp: alsoWhatsapp === true });
 export const updateProfile = (patch) => rpc("seller_update_profile", { p_patch: patch });
 export const setTimezone = (timezone) => rpc("seller_set_timezone", { p_timezone: timezone });
 export const saveWeeklyHours = (hours) => rpc("seller_set_hours", { p_hours: hours });
@@ -704,7 +705,7 @@ export const deleteOffer = (id) => rpc("seller_delete_offer", { p_id: id });
 // ---- Settings, help and onboarding ----
 // The few business columns the settings and setup screens read that the shared business shape does not carry.
 export const getBusinessFacts = async () => {
-  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, email, logo_path, cover_path, county, town, address, lat, lng, delivers, delivery_fee, delivery_radius_km, delivery_area, delivery_min_order, delivery_notes").maybeSingle());
+  const b = await rows(need().from("businesses").select("id, seller_id, name, status, plan_key, category_id, phone, whatsapp, email, logo_path, cover_path, county, town, address, lat, lng, delivers, delivery_fee, delivery_radius_km, delivery_area, delivery_min_order, delivery_notes").maybeSingle());
   if (!b) throw new ApiError("not_a_seller");
   return b;
 };

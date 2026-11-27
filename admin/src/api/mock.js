@@ -278,6 +278,21 @@ export async function getBusinessDetail(id) {
     },
   };
 }
+// Old numbers and emails, kept per business; the first look at a business seeds two so the panel has something to show.
+const contactHistory = new Map();
+export async function getContactHistory(businessId) {
+  if (!contactHistory.has(businessId)) {
+    contactHistory.set(businessId, [
+      { id: `${businessId}-h2`, field: "phone", old: "+254712000111", new: "+254722000222", at: "2026-11-20T09:30:00Z", byAdmin: false, by: null },
+      { id: `${businessId}-h1`, field: "login_email", old: "first@example.com", new: "second@example.com", at: "2026-11-02T14:05:00Z", byAdmin: true, by: "Amina (admin)" },
+    ]);
+  }
+  return structuredClone(contactHistory.get(businessId));
+}
+export async function deleteContactHistory(id) {
+  for (const [key, rows] of contactHistory) contactHistory.set(key, rows.filter((r) => r.id !== id));
+  return true;
+}
 export async function getLoginDelivery() {
   await latency(60);
   return [

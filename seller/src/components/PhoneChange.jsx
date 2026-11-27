@@ -15,7 +15,7 @@ import styles from "./phoneChange.module.css";
 //   2. the code -> saved
 // `startOpen` goes straight to the form, for a dialog the seller already opened to change the number.
 // `onAskAdmin` (optional) adds a way out for a seller who cannot do this, such as one who has lost their password.
-export default function PhoneChange({ currentPhone, onAskAdmin, onChanged, startOpen = false }) {
+export default function PhoneChange({ currentPhone, currentWhatsapp, onAskAdmin, onChanged, startOpen = false }) {
   const qc = useQueryClient();
   const [step, setStep] = useState(startOpen ? "phone" : "idle"); // idle | phone | code
   const [phone, setPhone] = useState("");
@@ -25,6 +25,11 @@ export default function PhoneChange({ currentPhone, onAskAdmin, onChanged, start
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  // WhatsApp follows the new number by default when it is the same number as the call number today (or not set), so the two do not drift apart;
+  // a seller who keeps a different WhatsApp number is not touched unless they tick it.
+  const sameToday = !currentWhatsapp || currentWhatsapp === currentPhone;
+  const [alsoWhatsapp, setAlsoWhatsapp] = useState(sameToday);
+  const [whatsappMoved, setWhatsappMoved] = useState(false);
 
   const reset = () => { setStep(startOpen ? "phone" : "idle"); setPhone(""); setCurrentPassword(""); setCode(""); setError(""); };
 
@@ -52,7 +57,8 @@ export default function PhoneChange({ currentPhone, onAskAdmin, onChanged, start
     if (!code.trim()) return setError("Enter the code from the text message.");
     setBusy(true);
     try {
-      await api.setLoginPhone({ code: code.trim(), currentPassword });
+      const saved = await api.setLoginPhone({ code: code.trim(), currentPassword, alsoWhatsapp });
+      setWhatsappMoved(saved?.whatsappChanged === true);
       await Promise.all([qc.invalidateQueries({ queryKey: ["subscription"] }), qc.invalidateQueries({ queryKey: FACTS_KEY })]);
       reset();
       setDone(true);
@@ -69,14 +75,14 @@ export default function PhoneChange({ currentPhone, onAskAdmin, onChanged, start
 
   return (
     <>
-      {done && <p className={`${styles.ok} ${ui.muted}`} role="status">Phone number saved. We also sent a notice to your old number.</p>}
+      {done && <p className={`${styles.ok} ${ui.muted}`} role="status">{whatsappMoved ? "Phone number and WhatsApp number saved." : "Phone number saved."} We also sent a notice to your old number.</p>}
       {step === "idle" && (
         <>
           <p className={`${ui.muted} ${styles.current}`}>
             The number on your listing is <strong className={styles.number} aria-label="Phone number, masked">{currentPhone ? maskPhone(currentPhone) : "not set"}</strong>.
             Customers call it, and sign-in and password codes are texted to it. It can be from any country.
           </p>
-          <button type="button" className={`${ui.btn} ${styles.fit}`} onClick={() => { setDone(false); setStep("phone"); }}>Change phone number</button>
+          <button type="button" className={`${ui.btn} ${styles.fit}`} onClick={() => { setDone(false); setAlsoWhatsapp(sameToday); setStep("phone"); }}>Change phone number</button>
         </>
       )}
       {step === "phone" && (
@@ -86,6 +92,13 @@ export default function PhoneChange({ currentPhone, onAskAdmin, onChanged, start
             <label className={ui.label} htmlFor="pc-phone">New phone number</label>
             <PhoneInput id="pc-phone" value={phone} onChange={setPhone} inputClassName={ui.input} />
           </div>
+          <label className={styles.check}>
+            <input type="checkbox" checked={alsoWhatsapp} onChange={(e) => setAlsoWhatsapp(e.target.checked)} />
+            <span>
+              Use this number for WhatsApp too
+              {!sameToday && <span className={ui.muted}> (your WhatsApp is now <span className={styles.number}>{maskPhone(currentWhatsapp)}</span>; leave this unticked to keep it)</span>}
+            </span>
+          </label>
           <div className={ui.field}>
             <label className={ui.label} htmlFor="pc-pw">Current password</label>
             <input id="pc-pw" type="password" className={ui.input} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} autoComplete="current-password" />

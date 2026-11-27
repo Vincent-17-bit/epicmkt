@@ -125,7 +125,7 @@ test("verify_phone has its own resend wait and hourly limit, apart from the othe
 test("seller_set_verified_phone saves the normalised number, refuses the same one, and returns the old number", async () => {
   const [{ phone: before }] = await sql(c, `select phone from businesses where id = '${ids.bizA}'`);
   const first = await setPhone("0722 000 111");
-  assert.deepEqual(first, { ok: true, phone: "+254722000111", previous: before, cancelledRequests: 0 });
+  assert.deepEqual(first, { ok: true, phone: "+254722000111", previous: before, whatsappChanged: false, cancelledRequests: 0 });
   assert.equal((await sql(c, `select phone from businesses where id = '${ids.bizA}'`))[0].phone, "+254722000111");
 
   assert.deepEqual(await setPhone("+254 722 000 111"), { ok: false, reason: "no_change" }); // already theirs, in another form
@@ -163,4 +163,119 @@ test("only the service can save a verified phone number, and a seller still cann
   const r = await tx(c, asA, (k) => k.query(`update businesses set phone = '+254700123123'`));
   assert.equal(r.rowCount, 0);
   await rejects(c, asA, `select seller_update_profile($1::jsonb)`, [JSON.stringify({ phone: "0700123123" })], /field_not_allowed/);
+});
+
+// ---- 0157: old numbers and emails are kept, a phone change can set WhatsApp too, admins can see (and the owner remove) the history ------
+
+const REVIEWER = "00000000-0000-0000-0000-0000000000a2";
+const history = (business = ids.bizA) => sql(c, `select field, old_value, new_value, changed_by from business_contact_history where business_id = $1 order by changed_at, id`, [business]);
+const setPhone3 = (phone, also, business = ids.bizA) =>
+  tx(c, asService, (k) => sql(k, `select seller_set_verified_phone($1, $2, $3) as r`, [business, phone, also]).then((r) => r[0].r), { commit: true });
+
+async function resetBizA() {
+  await sql(c, `delete from business_contact_history`);
+  await sql(c, `update businesses set phone = '+254712345678', whatsapp = '+254799000111', login_email = null, login_email_verified_at = null where id = $1`, [ids.bizA]);
+  await sql(c, `delete from business_contact_history`);
+}
+
+test("every old phone, WhatsApp number and sign-in email is kept when it changes, and a first value is not 'history'", async () => {
+  await resetBizA();
+  await sql(c, `update businesses set login_email = 'first@example.com', login_email_verified_at = now() where id = $1`, [ids.bizA]); // null -> value: nothing was replaced
+  assert.deepEqual(await history(), []);
+
+  await sql(c, `update businesses set phone = '+256772123456' where id = $1`, [ids.bizA]);
+  await sql(c, `update businesses set whatsapp = '+256772999000' where id = $1`, [ids.bizA]);
+  await sql(c, `update businesses set login_email = 'second@example.com' where id = $1`, [ids.bizA]);
+  await sql(c, `update businesses set name = name where id = $1`, [ids.bizA]); // an update that changes none of them adds nothing
+  const rows = await history();
+  assert.deepEqual(rows.map((r) => [r.field, r.old_value, r.new_value]), [
+    ["phone", "+254712345678", "+256772123456"],
+    ["whatsapp", "+254799000111", "+256772999000"],
+    ["login_email", "first@example.com", "second@example.com"]
+  ]);
+
+  await sql(c, `update businesses set whatsapp = null where id = $1`, [ids.bizA]); // cleared: the old one is still kept
+  assert.deepEqual((await history()).at(-1), { field: "whatsapp", old_value: "+256772999000", new_value: null, changed_by: null });
+  await resetBizA();
+});
+
+test("a phone change can set WhatsApp to the same number, or leave a different WhatsApp number alone", async () => {
+  await resetBizA();
+  const alone = await setPhone3("0722 000 111", false);
+  assert.deepEqual([alone.ok, alone.phone, alone.whatsappChanged], [true, "+254722000111", false]);
+  let [b] = await sql(c, `select phone, whatsapp from businesses where id = $1`, [ids.bizA]);
+  assert.deepEqual(b, { phone: "+254722000111", whatsapp: "+254799000111" }); // WhatsApp kept: they may use two numbers
+  assert.deepEqual((await history()).map((r) => r.field), ["phone"]);
+
+  await resetBizA();
+  const both = await setPhone3("+256 772 123 456", true);
+  assert.deepEqual([both.ok, both.phone, both.whatsappChanged], [true, "+256772123456", true]);
+  [b] = await sql(c, `select phone, whatsapp from businesses where id = $1`, [ids.bizA]);
+  assert.deepEqual(b, { phone: "+256772123456", whatsapp: "+256772123456" });
+  assert.deepEqual((await history()).map((r) => [r.field, r.old_value]), [["phone", "+254712345678"], ["whatsapp", "+254799000111"]]); // both old numbers kept
+
+  // WhatsApp already the new number: nothing to change there
+  await resetBizA();
+  await sql(c, `update businesses set whatsapp = '+254722000111' where id = $1`, [ids.bizA]);
+  assert.equal((await setPhone3("0722000111", true)).whatsappChanged, false);
+  // the old two-argument call (the edge function already deployed) still works
+  await resetBizA();
+  assert.equal((await setPhone("0722000111")).ok, true);
+  await resetBizA();
+});
+
+test("the admin site shows the new numbers straight away, in the business list and the business page", async () => {
+  await resetBizA();
+  await setPhone3("+256 772 123 456", true);
+  const detail = await tx(c, asAdmin, (k) => sql(k, `select admin_business_detail($1) as d`, [ids.bizA]).then((r) => r[0].d));
+  const text = JSON.stringify(detail);
+  assert.ok(text.includes('"phone":"+256772123456"'), "detail has the new phone");
+  assert.ok(text.includes('"whatsapp":"+256772123456"'), "detail has the new WhatsApp number");
+  assert.ok(!text.includes("+254712345678"), "and not the old one");
+  await resetBizA();
+});
+
+test("admins can read the history, say who did it, and sellers and the public cannot", async () => {
+  await resetBizA();
+  await sql(c, `delete from change_requests`);
+  await setPhone3("0722000111", false); // the seller, through the server
+  // an admin approves a phone change the seller asked for
+  await sql(c, `insert into change_requests (business_id, field, old_value, new_value) values ($1, 'phone', '+254722000111', '+254733000222')`, [ids.bizA]);
+  await tx(c, asAdmin, (k) => sql(k, `select admin_decide_change_request((select id from change_requests where field = 'phone' and status = 'pending'), true, null)`), { commit: true });
+
+  const list = await tx(c, asAdmin, (k) => sql(k, `select admin_contact_history($1) as h`, [ids.bizA]).then((r) => r[0].h));
+  assert.deepEqual(list.map((h) => [h.field, h.old, h.new, h.byAdmin]), [
+    ["phone", "+254722000111", "+254733000222", true], // newest first, by an admin
+    ["phone", "+254712345678", "+254722000111", false]  // by the seller
+  ]);
+  assert.ok(list[0].by, "an admin is named");
+  assert.equal(list[1].by, null);
+
+  await rejects(c, asA, `select admin_contact_history('${ids.bizA}')`, [], /forbidden/);
+  await rejects(c, { role: "anon" }, `select admin_contact_history('${ids.bizA}')`, [], /permission denied/);
+  await rejects(c, asA, `select * from business_contact_history`, [], /permission denied/);
+  await sql(c, `delete from change_requests`);
+  await resetBizA();
+});
+
+test("only the owner can delete a history entry, and the deletion is written to the audit log", async () => {
+  await resetBizA();
+  await sql(c, `insert into auth.users (id, email) values ('${REVIEWER}', 'rev@test') on conflict do nothing`);
+  await sql(c, `insert into admins (user_id, role) values ('${REVIEWER}', 'reviewer') on conflict (user_id) do update set role = 'reviewer'`);
+  await setPhone3("0722000111", false);
+  const [{ id }] = await sql(c, `select id from business_contact_history where business_id = $1`, [ids.bizA]);
+
+  const asReviewer = { sub: REVIEWER };
+  assert.equal((await tx(c, asReviewer, (k) => sql(k, `select jsonb_array_length(admin_contact_history($1)) as n`, [ids.bizA]))).at(0).n, 1); // a reviewer can read it
+  await rejects(c, asReviewer, `select admin_delete_contact_history('${id}')`, [], /forbidden/);
+  await rejects(c, asA, `select admin_delete_contact_history('${id}')`, [], /forbidden/);
+  assert.equal((await history()).length, 1); // still there
+
+  assert.equal((await tx(c, asAdmin, (k) => sql(k, `select admin_delete_contact_history($1) as ok`, [id]), { commit: true }))[0].ok, true);
+  assert.equal((await history()).length, 0);
+  const [audit] = await sql(c, `select action, data from audit_log where action = 'contact_history_deleted' and business_id = $1`, [ids.bizA]);
+  assert.equal(audit.action, "contact_history_deleted");
+  assert.equal(audit.data.old, "+254712345678"); // what was removed is recorded
+  await rejects(c, asAdmin, `select admin_delete_contact_history('${id}')`, [], /not_found/);
+  await resetBizA();
 });
