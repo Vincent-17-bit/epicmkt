@@ -1,9 +1,9 @@
 .page {
-  padding-block: var(--space-4) var(--space-6);
+  padding-block: var(--space-3) var(--space-5);
 }
 
 .page > :first-child {
-  margin-top: calc(var(--space-4) * -1);
+  margin-top: calc(var(--space-3) * -1);
   margin-bottom: var(--space-2);
 }
 

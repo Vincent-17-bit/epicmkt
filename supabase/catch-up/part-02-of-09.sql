@@ -1,4 +1,4 @@
--- EpicMKT catch-up, PART 2 OF 9 (migrations 0054 to 0073). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
+-- EpicMKT catch-up, PART 2 OF 9 (migrations 0053 to 0073). Run the parts in order in the Supabase SQL editor: 1, 2, ... 9.
 -- Together they bring a database that stopped part-way up to the latest migration, applying only what is missing (the same as
 -- catch-up-items.sql, which is too large for the SQL editor). Paste the whole part and press Run; the table at the end says what
 -- happened and which part is next. A part run before the one before it stops without changing anything.
@@ -27,6 +27,30 @@ begin
   select coalesce(max(step), 0) into v_step from catch_up.log;
   if v_first is not null then
     for m in select * from (values
+    ('0053_reorder_item_photos', $m_0053_reorder_item_photos$
+create or replace function public.seller_reorder_item_photos(p_item uuid, p_paths text[]) returns integer
+language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid := public.my_business_id();
+  v_n integer;
+begin
+  perform public.assert_seller_active();
+  if v_id is null then raise exception 'not_a_seller' using errcode = '42501'; end if;
+  if not exists (select 1 from public.items i where i.id = p_item and i.business_id = v_id and not i.removed_by_admin) then
+    raise exception 'item_not_found' using errcode = 'P0001';
+  end if;
+  if p_paths is null or cardinality(p_paths) = 0 or cardinality(p_paths) > 50 then raise exception 'no_items' using errcode = 'P0001'; end if;
+  update public.item_media m set sort = o.pos
+    from (select u.path, u.ord::integer - 1 as pos from unnest(p_paths) with ordinality as u(path, ord)) o
+    where m.item_id = p_item and m.business_id = v_id and m.kind = 'image' and m.path = o.path and m.sort <> o.pos;
+  get diagnostics v_n = row_count;
+  return v_n;
+end $$;
+
+revoke all on function public.seller_reorder_item_photos(uuid, text[]) from public, anon;
+grant execute on function public.seller_reorder_item_photos(uuid, text[]) to authenticated, service_role;
+
+$m_0053_reorder_item_photos$),
     ('0054_business_timezone', $m_0054_business_timezone$
 -- Each shop keeps its opening hours in its own time zone (an IANA name such as Asia/Kolkata). Until now every shop was
 -- read as Africa/Nairobi. Existing shops keep that value, so nothing changes for them.

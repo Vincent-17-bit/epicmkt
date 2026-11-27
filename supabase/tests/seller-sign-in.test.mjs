@@ -165,7 +165,7 @@ test("only the service can save a verified phone number, and a seller still cann
   await rejects(c, asA, `select seller_update_profile($1::jsonb)`, [JSON.stringify({ phone: "0700123123" })], /field_not_allowed/);
 });
 
-// ---- 0157: old numbers and emails are kept, a phone change can set WhatsApp too, admins can see (and the owner remove) the history ------
+// ---- 0158: old numbers and emails are kept, a phone change can set WhatsApp too, admins can see (and the owner remove) the history ------
 
 const REVIEWER = "00000000-0000-0000-0000-0000000000a2";
 const history = (business = ids.bizA) => sql(c, `select field, old_value, new_value, changed_by from business_contact_history where business_id = $1 order by changed_at, id`, [business]);

@@ -1,4 +1,4 @@
--- 0157: old phone numbers, WhatsApp numbers and sign-in emails are kept, and a phone change can update WhatsApp too.
+-- 0158: old phone numbers, WhatsApp numbers and sign-in emails are kept, and a phone change can update WhatsApp too.
 --
 -- 1. business_contact_history keeps every number and sign-in email a business has had. A trigger on businesses writes a row
 --    whenever phone, whatsapp or login_email changes, whoever changes it (the seller through an edge function or their profile, an

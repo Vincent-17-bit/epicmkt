@@ -1,9 +1,9 @@
 .page {
-  --page-pad-l: max(var(--space-3), var(--safe-left));
-  --page-pad-r: max(var(--space-3), var(--safe-right));
-  max-width: 78rem;
+  --page-pad-l: max(var(--gutter), var(--safe-left));
+  --page-pad-r: max(var(--gutter), var(--safe-right));
+  max-width: var(--content-width);
   margin: 0 auto;
-  padding: var(--space-3) var(--page-pad-r) 0 var(--page-pad-l);
+  padding: var(--space-2) var(--page-pad-r) 0 var(--page-pad-l);
 }
 
 .shell {
