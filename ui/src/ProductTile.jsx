@@ -18,6 +18,7 @@ const DEFAULT_LABELS = {
   options: "Options",
   optionsOne: "1 option",
   optionsMany: "{n} options",
+  priceVaries: "price varies",
   closed: "Closed",
   open: "Open now",
   lowStock: "Low stock",
@@ -87,7 +88,9 @@ export default function ProductTile({
   // "-33%" badge: each option is discounted differently (or not at all), so one percentage would be wrong for most of them.
   const ranged = Boolean(pricing?.hasRange && Number.isFinite(pricing.priceMin));
   const count = Number(item.optionCount);
-  const optionsText = !item.hasOptions ? "" : count === 1 ? text.optionsOne : count > 1 ? text.optionsMany.replace("{n}", String(count)) : text.options;
+  const optionsBase = !item.hasOptions ? "" : count === 1 ? text.optionsOne : count > 1 ? text.optionsMany.replace("{n}", String(count)) : text.options;
+  // "From KES 10" is the lowest price, not the price of every option: say so, so nobody expects the smallest size's price on the biggest.
+  const optionsText = ranged && optionsBase ? `${optionsBase} · ${text.priceVaries}` : optionsBase;
   // A short line after the name, sharing the name's lines: it fills the space a short name leaves and is cut when long.
   const blurb = showBlurb ? cardBlurb(item) || String(item.section ?? "").trim() : "";
   const dots = Array.isArray(swatches) ? swatches.filter((s) => s?.label) : [];

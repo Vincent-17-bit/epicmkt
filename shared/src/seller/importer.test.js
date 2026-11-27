@@ -82,7 +82,7 @@ test("every field is validated per row", () => {
   assert.match(r.rejected[1].errors[0], /at least 2/);
   assert.match(r.rejected[2].errors[0], /over 120/);
   assert.match(r.rejected[3].errors[0], /Price type/);
-  assert.match(r.rejected[4].errors[0], /must be a number/);
+  assert.match(r.rejected[4].errors[0], /whole number/);
   assert.match(r.rejected[5].errors[0], /required/);
   assert.match(r.rejected[7].errors[0], /free item/);
   assert.match(r.rejected[8].errors[0], /Availability/);

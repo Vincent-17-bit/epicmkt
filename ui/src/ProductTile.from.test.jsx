@@ -71,4 +71,16 @@ describe("ProductTile price: range and single", () => {
     expect(link).toHaveTextContent("Kuanzia");
     expect(link).toHaveTextContent("Chaguo");
   });
+
+  it('says the price varies when it is a "From" price, so the smallest size\'s price is not read as every size\'s', () => {
+    render(<ProductTile item={item({ hasOptions: true, optionCount: 9, pricing: ranged() })} href="/x" />);
+    expect(screen.getByRole("link")).toHaveTextContent("9 options · price varies");
+  });
+
+  it("does not say it for a single price, and uses the caller's words", () => {
+    const { rerender } = render(<ProductTile item={item({ hasOptions: true, optionCount: 2, pricing: { regularPrice: 1000, salePrice: 1000, savings: 0, discountPercent: 0 } })} href="/x" />);
+    expect(screen.getByRole("link")).not.toHaveTextContent("price varies");
+    rerender(<ProductTile item={item({ hasOptions: true, optionCount: 9, pricing: ranged() })} href="/x" labels={{ optionsMany: "Chaguo {n}", priceVaries: "bei hutofautiana" }} />);
+    expect(screen.getByRole("link")).toHaveTextContent("Chaguo 9 · bei hutofautiana");
+  });
 });

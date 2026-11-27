@@ -147,9 +147,9 @@ export const positionalMapping = (columns) =>
 const parsePrice = (raw) => {
   const cleaned = raw.replace(/\s*(kes|ksh|kshs|\/=)\s*/gi, "").replace(/,/g, "").trim();
   if (cleaned === "") return { empty: true };
-  const rangeMatch = cleaned.match(/^(\d+(?:\.\d{1,2})?)\s*(?:-|to)\s*(\d+(?:\.\d{1,2})?)$/i);
+  const rangeMatch = cleaned.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
   if (rangeMatch) return { value: Number(rangeMatch[1]), max: Number(rangeMatch[2]) };
-  if (!/^\d+(?:\.\d{1,2})?$/.test(cleaned)) return { error: "Price must be a number such as 1500." };
+  if (!/^\d+$/.test(cleaned)) return { error: "Price must be a whole number such as 1500 (no cents)." };
   return { value: Number(cleaned) };
 };
 
