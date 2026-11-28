@@ -24,6 +24,6 @@ export function entryFor({ item, business, optionParam = "", optionLabel = "", q
     optionLabel,
     kind: isServiceItem(item) ? "service" : "product",
     qty,
-    snap: { name: item.name, image: coverUrl(item) || null, unit: unitNow(item, unit), businessName: shop.name || "", mode: measure ? "measure" : "units", measure }
+    snap: { name: item.name, image: coverUrl(item) || null, unit: unitNow(item, unit), businessName: shop.name || "", mode: measure ? "measure" : "units", measure, counted: Boolean(info) }
   };
 }

@@ -41,7 +41,7 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
   const km = exact && hasPin ? distanceKm(exact, { lat, lng }) : null;
   const lines = sendable(group);
   const whatsapp = shop?.whatsapp;
-  const href = whatsapp && lines.length ? whatsappLink(whatsapp, listMessage({ business: shop, lines: lines.map((l) => ({ name: l.name, optionLabel: l.optionLabel, qty: l.qty, measure: l.mode === "measure", unitLabel: l.entry.snap?.measure?.unit ?? null, total: l.total, service: l.service, status: l.status })) })) : null;
+  const href = whatsapp && lines.length ? whatsappLink(whatsapp, listMessage({ business: shop, lines: lines.map((l) => ({ name: l.name, optionLabel: l.optionLabel, qty: l.qty, measure: l.mode === "measure", unitLabel: l.unitLabel ?? l.entry.snap?.measure?.unit ?? null, counted: Boolean(l.rules), total: l.total, service: l.service, status: l.status })) })) : null;
 
   const onSend = () => {
     const services = lines.filter((l) => l.service).length;

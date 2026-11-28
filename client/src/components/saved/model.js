@@ -65,7 +65,7 @@ export function lineView(entry, data, { shopGone = false } = {}) {
       unit,
       total: unit !== null ? lineTotal(unit, entry.qty) : null,
       mode: measure ? "measure" : "units",
-      rules: service ? null : quantityRules(measure ? "measure" : "units", { quantity: measure }),
+      rules: service && !snap.counted ? null : quantityRules(measure ? "measure" : "units", { quantity: measure }),
       note: unit === null ? t("saved.askPrice") : ""
     };
   }
@@ -78,7 +78,7 @@ export function lineView(entry, data, { shopGone = false } = {}) {
   const name = item.name || base.name;
   const image = coverUrl(item) || base.image;
   const href = `/b/${encodeURIComponent(item.businessSlug || entry.businessSlug)}/i/${encodeURIComponent(itemId)}${optionParam ? `?v=${encodeURIComponent(optionParam)}` : ""}`;
-  const out = { ...base, name, image, href, service: sl.service, redirected, status: sl.status, qty: sl.qty, total: sl.status === "ok" ? sl.total : null, unit: sl.unit ?? null, mode: sl.info?.mode ?? "units", rules: sl.service ? null : (sl.info?.rules ?? null), optionLabel: sl.option?.state === "ok" ? sl.option.label : entry.optionLabel || "", itemId };
+  const out = { ...base, name, image, href, service: sl.service, redirected, status: sl.status, qty: sl.qty, total: sl.status === "ok" ? sl.total : null, unit: sl.unit ?? null, mode: sl.info?.mode ?? "units", rules: sl.info?.rules ?? null, unitLabel: sl.info?.unit ?? null, optionLabel: sl.option?.state === "ok" ? sl.option.label : entry.optionLabel || "", itemId };
 
   if (sl.status === "choose_options") {
     return { ...out, optionLabel: "", chip: null, note: finite(sl.from) ? fill("saved.fromChoose", { price: formatKes(sl.from) }) : t("saved.chooseOptions"), rules: null };

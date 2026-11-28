@@ -80,7 +80,7 @@ export default function SavedLine({ line, loading, goTo }) {
       </span>
 
       <span className={styles.qty}>
-        {line.service && !gone ? (
+        {line.service && !line.rules && !gone ? (
           <span className={styles.muted}>{t("saved.service")}</span>
         ) : line.rules ? (
           <QuantityStepper mode={line.mode} rules={line.rules} value={line.qty} onChange={setQty} size="sm" hints={false} label={fill("saved.qtyOf", { name: line.name })} />

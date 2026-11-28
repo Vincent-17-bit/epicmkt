@@ -91,6 +91,21 @@ describe("lineFor parity: page, drawer and message agree", () => {
   });
 });
 
+describe("a service that is counted", () => {
+  it("units: 50 pages cost 50 times the price, in the page, the drawer and the line", () => {
+    const item = base({ kind: "service", quantityMode: "units", pricing: pricing(10) });
+    expect(quantityInfo(item)).not.toBeNull();
+    const { page, drawer } = both(item, "", 50);
+    expect([page.total, drawer.total, drawer.qty, drawer.service]).toEqual([500, 500, 50, true]);
+  });
+
+  it("measure: 3 hours at a price per hour", () => {
+    const item = base({ kind: "service", unit: "hour", quantityMode: "measure", quantity: { min: 0.5, step: 0.5, unit: "hour" }, pricing: pricing(120) });
+    const { page, drawer } = both(item, "", 3);
+    expect([page.total, drawer.total, drawer.info.unit]).toEqual([360, 360, "hour"]);
+  });
+});
+
 describe("lines that cannot be totalled", () => {
   it("no price", () => {
     expect(savedLine({ entry: entry(), item: base({ pricing: null }) })).toMatchObject({ status: "no_price", total: null, priced: false });

@@ -256,6 +256,11 @@ describe("listMessage", () => {
     expect(text).toBe(["Hi Glow Salon Kilimani, I'd like to book on EpicMKT:", "1. *Braids* · KES 3,000", "2. *Wash* · KES 500", "When are you free?"].join("\n"));
   });
 
+  it("a counted service writes its amount and the total", () => {
+    const text = listMessage({ business: { name: "Cyber Hub" }, lines: [line({ name: "Printing, black and white", optionLabel: "", qty: 50, total: 500, service: true, counted: true }), line({ name: "Computer use", optionLabel: "", qty: 2.5, measure: true, unitLabel: "hour", total: 300, service: true, counted: true })] });
+    expect(text).toBe(["Hi Cyber Hub, I'd like to book on EpicMKT:", "1. *Printing, black and white* x50 · KES 500", "2. *Computer use* 2.5 hour · KES 300", "Total: KES 800", "When are you free?"].join("\n"));
+  });
+
   it("products and services together: products first, then To book:, one total", () => {
     const text = listMessage({ business: shop, lines: [line({ name: "Haircut", optionLabel: "", total: 500, service: true }), line()] });
     expect(text.split("\n")).toEqual(["Hi Nyumbani Home Store, I found these on EpicMKT:", "1. *Wooden coffee table* (Walnut) x1 · KES 8,500", "To book:", "2. *Haircut* · KES 500", "Total: KES 9,000", "Are they available? When are you free?"]);

@@ -81,11 +81,11 @@ export function savedLine({ entry, item }) {
   }
   if (option?.state === "gone") return { ...base, status: "option_gone", total: null, qty: entry.qty, priced: false };
   const withOption = option?.state === "ok" ? { variant: option.variant, label: option.label } : null;
-  const info = service ? null : quantityInfo(item, withOption?.variant ?? null);
+  const info = quantityInfo(item, withOption?.variant ?? null);
   // Held at what is in stock: the stored quantity changes only when the buyer touches the buttons.
   const stock = info?.rules.max;
   const wanted = info && Number.isFinite(stock) ? Math.min(entry.qty, stock) : entry.qty;
-  const line = lineFor({ item: service ? { ...item, quantityMode: "none" } : item, option: withOption, qty: info ? Math.max(wanted, info.rules.min) : 1 });
+  const line = lineFor({ item, option: withOption, qty: info ? Math.max(wanted, info.rules.min) : 1 });
   return { ...base, ...line, status: line.priced ? "ok" : "no_price", capped: info && Number.isFinite(stock) && entry.qty > stock ? stock : null };
 }
 

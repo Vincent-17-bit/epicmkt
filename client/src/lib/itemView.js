@@ -232,7 +232,7 @@ export function listMessage({ business, lines }) {
   const row = (l, n) => {
     let text = `${n}. *${plain(l.name)}*`;
     if (l.optionLabel) text += ` (${plain(l.optionLabel)})`;
-    if (!l.service) text += ` ${l.measure ? amountText(l.qty, l.unitLabel) : `x${l.qty}`}`;
+    if (!l.service || l.counted) text += ` ${l.measure ? amountText(l.qty, l.unitLabel) : `x${l.qty}`}`;
     if (Number.isFinite(l.total)) text += ` · ${formatKes(l.total)}`;
     else if (l.status === "choose_options" || l.status === "option_gone") text += " · which option?";
     else text += " · price?";
@@ -258,7 +258,7 @@ export function listMessage({ business, lines }) {
       out.push(row(l, n));
     }
     if (shown < ordered.length) out.push(`+${ordered.length - shown} more item${ordered.length - shown === 1 ? "" : "s"}`);
-    if (products.length && Number.isFinite(total) && priced.length) out.push(`Total: ${formatKes(total)}`);
+    if ((products.length || lines.some((l) => l.counted)) && Number.isFinite(total) && priced.length) out.push(`Total: ${formatKes(total)}`);
     out.push(...closing);
     return out.join("\n");
   };
