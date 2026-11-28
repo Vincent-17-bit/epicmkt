@@ -16,10 +16,7 @@ function entry(term, products, extra = {}, taken = new Set()) {
 }
 
 function fallbackImage(item, products) {
-  if (item.kind === "store" && item.slug) {
-    const own = products.find((p) => p.slug === item.slug && pictured(p));
-    if (own) return pictured(own);
-  }
+  if (item.kind === "store") return null;
   const found = searchProducts(products, { q: item.term }, { pageSize: 8, itemsOnly: true });
   const withPicture = found.items.find((p) => pictured(p));
   return withPicture ? pictured(withPicture) : null;

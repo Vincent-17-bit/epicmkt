@@ -98,6 +98,18 @@ test("one list ranks every kind together: a store, a category, a flash sale and 
   assert.equal(out.popular[1].slug, "shop-a", "a store carries its page");
 });
 
+test("a store row carries the shop's logo, never a product picture", async () => {
+  await sql(c, `update businesses set logo_path = 'logos/shop-a.png' where id = $1`, [ids.bizA]);
+  await people("shop a", 4);
+  await refresh();
+  const out = await lists();
+  const store = out.popular.find((x) => x.kind === "store");
+  assert.equal(store.image, "logos/shop-a.png");
+  await sql(c, `update businesses set logo_path = null where id = $1`, [ids.bizA]);
+  await refresh();
+  assert.equal((await lists()).popular.find((x) => x.kind === "store").image, null);
+});
+
 test("plural endings and synonyms count as one thing, shown with the most common spelling", async () => {
   await people("gas cylinder", 2);
   await people("gas cylinders", 3);
