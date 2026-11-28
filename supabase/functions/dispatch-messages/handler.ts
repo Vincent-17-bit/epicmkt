@@ -2,11 +2,11 @@ import { json, readJson, wrap, z } from "../_shared/seller.ts";
 import { writeAudit } from "../_shared/audit.ts";
 import { cronOrRole, isResponse, limitAdmin, type OutboundDeps, type SendResult } from "../_shared/outbound.ts";
 
-// Runs every minute from pg_cron (see supabase/cron/schedule.sql) with the x-cron-secret header.
+// Runs every 2 minutes from pg_cron (see supabase/cron/schedule.sql) with the x-cron-secret header.
 // An owner or support admin can also run it by hand.
 //
 // Audit (owner decision D2b): a run an admin starts by hand writes one 'dispatch.run' row with the counts. Cron runs
-// write none: they fire every minute, and a message that finally fails already raises an admin notification.
+// write none: they fire every 2 minutes, and a message that finally fails already raises an admin notification.
 //
 // All state lives in SQL: claim_due_messages() holds back promotional SMS/email during quiet hours and leases
 // the rest; record_message_result() applies the retry policy (3 attempts, then 'failed' plus an admin notification).

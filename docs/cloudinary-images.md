@@ -39,7 +39,7 @@ message attachments stay in Supabase Storage (they are private or not pictures).
 ```
 seller browser ──1 sign──▶ seller-media-sign ──▶ records the id in media_uploads, returns a signature for THAT id
 seller browser ──2 file──▶ Cloudinary (direct; Supabase never sees the bytes)
-                           incoming transformation: scale so the longest side is 3840 px (up or down), q_auto:best
+                           incoming transformation: a bigger picture is scaled down to 1920 px on its longest side (never enlarged), q_auto:best
 seller browser ──3 done──▶ seller-media-finalize ──▶ checks Cloudinary's signature on the answer, attaches the id to the item
 ```
 * The browser never holds the API secret. Each signature covers one id chosen by the server under the shop's own
@@ -54,16 +54,17 @@ seller browser ──3 done──▶ seller-media-finalize ──▶ checks Clou
 
 ## Upscaling (what to expect)
 
-Every upload is brought to **3840 px on its longest side**: small pictures are scaled up, big ones down, aspect ratio kept, nothing
-cropped. Plain upscaling makes the picture *bigger*, not *sharper*; a 300 px photo becomes a smooth 4K photo, not a detailed one.
+Every upload is capped at **1920 px on its longest side**: big pictures are scaled down, small ones are kept as they are (`c_limit`,
+never enlarged), aspect ratio kept, nothing cropped. Enlarging a picture makes it *bigger*, not *sharper*, and costs storage on the free plan,
+so a 600 px photo stays 600 px; the zoom shrinks itself to match.
 For real added detail enable Cloudinary's **AI Upscale** add-on and set `CLOUDINARY_AI_UPSCALE=true`: pictures under 960 px a side
 then go through it first (it multiplies each side by 4; it only accepts inputs under 4.2 megapixels, which is why larger pictures use
 plain scaling). The add-on is a paid/credit feature; the flag is off by default so uploads can never fail because of it.
 
 ## What visitors download
 
-The 4K master is never sent to a card. Delivery URLs are `…/image/upload/f_auto,q_auto:<tier>,c_limit,w_<width>/<id>`:
-`f_auto` picks AVIF/WebP/JPEG per browser, widths come from a fixed ladder (96 to 3840), thumbnails (≤ 480 px) use the `eco`
+The 1920 px master is never sent to a card. Delivery URLs are `…/image/upload/f_auto,q_auto:<tier>,c_limit,w_<width>/<id>`:
+`f_auto` picks AVIF/WebP/JPEG per browser, widths come from a fixed ladder (96 to 1920), thumbnails (≤ 480 px) use the `eco`
 quality tier, so a card image is typically a few KB to a few tens of KB. `LazyImage` builds a `srcset` so a phone gets the small
 file and a retina desktop the larger one. URLs are stable per picture, so Cloudinary's CDN, the browser cache and the app's
 service worker (`media-images`, CacheFirst) all keep them. The page preconnects to `res.cloudinary.com` while it is still parsing.
@@ -79,7 +80,7 @@ page plus CDN-cached image files, with no database or storage call per picture.
 
 * `npm run test:shared`, `npm run test:db`, `npm run test:fn`, `npm run test:seller-ui`, `npm run test:client`, `npm run test:ui`.
 * After deploy: upload a photo as a seller and open its URL in the network tab: it should be `res.cloudinary.com/.../f_auto,q_auto:...`,
-  a few KB to tens of KB. In the Cloudinary Media Library the original should be 3840 px on its long side.
+  a few KB to tens of KB. In the Cloudinary Media Library the original should be at most 1920 px on its long side.
 * Remove that photo: within ~10 minutes the asset disappears from Cloudinary (or run the `media-gc` function by hand with the cron secret).
 * `select count(*) from media_gc;` should hover near zero; rows with `last_error` set show a failing delete.
 

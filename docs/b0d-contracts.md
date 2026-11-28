@@ -166,7 +166,7 @@ Defined in `supabase/cron/schedule.sql` (not a migration; run once per environme
 
 | Job | Cron (UTC) | Nairobi |
 | --- | --- | --- |
-| `dispatch-messages` | `* * * * *` | every minute |
+| `dispatch-messages` | `*/2 * * * *` | every 2 minutes |
 | `daily-lifecycle` | `0 4 * * *` | 07:00 daily (when quiet hours end) |
 
 ## Owner decisions (approved 2026-10-15)

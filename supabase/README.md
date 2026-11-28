@@ -186,7 +186,7 @@ schema and tests, not from spec section 5: verify before relying on them).
 ### Messaging jobs
 
 Schedule the two jobs once per environment with `supabase/cron/schedule.sql` (setup steps are in its header):
-`dispatch-messages` every minute, `daily-lifecycle` at 07:00 Nairobi (04:00 UTC). Both accept the `x-cron-secret`
+`dispatch-messages` every 2 minutes, `daily-lifecycle` at 07:00 Nairobi (04:00 UTC). Both accept the `x-cron-secret`
 header (`CRON_SECRET`), and an admin JWT for manual runs.
 
 ```bash

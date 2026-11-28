@@ -53,10 +53,11 @@ begin
   end if;
 end $guard$;
 
--- dispatch-messages: every minute. Sends queued SMS/email, applies retries and quiet hours.
+-- dispatch-messages: every 2 minutes (was every minute; halves its Edge Function invocations on the free plan, 500K a month).
+-- Sends queued SMS/email, applies retries and quiet hours. Sign-in codes (OTP) do not wait for it: they are sent directly.
 select cron.schedule(
   'dispatch-messages',
-  '* * * * *',
+  '*/2 * * * *',
   $$
   select net.http_post(
     url := (select decrypted_secret from vault.decrypted_secrets where name = 'project_url') || '/functions/v1/dispatch-messages',

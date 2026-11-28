@@ -26,7 +26,7 @@ test("urls, blobs, traversal and empty values are never Cloudinary ids", () => {
 test("delivery urls carry f_auto, a quality tier and a width from the ladder", () => {
   assert.equal(deliveryTransform(480), "f_auto,q_auto:eco,c_limit,w_480");
   assert.equal(deliveryTransform(800), "f_auto,q_auto:good,c_limit,w_800");
-  assert.equal(deliveryTransform(2400), "f_auto,q_auto:best,c_limit,w_2400");
+  assert.equal(deliveryTransform(2400), "f_auto,q_auto:best,c_limit,w_1920");
   assert.equal(deliveryTransform(350), "f_auto,q_auto:eco,c_limit,w_480", "rounds up to the next rung");
   assert.equal(deliveryTransform(99999), `f_auto,q_auto:best,c_limit,w_${MASTER_EDGE}`, "never past the master");
   assert.equal(deliveryTransform(undefined), `f_auto,q_auto:best,c_limit,w_${MASTER_EDGE}`);
@@ -64,10 +64,10 @@ test("resizeImageUrl swaps the width of our urls and leaves every other url alon
   assert.match(imageSrcSet(url), /w_240\/.* 240w, .*w_480\/.* 480w, .*w_800\/.* 800w, .*w_1200\/.* 1200w, .*w_1600\/.* 1600w$/);
 });
 
-test("the upload transformation always lands on a 4K long side, with the AI upscaler only when asked for", () => {
-  assert.equal(uploadTransformation(), "c_fit,w_3840,h_3840/q_auto:best");
-  assert.equal(uploadTransformation({ aiUpscale: false }), "c_fit,w_3840,h_3840/q_auto:best");
-  assert.equal(uploadTransformation({ aiUpscale: true }), "if_w_lt_960_and_h_lt_960/e_upscale/if_end/c_fit,w_3840,h_3840/q_auto:best");
+test("the upload transformation never exceeds a 1920 px long side, with the AI upscaler only when asked for", () => {
+  assert.equal(uploadTransformation(), "c_limit,w_1920,h_1920/q_auto:best");
+  assert.equal(uploadTransformation({ aiUpscale: false }), "c_limit,w_1920,h_1920/q_auto:best");
+  assert.equal(uploadTransformation({ aiUpscale: true }), "if_w_lt_960_and_h_lt_960/e_upscale/if_end/c_limit,w_1920,h_1920/q_auto:best");
 });
 
 test("ids are built under the business prefix and ownership is checked by that prefix", () => {

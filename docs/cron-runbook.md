@@ -7,7 +7,7 @@ running, and lets the owner pause or run each one.
 
 | Job | Runs | What it does |
 | --- | --- | --- |
-| `dispatch-messages` | every minute | Sends queued SMS and email, retries failures, holds promotions during quiet hours |
+| `dispatch-messages` | every 2 minutes | Sends queued SMS and email, retries failures, holds promotions during quiet hours |
 | `daily-lifecycle` | 04:00 UTC (07:00 Nairobi) | Queues renewal reminders, moves listings into grace and expiry |
 | `proofs-purge` | 01:00 UTC (04:00 Nairobi) | Deletes proof uploads 90 days after their flag was resolved, and uploads that were never finalized |
 | `media-gc` | every 10 minutes | Deletes from Cloudinary the pictures nothing points at any more (removed photos, replaced logos, deleted shops) and settles unfinished uploads. See `docs/cloudinary-images.md` |

@@ -1,4 +1,4 @@
-// One place that knows how a stored picture becomes a url, and how an upload is turned into a 4K master.
+// One place that knows how a stored picture becomes a url, and how an upload is turned into a 1920 px master.
 // Pure and dependency free: the browser apps, the Vercel functions and the Supabase edge functions all use it
 // (scripts/sync-shared.mjs copies it next to the edge functions).
 //
@@ -10,11 +10,11 @@
 // New pictures are always Cloudinary ids. Old rows keep working from the Supabase bucket until
 // scripts/migrate-images-to-cloudinary.mjs moves them. Videos stay in Supabase (they have an extension, so they are legacy-style).
 
-/** Longest side of the stored master. Everything the seller uploads is scaled (up or down) to this. */
-export const MASTER_EDGE = 3840;
+/** Longest side of the stored master. Bigger uploads are scaled down to this; smaller ones are kept as they are. */
+export const MASTER_EDGE = 1920;
 
 /** Widths the site asks Cloudinary for. A card never downloads more than it can show. */
-export const IMAGE_WIDTHS = [96, 160, 240, 320, 480, 640, 800, 1200, 1600, 2400, 3840];
+export const IMAGE_WIDTHS = [96, 160, 240, 320, 480, 640, 800, 1200, 1600, 1920];
 
 /** Formats a seller may upload. Cloudinary re-encodes them; the browser is served f_auto (AVIF/WebP/JPEG). */
 export const UPLOAD_FORMATS = ["jpg", "png", "webp"];
@@ -88,15 +88,15 @@ export function imageSrcSet(url, widths = [240, 480, 800, 1200, 1600]) {
 }
 
 /**
- * The transformation Cloudinary runs on the file BEFORE storing it, so the stored original is already the 4K master.
+ * The transformation Cloudinary runs on the file BEFORE storing it, so the stored original is already the 1920 px master.
  *   1. Pictures smaller than 960 px on both sides go through Cloudinary's AI upscaler first (it multiplies each side by 4)
- *      when `aiUpscale` is on. That add-on is optional; without it the next step still reaches 4K, just without invented detail.
- *   2. c_fit scales the picture, up or down, so its longest side is exactly MASTER_EDGE. Aspect ratio is kept, nothing is cropped.
+ *      when `aiUpscale` is on. That add-on is optional; without it the next step still reaches the master size, just without invented detail.
+ *   2. c_limit scales a bigger picture down so its longest side is MASTER_EDGE. A smaller picture is left as it is (never enlarged: that only costs storage). Aspect ratio is kept, nothing is cropped.
  *   3. q_auto:best keeps the master crisp while still shaving the bytes a camera original wastes.
  */
 export function uploadTransformation({ aiUpscale = false } = {}) {
   const ai = aiUpscale ? "if_w_lt_960_and_h_lt_960/e_upscale/if_end/" : "";
-  return `${ai}c_fit,w_${MASTER_EDGE},h_${MASTER_EDGE}/q_auto:best`;
+  return `${ai}c_limit,w_${MASTER_EDGE},h_${MASTER_EDGE}/q_auto:best`;
 }
 
 /** Where a seller's uploads live in Cloudinary. The business id comes first, so ownership is checkable by prefix. */

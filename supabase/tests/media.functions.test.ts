@@ -86,13 +86,13 @@ Deno.test("cloudinary: a signed upload pins the id, formats, transformation and 
   assertEquals(fields.timestamp, "1700000000");
   assertEquals(fields.allowed_formats, "jpg,png,webp");
   assertEquals(fields.overwrite, "false");
-  assertEquals(fields.transformation, "c_fit,w_3840,h_3840/q_auto:best");
+  assertEquals(fields.transformation, "c_limit,w_1920,h_1920/q_auto:best");
   assertEquals(fields.api_key, "key-1");
   const { api_key: _k, signature, ...signed } = fields;
   assertEquals(signature, await signParams(signed, SECRET));
   assert(!JSON.stringify(fields).includes(SECRET));
   const ai = makeCloudinary({ cloudName: "demo", apiKey: "k", apiSecret: SECRET, aiUpscale: true });
-  assert((await ai.signUpload("a/b/c")).fields.transformation.startsWith("if_w_lt_960_and_h_lt_960/e_upscale/if_end/c_fit"));
+  assert((await ai.signUpload("a/b/c")).fields.transformation.startsWith("if_w_lt_960_and_h_lt_960/e_upscale/if_end/c_limit"));
 });
 
 Deno.test("cloudinary: destroy treats ok and not-found as deleted, reports the rest, and signs every call", async () => {

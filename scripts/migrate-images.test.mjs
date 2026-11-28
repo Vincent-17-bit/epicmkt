@@ -32,7 +32,7 @@ test("uploadFromUrl signs the request, fetches from the url, and verifies Cloudi
   const r = await uploadFromUrl({ cloud, url: "https://x/y.jpg", publicId: `${B}/${I}/${U(1)}`, doFetch: cloudFetch(log), now: () => 1_700_000_000_000 });
   assert.equal(r.width, 3840);
   assert.equal(log[0].file, "https://x/y.jpg");
-  assert.equal(log[0].transformation, "c_fit,w_3840,h_3840/q_auto:best");
+  assert.equal(log[0].transformation, "c_limit,w_1920,h_1920/q_auto:best");
   const { file, api_key, signature, ...signed } = log[0];
   assert.equal(signature, await signParams(signed, "s"));
   await assert.rejects(uploadFromUrl({ cloud, url: "u", publicId: "a/b", doFetch: cloudFetch([], { fail: true }) }), /nope/);
