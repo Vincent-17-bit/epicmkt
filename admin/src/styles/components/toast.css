@@ -16,15 +16,25 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--toast-border);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--success);
   border-radius: var(--radius-md);
-  background: var(--toast-bg);
-  color: var(--toast-text);
+  background: var(--surface);
+  color: var(--text);
   box-shadow: var(--elevation-3);
 }
 
+.toast__icon {
+  flex: none;
+  color: var(--success);
+}
+
 .toast--error {
-  border-color: var(--danger);
+  border-left-color: var(--danger);
+}
+
+.toast--error .toast__icon {
+  color: var(--danger);
 }
 
 .toast__message {
@@ -43,5 +53,6 @@
 
 .toast .toast__action {
   color: var(--primary-text);
+  text-decoration: underline;
 }
 

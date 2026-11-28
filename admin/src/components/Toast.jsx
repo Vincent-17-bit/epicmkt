@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faTriangleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 const ToastContext = createContext(null);
 
@@ -18,7 +18,7 @@ function ToastItem({ item, onDismiss }) {
 
   return (
     <div className={`toast toast--${item.tone}`} role={item.tone === "error" ? "alert" : "status"}>
-      {item.tone === "error" ? <FontAwesomeIcon icon={faTriangleExclamation} /> : null}
+      <FontAwesomeIcon className="toast__icon" icon={item.tone === "error" ? faTriangleExclamation : faCircleCheck} aria-hidden="true" />
       <span className="toast__message">{item.message}</span>
       {item.actionLabel ? (
         <button

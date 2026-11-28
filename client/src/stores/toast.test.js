@@ -1,32 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { showToast, useToastStore } from "./toast.js";
 
+beforeEach(() => useToastStore.setState({ toasts: [] }));
+
 describe("toast store", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    useToastStore.setState({ toasts: [] });
-  });
-  afterEach(() => vi.useRealTimers());
-
-  it("a plain showToast(message) is unchanged: no action, gone after 4.5 s", () => {
-    showToast("Hello");
+  it("shows the same message once, however many times it is pushed", () => {
+    showToast("Saved");
+    showToast("Saved");
     expect(useToastStore.getState().toasts).toHaveLength(1);
-    expect(useToastStore.getState().toasts[0]).not.toHaveProperty("action");
-    vi.advanceTimersByTime(4499);
-    expect(useToastStore.getState().toasts).toHaveLength(1);
-    vi.advanceTimersByTime(2);
-    expect(useToastStore.getState().toasts).toHaveLength(0);
   });
 
-  it("carries an action and a longer duration when asked", () => {
-    const onClick = vi.fn();
-    showToast("Removed", { action: { label: "Undo", onClick }, duration: 6000 });
-    const [toast] = useToastStore.getState().toasts;
-    toast.action.onClick();
-    expect(onClick).toHaveBeenCalled();
-    vi.advanceTimersByTime(5900);
-    expect(useToastStore.getState().toasts).toHaveLength(1);
-    vi.advanceTimersByTime(200);
-    expect(useToastStore.getState().toasts).toHaveLength(0);
+  it("shows at most three, newest last", () => {
+    ["a", "b", "c", "d"].forEach((m) => showToast(m));
+    expect(useToastStore.getState().toasts.map((t) => t.message)).toEqual(["b", "c", "d"]);
+  });
+
+  it("marks a problem message as an error and the rest as success", () => {
+    showToast("We could not cancel that request.");
+    showToast("Saved");
+    expect(useToastStore.getState().toasts.map((t) => t.tone)).toEqual(["error", "success"]);
   });
 });

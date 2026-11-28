@@ -70,6 +70,27 @@ describe("ProductTile with a Save heart", () => {
     expect(link).toHaveAttribute("href", "/b/mama/i/i1");
   });
 
+  it("the picture, name, price and shop are all inside the one link, and the heart is the only other control", () => {
+    setup();
+    const link = screen.getByRole("link");
+    expect(link.querySelector("img, [class*=media]")).toBeTruthy();
+    expect(link).toHaveTextContent("Chapati and beans");
+    expect(link).toHaveTextContent(/KES/);
+    expect(link).toHaveTextContent("Mama Pima Kitchen");
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    // the heart is drawn over the picture's corner, outside the link
+    expect(screen.getByRole("button").className).toMatch(/save/);
+  });
+
+  it("clicking the price or the shop name opens the item; clicking the heart does not", () => {
+    const { onClick } = setup();
+    fireEvent.click(screen.getByText("Mama Pima Kitchen"));
+    expect(navigations).toEqual(["/b/mama/i/i1"]);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button"));
+    expect(navigations).toEqual(["/b/mama/i/i1"]);
+  });
+
   it("opening the item still works through the name link and still logs the click", () => {
     const { onClick } = setup();
     fireEvent.click(screen.getByRole("link"));
