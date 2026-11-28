@@ -1,5 +1,6 @@
-import { useId, useState } from "react";
-import { amountText, checkQuantity, formatKes, formatAmount, perUnitText } from "@epicmkt/shared";
+import { useId } from "react";
+import { formatKes } from "@epicmkt/shared";
+import QuantityStepper from "../QuantityStepper.jsx";
 import Tiers, { tiersFor } from "./Tiers.jsx";
 import { quantityInfo } from "../../lib/itemView.js";
 import { t } from "../../i18n/index.js";
@@ -10,8 +11,8 @@ const fill = (key, v) => Object.entries(v).reduce((s, [k, x]) => s.replace(`{${k
 /**
  * Slot for quantity, right after Offers. Three shapes, all driven by the one quantity the page keeps (ctx.qty):
  *   - an item with quantity-tier prices: the tier table (its own quantity box follows the page's),
- *   - a typed item that counts units or a measure (kg, m): a stepper with the total beside it,
- *   - a "none" item or a service: nothing at all, and the page is unchanged. An item with no type counts whole units.
+ *   - a priced item that counts units (any item without a type) or a measure (kg, m): the stepper; the total shows in the price at the top,
+ *   - a "none" item or a service: nothing at all, and the page is unchanged.
  */
 export default function Quantity({ ctx, slot }) {
   const item = slot?.item;
@@ -28,39 +29,16 @@ function Stepper({ item, info, ctx }) {
   const uid = useId();
   const { rules, mode, unit } = info;
   const measure = mode === "measure";
-  const qty = ctx.qty;
-  const order = ctx.order;
-  const [text, setText] = useState(null);   // what is being typed; null = show the quantity itself
-  const [said, setSaid] = useState("");
-  const apply = (value) => {
-    const checked = checkQuantity(mode, value, { quantity: measure ? { min: rules.min, step: rules.step, unit } : null, stock: rules.max });
-    ctx.setQty(checked.value);
-    setText(null);
-    setSaid(checked.reason === "above_max" ? fill("qty.max", { n: formatAmount(rules.max) }) : checked.reason === "below_min" ? fill("qty.min", { n: amountText(rules.min, unit) }) : "");
-  };
-  const step = (dir) => apply(Number((qty + dir * rules.step).toFixed(3)));
-  const shown = text ?? formatAmount(qty);
-  const total = formatKes(order.total);
+  const total = formatKes(ctx.order.total);
+  // The sum behind the price is never shown. The buyer sees the result in the price at the top of the page; a screen reader is told it here.
   return (
     <section className={styles.root} aria-labelledby={`${uid}-h`} data-testid="quantity">
       <h3 id={`${uid}-h`} className={styles.heading}>{t("qty.heading")}</h3>
       <div className={styles.picker}>
-        <label htmlFor={`${uid}-q`} className={styles.label}>{measure ? fill("qty.howMuch", { unit }) : t("qty.howMany")}</label>
-        <div className={styles.stepper}>
-          <button type="button" className={styles.step} aria-label={t("qty.less")} disabled={qty <= rules.min} onClick={() => step(-1)}>−</button>
-          <input
-            id={`${uid}-q`} className={styles.input} type="text" inputMode={measure ? "decimal" : "numeric"} autoComplete="off" value={shown}
-            onChange={(e) => setText(e.target.value.replace(measure ? /[^0-9.]/g : /[^0-9-]/g, "").slice(0, 8))}
-            onBlur={() => { if (text !== null) apply(text); }}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); apply(shown); } }}
-          />
-          <button type="button" className={styles.step} aria-label={t("qty.more")} disabled={rules.max !== null && qty >= rules.max} onClick={() => step(1)}>+</button>
-        </div>
+        <span className={styles.label}>{measure ? fill("qty.howMuch", { unit }) : t("qty.howMany")}</span>
+        <QuantityStepper mode={mode} rules={rules} value={ctx.qty} onChange={ctx.setQty} size="md" />
       </div>
-      <p className={styles.total} role="status" aria-live="polite" data-testid="quantity-total">
-        <strong>{measure ? fill("qty.measureTotal", { per: perUnitText(order.unit, unit), amount: amountText(qty, unit), total }) : fill("qty.total", { total, qty })}</strong>
-      </p>
-      {said && <p className={styles.hint} role="status">{said}</p>}
+      <p className="sr-only" role="status" aria-live="polite" data-testid="quantity-total">{fill("qty.announce", { total })}</p>
     </section>
   );
 }

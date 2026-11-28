@@ -251,3 +251,20 @@
     transform: none;
   }
 }
+
+/* The Save heart sits on the item's price row, at the right end, above the button. */
+.service[data-save] {
+  position: relative;
+}
+
+.save {
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  z-index: 2;
+  display: inline-flex;
+}
+
+.service[data-save] .price {
+  padding-right: 26px;
+}

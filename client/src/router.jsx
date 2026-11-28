@@ -26,6 +26,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Home /> },
           { path: "c/:slug", element: <Home /> },
           { path: "search", element: <Home /> },
+          // The home page with the Saved drawer open (links, an app shortcut). Closing it goes to / with replace; not indexed.
+          { path: "saved", element: <Home /> },
           { path: "products", lazy: async () => ({ Component: (await import("./pages/ProductSearch.jsx")).default }) },
           { path: "flash", lazy: async () => ({ Component: (await import("./pages/FlashSales.jsx")).default }) },
           { path: "offers", lazy: async () => ({ Component: (await import("./pages/Offers.jsx")).default }) },

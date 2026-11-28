@@ -31,13 +31,10 @@
   flex: none;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: #f5f5f6;
+  background: var(--media-stage);
 }
 
 /* Product photos are made on white; a light grey stage keeps them from melting into the card, in dark mode too. */
-:global([data-theme="dark"]) .media {
-  background: #ececee;
-}
 
 /* Once the photo is in, the loading artwork behind it goes, so the grey stage shows around a photo that is not square. */
 .media > span[data-state="loaded"] {
@@ -419,5 +416,66 @@
   .tile:hover .img,
   .tile:active {
     transform: none;
+  }
+}
+
+/* ---- Saved heart (only when the card is given an `action`) ----
+ * The card root is a div, the name is the link, and its ::after stretches over the whole card, so tapping anywhere still opens
+ * the item. The heart sits above that stretch (z-index 1) and is never inside the link, so a tap on it can only save. */
+.tileSave {
+  cursor: pointer;
+}
+
+.nameLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.nameLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.nameLink:focus-visible {
+  outline: none;
+}
+
+/* Keyboard focus shows on the whole card, drawn by the name link's stretched ::after (inside the card, which clips anything outside it).
+ * Not :focus-within: that also lit up after a mouse tap on the heart. No :has(), which older phones lack. */
+.nameLink:focus-visible::after {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+  border-radius: var(--radius-card);
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+.priceRow > .prices,
+.priceRow > .ask {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.priceRow > .save {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  margin-right: calc(6px - var(--pad));
+  margin-block: -8px;
+}
+
+@media (hover: hover) {
+  .tileSave:hover .nameLink {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
   }
 }

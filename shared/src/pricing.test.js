@@ -134,18 +134,25 @@ test("an offer works on the flash price", () => {
   assert.deepEqual([r.unit, r.total, r.was, r.source], [21600, 19440, 24000, "offer"]);
 });
 
-test("rounding is half up and never a fraction", () => {
-  assert.equal(lineTotal(750, 0.25), 188);
+test("money is rounded half up to the cent, and KES 210.99 stays 210.99", () => {
+  assert.equal(lineTotal(750, 0.25), 187.5);
+  assert.equal(lineTotal(210.99, 1), 210.99);
+  assert.equal(lineTotal(210.99, 3), 632.97);
+  assert.equal(lineTotal(0.333, 3), 0.99);
+  assert.equal(priceFor({ regularPrice: 210.99 }, null, 1, NOW).total, 210.99);
+  assert.equal(priceFor({ regularPrice: 210.99 }, null, 3, NOW).total, 632.97);
   assert.equal(lineTotal(800, 1.5), 1200);
   assert.equal(lineTotal(333, 3), 999);
-  assert.equal(wholeAmount("12.5"), 13);
+  assert.equal(wholeAmount("12.5"), 12.5);
+  assert.equal(wholeAmount("210.99"), 210.99);
+  assert.equal(wholeAmount("210.999"), 211);
   assert.equal(wholeAmount(-1), null);
   assert.equal(wholeAmount(null), null);
   const r = priceFor({ regularPrice: 999 }, null, 1, NOW);
-  assert.equal(Number.isInteger(r.total), true);
+  assert.equal(r.total, 999);
   const odd = priceFor({ regularPrice: 999, flash: flash({ discount: { type: "percent", value: 15 } }) }, null, 3, NOW);
-  assert.equal(odd.unit, 849);
-  assert.equal(odd.total, 2547);
+  assert.equal(odd.unit, 849.15);
+  assert.equal(odd.total, 2547.45);
 });
 
 test("price_min and price_max: lowest you can actually buy, in stock first", () => {

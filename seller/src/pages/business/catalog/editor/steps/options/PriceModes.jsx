@@ -55,7 +55,7 @@ export default function PriceModes({ options, set, announce, itemPrice, itemUnit
     if (!groupSold(options, chosen, choice)) {
       return <button type="button" className={s.notSold} data-price-group={`${uid}:${gkey}`} aria-label={`${label.replace(/ price$/, "")} is not sold. Put back on sale.`} onClick={() => { set(setGroupSold(options, chosen, choice, true)); announce(`${label.replace(/ price$/, "")} back on sale.`); }}>Not sold</button>;
     }
-    return <input data-price-group={`${uid}:${gkey}`} className={s.priceInput} inputMode="numeric" autoComplete="off" aria-label={label} value={groupPrice(options, chosen, choice)} onChange={(e) => put(choice, e.target.value)} {...extra} />;
+    return <input data-price-group={`${uid}:${gkey}`} className={s.priceInput} inputMode="decimal" autoComplete="off" aria-label={label} value={groupPrice(options, chosen, choice)} onChange={(e) => put(choice, e.target.value)} {...extra} />;
   };
 
   const [a1, a2] = chosen.map(axisOf); // list: a1 is the only one. grid: a1 across, a2 down.
@@ -114,7 +114,7 @@ export default function PriceModes({ options, set, announce, itemPrice, itemUnit
           {view === "diff" && (
             <div className={s.stack}>
               <p className={s.hint}>{a2.label} sets the base price, {a1.label.toLowerCase()} adds or removes money.</p>
-              <fieldset className={s.depSet}><legend>Base price for each {a2.label.toLowerCase()} (KES)</legend><div className={s.toolGrid}>{a2.values.map((v) => <label key={v.id} className={s.cell}><span>{v.label}</span><input className={s.priceInput} inputMode="numeric" autoComplete="off" aria-label={`${v.label} base price`} value={base[v.id] ?? ""} onChange={(e) => setBase({ ...base, [v.id]: e.target.value })} /></label>)}</div></fieldset>
+              <fieldset className={s.depSet}><legend>Base price for each {a2.label.toLowerCase()} (KES)</legend><div className={s.toolGrid}>{a2.values.map((v) => <label key={v.id} className={s.cell}><span>{v.label}</span><input className={s.priceInput} inputMode="decimal" autoComplete="off" aria-label={`${v.label} base price`} value={base[v.id] ?? ""} onChange={(e) => setBase({ ...base, [v.id]: e.target.value })} /></label>)}</div></fieldset>
               <fieldset className={s.depSet}><legend>Difference for each {a1.label.toLowerCase()} (KES, such as -1000)</legend><div className={s.toolGrid}>{a1.values.map((v) => <label key={v.id} className={s.cell}><span>{v.label}</span><input className={s.priceInput} inputMode="decimal" autoComplete="off" aria-label={`${v.label} difference`} value={diff[v.id] ?? ""} onChange={(e) => setDiff({ ...diff, [v.id]: e.target.value })} /></label>)}</div></fieldset>
               <button type="button" className={`${s.pill} ${s.pillPrimary}`} style={{ justifySelf: "start" }} onClick={() => { set(setBasePlusDifference(options, { baseAxis: a2.key, diffAxis: a1.key, base, diff })); announce("Prices filled in. You can still change any price in the grid."); }}>Fill the prices</button>
             </div>

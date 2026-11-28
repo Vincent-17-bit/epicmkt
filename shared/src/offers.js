@@ -427,17 +427,18 @@ const priceOf = (p) => (p && Number.isFinite(Number(p.price)) && Number(p.price)
  * Returns null when the maths needs a price that is missing, or { units, regular, pay, save, text } otherwise.
  * `price` is the product's current price (a flash sale price counts); `companions` are the other bundle products.
  */
+const r2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 export function offerSavings(offer, { price, companions = [] } = {}) {
   const p = Number(price);
   const c = offer?.config ?? {};
   const out = (units, regular, pay, text) => {
-    const save = Math.max(0, Math.round(regular - pay));
+    const save = Math.max(0, r2(regular - pay));
     // A deal that would make the product free is a mistake in the offer, not a saving to advertise.
-    return save > 0 && Math.round(pay) > 0 ? { units, regular: Math.round(regular), pay: Math.round(pay), save, text } : null;
+    return save > 0 && r2(pay) > 0 ? { units, regular: r2(regular), pay: r2(pay), save, text } : null;
   };
   switch (offer?.kind) {
     case "percent_off":
-      return p > 0 ? out(1, p, p * (1 - c.percent / 100), `Pay ${money(Math.round(p * (1 - c.percent / 100)))} instead of ${money(p)}`) : null;
+      return p > 0 ? out(1, p, p * (1 - c.percent / 100), `Pay ${money(r2(p * (1 - c.percent / 100)))} instead of ${money(p)}`) : null;
     case "amount_off":
       return p > 0 ? out(1, p, Math.max(0, p - c.amount), `Pay ${money(Math.max(0, p - c.amount))} instead of ${money(p)}`) : null;
     case "buy_x_get_y": {
@@ -445,23 +446,23 @@ export function offerSavings(offer, { price, companions = [] } = {}) {
       const units = c.buy + c.get;
       const regular = p * units;
       const pay = p * c.buy + p * c.get * (1 - c.discountPercent / 100);
-      return out(units, regular, pay, `Pay ${money(Math.round(pay))} for ${units} instead of ${money(Math.round(regular))}`);
+      return out(units, regular, pay, `Pay ${money(r2(pay))} for ${units} instead of ${money(r2(regular))}`);
     }
     case "multi_buy":
-      return p > 0 ? out(c.qty, p * c.qty, c.price, `Pay ${money(c.price)} for ${c.qty} instead of ${money(Math.round(p * c.qty))}`) : null;
+      return p > 0 ? out(c.qty, p * c.qty, c.price, `Pay ${money(c.price)} for ${c.qty} instead of ${money(r2(p * c.qty))}`) : null;
     case "bundle": {
       const prices = [p, ...companions.map(priceOf)];
       if (!prices.every((x) => x > 0)) return null;
       const total = prices.reduce((a, b) => a + b, 0);
       if (c.rewardType === "free_gift") return null;
       const pay = c.rewardType === "bundle_price" ? c.rewardValue : c.rewardType === "percent_off" ? total * (1 - c.rewardValue / 100) : Math.max(0, total - c.rewardValue);
-      return out(prices.length, total, pay, `Pay ${money(Math.round(pay))} for the set instead of ${money(Math.round(total))}`);
+      return out(prices.length, total, pay, `Pay ${money(r2(pay))} for the set instead of ${money(r2(total))}`);
     }
     case "volume": {
       if (!(p > 0)) return null;
       const top = c.tiers[c.tiers.length - 1];
       const each = p * (1 - top.percent / 100);
-      return out(top.qty, p * top.qty, each * top.qty, `${top.qty}+ at ${money(Math.round(each))} each instead of ${money(p)}`);
+      return out(top.qty, p * top.qty, each * top.qty, `${top.qty}+ at ${money(r2(each))} each instead of ${money(p)}`);
     }
     default:
       return null;

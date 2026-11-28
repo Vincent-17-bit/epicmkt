@@ -59,7 +59,7 @@ export function urgencyLabel(urgency) {
   return t("flash.label");
 }
 
-export const kes = (n) => Number(n).toLocaleString("en-KE");
+export const kes = (n) => Number(n).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 });
 
 export const kesText = (n) => `${t("flash.currency")} ${kes(n)}`;
 

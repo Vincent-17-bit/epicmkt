@@ -14,8 +14,7 @@ import { OPTION_LIMITS, VARIANT_STATUSES, comboKey, optionSlug, validateOptions 
 import { generateCombinations } from "./combinations.js";
 import { rowTiersProblem, rowTiersToStored } from "./rowTiers.js";
 
-// Whole shillings only: a price with cents (10.50) used to be charged rounded (KES 11), so it is not accepted at all.
-const MONEY = /^\d{1,10}$/;
+const MONEY = /^\d{1,10}(\.\d{1,2})?$/;
 const clean = (v) => String(v ?? "").replace(/,/g, "").trim();
 export const isMoney = (v) => MONEY.test(clean(v));
 
@@ -410,7 +409,7 @@ export const setBasePlusDifference = (options, { baseAxis, diffAxis, base = {}, 
   const b = amount(base[r.choice[baseAxis]]);
   if (b === null) return r;
   const raw = clean(diff[r.choice[diffAxis]]);
-  const d = raw === "" ? 0 : /^-?\d{1,10}$/.test(raw) ? Number(raw) : null;
+  const d = raw === "" ? 0 : /^-?\d{1,10}(\.\d{1,2})?$/.test(raw) ? Number(raw) : null;
   if (d === null || b + d <= 0) return r;
   return { ...r, price: priceText(b + d) };
 });

@@ -5,7 +5,7 @@
 import { flashPrice } from "../seller/flash.js";
 import { comboKey } from "../seller/options.js";
 import { liveOffers, offerAvailableNow } from "../offers.js";
-import { percentOf, wholeAmount } from "./money.js";
+import { cents, percentOf, wholeAmount } from "./money.js";
 
 const entryId = (e) => (typeof e === "string" ? e : (e?.variantId ?? e?.id ?? null));
 
@@ -66,20 +66,24 @@ export function unitPrice(item, variant, listed, nowMs) {
 
 /** What `qty` units cost under one offer, or null when the offer does not change the price. Percent and fractions are half up. */
 export function offerTotal(offer, unit, qty) {
+  const t = offerTotalRaw(offer, unit, qty);
+  return t === null || t === undefined ? t : cents(t);
+}
+function offerTotalRaw(offer, unit, qty) {
   const c = offer?.config ?? {};
   const full = unit * qty;
   switch (offer?.kind) {
     case "percent_off":
       return (unit - percentOf(unit, c.percent)) * qty;
     case "amount_off":
-      return Math.max(0, unit - Math.round(Number(c.amount))) * qty;
+      return Math.max(0, unit - cents(c.amount)) * qty;
     case "buy_x_get_y": {
       const groups = Math.floor(qty / (c.buy + c.get));
       return full - percentOf(unit * c.get * groups, c.discountPercent);
     }
     case "multi_buy": {
       const groups = Math.floor(qty / c.qty);
-      return groups >= 1 ? groups * Math.round(Number(c.price)) + (qty - groups * c.qty) * unit : null;
+      return groups >= 1 ? groups * cents(c.price) + (qty - groups * c.qty) * unit : null;
     }
     case "volume": {
       const tier = [...(c.tiers ?? [])].reverse().find((t) => qty >= t.qty);
@@ -97,7 +101,7 @@ export function bestOffer(item, variantId, unit, qty, nowMs) {
     if (offer.scope === "store" || !offerAvailableNow(offer, nowMs, item?.business?.timeZone)) continue;
     if (!targetOf(offer.variantIds ?? offer.variantOverrides, variantId)) continue;
     const total = offerTotal(offer, unit, qty);
-    if (total !== null && total > 0 && total < unit * qty && (best === null || total < best.total)) best = { total, offerId: offer.id ?? null };
+    if (total !== null && total > 0 && total < cents(unit * qty) && (best === null || total < best.total)) best = { total, offerId: offer.id ?? null };
   }
   return best;
 }

@@ -1,0 +1,198 @@
+/* A compact card inside the shop's box: no card-in-card border, a hairline between lines. About 72 px tall on a phone. */
+.line {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 10px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.line:first-child {
+  border-top: 0;
+}
+
+@media (hover: hover) {
+  .line:hover {
+    background: var(--surface-2);
+  }
+}
+
+.line:focus-within {
+  background: var(--surface-2);
+}
+
+.pic {
+  grid-row: 1 / span 2;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--media-stage);
+}
+
+.img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+[data-dim="true"] {
+  opacity: 0.55;
+}
+
+.name {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nameLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* The link's ::after covers the whole line, so tapping anywhere opens the item; the stepper and heart sit above it. */
+.nameLink::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.nameLink:focus-visible {
+  outline: none;
+}
+
+/* Keyboard focus shows on the whole line: the ::after covers it, so its outline is the line's outline (no :has(), which older phones lack). */
+.nameLink:focus-visible::after {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+
+.end {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.price {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.heart {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin-block: -12px;
+  justify-content: center;
+}
+
+.sub {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.hint {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.action {
+  min-height: 24px;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chip {
+  display: inline-block;
+  max-width: 100%;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.chip[data-tone="ok"] {
+  background: var(--status-ok-bg);
+  color: var(--status-ok-fg);
+}
+
+.chip[data-tone="warn"] {
+  background: var(--status-warn-bg);
+  color: var(--status-warn-text);
+}
+
+.chip[data-tone="flash"],
+.chip[data-tone="info"] {
+  background: var(--primary-tint);
+  color: var(--on-primary-tint);
+}
+
+.chip[data-tone="bad"] {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+.qty {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+@media (max-width: 22.4375rem) {
+  .line {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .pic {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* From 768 px the name may take two lines. */
+@media (min-width: 48rem) {
+  .name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+  }
+}

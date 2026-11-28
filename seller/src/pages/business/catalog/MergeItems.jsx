@@ -7,7 +7,7 @@ import { errorText } from "../../../lib/errors.js";
 import ui from "../../../styles/ui.module.css";
 import styles from "./merge.module.css";
 
-const kes = (n) => (Number.isFinite(Number(n)) ? `KES ${Number(n).toLocaleString("en-KE")}` : "");
+const kes = (n) => (Number.isFinite(Number(n)) ? `KES ${Number(n).toLocaleString("en-KE", { minimumFractionDigits: Number.isInteger(Number(n)) ? 0 : 2, maximumFractionDigits: 2 })}` : "");
 const slugKey = (label) => String(label).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 30);
 const until = (iso) => new Date(iso).toLocaleString("en-KE", { weekday: "short", hour: "numeric", minute: "2-digit" });
 const startName = (group) => { const k = similarKey(group.items[0].name); return k ? k[0].toUpperCase() + k.slice(1) : group.items[0].name; };

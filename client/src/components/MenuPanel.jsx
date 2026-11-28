@@ -12,11 +12,15 @@ import { routes } from "../config/routes.js";
 import { infoLinks } from "../config/nav.js";
 import { Container, Button, IconButton, Skeleton } from "@epicmkt/ui";
 import ThemeSwitch from "./ThemeSwitch.jsx";
+import { useSavedCount } from "../stores/saved.js";
+import { useSavedDrawer } from "./saved/useSavedDrawer.js";
 import { MENU_ID } from "./panelIds.js";
 import styles from "./MenuPanel.module.css";
 
 
 export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searchRef, quietRef }) {
+  const savedCount = useSavedCount();
+  const saved = useSavedDrawer();
   const activeSlug = useMatch("/c/:slug")?.params.slug;
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["categories"],
@@ -56,7 +60,12 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
         className={styles.panel}
       >
         <Container className={styles.inner}>
-          <form role="search" className={`${styles.search} ${styles.areaSearch}`} onSubmit={submit}>
+          <div className={`${styles.areaSearch} ${styles.searchStack}`}>
+            <button type="button" className={styles.savedLink} onClick={saved.open} data-testid="menu-saved">
+              <span>Saved</span>
+              {savedCount > 0 && <span className={styles.savedCount}>{savedCount}</span>}
+            </button>
+          <form role="search" className={styles.search} onSubmit={submit}>
             <label htmlFor="menu-search" className="sr-only">
               {t("menu.searchLabel")}
             </label>
@@ -76,6 +85,7 @@ export default function MenuPanel({ open, onClose, panelRef, onOpenSearch, searc
             />
             <IconButton type="submit" icon={faMagnifyingGlass} label={t("menu.searchButton")} className={styles.submit} />
           </form>
+          </div>
 
           {(trending.isPending || real.length > 0) && (
             <section aria-labelledby="menu-trending" className={`${styles.trending} ${styles.areaTrend}`}>

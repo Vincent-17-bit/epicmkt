@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -40,9 +40,11 @@ describe("Department page", () => {
     view("/d/phones");
     const link = await screen.findByRole("link", { name: /Galaxy A15/ });
     expect(link).toHaveAttribute("href", "/b/cyber-hub/i/i1");
-    expect(link).toHaveTextContent("Cyber Hub");
-    expect(link).toHaveTextContent("Kisumu");
-    expect(link).toHaveTextContent(/From KES 18,500/);
+    const card = link.closest("div");
+    expect(card).toHaveTextContent("Cyber Hub");
+    expect(card).toHaveTextContent("Kisumu");
+    expect(card).toHaveTextContent(/From KES 18,500/);
+    expect(within(card).getByRole("button", { name: "Save Galaxy A15" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("heading", { name: "Phones" })).toBeInTheDocument();
   });
 

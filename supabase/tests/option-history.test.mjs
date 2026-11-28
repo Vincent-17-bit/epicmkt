@@ -1,7 +1,6 @@
-// Migration 0161: prices are whole shillings, and a change to a size's price goes to the item's History.
+// Migrations 0161 and 0162: prices keep their cents, and a change to a size's price goes to the item's History.
 import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { createDatabase, connect, seedFixtures, tx, sql, rejects, ids, asA } from "./db.mjs";
 
 let c;
@@ -36,56 +35,22 @@ const v = (flavour, size, extra = {}) => ({ choice: { flavour, size }, ...extra 
 const withOptions = (variants, extra = {}) => base({ options: { axes: axes(), variants }, ...extra });
 const grid = (jar = 160) => [v("beef", "cubes", { price: 10 }), v("beef", "jar", { price: jar }), v("chicken", "cubes", { price: 10 }), v("chicken", "jar", { price: jar })];
 
-test("a price with cents is refused on an item, its range top, its sale price and on a size", async () => {
+test("a price with cents is kept exactly: 210.99 stays 210.99 on an item, its sale price and a size", async () => {
   const id = await newItem();
-  await saveFails(id, base({ price: "10.50" }), /invalid_price/);
-  await saveFails(id, base({ price_type: "range", price: 10, price_max: "20.5" }), /invalid_price/);
-  await saveFails(id, base({ price: 100, sale_price: "99.99" }), /invalid_price/);
-  await saveFails(id, withOptions([v("beef", "cubes", { price: "10.50" })]), /invalid_price/);
-  await saveFails(id, withOptions([v("beef", "cubes", { price: 100, salePrice: "80.25" })]), /invalid_price/);
-  assert.equal((await sql(c, `select price from items where id = $1`, [id]))[0].price, "10.00", "nothing was written");
-  await save(id, base({ price: "10", sale_price: "8" }));
-  assert.equal((await sql(c, `select price, sale_price from items where id = $1`, [id]))[0].sale_price, "8.00");
+  await save(id, base({ price: "210.99", sale_price: "199.50" }));
+  const r = (await sql(c, `select price::text as price, sale_price::text as sale, price_min::text as lo from items where id = $1`, [id]))[0];
+  assert.deepEqual(r, { price: "210.99", sale: "199.50", lo: "199.50" });
+  await save(id, withOptions([v("beef", "cubes", { price: "10.50" }), v("beef", "jar", { price: "210.99", salePrice: "205.25" })]));
+  const vs = await sql(c, `select combo_key, price::text as price, sale_price::text as sale from item_variants where item_id = $1 order by sort`, [id]);
+  assert.deepEqual(vs.map((x) => [x.price, x.sale]), [["10.50", null], ["210.99", "205.25"]]);
+  assert.equal((await sql(c, `select price_min::text as lo, price_high::text as hi from items where id = $1`, [id]))[0].lo, "10.50");
 });
 
-test("a direct write with cents is refused too, whichever function or tool did it", async () => {
-  const id = await newItem();
-  await assert.rejects(sql(c, `update items set price = 10.5 where id = $1`, [id]), /invalid_price/);
-  await save(id, withOptions(grid()));
-  await assert.rejects(sql(c, `update item_variants set price = 99.5 where item_id = $1`, [id]), /invalid_price/);
-  await assert.rejects(newItem({ price: 1.25 }), /invalid_price/);
-});
-
-test("the clean-up in the migration rounds half up, keeps a sale below its price, and leaves whole prices alone", async () => {
-  const text = readFileSync(new URL("../migrations/0161_whole_prices_option_history.sql", import.meta.url), "utf8");
-  const cleanup = text.slice(text.indexOf("update public.items set"), text.indexOf("-- 2. Refuse cents"));
-  const a = await newItem({ price: 10 });                                  // 10.60 with a 10.50 sale: both round to 11, so the sale steps down to 10
-  const b = await newItem({ price: 10 });                                  // 99.50 with a 79.40 sale: 100 and 79
-  const d = await newItem({ price: 10 });                                  // already whole: untouched
-  const e = await newItem({ price: 10 });                                  // 0.40 rounds to 0 and a sale cannot be below 1: no sale
-  await sql(c, `alter table items disable trigger t_items_whole_price`);
-  await sql(c, `update items set price = 10.60, sale_price = 10.50 where id = $1`, [a]);
-  await sql(c, `update items set price = 99.50, sale_price = 79.40, price_type = 'range', price_max = 150.50 where id = $1`, [b]);
-  await sql(c, `update items set price = 250, sale_price = 200 where id = $1`, [d]);
-  await sql(c, `update items set price = 0.40, sale_price = 0.20 where id = $1`, [e]);
-  await sql(c, `alter table items enable trigger t_items_whole_price`);
-  const vid = await newItem();
-  await save(vid, withOptions(grid()));
-  await sql(c, `alter table item_variants disable trigger t_item_variants_whole_price`);
-  await sql(c, `update item_variants set price = 160.50, sale_price = 160.20 where item_id = $1 and combo_key like '%jar'`, [vid]);
-  await sql(c, `alter table item_variants enable trigger t_item_variants_whole_price`);
-
-  await sql(c, cleanup);
-
-  const row = async (id) => (await sql(c, `select price::float as price, sale_price::float as sale, price_max::float as max from items where id = $1`, [id]))[0];
-  assert.deepEqual(await row(a), { price: 11, sale: 10, max: null });
-  assert.deepEqual(await row(b), { price: 100, sale: 79, max: 151 });
-  assert.deepEqual(await row(d), { price: 250, sale: 200, max: null });
-  assert.deepEqual(await row(e), { price: 0, sale: null, max: null });
-  const jars = await sql(c, `select price::float as price, sale_price::float as sale from item_variants where item_id = $1 and combo_key like '%jar'`, [vid]);
-  assert.deepEqual(jars, [{ price: 161, sale: 160 }, { price: 161, sale: 160 }]);
-  const cubes = await sql(c, `select price::float as price from item_variants where item_id = $1 and combo_key like '%cubes'`, [vid]);
-  assert.deepEqual(cubes.map((r) => r.price), [10, 10]);
+test("a flash sale keeps cents: 10% off 210.99 is 189.89, and a fixed sale price of 99.99 stays 99.99", async () => {
+  const q = async (t, val, reg) => (await sql(c, `select flash_discounted_price($1, $2::numeric, $3::numeric)::text as p`, [t, val, reg]))[0].p;
+  assert.equal(await q("percent", 10, 210.99), "189.89");
+  assert.equal(await q("sale_price", 99.99, 210.99), "99.99");
+  assert.equal(await q("amount_off", 0.5, 210.99), "210.49");
 });
 
 test("changing a size's price is logged with a readable name, and so is a sale price, a status and a unit", async () => {
@@ -127,4 +92,11 @@ test("adding a size to an item that already exists is logged; deleting the item 
   assert.deepEqual(rows.map((r) => [r.field, r.old_value, r.new_value]), [["option_price:Chicken / 3 Cubes", null, "12.00"]]);
   await sql(c, `delete from items where id = $1`, [id]);
   assert.equal((await sql(c, `select count(*)::int as n from item_variants where item_id = $1`, [id]))[0].n, 0);
+});
+
+test("a flash sale on one size keeps cents in the price range, and the other sizes are untouched", async () => {
+  const id = await newItem();
+  await save(id, withOptions([v("beef", "cubes", { price: "210.99" }), v("beef", "jar", { price: "400.50" })]));
+  const [lo] = await sql(c, `select price_min::text as lo, price_high::text as hi from items where id = $1`, [id]);
+  assert.deepEqual(lo, { lo: "210.99", hi: "400.50" });
 });

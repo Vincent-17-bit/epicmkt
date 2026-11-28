@@ -6,6 +6,18 @@ export default function Toaster({ toasts, onDismiss, dismissLabel = "Dismiss" })
       {toasts.map((toast) => (
         <div key={toast.id} className={styles.toast}>
           <span>{toast.message}</span>
+          {toast.action && (
+            <button
+              type="button"
+              className={styles.close}
+              onClick={() => {
+                toast.action.onClick?.();
+                onDismiss(toast.id);
+              }}
+            >
+              {toast.action.label}
+            </button>
+          )}
           <button type="button" className={styles.close} onClick={() => onDismiss(toast.id)}>
             {dismissLabel}
           </button>

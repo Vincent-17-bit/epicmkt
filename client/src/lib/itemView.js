@@ -1,4 +1,5 @@
 import { LABEL_SETS, amountText, formatKes, greetingProblems, labelFor, lineTotal, perUnitText, priceTiered, quantityModeOf, quantityRules, renderGreeting, slugify } from "@epicmkt/shared";
+import { isServiceItem } from "./listing.js";
 import { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights } from "@epicmkt/ui";
 
 export { HIGHLIGHT_LIMIT, SPEC_GROUPS, buildSpecGroups, countRows, normalizeHighlights };
@@ -50,9 +51,10 @@ const isBlank = (value) => value === undefined || value === null || value === ""
  */
 export function quantityInfo(item, variant = null) {
   // An item with no quantity mode is a whole-unit item (the rule in shared/quantity.js), so every product can be bought in a number.
-  // Only a "none" item (the price is not per quantity) and a service with no mode of its own (booked, not counted) have none.
+  // Only a "none" item (the price is not per quantity) and a service with no mode of its own (booked, not counted; the product/service
+  // rule is the one search uses) have none.
   const mode = quantityModeOf(item);
-  if ((mode !== "units" && mode !== "measure") || (item?.kind === "service" && !item?.quantityMode)) return null;
+  if ((mode !== "units" && mode !== "measure") || (!item?.quantityMode && isServiceItem(item))) return null;
   const left = [variant?.stockLeft, item?.stockLeft].find((n) => Number.isFinite(n) && n >= 0);
   const quantity = mode === "measure" ? (item.quantity ?? { unit: item.unit ?? "kg" }) : null;
   return { mode, rules: quantityRules(mode, { quantity, stock: left ?? null }), unit: mode === "measure" ? (quantity?.unit ?? "kg") : null };
@@ -202,3 +204,66 @@ export function buildItemJsonLd({ item, siteUrl, receivedAt = Date.now() }) {
 }
 
 export { defaultVariantId } from "@epicmkt/shared";
+
+// ---- The Saved list, sent to one shop ----
+
+const MESSAGE_LIMIT = 3000; // the encoded text stays under this, so the link opens everywhere
+
+/**
+ * What one shop is sent: its whole list, in the words buyers already use with shops here. `lines` are the shop's lines that still exist, each
+ * { name, optionLabel, qty, measure, unitLabel, total, service, status }. Money is each line's total (lineFor), never recalculated here.
+ * Products first, then "To book:" and the services; one total covers the lines that have a price (none for services alone).
+ * A line with no price ends "(what's the price?)"; one whose options are not chosen ends "(which options do you have?)".
+ * A very long list ends "+6 more items": the list on the device keeps every line, only the message is cut.
+ */
+export function listMessage({ business, lines }) {
+  const name = plain(business?.name);
+  const products = lines.filter((l) => !l.service);
+  const services = lines.filter((l) => l.service);
+  const open = products.length ? `Hi${name ? ` ${name}` : ""}, I'd like these from EpicMKT:` : `Hi${name ? ` ${name}` : ""}, I'd like to book these from EpicMKT:`;
+  const priced = lines.filter((l) => Number.isFinite(l.total));
+  const total = priced.reduce((sum, l) => sum + l.total, 0);
+
+  const row = (l, n) => {
+    const parts = [plain(l.name)];
+    if (l.optionLabel) parts.push(plain(l.optionLabel));
+    if (!l.service) parts.push(l.measure ? amountText(l.qty, l.unitLabel) : `x${l.qty}`);
+    let text = `${n}. ${parts.join(", ")}`;
+    if (Number.isFinite(l.total)) text += `, ${formatKes(l.total)}`;
+    else if (l.status === "choose_options" || l.status === "option_gone") text += " (which options do you have?)";
+    else text += " (what's the price?)";
+    return text;
+  };
+
+  const ordered = [...products, ...services];
+  const closing = [];
+  if (products.length && services.length) closing.push("Are they available? When can you fit me in?");
+  else if (products.length) closing.push("Are they available?");
+  else closing.push("When can you fit me in?");
+
+  const build = (shown) => {
+    const out = [open];
+    let n = 0;
+    let marked = false;
+    for (const l of ordered.slice(0, shown)) {
+      if (l.service && products.length && !marked) {
+        out.push("To book:");
+        marked = true;
+      }
+      n += 1;
+      out.push(row(l, n));
+    }
+    if (shown < ordered.length) out.push(`+${ordered.length - shown} more item${ordered.length - shown === 1 ? "" : "s"}`);
+    if (products.length && Number.isFinite(total) && priced.length) out.push(`Total: ${formatKes(total)}`);
+    out.push(...closing);
+    return out.join("\n");
+  };
+
+  let shown = ordered.length;
+  let text = build(shown);
+  while (shown > 1 && encodeURIComponent(text).length > MESSAGE_LIMIT) {
+    shown -= 1;
+    text = build(shown);
+  }
+  return text;
+}

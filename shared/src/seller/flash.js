@@ -20,7 +20,7 @@ const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
 
 export function flashPrice(type, value, regular) {
   const raw = type === "percent" ? regular * (1 - value / 100) : type === "amount_off" ? regular - value : value;
-  return Math.max(0, Math.round(raw));
+  return Math.max(0, Math.round((raw + Number.EPSILON) * 100) / 100);
 }
 
 const text = (value, [min, max]) => {

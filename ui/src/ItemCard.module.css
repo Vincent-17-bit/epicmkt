@@ -193,3 +193,16 @@
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+
+/* The Save heart (only when the card is given an `action`): absolutely placed on the price row, above the card button. */
+.save {
+  position: absolute;
+  right: calc(6px - 1px);
+  bottom: calc(clamp(8px, 5.2cqw, 14px) - 10px);
+  z-index: 2;
+  display: inline-flex;
+}
+
+.shell[data-save] .meta {
+  padding-right: 24px;
+}

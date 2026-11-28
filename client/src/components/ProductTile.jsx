@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ProductTile as Tile } from "@epicmkt/ui";
 import { t } from "../i18n/index.js";
 import FlashChip from "./FlashChip.jsx";
+import { useSaveAction } from "./saved/useSave.js";
 
 const renderLink = ({ href, children, ...rest }) => (
   <Link to={href} {...rest}>
@@ -22,9 +23,12 @@ const labels = {
 export const itemPagePath = (item) => `/b/${item.business?.slug ?? item.businessSlug}/i/${encodeURIComponent(item.id)}`;
 
 /** The site's one product card. Search results pass the extras they show (facts, colours, delivery, a button); see @epicmkt/ui ProductTile. */
-export default function ProductTile({ item, href, ...extra }) {
+export default function ProductTile({ item, href, save = true, ...extra }) {
+  // The Save heart: on every buyer card, unless a caller opts out (save={false}) or the item does not say which shop it belongs to.
+  const action = useSaveAction(save ? item : null);
   return (
     <Tile
+      action={action ?? undefined}
       {...extra}
       item={item}
       href={href ?? itemPagePath(item)}
