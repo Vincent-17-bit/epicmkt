@@ -590,13 +590,13 @@
 }
 @container results (min-width: 40rem) {
   .list {
-    --tile-media-ratio: 5 / 4;
+    --tile-media-ratio: 3 / 2;
     grid-template-columns: repeat(auto-fill, minmax(clamp(12rem, 21cqw, 17rem), 1fr));
   }
 }
 @container results (min-width: 64rem) {
   .list {
-    --tile-media-ratio: 4 / 3;
+    --tile-media-ratio: 8 / 5;
   }
 }
 .cardSkeleton {
