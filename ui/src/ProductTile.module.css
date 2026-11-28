@@ -42,7 +42,7 @@
 }
 
 .media .img {
-  object-fit: contain;
+  object-fit: var(--tile-media-fit, contain);
   mix-blend-mode: multiply;
   transition: transform 320ms ease, opacity 260ms ease;
   user-select: none;
@@ -380,10 +380,6 @@
     box-shadow: var(--shadow-md);
   }
 
-  .tile:hover .img {
-    transform: scale(1.04);
-  }
-
   .tile:hover .name {
     text-decoration: underline;
     text-decoration-thickness: 1px;
@@ -413,7 +409,6 @@
   }
 
   .tile:hover,
-  .tile:hover .img,
   .tile:active {
     transform: none;
   }
