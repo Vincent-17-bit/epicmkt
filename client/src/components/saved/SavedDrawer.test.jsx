@@ -288,7 +288,6 @@ describe("SavedDrawer", () => {
     expect(mocks.logContactEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "whatsapp" }));
     expect(savedList().count()).toBe(2);
     expect(screen.getAllByText(/Sent \d/)).toHaveLength(1);
-    expect(screen.getByText(/Closed now\. They'll reply when open\./)).toBeInTheDocument();
   });
 
   it("a shop that is no longer live keeps its lines and says so", async () => {

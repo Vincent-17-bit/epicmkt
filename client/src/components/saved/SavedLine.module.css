@@ -159,8 +159,12 @@
 }
 
 .chip {
-  display: inline-block;
+  display: block;
+  width: fit-content;
   max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   padding: 1px 8px;
   border-radius: var(--radius-pill);
   background: var(--surface-2);

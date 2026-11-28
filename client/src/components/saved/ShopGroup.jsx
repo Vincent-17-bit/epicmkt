@@ -51,7 +51,6 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
     savedList().markSent(group.businessId);
   };
   const onCall = () => logContactEvent({ businessId: group.businessId, itemId: lines[0]?.itemId ?? lines[0]?.entry.itemId, type: "call" });
-  const closed = shop && !shop.isOpen;
   const status = shop ? (shop.isOpen ? t("saved.open") : shop.statusLine || t("saved.closed")) : "";
   const visit = (e) => {
     e.preventDefault();
@@ -108,40 +107,40 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
       )}
 
       <footer className={styles.foot}>
-        {group.priced > 0 && (
-          <p className={styles.subtotal}>
-            <span>{t("saved.subtotalLabel")}</span>{" "}
-            <strong>{formatKes(group.subtotal)}</strong>
-          </p>
+        {(group.priced > 0 || sentAt > 0) && (
+          <div className={styles.totals}>
+            {group.priced > 0 && (
+              <p className={styles.subtotal}>
+                <span>{t("saved.subtotalLabel")}</span>{" "}
+                <strong>{formatKes(group.subtotal)}</strong>
+              </p>
+            )}
+            {sentAt > 0 && <p className={styles.note}>{sentText(sentAt)}</p>}
+          </div>
         )}
         <div className={styles.actions}>
-          {href ? (
-            <a href={href} {...external} className={styles.send} onClick={onSend} data-testid="saved-send">
-              <FontAwesomeIcon icon={faWhatsapp} aria-hidden="true" />
-              <span>{t("saved.send")}</span>
-            </a>
-          ) : shop?.phone && !group.shopGone ? (
-            <a href={telLink(shop.phone)} className={styles.send} onClick={onCall}>
-              <FontAwesomeIcon icon={faPhone} aria-hidden="true" />
-              <span>{t("saved.call")}</span>
-            </a>
-          ) : null}
           {href && shop?.phone && (
-            <a href={telLink(shop.phone)} className={styles.icon} aria-label={t("saved.call")} onClick={onCall}>
+            <a href={telLink(shop.phone)} className={styles.icon} aria-label={t("saved.call")} title={t("saved.call")} onClick={onCall}>
               <FontAwesomeIcon icon={faPhone} aria-hidden="true" />
             </a>
           )}
           {hasPin && !group.shopGone && (
-            <a href={directionsLink(lat, lng)} {...external} className={styles.icon} aria-label={t("saved.directions")}>
+            <a href={directionsLink(lat, lng)} {...external} className={styles.icon} aria-label={t("saved.directions")} title={t("saved.directions")}>
               <FontAwesomeIcon icon={faLocationArrow} aria-hidden="true" />
             </a>
           )}
+          {href ? (
+            <a href={href} {...external} className={styles.send} onClick={onSend} data-testid="saved-send" aria-label={t("saved.sendLong")}>
+              <FontAwesomeIcon icon={faWhatsapp} aria-hidden="true" />
+              <span>{t("saved.send")}</span>
+            </a>
+          ) : shop?.phone && !group.shopGone ? (
+            <a href={telLink(shop.phone)} className={`${styles.send} ${styles.callMain}`} onClick={onCall}>
+              <FontAwesomeIcon icon={faPhone} aria-hidden="true" />
+              <span>{t("saved.call")}</span>
+            </a>
+          ) : null}
         </div>
-        {(sentAt > 0 || (closed && href)) && (
-          <p className={styles.note}>
-            {[closed && href ? t("saved.closedNote") : "", sentAt > 0 ? sentText(sentAt) : ""].filter(Boolean).join(" · ")}
-          </p>
-        )}
       </footer>
     </section>
   );
