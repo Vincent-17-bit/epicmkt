@@ -76,7 +76,7 @@ test("a client is capped per minute", async () => {
   assert.equal(await total(), 12);
 });
 
-test("junk, links and requests without a client address are dropped without error", async () => {
+test("junk and links are dropped without error", async () => {
   await from("1.1.1.1", "http://spam.example/buy");
   await from("1.1.1.1", "<script>alert(1)</script>");
   await from("1.1.1.1", "12345");
@@ -84,8 +84,27 @@ test("junk, links and requests without a client address are dropped without erro
   await from("1.1.1.1", "x".repeat(200));
   await from("1.1.1.1", "one two three four five six seven");
   await from("1.1.1.1", null);
-  await from(null, "barbershop");
   assert.equal(await total(), 0);
+});
+
+test("a search is recorded whichever address header the request carries, and with none", async () => {
+  const send = async (headers, term) => {
+    await c.query("begin");
+    try {
+      await c.query(`set local role anon`);
+      await c.query(`select set_config('request.headers', $1, true)`, [JSON.stringify(headers)]);
+      await c.query(`select log_search($1)`, [term]);
+    } finally {
+      await c.query("commit");
+    }
+  };
+  await send({ "x-forwarded-for": "5.5.5.5, 10.0.0.1" }, "barbershop");
+  await send({ "x-forwarded-for": "6.6.6.6" }, "barbershop");
+  await send({ "user-agent": "Mozilla/5.0 A" }, "barbershop");
+  await send({}, "barbershop");
+  assert.equal(await total(), 4);
+  const people = await sql(c, `select count(distinct client_hash)::int as n from search_events`);
+  assert.equal(people[0].n, 4);
 });
 
 test("a blocked word disappears from the list", async () => {

@@ -52,7 +52,7 @@
 
 @media (min-width: 64rem) {
   .cell[data-wide="true"] {
-    flex-basis: calc(var(--cell) * 2 + 12px);
+    flex-basis: calc(var(--cell) * 1.6);
   }
 }
 

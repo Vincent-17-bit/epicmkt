@@ -144,6 +144,10 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
     onSelect(to ?? (scope === "products" ? `/products?q=${encodeURIComponent(clean)}` : `/search?q=${encodeURIComponent(clean)}`));
   };
 
+  const logTyped = () => {
+    if (normalized) logSearch(normalized);
+  };
+
   // Every row in one list for the arrow keys: phrases, products, stores, categories, then "see all results".
   const groups = (() => {
     if (!typing) return [];
@@ -162,10 +166,10 @@ export default function SearchPanel({ open, onClose, onSelect, panelRef, inputRe
       {
         key: "products",
         title: "Products",
-        rows: products.map((p) => ({ kind: "product", id: `p-${p.id}`, label: p.name, image: thumb(p.image), price: price(p.price), go: () => onSelect(`/b/${p.slug}/i/${encodeURIComponent(p.id)}`) }))
+        rows: products.map((p) => ({ kind: "product", id: `p-${p.id}`, label: p.name, image: thumb(p.image), price: price(p.price), go: () => { logTyped(); onSelect(`/b/${p.slug}/i/${encodeURIComponent(p.id)}`); } }))
       },
-      { key: "stores", title: "Stores", rows: stores.map((s) => ({ kind: "store", id: `s-${s.slug}`, label: s.label, go: () => onSelect(`/b/${s.slug}`) })) },
-      { key: "categories", title: "Categories", rows: cats.slice(0, 3).map((c) => ({ kind: "category", id: `c-${c.id}`, label: c.label, go: () => onSelect(`/c/${c.id}`) })) },
+      { key: "stores", title: "Stores", rows: stores.map((s) => ({ kind: "store", id: `s-${s.slug}`, label: s.label, go: () => { logTyped(); onSelect(`/b/${s.slug}`); } })) },
+      { key: "categories", title: "Categories", rows: cats.slice(0, 3).map((c) => ({ kind: "category", id: `c-${c.id}`, label: c.label, go: () => { logTyped(); onSelect(`/c/${c.id}`); } })) },
       // A corrected misspelling searches the correction ("mlik" -> all products for "milk").
       { key: "all", title: null, rows: [{ kind: "all", id: "all", label: data.corrected ?? normalized, go: () => commit(data.corrected ?? normalized) }] }
     ].filter((g) => g.rows.length);
