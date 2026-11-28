@@ -7,7 +7,6 @@
 .openText strong { font-weight: 700; }
 .openHint { color: var(--text-muted); font-size: var(--text-xs); }
 .open:focus-visible, .close:focus-visible, .btn:focus-visible, .stage:focus-visible { outline: 3px solid var(--focus-ring, var(--primary, currentColor)); outline-offset: 2px; }
-.cube { inline-size: 1rem; block-size: 1rem; border: 2px solid currentColor; border-radius: 3px; transform: rotate(45deg) skew(-8deg, -8deg); }
 .modal { padding: 0; }
 .body { display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); max-height: inherit; overflow-y: auto; }
 .head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }

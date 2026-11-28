@@ -122,35 +122,6 @@
   gap: var(--space-2);
 }
 
-.tip {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1.5px solid var(--primary);
-  border-radius: var(--radius-sm);
-  background: var(--primary-tint);
-  color: var(--on-primary-tint);
-  font-size: var(--text-sm);
-}
-
-.tip p {
-  flex: 1;
-  min-width: 0;
-}
-
-.tip button {
-  flex: none;
-  min-height: var(--tap);
-  padding: 0 var(--space-2);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
 
 .card {
   display: grid;

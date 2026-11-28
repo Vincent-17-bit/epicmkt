@@ -42,9 +42,6 @@
 }
 
 /* The shared scroller pads its rows for a full-width band; here the heading is directly above, so tighten it. */
-.scroller {
-  min-width: 0;
-}
 
 .scroller > ul {
   gap: 10px;

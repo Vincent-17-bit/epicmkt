@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-// The one set of rules for every video customers see (the item gallery's stage, MediaVideo's player):
+// The one set of rules for every video customers see (the item gallery's stage):
 //   - Nothing ever autoplays: no `autoplay` attribute, and play() is only called from a person's tap on Play or a real
 //     hover (below).
 //   - Muted until the person turns sound on. Playing never unmutes.
