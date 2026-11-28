@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { Link } from "react-router-dom";
-import { LazyImage, SaveButton, Skeleton, resizedUrl } from "@epicmkt/ui";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { LazyImage, Skeleton, resizedUrl } from "@epicmkt/ui";
 import { formatKes } from "@epicmkt/shared";
 import QuantityStepper from "../QuantityStepper.jsx";
 import { savedList } from "../../lib/savedList.js";
@@ -9,9 +11,9 @@ import { fill } from "./model.js";
 import { useSaveActions } from "./useSave.js";
 import styles from "./SavedLine.module.css";
 
-// One saved line: a compact two-row card. Picture spans both rows; row 1 is the name, the line total and the remove heart; row 2 is the option
+// One saved line: a compact two-row card. Picture spans both rows; row 1 is the name, the line total and the delete button; row 2 is the option
 // (or one status chip) and the compact stepper. The name is the link and stretches over the card (as on a product card), so the stepper and the
-// heart sit above it and never open the item. Never a unit price, never a sum.
+// delete button sit above it and never open the item. Never a unit price, never a sum.
 export default function SavedLine({ line, loading, goTo }) {
   const { removeLines } = useSaveActions();
   const setQty = useCallback((qty) => savedList().setQty(line.key, qty), [line.key]);
@@ -50,7 +52,9 @@ export default function SavedLine({ line, loading, goTo }) {
         ) : line.total !== null ? (
           <span className={styles.price}>{formatKes(line.total)}</span>
         ) : null}
-        <SaveButton className={styles.heart} saved size={20} label={fill("saved.removeItem", { name: line.name })} onToggle={() => removeLines([line.key])} />
+        <button type="button" className={styles.trash} aria-label={fill("saved.removeItem", { name: line.name })} title={t("saved.remove")} onClick={() => removeLines([line.key])}>
+          <FontAwesomeIcon icon={faTrashCan} aria-hidden="true" />
+        </button>
       </span>
 
       <span className={styles.sub}>

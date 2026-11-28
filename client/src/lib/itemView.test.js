@@ -242,9 +242,9 @@ describe("listMessage", () => {
     const text = listMessage({ business: shop, lines: [line(), line({ name: "Cushion covers", optionLabel: "Grey", qty: 2, total: 1600 })] });
     expect(text).toBe(
       [
-        "Hi Nyumbani Home Store, I'd like these from EpicMKT:",
-        "1. Wooden coffee table, Walnut, x1, KES 8,500",
-        "2. Cushion covers, Grey, x2, KES 1,600",
+        "Hi Nyumbani Home Store, I found these on EpicMKT:",
+        "1. *Wooden coffee table* (Walnut) x1 · KES 8,500",
+        "2. *Cushion covers* (Grey) x2 · KES 1,600",
         "Total: KES 10,100",
         "Are they available?"
       ].join("\n")
@@ -253,24 +253,24 @@ describe("listMessage", () => {
 
   it("services only: to book, no quantity, no total, and a question about time", () => {
     const text = listMessage({ business: { name: "Glow Salon Kilimani" }, lines: [line({ name: "Braids", optionLabel: "", total: 3000, service: true }), line({ name: "Wash", optionLabel: "", total: 500, service: true })] });
-    expect(text).toBe(["Hi Glow Salon Kilimani, I'd like to book these from EpicMKT:", "1. Braids, KES 3,000", "2. Wash, KES 500", "When can you fit me in?"].join("\n"));
+    expect(text).toBe(["Hi Glow Salon Kilimani, I'd like to book on EpicMKT:", "1. *Braids* · KES 3,000", "2. *Wash* · KES 500", "When are you free?"].join("\n"));
   });
 
   it("products and services together: products first, then To book:, one total", () => {
     const text = listMessage({ business: shop, lines: [line({ name: "Haircut", optionLabel: "", total: 500, service: true }), line()] });
-    expect(text.split("\n")).toEqual(["Hi Nyumbani Home Store, I'd like these from EpicMKT:", "1. Wooden coffee table, Walnut, x1, KES 8,500", "To book:", "2. Haircut, KES 500", "Total: KES 9,000", "Are they available? When can you fit me in?"]);
+    expect(text.split("\n")).toEqual(["Hi Nyumbani Home Store, I found these on EpicMKT:", "1. *Wooden coffee table* (Walnut) x1 · KES 8,500", "To book:", "2. *Haircut* · KES 500", "Total: KES 9,000", "Are they available? When are you free?"]);
   });
 
   it("asks about a missing price and about options not chosen; the total covers only what has a price", () => {
     const text = listMessage({ business: shop, lines: [line({ total: null, status: "no_price", optionLabel: "" }), line({ name: "Sofa", total: null, status: "choose_options", optionLabel: "" }), line({ name: "Lamp", optionLabel: "", total: 900 })] });
-    expect(text).toContain("1. Wooden coffee table, x1 (what's the price?)");
-    expect(text).toContain("2. Sofa, x1 (which options do you have?)");
+    expect(text).toContain("1. *Wooden coffee table* x1 · price?");
+    expect(text).toContain("2. *Sofa* x1 · which option?");
     expect(text).toContain("Total: KES 900");
   });
 
   it("a measured line says the amount, not x", () => {
     const text = listMessage({ business: shop, lines: [line({ name: "Beef", optionLabel: "", qty: 1.5, measure: true, unitLabel: "kg", total: 1200 })] });
-    expect(text).toContain("1. Beef, 1.5 kg, KES 1,200");
+    expect(text).toContain("1. *Beef* 1.5 kg · KES 1,200");
   });
 
   it("a very long list ends with +N more items and stays under the limit when encoded", () => {

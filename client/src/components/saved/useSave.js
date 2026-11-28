@@ -44,7 +44,7 @@ export function useSaveActions() {
     },
     [open]
   );
-  const removeLines = useCallback((keys) => {
+  const removeLines = useCallback((keys, { detail } = {}) => {
     const list = savedList();
     const gone = [];
     for (const key of keys) {
@@ -57,7 +57,7 @@ export function useSaveActions() {
     showToast(t("saved.toastWishlistRemoved"), {
       duration: 6000,
       icon: "heart-off",
-      detail: gone.length === 1 ? last?.snap?.name || undefined : undefined,
+      detail: detail || (gone.length === 1 ? last?.snap?.name || undefined : `${gone.length} items`),
       image: gone.length === 1 ? last?.snap?.image || undefined : undefined,
       action: {
         label: t("saved.undo"),

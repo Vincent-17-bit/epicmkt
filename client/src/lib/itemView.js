@@ -210,36 +210,40 @@ export { defaultVariantId } from "@epicmkt/shared";
 const MESSAGE_LIMIT = 3000; // the encoded text stays under this, so the link opens everywhere
 
 /**
- * What one shop is sent: its whole list, in the words buyers already use with shops here. `lines` are the shop's lines that still exist, each
+ * What one shop is sent: its whole list, short and easy to read in a chat. `lines` are the shop's lines that still exist, each
  * { name, optionLabel, qty, measure, unitLabel, total, service, status }. Money is each line's total (lineFor), never recalculated here.
+ *   Hi Nyumbani Home Store, I found these on EpicMKT:
+ *   1. *Lamp* x2 · KES 1,800
+ *   2. *Cushion covers* (Grey) x2 · KES 1,600
+ *   Total: KES 3,400
+ *   Are they available?
  * Products first, then "To book:" and the services; one total covers the lines that have a price (none for services alone).
- * A line with no price ends "(what's the price?)"; one whose options are not chosen ends "(which options do you have?)".
+ * A line with no price ends "· price?"; one whose options are not chosen ends "· which option?".
  * A very long list ends "+6 more items": the list on the device keeps every line, only the message is cut.
  */
 export function listMessage({ business, lines }) {
   const name = plain(business?.name);
   const products = lines.filter((l) => !l.service);
   const services = lines.filter((l) => l.service);
-  const open = products.length ? `Hi${name ? ` ${name}` : ""}, I'd like these from EpicMKT:` : `Hi${name ? ` ${name}` : ""}, I'd like to book these from EpicMKT:`;
+  const open = products.length ? `Hi${name ? ` ${name}` : ""}, I found these on EpicMKT:` : `Hi${name ? ` ${name}` : ""}, I'd like to book on EpicMKT:`;
   const priced = lines.filter((l) => Number.isFinite(l.total));
   const total = priced.reduce((sum, l) => sum + l.total, 0);
 
   const row = (l, n) => {
-    const parts = [plain(l.name)];
-    if (l.optionLabel) parts.push(plain(l.optionLabel));
-    if (!l.service) parts.push(l.measure ? amountText(l.qty, l.unitLabel) : `x${l.qty}`);
-    let text = `${n}. ${parts.join(", ")}`;
-    if (Number.isFinite(l.total)) text += `, ${formatKes(l.total)}`;
-    else if (l.status === "choose_options" || l.status === "option_gone") text += " (which options do you have?)";
-    else text += " (what's the price?)";
+    let text = `${n}. *${plain(l.name)}*`;
+    if (l.optionLabel) text += ` (${plain(l.optionLabel)})`;
+    if (!l.service) text += ` ${l.measure ? amountText(l.qty, l.unitLabel) : `x${l.qty}`}`;
+    if (Number.isFinite(l.total)) text += ` · ${formatKes(l.total)}`;
+    else if (l.status === "choose_options" || l.status === "option_gone") text += " · which option?";
+    else text += " · price?";
     return text;
   };
 
   const ordered = [...products, ...services];
   const closing = [];
-  if (products.length && services.length) closing.push("Are they available? When can you fit me in?");
+  if (products.length && services.length) closing.push("Are they available? When are you free?");
   else if (products.length) closing.push("Are they available?");
-  else closing.push("When can you fit me in?");
+  else closing.push("When are you free?");
 
   const build = (shown) => {
     const out = [open];

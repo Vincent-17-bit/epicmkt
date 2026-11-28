@@ -1,7 +1,7 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleCheck, faLocationArrow, faPhone } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faLocationArrow, faPhone, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import { faWhatsapp } from "@fortawesome/free-brands-svg-icons";
 import { directionsLink, formatDate, formatDistance, formatKes, formatTime, distanceKm, telLink, whatsappLink } from "@epicmkt/shared";
 import { resizedUrl } from "@epicmkt/ui";
@@ -14,6 +14,7 @@ import { t } from "../../i18n/index.js";
 import { external } from "../item/links.js";
 import { fill, sendable } from "./model.js";
 import SavedLine from "./SavedLine.jsx";
+import { useSaveActions } from "./useSave.js";
 import styles from "./ShopGroup.module.css";
 
 const FIRST = 4;
@@ -27,6 +28,7 @@ const sentText = (at) => {
 // One shop's box: its head, its lines (the first four, then "Show N more"), its subtotal and the one button that sends the whole list.
 export default function ShopGroup({ group, index = 0, loading, goTo }) {
   const uid = useId();
+  const { removeLines } = useSaveActions();
   const [all, setAll] = useState(false);
   const exact = useGeoStore((s) => s.exact);
   const sentAt = useSaved((s) => s.sentAt[group.businessId] ?? 0);
@@ -78,11 +80,20 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
           ) : (
             <p className={styles.meta}>
               <span className={styles.status} data-open={shop?.isOpen ? "true" : "false"}>{status}</span>
-              {Number.isFinite(km) && ` · ${formatDistance(km)}`}
+              {Number.isFinite(km) && <span className={styles.dot}>{formatDistance(km)}</span>}
+              <span className={styles.dot}>{group.lines.length === 1 ? t("saved.itemOne") : fill("saved.itemMany", { n: String(group.lines.length) })}</span>
             </p>
           )}
         </div>
-        <span className={styles.count}>{group.lines.length === 1 ? t("saved.itemOne") : fill("saved.itemMany", { n: String(group.lines.length) })}</span>
+        <button
+          type="button"
+          className={styles.trash}
+          aria-label={fill("saved.removeShop", { name: group.name })}
+          title={t("saved.removeShopShort")}
+          onClick={() => removeLines(group.lines.map((l) => l.key), { detail: group.name })}
+        >
+          <FontAwesomeIcon icon={faTrashCan} aria-hidden="true" />
+        </button>
       </header>
 
       <ul className={styles.lines}>
@@ -97,7 +108,12 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
       )}
 
       <footer className={styles.foot}>
-        {group.priced > 0 && <p className={styles.subtotal}>{fill("saved.subtotal", { total: formatKes(group.subtotal) })}</p>}
+        {group.priced > 0 && (
+          <p className={styles.subtotal}>
+            <span>{t("saved.subtotalLabel")}</span>{" "}
+            <strong>{formatKes(group.subtotal)}</strong>
+          </p>
+        )}
         <div className={styles.actions}>
           {href ? (
             <a href={href} {...external} className={styles.send} onClick={onSend} data-testid="saved-send">
@@ -121,8 +137,11 @@ export default function ShopGroup({ group, index = 0, loading, goTo }) {
             </a>
           )}
         </div>
-        {closed && href && <p className={styles.note}>{t("saved.closedNote")}</p>}
-        {sentAt > 0 && <p className={styles.note}>{sentText(sentAt)}</p>}
+        {(sentAt > 0 || (closed && href)) && (
+          <p className={styles.note}>
+            {[closed && href ? t("saved.closedNote") : "", sentAt > 0 ? sentText(sentAt) : ""].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </footer>
     </section>
   );

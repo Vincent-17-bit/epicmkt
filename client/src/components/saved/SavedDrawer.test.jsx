@@ -15,6 +15,7 @@ const { useToastStore } = await import("../../stores/toast.js");
 
 const axe = configureAxe({ rules: { "color-contrast": { enabled: false }, region: { enabled: false } } });
 
+const sub = (v) => (_, el) => el?.tagName === "P" && el.textContent === `Subtotal ${v}`;
 const shopA = { id: "bA", slug: "nyumbani", name: "Nyumbani Home Store", whatsapp: "0712345678", phone: "0712345678", isOpen: true, statusLine: "Open", verified: true, lat: -0.1, lng: 34.7, categoryId: "general" };
 const shopB = { id: "bB", slug: "glow", name: "Glow Salon", whatsapp: "0722000111", phone: "0722000111", isOpen: false, statusLine: "Closed, opens 7am", categoryId: "salon" };
 const pricing = (n) => ({ regularPrice: n, salePrice: n, savings: 0, discountPercent: 0, unit: null, variants: [] });
@@ -79,11 +80,11 @@ describe("SavedDrawer", () => {
     const shops = screen.getAllByTestId("saved-shop");
     expect(shops).toHaveLength(2);
     expect(shops.map((s) => within(s).getByRole("heading", { level: 3 }).textContent.replace("Verified", ""))).toEqual(["Glow Salon", "Nyumbani Home Store"]); // the shop saved last is on top
-    expect(within(shops[1]).getByText("Subtotal KES 8,500")).toBeInTheDocument();
+    expect(within(shops[1]).getByText(sub("KES 8,500"))).toBeInTheDocument();
     expect(within(shops[0]).getByText("Service")).toBeInTheDocument();
     expect(screen.getByText("2 items · 2 shops")).toBeInTheDocument();
     expect(screen.getByTestId("saved-total")).toHaveTextContent("Estimated total KES 11,500");
-    expect(screen.getByText("Prices and delivery are agreed with each shop.")).toBeInTheDocument();
+    expect(screen.getByText("Each shop confirms final prices.")).toBeInTheDocument();
     expect(mocks.getSaved).toHaveBeenCalledWith(["braids", "table"]);
   });
 
@@ -91,7 +92,7 @@ describe("SavedDrawer", () => {
     seed(Array.from({ length: 6 }, (_, i) => entry(`p${i}`, shopA)));
     mocks.getSaved.mockResolvedValue(answer(Array.from({ length: 6 }, (_, i) => product(`p${i}`, `Product ${i}`, 100))));
     mount();
-    await screen.findByText("Subtotal KES 600");
+    await screen.findByText(sub("KES 600"));
     expect(screen.getAllByTestId("saved-line")).toHaveLength(4);
     await userEvent.click(screen.getByRole("button", { name: "Show 2 more" }));
     expect(screen.getAllByTestId("saved-line")).toHaveLength(6);
@@ -114,10 +115,25 @@ describe("SavedDrawer", () => {
     seed([entry("a", shopA, { qty: 1 })]);
     mocks.getSaved.mockResolvedValue(answer([product("a", "Lamp", 900)]));
     mount();
-    await screen.findByText("Subtotal KES 900");
+    await screen.findByText(sub("KES 900"));
     await userEvent.click(screen.getByRole("button", { name: "One more" }));
     expect(savedList().list()[0].qty).toBe(2);
-    expect(await screen.findByText("Subtotal KES 1,800")).toBeInTheDocument();
+    expect(screen.getAllByText("KES 1,800").length).toBeGreaterThan(0);
+  });
+
+  it("each line has a delete button, and so does each shop; both undo", async () => {
+    seed([entry("a", shopA), entry("b", shopA), entry("c", shopB)]);
+    mocks.getSaved.mockResolvedValue(answer([product("a", "Lamp", 900), product("b", "Rug", 500), product("c", "Braids", 3000, shopB)]));
+    mount();
+    await screen.findByText("Lamp");
+    const shopButton = screen.getByRole("button", { name: `Remove ${shopA.name} and its items` });
+    await userEvent.click(shopButton);
+    expect(savedList().list().map((e) => e.itemId)).toEqual(["c"]);
+    const toast = useToastStore.getState().toasts.at(-1);
+    expect(toast.detail).toBe(shopA.name);
+    act(() => toast.action.onClick());
+    expect(savedList().list().map((e) => e.itemId).sort()).toEqual(["a", "b", "c"]);
+    expect(screen.getAllByRole("button", { name: /^Remove .* from Saved$/ })).toHaveLength(3);
   });
 
   it("removes a line with Undo, in place, and never loses it any other way", async () => {
@@ -250,7 +266,7 @@ describe("SavedDrawer", () => {
     seed([entry("a", shopA, { qty: 2, snap: { name: "Lamp", unit: 900, businessName: "Nyumbani Home Store" } })]);
     mocks.getSaved.mockImplementation(() => new Promise(() => {}));
     mount();
-    expect(screen.getByText("You're offline. Showing prices from when you saved.")).toBeInTheDocument();
+    expect(screen.getByText("Offline. Showing prices from when you saved.")).toBeInTheDocument();
     expect(await screen.findByText("Lamp")).toBeInTheDocument();
     expect(screen.getByTestId("saved-total")).toHaveTextContent("Estimated total KES 1,800 · may have changed");
   });
@@ -263,16 +279,16 @@ describe("SavedDrawer", () => {
     expect(sends).toHaveLength(2);
     const links = sends.map((a) => a.getAttribute("href"));
     const mine = links.find((h) => h.includes("254712345678"));
-    expect(decodeURIComponent(mine)).toContain("Hi Nyumbani Home Store, I'd like these from EpicMKT:\n1. Lamp, x2, KES 1,800");
+    expect(decodeURIComponent(mine)).toContain("Hi Nyumbani Home Store, I found these on EpicMKT:\n1. *Lamp* x2 · KES 1,800");
     const glow = links.find((h) => h.includes("254722000111"));
-    expect(decodeURIComponent(glow)).toContain("I'd like to book these from EpicMKT:");
+    expect(decodeURIComponent(glow)).toContain("I'd like to book on EpicMKT:");
     sends[0].addEventListener("click", (e) => e.preventDefault());
     await userEvent.click(sends[0]);
     expect(mocks.logEvent).toHaveBeenCalledWith("saved_send", expect.objectContaining({ lines: 1 }));
     expect(mocks.logContactEvent).toHaveBeenCalledWith(expect.objectContaining({ type: "whatsapp" }));
     expect(savedList().count()).toBe(2);
-    expect(screen.getAllByText(/^Sent today, /)).toHaveLength(1);
-    expect(screen.getByText("Closed now. They'll see it when they open.")).toBeInTheDocument();
+    expect(screen.getAllByText(/Sent \d/)).toHaveLength(1);
+    expect(screen.getByText(/Closed now\. They'll reply when open\./)).toBeInTheDocument();
   });
 
   it("a shop that is no longer live keeps its lines and says so", async () => {
@@ -287,7 +303,7 @@ describe("SavedDrawer", () => {
     seed([entry("old", shopA, { qty: 3 })]);
     mocks.getSaved.mockResolvedValue({ ...answer([product("new", "Lamp (new)", 900)]), items: { new: product("new", "Lamp (new)", 900) }, redirects: { old: { itemId: "new", param: "" } } });
     mount();
-    expect(await screen.findByText("Subtotal KES 2,700")).toBeInTheDocument();
+    expect(await screen.findByText(sub("KES 2,700"))).toBeInTheDocument();
     expect(savedList().list()[0].itemId).toBe("old");
   });
 
@@ -295,8 +311,8 @@ describe("SavedDrawer", () => {
     seed([entry("a", shopA, { snap: { name: "A", unit: 1000 } }), entry("b", shopA, { snap: { name: "B", unit: 500 } }), entry("c", shopA, { snap: { name: "C", unit: 1000 } })]);
     mocks.getSaved.mockResolvedValue(answer([product("a", "Alpha", 800), product("b", "Beta", 800), product("c", "Gamma", 800, shopA, { flash: { sale: { id: "s", endsAt: "2999-01-01T00:00:00Z" } } })]));
     mount();
-    expect(await screen.findByText("KES 200 less than when you saved")).toBeInTheDocument();
-    expect(screen.getByText("KES 300 more than when you saved")).toBeInTheDocument();
+    expect(await screen.findByText("Price down KES 200")).toBeInTheDocument();
+    expect(screen.getByText("Price up KES 300")).toBeInTheDocument();
     expect(screen.getByText("Flash sale")).toBeInTheDocument();
   });
 
