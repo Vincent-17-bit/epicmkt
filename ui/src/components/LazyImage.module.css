@@ -1,10 +1,13 @@
-/* Placeholder + wave. The placeholder is the EpicMKT artwork (assets/placeholder.webp, ~1 KB, inlined by the build). */
+/* Placeholder + wave. The placeholder is the EpicMKT wordmark as a vector (assets/placeholder.svg), so it is sharp at any size: a soft
+   grey field with the wordmark centred at about 60% of the frame (never stretched or cropped, never zoomed). */
 .frame {
   position: relative;
   display: block;
   width: 100%;
   overflow: hidden;
-  background: var(--surface-3) url("../assets/placeholder.webp") center / cover no-repeat;
+  background:
+    url("../assets/placeholder.svg") center / 60% auto no-repeat,
+    radial-gradient(120% 120% at 30% 20%, var(--surface-2), var(--surface-3));
 }
 
 .fill {
@@ -26,11 +29,6 @@
 
 :global([data-theme="dark"]) .frame::after {
   background-image: linear-gradient(105deg, transparent 20%, rgb(255 255 255 / 0.18) 45%, rgb(255 255 255 / 0.06) 55%, transparent 80%);
-}
-
-/* The placeholder breathes a little so the wave reads as water, not as a flat shine. */
-.frame[data-state="loading"] {
-  animation: drift 3.2s ease-in-out infinite;
 }
 
 .frame[data-state="loaded"]::after,
@@ -68,21 +66,8 @@
   }
 }
 
-@keyframes drift {
-  0%,
-  100% {
-    background-position: 48% 50%;
-    background-size: 108%;
-  }
-  50% {
-    background-position: 52% 50%;
-    background-size: 114%;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .frame::after,
-  .frame[data-state="loading"] {
+  .frame::after {
     animation: none;
   }
 
