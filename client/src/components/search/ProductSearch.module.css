@@ -587,6 +587,17 @@
     grid-template-columns: repeat(auto-fill, minmax(clamp(9.75rem, 15cqw, 12.5rem), 1fr));
   }
 }
+@container results (min-width: 40rem) {
+  .list {
+    --tile-media-ratio: 5 / 4;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(12rem, 21cqw, 17rem), 1fr));
+  }
+}
+@container results (min-width: 64rem) {
+  .list {
+    --tile-media-ratio: 4 / 3;
+  }
+}
 .cardSkeleton {
   width: 100%;
   aspect-ratio: 1 / 1.62;

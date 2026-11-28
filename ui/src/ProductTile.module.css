@@ -29,7 +29,7 @@
   position: relative;
   display: block;
   flex: none;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: var(--tile-media-ratio, 1 / 1);
   overflow: hidden;
   background: var(--media-stage);
 }
