@@ -380,12 +380,6 @@
     box-shadow: var(--shadow-md);
   }
 
-  .tile:hover .name {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
-  }
-
   .tile:hover .cta {
     border-color: var(--text);
     background: var(--text);
@@ -458,12 +452,4 @@
 .tileSave .tag + .offer,
 .tileSave .offerLow {
   top: calc(clamp(4px, 2.6cqw, 8px) + var(--heart) + 4px + 1.75em);
-}
-
-@media (hover: hover) {
-  .tileSave:hover .name {
-    text-decoration: underline;
-    text-decoration-thickness: 1px;
-    text-underline-offset: 2px;
-  }
 }
