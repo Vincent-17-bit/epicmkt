@@ -5,7 +5,7 @@ import { showToast } from "../../stores/toast.js";
 import { announce } from "../../stores/savedAnnounce.js";
 import { t } from "../../i18n/index.js";
 import { entryFor } from "../saved/entry.js";
-import { useSaveActions } from "../saved/useSave.js";
+import { useSaveActions, wishlistToast } from "../saved/useSave.js";
 import { fill } from "../saved/text.js";
 import { requestSavedOpen } from "../../stores/savedUi.js";
 
@@ -40,7 +40,7 @@ export function useItemSave(ctx) {
       if (moved) {
         list.setQty(moved.key, qty);
         announce(fill("saved.liveSavedMany", { n: String(list.count()) }));
-        showToast(t("saved.toastSaved"), { action: { label: t("saved.viewList"), onClick: open } });
+        showToast(t("saved.toastWishlist"), wishlistToast(moved, open));
         return;
       }
     }

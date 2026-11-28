@@ -128,7 +128,7 @@ describe("SavedDrawer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove Lamp from Saved" }));
     expect(savedList().count()).toBe(1);
     const toast = useToastStore.getState().toasts.at(-1);
-    expect(toast.message).toBe("Removed");
+    expect(toast.message).toBe("Removed from wishlist");
     expect(toast.action.label).toBe("Undo");
     act(() => toast.action.onClick());
     expect(savedList().list().map((e) => e.itemId)).toEqual(["a", "b"]);

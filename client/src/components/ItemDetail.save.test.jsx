@@ -49,7 +49,7 @@ describe("Save on the item page", () => {
     expect(savedList().list()[0]).toMatchObject({ itemId: "it", businessId: "b1", qty: 2, optionParam: "", kind: "product" });
     expect(savedList().list()[0].snap).toMatchObject({ name: "Lamp", unit: 900, businessName: "Shop" });
     expect(footerSave()).toHaveAttribute("aria-pressed", "true");
-    expect(useToastStore.getState().toasts.at(-1).message).toBe("Saved");
+    expect(useToastStore.getState().toasts.at(-1).message).toBe("Added to wishlist");
     await userEvent.click(footerSave());
     expect(savedList().count()).toBe(0);
     expect(useToastStore.getState().toasts.at(-1).action.label).toBe("Undo");

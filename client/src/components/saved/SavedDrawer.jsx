@@ -104,7 +104,7 @@ export default function SavedDrawer() {
     setConfirm(false);
     setMenu(false);
     announce(t("saved.liveRemoved"));
-    showToast(t("saved.toastRemoved"), { duration: 6000, action: { label: t("saved.undo"), onClick: () => { list.restoreAll(was); announce(t("saved.toastAddedBack")); } } });
+    showToast(t("saved.toastWishlistRemoved"), { duration: 6000, icon: "heart-off", action: { label: t("saved.undo"), onClick: () => { list.restoreAll(was); announce(t("saved.toastAddedBack")); } } });
   };
 
   const empty = view.count === 0;

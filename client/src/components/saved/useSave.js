@@ -18,6 +18,14 @@ const warm = () => {
 
 const say = (list) => announce(list.count() === 1 ? t("saved.liveSavedOne") : fill("saved.liveSavedMany", { n: String(list.count()) }));
 
+/** The wishlist toast: the product's picture and name under "Added to your wishlist", and a View wishlist button. */
+export const wishlistToast = (entry, open) => ({
+  icon: "heart",
+  detail: entry?.snap?.name || undefined,
+  image: entry?.snap?.image || undefined,
+  action: { label: t("saved.viewWishlist"), onClick: open }
+});
+
 /** save / remove with the toasts, undo and announcements the Saved list promises. `open` shows the drawer (the toast's "View list"). */
 export function useSaveActions() {
   const open = requestSavedOpen;
@@ -31,7 +39,7 @@ export function useSaveActions() {
         return res;
       }
       say(list);
-      if (toast) showToast(chooseLater ? t("saved.toastChooseLater") : t("saved.toastSaved"), { action: { label: t("saved.viewList"), onClick: open } });
+      if (toast) showToast(t(chooseLater ? "saved.toastWishlistOptions" : "saved.toastWishlist"), wishlistToast(res.entry ?? entry, open));
       return res;
     },
     [open]
@@ -45,8 +53,12 @@ export function useSaveActions() {
     }
     if (!gone.length) return;
     announce(t("saved.liveRemoved"));
-    showToast(t("saved.toastRemoved"), {
+    const last = gone.at(-1)?.entry;
+    showToast(t("saved.toastWishlistRemoved"), {
       duration: 6000,
+      icon: "heart-off",
+      detail: gone.length === 1 ? last?.snap?.name || undefined : undefined,
+      image: gone.length === 1 ? last?.snap?.image || undefined : undefined,
       action: {
         label: t("saved.undo"),
         // Back where they were: put the last removed back first so every position is still right.
